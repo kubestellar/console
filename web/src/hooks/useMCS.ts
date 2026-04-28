@@ -8,6 +8,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, BackendUnavailableError } from '../lib/api'
 import { useDemoMode } from './useDemoMode'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 import type {
   ServiceExport,
   ServiceExportList,
@@ -17,8 +19,6 @@ import type {
   ClusterMCSStatus,
 } from '../types/mcs'
 
-// Refresh interval for automatic polling (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
 
 // Demo data for demo mode
 const DEMO_SERVICE_EXPORTS: ServiceExport[] = [
@@ -62,7 +62,7 @@ export function useMCSStatus() {
     }))
 
     try {
-      const { data } = await api.get<MCSStatusResponse>('/api/mcs/status', { timeout: 10000 })
+      const { data } = await api.get<MCSStatusResponse>('/api/mcs/status', { timeout: FETCH_DEFAULT_TIMEOUT_MS })
       setState({
         data: data.clusters,
         isLoading: false,
@@ -140,7 +140,7 @@ export function useServiceExports(cluster?: string, namespace?: string) {
       const query = params.toString()
       const url = `/api/mcs/exports${query ? `?${query}` : ''}`
 
-      const { data } = await api.get<ServiceExportList>(url, { timeout: 15000 })
+      const { data } = await api.get<ServiceExportList>(url, { timeout: FETCH_EXTERNAL_TIMEOUT_MS })
       setState({
         data: data.items,
         isLoading: false,
@@ -232,7 +232,7 @@ export function useServiceImports(cluster?: string, namespace?: string) {
       const query = params.toString()
       const url = `/api/mcs/imports${query ? `?${query}` : ''}`
 
-      const { data } = await api.get<ServiceImportList>(url, { timeout: 15000 })
+      const { data } = await api.get<ServiceImportList>(url, { timeout: FETCH_EXTERNAL_TIMEOUT_MS })
       setState({
         data: data.items,
         isLoading: false,
@@ -315,7 +315,7 @@ export function useServiceExport(cluster: string, namespace: string, name: strin
 
     try {
       const url = `/api/mcs/exports/${encodeURIComponent(cluster)}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`
-      const { data } = await api.get<ServiceExport>(url, { timeout: 10000 })
+      const { data } = await api.get<ServiceExport>(url, { timeout: FETCH_DEFAULT_TIMEOUT_MS })
       setState({
         data,
         isLoading: false,
@@ -380,7 +380,7 @@ export function useServiceImport(cluster: string, namespace: string, name: strin
 
     try {
       const url = `/api/mcs/imports/${encodeURIComponent(cluster)}/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`
-      const { data } = await api.get<ServiceImport>(url, { timeout: 10000 })
+      const { data } = await api.get<ServiceImport>(url, { timeout: FETCH_DEFAULT_TIMEOUT_MS })
       setState({
         data,
         isLoading: false,

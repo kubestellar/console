@@ -71,7 +71,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
 
   if (totalResolutions === 0) {
     return (
-      <div className="flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
+      <div className="shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
         <div className="bg-card border border-border rounded-lg p-4">
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <BookMarked className="w-4 h-4 text-purple-400" />
@@ -92,7 +92,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   }
 
   return (
-    <div className="flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
+    <div className="shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
       <div className="bg-card border border-border rounded-lg p-4">
         <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
           <BookMarked className="w-4 h-4 text-purple-400" />
@@ -235,9 +235,9 @@ function ResolutionCard({
         className="w-full flex items-start gap-2 p-2.5 text-left hover:bg-secondary/50 transition-colors"
       >
         {isExpanded ? (
-          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
         ) : (
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -342,7 +342,7 @@ function ResolutionCard({
                     e.stopPropagation()
                     onSubmitToKB()
                   }}
-                  className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-2xs font-medium bg-gradient-to-r from-purple-500/20 to-purple-400/20 hover:from-purple-500/30 hover:to-purple-400/30 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 rounded-md shadow-sm shadow-purple-500/10 hover:shadow-purple-500/20 transition-all duration-200"
+                  className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-2xs font-medium bg-linear-to-r from-purple-500/20 to-purple-400/20 hover:from-purple-500/30 hover:to-purple-400/30 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 rounded-md shadow-xs shadow-purple-500/10 hover:shadow-purple-500/20 transition-all duration-200"
                   title="Submit to Knowledge Base"
                 >
                   <BookUp className="w-3.5 h-3.5" />

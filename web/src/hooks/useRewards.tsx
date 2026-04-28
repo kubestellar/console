@@ -12,7 +12,7 @@
  * using a private window no longer wipes the balance.
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { useAuth } from '../lib/auth'
 import { getDemoMode } from '../lib/demoMode'
 import {
@@ -116,6 +116,38 @@ function resolveRewardsUserId(userId: string | undefined): string | null {
   return userId
 }
 
+// Check which achievements have been earned (pure function — depends only on ACHIEVEMENTS constant)
+function checkAchievements(userRewards: UserRewards): string[] {
+  const newAchievements: string[] = []
+
+  for (const achievement of (ACHIEVEMENTS || [])) {
+    // Skip if already earned
+    if (userRewards.achievements.includes(achievement.id)) continue
+
+    let earned = false
+
+    // Check coin requirement
+    if (achievement.requiredCoins && userRewards.lifetimeCoins >= achievement.requiredCoins) {
+      earned = true
+    }
+
+    // Check action requirement
+    if (achievement.requiredAction) {
+      const count = userRewards.events.filter(e => e.action === achievement.requiredAction).length
+      const requiredCount = achievement.requiredCount || 1
+      if (count >= requiredCount) {
+        earned = true
+      }
+    }
+
+    if (earned) {
+      newAchievements.push(achievement.id)
+    }
+  }
+
+  return newAchievements
+}
+
 export function RewardsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const [rewards, setRewards] = useState<UserRewards | null>(null)
@@ -130,6 +162,12 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     effectiveUserIdRef.current = effectiveUserId
   }, [effectiveUserId])
+
+  // Ref for rewards so stable callbacks can read current state
+  const rewardsRef = useRef<UserRewards | null>(rewards)
+  useEffect(() => {
+    rewardsRef.current = rewards
+  }, [rewards])
 
   // Load rewards when the user changes.
   //
@@ -254,10 +292,11 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Check if action has been earned (for one-time rewards)
-  const hasEarnedAction = (action: RewardActionType): boolean => {
-    if (!rewards) return false
-    return rewards.events.some(e => e.action === action)
-  }
+  const hasEarnedAction = useCallback((action: RewardActionType): boolean => {
+    const r = rewardsRef.current
+    if (!r) return false
+    return r.events.some(e => e.action === action)
+  }, [])
 
   // Get count of times an action has been performed
   const getActionCount = useCallback((action: RewardActionType): number => {
@@ -272,8 +311,10 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
   // persistence endpoint when the user is authenticated. Network errors
   // are logged but do NOT roll back the optimistic state — the next load
   // will reconcile against the server row.
-  const awardCoins = (action: RewardActionType, metadata?: Record<string, unknown>): boolean => {
-    if (!rewards || !effectiveUserId) return false
+  const awardCoins = useCallback((action: RewardActionType, metadata?: Record<string, unknown>): boolean => {
+    const currentRewards = rewardsRef.current
+    const currentUserId = effectiveUserIdRef.current
+    if (!currentRewards || !currentUserId) return false
 
     const rewardConfig = REWARD_ACTIONS[action]
     if (!rewardConfig) {
@@ -282,14 +323,14 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     }
 
     // Check if one-time reward already earned
-    if (rewardConfig.oneTime && hasEarnedAction(action)) {
+    if (rewardConfig.oneTime && currentRewards.events.some(e => e.action === action)) {
       return false
     }
 
     // Create reward event
     const event: RewardEvent = {
       id: generateId(),
-      userId: effectiveUserId,
+      userId: currentUserId,
       action,
       coins: rewardConfig.coins,
       timestamp: new Date().toISOString(),
@@ -297,10 +338,10 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
     // Update rewards
     const updated: UserRewards = {
-      ...rewards,
-      totalCoins: rewards.totalCoins + rewardConfig.coins,
-      lifetimeCoins: rewards.lifetimeCoins + rewardConfig.coins,
-      events: [event, ...rewards.events].slice(0, MAX_REWARD_EVENTS),
+      ...currentRewards,
+      totalCoins: currentRewards.totalCoins + rewardConfig.coins,
+      lifetimeCoins: currentRewards.lifetimeCoins + rewardConfig.coins,
+      events: [event, ...currentRewards.events].slice(0, MAX_REWARD_EVENTS),
       lastUpdated: new Date().toISOString() }
 
     // Check for new achievements
@@ -310,12 +351,12 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     }
 
     setRewards(updated)
-    saveRewards(effectiveUserId, updated)
+    saveRewards(currentUserId, updated)
 
     // Mirror to backend for authenticated sessions. Demo mode and the
     // shared "demo-user" bucket are intentionally excluded — they have no
     // JWT so the request would always 401.
-    const isDemoSession = getDemoMode() || effectiveUserId === DEMO_REWARDS_USER_ID
+    const isDemoSession = getDemoMode() || currentUserId === DEMO_REWARDS_USER_ID
     if (!isDemoSession) {
       apiIncrementCoins(rewardConfig.coins).catch(err => {
         if (err instanceof RewardsUnauthenticatedError) return
@@ -324,57 +365,25 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     }
 
     return true
-  }
-
-  // Check which achievements have been earned
-  const checkAchievements = (userRewards: UserRewards): string[] => {
-    const newAchievements: string[] = []
-
-    for (const achievement of (ACHIEVEMENTS || [])) {
-      // Skip if already earned
-      if (userRewards.achievements.includes(achievement.id)) continue
-
-      let earned = false
-
-      // Check coin requirement
-      if (achievement.requiredCoins && userRewards.lifetimeCoins >= achievement.requiredCoins) {
-        earned = true
-      }
-
-      // Check action requirement
-      if (achievement.requiredAction) {
-        const count = userRewards.events.filter(e => e.action === achievement.requiredAction).length
-        const requiredCount = achievement.requiredCount || 1
-        if (count >= requiredCount) {
-          earned = true
-        }
-      }
-
-      if (earned) {
-        newAchievements.push(achievement.id)
-      }
-    }
-
-    return newAchievements
-  }
+  }, [])
 
   // Get earned achievements as full objects
-  const earnedAchievements = (() => {
+  const earnedAchievements = useMemo(() => {
     if (!rewards) return []
     return ACHIEVEMENTS.filter(a => rewards.achievements.includes(a.id))
-  })()
+  }, [rewards])
 
   // Get recent events (last 10)
-  const recentEvents = (() => {
+  const recentEvents = useMemo(() => {
     if (!rewards) return []
     return rewards.events.slice(0, RECENT_EVENTS_LIMIT)
-  })()
+  }, [rewards])
 
   // Dedup: subtract console-submitted bug/feature coins that overlap with GitHub data.
   // Only dedup the *actual* overlap — the minimum of localStorage event count and
   // GitHub contribution count for each category. This prevents under-counting when
   // GitHub hasn't indexed an issue yet or classifies it differently due to label timing.
-  const consoleSubmittedOffset = (() => {
+  const consoleSubmittedOffset = useMemo(() => {
     if (!rewards || !githubRewards) return 0
 
     const localBugCount = (rewards.events || []).filter(e => e.action === 'bug_report').length
@@ -388,20 +397,20 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     const featureOverlap = Math.min(localFeatureCount, githubFeatureCount)
 
     return (bugOverlap * REWARD_ACTIONS.bug_report.coins) + (featureOverlap * REWARD_ACTIONS.feature_suggestion.coins)
-  })()
+  }, [rewards, githubRewards])
 
   // Merged total: localStorage coins - dedup offset + GitHub coins + bonus.
   // The dedup offset removes only the overlapping bug/feature coins from
   // localStorage to avoid double-counting with the GitHub-sourced total.
-  const mergedTotalCoins = (() => {
+  const mergedTotalCoins = useMemo(() => {
     const localCoins = rewards?.totalCoins ?? 0
     if (!githubRewards) return localCoins + bonusPoints
     return Math.max(0, localCoins - consoleSubmittedOffset) + githubPoints + bonusPoints
-  })()
+  }, [rewards, githubRewards, consoleSubmittedOffset, githubPoints, bonusPoints])
 
   const localCoins = Math.max(0, (rewards?.totalCoins ?? 0) - consoleSubmittedOffset)
 
-  const value: RewardsContextType = {
+  const value = useMemo<RewardsContextType>(() => ({
     rewards,
     totalCoins: mergedTotalCoins,
     earnedAchievements,
@@ -414,7 +423,22 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
     githubPoints,
     localCoins,
     bonusPoints,
-    refreshGitHubRewards }
+    refreshGitHubRewards,
+  }), [
+    rewards,
+    mergedTotalCoins,
+    earnedAchievements,
+    isLoading,
+    awardCoins,
+    hasEarnedAction,
+    getActionCount,
+    recentEvents,
+    githubRewards,
+    githubPoints,
+    localCoins,
+    bonusPoints,
+    refreshGitHubRewards,
+  ])
 
   return (
     <RewardsContext.Provider value={value}>

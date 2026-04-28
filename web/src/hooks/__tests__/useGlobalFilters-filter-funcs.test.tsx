@@ -97,15 +97,23 @@ describe('filterByCluster', () => {
     expect(filtered.every(item => item.cluster === 'cluster-a')).toBe(true)
   })
 
-  it('deselectAllClusters is reconciled to all-selected (returns all items)', () => {
-    // PR #5449: reconciliation drops __none__ sentinel, reverting to all mode
+  it('deselectAllClusters preserves __none__ sentinel (returns empty)', () => {
+    // __none__ sentinel is preserved during reconciliation, so
+    // filterByCluster returns an empty array (nothing selected).
+    //
+    // Per issue #9838: assert the sentinel is present in selectedClusters
+    // directly rather than relying purely on derived filter behavior.
     const { result } = renderHook(() => useGlobalFilters(), { wrapper })
 
     act(() => {
       result.current.deselectAllClusters()
     })
 
-    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual(SAMPLE_ITEMS)
+    // Direct assertion on the state
+    expect(result.current.selectedClusters).toEqual(['__none__'])
+
+    // Derived behavior still holds
+    expect(result.current.filterByCluster(SAMPLE_ITEMS)).toEqual([])
   })
 
   it('excludes items without a cluster field', () => {

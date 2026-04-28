@@ -107,4 +107,7 @@ export interface MessageProps {
   isLastAssistantMessage?: boolean
   missionStatus?: string
   userAvatarUrl?: string
+  /** Callback to edit a user message — removes it and subsequent messages,
+   *  populating the chat input for re-sending (#10450). */
+  onEdit?: (messageId: string) => void
 }

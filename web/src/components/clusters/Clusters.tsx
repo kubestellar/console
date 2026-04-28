@@ -32,7 +32,6 @@ import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_CLUSTER_LAYOUT, STORAGE_KEY_CLUSTER_O
 import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useModalState } from '../../lib/modals'
 import { useToast } from '../ui/Toast'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import type { StatBlockValue } from '../ui/StatsOverview'
 import { formatMemoryStat } from '../../lib/formatStats'
 import { RotatingTip } from '../ui/RotatingTip'
@@ -52,13 +51,12 @@ export function Clusters() {
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading, error: gpuError, refetch: gpuRefetch } = useGPUNodes()
   const { operators: nvidiaOperators } = useNVIDIAOperators()
-  const { isConnected, status: agentStatus } = useLocalAgent()
+  const { isConnected, isDegraded, status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
   const isModeSwitching = useIsModeSwitching()
   const { startMission, openSidebar } = useMissions()
   const { showKeyPrompt: pruneShowKeyPrompt, checkKeyAndRun: pruneCheckKeyAndRun, goToSettings: pruneGoToSettings, dismissPrompt: pruneDismissPrompt } = useApiKeyCheck()
   const { showKeyPrompt: createShowKeyPrompt, checkKeyAndRun: createCheckKeyAndRun, goToSettings: createGoToSettings, dismissPrompt: createDismissPrompt } = useApiKeyCheck()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { showToast } = useToast()
 
   // When demo mode is OFF and agent is not connected, force skeleton display
@@ -73,7 +71,9 @@ export function Clusters() {
     clusterGroups,
     addClusterGroup,
     deleteClusterGroup,
-    selectClusterGroup } = useGlobalFilters()
+    selectClusterGroup,
+    selectedDistributions,
+    isAllDistributionsSelected } = useGlobalFilters()
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -216,6 +216,8 @@ export function Clusters() {
     globalSelectedClusters,
     isAllClustersSelected,
     customFilter,
+    selectedDistributions,
+    isAllDistributionsSelected,
     sortBy,
     sortAsc,
     customOrder })
@@ -308,7 +310,7 @@ export function Clusters() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // ── beforeCards: Stale banner + Cluster Info Cards + Cluster Groups ──
 
@@ -401,7 +403,12 @@ export function Clusters() {
                 }}
               />
               {filteredClusters.length === 0 && !isLoading && !showSkeletonContent ? (
-                <EmptyClusterState onAddCluster={() => setShowAddCluster(true)} />
+                <EmptyClusterState
+                  onAddCluster={() => setShowAddCluster(true)}
+                  agentConnected={isConnected}
+                  agentDegraded={isDegraded}
+                  inClusterMode={isInClusterMode()}
+                />
               ) : (
                 <ClusterGrid
                   clusters={filteredClusters}

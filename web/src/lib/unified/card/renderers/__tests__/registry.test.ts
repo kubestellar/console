@@ -124,7 +124,7 @@ describe('built-in renderers via renderCell', () => {
     expect(result).toBeDefined()
     if (typeof result === 'object' && result !== null) {
       const el = result as { props: { children: string } }
-      expect(el.props.children).toContain('1.0 GB')
+      expect(el.props.children).toContain('1 GB')
     }
   })
 

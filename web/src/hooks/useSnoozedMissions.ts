@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { MissionSuggestion } from './useMissionSuggestions'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
+import { MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE } from '../lib/constants/time'
 
 const STORAGE_KEY = 'kubestellar-snoozed-missions'
-const SNOOZE_DURATION_MS = 24 * 60 * 60 * 1000 // 24 hours
+const SNOOZE_DURATION_MS = MS_PER_DAY // 24 hours
 
 export interface SnoozedMission {
   id: string
@@ -152,8 +153,8 @@ export function useSnoozedMissions() {
 
 // Helper to format time remaining
 export function formatTimeRemaining(ms: number): string {
-  const hours = Math.floor(ms / (60 * 60 * 1000))
-  const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000))
+  const hours = Math.floor(ms / MS_PER_HOUR)
+  const minutes = Math.floor((ms % MS_PER_HOUR) / MS_PER_MINUTE)
 
   if (hours > 0) {
     return `${hours}h ${minutes}m`

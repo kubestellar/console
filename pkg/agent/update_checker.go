@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	developerCheckInterval = 5 * time.Minute
+	developerCheckInterval = 15 * time.Minute
 	releaseCheckInterval   = 60 * time.Minute
 	healthCheckRetries     = 15
 	healthCheckDelay       = 2 * time.Second
@@ -737,7 +737,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	}
 
 	// Spawn the script in a new process group so it survives our exit
-	cmd := exec.Command("bash", scriptPath)
+	cmd := exec.Command("bash", scriptPath) // #nosec G204 -- scriptPath is repoPath+"/startup-oauth.sh", not user input
 	cmd.Dir = repoPath
 	if logFile != nil {
 		cmd.Stdout = logFile

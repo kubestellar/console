@@ -1,6 +1,12 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { CHART_TOOLTIP_CONTENT_STYLE } from '../../lib/constants'
+import {
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
+  CHART_TEXT_WHITE,
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_TEXT_COLOR,
+} from '../../lib/constants'
 
 interface TreeMapItem {
   name: string
@@ -52,7 +58,7 @@ export function TreeMap({
       tooltip: {
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: '#e0e0e0', fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: { name: string; value: number }) =>
           `${params.name}: ${formatValue(params.value)}`,
       },
@@ -71,8 +77,8 @@ export function TreeMap({
             return `{name|${name}}\n{value|${formatValue(params.value)}}`
           },
           rich: {
-            name: { color: '#fff', fontSize: 12, fontWeight: 500, lineHeight: 18 },
-            value: { color: '#fff', fontSize: 10, opacity: 0.7, lineHeight: 14 },
+            name: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE, fontWeight: 500, lineHeight: 18 },
+            value: { color: CHART_TEXT_WHITE, fontSize: CHART_AXIS_FONT_SIZE, opacity: 0.7, lineHeight: 14 },
           },
           minMargin: 4,
         },
@@ -134,7 +140,7 @@ export function NestedTreeMap({
       tooltip: {
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: '#e0e0e0', fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: { name: string; value: number }) =>
           `${params.name}: ${formatValue(params.value)}`,
       },
@@ -153,8 +159,8 @@ export function NestedTreeMap({
             return `{name|${name}}\n{value|${formatValue(params.value)}}`
           },
           rich: {
-            name: { color: '#fff', fontSize: 12, fontWeight: 500, lineHeight: 18 },
-            value: { color: '#fff', fontSize: 10, opacity: 0.7, lineHeight: 14 },
+            name: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE, fontWeight: 500, lineHeight: 18 },
+            value: { color: CHART_TEXT_WHITE, fontSize: CHART_AXIS_FONT_SIZE, opacity: 0.7, lineHeight: 14 },
           },
         },
         itemStyle: { borderColor: '#1a1a2e', borderWidth: 2, gapWidth: 2 },

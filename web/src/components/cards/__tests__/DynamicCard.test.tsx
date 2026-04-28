@@ -9,6 +9,13 @@ import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../../l
 // ---------------------------------------------------------------------------
 
 const mockGetDynamicCard = vi.fn()
+vi.mock('../../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/dynamic-cards/dynamicCardRegistry', () => ({
   getDynamicCard: (...args: unknown[]) => mockGetDynamicCard(...args),
 }))

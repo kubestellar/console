@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -171,8 +172,49 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       allIssues.push(reason)
     }
 
+    // Parse warning events from kubectl events output (#10444)
+    // Events with TYPE=Warning indicate active issues even if pod status is Running
+    if (eventsOutput && !eventsOutput.includes('No resources found')) {
+      const eventLines = eventsOutput.split('\n')
+      // Find header to locate TYPE and MESSAGE columns
+      const headerLine = eventLines[0] || ''
+      const typeIdx = headerLine.indexOf('TYPE')
+      const reasonIdx = headerLine.indexOf('REASON')
+      const messageIdx = headerLine.indexOf('MESSAGE')
+
+      /** Fallback column width for TYPE field when REASON column is absent */
+      const TYPE_COLUMN_FALLBACK_WIDTH = 10
+      if (typeIdx >= 0 && messageIdx >= 0) {
+        for (const line of eventLines.slice(1)) {
+          if (!line.trim()) continue
+          // Extract TYPE field — use REASON column start as the end boundary if available
+          const typeEnd = reasonIdx > typeIdx ? reasonIdx : typeIdx + TYPE_COLUMN_FALLBACK_WIDTH
+          const eventType = line.substring(typeIdx, typeEnd).trim()
+          if (eventType.toLowerCase() === 'warning') {
+            const message = messageIdx < line.length
+              ? line.substring(messageIdx).trim()
+              : ''
+            // Use a shortened version: "Warning: <reason>" or "Warning: <message snippet>"
+            /** Fallback column width for REASON field when MESSAGE column is absent */
+            const REASON_COLUMN_FALLBACK_WIDTH = 30
+            const eventReason = reasonIdx >= 0
+              ? line.substring(reasonIdx, messageIdx > reasonIdx ? messageIdx : reasonIdx + REASON_COLUMN_FALLBACK_WIDTH).trim()
+              : ''
+            const MAX_EVENT_MSG_LENGTH = 80
+            const issueText = eventReason
+              ? `Warning: ${eventReason}${message ? ' — ' + message.substring(0, MAX_EVENT_MSG_LENGTH) : ''}`
+              : `Warning: ${message.substring(0, MAX_EVENT_MSG_LENGTH)}`
+            // Avoid duplicate issues (case-insensitive)
+            if (!allIssues.some(i => i.toLowerCase() === issueText.toLowerCase())) {
+              allIssues.push(issueText)
+            }
+          }
+        }
+      }
+    }
+
     return allIssues
-  }, [passedIssues, status, reason, podStatusOutput, podName])
+  }, [passedIssues, status, reason, podStatusOutput, podName, eventsOutput])
 
   // Use passed labels/annotations if available
   useEffect(() => {
@@ -186,7 +228,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setDescribeLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `describe-${Date.now()}`
 
       ws.onopen = () => {
@@ -253,7 +295,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setLogsLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `logs-${Date.now()}`
 
       ws.onopen = () => {
@@ -292,7 +334,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setEventsLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `events-${Date.now()}`
 
       ws.onopen = () => {
@@ -337,7 +379,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       // Helper to run a kubectl command and get output
       const runKubectl = (args: string[]): Promise<string> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+          const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
           const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
 
@@ -464,7 +506,7 @@ ${annotations ? Object.entries(annotations).map(([k, v]) => `${k}=${v}`).join('\
 `.trim()
 
       // Now request AI analysis via Claude
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `ai-analyze-${Date.now()}`
 
       ws.onopen = () => {
@@ -551,7 +593,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     setPodStatusLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `status-${Date.now()}`
 
       ws.onopen = () => {
@@ -590,7 +632,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     setYamlLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `yaml-${Date.now()}`
 
       ws.onopen = () => {
@@ -742,7 +784,7 @@ Please:
     setDeleteError(null)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `delete-pod-${Date.now()}`
 
       ws.onopen = () => {
@@ -797,7 +839,7 @@ Please:
     try {
       const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+          const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
           const requestId = `label-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
           const timeout = setTimeout(() => {
@@ -934,7 +976,7 @@ Please:
     try {
       const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+          const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
           const requestId = `annotate-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
           const timeout = setTimeout(() => {
@@ -1070,7 +1112,7 @@ Please:
     try {
       const runKubectl = (args: string[]): Promise<string> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+          const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
           const requestId = `related-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
 
@@ -1362,7 +1404,7 @@ Please:
                   )}
 
                 </div>
-              ) : (podStatusLoading || describeLoading) ? (
+              ) : (podStatusLoading || describeLoading || eventsLoading) ? (
                 <div className="p-4 rounded-lg bg-secondary/30 border border-border text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />

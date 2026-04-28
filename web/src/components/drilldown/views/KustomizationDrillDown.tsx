@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import type { Condition } from '../../../types/mcs'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
@@ -11,6 +12,7 @@ import {
 import { cn } from '../../../lib/cn'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -55,21 +57,6 @@ interface InventoryEntryRaw {
   v?: string
 }
 
-interface Condition {
-  type: string
-  status: string
-  reason?: string
-  message?: string
-  lastTransitionTime?: string
-}
-
-interface ConditionRaw {
-  type: string
-  status: string
-  reason?: string
-  message?: string
-  lastTransitionTime?: string
-}
 
 export function KustomizationDrillDown({ data }: Props) {
   const { t } = useTranslation()
@@ -129,7 +116,7 @@ export function KustomizationDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
@@ -192,7 +179,7 @@ export function KustomizationDrillDown({ data }: Props) {
 
         // Get conditions
         const conds = ks.status?.conditions || []
-        setConditions(conds.map((c: ConditionRaw) => ({
+        setConditions(conds.map((c: Condition) => ({
           type: c.type,
           status: c.status,
           reason: c.reason,
@@ -371,7 +358,7 @@ Please:
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Kustomization Info Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+            <div className="p-4 rounded-lg bg-linear-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
               <div className="flex items-start gap-3">
                 <Layers className="w-8 h-8 text-blue-400 mt-1" />
                 <div className="flex-1 min-w-0">

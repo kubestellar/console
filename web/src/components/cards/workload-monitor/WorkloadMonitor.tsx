@@ -173,7 +173,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
             <select
               value={selectedCluster}
               onChange={(e) => handleClusterChange(e.target.value)}
-              className="flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+              className="flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
             >
               <option value="">{t('selectors.selectCluster')}</option>
               {clusterNames.map(c => (
@@ -188,7 +188,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
               onChange={(e) => handleNamespaceChange(e.target.value)}
               disabled={!selectedCluster || nsLoading}
               className={cn(
-                'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50',
+                'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50',
                 (!selectedCluster || nsLoading) && 'opacity-50 cursor-not-allowed',
               )}
             >
@@ -205,7 +205,7 @@ export function WorkloadMonitor({ config }: WorkloadMonitorProps) {
               onChange={(e) => handleWorkloadChange(e.target.value)}
               disabled={!selectedNamespace || wlLoading}
               className={cn(
-                'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50',
+                'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50',
                 (!selectedNamespace || wlLoading) && 'opacity-50 cursor-not-allowed',
               )}
             >

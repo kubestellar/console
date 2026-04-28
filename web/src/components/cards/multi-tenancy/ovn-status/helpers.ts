@@ -5,6 +5,9 @@
  * pod and annotation data into the metrics shown by the card.
  */
 
+import { isPodHealthy } from '../../../../lib/k8s'
+export { parseReadyCount, isPodHealthy } from '../../../../lib/k8s'
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -75,30 +78,6 @@ export function isOvnPod(labels?: Record<string, string>): boolean {
     appLabel === OVN_MASTER_LABEL ||
     appLabel === OVN_CONTROLLER_LABEL
   )
-}
-
-/**
- * Determine whether a pod is healthy based on its status and ready ratio.
- */
-export function isPodHealthy(pod: OvnPodInfo): boolean {
-  const status = (pod.status ?? '').toLowerCase()
-  if (status !== 'running') return false
-
-  const { ready, total } = parseReadyCount(pod.ready)
-  return total > 0 && ready === total
-}
-
-/**
- * Parse a Kubernetes "ready" string like "1/1" into numeric values.
- */
-export function parseReadyCount(ready?: string): { ready: number; total: number } {
-  const [readyPart, totalPart] = String(ready ?? '').split('/')
-  const readyCount = Number.parseInt(readyPart, 10)
-  const totalCount = Number.parseInt(totalPart, 10)
-  return {
-    ready: Number.isFinite(readyCount) ? readyCount : 0,
-    total: Number.isFinite(totalCount) ? totalCount : 0,
-  }
 }
 
 /**

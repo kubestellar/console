@@ -8,6 +8,8 @@ import type { GatekeeperStatus, StartMissionFn } from './types'
 import { POLICY_TEMPLATES } from './types'
 import { copyToClipboard } from '../../../lib/clipboard'
 
+const OPA_CREATE_TIMEOUT_MS = 20_000
+
 // Creation flow type for CreatePolicyModal
 type CreateFlow = 'choose' | 'describe' | 'template' | 'yaml'
 
@@ -62,7 +64,7 @@ export function CreatePolicyModal({
       try {
         const podsResult = await kubectlProxy.exec(
           ['get', 'pods', '-A', '-o', 'json'],
-          { context: selectedCluster, timeout: 20000 }
+          { context: selectedCluster, timeout: OPA_CREATE_TIMEOUT_MS }
         )
 
         if (podsResult.output) {
@@ -271,7 +273,7 @@ Please proceed with applying this policy.`,
                 value={selectedCluster}
                 onChange={(e) => setSelectedCluster(e.target.value)}
                 disabled={isAnalyzing}
-                className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50 disabled:opacity-50"
+                className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50 disabled:opacity-50"
               >
                 {installedClusters.map(name => (
                   <option key={name} value={name}>{name}</option>
@@ -378,7 +380,7 @@ Please proceed with applying this policy.`,
                 <textarea
                   value={userDescription}
                   onChange={(e) => setUserDescription(e.target.value)}
-                  className="w-full h-32 p-3 bg-secondary/50 border border-border rounded-lg text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                  className="w-full h-32 p-3 bg-secondary/50 border border-border rounded-lg text-sm text-foreground resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                   placeholder="e.g., Block all pods that don't have a 'team' label, require all containers to have memory limits, prevent images from untrusted registries..."
                   autoFocus
                 />
@@ -438,7 +440,7 @@ Please proceed with applying this policy.`,
                 <textarea
                   value={yamlContent}
                   onChange={(e) => setYamlContent(e.target.value)}
-                  className="w-full h-[40vh] p-3 bg-secondary/50 border border-border rounded-lg font-mono text-sm text-foreground resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+                  className="w-full h-[40vh] p-3 bg-secondary/50 border border-border rounded-lg font-mono text-sm text-foreground resize-none focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                   placeholder="# Paste or write your ConstraintTemplate and Constraint YAML here..."
                   spellCheck={false}
                   autoFocus

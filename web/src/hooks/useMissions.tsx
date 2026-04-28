@@ -4,8 +4,12 @@ import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { useLocalAgent } from './useLocalAgent'
+import { agentFetch } from './mcp/shared'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
+import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
 import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
@@ -76,6 +80,9 @@ interface MissionContextValue {
   runSavedMission: (missionId: string, cluster?: string) => void
   updateSavedMission: (missionId: string, updates: SavedMissionUpdates) => void
   sendMessage: (missionId: string, content: string) => void
+  /** Remove a user message and all subsequent messages, returning the content
+   *  so the caller can populate the chat input for editing. (#10450) */
+  editAndResend: (missionId: string, messageId: string) => string | null
   retryPreflight: (missionId: string) => void
   cancelMission: (missionId: string) => void
   dismissMission: (missionId: string) => void
@@ -121,7 +128,7 @@ const MISSION_RECONNECT_DELAY_MS = 500
  * half-finished prompt. 30 minutes is conservative: it covers lunch/
  * meeting gaps while still protecting against overnight reconnects.
  */
-const MISSION_RECONNECT_MAX_AGE_MS = 30 * 60 * 1000
+const MISSION_RECONNECT_MAX_AGE_MS = 30 * MS_PER_MINUTE
 /**
  * issue 6429 — Cap how many prior messages we re-append to the prompt on
  * reconnect. Long-running missions can accumulate hundreds of turns; some
@@ -192,6 +199,7 @@ const WAITING_INPUT_TIMEOUT_MS = 600_000 // 10 minutes
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
+  const { isConnected: isAgentConnected } = useLocalAgent()
   // #7313 — Restore the active mission ID from localStorage so a reload
   // remembers which mission was selected. Sidebar visibility is restored
   // separately via SIDEBAR_OPEN_STORAGE_KEY (kc_mission_sidebar_open).
@@ -426,8 +434,15 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       suppressNextSaveRef.current = false
       return
     }
-    lastWrittenAtRef.current = Date.now()
-    saveMissions(missions)
+    // #9617 — Debounce saves to avoid JSON.stringify on every SSE chunk.
+    // During streaming, missions update on every chunk (~50ms). Without
+    // debouncing, saveMissions runs synchronous JSON.stringify on the full
+    // mission array for every chunk, blocking the main thread.
+    const timer = setTimeout(() => {
+      lastWrittenAtRef.current = Date.now()
+      saveMissions(missions)
+    }, 500)
+    return () => clearTimeout(timer)
   }, [missions])
 
   // #6668 — Listen for cross-tab mission updates. When another tab writes
@@ -553,6 +568,58 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveUnreadMissionIds(unreadMissionIds)
   }, [unreadMissionIds])
+
+  // #10525 — Clear stale agent-unavailable errors when the agent reconnects.
+  // When a mission fails because the local agent was disconnected, the error
+  // message gets locked into the chat history. Once the agent reconnects, we
+  // transition those failed missions back to 'saved' so the user can retry
+  // cleanly without seeing the stale "Local Agent Not Connected" error.
+  const prevAgentConnected = useRef(isAgentConnected)
+  useEffect(() => {
+    const wasConnected = prevAgentConnected.current
+    prevAgentConnected.current = isAgentConnected
+    if (!wasConnected && isAgentConnected) {
+      setMissions(prev => {
+        const hasStale = prev.some(m =>
+          m.status === 'failed' &&
+          m.messages.some(msg =>
+            msg.role === 'system' && (
+              msg.content.includes('Local Agent Not Connected') ||
+              msg.content.includes('agent not available') ||
+              msg.content.includes('agent not responding')
+            )
+          )
+        )
+        if (!hasStale) return prev
+        return prev.map(m => {
+          if (m.status !== 'failed') return m
+          // Find the last system message with stale agent error
+          let staleIdx = -1
+          for (let i = m.messages.length - 1; i >= 0; i--) {
+            const msg = m.messages[i]
+            if (
+              msg.role === 'system' && (
+                msg.content.includes('Local Agent Not Connected') ||
+                msg.content.includes('agent not available') ||
+                msg.content.includes('agent not responding')
+              )
+            ) {
+              staleIdx = i
+              break
+            }
+          }
+          if (staleIdx === -1) return m
+          const cleanedMessages = m.messages.filter((_, i) => i !== staleIdx)
+          return {
+            ...m,
+            status: 'saved' as MissionStatus,
+            currentStep: undefined,
+            messages: cleanedMessages,
+          }
+        })
+      })
+    }
+  }, [isAgentConnected])
 
   // Periodically check for missions stuck in "running" state.
   // Two failure conditions are detected (#2375, #3079):
@@ -696,7 +763,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         // The backoff is reset later, after the first application-layer
         // message actually arrives, not here.
         connectionEstablished.current = false
-        wsRef.current = new WebSocket(LOCAL_AGENT_WS_URL)
+        wsRef.current = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)
@@ -1409,12 +1476,21 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     const isDedicatedCancelAck =
       message.type === CANCEL_ACK_MESSAGE_TYPE ||
       message.type === CANCEL_CONFIRMED_MESSAGE_TYPE
+    // #9477 — The backend may send `cancelled` without `sessionId` in the
+    // payload (e.g. when the cancel request payload itself had an empty
+    // sessionId, or when a proxy strips the field). Previously the check
+    // required BOTH `cancelled` AND `sessionId` in the payload, causing the
+    // message to fall through to the generic result handler where it was
+    // silently dropped (the cancel message's `id` is `cancel-<ts>`, which
+    // is never registered in pendingRequests). This left the UI stuck on
+    // "Cancelling..." indefinitely. Now we only require `cancelled` in the
+    // payload, and fall back to resolving the mission ID from cancelIntents
+    // or the missions list when `sessionId`/`id` are absent.
     const isCancelResultMessage =
       message.type === 'result' &&
       !!message.payload &&
       typeof message.payload === 'object' &&
-      'cancelled' in (message.payload as Record<string, unknown>) &&
-      'sessionId' in (message.payload as Record<string, unknown>)
+      'cancelled' in (message.payload as Record<string, unknown>)
     if (isDedicatedCancelAck || isCancelResultMessage) {
       const payload = message.payload as {
         sessionId?: string
@@ -1425,7 +1501,23 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       }
       // #7310 — Backend may send `id` instead of `sessionId` in the cancel_ack
       // payload. Check both fields to avoid a permanent cancelling state lock.
-      const cancelledMissionId = payload.sessionId || payload.id
+      // #9477 — When neither field is present, resolve the mission ID from the
+      // active cancel intents or from missions currently in 'cancelling' status.
+      let cancelledMissionId = payload.sessionId || payload.id
+      if (!cancelledMissionId) {
+        // First try cancelIntents — the authoritative set of missions with
+        // pending cancellation requests.
+        const intentIds = Array.from(cancelIntents.current)
+        if (intentIds.length === 1) {
+          cancelledMissionId = intentIds[0]
+        } else {
+          // Fall back to the first mission in 'cancelling' status.
+          const cancellingMission = missionsRef.current.find(m => m.status === 'cancelling')
+          if (cancellingMission) {
+            cancelledMissionId = cancellingMission.id
+          }
+        }
+      }
       if (cancelledMissionId) {
         // Treat either `success === false` (cancel_ack shape) or
         // `cancelled === false` (result shape from handleCancelChat) as a
@@ -1704,9 +1796,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         if (m.status === 'running') {
           // #7326 — Cap duration at 24 hours to prevent numeric overflow
           // from clock skew or backgrounded tabs.
-          const MAX_MISSION_DURATION_SEC = 86_400 // 24 hours
           const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
-          const clampedDuration = Math.min(Math.max(rawDuration, 0), MAX_MISSION_DURATION_SEC)
+          const clampedDuration = Math.min(Math.max(rawDuration, 0), SECONDS_PER_DAY)
           emitMissionCompleted(m.type, clampedDuration)
           // Notify data-dependent components (e.g. ACMM scan) so they
           // re-fetch after a mission may have changed the repo's state.
@@ -1908,6 +1999,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           preflight.error?.code || 'preflight_unknown',
           preflight.error?.message
         )
+        if (preflight.error?.message) {
+          emitError('cluster_access', preflight.error.message)
+        }
         return
       }
 
@@ -2343,6 +2437,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             ]
           } : m
         ))
+        if (preflight.error?.message) {
+          emitError('cluster_access', preflight.error.message)
+        }
         return
       }
 
@@ -2571,9 +2668,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     } else {
       // HTTP fallback — WS may be disconnected during long agent runs.
       // Use the response body to determine if cancellation succeeded (#5477).
-      fetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
+      agentFetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ sessionId: missionId }) }).then(async response => {
         // #7303 — Guard against post-unmount finalization from HTTP fallback
         if (unmountedRef.current) return
@@ -2733,6 +2830,29 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
+  }
+
+  // Edit and resend: remove a user message and everything after it,
+  // returning the original content so the UI can populate the input (#10450).
+  const editAndResend = (missionId: string, messageId: string): string | null => {
+    let removedContent: string | null = null
+    setMissions(prev => prev.map(m => {
+      if (m.id !== missionId) return m
+      const msgIndex = m.messages.findIndex(msg => msg.id === messageId)
+      if (msgIndex < 0) return m
+      const targetMsg = m.messages[msgIndex]
+      if (targetMsg.role !== 'user') return m
+      removedContent = targetMsg.content
+      return {
+        ...m,
+        // Truncate from the edited message onward
+        messages: m.messages.slice(0, msgIndex),
+        // Reset status so the user can re-send
+        status: m.status === 'running' || m.status === 'cancelling' ? m.status : 'waiting_input' as MissionStatus,
+        updatedAt: new Date(),
+      }
+    }))
+    return removedContent
   }
 
   // Dismiss/remove a mission from the list
@@ -3013,13 +3133,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // state changes.
   const handlersRef = useRef({
     startMission, saveMission, runSavedMission, updateSavedMission, sendMessage,
-    retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
+    editAndResend, retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
     setActiveMission, markMissionAsRead, selectAgent, connectToAgent,
     toggleSidebar, openSidebar, closeSidebar, minimizeSidebar, expandSidebar,
     handleSetFullScreen, confirmPendingReview, cancelPendingReview })
   handlersRef.current = {
     startMission, saveMission, runSavedMission, updateSavedMission, sendMessage,
-    retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
+    editAndResend, retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
     setActiveMission, markMissionAsRead, selectAgent, connectToAgent,
     toggleSidebar, openSidebar, closeSidebar, minimizeSidebar, expandSidebar,
     handleSetFullScreen, confirmPendingReview, cancelPendingReview }
@@ -3036,6 +3156,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       handlersRef.current.updateSavedMission(...args),
     sendMessage: (...args: Parameters<typeof sendMessage>) =>
       handlersRef.current.sendMessage(...args),
+    editAndResend: (...args: Parameters<typeof editAndResend>) =>
+      handlersRef.current.editAndResend(...args),
     retryPreflight: (...args: Parameters<typeof retryPreflight>) =>
       handlersRef.current.retryPreflight(...args),
     cancelMission: (...args: Parameters<typeof cancelMission>) =>
@@ -3151,6 +3273,7 @@ const MISSIONS_FALLBACK: MissionContextValue = {
   runSavedMission: () => {},
   updateSavedMission: () => {},
   sendMessage: () => {},
+  editAndResend: () => null,
   retryPreflight: () => {},
   cancelMission: () => {},
   dismissMission: () => {},

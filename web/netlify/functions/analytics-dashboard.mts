@@ -10,6 +10,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
+import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -868,15 +869,20 @@ async function fetchDashboardData(
 // ---------------------------------------------------------------------------
 
 export default async (req: Request) => {
+  // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
+  const corsOpts = {
+    methods: "GET, OPTIONS",
+    headers: "Content-Type",
+  };
+  /** Browser cache: 15 min — analytics rollups refresh infrequently. */
+  const ANALYTICS_BROWSER_CACHE_S = 900;
   const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Cache-Control": "public, max-age=900", // 15 min browser cache
+    ...buildCorsHeaders(req, corsOpts),
+    "Cache-Control": `public, max-age=${ANALYTICS_BROWSER_CACHE_S}`,
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return handlePreflight(req, corsOpts);
   }
 
   // Load service account credentials

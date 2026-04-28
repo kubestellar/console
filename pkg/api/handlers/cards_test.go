@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -186,11 +187,11 @@ type recordFocusStore struct {
 	dashboard *models.Dashboard
 }
 
-func (s *recordFocusStore) GetCard(id uuid.UUID) (*models.Card, error) {
+func (s *recordFocusStore) GetCard(_ context.Context, id uuid.UUID) (*models.Card, error) {
 	return s.card, nil
 }
 
-func (s *recordFocusStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) {
+func (s *recordFocusStore) GetDashboard(_ context.Context, id uuid.UUID) (*models.Dashboard, error) {
 	return s.dashboard, nil
 }
 
@@ -275,9 +276,11 @@ type cardMutationStore struct {
 	updateErr      error
 	updateCalled   bool
 	lastUpdate     *models.Card
+	moveErr        error
+	moveCalled     bool
 }
 
-func (s *cardMutationStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error) {
+func (s *cardMutationStore) GetDashboard(_ context.Context, id uuid.UUID) (*models.Dashboard, error) {
 	if s.dashboardByID != nil {
 		if d, ok := s.dashboardByID[id]; ok {
 			return d, nil
@@ -286,28 +289,33 @@ func (s *cardMutationStore) GetDashboard(id uuid.UUID) (*models.Dashboard, error
 	return s.dashboard, nil
 }
 
-func (s *cardMutationStore) GetCard(id uuid.UUID) (*models.Card, error) {
+func (s *cardMutationStore) GetCard(_ context.Context, id uuid.UUID) (*models.Card, error) {
 	return s.card, nil
 }
 
-func (s *cardMutationStore) GetDashboardCards(dashboardID uuid.UUID) ([]models.Card, error) {
+func (s *cardMutationStore) GetDashboardCards(_ context.Context, dashboardID uuid.UUID) ([]models.Card, error) {
 	if s.dashboardCards != nil {
 		return s.dashboardCards[dashboardID], nil
 	}
 	return nil, nil
 }
 
-func (s *cardMutationStore) CreateCardWithLimit(card *models.Card, maxCards int) error {
+func (s *cardMutationStore) CreateCardWithLimit(_ context.Context, card *models.Card, maxCards int) error {
 	s.createCalled = true
 	s.lastCreate = card
 	s.lastMaxCards = maxCards
 	return s.createErr
 }
 
-func (s *cardMutationStore) UpdateCard(card *models.Card) error {
+func (s *cardMutationStore) UpdateCard(_ context.Context, card *models.Card) error {
 	s.updateCalled = true
 	s.lastUpdate = card
 	return s.updateErr
+}
+
+func (s *cardMutationStore) MoveCardWithLimit(_ context.Context, _ uuid.UUID, _ uuid.UUID, _ int) error {
+	s.moveCalled = true
+	return s.moveErr
 }
 
 // newCardMutationApp wires a CardHandler backed by cardMutationStore, with
@@ -388,6 +396,7 @@ func TestMoveCard_RejectsWhenTargetAtLimit(t *testing.T) {
 			DashboardID: sourceDashID,
 			CardType:    models.CardTypeClusterHealth,
 		},
+		moveErr: store.ErrDashboardCardLimitReached,
 	}
 
 	hub := NewHub()
@@ -410,7 +419,7 @@ func TestMoveCard_RejectsWhenTargetAtLimit(t *testing.T) {
 	resp, err := app.Test(req, fiberTestTimeout)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
-	assert.False(t, wrapper.updateCalled, "store must not be updated when target is at limit")
+	assert.True(t, wrapper.moveCalled, "MoveCardWithLimit must be called")
 }
 
 // --- Viewer denial ---
@@ -567,7 +576,7 @@ type failingUserStore struct {
 	*cardMutationStore
 }
 
-func (s *failingUserStore) GetUser(id uuid.UUID) (*models.User, error) {
+func (s *failingUserStore) GetUser(_ context.Context, id uuid.UUID) (*models.User, error) {
 	return nil, assert.AnError
 }
 

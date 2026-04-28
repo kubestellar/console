@@ -222,7 +222,7 @@ export function UnifiedCardsSection({
                 onChange={(e) => handleUnifiedSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && browseSearch.trim() && handleGenerateWithQuery(browseSearch)}
                 placeholder="Search cards or describe what you want to monitor..."
-                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
               />
             </div>
             <button
@@ -347,7 +347,7 @@ export function UnifiedCardsSection({
       </div>
 
       {/* Sticky footer — always rendered to prevent height shift; hidden when nothing selected */}
-      <div className={`border-t border-border px-4 py-3 flex items-center justify-between flex-shrink-0 transition-all ${
+      <div className={`border-t border-border px-4 py-3 flex items-center justify-between shrink-0 transition-all ${
         totalSelected > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none h-0 py-0 overflow-hidden border-t-0'
       }`}>
         <span className="text-sm text-muted-foreground">

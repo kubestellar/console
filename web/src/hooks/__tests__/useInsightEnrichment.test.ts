@@ -14,6 +14,13 @@ import { renderHook } from '@testing-library/react'
 let mockAgentConnected = false
 let mockAgentUnavailable = false
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../useLocalAgent', () => ({
   isAgentConnected: () => mockAgentConnected,
   isAgentUnavailable: () => mockAgentUnavailable,

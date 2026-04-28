@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Database, AlertCircle } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useClusters } from '../../hooks/useMCP'
 import type { PVC } from '../../hooks/useMCP'
 import { useCachedPVCs } from '../../hooks/useCachedData'
@@ -68,7 +67,7 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all' }: PV
           placeholder={t('common.searchPVCs')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+          className="w-full px-3 py-2 rounded-lg bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/50"
         />
       </div>
 
@@ -128,7 +127,6 @@ export function Storage() {
   const { pvcs, error: pvcsError } = useCachedPVCs()
   const error = clustersError || pvcsError
   const { drillToResources } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // PVC List Modal state
   const { isOpen: showPVCModal, open: openPVCModal, close: closePVCModal } = useModalState()
@@ -250,7 +248,7 @@ export function Storage() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <>
@@ -275,7 +273,7 @@ export function Storage() {
         {/* Error Display */}
         {error && (
           <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-red-400">Error loading storage data</p>
               <p className="text-xs text-muted-foreground mt-1">{error}</p>

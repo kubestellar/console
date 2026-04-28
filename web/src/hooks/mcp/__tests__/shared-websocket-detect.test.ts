@@ -28,6 +28,13 @@ const mockResetAllCacheFailures = vi.hoisted(() => vi.fn())
 const mockKubectlProxyExec = vi.hoisted(() => vi.fn())
 const mockApiGet = vi.hoisted(() => vi.fn())
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/api', () => ({
   api: { get: mockApiGet },
   isBackendUnavailable: mockIsBackendUnavailable,
@@ -110,6 +117,7 @@ import {
   updateSingleClusterInCache,
   setInitialFetchStarted,
   setHealthCheckFailures,
+  getHealthCheckFailures,
   initialFetchStarted,
   healthCheckFailures,
   // WebSocket
@@ -406,7 +414,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
     setHealthCheckFailures(0)
     await fetchSingleClusterHealth('err-cluster')
 
-    expect(healthCheckFailures).toBe(1)
+    expect(getHealthCheckFailures()).toBe(1)
   })
 
   it('resets healthCheckFailures to 0 on successful backend response', async () => {
@@ -417,7 +425,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
     })
 
     await fetchSingleClusterHealth('ok-cluster')
-    expect(healthCheckFailures).toBe(0)
+    expect(getHealthCheckFailures()).toBe(0)
   })
 
   it('returns null when backend JSON parse fails', async () => {
@@ -469,7 +477,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('sends Authorization header when token exists', async () => {
     mockIsAgentUnavailable.mockReturnValue(true) // skip agent
-    localStorage.setItem('token', 'my-jwt')
+    localStorage.setItem('kc-agent-token', 'my-jwt')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -484,7 +492,7 @@ describe('fetchSingleClusterHealth — backend error paths', () => {
 
   it('omits Authorization header when no token', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
-    localStorage.removeItem('token')
+    localStorage.removeItem('kc-agent-token')
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,

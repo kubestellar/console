@@ -1,6 +1,5 @@
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useCachedLLMdModels } from '../../hooks/useCachedData'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -19,7 +18,6 @@ export function AIML() {
   const { t } = useTranslation('common')
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { nodes: gpuNodes, isLoading: gpuLoading } = useGPUNodes()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Get GPU cluster names for intelligent LLM-d cluster discovery
   const gpuClusterNames = new Set(gpuNodes.map(n => n.cluster))
@@ -76,7 +74,7 @@ export function AIML() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <StackProvider>

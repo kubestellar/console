@@ -29,7 +29,7 @@ export function MissionCTA() {
 
   return (
     <div className="mb-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center gap-3">
-      <Sparkles className="w-5 h-5 text-purple-400 flex-shrink-0" />
+      <Sparkles className="w-5 h-5 text-purple-400 shrink-0" />
       <div className="flex-1">
         <span className="text-sm font-medium text-purple-300">Try AI Missions</span>
         <span className="text-sm text-purple-400/80 ml-2">

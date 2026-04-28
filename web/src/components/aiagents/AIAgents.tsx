@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useKagentiSummary } from '../../hooks/mcp/kagenti'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
 import { useTranslation } from 'react-i18next'
 import { AgentIcon } from '../agent/AgentIcon'
 import { ExternalLink } from 'lucide-react'
+import { Button } from '../ui/Button'
 import { aiAgentsDashboardConfig } from '../../config/dashboards/ai-agents'
 import { RotatingTip } from '../ui/RotatingTip'
 
@@ -26,7 +26,6 @@ function getTabDefaultCards(tabId: string) {
 export function AIAgents() {
   const { t } = useTranslation('common')
   const { summary, isLoading, isDemoData: hookIsDemoData, refetch, error } = useKagentiSummary()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const tabs = aiAgentsDashboardConfig.tabs || []
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || 'kagenti')
 
@@ -53,7 +52,7 @@ export function AIAgents() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Issue 8883: WAI-ARIA tablist keyboard navigation. ArrowLeft/Right move
   // between enabled tabs, Home/End jump to the first/last enabled tab,
@@ -80,15 +79,17 @@ export function AIAgents() {
   const tabBar = tabs.length > 0 ? (
     <div className="flex items-center gap-1 mb-6 border-b border-border" role="tablist">
       {tabs.map(tab => (
-        <button
+        <Button
           key={tab.id}
+          variant="ghost"
+          size="md"
           onClick={() => !tab.disabled && setActiveTab(tab.id)}
           onKeyDown={handleTabKeyDown}
           disabled={tab.disabled}
           role="tab"
           aria-selected={activeTab === tab.id}
           tabIndex={activeTab === tab.id ? 0 : -1}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+          className={`rounded-none border-b-2 -mb-px ${
             activeTab === tab.id
               ? 'border-purple-500 text-foreground'
               : tab.disabled
@@ -109,7 +110,7 @@ export function AIAgents() {
               Install <ExternalLink className="w-2.5 h-2.5" />
             </a>
           )}
-        </button>
+        </Button>
       ))}
     </div>
   ) : null

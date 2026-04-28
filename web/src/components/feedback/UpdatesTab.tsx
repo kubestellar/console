@@ -10,6 +10,7 @@ import { isTriaged } from '../../hooks/useFeatureRequests'
 import type { FeatureRequest } from '../../hooks/useFeatureRequests'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { MS_PER_SECOND } from '../../lib/constants/time'
 import { ContributorBanner } from '../rewards/ContributorLadder'
 import { GITHUB_REWARD_LABELS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
@@ -56,8 +57,6 @@ interface UpdatesTabProps {
   onShowLoginPrompt: () => void
 }
 
-/** Number of milliseconds in one second (for preview warmup countdown) */
-const MS_PER_SECOND = 1000
 
 export function UpdatesTab({
   requests,
@@ -169,7 +168,7 @@ export function UpdatesTab({
       </div>
 
       {/* Actions header */}
-      <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+      <div className="p-2 border-b border-border/50 flex items-center justify-between shrink-0">
         {actionError ? (
           <span className="text-xs text-red-400">{actionError}</span>
         ) : (
@@ -192,7 +191,7 @@ export function UpdatesTab({
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         {/* Your Requests section */}
-        <div className="p-2 border-b border-border/50 flex-shrink-0">
+        <div className="p-2 border-b border-border/50 shrink-0">
           <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
             Your Requests ({requests.length})
           </span>
@@ -434,7 +433,7 @@ function UntriagedRequestContent({
 }) {
   return isOwnedByUser ? (
     <>
-      <p className="text-sm font-medium text-foreground mt-1 truncate blur-sm select-none">
+      <p className="text-sm font-medium text-foreground mt-1 truncate blur-xs select-none">
         {request.request_type === 'bug' ? '\uD83D\uDC1B ' : '\u2728 '}{request.title}
       </p>
       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -492,7 +491,7 @@ function TriagedRequestContent({
 }) {
   return (
     <>
-      <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-sm select-none' : ''}`}>
+      <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-xs select-none' : ''}`}>
         {request.request_type === 'bug' ? '\uD83D\uDC1B ' : '\u2728 '}{request.title}
       </p>
       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -505,7 +504,7 @@ function TriagedRequestContent({
           </span>
         )}
         {getStatusDescription(request.status, request.closed_by_user) && (
-          <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-sm select-none' : ''}`}>
+          <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-xs select-none' : ''}`}>
             {getStatusDescription(request.status, request.closed_by_user)}
           </span>
         )}
@@ -748,7 +747,7 @@ function GitHubContributionsSection({
 }: GitHubContributionsSectionProps) {
   return (
     <>
-      <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+      <div className="p-2 border-b border-border/50 flex items-center justify-between shrink-0">
         <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
           <Github className="w-3 h-3" />
           {currentGitHubLogin ? `${currentGitHubLogin}'s` : ''} GitHub Contributions
@@ -768,7 +767,7 @@ function GitHubContributionsSection({
                 window.open(linkedInUrl, '_blank', `noopener,noreferrer,width=${LINKEDIN_POPUP_SIZE},height=${LINKEDIN_POPUP_SIZE}`)
                 emitLinkedInShare('feature_request')
               }}
-              className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-[#0A66C2] transition-colors"
+              className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-linkedin transition-colors"
               title={`Share ${githubPoints.toLocaleString()} coins on LinkedIn`}
             >
               <Linkedin className="w-3.5 h-3.5" />
@@ -789,7 +788,7 @@ function GitHubContributionsSection({
         // (kubestellar, llm-d) — NOT only items submitted via this console.
         // The Rewards panel's "Submitted via console" line counts a different
         // (smaller) population. See kubestellar/console#8893 for context.
-        <div className="px-3 py-2 border-b border-border/50 flex-shrink-0">
+        <div className="px-3 py-2 border-b border-border/50 shrink-0">
           <div className="flex flex-wrap gap-1.5">
             {githubRewards.breakdown.prs_merged > 0 && (
               <StatusBadge color="purple" size="xs" rounded="full" icon={<GitMerge className="w-2.5 h-2.5" />}>
@@ -824,7 +823,7 @@ function GitHubContributionsSection({
               </StatusBadge>
             )}
             {githubRewards.breakdown.other_issues > 0 && (
-              <StatusBadge color="purple" size="xs" rounded="full" className="!bg-gray-500/20 !text-muted-foreground" icon={<AlertCircle className="w-2.5 h-2.5" />}>
+              <StatusBadge color="purple" size="xs" rounded="full" className="bg-gray-500/20! text-muted-foreground!" icon={<AlertCircle className="w-2.5 h-2.5" />}>
                 {githubRewards.breakdown.other_issues} Issues
               </StatusBadge>
             )}
@@ -866,7 +865,7 @@ function GitHubContributionsSection({
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <GitHubContributionIcon type={contrib.type} />
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm text-foreground truncate group-hover:text-blue-400 transition-colors ${isUntriaged ? 'blur-sm select-none' : ''}`}>
+                    <p className={`text-sm text-foreground truncate group-hover:text-blue-400 transition-colors ${isUntriaged ? 'blur-xs select-none' : ''}`}>
                       {contrib.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -874,7 +873,7 @@ function GitHubContributionsSection({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                <div className="flex items-center gap-2 shrink-0 ml-2">
                   <span className="text-xs text-yellow-400 font-medium">+{contrib.points}</span>
                   <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
@@ -882,6 +881,20 @@ function GitHubContributionsSection({
             )
           })
         })()
+      )}
+
+      {githubRewards && currentGitHubLogin && (
+        <div className="p-2.5 border-t border-border/50 text-center">
+          <a
+            href={`https://github.com/search?q=author:${encodeURIComponent(currentGitHubLogin)}+org:kubestellar+org:llm-d&type=issues&s=updated&o=desc`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            View all contributions on GitHub
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
       )}
 
       {githubRewards?.from_cache && (

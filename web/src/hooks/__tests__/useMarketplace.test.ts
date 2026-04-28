@@ -8,6 +8,13 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 const mockApiGet = vi.fn()
 const mockApiPost = vi.fn()
 const mockApiDelete = vi.fn()
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../lib/api', () => ({
   api: {
     get: (...args: unknown[]) => mockApiGet(...args),
@@ -330,6 +337,27 @@ describe('useMarketplace', () => {
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
     })
+    expect(result.current.allItems[0].status).toBe('available')
+    expect(result.current.allItems[0].tags).not.toContain('help-wanted')
+  })
+
+  it('maps cncf-flux to flux_status during reconcile', async () => {
+    const items = [
+      makeItem({
+        id: 'cncf-flux',
+        status: 'help-wanted',
+        tags: ['cncf', 'help-wanted'],
+      }),
+    ]
+    mockIsCardTypeRegistered.mockImplementation((t: string) => t === 'flux_status')
+    seedCache(items)
+
+    const { result } = renderHook(() => useMarketplace())
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
     expect(result.current.allItems[0].status).toBe('available')
     expect(result.current.allItems[0].tags).not.toContain('help-wanted')
   })

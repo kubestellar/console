@@ -22,6 +22,7 @@ import {
 } from './helpers'
 import { KUBEFLEX_DEMO_DATA, type KubeFlexStatusDemoData } from './demoData'
 import { LOCAL_AGENT_HTTP_URL } from '../../../../lib/constants/network'
+import { agentFetch } from '../../../../hooks/mcp/shared'
 
 // ============================================================================
 // Data Interface
@@ -71,7 +72,7 @@ interface BackendPodInfo {
 // ============================================================================
 
 async function fetchKubeFlexStatus(): Promise<KubeFlexStatus> {
-  const podsResp = await fetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
+  const podsResp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pods`, {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
   })

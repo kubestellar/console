@@ -13,6 +13,13 @@ afterEach(() => {
   globalThis.fetch = originalFetch
 })
 
+vi.mock('../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 describe('useMediumBlog', () => {
   it('returns loading state initially', () => {
     globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {}))

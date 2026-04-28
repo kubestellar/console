@@ -161,7 +161,7 @@ Please proceed step by step.`,
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search policies..."
-                  className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                 />
               </div>
               {status.totalPolicies === 0 && (
@@ -281,7 +281,7 @@ function PolicyRow({
             {policy.status}
           </StatusBadge>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {policy.violations > 0 && (
             <span className="flex items-center gap-1 text-xs text-yellow-400">
               <AlertTriangle className="w-3 h-3" />

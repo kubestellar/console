@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Activity, AlertTriangle, CheckCircle, Clock, Server } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -8,6 +8,7 @@ import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
@@ -16,7 +17,9 @@ import {
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR } from '../../lib/constants'
+  CHART_TICK_COLOR,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE } from '../../lib/constants'
 
 interface TimePoint {
   time: string
@@ -39,7 +42,7 @@ const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: TimeRangeTranslatio
 // Group events by time buckets
 function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firstSeen?: string; count: number }>, bucketMinutes = 5, numBuckets = 12): TimePoint[] {
   const now = Date.now()
-  const bucketMs = bucketMinutes * 60 * 1000
+  const bucketMs = bucketMinutes * MS_PER_MINUTE
 
   // Initialize buckets
   const buckets: TimePoint[] = []
@@ -95,10 +98,11 @@ function EventsTimelineInternal() {
   const { deduplicatedClusters: clusters } = useClusters()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = events.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
     isDemoData: isDemoMode || isDemoFallback,
-    hasAnyData: events.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isRefreshing })
@@ -180,14 +184,14 @@ function EventsTimelineInternal() {
     xAxis: {
       type: 'category' as const,
       data: timeSeriesData.map(d => d.time),
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value' as const,
       minInterval: 1,
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
@@ -196,7 +200,7 @@ function EventsTimelineInternal() {
       trigger: 'axis' as const,
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-      textStyle: { color: CHART_TICK_COLOR, fontSize: 12 },
+      textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_BODY_FONT_SIZE },
     },
     series: [
       {
@@ -205,13 +209,13 @@ function EventsTimelineInternal() {
         stack: 'total',
         step: 'end' as const,
         data: timeSeriesData.map(d => d.warnings),
-        lineStyle: { color: '#f97316', width: 2 },
-        itemStyle: { color: '#f97316' },
+        lineStyle: { color: 'var(--chart-warning)', width: 2 },
+        itemStyle: { color: 'var(--chart-warning)' },
         areaStyle: {
           color: {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(249,115,22,0.4)' },
+              { offset: 0, color: 'var(--chart-warning-opaque)' },
               { offset: 1, color: 'rgba(249,115,22,0)' },
             ],
           },
@@ -224,13 +228,13 @@ function EventsTimelineInternal() {
         stack: 'total',
         step: 'end' as const,
         data: timeSeriesData.map(d => d.normal),
-        lineStyle: { color: '#22c55e', width: 2 },
-        itemStyle: { color: '#22c55e' },
+        lineStyle: { color: 'var(--chart-success)', width: 2 },
+        itemStyle: { color: 'var(--chart-success)' },
         areaStyle: {
           color: {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(34,197,94,0.4)' },
+              { offset: 0, color: 'var(--chart-success-opaque)' },
               { offset: 1, color: 'rgba(34,197,94,0)' },
             ],
           },
@@ -345,7 +349,7 @@ function EventsTimelineInternal() {
           </div>
         ) : (
           <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`Events timeline chart showing ${totalWarnings} warnings and ${totalNormal} normal events, peak ${peakEvents} events`}>
-            <ReactECharts
+            <LazyEChart
               option={chartOption}
               style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
               notMerge={true}

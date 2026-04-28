@@ -397,6 +397,9 @@ async function runMode(page: Page, mode: PerfMode): Promise<CardTTFIMetric[]> {
   await setupAuth(page, mockUser)
   if (mode.startsWith('live')) {
     await setupLiveMocks(page)
+  } else {
+    // Demo modes still need the catch-all API mock to prevent hangs
+    await setupLiveMocks(page)
   }
   await setMode(page, mode)
 

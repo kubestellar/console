@@ -55,7 +55,7 @@ export function SecurityAuditCard({ config }: SecurityAuditCardProps) {
           key={i}
           className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/15 transition-colors"
         >
-          <ShieldAlert className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+          <ShieldAlert className="w-3.5 h-3.5 text-red-400 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="font-medium text-foreground truncate">
               {event.syscall} <span className="text-red-400">({event.action})</span>

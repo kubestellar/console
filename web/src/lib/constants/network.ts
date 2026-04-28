@@ -22,18 +22,58 @@ const _isNetlify = typeof window !== 'undefined' && (
 )
 
 /**
- * WebSocket URL for the local kc-agent.
- * On Netlify, uses a syntactically-valid but unroutable URL so that `new WebSocket(url)`
- * never throws (Safari throws TypeError for empty/invalid URLs). The connection simply
- * fails via `onerror`, which all consumers already handle.
+ * Whether the local kc-agent should be suppressed.
+ * True on Netlify deployments, or when VITE_NO_LOCAL_AGENT is set at build time,
+ * or when the backend reports no_local_agent via /health (in-cluster deployments).
+ *
+ * The build-time VITE_NO_LOCAL_AGENT covers custom builds (e.g. CI, Docker).
+ * The runtime flag (set via suppressLocalAgent()) covers pre-built images
+ * deployed in-cluster where Vite env vars cannot be injected at runtime.
  */
-export const LOCAL_AGENT_WS_URL = _isNetlify ? 'ws://localhost:1/disabled' : 'ws://127.0.0.1:8585/ws'
+let _suppressAgent = _isNetlify || import.meta.env.VITE_NO_LOCAL_AGENT === 'true'
+
+/**
+ * Called by the BrandingProvider after fetching /health to suppress agent
+ * connections at runtime (e.g. in-cluster Helm deployments that ship a
+ * pre-built frontend image where VITE_NO_LOCAL_AGENT cannot be set).
+ *
+ * Once called with `true`, the agent URLs are permanently disabled for
+ * the lifetime of the page — there is no "un-suppress" path.
+ */
+export function suppressLocalAgent(suppress: boolean): void {
+  if (suppress && !_suppressAgent) {
+    _suppressAgent = true
+    // Update the mutable URLs so any future reads get the suppressed values
+    LOCAL_AGENT_WS_URL = AGENT_WS_DISABLED_URL
+    LOCAL_AGENT_HTTP_URL = ''
+  }
+}
+
+/** Check whether the local agent is suppressed (build-time or runtime). */
+export function isLocalAgentSuppressed(): boolean {
+  return _suppressAgent
+}
+
+/** Syntactically-valid but unroutable WS URL used when the agent is suppressed.
+ * Safari throws TypeError for empty/invalid URLs in `new WebSocket(url)`,
+ * so this ensures the constructor succeeds but the connection simply fails
+ * via `onerror`, which all consumers already handle. */
+const AGENT_WS_DISABLED_URL = 'ws://localhost:1/disabled'
+
+/**
+ * WebSocket URL for the local kc-agent.
+ * Suppressed (unroutable) when running on Netlify, in-cluster, or with
+ * VITE_NO_LOCAL_AGENT=true. The connection fails via `onerror`, which
+ * all consumers already handle.
+ */
+export let LOCAL_AGENT_WS_URL = _suppressAgent ? AGENT_WS_DISABLED_URL : 'ws://127.0.0.1:8585/ws'
 
 /**
  * HTTP URL for the local kc-agent.
- * Empty on Netlify — fetch calls become relative URLs (e.g. '/settings'), which 404 silently.
+ * Empty when suppressed — fetch calls become relative URLs (e.g. '/settings'),
+ * which 404 silently.
  */
-export const LOCAL_AGENT_HTTP_URL = _isNetlify ? '' : 'http://127.0.0.1:8585'
+export let LOCAL_AGENT_HTTP_URL = _suppressAgent ? '' : 'http://127.0.0.1:8585'
 
 /** Default backend URL — empty string means same-origin relative URL.
  * This ensures API requests work in deployed environments (custom domain,
@@ -67,6 +107,16 @@ export const KUBECTL_EXTENDED_TIMEOUT_MS = 30_000
 export const KUBECTL_MAX_TIMEOUT_MS = 45_000
 
 // ============================================================================
+// CRD Discovery Timeouts (shared by useKyverno, useTrivy, useKubescape, etc.)
+// ============================================================================
+
+/** Timeout for checking whether a CRD exists on a cluster */
+export const CRD_CHECK_TIMEOUT_MS = 8_000
+
+/** Timeout for fetching data after CRD presence is confirmed */
+export const CRD_DATA_FETCH_TIMEOUT_MS = 30_000
+
+// ============================================================================
 // API & Health Check Timeouts
 // ============================================================================
 
@@ -87,6 +137,9 @@ export const FETCH_DEFAULT_TIMEOUT_MS = 10_000
 
 /** Timeout for fetch() calls to external services (GitHub API, registries, etc.) */
 export const FETCH_EXTERNAL_TIMEOUT_MS = 15_000
+
+/** Timeout for RBAC queries that fan out across all clusters */
+export const RBAC_QUERY_TIMEOUT_MS = 60_000
 
 /** Extended timeout for feedback submissions with screenshot uploads (90 seconds).
  * Screenshots are uploaded server-side to GitHub via the Contents API, which can
@@ -165,15 +218,17 @@ export const MISSION_SUGGEST_INTERVAL_MS = 120_000
 /** Polling interval for nightly E2E run data (5 minutes) */
 export const NIGHTLY_E2E_POLL_INTERVAL_MS = 300_000
 
+/** Default auto-refresh interval for cached data hooks (2 minutes).
+ *  Most useCached* / use* hooks poll on this cadence. Import this
+ *  constant instead of defining a local `REFRESH_INTERVAL_MS = 120_000`. */
+export const DEFAULT_REFRESH_INTERVAL_MS = 120_000
+
 // ============================================================================
 // Loading & Timeout Thresholds
 // ============================================================================
 
 /** Timeout before showing "loading took too long" UI (5 seconds) */
 export const LOADING_TIMEOUT_MS = 5_000
-
-/** Extended loading timeout for cluster/page loads (10 seconds) */
-export const LOADING_TIMEOUT_EXTENDED_MS = 10_000
 
 /** Timeout for skeleton placeholder before showing fallback (100ms) */
 export const SKELETON_DELAY_MS = 100
@@ -238,6 +293,35 @@ export const FLASH_ANIMATION_MS = 1_100
 /** WebSocket reconnect delay (5 seconds) */
 export const WS_RECONNECT_DELAY_MS = 5_000
 
+// ============================================================================
+// WebSocket Reconnect with Exponential Backoff
+// ============================================================================
+
+/** Base delay for WebSocket reconnection attempts (doubles each retry) */
+export const WS_RECONNECT_BASE_DELAY_MS = 2_000
+
+/** Maximum delay between WebSocket reconnection attempts */
+export const WS_RECONNECT_MAX_DELAY_MS = 30_000
+
+/** Maximum WebSocket reconnection attempts before giving up */
+export const MAX_WS_RECONNECT_ATTEMPTS = 5
+
+/** Small random jitter added to backoff to avoid thundering herd */
+export const WS_BACKOFF_JITTER_MAX_MS = 1_000
+
+/**
+ * Calculate exponential backoff delay with jitter.
+ * Delay = min(base * 2^attempt, max) + random jitter
+ */
+export function getWsBackoffDelay(attempt: number): number {
+  const delay = Math.min(
+    WS_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt),
+    WS_RECONNECT_MAX_DELAY_MS,
+  )
+  const jitter = Math.random() * WS_BACKOFF_JITTER_MAX_MS
+  return delay + jitter
+}
+
 /** Delay for simulated AI thinking/processing (300ms) */
 export const AI_THINKING_DELAY_MS = 300
 
@@ -246,6 +330,9 @@ export const POPUP_HIDE_DELAY_MS = 150
 
 /** Hover tooltip hide delay (50ms) */
 export const TOOLTIP_HIDE_DELAY_MS = 50
+
+/** Hover tooltip/popover show delay — prevents flicker from incidental cursor pass-through */
+export const TOOLTIP_SHOW_DELAY_MS = 250
 
 // ============================================================================
 // AI Mission Chat Limits
@@ -287,9 +374,7 @@ export const SERVICES_CACHE_TTL_MS = 60_000
  * SERVICES_CACHE_TTL_MS. */
 export const SERVICES_CACHE_STALE_MS = 30_000
 
-/** Conversion factor from milliseconds to seconds, used when formatting
- * the "Cached • Ns ago" label. */
-export const MS_PER_SECOND = 1_000
+export { MS_PER_SECOND } from './time'
 
 // ============================================================================
 // Service port rendering (issue #6163)

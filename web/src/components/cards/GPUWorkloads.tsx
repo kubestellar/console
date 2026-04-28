@@ -13,6 +13,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import type { PodInfo } from '../../hooks/useMCP'
 import { useTranslation } from 'react-i18next'
+import { hasGPUResourceRequest, normalizeClusterName } from '../../lib/gpu'
 
 interface GPUWorkloadsProps {
   config?: Record<string, unknown>
@@ -41,21 +42,6 @@ const GPU_SORT_COMPARATORS: Record<SortByOption, (a: PodInfo, b: PodInfo) => num
   name: commonComparators.string<PodInfo>('name'),
   namespace: commonComparators.string<PodInfo>('namespace'),
   cluster: commonComparators.string<PodInfo>('cluster') }
-
-// Check if any container in the pod requests GPUs
-function hasGPUResourceRequest(containers?: { gpuRequested?: number }[]): boolean {
-  if (!containers) return false
-  return containers.some(c => (c.gpuRequested ?? 0) > 0)
-}
-
-// Normalize cluster name for matching (handle kubeconfig/xxx format)
-function normalizeClusterName(cluster: string): string {
-  if (!cluster) return ''
-  // If it's a path like "kubeconfig/cluster-name", extract just the cluster name
-  const parts = cluster.split('/')
-  return parts[parts.length - 1] || cluster
-}
-
 
 export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
   const { t } = useTranslation(['cards', 'common'])
@@ -319,7 +305,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Box className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                      <Box className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       <span className="text-sm font-medium text-foreground truncate">{pod.name}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
@@ -338,7 +324,7 @@ export function GPUWorkloads({ config: _config }: GPUWorkloadsProps) {
                       issues={[{ name: t('gpuWorkloads.podStatusName', { status: pod.status }), message: t('gpuWorkloads.podStatusMessage', { status: pod.status }) }]}
                     />
                   )}
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </div>
               </div>
             )

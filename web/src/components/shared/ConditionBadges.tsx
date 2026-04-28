@@ -1,11 +1,7 @@
 import { cn } from '../../lib/cn'
+import type { Condition } from '../../types/mcs'
 
-export interface Condition {
-  type: string
-  status: string
-  reason?: string
-  message?: string
-}
+export type { Condition }
 
 interface ConditionBadgesProps {
   conditions: Condition[]

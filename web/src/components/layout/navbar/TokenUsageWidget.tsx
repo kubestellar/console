@@ -88,7 +88,7 @@ export function TokenUsageWidget() {
 
       {/* Token details dropdown */}
       {showTokenDetails && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-4 z-50">
+        <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-4 z-dropdown">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-foreground">{t('layout.navbar.tokenUsage')}</h4>
             {isDemoData && (

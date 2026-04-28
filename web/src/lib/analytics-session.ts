@@ -8,6 +8,7 @@
 
 import { STORAGE_KEY_ANALYTICS_OPT_OUT, STORAGE_KEY_ANONYMOUS_USER_ID } from './constants'
 import type { UtmParams } from './analytics-types'
+import { MS_PER_MINUTE } from './constants/time'
 
 // ── Storage keys ───────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export const LAST_KEY = '_ksc_last'
 
 // ── Session ────────────────────────────────────────────────────────
 
-export const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 min
+export const SESSION_TIMEOUT_MS = 30 * MS_PER_MINUTE // 30 min
 
 // ── Bot / Headless Detection ────────────────────────────────────────
 // Automated installs (CI pipelines, cloud VMs running curl|bash) start

@@ -101,7 +101,7 @@ export function ClusterGroupsSection({
                 placeholder="Group name..."
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
                 autoFocus
               />
               <div className="text-xs text-muted-foreground mb-1">Select clusters for this group:</div>

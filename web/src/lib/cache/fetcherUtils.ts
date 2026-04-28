@@ -53,49 +53,69 @@ export function abortAllFetches(): void {
 // Core fetch helpers
 // ============================================================================
 
-export async function fetchAPI<T>(
-  endpoint: string,
-  params?: Record<string, string | number | undefined>
-): Promise<T> {
-  const token = getToken()
-  if (!token) {
-    throw new Error('No authentication token')
-  }
+type FetchParamValue = string | number | boolean | undefined
 
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        searchParams.append(key, String(value))
-      }
-    })
-  }
+interface RestFetcherConfig {
+  urlPrefix: string
+  timeoutMs: number
+  useGlobalAbort?: boolean
+  errorLabel: string
+}
 
-  const url = `${LOCAL_AGENT_HTTP_URL}/${endpoint}?${searchParams}`
-  // Combine the global abort signal with a per-request timeout.
-  // AbortSignal.any() fires if either signal triggers.
-  const signal = AbortSignal.any([
-    globalFetchController.signal,
-    AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-  ])
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}` },
-    signal })
+function makeRestFetcher(config: RestFetcherConfig) {
+  return async function restFetch<T>(
+    endpoint: string,
+    params?: Record<string, FetchParamValue>
+  ): Promise<T> {
+    const token = getToken()
+    if (!token) throw new Error('No authentication token')
 
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`)
-  }
+    const searchParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) searchParams.append(key, String(value))
+      })
+    }
 
-  const text = await response.text()
-  try {
-    return JSON.parse(text) as T
-  } catch {
-    throw new Error(`API returned non-JSON response from /api/mcp/${endpoint}`)
+    const url = `${config.urlPrefix}${endpoint}?${searchParams}`
+    const timeoutSignal = AbortSignal.timeout(config.timeoutMs)
+    const signal = config.useGlobalAbort
+      ? AbortSignal.any([globalFetchController.signal, timeoutSignal])
+      : timeoutSignal
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      signal })
+
+    if (!response.ok) throw new Error(`API error: ${response.status}`)
+    const text = await response.text()
+    try {
+      return JSON.parse(text) as T
+    } catch {
+      throw new Error(`API returned non-JSON response from ${config.errorLabel}/${endpoint}`)
+    }
   }
 }
+
+export const fetchAPI = makeRestFetcher({
+  urlPrefix: `${LOCAL_AGENT_HTTP_URL}/`,
+  timeoutMs: FETCH_DEFAULT_TIMEOUT_MS,
+  useGlobalAbort: true,
+  errorLabel: '/api/mcp',
+})
+
+/**
+ * Fetcher that targets the main backend (port 8080) via same-origin `/api/mcp/`.
+ * Use this for endpoints that only exist on the backend and have NOT been ported
+ * to the kc-agent (e.g. pod-issues, deployment-issues, events/warnings,
+ * security-issues, gpu-nodes/health/cronjob). See issue #9996.
+ */
+export const fetchBackendAPI = makeRestFetcher({
+  urlPrefix: '/api/mcp/',
+  timeoutMs: FETCH_DEFAULT_TIMEOUT_MS,
+  useGlobalAbort: true,
+  errorLabel: '/api/mcp',
+})
 
 // Get list of reachable (or not-yet-checked) clusters (prefer local agent data for accurate reachability)
 function getReachableClusters(): string[] {
@@ -260,6 +280,108 @@ export async function fetchViaSSE<T>(
 }
 
 /**
+ * Fetch data from all clusters via the main backend (port 8080).
+ * Identical to fetchFromAllClusters but routes through `/api/mcp/` instead of
+ * the local agent. Use this for backend-only endpoints that have NOT been
+ * ported to kc-agent (pod-issues, deployment-issues, events/warnings,
+ * security-issues, gpu-nodes/health). See issue #9996.
+ */
+export async function fetchFromAllClustersViaBackend<T>(
+  endpoint: string,
+  resultKey: string,
+  params?: Record<string, string | number | undefined>,
+  addClusterField = true,
+  onProgress?: (partial: T[]) => void,
+  options?: FetchFromAllClustersOptions
+): Promise<T[]> {
+  const clusters = await fetchClusters()
+  if (clusters.length === 0) {
+    throw new Error('No clusters available (agent connecting or backend not authenticated)')
+  }
+
+  const tasks = clusters.map((cluster) => async () => {
+    const data = await fetchBackendAPI<Record<string, T[]>>(endpoint, { ...params, cluster })
+    const items = data[resultKey] || []
+    return addClusterField ? items.map(item => ({ ...item, cluster })) : items
+  })
+
+  const accumulated: T[] = []
+  let failedCount = 0
+
+  function handleSettled(result: PromiseSettledResult<T[]>) {
+    if (result.status === 'fulfilled') {
+      accumulated.push(...result.value)
+      onProgress?.([...accumulated])
+    } else {
+      failedCount++
+    }
+  }
+  await settledWithConcurrency(tasks, undefined, handleSettled)
+
+  if (accumulated.length === 0 && clusters.length > 0 && failedCount === clusters.length) {
+    throw new Error('All cluster fetches failed')
+  }
+
+  if (
+    options?.throwIfPartialFailureEmpty &&
+    accumulated.length === 0 &&
+    failedCount > 0
+  ) {
+    throw new Error(
+      `Partial cluster failure yielded empty result (${failedCount}/${clusters.length} clusters errored) — preserving existing cache`,
+    )
+  }
+
+  return accumulated
+}
+
+/**
+ * Fetch data from all clusters using SSE streaming via the main backend.
+ * Identical to fetchViaSSE but routes through `/api/mcp/` instead of the
+ * local agent. Use this for backend-only endpoints. See issue #9996.
+ */
+export async function fetchViaBackendSSE<T>(
+  endpoint: string,
+  resultKey: string,
+  params?: Record<string, string | number | undefined>,
+  onProgress?: (partial: T[]) => void,
+  options?: FetchFromAllClustersOptions
+): Promise<T[]> {
+  const token = getToken()
+  if (!token || token === 'demo-token' || isBackendUnavailable()) {
+    return fetchFromAllClustersViaBackend<T>(endpoint, resultKey, params, true, onProgress, options)
+  }
+
+  try {
+    const accumulated: T[] = []
+    let clusterErrorCount = 0
+    const result = await fetchSSE<T>({
+      url: `/api/mcp/${endpoint}/stream`,
+      params,
+      itemsKey: resultKey,
+      onClusterData: (_cluster, items) => {
+        accumulated.push(...items)
+        onProgress?.([...accumulated])
+      },
+      onClusterError: () => {
+        clusterErrorCount += 1
+      } })
+    if (
+      options?.throwIfPartialFailureEmpty &&
+      result.length === 0 &&
+      clusterErrorCount > 0
+    ) {
+      throw new Error(
+        `Partial SSE failure yielded empty result (${clusterErrorCount} cluster_error events) — preserving existing cache`,
+      )
+    }
+    return result
+  } catch {
+    return fetchFromAllClustersViaBackend<T>(endpoint, resultKey, params, true, onProgress, options)
+  }
+}
+
+/**
  * Fetch GitOps data via SSE streaming (uses /api/gitops/ prefix).
  */
 export async function fetchViaGitOpsSSE<T>(
@@ -284,66 +406,14 @@ export async function fetchViaGitOpsSSE<T>(
     } })
 }
 
-/**
- * Fetch data from a GitOps REST endpoint.
- */
-export async function fetchGitOpsAPI<T>(
-  endpoint: string,
-  params?: Record<string, string | number | undefined>
-): Promise<T> {
-  const token = getToken()
-  if (!token) throw new Error('No authentication token')
+export const fetchGitOpsAPI = makeRestFetcher({
+  urlPrefix: '/api/gitops/',
+  timeoutMs: FETCH_DEFAULT_TIMEOUT_MS,
+  errorLabel: '/api/gitops',
+})
 
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) searchParams.append(key, String(value))
-    })
-  }
-
-  const url = `/api/gitops/${endpoint}?${searchParams}`
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-
-  if (!response.ok) throw new Error(`API error: ${response.status}`)
-  const gitopsText = await response.text()
-  try {
-    return JSON.parse(gitopsText) as T
-  } catch {
-    throw new Error(`API returned non-JSON response from /api/gitops/${endpoint}`)
-  }
-}
-
-/**
- * Fetch data from an RBAC REST endpoint (/api/rbac/).
- */
-export async function fetchRbacAPI<T>(
-  endpoint: string,
-  params?: Record<string, string | number | boolean | undefined>
-): Promise<T> {
-  const token = getToken()
-  if (!token) throw new Error('No authentication token')
-
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) searchParams.append(key, String(value))
-    })
-  }
-
-  const url = `/api/rbac/${endpoint}?${searchParams}`
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(RBAC_FETCH_TIMEOUT_MS) })
-
-  if (!response.ok) throw new Error(`API error: ${response.status}`)
-  const rbacText = await response.text()
-  try {
-    return JSON.parse(rbacText) as T
-  } catch {
-    throw new Error(`API returned non-JSON response from /api/rbac/${endpoint}`)
-  }
-}
+export const fetchRbacAPI = makeRestFetcher({
+  urlPrefix: '/api/rbac/',
+  timeoutMs: RBAC_FETCH_TIMEOUT_MS,
+  errorLabel: '/api/rbac',
+})

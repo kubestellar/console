@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../../../components/charts/LazyEChart'
 import type { CardContentChart, CardChartSeries, CardAxisConfig } from '../../types'
 import { CHART_TOOLTIP_CONTENT_STYLE_GRAY } from '../../../constants'
 
@@ -214,7 +214,7 @@ function LineChartRenderer({
 
   return (
     <div style={{ width: '100%', height }}>
-      <ReactECharts option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
+      <LazyEChart option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
     </div>
   )
 }
@@ -281,7 +281,7 @@ function AreaChartRenderer({
 
   return (
     <div style={{ width: '100%', height }}>
-      <ReactECharts option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
+      <LazyEChart option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
     </div>
   )
 }
@@ -344,7 +344,7 @@ function BarChartRenderer({
 
   return (
     <div style={{ width: '100%', height }}>
-      <ReactECharts option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
+      <LazyEChart option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
     </div>
   )
 }
@@ -401,7 +401,7 @@ function DonutChartRenderer({
 
   return (
     <div style={{ width: '100%', height }}>
-      <ReactECharts option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
+      <LazyEChart option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
     </div>
   )
 }
@@ -440,7 +440,7 @@ function GaugeChartRenderer({
 
   return (
     <div style={{ width: '100%', height }} className="relative">
-      <ReactECharts option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
+      <LazyEChart option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
       <div className="absolute inset-0 flex items-center justify-center pt-4">
         <span className="text-2xl font-bold text-foreground">{Math.round(value)}%</span>
       </div>
@@ -479,7 +479,7 @@ function SparklineRenderer({
 
   return (
     <div style={{ width: '100%', height }}>
-      <ReactECharts option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
+      <LazyEChart option={option} style={{ height, width: '100%' }} notMerge={true} opts={{ renderer: 'svg' }} />
     </div>
   )
 }

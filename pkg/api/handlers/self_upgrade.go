@@ -238,7 +238,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 			Error: "self-upgrade unavailable — user store is not configured",
 		})
 	}
-	user, err := h.store.GetUser(userID)
+	user, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil {
 		slog.Warn("[self-upgrade] SECURITY: failed to look up user for role check",
 			"user_id", userID, "error", err)

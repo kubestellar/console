@@ -4,10 +4,21 @@ import type { TreeNode } from './types'
 
 /**
  * Generate a stable, URL-safe slug for any mission.
- * - Installers with cncfProject: `install-<cncfProject>` (e.g. `install-prometheus`)
- * - All others: slugified title (lowercase, non-alphanum → hyphens, dedupe, trim)
+ * Priority order:
+ *   1. `name` field from console-kb (unique per mission, e.g. "install-argo-workflows")
+ *   2. Installers with cncfProject: `install-<cncfProject>` (legacy fallback)
+ *   3. Slugified title (lowercase, non-alphanum → hyphens, dedupe, trim)
  */
 export function getMissionSlug(mission: MissionExport): string {
+  if (mission.name) {
+    // Normalize the name field the same way as the title-based fallback to
+    // ensure consistent, URL-safe slugs (lowercase, non-alphanum → hyphens).
+    return mission.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+  }
   if (mission.missionClass === 'install' && mission.cncfProject) {
     return `install-${mission.cncfProject.toLowerCase()}`
   }
@@ -53,13 +64,6 @@ export function removeNodeFromTree(nodes: TreeNode[], nodeId: string): TreeNode[
     )
 }
 
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes < 0) return '0 B'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
 /** Normalize kc-mission-v1 JSON (nested format) into flat MissionExport shape.
  *  Kept for on-demand file loading when user selects a mission from the sidebar. */
 export function normalizeMission(raw: Record<string, unknown>): MissionExport | null {
@@ -92,6 +96,7 @@ export function normalizeMission(raw: Record<string, unknown>): MissionExport | 
 
   return {
     version: (raw.version as string) ?? (raw.format as string) ?? 'kc-mission-v1',
+    name: (raw.name as string) ?? undefined,
     title: (m.title as string) ?? '',
     description: (m.description as string) ?? '',
     type: (m.type as string) ?? 'troubleshoot',

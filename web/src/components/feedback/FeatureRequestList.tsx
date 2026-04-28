@@ -19,22 +19,7 @@ import {
   type FeedbackType,
 } from '../../hooks/useFeatureRequests'
 import { useTranslation } from 'react-i18next'
-
-// Format relative time
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
-}
+import { formatTimeAgo } from '../../lib/formatters'
 
 interface RequestCardProps {
   request: FeatureRequest
@@ -63,9 +48,9 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2 min-w-0">
           {request.request_type === 'bug' ? (
-            <Bug className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+            <Bug className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
           ) : (
-            <Sparkles className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+            <Sparkles className="w-4 h-4 text-purple-400 mt-0.5 shrink-0" />
           )}
           <div className="min-w-0">
             <h3 className="text-sm font-medium text-foreground truncate">
@@ -77,7 +62,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
           </div>
         </div>
         <span
-          className={`px-2 py-0.5 text-xs rounded-full text-white flex-shrink-0 ${
+          className={`px-2 py-0.5 text-xs rounded-full text-white shrink-0 ${
             STATUS_COLORS[request.status]
           }`}
         >
@@ -89,7 +74,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
       <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
-          {formatRelativeTime(request.created_at)}
+          {formatTimeAgo(request.created_at)}
         </span>
         {request.github_issue_url && (
           <a

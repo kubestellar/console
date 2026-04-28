@@ -19,6 +19,13 @@ const {
   mockSubscribePolling: vi.fn(() => vi.fn()),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
@@ -253,7 +260,7 @@ describe('useSecurityIssues', () => {
 
     await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
     const callArgs = mockFetchSSE.mock.calls[0][0] as { url: string; itemsKey: string }
-    expect(callArgs.url).toBe(`${LOCAL_AGENT_HTTP_URL}/security-issues/stream`)
+    expect(callArgs.url).toBe('/api/mcp/security-issues/stream')
     expect(callArgs.itemsKey).toBe('issues')
   })
 

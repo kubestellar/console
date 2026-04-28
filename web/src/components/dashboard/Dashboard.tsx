@@ -36,13 +36,12 @@ import { getDefaultCardsForDashboard } from '../../config/dashboards'
 import { safeLazy } from '../../lib/safeLazy'
 import { CardRecommendations } from './CardRecommendations'
 import { safeGetItem, safeSetItem, safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
+import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../lib/constants'
 import { MissionSuggestions } from './MissionSuggestions'
 import { GettingStartedBanner } from './GettingStartedBanner'
-import { SidebarCustomizer } from '../layout/SidebarCustomizer'
 import { useMissions } from '../../hooks/useMissions'
-import { CreateDashboardModal } from './CreateDashboardModal'
 import { FloatingDashboardActions } from './FloatingDashboardActions'
-import { DashboardCustomizer } from './customizer/DashboardCustomizer'
+const DashboardCustomizer = safeLazy(() => import('./customizer/DashboardCustomizer'), 'DashboardCustomizer')
 import { DashboardTemplate } from './templates'
 import { SortableCard, DragPreviewCard } from './SharedSortableCard'
 import type { Card, DashboardData } from './dashboardUtils'
@@ -67,7 +66,6 @@ import { useDashboardScrollTracking } from '../../hooks/useDashboardScrollTracki
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
 import { useDeployWorkload } from '../../hooks/useWorkloads'
 import { DeployConfirmDialog } from '../deploy/DeployConfirmDialog'
@@ -122,9 +120,7 @@ export function Dashboard() {
   const [isDragging, setIsDragging] = useState(false)
   const [insertAtIndex, setInsertAtIndex] = useState<number | null>(null)
   const [__dragOverDashboard, setDragOverDashboard] = useState<string | null>(null)
-  const { isOpen: isCreateDashboardOpen, open: openCreateDashboard, close: closeCreateDashboard } = useModalState()
   const { isOpen: isWidgetExportOpen, open: openWidgetExport, close: closeWidgetExport } = useModalState()
-  const { isOpen: isSidebarCustomizerOpen, open: openSidebarCustomizer, close: closeSidebarCustomizer } = useModalState()
 
   // Get context for modals that can be triggered from sidebar
   const {
@@ -184,7 +180,6 @@ export function Dashboard() {
   useEffect(() => { recordVisit() }, [recordVisit])
 
   // Universal stats for cross-dashboard stat blocks
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // Global cluster filter — stats should reflect only selected clusters
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
@@ -240,11 +235,11 @@ export function Dashboard() {
   }
 
   // Merged getter: dashboard-specific values first, then universal fallback
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Auto-refresh state (persisted in localStorage)
   const [autoRefresh, setAutoRefresh] = useState(() => {
-    const stored = safeGetItem('dashboard-auto-refresh')
+    const stored = safeGetItem(STORAGE_KEY_DASHBOARD_AUTO_REFRESH)
     return stored !== null ? stored === 'true' : true // default to true
   })
   const autoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -252,7 +247,7 @@ export function Dashboard() {
   // Persist auto-refresh setting and propagate to global cache layer.
   // When the user unchecks "Auto", all card cache intervals are also paused.
   useEffect(() => {
-    safeSetItem('dashboard-auto-refresh', String(autoRefresh))
+    safeSetItem(STORAGE_KEY_DASHBOARD_AUTO_REFRESH, String(autoRefresh))
     setAutoRefreshPaused(!autoRefresh)
     return () => {
       // Re-enable auto-refresh when the Dashboard unmounts (e.g., navigating away)
@@ -332,8 +327,14 @@ export function Dashboard() {
       // Return empty — don't let sortable card droppables capture workload drags
       return []
     }
-    // Normal card reorder uses closestCenter
-    return closestCenter(args)
+    // Normal card reorder — but first check if hovering over a dashboard drop zone
+    const centerCollisions = closestCenter(args)
+    const pointerCollisions = pointerWithin(args)
+    const dashboardDropTarget = pointerCollisions.find(
+      (c) => String(c.id).startsWith('dashboard-drop-') || String(c.id) === 'create-new-dashboard'
+    )
+    if (dashboardDropTarget) return [dashboardDropTarget]
+    return centerCollisions
   }
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -509,40 +510,7 @@ export function Dashboard() {
   }
 
   const handleCreateDashboard = () => {
-    openCreateDashboard()
-  }
-
-  const handleCreateDashboardConfirm = async (name: string, template?: DashboardTemplate) => {
-    try {
-      const newDashboard = await createDashboard(name)
-
-      // If a template was selected, apply template cards to the new dashboard
-      if (template && newDashboard.id) {
-        const templateCards = template.cards.map((tc, index) => ({
-          id: `template-${Date.now()}-${index}`,
-          card_type: tc.card_type,
-          config: tc.config || {},
-          position: { x: 0, y: 0, w: tc.position?.w || 4, h: tc.position?.h || 2 },
-          title: tc.title }))
-
-        // Persist template cards to the new dashboard
-        for (const card of templateCards) {
-          try {
-            await api.post(`/api/dashboards/${newDashboard.id}/cards`, card)
-          } catch (error) {
-            console.error('Failed to add template card:', error)
-            showToast('Failed to add template card', 'error')
-          }
-        }
-
-        showToast(`Created "${newDashboard.name}" with ${templateCards.length} cards from "${template.name}"`, 'success')
-      } else {
-        showToast(`Created "${newDashboard.name}"`, 'success')
-      }
-    } catch (error) {
-      console.error('Failed to create dashboard:', error)
-      showToast('Failed to create dashboard', 'error')
-    }
+    openAddCardModal('dashboards')
   }
 
   // Load dashboard on mount and when navigating back to the page.
@@ -1038,7 +1006,7 @@ export function Dashboard() {
       <GettingStartedBanner
         onBrowseCards={openAddCardModal}
         onTryMission={openMissionSidebar}
-        onExploreDashboards={openSidebarCustomizer}
+        onExploreDashboards={() => openAddCardModal('dashboards')}
       />
 
       {/* Demo-to-local CTA — shown on console.kubestellar.io for demo visitors */}
@@ -1177,39 +1145,41 @@ export function Dashboard() {
         canRedo={canRedo}
       />
 
-      {/* Dashboard Studio — unified customization panel */}
-      <DashboardCustomizer
-        isOpen={isAddCardModalOpen}
-        onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
-        dashboardName={dashboard?.name || 'Main Dashboard'}
-        onAddCards={handleAddCards}
-        existingCardTypes={currentCardTypes}
-        initialSection={studioInitialSection}
-        initialWidgetCardType={studioWidgetCardType}
-        initialSearch={addCardSearch}
-        onApplyTemplate={handleApplyTemplate}
-        onExport={dashboard?.id ? async () => {
-          try {
-            const data = await exportDashboard(dashboard.id)
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
-            a.click()
-            safeRevokeObjectURL(url)
-            showToast('Dashboard exported', 'success')
-          } catch {
-            showToast('Failed to export dashboard', 'error')
-          }
-        } : undefined}
-        onReset={() => reset('replace')}
-        isCustomized={isCustomized}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      />
+      {/* Dashboard Studio — unified customization panel (lazy-loaded) */}
+      <Suspense fallback={null}>
+        <DashboardCustomizer
+          isOpen={isAddCardModalOpen}
+          onClose={() => { closeAddCardModal(); setAddCardSearch(''); setInsertAtIndex(null) }}
+          dashboardName={dashboard?.name || 'Main Dashboard'}
+          onAddCards={handleAddCards}
+          existingCardTypes={currentCardTypes}
+          initialSection={studioInitialSection}
+          initialWidgetCardType={studioWidgetCardType}
+          initialSearch={addCardSearch}
+          onApplyTemplate={handleApplyTemplate}
+          onExport={dashboard?.id ? async () => {
+            try {
+              const data = await exportDashboard(dashboard.id)
+              const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
+              a.click()
+              safeRevokeObjectURL(url)
+              showToast('Dashboard exported', 'success')
+            } catch {
+              showToast('Failed to export dashboard', 'error')
+            }
+          } : undefined}
+          onReset={() => reset('replace')}
+          isCustomized={isCustomized}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+        />
+      </Suspense>
 
       {/* Configure Card Modal */}
       <Suspense fallback={null}>
@@ -1227,14 +1197,6 @@ export function Dashboard() {
 
       {/* Templates are now accessed via Dashboard Studio */}
 
-      {/* Create Dashboard Modal */}
-      <CreateDashboardModal
-        isOpen={isCreateDashboardOpen}
-        onClose={closeCreateDashboard}
-        onCreate={handleCreateDashboardConfirm}
-        existingNames={dashboards.map(d => d.name)}
-      />
-
       {/* Widget Export Modal — opened from nudge banner */}
       <WidgetExportModal
         isOpen={isWidgetExportOpen}
@@ -1251,11 +1213,6 @@ export function Dashboard() {
         sourceCluster={pendingDeploy?.sourceCluster ?? ''}
         targetClusters={pendingDeploy?.targetClusters ?? []}
         groupName={pendingDeploy?.groupName}
-      />
-
-      <SidebarCustomizer
-        isOpen={isSidebarCustomizerOpen}
-        onClose={closeSidebarCustomizer}
       />
     </div>
   )

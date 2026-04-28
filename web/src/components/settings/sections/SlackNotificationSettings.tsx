@@ -88,7 +88,7 @@ export function SlackNotificationSettings({
           placeholder="https://hooks.slack.com/services/..."
           aria-invalid={!!urlError}
           aria-describedby={urlError ? 'slack-webhook-url-error' : undefined}
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
         />
         {urlError && (
           <p id="slack-webhook-url-error" role="alert" className="mt-1 text-xs text-red-400">{urlError}</p>
@@ -107,7 +107,7 @@ export function SlackNotificationSettings({
           value={config.slackChannel || ''}
           onChange={e => updateConfig({ slackChannel: e.target.value })}
           placeholder="#alerts"
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
         />
         <p className="text-xs text-muted-foreground mt-1">
           {t('settings.notifications.slack.channelHint')}
@@ -129,9 +129,9 @@ export function SlackNotificationSettings({
           }`}
         >
           {testResult.success ? (
-            <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+            <Check className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
           ) : (
-            <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           )}
           <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
             {testResult.message}

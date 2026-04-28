@@ -21,11 +21,11 @@ import { EventStream } from './EventStream'
 import { PodIssues } from './PodIssues'
 import { ResourceUsage } from './ResourceUsage'
 import { ClusterMetrics } from './ClusterMetrics'
-import { EventsTimeline } from './EventsTimeline'
 import { HardwareHealthCard } from './HardwareHealthCard'
-import { ConsoleOfflineDetectionCard } from './console-missions/ConsoleOfflineDetectionCard'
 import { DeploymentStatus } from './DeploymentStatus'
 // Remaining cards are lazy-loaded for code splitting
+// ConsoleOfflineDetectionCard lazy-loaded to reduce critical path bundle size
+const ConsoleOfflineDetectionCard = safeLazy(() => import('./console-missions/ConsoleOfflineDetectionCard'), 'ConsoleOfflineDetectionCard')
 const PodLogs = safeLazy(() => import('./PodLogs'), 'PodLogs')
 const TopPods = safeLazy(() => import('./TopPods'), 'TopPods')
 const AppStatus = safeLazy(() => import('./AppStatus'), 'AppStatus')
@@ -48,12 +48,15 @@ const SecurityIssues = safeLazy(() => import('./SecurityIssues'), 'SecurityIssue
 const EventSummary = safeLazy(() => import('./EventSummary'), 'EventSummary')
 const WarningEvents = safeLazy(() => import('./WarningEvents'), 'WarningEvents')
 const RecentEvents = safeLazy(() => import('./RecentEvents'), 'RecentEvents')
-// EventsTimeline eagerly imported above
+// EventsTimeline deferred to keep the echarts vendor chunk off the critical path
+const EventsTimeline = safeLazy(() => import('./EventsTimeline'), 'EventsTimeline')
 const PodHealthTrend = safeLazy(() => import('./PodHealthTrend'), 'PodHealthTrend')
 const ResourceTrend = safeLazy(() => import('./ResourceTrend'), 'ResourceTrend')
 const GPUUtilization = safeLazy(() => import('./GPUUtilization'), 'GPUUtilization')
 const GPUUsageTrend = safeLazy(() => import('./GPUUsageTrend'), 'GPUUsageTrend')
 const ClusterResourceTree = safeLazy(() => import('./cluster-resource-tree/ClusterResourceTree'), 'ClusterResourceTree')
+// Cross-cluster change timeline (Phase 2 of #9967)
+const ChangeTimeline = safeLazy(() => import('./change_timeline/ChangeTimeline'), 'ChangeTimeline')
 const StorageOverview = safeLazy(() => import('./StorageOverview'), 'StorageOverview')
 const PVCStatus = safeLazy(() => import('./PVCStatus'), 'PVCStatus')
 const NetworkOverview = safeLazy(() => import('./NetworkOverview'), 'NetworkOverview')
@@ -77,6 +80,45 @@ const HelmValuesDiff = safeLazy(() => import('./HelmValuesDiff'), 'HelmValuesDif
 const HelmHistory = safeLazy(() => _deployBundle, 'HelmHistory')
 const ChartVersions = safeLazy(() => _deployBundle, 'ChartVersions')
 const KustomizationStatus = safeLazy(() => _deployBundle, 'KustomizationStatus')
+const FluxStatus = safeLazy(() => import('./flux_status'), 'FluxStatus')
+// Backstage developer portal card (CNCF incubating)
+const BackstageStatus = safeLazy(() => import('./backstage_status'), 'BackstageStatus')
+// Contour ingress proxy card
+const ContourStatus = safeLazy(() => import('./contour_status'), 'ContourStatus')
+// Dapr distributed application runtime card
+const DaprStatus = safeLazy(() => import('./dapr_status'), 'DaprStatus')
+// Envoy proxy card (Service Mesh / network)
+const EnvoyStatus = safeLazy(() => import('./envoy_status'), 'EnvoyStatus')
+// gRPC services card (network / service communication)
+const GrpcStatus = safeLazy(() => import('./grpc_status'), 'GrpcStatus')
+// Linkerd service mesh card
+const LinkerdStatus = safeLazy(() => import('./linkerd_status'), 'LinkerdStatus')
+// Longhorn distributed block storage card (CNCF Incubating)
+const LonghornStatus = safeLazy(() => import('./longhorn_status'), 'LonghornStatus')
+// OpenFGA fine-grained authorization card (CNCF Sandbox)
+const OpenfgaStatus = safeLazy(() => import('./openfga_status'), 'OpenfgaStatus')
+// OpenTelemetry collector card (Observability)
+const OtelStatus = safeLazy(() => import('./otel_status'), 'OtelStatus')
+// Rook cloud-native storage orchestrator card
+const RookStatus = safeLazy(() => import('./rook_status'), 'RookStatus')
+// SPIFFE workload identity card (CNCF graduated)
+const SpiffeStatus = safeLazy(() => import('./spiffe_status'), 'SpiffeStatus')
+// CNI (Container Network Interface) plugin status card
+const CniStatus = safeLazy(() => import('./cni_status'), 'CniStatus')
+// SPIRE (SPIFFE Runtime Environment) workload identity card
+const SpireStatus = safeLazy(() => import('./spire_status'), 'SpireStatus')
+// TiKV distributed key-value store card
+const TikvStatus = safeLazy(() => import('./tikv_status'), 'TikvStatus')
+// TUF (The Update Framework) repository metadata card
+const TufStatus = safeLazy(() => import('./tuf_status'), 'TufStatus')
+// Vitess distributed MySQL card
+const VitessStatus = safeLazy(() => import('./vitess_status'), 'VitessStatus')
+// Chaos Mesh fault-injection and chaos engineering card
+const ChaosMeshStatus = safeLazy(() => import('./chaos_mesh_status'), 'ChaosMeshStatus')
+// wasmCloud WebAssembly lattice card (CNCF incubating)
+const WasmcloudStatus = safeLazy(() => import('./wasmcloud_status'), 'WasmcloudStatus')
+// Volcano batch/HPC scheduler card (CNCF Incubating)
+const VolcanoStatus = safeLazy(() => import('./volcano_status'), 'VolcanoStatus')
 const OverlayComparison = safeLazy(() => _deployBundle, 'OverlayComparison')
 const ArgoCDApplications = safeLazy(() => _deployBundle, 'ArgoCDApplications')
 const ArgoCDApplicationSets = safeLazy(() => _deployBundle, 'ArgoCDApplicationSets')
@@ -108,6 +150,48 @@ const TrestleScan = safeLazy(() => import('./TrestleScan'), 'TrestleScan')
 const VaultSecrets = safeLazy(() => import('./DataComplianceCards'), 'VaultSecrets')
 const ExternalSecrets = safeLazy(() => import('./DataComplianceCards'), 'ExternalSecrets')
 const CertManager = safeLazy(() => import('./DataComplianceCards'), 'CertManager')
+// Enterprise compliance cards — share one chunk
+const _enterpriseComplianceBundle = import('./EnterpriseComplianceCards').catch(() => undefined as never)
+const HIPAACard = safeLazy(() => _enterpriseComplianceBundle, 'HIPAACard')
+const GxPCard = safeLazy(() => _enterpriseComplianceBundle, 'GxPCard')
+const BAACard = safeLazy(() => _enterpriseComplianceBundle, 'BAACard')
+const ComplianceFrameworksCard = safeLazy(() => _enterpriseComplianceBundle, 'ComplianceFrameworksCard')
+const DataResidencyCard = safeLazy(() => _enterpriseComplianceBundle, 'DataResidencyCard')
+const ChangeControlCard = safeLazy(() => _enterpriseComplianceBundle, 'ChangeControlCard')
+const SegregationOfDutiesCard = safeLazy(() => _enterpriseComplianceBundle, 'SegregationOfDutiesCard')
+const ComplianceReportsCard = safeLazy(() => _enterpriseComplianceBundle, 'ComplianceReportsCard')
+const NISTCard = safeLazy(() => _enterpriseComplianceBundle, 'NISTCard')
+const STIGCard = safeLazy(() => _enterpriseComplianceBundle, 'STIGCard')
+const AirGapCard = safeLazy(() => _enterpriseComplianceBundle, 'AirGapCard')
+const FedRAMPCard = safeLazy(() => _enterpriseComplianceBundle, 'FedRAMPCard')
+const OIDCFederationCard = safeLazy(() => _enterpriseComplianceBundle, 'OIDCFederationCard')
+const RBACAuditCard = safeLazy(() => _enterpriseComplianceBundle, 'RBACAuditCard')
+const SessionManagementCard = safeLazy(() => _enterpriseComplianceBundle, 'SessionManagementCard')
+const SIEMIntegrationCard = safeLazy(() => _enterpriseComplianceBundle, 'SIEMIntegrationCard')
+const IncidentResponseCard = safeLazy(() => _enterpriseComplianceBundle, 'IncidentResponseCard')
+const ThreatIntelCard = safeLazy(() => _enterpriseComplianceBundle, 'ThreatIntelCard')
+const SBOMManagerCard = safeLazy(() => _enterpriseComplianceBundle, 'SBOMManagerCard')
+const SigstoreVerifyCard = safeLazy(() => _enterpriseComplianceBundle, 'SigstoreVerifyCard')
+const SLSAProvenanceCard = safeLazy(() => _enterpriseComplianceBundle, 'SLSAProvenanceCard')
+const RiskMatrixCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskMatrixCard')
+const RiskRegisterCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskRegisterCard')
+const RiskAppetiteCard = safeLazy(() => _enterpriseComplianceBundle, 'RiskAppetiteCard')
+// Enterprise dashboard content cards — each lazily loaded individually
+const ComplianceFrameworksDashboardCard = safeLazy(() => import('../compliance/ComplianceFrameworks'), 'ComplianceFrameworksContent')
+const ChangeControlDashboardCard = safeLazy(() => import('../compliance/ChangeControlAudit'), 'ChangeControlAuditContent')
+const SegregationOfDutiesDashboardCard = safeLazy(() => import('../compliance/SegregationOfDuties'), 'SegregationOfDutiesContent')
+const DataResidencyDashboardCard = safeLazy(() => import('../compliance/DataResidency'), 'DataResidencyContent')
+const ComplianceReportsDashboardCard = safeLazy(() => import('../compliance/ComplianceReports'), 'ComplianceReportsContent')
+const HIPAADashboardCard = safeLazy(() => import('../compliance/HIPAADashboard'), 'HIPAADashboardContent')
+const GxPDashboardCard = safeLazy(() => import('../compliance/GxPDashboard'), 'GxPDashboardContent')
+const BAADashboardCard = safeLazy(() => import('../compliance/BAADashboard'), 'BAADashboardContent')
+const NISTDashboardCard = safeLazy(() => import('../compliance/NISTDashboard'), 'NISTDashboardContent')
+const STIGDashboardCard = safeLazy(() => import('../compliance/STIGDashboard'), 'STIGDashboardContent')
+const AirGapDashboardCard = safeLazy(() => import('../compliance/AirGapDashboard'), 'AirGapDashboardContent')
+const FedRAMPDashboardCard = safeLazy(() => import('../compliance/FedRAMPDashboard'), 'FedRAMPDashboardContent')
+const OIDCDashboardCard = safeLazy(() => import('../compliance/OIDCDashboard'), 'OIDCDashboardContent')
+const RBACAuditDashboardCard = safeLazy(() => import('../compliance/RBACAuditDashboard'), 'RBACAuditDashboardContent')
+const SessionDashboardCard = safeLazy(() => import('../compliance/SessionDashboard'), 'SessionDashboardContent')
 // Workload detection cards — share one chunk via barrel import
 const _workloadDetectionBundle = import('./workload-detection').catch(() => undefined as never)
 const ProwJobs = safeLazy(() => _workloadDetectionBundle, 'ProwJobs')
@@ -195,6 +279,8 @@ const PerformanceTimeline = safeLazy(() => _llmdBundle, 'PerformanceTimeline')
 const ResourceUtilization = safeLazy(() => _llmdBundle, 'ResourceUtilization')
 const GitHubCIMonitor = safeLazy(() => _workloadMonitorBundle, 'GitHubCIMonitor')
 const ClusterHealthMonitor = safeLazy(() => _workloadMonitorBundle, 'ClusterHealthMonitor')
+// Runtime Attestation Score card (#9987)
+const RuntimeAttestationCard = safeLazy(() => import('./RuntimeAttestationCard'), 'RuntimeAttestationCard')
 
 // GitHub Pipelines cards — all four share one chunk via the pipelines barrel
 const _pipelinesBundle = import('./pipelines').catch(() => undefined as never)
@@ -244,6 +330,14 @@ const KedaStatus = safeLazy(() => import('./keda_status'), 'KedaStatus')
 const FluentdStatus = safeLazy(() => import('./fluentd_status'), 'FluentdStatus')
 // CRI-O container runtime card
 const CrioStatus = safeLazy(() => import('./crio_status'), 'CrioStatus')
+// Cloud Custodian rules-engine card (CNCF incubating — marketplace#32)
+const CloudCustodianStatus = safeLazy(() => import('./cloud_custodian_status'), 'CloudCustodianStatus')
+// Containerd container runtime card (CNCF graduated — marketplace#4)
+const ContainerdStatus = safeLazy(() => import('./containerd_status'), 'ContainerdStatus')
+// Cortex horizontally scalable Prometheus card (CNCF incubating — marketplace#35)
+const CortexStatus = safeLazy(() => import('./cortex_status'), 'CortexStatus')
+// Dragonfly P2P image/file distribution card (CNCF graduated — marketplace#22)
+const DragonflyStatus = safeLazy(() => import('./dragonfly_status'), 'DragonflyStatus')
 // Lima VM card
 const LimaStatus = safeLazy(() => import('./lima_status'), 'LimaStatus')
 // NATS messaging server monitoring card
@@ -276,6 +370,18 @@ const KeycloakStatus = safeLazy(() => import('./keycloak_status'), 'KeycloakStat
 const OpenYurtStatus = safeLazy(() => import('./openyurt_status'), 'OpenYurtStatus')
 // Knative serverless monitoring card
 const KnativeStatus = safeLazy(() => import('./knative_status'), 'KnativeStatus')
+// KServe model serving monitoring card
+const KServeStatus = safeLazy(() => import('./kserve_status'), 'KServeStatus')
+// Fluid dataset caching card
+const FluidStatus = safeLazy(() => import('./fluid_status'), 'FluidStatus')
+// Jaeger Tracing monitoring card
+const JaegerStatus = safeLazy(() => import('./jaeger_status'), 'JaegerStatus')
+// CubeFS distributed file system card
+const CubefsStatus = safeLazy(() => import('./cubefs_status'), 'CubefsStatus')
+// Harbor registry card
+const HarborStatus = safeLazy(() => import('./harbor_status'), 'HarborStatus')
+// Deployment Risk Score card (correlates Argo CD + Kyverno + pod restart signals) — #9827
+const DeploymentRiskScore = safeLazy(() => import('./DeploymentRiskScore'), 'DeploymentRiskScore')
 // Inspektor Gadget cards
 const NetworkTraceCard = safeLazy(() => import('./gadget/NetworkTraceCard'), 'NetworkTraceCard')
 const DNSTraceCard = safeLazy(() => import('./gadget/DNSTraceCard'), 'DNSTraceCard')
@@ -305,6 +411,7 @@ const ConfigDriftHeatmap = safeLazy(() => _insightsBundle, 'ConfigDriftHeatmap')
 const ResourceImbalanceDetector = safeLazy(() => _insightsBundle, 'ResourceImbalanceDetector')
 const RestartCorrelationMatrix = safeLazy(() => _insightsBundle, 'RestartCorrelationMatrix')
 const DeploymentRolloutTracker = safeLazy(() => _insightsBundle, 'DeploymentRolloutTracker')
+const RightSizeAdvisor = safeLazy(() => _insightsBundle, 'RightSizeAdvisor')
 
 // Cluster admin cards — share one chunk via barrel import
 const _clusterAdminBundle = import('./cluster-admin-bundle').catch(() => undefined as never)
@@ -402,6 +509,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   chart_versions: ChartVersions,
   // Kustomize-scoped cards
   kustomization_status: KustomizationStatus,
+  flux_status: FluxStatus,
+  chaos_mesh_status: ChaosMeshStatus,
   overlay_comparison: OverlayComparison,
   // ArgoCD cards
   argocd_applications: ArgoCDApplications,
@@ -433,6 +542,60 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   kubescape_scan: KubescapeScan,
   policy_violations: PolicyViolations,
   compliance_score: ComplianceScore,
+  // Enterprise compliance cards
+  hipaa_compliance: HIPAACard,
+  gxp_validation: GxPCard,
+  baa_tracker: BAACard,
+  compliance_frameworks: ComplianceFrameworksCard,
+  data_residency: DataResidencyCard,
+  change_control: ChangeControlCard,
+  segregation_of_duties: SegregationOfDutiesCard,
+  compliance_reports: ComplianceReportsCard,
+  nist_800_53: NISTCard,
+  stig_compliance: STIGCard,
+  air_gap_readiness: AirGapCard,
+  fedramp_readiness: FedRAMPCard,
+  // Identity & Access cards
+  oidc_federation: OIDCFederationCard,
+  rbac_audit: RBACAuditCard,
+  session_management: SessionManagementCard,
+  siem_integration: SIEMIntegrationCard,
+  incident_response: IncidentResponseCard,
+  threat_intel: ThreatIntelCard,
+  // Runtime Attestation Score (#9987)
+  runtime_attestation: RuntimeAttestationCard,
+  // Supply chain security cards
+  sbom_manager: SBOMManagerCard,
+  sigstore_verify: SigstoreVerifyCard,
+  slsa_provenance: SLSAProvenanceCard,
+  // Enterprise Risk Management cards
+  risk_matrix: RiskMatrixCard,
+  risk_register: RiskRegisterCard,
+  risk_appetite: RiskAppetiteCard,
+  // Dashboard content cards (full-width, lazy loaded individually)
+  sbom_dashboard: safeLazy(() => import('../compliance/SBOMDashboard'), 'SBOMDashboardContent'),
+  sigstore_dashboard: safeLazy(() => import('../compliance/SigstoreDashboard'), 'SigstoreDashboardContent'),
+  slsa_dashboard: safeLazy(() => import('../compliance/SLSADashboard'), 'SLSADashboardContent'),
+  // Enterprise dashboard content cards (full dashboards as cards)
+  compliance_frameworks_dashboard: ComplianceFrameworksDashboardCard,
+  change_control_dashboard: ChangeControlDashboardCard,
+  segregation_of_duties_dashboard: SegregationOfDutiesDashboardCard,
+  data_residency_dashboard: DataResidencyDashboardCard,
+  compliance_reports_dashboard: ComplianceReportsDashboardCard,
+  hipaa_dashboard: HIPAADashboardCard,
+  gxp_dashboard: GxPDashboardCard,
+  baa_dashboard: BAADashboardCard,
+  nist_dashboard: NISTDashboardCard,
+  stig_dashboard: STIGDashboardCard,
+  airgap_dashboard: AirGapDashboardCard,
+  fedramp_dashboard: FedRAMPDashboardCard,
+  oidc_dashboard: OIDCDashboardCard,
+  rbac_audit_dashboard: RBACAuditDashboardCard,
+  session_dashboard: SessionDashboardCard,
+  // Enterprise Risk Management dashboard content cards
+  risk_matrix_dashboard: lazy(() => import('../compliance/RiskMatrixDashboard').then(m => ({ default: m.RiskMatrixDashboardContent }))),
+  risk_register_dashboard: lazy(() => import('../compliance/RiskRegisterDashboard').then(m => ({ default: m.RiskRegisterDashboardContent }))),
+  risk_appetite_dashboard: lazy(() => import('../compliance/RiskAppetiteDashboard').then(m => ({ default: m.RiskAppetiteDashboardContent }))),
   // ISO 27001 audit checklist
   iso27001_audit: ISO27001Audit,
   // Cross-cluster compliance cards
@@ -520,6 +683,8 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   resource_marshall: ResourceMarshall,
   // Workload Monitor card (health monitoring with tree/list views)
   workload_monitor: WorkloadMonitor,
+  // Workload Status card (alias for WorkloadMonitor — widget registry type)
+  workload_status: WorkloadMonitor,
   // Specialized monitoring cards
   llmd_stack_monitor: LLMdStackMonitor,
   prow_ci_monitor: ProwCIMonitor,
@@ -568,6 +733,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   rbac_explorer: RBACExplorer,
   maintenance_windows: MaintenanceWindows,
   cluster_changelog: ClusterChangelog,
+  change_timeline: ChangeTimeline,
   quota_heatmap: QuotaHeatmap,
   // Cloud Native Buildpacks
   buildpacks_status: BuildpacksStatus,
@@ -581,10 +747,54 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   fluentd_status: FluentdStatus,
   // CRI-O container runtime
   crio_status: CrioStatus,
+  // Cloud Custodian rules engine (CNCF incubating)
+  cloud_custodian_status: CloudCustodianStatus,
+  // Containerd container runtime
+  containerd_status: ContainerdStatus,
+  // Cortex horizontally scalable Prometheus
+  cortex_status: CortexStatus,
+  // Dragonfly P2P image/file distribution
+  dragonfly_status: DragonflyStatus,
   // Lima VM
   lima_status: LimaStatus,
   // NATS messaging server
   nats_status: NatsStatus,
+  // Backstage developer portal (CNCF incubating)
+  backstage_status: BackstageStatus,
+  // Contour ingress proxy
+  contour_status: ContourStatus,
+  // Dapr distributed application runtime
+  dapr_status: DaprStatus,
+  // Envoy proxy (service mesh / edge)
+  envoy_status: EnvoyStatus,
+  // gRPC services (network / service communication)
+  grpc_status: GrpcStatus,
+  // Linkerd service mesh
+  linkerd_status: LinkerdStatus,
+  // Longhorn distributed block storage (CNCF Incubating)
+  longhorn_status: LonghornStatus,
+  // OpenFGA fine-grained authorization (CNCF Sandbox)
+  openfga_status: OpenfgaStatus,
+  // OpenTelemetry collector
+  otel_status: OtelStatus,
+  // Rook cloud-native storage orchestrator (Ceph)
+  rook_status: RookStatus,
+  // SPIFFE workload identity (CNCF graduated)
+  spiffe_status: SpiffeStatus,
+  // CNI plugin status (Cilium, Calico, Flannel, etc.)
+  cni_status: CniStatus,
+  // SPIRE (SPIFFE Runtime Environment) — workload identity
+  spire_status: SpireStatus,
+  // TiKV distributed key-value store
+  tikv_status: TikvStatus,
+  // TUF (The Update Framework) repository metadata
+  tuf_status: TufStatus,
+  // Vitess distributed MySQL
+  vitess_status: VitessStatus,
+  // wasmCloud WebAssembly lattice (CNCF incubating)
+  wasmcloud_status: WasmcloudStatus,
+  // Volcano batch/HPC scheduler (CNCF Incubating)
+  volcano_status: VolcanoStatus,
   // Artifact Hub
   artifact_hub_status: ArtifactHubStatus,
   // CloudEvents messaging
@@ -599,6 +809,16 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   openyurt_status: OpenYurtStatus,
   // Knative serverless
   knative_status: KnativeStatus,
+  // KServe model serving
+  kserve_status: KServeStatus,
+  // Fluid dataset caching
+  fluid_status: FluidStatus,
+  // CubeFS distributed file system
+  cubefs_status: CubefsStatus,
+  // Harbor registry
+  harbor_status: HarborStatus,
+  // Deployment Risk Score — #9827
+  deployment_risk_score: DeploymentRiskScore,
   // KubeRay fleet monitoring
   kuberay_fleet: KubeRayFleet,
   // SLO compliance tracking
@@ -619,6 +839,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   dns_trace: DNSTraceCard,
   process_trace: ProcessTraceCard,
   security_audit: SecurityAuditCard,
+  jaeger_status: JaegerStatus,
 
   // Drasi reactive pipeline cards
   drasi_reactive_graph: DrasiReactiveGraph,
@@ -659,6 +880,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   resource_imbalance_detector: ResourceImbalanceDetector,
   restart_correlation_matrix: RestartCorrelationMatrix,
   deployment_rollout_tracker: DeploymentRolloutTracker,
+  right_size_advisor: RightSizeAdvisor,
 
   // Dynamic Card (Card Factory meta-component)
   dynamic_card: DynamicCard,
@@ -805,6 +1027,16 @@ export const DEMO_DATA_CARDS = new Set([
   'vcluster_status',
   // Knative serverless - demo until Knative is installed
   'knative_status',
+  // KServe model serving - demo until KServe is installed
+  'kserve_status',
+  // Fluid dataset caching - demo until Fluid is installed
+  'fluid_status',
+  // CubeFS distributed file system - demo until CubeFS is installed
+  'cubefs_status',
+  // Harbor registry - demo until Harbor is installed
+  'harbor_status',
+  // Deployment Risk Score — demo when no live Argo/Kyverno/pod data (#9827)
+  'deployment_risk_score',
 ])
 
 /**
@@ -879,6 +1111,27 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   helm_history: () => import('./deploy-bundle'),
   chart_versions: () => import('./deploy-bundle'),
   kustomization_status: () => import('./deploy-bundle'),
+  flux_status: () => import('./flux_status'),
+  backstage_status: () => import('./backstage_status'),
+  contour_status: () => import('./contour_status'),
+  dapr_status: () => import('./dapr_status'),
+  envoy_status: () => import('./envoy_status'),
+  grpc_status: () => import('./grpc_status'),
+  linkerd_status: () => import('./linkerd_status'),
+  longhorn_status: () => import('./longhorn_status'),
+  openfga_status: () => import('./openfga_status'),
+  otel_status: () => import('./otel_status'),
+  rook_status: () => import('./rook_status'),
+  spiffe_status: () => import('./spiffe_status'),
+  cni_status: () => import('./cni_status'),
+  spire_status: () => import('./spire_status'),
+  tikv_status: () => import('./tikv_status'),
+  tuf_status: () => import('./tuf_status'),
+  vitess_status: () => import('./vitess_status'),
+  // Chaos Mesh fault-injection and chaos engineering
+  chaos_mesh_status: () => import('./chaos_mesh_status'),
+  wasmcloud_status: () => import('./wasmcloud_status'),
+  volcano_status: () => import('./volcano_status'),
   overlay_comparison: () => import('./deploy-bundle'),
   argocd_applications: () => import('./deploy-bundle'),
   argocd_applicationsets: () => import('./deploy-bundle'),
@@ -934,6 +1187,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   resource_marshall: () => import('./deploy-bundle'),
   // Workload monitors — all share one chunk via barrel
   workload_monitor: () => import('./workload-monitor'),
+  workload_status: () => import('./workload-monitor'),
   llmd_stack_monitor: () => import('./workload-monitor'),
   prow_ci_monitor: () => import('./workload-monitor'),
   github_ci_monitor: () => import('./workload-monitor'),
@@ -983,6 +1237,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   rbac_explorer: () => import('./cluster-admin-bundle'),
   maintenance_windows: () => import('./cluster-admin-bundle'),
   cluster_changelog: () => import('./cluster-admin-bundle'),
+  change_timeline: () => import('./change_timeline/ChangeTimeline'),
   quota_heatmap: () => import('./cluster-admin-bundle'),
   // Kagenti AI Agents — all share one chunk via barrel
   kagenti_status: () => import('./KagentiStatusCard'),
@@ -1003,6 +1258,8 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   kagent_topology: () => import('./kagent'),
   // Crossplane cards
   crossplane_managed_resources: () => import('./crossplane-status'),
+  // Jaeger Tracing
+  jaeger_status: () => import('./jaeger_status'),
   // Cloud Native Buildpacks
   buildpacks_status: () => import('./buildpacks-status'),
   // KEDA
@@ -1015,6 +1272,14 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   cloudevents_status: () => import('./cloudevents_status'),
   // CRI-O
   crio_status: () => import('./crio_status'),
+  // Cloud Custodian
+  cloud_custodian_status: () => import('./cloud_custodian_status'),
+  // Containerd
+  containerd_status: () => import('./containerd_status'),
+  // Cortex
+  cortex_status: () => import('./cortex_status'),
+  // Dragonfly P2P image/file distribution
+  dragonfly_status: () => import('./dragonfly_status'),
   // Strimzi
   strimzi_status: () => import('./strimzi_status'),
   // KubeVela application delivery
@@ -1025,6 +1290,16 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   openyurt_status: () => import('./openyurt_status'),
   // Knative serverless
   knative_status: () => import('./knative_status'),
+  // KServe model serving
+  kserve_status: () => import('./kserve_status'),
+  // Fluid dataset caching
+  fluid_status: () => import('./fluid_status'),
+  // CubeFS distributed file system
+  cubefs_status: () => import('./cubefs_status'),
+  // Harbor registry
+  harbor_status: () => import('./harbor_status'),
+  // Deployment Risk Score — #9827
+  deployment_risk_score: () => import('./DeploymentRiskScore'),
   kuberay_fleet: () => import('./kuberay_fleet'),
   slo_compliance: () => import('./slo_compliance'),
   failover_timeline: () => import('./failover_timeline'),
@@ -1051,6 +1326,7 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
   resource_imbalance_detector: () => import('./insights'),
   restart_correlation_matrix: () => import('./insights'),
   deployment_rollout_tracker: () => import('./insights'),
+  right_size_advisor: () => import('./insights'),
   // User management & AI missions
   user_management: () => import('./UserManagement'),
   console_ai_issues: () => import('./console-missions/ConsoleIssuesCard'),
@@ -1159,6 +1435,7 @@ export function prefetchDemoCardChunks(): void {
  * Primarily time-series, trend, and event streaming cards.
  */
 export const LIVE_DATA_CARDS = new Set([
+  'chaos_mesh_status',
   // Time-series trend cards
   'pod_health_trend',
   'resource_trend',
@@ -1190,6 +1467,7 @@ export const LIVE_DATA_CARDS = new Set([
   'deployment_missions',
   // Workload Monitor - live health monitoring
   'workload_monitor',
+  'workload_status',
   // Specialized monitoring cards
   'llmd_stack_monitor',
   'prow_ci_monitor',
@@ -1214,10 +1492,14 @@ export const LIVE_DATA_CARDS = new Set([
   'coredns_status',
   'keda_status',
   'crio_status',
+  'containerd_status',
+  'cortex_status',
+  'dragonfly_status',
   'strimzi_status',
   'keycloak_status',
   'kubevela_status',
   'openyurt_status',
+  'kserve_status',
   // KubeRay, SLO, Failover, Trino - demo until detected
   'kuberay_fleet',
   'slo_compliance',
@@ -1225,6 +1507,7 @@ export const LIVE_DATA_CARDS = new Set([
   'trino_gateway',
   'network_policies',
   'cluster_changelog',
+  'change_timeline',
   'predictive_health',
   'quota_heatmap',
   // Multi-tenancy cards — live detection of cluster components
@@ -1271,6 +1554,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   upgrade_status: 4,
   crossplane_managed_resources: 4,
   buildpacks_status: 6,
+  // Runtime Attestation Score — shows per-cluster breakdown
+  runtime_attestation: 6,
 
   // MCS cards
   service_exports: 6,
@@ -1285,6 +1570,12 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   // Workload Deployment - wide for workload list
   workload_deployment: 6,
 
+  // Provisioning
+  harbor_status: 6,
+
+  // Deployment Risk Score — spans wide for per-namespace breakdown (#9827)
+  deployment_risk_score: 6,
+
   // Cluster Groups card
   cluster_groups: 4,
   // Deployment Missions card
@@ -1293,6 +1584,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   resource_marshall: 6,
   // Workload Monitor card
   workload_monitor: 8,
+  workload_status: 8,
   // Specialized monitoring cards
   llmd_stack_monitor: 6,
   prow_ci_monitor: 6,
@@ -1357,17 +1649,24 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   coredns_status: 6,
   keda_status: 6,
   crio_status: 6,
+  cloud_custodian_status: 6,
+  containerd_status: 6,
+  cortex_status: 6,
+  dragonfly_status: 6,
   strimzi_status: 6,
   etcd_status: 4,
   network_policies: 6,
   rbac_explorer: 6,
   maintenance_windows: 6,
   cluster_changelog: 6,
+  change_timeline: 6,
   quota_heatmap: 8,
   // KubeVela application delivery
   kubevela_status: 6,
   // OpenYurt edge computing
   openyurt_status: 6,
+  // KServe model serving
+  kserve_status: 6,
   // Flatcar Container Linux
   flatcar_status: 6,
   // Fluentd log collector
@@ -1384,6 +1683,8 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   slo_compliance: 6,
   failover_timeline: 8,
   trino_gateway: 6,
+  // Fluid dataset caching
+  fluid_status: 6,
   // OpenFeature feature-flag management
   openfeature_status: 6,
   // OpenKruise advanced workloads + sidecar injection
@@ -1398,6 +1699,7 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   resource_imbalance_detector: 6,
   restart_correlation_matrix: 6,
   deployment_rollout_tracker: 6,
+  right_size_advisor: 8,
 
   // Multi-tenancy cards
   ovn_status: 6,
@@ -1438,6 +1740,26 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   argocd_applicationsets: 6,
   argocd_sync_status: 6,
   kustomization_status: 6,
+  flux_status: 6,
+  backstage_status: 6,
+  contour_status: 6,
+  dapr_status: 6,
+  envoy_status: 6,
+  grpc_status: 6,
+  linkerd_status: 6,
+  longhorn_status: 6,
+  openfga_status: 6,
+  otel_status: 6,
+  rook_status: 6,
+  spiffe_status: 6,
+  cni_status: 6,
+  spire_status: 6,
+  tikv_status: 6,
+  tuf_status: 6,
+  vitess_status: 6,
+  chaos_mesh_status: 6,
+  wasmcloud_status: 6,
+  volcano_status: 6,
   pvc_status: 6,
   gpu_status: 6,
   gpu_inventory: 6,
@@ -1548,6 +1870,30 @@ export const CARD_DEFAULT_WIDTHS: Record<string, number> = {
   // Full width cards (12 columns) - complex visualizations
   cluster_comparison: 12,
   cluster_resource_tree: 12,
+  // Enterprise dashboard content cards (full width)
+  compliance_frameworks_dashboard: 12,
+  change_control_dashboard: 12,
+  segregation_of_duties_dashboard: 12,
+  data_residency_dashboard: 12,
+  compliance_reports_dashboard: 12,
+  hipaa_dashboard: 12,
+  gxp_dashboard: 12,
+  baa_dashboard: 12,
+  nist_dashboard: 12,
+  stig_dashboard: 12,
+  airgap_dashboard: 12,
+  fedramp_dashboard: 12,
+  oidc_dashboard: 12,
+  rbac_audit_dashboard: 12,
+  session_dashboard: 12,
+  // Supply chain dashboard content cards
+  sbom_dashboard: 12,
+  sigstore_dashboard: 12,
+  slsa_dashboard: 12,
+  // Enterprise Risk Management dashboard content cards
+  risk_matrix_dashboard: 12,
+  risk_register_dashboard: 12,
+  risk_appetite_dashboard: 12,
 }
 
 // ---------------------------------------------------------------------------

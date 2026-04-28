@@ -18,10 +18,14 @@ import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
   parseRSSFeed, stripHTML, decodeHTMLEntities,
-  isValidThumbnail, normalizeRedditLink, formatTimeAgo } from './RSSParser'
+  isValidThumbnail, normalizeRedditLink } from './RSSParser'
+import { formatTimeAgo } from '../../../lib/formatters'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
+import { MS_PER_HOUR } from '../../../lib/constants/time'
 import { hostnameEndsWith } from '../../../lib/utils/urlHostname'
+
+const MIN_VALID_FEED_LENGTH = 50
 
 type SortByOption = 'date' | 'title'
 
@@ -36,7 +40,7 @@ const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => numbe
 // Demo RSS feed items (avoids external API calls in demo mode)
 function getDemoRSSItems(): FeedItem[] {
   const now = new Date()
-  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000)
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * MS_PER_HOUR)
   return [
     { id: 'demo-1', title: 'Kubernetes 1.32: What You Need to Know', link: '#', description: 'The latest Kubernetes release brings improvements to pod scheduling, enhanced GPU support, and new security features for multi-tenant clusters.', pubDate: hoursAgo(1), author: 'CNCF Blog', sourceName: 'Kubernetes Blog', sourceIcon: '⎈' },
     { id: 'demo-2', title: 'KubeStellar: Multi-Cluster Management Made Simple', link: '#', description: 'How KubeStellar simplifies deploying and managing workloads across multiple Kubernetes clusters with its innovative control plane architecture.', pubDate: hoursAgo(3), author: 'KubeStellar Team', sourceName: 'KubeStellar Blog', sourceIcon: '🌟' },
@@ -310,7 +314,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
         } else {
           const feedXml = await response.text()
           // Check for empty or error response
-          if (!feedXml || feedXml.length < 50) {
+          if (!feedXml || feedXml.length < MIN_VALID_FEED_LENGTH) {
             throw new Error('Empty response')
           }
           // Check for error pages
@@ -677,7 +681,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
   return (
     <div className="h-full flex flex-col min-h-0 overflow-hidden relative">
       {/* Row 1: Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           {/* Feed Selector */}
           <div className="relative">
@@ -744,7 +748,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             onClick={() => fetchFeed(true)}
             disabled={isRefreshing}
             className="p-1.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh)})` : t('common:common.refresh')}
+            title={lastRefresh ? `Refresh (last: ${formatTimeAgo(lastRefresh, { compact: true, extended: true })})` : t('common:common.refresh')}
           >
             <RefreshCw className={cn('w-4 h-4', isRefreshing && 'animate-spin')} />
           </button>
@@ -764,7 +768,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       </div>
 
       {/* Row 2: Search */}
-      <div className="flex flex-col gap-2 mb-2 flex-shrink-0">
+      <div className="flex flex-col gap-2 mb-2 shrink-0">
         <CardSearchInput
           value={filters.search}
           onChange={filters.setSearch}
@@ -774,7 +778,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
       {/* Row 3: Feed Pills - Quick Navigation */}
       {feeds.length > 1 && (
-        <div className="flex items-center gap-1 mb-2 overflow-x-auto scrollbar-thin flex-shrink-0 h-6">
+        <div className="flex items-center gap-1 mb-2 overflow-x-auto scrollbar-thin shrink-0 h-6">
           {feeds.map((feed, idx) => (
             <button
               key={feed.url}
@@ -786,7 +790,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 }
               }}
               className={cn(
-                'flex items-center gap-1 px-2 py-0.5 text-2xs rounded-full whitespace-nowrap transition-colors flex-shrink-0',
+                'flex items-center gap-1 px-2 py-0.5 text-2xs rounded-full whitespace-nowrap transition-colors shrink-0',
                 idx === activeFeedIndex
                   ? 'bg-primary/20 text-primary border border-primary/30'
                   : 'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent'
@@ -801,7 +805,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       )}
 
       {/* Sort & Filter Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           {/* CardControlsRow for sort & limit */}
           <CardControlsRow
@@ -892,7 +896,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
       {/* Filter Editor Modal */}
       {showFilterEditor && (
-        <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg flex-shrink-0 max-h-36 overflow-y-auto">
+        <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg shrink-0 max-h-36 overflow-y-auto">
           <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
             <span className="text-xs font-medium text-purple-300">Filter: {activeFeed?.name}</span>
             <button
@@ -910,7 +914,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 value={tempIncludeTerms}
                 onChange={(e) => setTempIncludeTerms(e.target.value)}
                 placeholder="kubernetes, docker, cloud..."
-                className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500"
               />
             </div>
             <div>
@@ -920,7 +924,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 value={tempExcludeTerms}
                 onChange={(e) => setTempExcludeTerms(e.target.value)}
                 placeholder="spam, politics, off-topic..."
-                className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500"
               />
             </div>
             <div className="flex gap-2 pt-1">
@@ -968,7 +972,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
               value={newFeedUrl}
               onChange={(e) => setNewFeedUrl(e.target.value)}
               placeholder="Feed URL (e.g., r/kubernetes or hnrss.org/frontpage)"
-              className="w-full px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary"
             />
             <div className="flex gap-2">
               <input
@@ -976,7 +980,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                 value={newFeedName}
                 onChange={(e) => setNewFeedName(e.target.value)}
                 placeholder="Name (optional)"
-                className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
               <button
                 onClick={() => {
@@ -1156,7 +1160,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                   value={aggregateName}
                   onChange={(e) => setAggregateName(e.target.value)}
                   placeholder="Aggregate name (e.g., My Tech News)"
-                  className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-purple-500 mb-2"
+                  className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500 mb-2"
                 />
 
                 {/* Source feed selector */}
@@ -1215,7 +1219,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                       value={aggregateIncludeTerms}
                       onChange={(e) => setAggregateIncludeTerms(e.target.value)}
                       placeholder="kubernetes, AI, cloud..."
-                      className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                     />
                   </div>
                   <div>
@@ -1225,7 +1229,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                       value={aggregateExcludeTerms}
                       onChange={(e) => setAggregateExcludeTerms(e.target.value)}
                       placeholder="spam, off-topic..."
-                      className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-purple-500"
+                      className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                     />
                   </div>
                 </div>
@@ -1263,7 +1267,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       )}
 
       {/* Status area - fixed height to prevent layout shifts */}
-      <div className="h-5 mb-1 flex-shrink-0 flex items-center">
+      <div className="h-5 mb-1 shrink-0 flex items-center">
         {(isLoading || isRefreshing) && !error ? (
           <span className="text-2xs text-muted-foreground/60 flex items-center gap-1">
             <RefreshCw className="w-3 h-3 animate-spin" />
@@ -1278,7 +1282,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
             </span>
             <button
               onClick={() => fetchFeed(true)}
-              className="flex-shrink-0 px-1.5 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 rounded text-yellow-300 transition-colors"
+              className="shrink-0 px-1.5 py-0.5 bg-yellow-500/20 hover:bg-yellow-500/30 rounded text-yellow-300 transition-colors"
             >
               {t('common:common.retry')}
             </button>
@@ -1339,7 +1343,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                   <img
                     src={item.thumbnail}
                     alt={item.title || 'Feed thumbnail'}
-                    className="w-16 h-16 object-cover rounded flex-shrink-0"
+                    className="w-16 h-16 object-cover rounded shrink-0"
                     onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
                 )}
@@ -1382,7 +1386,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
                     {item.pubDate && (
                       <span className="flex items-center gap-0.5">
                         <Clock className="w-3 h-3" />
-                        {formatTimeAgo(item.pubDate)}
+                        {formatTimeAgo(item.pubDate, { compact: true, extended: true })}
                       </span>
                     )}
 
@@ -1404,7 +1408,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       </div>
 
       {/* Pagination */}
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <CardPaginationFooter
           currentPage={currentPage}
           totalPages={totalPages}

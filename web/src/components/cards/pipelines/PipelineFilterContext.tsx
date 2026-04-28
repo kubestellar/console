@@ -10,7 +10,7 @@
  * Cards on OTHER dashboards (where the provider is absent) fall back to
  * their own per-card state.
  */
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { getPipelineRepos } from '../../../hooks/useGitHubPipelines'
 import { safeGetJSON, safeSetJSON } from '../../../lib/utils/localStorage'
 
@@ -198,7 +198,7 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     }
   }, [])
 
-  const value: PipelineFilterState = {
+  const value: PipelineFilterState = useMemo(() => ({
     selectedRepos,
     toggleRepo,
     selectAll,
@@ -212,7 +212,21 @@ export function PipelineFilterProvider({ children, initialRepo }: { children: Re
     hiddenRepos: config.hidden,
     hasCustomization,
     resetToDefaults,
-  }
+  }), [
+    selectedRepos,
+    toggleRepo,
+    selectAll,
+    repoFilter,
+    setRepoFilter,
+    repos,
+    serverRepos,
+    addRepo,
+    removeRepo,
+    restoreRepo,
+    config.hidden,
+    hasCustomization,
+    resetToDefaults,
+  ])
 
   return (
     <PipelineFilterCtx.Provider value={value}>

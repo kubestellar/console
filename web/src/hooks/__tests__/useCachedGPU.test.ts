@@ -21,14 +21,15 @@ vi.mock('../../lib/cache/fetcherUtils', () => ({
   AGENT_HTTP_TIMEOUT_MS: 30000,
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/constants')>()
+  return { ...actual, LOCAL_AGENT_HTTP_URL: 'http://localhost:8585' }
+})
 
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-  AI_PREDICTION_TIMEOUT_MS: 30000,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/constants/network')>()
+  return { ...actual, FETCH_DEFAULT_TIMEOUT_MS: 5000, AI_PREDICTION_TIMEOUT_MS: 30000 }
+})
 
 vi.mock('../useCachedData/demoData', () => ({
   getDemoGPUNodes: () => [],

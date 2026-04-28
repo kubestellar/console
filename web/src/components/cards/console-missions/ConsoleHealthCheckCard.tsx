@@ -15,7 +15,7 @@ import { HorseshoeGauge } from '../llmd/shared/HorseshoeGauge'
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { t } = useTranslation()
   const { startMission, missions } = useMissions()
-  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
   const { issues: allPodIssues, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
   const { issues: allDeploymentIssues, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
@@ -23,8 +23,10 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allClusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: allClusters.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,

@@ -10,6 +10,7 @@
 
 import { getDemoMode } from './useDemoMode'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
 const RECONNECT_DELAY = 1000
 const REQUEST_TIMEOUT = 30000
 
@@ -52,7 +53,7 @@ class KubectlService {
 
     this.isConnecting = true
     try {
-      this.ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      this.ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
       this.ws.onopen = () => {
         this.isConnecting = false

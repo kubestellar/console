@@ -83,7 +83,7 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetGPUNodeHealth returns proactive health check results for GPU nodes
@@ -148,7 +148,7 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetGPUHealthCronJobStatus returns the installation status of the GPU health CronJob
@@ -166,7 +166,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobStatus(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -203,7 +203,7 @@ func (h *MCPHandlers) GetGPUHealthCronJobResults(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), mcpDefaultTimeout)
@@ -277,7 +277,7 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"operators": []*k8s.NVIDIAOperatorStatus{status}, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetConfigMaps returns ConfigMaps from clusters
@@ -345,7 +345,7 @@ func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"configmaps": configmaps, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetSecrets returns Secrets from clusters
@@ -413,7 +413,7 @@ func (h *MCPHandlers) GetSecrets(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"secrets": secrets, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetServiceAccounts returns ServiceAccounts from clusters
@@ -481,7 +481,7 @@ func (h *MCPHandlers) GetServiceAccounts(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"serviceAccounts": serviceAccounts, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetPVCs returns PersistentVolumeClaims from clusters
@@ -549,7 +549,7 @@ func (h *MCPHandlers) GetPVCs(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"pvcs": pvcs, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetPVs returns PersistentVolumes from clusters
@@ -615,7 +615,7 @@ func (h *MCPHandlers) GetPVs(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"pvs": pvs, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetResourceQuotas returns resource quotas from clusters
@@ -683,7 +683,7 @@ func (h *MCPHandlers) GetResourceQuotas(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"resourceQuotas": quotas, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetLimitRanges returns limit ranges from clusters
@@ -751,7 +751,7 @@ func (h *MCPHandlers) GetLimitRanges(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"limitRanges": ranges, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // CreateOrUpdateResourceQuota creates or updates a ResourceQuota
@@ -822,7 +822,7 @@ func (h *MCPHandlers) CreateOrUpdateResourceQuota(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"resourceQuota": quota, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // DeleteResourceQuota deletes a ResourceQuota
@@ -861,7 +861,7 @@ func (h *MCPHandlers) DeleteResourceQuota(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"deleted": true, "name": name, "namespace": namespace, "cluster": cluster})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetPodLogs returns logs from a pod
@@ -904,7 +904,7 @@ func (h *MCPHandlers) GetPodLogs(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"logs": logs, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // CallToolRequest represents a request to call an MCP tool
@@ -1145,7 +1145,7 @@ func (h *MCPHandlers) GetFlatcarNodes(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetIngresses returns Ingresses from clusters
@@ -1213,7 +1213,7 @@ func (h *MCPHandlers) GetIngresses(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"ingresses": items, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetNetworkPolicies returns NetworkPolicies from clusters
@@ -1281,7 +1281,7 @@ func (h *MCPHandlers) GetNetworkPolicies(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"networkpolicies": items, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // podNetworkStatsTimeout is the per-cluster timeout for network stats queries.
@@ -1343,7 +1343,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+		return errNoClusterAccess(c)
 	}
 
 	clusters, _, err := h.k8sClient.HealthyClusters(c.Context())

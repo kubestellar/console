@@ -447,6 +447,8 @@ async function fetchTokenUsage() {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), QUICK_ABORT_TIMEOUT_MS)
+    // Use plain fetch — /health does not require auth and avoids CORS
+    // preflight failures from X-Requested-With header (#10459).
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },

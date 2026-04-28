@@ -128,13 +128,7 @@ async function setupMocks(page: Page) {
   await page.route('**/health', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{"status":"ok"}' })
   )
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ id: '1', github_login: 'test-user', email: 'test@test.com', onboarded: true }),
-    })
-  )
+  // Catch-all FIRST — specific mocks registered after take priority
   await page.route('**/api/**', (route) => {
     const url = route.request().url()
     if (url.includes('/stream') || url.includes('/events')) {
@@ -142,6 +136,13 @@ async function setupMocks(page: Page) {
     }
     route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   })
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: '1', github_login: 'test-user', email: 'test@test.com', onboarded: true }),
+    })
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +169,10 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
     demoUserOnboarded: true,
   })
   await setupMocks(page)
+  // Firefox WebSocket connections may prevent networkidle from settling —
+  // fall back to domcontentloaded on timeout. #10134
   await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS })
+    .catch(() => page.waitForLoadState('domcontentloaded'))
 
   // ══════════════════════════════════════════════════════════════════════
   // Phase 2: DOM XSS Vectors
@@ -176,7 +180,8 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   console.log('[RCE] Phase 2: DOM XSS vectors')
 
   for (const route of ROUTES_TO_SCAN) {
-    await page.goto(route, { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch(() => {})
+    await page.goto(route, { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS })
+      .catch(() => page.waitForLoadState('domcontentloaded').catch(() => {}))
 
     // 2a: No javascript: links
     const jsLinks = await page.evaluate(() =>

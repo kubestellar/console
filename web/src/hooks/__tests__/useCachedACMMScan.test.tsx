@@ -20,6 +20,13 @@ const lastArgs: { current: Record<string, unknown> | null } = { current: null }
 // `forceRefetch()` actually calls through to it.
 const lastRefetch: { current: ReturnType<typeof vi.fn> | null } = { current: null }
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../lib/cache', () => ({
   useCache: (args: Record<string, unknown>) => {
     lastArgs.current = args

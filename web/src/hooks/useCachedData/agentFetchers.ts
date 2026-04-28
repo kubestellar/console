@@ -9,13 +9,14 @@
  */
 
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { clusterCacheRef } from '../mcp/shared'
+import { clusterCacheRef, agentFetch } from '../mcp/shared'
 import { isAgentUnavailable } from '../useLocalAgent'
-import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
+import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { AGENT_HTTP_TIMEOUT_MS } from '../../lib/cache/fetcherUtils'
 import type { PodIssue, Deployment } from '../useMCP'
 import type { Workload } from '../useWorkloads'
+import type { CiliumStatus } from '../../types/cilium'
 
 // ============================================================================
 // Cluster helpers
@@ -48,7 +49,8 @@ export async function fetchPodIssuesViaAgent(namespace?: string, onProgress?: (p
     const ctx = context || name
     const issues = await kubectlProxy.getPodIssues(ctx, namespace)
     // Always use the short name — kubectlProxy returns context path as cluster
-    return issues.map(i => ({ ...i, cluster: name }))
+    // Guard against null/undefined when proxy is disconnected or in cooldown
+    return (issues || []).map(i => ({ ...i, cluster: name }))
   })
 
   const accumulated: PodIssue[] = []
@@ -79,9 +81,10 @@ export async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: 
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
-    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
       signal: controller.signal,
-      headers: { Accept: 'application/json' } })
+      headers: { Accept: 'application/json' }
+    })
     clearTimeout(timeoutId)
 
     if (!response.ok) throw new Error(`Agent returned ${response.status}`)
@@ -92,7 +95,8 @@ export async function fetchDeploymentsViaAgent(namespace?: string, onProgress?: 
     // Always use the short name — agent echoes back context path as cluster
     return ((data.deployments || []) as Deployment[]).map(d => ({
       ...d,
-      cluster: name }))
+      cluster: name
+    }))
   })
 
   const accumulated: Deployment[] = []
@@ -124,9 +128,10 @@ export async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[])
 
     const ctrl = new AbortController()
     const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
       signal: ctrl.signal,
-      headers: { Accept: 'application/json' } })
+      headers: { Accept: 'application/json' }
+    })
     clearTimeout(tid)
 
     if (!res.ok) throw new Error(`Agent ${res.status}`)
@@ -148,7 +153,8 @@ export async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[])
         readyReplicas: Number(d.readyReplicas || 0),
         status: ws,
         image: String(d.image || ''),
-        createdAt: new Date().toISOString() }
+        createdAt: new Date().toISOString()
+      }
     })
   })
 
@@ -161,4 +167,66 @@ export async function fetchWorkloadsFromAgent(onProgress?: (partial: Workload[])
   }
   await settledWithConcurrency(tasks, undefined, handleSettled)
   return accumulated.length > 0 ? accumulated : null
+}
+
+// ============================================================================
+// Cilium status fetcher
+// ============================================================================
+
+/**
+ * Fetch aggregated Cilium status from the local agent.
+ * Returns null when the agent is unavailable or the user is in demo mode,
+ * which causes the useCache layer to fall back to demo data.
+ */
+export async function fetchCiliumStatus(): Promise<CiliumStatus | null> {
+  if (isAgentUnavailable()) return null
+
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  if (!token || token === 'demo-token') return null
+
+  try {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/cilium-status`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
+    if (!res.ok) return null
+    return await res.json().catch(() => null)
+  } catch {
+    return null
+  }
+}
+// ============================================================================
+// Jaeger status fetcher
+// ============================================================================
+
+/**
+ * Fetch aggregated Jaeger tracing status from the local agent.
+ * Matches backend handler at /jaeger-status.
+ */
+export async function fetchJaegerStatus(): Promise<any | null> {
+  // Rule: Check if agent is available before attempting fetch
+  if (isAgentUnavailable()) return null
+
+  // Rule: Authorization via bearer token
+  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  if (!token || token === 'demo-token') return null
+
+  try {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/jaeger-status`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
+
+    if (!res.ok) return null
+    return await res.json().catch(() => null)
+  } catch {
+    // Suppress console noise on expected fetch timeouts
+    return null
+  }
 }

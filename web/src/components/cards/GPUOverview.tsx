@@ -144,8 +144,8 @@ export function GPUOverview({ config: _config }: GPUOverviewProps) {
           <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3">
             <Activity className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-foreground font-medium">{t('gpuStatus.noGPUData')}</p>
-          <p className="text-sm text-muted-foreground">{t('gpuStatus.gpuMetricsNotAvailable')}</p>
+          <p className="text-foreground font-medium">{t('gpuOverview.noGPUData')}</p>
+          <p className="text-sm text-muted-foreground">{t('gpuOverview.gpuMetricsNotAvailable')}</p>
         </div>
       </div>
     )

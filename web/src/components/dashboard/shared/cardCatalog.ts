@@ -115,7 +115,13 @@ export const CARD_CATALOG = {
     { type: 'hpa_status', title: 'HPA Status', description: 'Horizontal Pod Autoscalers with scaling targets and metrics', visualization: 'table' },
     { type: 'configmap_status', title: 'ConfigMap Status', description: 'ConfigMaps across clusters with data key counts', visualization: 'table' },
     { type: 'secret_status', title: 'Secret Status', description: 'Secrets across clusters with types and key counts', visualization: 'table' },
-    { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela controller health and OAM application delivery status', visualization: 'status' },
+    { type: 'kubevela_status', title: 'KubeVela', description: 'KubeVela Application CRs: workflow step progress, component + trait counts, and vela-core controller health', visualization: 'status' },
+    { type: 'backstage_status', title: 'Backstage', description: 'Backstage developer portal: replicas, catalog entities (Components/APIs/Systems/Domains/Resources/Users/Groups), plugins, scaffolder templates, and last catalog sync', visualization: 'status' },
+    { type: 'dapr_status', title: 'Dapr', description: 'Dapr control plane health, Dapr-enabled apps, and configured components (state store / pub-sub / binding)', visualization: 'status' },
+    { type: 'dragonfly_status', title: 'Dragonfly', description: 'Dragonfly P2P image/file distribution: manager, scheduler, seed-peers, and per-node dfdaemon agents', visualization: 'status' },
+    { type: 'openfeature_status', title: 'OpenFeature', description: 'OpenFeature feature flags: provider status (flagd, LaunchDarkly, ...), flag definitions by type, and evaluation metrics', visualization: 'status' },
+    { type: 'wasmcloud_status', title: 'wasmCloud', description: 'wasmCloud WebAssembly lattice: hosts, actors, capability providers, and link definitions', visualization: 'status' },
+    { type: 'volcano_status', title: 'Volcano', description: 'Volcano batch/HPC scheduler: queues, jobs (pending/running/completed/failed), pod groups, and GPU allocation', visualization: 'status' },
   ],
   'Compute': [
     { type: 'compute_overview', title: 'Compute Overview', description: 'CPU, memory, and GPU summary with live data', visualization: 'status' },
@@ -134,6 +140,15 @@ export const CARD_CATALOG = {
     { type: 'storage_overview', title: 'Storage Overview', description: 'Total storage capacity and PVC summary', visualization: 'status' },
     { type: 'pvc_status', title: 'PVC Status', description: 'Persistent Volume Claims with status breakdown', visualization: 'table' },
     { type: 'pv_status', title: 'Persistent Volumes', description: 'Persistent Volumes with capacity, access modes, and reclaim policy', visualization: 'table' },
+    { type: 'fluid_status', title: 'Fluid', description: 'Fluid dataset caching status, runtime health, and data load progress', visualization: 'status' },
+    { type: 'cubefs_status', title: 'CubeFS', description: 'CubeFS distributed file system health, volume status, and node topology', visualization: 'status' },
+    { type: 'rook_status', title: 'Rook', description: 'Rook-managed CephClusters: Ceph health, OSD/MON/MGR counts, and capacity', visualization: 'status' },
+    { type: 'longhorn_status', title: 'Longhorn', description: 'Longhorn distributed block storage: volumes, node status, replica health, and capacity utilization', visualization: 'status' },
+    { type: 'tikv_status', title: 'TiKV', description: 'TiKV distributed key-value store: store nodes, regions, leaders, and capacity', visualization: 'status' },
+    { type: 'vitess_status', title: 'Vitess', description: 'Vitess distributed MySQL: keyspaces, shards, tablets (PRIMARY/REPLICA/RDONLY), and replication lag', visualization: 'status' },
+  ],
+  'Provisioning': [
+    { type: 'harbor_status', title: 'Harbor Registry', description: 'Harbor registry projects, repositories, and vulnerability scan results', visualization: 'status' },
   ],
   'Network': [
     { type: 'network_overview', title: 'Network Overview', description: 'Services breakdown by type and namespace', visualization: 'status' },
@@ -145,8 +160,19 @@ export const CARD_CATALOG = {
     { type: 'service_topology', title: 'Service Topology', description: 'Animated service mesh visualization with cross-cluster traffic', visualization: 'status' },
     { type: 'ingress_status', title: 'Ingress Status', description: 'Ingress resources with hosts, paths, and backend services', visualization: 'table' },
     { type: 'network_policy_status', title: 'Network Policy Status', description: 'NetworkPolicy resources with pod selectors and rules', visualization: 'table' },
+    { type: 'cni_status', title: 'CNI', description: 'Container Network Interface plugin: active plugin, per-node CNI readiness, pod network CIDR, and NetworkPolicy coverage', visualization: 'status' },
+    { type: 'cilium_status', title: 'Cilium', description: 'Cilium eBPF networking, network policy enforcement, and Hubble flow visibility.', visualization: 'status' },
+    { type: 'contour_status', title: 'Contour', description: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health', visualization: 'status' },
+    { type: 'envoy_status', title: 'Envoy Proxy', description: 'Envoy listener health, upstream cluster health, and request/connection stats', visualization: 'status' },
+    { type: 'grpc_status', title: 'gRPC Services', description: 'gRPC service health, per-service RPS, p99 latency, and error rates', visualization: 'status' },
+    { type: 'linkerd_status', title: 'Linkerd', description: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment', visualization: 'status' },
     { type: 'network_trace', title: 'Network Traces', description: 'Live network connection tracing via Inspektor Gadget eBPF', visualization: 'table' },
     { type: 'dns_trace', title: 'DNS Traces', description: 'Live DNS query tracing via Inspektor Gadget eBPF', visualization: 'table' },
+  ],
+  'Observability': [
+    { type: 'jaeger_status', title: 'Jaeger Tracing', description: 'Distributed trace collection, service dependencies, and latency analysis', visualization: 'status' },
+    { type: 'otel_status', title: 'OpenTelemetry', description: 'OpenTelemetry Collectors: pipeline health, receivers, exporters, dropped telemetry', visualization: 'status' },
+    { type: 'cortex_status', title: 'Cortex', description: 'Cortex (CNCF incubating) — horizontally scalable Prometheus: microservice health, active series, ingestion rate, query rate, and tenant count', visualization: 'status' },
   ],
   'GitOps': [
     { type: 'helm_release_status', title: 'Helm Releases', description: 'Helm release status and versions', visualization: 'status' },
@@ -154,6 +180,7 @@ export const CARD_CATALOG = {
     { type: 'helm_values_diff', title: 'Helm Values Diff', description: 'Compare values vs defaults', visualization: 'table' },
     { type: 'chart_versions', title: 'Helm Chart Versions', description: 'Available chart upgrades', visualization: 'table' },
     { type: 'kustomization_status', title: 'Kustomization Status', description: 'Flux kustomizations health', visualization: 'status' },
+    { type: 'flux_status', title: 'Flux CD', description: 'Flux sources, kustomizations, and Helm release reconciliation status', visualization: 'status' },
     { type: 'overlay_comparison', title: 'Overlay Comparison', description: 'Compare kustomize overlays', visualization: 'table' },
     { type: 'gitops_drift', title: 'GitOps Drift', description: 'Configuration drift detection', visualization: 'status' },
   ],
@@ -183,6 +210,7 @@ export const CARD_CATALOG = {
     { type: 'crossplane_managed_resources', title: 'Crossplane Managed Resources', description: 'View all Crossplane managed resources including status, provider, and sync conditions', visualization: 'table' },
   ],
   'Security & Events': [
+    { type: 'deployment_risk_score', title: 'Deployment Risk Score', description: 'Correlates Argo CD sync, Kyverno violations, and pod restart rates into a single 0-100 risk score per namespace', visualization: 'status' },
     { type: 'security_issues', title: 'Security Issues', description: 'Security findings and vulnerabilities', visualization: 'table' },
     { type: 'event_stream', title: 'Event Stream', description: 'Live Kubernetes event feed', visualization: 'events' },
     { type: 'pod_logs', title: 'Pod Logs', description: 'Tail container logs for any pod across your clusters', visualization: 'events' },
@@ -217,6 +245,9 @@ export const CARD_CATALOG = {
     { type: 'console_ai_offline_detection', title: 'Offline Detection', description: 'Detect offline nodes and unavailable GPUs', visualization: 'status' },
     { type: 'hardware_health', title: 'Hardware Health', description: 'Track GPU, NIC, NVMe, InfiniBand disappearances on SuperMicro/HGX nodes', visualization: 'status' },
   ],
+  'AI/ML': [
+    { type: 'kserve_status', title: 'KServe', description: 'KServe InferenceService readiness, predictor replica status, canary traffic split, and serving throughput / latency', visualization: 'status' },
+  ],
   'Alerting': [
     { type: 'alert_rules', title: 'Alert Rules', description: 'Manage alert rules and notification channels', visualization: 'table' },
   ],
@@ -230,6 +261,9 @@ export const CARD_CATALOG = {
     { type: 'opa_policies', title: 'OPA Gatekeeper', description: 'Policy enforcement with OPA Gatekeeper - shows installed status per cluster', visualization: 'status' },
     { type: 'kyverno_policies', title: 'Kyverno Policies', description: 'Kubernetes-native policy management with Kyverno', visualization: 'status' },
     { type: 'intoto_supply_chain', title: 'in-toto Supply Chain', description: 'Monitor supply chain security and verify layout steps across clusters', visualization: 'status' },
+    { type: 'tuf_status', title: 'TUF', description: 'TUF repository role metadata — root, targets, snapshot, timestamp — with versions, expirations, and signing status', visualization: 'status' },
+    { type: 'cloud_custodian_status', title: 'Cloud Custodian', description: 'Cloud Custodian policy runs — success / fail / dry-run counts, last-run timestamps, top resources acted on, and violations by severity', visualization: 'status' },
+    { type: 'spire_status', title: 'SPIRE', description: 'SPIRE workload identity — server pod health, agent DaemonSet coverage, attested agents, registration entries, and trust bundle age', visualization: 'status' },
     { type: 'falco_alerts', title: 'Falco Alerts', description: 'Runtime security monitoring - syscall anomalies, container escapes, privilege escalation', visualization: 'events' },
     { type: 'trivy_scan', title: 'Trivy Scanner', description: 'Vulnerability scanning for container images, IaC, and secrets', visualization: 'table' },
     { type: 'kubescape_scan', title: 'Kubescape', description: 'Security posture management and NSA/CISA hardening compliance', visualization: 'status' },
@@ -240,6 +274,8 @@ export const CARD_CATALOG = {
     { type: 'compliance_drift', title: 'Compliance Drift', description: 'Detect clusters deviating from fleet compliance baseline', visualization: 'status' },
     { type: 'cross_cluster_policy_comparison', title: 'Cross-Cluster Policy Comparison', description: 'Compare Kyverno policy deployment across clusters', visualization: 'table' },
     { type: 'trestle_scan', title: 'Compliance Trestle (OSCAL)', description: 'OSCAL compliance assessment via Compliance Trestle (CNCF Sandbox)', visualization: 'status' },
+    { type: 'spiffe_status', title: 'SPIFFE', description: 'SPIFFE/SPIRE workload identity: trust domain, SVID counts (x509/JWT), federated domains, and registration entries', visualization: 'status' },
+    { type: 'openfga_status', title: 'OpenFGA', description: 'OpenFGA fine-grained authorization: stores, authorization models, relationship tuples, API throughput, and latency percentiles', visualization: 'status' },
   ],
   'Data Compliance': [
     { type: 'vault_secrets', title: 'HashiCorp Vault', description: 'Secrets management, dynamic credentials, and encryption-as-a-service', visualization: 'status' },
@@ -247,6 +283,53 @@ export const CARD_CATALOG = {
     { type: 'cert_manager', title: 'Cert-Manager', description: 'TLS certificate lifecycle management with automatic renewal', visualization: 'status' },
     { type: 'keycloak_status', title: 'Keycloak', description: 'Keycloak realm health, active user sessions, and registered clients', visualization: 'status' },
     { type: 'namespace_rbac', title: 'Access Controls', description: 'RBAC policies and permission auditing per namespace', visualization: 'table' },
+  ],
+  'Enterprise Compliance': [
+    { type: 'hipaa_compliance', title: 'HIPAA Compliance', description: 'HIPAA Security Rule technical safeguards for PHI workloads', visualization: 'gauge' },
+    { type: 'gxp_validation', title: 'GxP Validation', description: 'FDA 21 CFR Part 11 electronic signatures and audit chain', visualization: 'status' },
+    { type: 'baa_tracker', title: 'BAA Tracker', description: 'Business Associate Agreement tracking and expiry alerts', visualization: 'table' },
+    { type: 'compliance_frameworks', title: 'Compliance Frameworks', description: 'PCI-DSS 4.0, SOC 2 Type II framework evaluations', visualization: 'gauge' },
+    { type: 'data_residency', title: 'Data Residency', description: 'Geographic data locality rules and violation detection', visualization: 'status' },
+    { type: 'change_control', title: 'Change Control', description: 'SOX/PCI change management audit trail', visualization: 'events' },
+    { type: 'segregation_of_duties', title: 'Segregation of Duties', description: 'RBAC conflict detection across clusters', visualization: 'table' },
+    { type: 'compliance_reports', title: 'Compliance Reports', description: 'Generate PDF/JSON compliance reports in OSCAL format', visualization: 'status' },
+    { type: 'nist_800_53', title: 'NIST 800-53', description: 'NIST 800-53 Rev 5 control family mapping and coverage', visualization: 'gauge' },
+    { type: 'stig_compliance', title: 'STIG Compliance', description: 'DISA STIG container hardening checks', visualization: 'gauge' },
+    { type: 'air_gap_readiness', title: 'Air-Gap Readiness', description: 'Disconnected environment readiness assessment', visualization: 'status' },
+    { type: 'fedramp_readiness', title: 'FedRAMP Readiness', description: 'FedRAMP Low/Moderate/High baseline scoring', visualization: 'gauge' },
+    { type: 'oidc_federation', title: 'OIDC Federation', description: 'OIDC identity provider federation and session status', visualization: 'status' },
+    { type: 'rbac_audit', title: 'RBAC Audit', description: 'RBAC least-privilege analysis and over-privilege detection', visualization: 'gauge' },
+    { type: 'session_management', title: 'Session Management', description: 'Enterprise session monitoring and policy enforcement', visualization: 'table' },
+    { type: 'siem_integration', title: 'SIEM Integration', description: 'Security event monitoring and alert correlation', visualization: 'events' },
+    { type: 'incident_response', title: 'Incident Response', description: 'Incident tracking and playbook management', visualization: 'status' },
+    { type: 'threat_intel', title: 'Threat Intelligence', description: 'Threat feed monitoring and IOC analysis', visualization: 'gauge' },
+    { type: 'sbom_manager', title: 'SBOM Manager', description: 'Software bill of materials and vulnerability tracking', visualization: 'table' },
+    { type: 'sigstore_verify', title: 'Sigstore Verify', description: 'Image signature verification and cosign results', visualization: 'status' },
+    { type: 'slsa_provenance', title: 'SLSA Provenance', description: 'Build provenance levels and attestation verification', visualization: 'gauge' },
+    { type: 'sbom_dashboard', title: 'SBOM Dashboard', description: 'Full SBOM dashboard with package inventory and vulnerability scanning', visualization: 'table' },
+    { type: 'sigstore_dashboard', title: 'Sigstore Dashboard', description: 'Full Sigstore dashboard with signature verification and trust chain', visualization: 'status' },
+    { type: 'slsa_dashboard', title: 'SLSA Dashboard', description: 'Full SLSA dashboard with provenance levels and source integrity', visualization: 'gauge' },
+    { type: 'compliance_frameworks_dashboard', title: 'Compliance Frameworks Dashboard', description: 'Full compliance frameworks dashboard with framework evaluation and controls', visualization: 'status' },
+    { type: 'change_control_dashboard', title: 'Change Control Dashboard', description: 'Full change control audit dashboard with risk scoring and policy violations', visualization: 'status' },
+    { type: 'segregation_of_duties_dashboard', title: 'Segregation of Duties Dashboard', description: 'Full SoD dashboard with RBAC conflict detection and remediation', visualization: 'status' },
+    { type: 'data_residency_dashboard', title: 'Data Residency Dashboard', description: 'Full data residency dashboard with geographic sovereignty enforcement', visualization: 'status' },
+    { type: 'compliance_reports_dashboard', title: 'Compliance Reports Dashboard', description: 'Full compliance reports dashboard with PDF and JSON report generation', visualization: 'status' },
+    { type: 'hipaa_dashboard', title: 'HIPAA Dashboard', description: 'Full HIPAA compliance dashboard with security safeguards and PHI monitoring', visualization: 'status' },
+    { type: 'gxp_dashboard', title: 'GxP Dashboard', description: 'Full GxP validation dashboard with 21 CFR Part 11 compliance checks', visualization: 'status' },
+    { type: 'baa_dashboard', title: 'BAA Dashboard', description: 'Full BAA tracker dashboard with agreement management and expiry alerts', visualization: 'status' },
+    { type: 'nist_dashboard', title: 'NIST 800-53 Dashboard', description: 'Full NIST 800-53 dashboard with control family mapping and coverage', visualization: 'status' },
+    { type: 'stig_dashboard', title: 'DISA STIG Dashboard', description: 'Full DISA STIG dashboard with security hardening checks and findings', visualization: 'status' },
+    { type: 'airgap_dashboard', title: 'Air-Gap Readiness Dashboard', description: 'Full air-gap readiness dashboard with disconnected environment assessment', visualization: 'status' },
+    { type: 'fedramp_dashboard', title: 'FedRAMP Dashboard', description: 'Full FedRAMP dashboard with baseline scoring and POAMs tracking', visualization: 'status' },
+    { type: 'oidc_dashboard', title: 'OIDC Federation Dashboard', description: 'Full OIDC federation dashboard with identity provider management', visualization: 'status' },
+    { type: 'rbac_audit_dashboard', title: 'RBAC Audit Dashboard', description: 'Full RBAC audit dashboard with least-privilege analysis', visualization: 'status' },
+    { type: 'session_dashboard', title: 'Session Management Dashboard', description: 'Full session management dashboard with policy enforcement monitoring', visualization: 'status' },
+    { type: 'risk_matrix', title: 'Risk Matrix', description: 'Interactive risk heat map', visualization: 'gauge' },
+    { type: 'risk_register', title: 'Risk Register', description: 'Comprehensive risk tracking', visualization: 'table' },
+    { type: 'risk_appetite', title: 'Risk Appetite', description: 'Risk tolerance monitoring', visualization: 'gauge' },
+    { type: 'risk_matrix_dashboard', title: 'Risk Matrix Dashboard', description: 'Full risk matrix with heat map', visualization: 'gauge' },
+    { type: 'risk_register_dashboard', title: 'Risk Register Dashboard', description: 'Full risk register with filtering', visualization: 'table' },
+    { type: 'risk_appetite_dashboard', title: 'Risk Appetite Dashboard', description: 'Full risk appetite monitoring', visualization: 'gauge' },
   ],
   'Workload Detection': [
     { type: 'prow_jobs', title: 'Prow Jobs', description: 'Prow CI/CD job status - presubmit, postsubmit, and periodic jobs', visualization: 'table' },
@@ -312,6 +395,7 @@ export const CARD_CATALOG = {
     { type: 'lima_status', title: 'Lima', description: 'Lima virtual machine instances, runtime health, and resource usage', visualization: 'status' },
     { type: 'artifact_hub_status', title: 'Artifact Hub', description: 'Artifact Hub package discovery and repository sync status', visualization: 'status' },
     { type: 'crio_status', title: 'CRI-O', description: 'CRI-O container runtime metrics, image pulls, and pod sandbox status', visualization: 'status' },
+    { type: 'containerd_status', title: 'Containerd', description: 'Containerd runtime — running containers, image, namespace, state, and uptime', visualization: 'status' },
     { type: 'github_activity', title: 'GitHub Activity', description: 'Monitor GitHub repository activity - PRs, issues, releases, and contributors', visualization: 'table' },
     { type: 'kubectl', title: 'Kubectl', description: 'Interactive kubectl terminal with AI assistance, YAML editor, and command history', visualization: 'table' },
   ],
@@ -343,11 +427,14 @@ export const CARD_CATALOG = {
     { type: 'strimzi_status', title: 'Strimzi', description: 'Strimzi Kafka cluster health, topic status, and consumer group lag', visualization: 'status' },
     { type: 'nats_status', title: 'NATS', description: 'NATS messaging server status, JetStream streams, and consumer health', visualization: 'status' },
   ],
+  'Runtime': [
+    { type: 'chaos_mesh_status', title: 'Chaos Mesh', description: 'Chaos Mesh experiment status and workflow progress', visualization: 'status' },
+  ],
   'Drasi': [
     { type: 'drasi_reactive_graph', title: 'Drasi Reactive Graph', description: 'Reactive data pipeline — sources, continuous queries, reactions, and live results with animated flow', visualization: 'status' },
   ],
   'Maturity': [
-    { type: 'acmm_level', title: 'Current Level', description: "The repo's current level on the AI Codebase Maturity Model (L1–L5)", visualization: 'gauge' },
+    { type: 'acmm_level', title: 'Current Level', description: "The repo's current level on the AI Codebase Maturity Model (L1–L6)", visualization: 'gauge' },
     { type: 'acmm_balance', title: 'Human vs AI Balance', description: 'Weekly AI vs human contribution trend with a balance target slider anchored to ACMM levels', visualization: 'timeseries' },
     { type: 'acmm_feedback_loops', title: 'Feedback Loop Inventory', description: 'Inventory of criteria from ACMM + Fullsend + Agentic Engineering Framework + Claude Reflect', visualization: 'status' },
     { type: 'acmm_recommendations', title: 'Your Role + Next Steps', description: 'Current role and prioritized missing criteria for the next level', visualization: 'status' },
@@ -388,10 +475,12 @@ export const CATEGORY_LOCALE_KEYS: Record<string, string> = {
   'Live Trends': 'trends',
   'AI Agents': 'aiAgents',
   'AI Assistant': 'aiAssistant',
+  'AI/ML': 'aiMl',
   'Alerting': 'alerting',
   'Cost Management': 'costManagement',
   'Security Posture': 'securityPosture',
   'Data Compliance': 'dataCompliance',
+  'Enterprise Compliance': 'enterpriseCompliance',
   'Workload Detection': 'workloadDetection',
   'Multi-Cluster Insights': 'multiClusterInsights',
   'Arcade': 'arcade',
@@ -403,6 +492,7 @@ export const CATEGORY_LOCALE_KEYS: Record<string, string> = {
   'Streaming & Messaging': 'streamingMessaging',
   'Maturity': 'maturity',
   'Observability': 'observability',
+  'Provisioning': 'provisioning',
 }
 
 // ---------------------------------------------------------------------------
@@ -483,6 +573,7 @@ export function generateCardSuggestions(query: string): CardSuggestion[] {
       { type: 'cluster_focus', title: 'Cluster Focus', description: 'Single cluster detailed view', visualization: 'status', config: {} },
       { type: 'cluster_comparison', title: 'Cluster Comparison', description: 'Side-by-side cluster metrics', visualization: 'bar', config: {} },
       { type: 'cluster_network', title: 'Cluster Network', description: 'API server and network info', visualization: 'status', config: {} },
+      { type: 'cilium_status', title: 'Cilium', description: 'Cilium eBPF networking, network policy enforcement, and Hubble flow visibility.', visualization: 'status', config: {} },
     ]
   }
 
@@ -509,6 +600,12 @@ export function generateCardSuggestions(query: string): CardSuggestion[] {
       { type: 'helm_values_diff', title: 'Helm Values Diff', description: 'Compare values vs defaults', visualization: 'table', config: {} },
       { type: 'helm_history', title: 'Helm History', description: 'Release revision history', visualization: 'events', config: {} },
       { type: 'chart_versions', title: 'Helm Chart Versions', description: 'Available chart upgrades', visualization: 'table', config: {} },
+    ]
+  }
+
+  if (lowerQuery.includes('harbor') || lowerQuery.includes('registry') || lowerQuery.includes('vulnerability')) {
+    return [
+      { type: 'harbor_status', title: 'Harbor Registry', description: 'Harbor registry projects, repositories, and vulnerability scan results', visualization: 'status', config: {} },
     ]
   }
 
@@ -548,6 +645,25 @@ export function generateCardSuggestions(query: string): CardSuggestion[] {
     ]
   }
 
+  if (lowerQuery.includes('kserve') || lowerQuery.includes('inference') || lowerQuery.includes('model serving') || lowerQuery.includes('inferenceservice')) {
+    return [
+      { type: 'kserve_status', title: 'KServe', description: 'KServe inference service readiness, model serving throughput, and latency health', visualization: 'status', config: {} },
+      { type: 'knative_status', title: 'Knative', description: 'Knative serving revisions, traffic routing, and eventing broker status', visualization: 'status', config: {} },
+    ]
+  }
+
+  if (lowerQuery.includes('fluid') || lowerQuery.includes('dataset') || lowerQuery.includes('caching') || lowerQuery.includes('alluxio') || lowerQuery.includes('juicefs')) {
+    return [
+      { type: 'fluid_status', title: 'Fluid', description: 'Fluid dataset caching status, runtime health, and data load progress', visualization: 'status', config: {} },
+    ]
+  }
+
+  if (lowerQuery.includes('cubefs') || lowerQuery.includes('cube fs') || lowerQuery.includes('distributed file system') || lowerQuery.includes('volume status')) {
+    return [
+      { type: 'cubefs_status', title: 'CubeFS', description: 'CubeFS distributed file system health, volume status, and node topology', visualization: 'status', config: {} },
+    ]
+  }
+
   if (lowerQuery.includes('user') || lowerQuery.includes('service account') || lowerQuery.includes('access') || lowerQuery.includes('permission')) {
     return [
       { type: 'user_management', title: 'User Management', description: 'Console users and Kubernetes RBAC', visualization: 'table', config: {} },
@@ -571,6 +687,13 @@ export function generateCardSuggestions(query: string): CardSuggestion[] {
       { type: 'pod_health_trend', title: 'Pod Health Trend', description: 'Healthy/unhealthy/pending pods over time', visualization: 'timeseries', config: {} },
       { type: 'resource_trend', title: 'Resource Trend', description: 'CPU, memory, pods, nodes over time', visualization: 'timeseries', config: {} },
       { type: 'gpu_utilization', title: 'GPU Utilization', description: 'GPU allocation trend with utilization chart', visualization: 'timeseries', config: {} },
+    ]
+  }
+
+  if (lowerQuery.includes('jaeger') || lowerQuery.includes('tracing') || lowerQuery.includes('latency') || lowerQuery.includes('trace') || lowerQuery.includes('span')) {
+    return [
+      { type: 'jaeger_status', title: 'Jaeger Tracing', description: 'Distributed trace collection, service dependencies, and latency analysis', visualization: 'status', config: {} },
+      { type: 'network_trace', title: 'Network Traces', description: 'Live network connection tracing via Inspektor Gadget eBPF', visualization: 'table', config: {} },
     ]
   }
 

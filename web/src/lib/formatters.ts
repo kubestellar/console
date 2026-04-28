@@ -2,6 +2,28 @@
  * Utility functions for formatting values for display
  */
 
+import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY, MS_PER_MONTH, MS_PER_YEAR, SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from './constants/time'
+
+/**
+ * Format the elapsed time between two ISO timestamps as a compact string.
+ * Used by ProwJob listings to display run duration.
+ */
+export function formatProwDuration(startTime: string, endTime?: string): string {
+  const start = new Date(startTime)
+  const end = endTime ? new Date(endTime) : new Date()
+  const diffMs = end.getTime() - start.getTime()
+
+  if (diffMs < 0) return '-'
+
+  const seconds = Math.floor(diffMs / MS_PER_SECOND)
+  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE)
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
+
+  if (hours > 0) return `${hours}h ${minutes % MINUTES_PER_HOUR}m`
+  if (minutes > 0) return `${minutes}m`
+  return `${seconds}s`
+}
+
 /**
  * Parse Kubernetes resource quantity strings (e.g., "16077540Ki", "4Gi", "500Mi")
  * and convert to bytes
@@ -46,40 +68,85 @@ function parseK8sQuantity(value: string): number {
   return num
 }
 
+/** Options for {@link formatBytes}. */
+interface FormatBytesOptions {
+  /** Number of decimal places (default: 1). */
+  decimals?: number
+  /** Use IEC binary units — KiB, MiB, GiB, TiB, PiB (default: false → KB, MB, …). */
+  binary?: boolean
+  /** String returned when the input is zero, negative, or non-finite (default: `'0 B'`). */
+  zeroLabel?: string
+}
+
+const SI_UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+const IEC_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB']
+const BYTES_PER_KIBIBYTE = 1024
+
 /**
- * Format bytes to human-readable string (GB, TB, MB, etc.)
+ * Format bytes to a human-readable string.
+ *
+ * @example
+ * formatBytes(1536)                       // "1.5 KB"
+ * formatBytes(1536, { binary: true })     // "1.5 KiB"
+ * formatBytes(0, { zeroLabel: '—' })      // "—"
  */
-export function formatBytes(bytes: number, decimals = 1): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
+export function formatBytes(
+  bytes: number,
+  optsOrDecimals: FormatBytesOptions | number = {},
+): string {
+  // Backward-compatible: accept a plain number as the decimals shorthand.
+  const opts: FormatBytesOptions =
+    typeof optsOrDecimals === 'number'
+      ? { decimals: optsOrDecimals }
+      : optsOrDecimals
 
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const { decimals = 1, binary = false, zeroLabel = '0 B' } = opts
 
-  const value = bytes / Math.pow(k, i)
+  if (!Number.isFinite(bytes) || bytes <= 0) return zeroLabel
+
+  const units = binary ? IEC_UNITS : SI_UNITS
+  const i = Math.floor(Math.log(bytes) / Math.log(BYTES_PER_KIBIBYTE))
+  const value = bytes / Math.pow(BYTES_PER_KIBIBYTE, i)
 
   // Use 0 decimals for whole numbers, otherwise use specified decimals
   if (value === Math.floor(value)) {
-    return `${value} ${sizes[i]}`
+    return `${value} ${units[i]}`
   }
-  return `${value.toFixed(decimals)} ${sizes[i]}`
+  return `${value.toFixed(decimals)} ${units[i]}`
+}
+
+// ---------------------------------------------------------------------------
+// Numeric formatters
+// ---------------------------------------------------------------------------
+
+const THOUSAND = 1_000
+const MILLION = 1_000_000
+const BILLION = 1_000_000_000
+
+/**
+ * Compact-format a large number: 1 234 → "1.2K", 5 600 000 → "5.6M".
+ * Returns the raw number as a string when it is below 1 000.
+ */
+export function formatStatNumber(value: number): string {
+  if (Math.abs(value) >= BILLION) return `${(value / BILLION).toFixed(1)}B`
+  if (Math.abs(value) >= MILLION) return `${(value / MILLION).toFixed(1)}M`
+  if (Math.abs(value) >= THOUSAND) return `${(value / THOUSAND).toFixed(1)}K`
+  return value.toString()
+}
+
+/** Round a ratio / percentage and append `%`. */
+export function formatPercent(value: number): string {
+  return `${Math.round(value)}%`
 }
 
 /**
- * Format a value already in GB to a smart string, auto-converting to TB when large.
- * Returns { display, tooltip } so callers can show the short form and hover for detail.
+ * Format a monetary value with a `$` prefix.
+ * Large amounts are compacted: $1.2K, $5.6M.
  */
-export function formatGBSmart(gb: number, decimals = 1): { display: string; tooltip: string } {
-  if (!Number.isFinite(gb) || gb <= 0) return { display: '0 GB', tooltip: '0 GB' }
-  if (gb >= 1024) {
-    const tb = gb / 1024
-    return {
-      display: `${tb.toFixed(decimals)} TB`,
-      tooltip: `${Math.round(gb).toLocaleString()} GB`,
-    }
-  }
-  const rounded = gb >= 10 ? Math.round(gb) : Number(gb.toFixed(decimals))
-  return { display: `${rounded} GB`, tooltip: `${gb.toFixed(2)} GB` }
+export function formatCurrency(value: number): string {
+  if (value >= MILLION) return `$${(value / MILLION).toFixed(1)}M`
+  if (value >= THOUSAND) return `$${(value / THOUSAND).toFixed(1)}K`
+  return `$${value.toFixed(2)}`
 }
 
 /**
@@ -100,53 +167,95 @@ export function formatK8sStorage(value: string): string {
   return formatBytes(bytes)
 }
 
-/**
- * Format a timestamp as relative time (e.g., "2m ago", "5h ago", "3d ago")
- * Returns a plain English string without i18n support
- */
-export function formatRelativeTime(isoString: string): string {
-  const diff = Date.now() - new Date(isoString).getTime()
-  if (isNaN(diff) || diff < 0) return 'Just now'
-  
-  const minute = 60_000
-  const hour = 60 * minute
-  const day = 24 * hour
-  
-  if (diff < minute) return 'Just now'
-  if (diff < hour) {
-    const mins = Math.floor(diff / minute)
-    return `${mins}m ago`
-  }
-  if (diff < day) {
-    const hours = Math.floor(diff / hour)
-    return `${hours}h ago`
-  }
-  const days = Math.floor(diff / day)
-  return `${days}d ago`
+function toTimestamp(input: string | Date | number): number {
+  if (typeof input === 'number') return input
+  if (input instanceof Date) return input.getTime()
+  return new Date(input).getTime()
+}
+
+interface FormatTimeAgoOptions {
+  /** Omit the " ago" suffix (e.g. "5m" instead of "5m ago"). */
+  compact?: boolean
+  /** Include month/year ranges for older timestamps (default: false — stops at days). */
+  extended?: boolean
+  /** Label returned when the input is invalid/NaN (default: "just now"). */
+  invalidLabel?: string
 }
 
 /**
- * Create an i18n-aware relative time formatter
- * Use this in components that need translated time strings
- * 
- * @example
- * const formatTime = createRelativeTimeFormatter(t)
- * formatTime(someISOString) // "2 minutes ago" or localized equivalent
+ * Format a timestamp as relative time (e.g., "just now", "5m ago", "3h ago", "2d ago").
+ * Accepts an ISO string, Date object, or epoch millisecond number.
  */
-export function createRelativeTimeFormatter(
-  t: (key: string, options?: { count?: number }) => string
+export function formatTimeAgo(input: string | Date | number, opts: FormatTimeAgoOptions = {}): string {
+  const { compact = false, extended = false, invalidLabel = 'just now' } = opts
+  const suffix = compact ? '' : ' ago'
+
+  const ts = toTimestamp(input)
+  const diff = Date.now() - ts
+  if (isNaN(diff) || diff < 0) return compact ? 'now' : invalidLabel
+
+  if (diff < MS_PER_MINUTE) return compact ? 'now' : 'just now'
+  if (diff < MS_PER_HOUR) return `${Math.floor(diff / MS_PER_MINUTE)}m${suffix}`
+  if (diff < MS_PER_DAY) return `${Math.floor(diff / MS_PER_HOUR)}h${suffix}`
+
+  if (extended) {
+    if (diff < MS_PER_MONTH) return `${Math.floor(diff / MS_PER_DAY)}d${suffix}`
+    if (diff < MS_PER_YEAR) return `${Math.floor(diff / MS_PER_MONTH)}mo${suffix}`
+    return `${Math.floor(diff / MS_PER_YEAR)}y${suffix}`
+  }
+
+  return `${Math.floor(diff / MS_PER_DAY)}d${suffix}`
+}
+
+/** @deprecated Use {@link formatTimeAgo} instead. */
+export const formatRelativeTime = formatTimeAgo
+
+interface CardSyncKeys {
+  justNow: string
+  minutesAgo: string
+  hoursAgo: string
+  daysAgo: string
+}
+
+/**
+ * Build the standard `synced*` i18n key set for a card prefix.
+ *
+ * Most status cards use `<prefix>.syncedJustNow`, etc.  Pass a custom
+ * {@link CardSyncKeys} object for cards that deviate (e.g. Thanos uses
+ * `thanosStatus.justNow` without the `synced` prefix).
+ */
+function cardSyncKeys(prefix: string): CardSyncKeys {
+  return {
+    justNow: `${prefix}.syncedJustNow`,
+    minutesAgo: `${prefix}.syncedMinutesAgo`,
+    hoursAgo: `${prefix}.syncedHoursAgo`,
+    daysAgo: `${prefix}.syncedDaysAgo`,
+  }
+}
+
+/**
+ * Create a card-specific i18n-aware relative time formatter.
+ *
+ * Accepts either a card prefix (uses the standard `synced*` key convention)
+ * or an explicit {@link CardSyncKeys} object for non-standard cards.
+ */
+export function createCardSyncFormatter(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: (key: any, options?: any) => string,
+  keys: string | CardSyncKeys,
 ): (isoString: string) => string {
+  const k = typeof keys === 'string' ? cardSyncKeys(keys) : keys
+
   return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('common.justNow')
-    
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    
-    if (diff < minute) return t('common.justNow')
-    if (diff < hour) return t('common.minutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('common.hoursAgo', { count: Math.floor(diff / hour) })
-    return t('common.daysAgo', { count: Math.floor(diff / day) })
+    const parsed = new Date(isoString).getTime()
+    if (!isoString || isNaN(parsed)) return t(k.justNow)
+
+    const diff = Date.now() - parsed
+    if (diff < 0) return t(k.justNow)
+
+    if (diff < MS_PER_MINUTE) return t(k.justNow)
+    if (diff < MS_PER_HOUR) return t(k.minutesAgo, { count: Math.floor(diff / MS_PER_MINUTE) })
+    if (diff < MS_PER_DAY) return t(k.hoursAgo, { count: Math.floor(diff / MS_PER_HOUR) })
+    return t(k.daysAgo, { count: Math.floor(diff / MS_PER_DAY) })
   }
 }

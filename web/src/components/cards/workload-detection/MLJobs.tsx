@@ -71,13 +71,13 @@ export function MLJobs({ config: _config }: MLJobsProps) {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'running':
-        return <StatusBadge color="green" icon={<Play className="w-2.5 h-2.5" />}>Running</StatusBadge>
+        return <StatusBadge color="green" icon={<Play className="w-2.5 h-2.5" />}>{t('mlJobs.statusRunning')}</StatusBadge>
       case 'queued':
-        return <StatusBadge color="yellow" icon={<Clock className="w-2.5 h-2.5" />}>Queued</StatusBadge>
+        return <StatusBadge color="yellow" icon={<Clock className="w-2.5 h-2.5" />}>{t('mlJobs.statusQueued')}</StatusBadge>
       case 'completed':
-        return <StatusBadge color="blue" icon={<CheckCircle className="w-2.5 h-2.5" />}>Done</StatusBadge>
+        return <StatusBadge color="blue" icon={<CheckCircle className="w-2.5 h-2.5" />}>{t('mlJobs.statusCompleted')}</StatusBadge>
       case 'failed':
-        return <StatusBadge color="red" icon={<XCircle className="w-2.5 h-2.5" />}>Failed</StatusBadge>
+        return <StatusBadge color="red" icon={<XCircle className="w-2.5 h-2.5" />}>{t('mlJobs.statusFailed')}</StatusBadge>
       default:
         return <StatusBadge color="gray">{status}</StatusBadge>
     }
@@ -104,7 +104,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
               {filters.localClusterFilter.length}/{filters.availableClusters.length}
             </span>
           )}
-          <StatusBadge color="yellow">
+          <StatusBadge color="green">
             {jobs.filter(j => j.status === 'running').length} running
           </StatusBadge>
         </div>
@@ -141,12 +141,12 @@ export function MLJobs({ config: _config }: MLJobsProps) {
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-yellow-400 font-medium">ML Job Detection</p>
           <p className="text-muted-foreground">
             Auto-detects Kubeflow, Ray, and custom ML training jobs.{' '}
-            <a href="https://www.kubeflow.org/docs/started/installing-kubeflow/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline inline-block py-2">
+            <a href="https://www.kubeflow.org/docs/started/installing-kubeflow/" target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:underline inline">
               Kubeflow docs <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>
@@ -173,7 +173,7 @@ export function MLJobs({ config: _config }: MLJobsProps) {
             {job.status === 'running' && (
               <div className="w-full bg-secondary rounded-full h-1.5">
                 <div
-                  className="bg-gradient-to-r from-yellow-500 to-green-500 h-1.5 rounded-full transition-all"
+                  className="bg-linear-to-r from-yellow-500 to-green-500 h-1.5 rounded-full transition-all"
                   style={{ width: `${job.progress}%` }}
                 />
               </div>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_TEXT_COLOR, CHART_TOOLTIP_LABEL_COLOR } from '../../lib/constants'
+import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_TEXT_COLOR, CHART_TOOLTIP_LABEL_COLOR, CHART_BODY_FONT_SIZE } from '../../lib/constants'
 
 interface DataItem {
   name: string
@@ -41,7 +41,7 @@ export function PieChart({
         trigger: 'item' as const,
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: { name: string; value: number; percent: number }) =>
           `<span style="color:${CHART_TOOLTIP_LABEL_COLOR};font-weight:500">${params.name}</span><br/><span style="color:${CHART_TOOLTIP_TEXT_COLOR}">${params.value} (${params.percent}%)</span>`,
       },

@@ -8,15 +8,16 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardControlsRow, CardPaginationFooter, CardSearchInput, CardSkeleton } from '../../lib/cards/CardComponents'
 import type { ClusterEvent } from '../../hooks/useMCP'
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/constants/time'
 
-const ONE_HOUR_MS = 60 * 60 * 1000
+const EVENT_CUTOFF_MS = MS_PER_HOUR
 
 type SortByOption = 'time' | 'reason' | 'object'
 
 function getMinutesAgo(timestamp: string | undefined): string {
   if (!timestamp) return 'Unknown'
   const diffMs = Date.now() - new Date(timestamp).getTime()
-  const diffMins = Math.floor(diffMs / 60000)
+  const diffMins = Math.floor(diffMs / MS_PER_MINUTE)
   if (diffMins < 1) return 'Just now'
   if (diffMins < 60) return `${diffMins}m ago`
   return `${Math.floor(diffMins / 60)}h ago`
@@ -47,7 +48,7 @@ export function RecentEvents() {
 
   // Pre-filter to events within the last hour (before handing to useCardData)
   const recentEventsCandidates = (() => {
-    const cutoff = Date.now() - ONE_HOUR_MS
+    const cutoff = Date.now() - EVENT_CUTOFF_MS
     return filterByCluster(events).filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() >= cutoff
@@ -147,7 +148,7 @@ export function RecentEvents() {
       {/* Error Display */}
       {isFailed && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-red-400">Error loading events</p>
             <p className="text-2xs text-muted-foreground mt-0.5">Failed to fetch event data ({consecutiveFailures} attempts)</p>
@@ -174,9 +175,9 @@ export function RecentEvents() {
             >
               <div className="flex items-start gap-2">
                 {event.type === 'Warning' ? (
-                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 mt-0.5 shrink-0" />
                 ) : (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 flex-shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">

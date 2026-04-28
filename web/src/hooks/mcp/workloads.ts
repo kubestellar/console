@@ -5,7 +5,6 @@ import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef, fetchWithRetry } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
@@ -693,9 +692,11 @@ export function usePodIssues(cluster?: string, namespace?: string) {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
         const podIssuesData = await kubectlProxy.getPodIssues(kubectlContext, namespace)
+        // Guard against null/undefined when proxy is disconnected or in cooldown
+        const safePodIssues = podIssuesData || []
         const now = new Date()
-        podIssuesCache = { data: podIssuesData, timestamp: now, key: cacheKey }
-        setIssues(podIssuesData)
+        podIssuesCache = { data: safePodIssues, timestamp: now, key: cacheKey }
+        setIssues(safePodIssues)
         setError(null)
         setLastUpdated(now)
         setConsecutiveFailures(0)
@@ -724,8 +725,9 @@ export function usePodIssues(cluster?: string, namespace?: string) {
       if (cluster) sseParams.cluster = cluster
       if (namespace) sseParams.namespace = namespace
 
+      // pod-issues is a backend-only endpoint (#9996) — route SSE via /api/mcp/
       const allIssues = await fetchSSE<PodIssue>({
-        url: `${LOCAL_AGENT_HTTP_URL}/pod-issues/stream`,
+        url: `/api/mcp/pod-issues/stream`,
         params: sseParams,
         itemsKey: 'issues',
         signal: abortController.signal,
@@ -886,8 +888,9 @@ export function useDeploymentIssues(cluster?: string, namespace?: string) {
       if (cluster) sseParams.cluster = cluster
       if (namespace) sseParams.namespace = namespace
 
+      // deployment-issues is a backend-only endpoint (#9996) — route SSE via /api/mcp/
       const allIssues = await fetchSSE<DeploymentIssue>({
-        url: `${LOCAL_AGENT_HTTP_URL}/deployment-issues/stream`,
+        url: `/api/mcp/deployment-issues/stream`,
         params: sseParams,
         itemsKey: 'issues',
         signal: abortController.signal,
@@ -1141,12 +1144,9 @@ export function useDeployments(cluster?: string, namespace?: string) {
         return
       }
 
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      headers['Authorization'] = `Bearer ${token}`
       const response = await fetchWithRetry(url, {
         method: 'GET',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         timeoutMs: MCP_HOOK_TIMEOUT_MS,
       })
       if (!response.ok) {

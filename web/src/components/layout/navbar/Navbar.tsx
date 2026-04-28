@@ -60,7 +60,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
   }, [location.pathname])
 
   return (
-    <nav data-tour="navbar" style={{ top: topOffset }} className="fixed left-0 right-0 h-16 glass z-toast px-3 md:px-6 flex items-center justify-between">
+    <nav data-tour="navbar" style={{ top: topOffset }} className="fixed left-0 right-0 h-16 glass z-sticky px-3 md:px-6 flex items-center justify-between overflow-x-clip">
       {/* Left side: Hamburger + Logo — shrink-0 so logo is never compressed */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Hamburger menu - mobile only */}
@@ -80,7 +80,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
-          className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity cursor-pointer"
           aria-label={t('navbar.goHome')}
         >
           <LogoWithStar className="w-8 h-8 md:w-9 md:h-9" showStar={false} />
@@ -88,7 +88,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
-          className="hidden lg:flex flex-col leading-tight justify-center min-h-[44px] hover:opacity-80 transition-opacity text-left"
+          className="hidden lg:flex flex-col leading-tight justify-center min-h-[44px] hover:opacity-80 transition-opacity text-left cursor-pointer"
           aria-label={t('navbar.goHome')}
         >
           <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>
@@ -122,7 +122,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
       {/* Right side — no shrink-0 here so the container participates in flex
            negotiation with the search bar, preventing overlap when the AI Mission
            button is visible (#4409). Individual critical items use shrink-0. */}
-      <div className="flex items-center gap-1 md:gap-3">
+      <div className="flex items-center gap-1 md:gap-3 min-w-0">
         {/* Core desktop items: md+ (768px) */}
         <div className="hidden md:flex items-center gap-2">
           {/* Unified Filter */}
@@ -133,8 +133,9 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <Suspense fallback={null}><AgentSelector compact /></Suspense>
         </div>
 
-        {/* Extended desktop items: lg+ (1024px) */}
-        <div className="hidden lg:flex items-center gap-2">
+        {/* Extended desktop items: xl+ (1280px) — moved from lg to xl to
+             prevent button overflow at the 1024px breakpoint (#10001). */}
+        <div className="hidden xl:flex items-center gap-2">
           {/* Update Indicator */}
           <UpdateIndicator />
 
@@ -194,8 +195,8 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <AlertBadge />
         </div>
 
-        {/* Overflow menu — visible below lg for items hidden at narrow widths */}
-        <div className="relative lg:hidden shrink-0">
+        {/* Overflow menu — visible below xl for items hidden at narrow widths */}
+        <div className="relative xl:hidden shrink-0">
           <button
             onClick={() => setShowMobileMore(!showMobileMore)}
             className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors"
@@ -207,7 +208,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             <>
               {/* Backdrop */}
               <div
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay"
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay"
                 onClick={() => setShowMobileMore(false)}
               />
               {/* Bottom sheet menu on mobile */}
@@ -239,7 +240,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                     <div className="border-t border-border mx-3 my-1" />
                   </div>
 
-                  {/* Items hidden at <lg (1024px): AI missions, update, token usage, feature request, tour */}
+                  {/* Items hidden at <xl (1280px): AI missions, update, token usage, feature request, tour */}
                   {!isSidebarOpen && (
                     <div className="px-3 py-2">
                       <button

@@ -5,7 +5,6 @@
  * Monitors KubeRay fleet, Trino gateways, SLO compliance, and failover events.
  */
 import { useClusters } from '../../hooks/useMCP'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -16,7 +15,6 @@ const DEFAULT_KARMADA_OPS_CARDS = getDefaultCards('karmada-ops')
 
 export function KarmadaOps() {
   const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const reachableClusters = clusters.filter(c => c.reachable !== false)
   const hasRealData = reachableClusters.length > 0
@@ -31,7 +29,7 @@ export function KarmadaOps() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage

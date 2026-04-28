@@ -432,7 +432,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               <span className="hidden @sm:inline">{pricingMode === 'per-cluster' ? t('cards:clusterCosts.perCluster') : t('cards:clusterCosts.uniform')}</span>
             </button>
             {showSettingsMenu && (
-              <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2">
+              <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2"
+                onKeyDown={(e) => {
+                  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                  e.preventDefault()
+                  const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                  if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                  else items[Math.max(idx - 1, 0)]?.focus()
+                }}
+              >
                 <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('cards:clusterCosts.pricingMode')}
                 </div>
@@ -490,7 +499,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
               </button>
               {showProviderMenu && (
-                <div className="absolute top-full left-0 mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 py-1">
+                <div className="absolute top-full left-0 mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 py-1"
+                  onKeyDown={(e) => {
+                    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                    e.preventDefault()
+                    const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                    const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                    if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                    else items[Math.max(idx - 1, 0)]?.focus()
+                  }}
+                >
                   {(Object.keys(CLOUD_PRICING) as CloudProvider[]).map(provider => (
                     <button
                       key={provider}
@@ -634,7 +652,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       />
 
       {/* Total costs */}
-      <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/20 to-green-500/20 border border-green-500/30 mb-4">
+      <div className="p-4 rounded-lg bg-linear-to-r from-green-500/20 to-green-500/20 border border-green-500/30 mb-4">
         <div className="flex flex-wrap items-center justify-between gap-y-2">
           <div>
             <p className="text-xs text-green-400 mb-1">{t('cards:clusterCosts.estimatedMonthly')}</p>
@@ -670,18 +688,18 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   {/* 1. Server icon */}
-                  <Server className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <Server className="w-4 h-4 text-muted-foreground shrink-0" />
                   {/* 2. Vendor logo icon */}
-                  <div className="flex-shrink-0" title={providerPricing.name}>
+                  <div className="shrink-0" title={providerPricing.name}>
                     <CloudProviderIcon provider={mapProviderToIconProvider(cluster.provider)} size={16} />
                   </div>
                   {/* 3. Text badge (clickable to change) - styled as obvious dropdown button */}
                   <button
-                    className={`group/badge px-1.5 py-0.5 text-[9px] font-medium rounded flex-shrink-0 flex items-center gap-0.5 ${providerIcon.bg} ${providerIcon.color} ${
+                    className={`group/badge px-1.5 py-0.5 text-[9px] font-medium rounded shrink-0 flex items-center gap-0.5 ${providerIcon.bg} ${providerIcon.color} ${
                       isOverridden
                         ? 'ring-1 ring-purple-500/50'
                         : ''
-                    } hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-sm hover:shadow`}
+                    } hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-xs hover:shadow-sm`}
                     title={`${providerPricing.name}${isOverridden ? ` (${t('cards:clusterCosts.manuallySet')})` : pricingMode === 'per-cluster' ? ` (${t('cards:clusterCosts.autoDetected')})` : ''}\n${t('cards:clusterCosts.clickToChange')}`}
                     aria-label={t('cards:clusterCosts.changeProviderPricing', { cluster: cluster.name, provider: providerPricing.name })}
                     onClick={(e) => {
@@ -713,20 +731,20 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                   {/* 4. Cluster name */}
                   <span className="text-sm font-medium text-foreground truncate min-w-0">{cluster.name}</span>
                   {/* 5. Health dot */}
-                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-medium text-green-400 flex-shrink-0">
+                  <span className="text-sm font-medium text-green-400 shrink-0">
                     ${cluster.monthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
                   </span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </div>
               </div>
 
               {/* Cost bar */}
               <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-green-500 rounded-full transition-all"
+                  className="h-full bg-linear-to-r from-green-500 to-green-500 rounded-full transition-all"
                   style={{ width: `${percent}%` }}
                 />
               </div>

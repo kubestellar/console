@@ -4,7 +4,12 @@
 [build]
   # Frontend is in web/ subdirectory
   base = "web"
-  command = "npm ci && npm run build"
+  # Skip the tsc type-check step on Netlify — TypeScript 6 needs ~3 GB heap
+  # which exceeds the default Node allocation in Netlify build containers,
+  # causing OOM crashes during `tsc -b`. Type checking is already enforced
+  # by CI (build workflow) and local `npm run build`. Vite compiles TS
+  # directly via esbuild, so the runtime bundle is unaffected.
+  command = "npm ci && npx vite build && node scripts/check-vendor-safety.mjs"
   publish = "dist"
 
 [functions]
@@ -30,6 +35,9 @@
   # Enable demo mode with mock data for Netlify previews
   VITE_DEMO_MODE = "true"
   NODE_VERSION = "20"
+  # Raise the V8 heap ceiling so esbuild function bundling (33 functions,
+  # including the 30 MB googleapis tree) does not OOM.
+  NODE_OPTIONS = "--max_old_space_size=4096"
 
 # GitHub avatar proxy — avatars.githubusercontent.com is blocked by browser
 # when loaded inside SVG foreignObject. Proxy through our domain to avoid CORS.
@@ -148,6 +156,54 @@
 [[redirects]]
   from = "/api/rewards/badge/*"
   to = "/.netlify/functions/rewards-badge/:splat"
+  status = 200
+
+# Identity OIDC API — proxy to Netlify Functions (enterprise OIDC dashboard)
+[[redirects]]
+  from = "/api/identity/oidc/summary"
+  to = "/.netlify/functions/identity-oidc-summary"
+  status = 200
+
+[[redirects]]
+  from = "/api/identity/oidc/providers"
+  to = "/.netlify/functions/identity-oidc-providers"
+  status = 200
+
+[[redirects]]
+  from = "/api/identity/oidc/sessions"
+  to = "/.netlify/functions/identity-oidc-sessions"
+  status = 200
+
+# Identity RBAC API — proxy to Netlify Functions (enterprise RBAC Audit dashboard)
+[[redirects]]
+  from = "/api/identity/rbac/summary"
+  to = "/.netlify/functions/identity-rbac-summary"
+  status = 200
+
+[[redirects]]
+  from = "/api/identity/rbac/bindings"
+  to = "/.netlify/functions/identity-rbac-bindings"
+  status = 200
+
+[[redirects]]
+  from = "/api/identity/rbac/findings"
+  to = "/.netlify/functions/identity-rbac-findings"
+  status = 200
+
+# Identity Sessions API — proxy to Netlify Functions (enterprise Session dashboard)
+[[redirects]]
+  from = "/api/identity/sessions/summary"
+  to = "/.netlify/functions/identity-sessions-summary"
+  status = 200
+
+[[redirects]]
+  from = "/api/identity/sessions/active"
+  to = "/.netlify/functions/identity-sessions-active"
+  status = 200
+
+[[redirects]]
+  from = "/api/identity/sessions/policies"
+  to = "/.netlify/functions/identity-sessions-policies"
   status = 200
 
 # SPA routing - redirect all routes to index.html (only if file doesn't exist)

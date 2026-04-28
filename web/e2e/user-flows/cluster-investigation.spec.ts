@@ -54,7 +54,7 @@ test.describe('Cluster Investigation — "My cluster has issues"', () => {
         // Filter options should appear
         const options = page.getByTestId('cluster-filter-option')
         const optionCount = await options.count()
-        expect(optionCount).toBeGreaterThanOrEqual(0)
+        expect(optionCount).toBeGreaterThanOrEqual(1)
       }
     }
   })

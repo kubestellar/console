@@ -4,18 +4,19 @@ import { STORAGE_KEY_CLUSTER_PROVIDER_OVERRIDES } from '../../lib/constants'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { TICK_INTERVAL_MS } from '../../lib/constants/network'
+import { HOURS_PER_MONTH } from '../../lib/constants/time'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 import { formatMemoryStat } from '../../lib/formatStats'
 
 /** GiB per TiB — used for storage unit display in cost blocks */
 
 const COST_CARDS_KEY = 'kubestellar-cost-cards'
+const STORAGE_COST_PER_GB_MONTH = 0.10
 
 // Default cards for the Cost dashboard
 const DEFAULT_COST_CARDS = getDefaultCards('cost')
@@ -24,7 +25,6 @@ export function Cost() {
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Filter clusters based on global selection
@@ -107,20 +107,19 @@ export function Cost() {
       const pricing = CLOUD_PRICING[provider]
 
       const clusterHourly = (cpus * pricing.cpu) + (memory * pricing.memory) + (gpus * pricing.gpu)
-      const clusterMonthly = clusterHourly * 24 * 30
+      const clusterMonthly = clusterHourly * HOURS_PER_MONTH
 
       totalCPU += cpus
       totalMemoryGB += memory
       totalGPUs += gpus
       totalMonthly += clusterMonthly
-      cpuMonthly += cpus * pricing.cpu * 24 * 30
-      memoryMonthly += memory * pricing.memory * 24 * 30
-      gpuMonthly += gpus * pricing.gpu * 24 * 30
+      cpuMonthly += cpus * pricing.cpu * HOURS_PER_MONTH
+      memoryMonthly += memory * pricing.memory * HOURS_PER_MONTH
+      gpuMonthly += gpus * pricing.gpu * HOURS_PER_MONTH
     })
 
     const totalStorageGB = reachableClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
-    const storageCostPerGBMonth = 0.10
-    const storageMonthly = totalStorageGB * storageCostPerGBMonth
+    const storageMonthly = totalStorageGB * STORAGE_COST_PER_GB_MONTH
 
     return {
       totalCPU,
@@ -159,7 +158,7 @@ export function Cost() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage
@@ -183,7 +182,7 @@ export function Cost() {
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-400">Error loading cost data</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>

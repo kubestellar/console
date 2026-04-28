@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -167,7 +168,7 @@ export function DeploymentDrillDown({ data }: Props) {
     return new Promise((resolve) => {
       let ws: WebSocket
       try {
-        ws = new WebSocket(LOCAL_AGENT_WS_URL)
+        ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       } catch {
         resolve('')
         return
@@ -440,11 +441,11 @@ export function DeploymentDrillDown({ data }: Props) {
   const isHealthy = readyReplicas === replicas && replicas > 0
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'pods', label: `Pods (${pods.length})`, icon: Box },
-    { id: 'events', label: 'Events', icon: Zap },
-    { id: 'describe', label: 'Describe', icon: FileText },
-    { id: 'yaml', label: 'YAML', icon: Code },
+    { id: 'overview', label: t('drilldown.tabs.overview', 'Overview'), icon: Info },
+    { id: 'pods', label: `${t('drilldown.tabs.pods', 'Pods')} (${pods.length})`, icon: Box },
+    { id: 'events', label: t('drilldown.tabs.events', 'Events'), icon: Zap },
+    { id: 'describe', label: t('drilldown.tabs.describe', 'Describe'), icon: FileText },
+    { id: 'yaml', label: t('drilldown.tabs.yaml', 'YAML'), icon: Code },
   ]
 
   return (

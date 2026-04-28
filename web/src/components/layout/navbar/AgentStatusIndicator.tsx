@@ -20,7 +20,10 @@ import {
   LOCAL_AGENT_HTTP_URL,
   BACKEND_HEALTH_CHECK_TIMEOUT_MS,
 } from '../../../lib/constants/network'
+import { agentFetch } from '@/hooks/mcp/shared'
 import type { AgentInfo } from '../../../types/agent'
+
+const CONNECTING_DEBOUNCE_MS = 300
 
 export function AgentStatusIndicator() {
   const { t } = useTranslation(['common'])
@@ -54,7 +57,9 @@ export function AgentStatusIndicator() {
   const fetchAgentsFromHealth = async () => {
     setIsDiscoveringAgents(true)
     try {
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(BACKEND_HEALTH_CHECK_TIMEOUT_MS),
       })
       if (!res.ok) return
@@ -105,7 +110,7 @@ export function AgentStatusIndicator() {
       // Don't immediately show "connecting" — wait 300ms to confirm it's real
       connectingTimerRef.current = setTimeout(() => {
         setStableStatus('connecting')
-      }, 300)
+      }, CONNECTING_DEBOUNCE_MS)
     } else {
       // Any non-connecting status applies immediately
       if (connectingTimerRef.current) clearTimeout(connectingTimerRef.current)
@@ -299,7 +304,7 @@ export function AgentStatusIndicator() {
           )}
         >
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="text-xs font-medium hidden sm:inline whitespace-nowrap">
+          <span className="text-sm font-medium hidden sm:inline whitespace-nowrap">
             {t('agent.connecting')}
           </span>
         </div>
@@ -318,11 +323,11 @@ export function AgentStatusIndicator() {
         title={pillStyle.title}
       >
         <pillStyle.Icon className="w-4 h-4" />
-        <span className="text-xs font-medium hidden sm:inline whitespace-nowrap">
+        <span className="text-sm font-medium hidden sm:inline whitespace-nowrap">
           {pillStyle.label}
         </span>
         <span
-          className={cn('w-2 h-2 rounded-full flex-shrink-0', pillStyle.dot)}
+          className={cn('w-2 h-2 rounded-full shrink-0', pillStyle.dot)}
         />
       </button>
 
@@ -330,7 +335,7 @@ export function AgentStatusIndicator() {
       {showAgentStatus && (
         <div
           ref={dropdownRef}
-          className="absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-50"
+          className="absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-dropdown"
         >
           {/* Demo Mode Toggle */}
           <div className="p-3 border-b border-border">
@@ -369,7 +374,7 @@ export function AgentStatusIndicator() {
                 ) : (
                   <span
                     className={cn(
-                      'absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform shadow-sm',
+                      'absolute top-1 left-1 w-4 h-4 bg-foreground rounded-full transition-transform shadow-xs',
                       isDemoMode ? 'translate-x-5' : 'translate-x-0',
                     )}
                   />
@@ -397,7 +402,7 @@ export function AgentStatusIndicator() {
                         ? 'bg-yellow-400'
                         : isConnected
                           ? 'bg-green-400'
-                          : agentStatus === 'connecting'
+                          : stableStatus === 'connecting'
                             ? 'bg-yellow-400'
                             : 'bg-red-400',
                 )}
@@ -416,7 +421,7 @@ export function AgentStatusIndicator() {
                       ? t('agent.localAgentDegraded')
                       : isConnected
                         ? t('agent.localAgentConnectedLabel')
-                        : agentStatus === 'connecting'
+                        : stableStatus === 'connecting'
                           ? t('agent.localAgentConnecting')
                           : t('agent.localAgentDisconnectedLabel')}
               </span>
@@ -536,7 +541,7 @@ export function AgentStatusIndicator() {
                   >
                     <div
                       className={cn(
-                        'w-2 h-2 rounded-full mt-1 flex-shrink-0',
+                        'w-2 h-2 rounded-full mt-1 shrink-0',
                         event.type === 'connected'
                           ? 'bg-green-400'
                           : event.type === 'disconnected'

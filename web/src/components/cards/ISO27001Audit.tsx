@@ -76,10 +76,10 @@ const STATUS_ORDER: Record<string, number> = { fail: 0, warning: 1, pass: 2, man
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
-    case 'pass': return <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-    case 'fail': return <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-    case 'warning': return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-    default: return <MinusCircle className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+    case 'pass': return <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
+    case 'fail': return <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+    case 'warning': return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+    default: return <MinusCircle className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
   }
 }
 

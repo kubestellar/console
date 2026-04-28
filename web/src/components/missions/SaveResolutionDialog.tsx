@@ -24,6 +24,7 @@ import { useResolutions, detectIssueSignature, type IssueSignature, type Resolut
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
+import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { useTranslation } from 'react-i18next'
 
 interface AISummary {
@@ -137,7 +138,7 @@ const RATE_LIMIT_MESSAGE =
  */
 async function generateAISummary(mission: Mission): Promise<AISummary> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+    const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
     let responseContent = ''
     // #9162 — Track whether the connection ever opened. If the agent closes
@@ -510,7 +511,7 @@ export function SaveResolutionDialog({
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('dashboard.missions.titlePlaceholder')}
               disabled={isGenerating}
-              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
             />
           </div>
 
@@ -527,7 +528,7 @@ export function SaveResolutionDialog({
                 onChange={(e) => setIssueType(e.target.value)}
                 placeholder={t('dashboard.missions.issueTypePlaceholder')}
                 disabled={isGenerating}
-                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
             <div>
@@ -540,7 +541,7 @@ export function SaveResolutionDialog({
                 onChange={(e) => setResourceKind(e.target.value)}
                 placeholder={t('dashboard.missions.resourceKindPlaceholder')}
                 disabled={isGenerating}
-                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
           </div>
@@ -556,7 +557,7 @@ export function SaveResolutionDialog({
               placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.problemSolutionPlaceholder')}
               rows={4}
               disabled={isGenerating}
-              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
+              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
             />
           </div>
 
@@ -576,7 +577,7 @@ export function SaveResolutionDialog({
                     onChange={(e) => handleStepChange(index, e.target.value)}
                     placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.stepPlaceholder')}
                     disabled={isGenerating}
-                    className="flex-1 px-3 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                    className="flex-1 px-3 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
                   />
                   {steps.length > 1 && (
                     <button
@@ -611,7 +612,7 @@ export function SaveResolutionDialog({
               placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.yamlPlaceholder')}
               rows={4}
               disabled={isGenerating}
-              className="w-full px-3 py-2 text-xs font-mono bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
+              className="w-full px-3 py-2 text-xs font-mono bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
             />
           </div>
 
@@ -655,7 +656,7 @@ export function SaveResolutionDialog({
           {/* Error */}
           {error && (
             <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <AlertCircle className="w-4 h-4 shrink-0" />
               {error}
             </div>
           )}

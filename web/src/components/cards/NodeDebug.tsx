@@ -95,10 +95,11 @@ export function NodeDebug() {
   const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
   const { execute } = useKubectl()
   const { showToast } = useToast()
+  const hasData = nodes.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: nodes.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures })
@@ -197,7 +198,7 @@ export function NodeDebug() {
         <select
           value={selectedCluster}
           onChange={e => { setSelectedCluster(e.target.value); setSelectedNode('') }}
-          className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+          className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
         >
           <option value="">{t('nodeDebug.allClusters')}</option>
           {clusters.map(c => <option key={c} value={c}>{c}</option>)}
@@ -205,7 +206,7 @@ export function NodeDebug() {
         <select
           value={selectedNode}
           onChange={e => setSelectedNode(e.target.value)}
-          className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+          className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
         >
           <option value="">{t('nodeDebug.selectNode')}</option>
           {clusterNodes.map(n => (
@@ -268,7 +269,7 @@ export function NodeDebug() {
             <select
               value={execImage}
               onChange={e => setExecImage(e.target.value)}
-              className="px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+              className="px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-orange-500/50"
             >
               {EXEC_IMAGES.map(img => (
                 <option key={img.value} value={img.value}>{img.label}</option>
@@ -304,7 +305,7 @@ export function NodeDebug() {
               onChange={e => setCustomCmd(e.target.value)}
               placeholder={t('nodeDebug.customCommandPlaceholder')}
               disabled={!selectedNode || isRunning}
-              className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-orange-500/50 placeholder:text-muted-foreground/50 disabled:opacity-40"
+              className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-orange-500/50 placeholder:text-muted-foreground/50 disabled:opacity-40"
             />
             <button
               type="submit"

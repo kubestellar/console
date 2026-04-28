@@ -1,17 +1,23 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { TrendingUp, Cpu, MemoryStick, Box, Server, Clock } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import {
+  MS_PER_MINUTE,
+} from '../../lib/constants/time'
+import {
   CHART_HEIGHT_STANDARD,
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR } from '../../lib/constants'
+  CHART_TICK_COLOR,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
+  CHART_TEXT_MUTED } from '../../lib/constants'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
 interface ResourcePoint {
@@ -34,7 +40,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
 
 export function ResourceTrend() {
   const { t } = useTranslation()
-  const { deduplicatedClusters: clusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
   const [view, setView] = useState<MetricView>('all')
@@ -49,7 +55,9 @@ export function ResourceTrend() {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -64,7 +72,7 @@ export function ResourceTrend() {
 
   // Track historical data points with persistence
   const STORAGE_KEY = 'resource-trend-history'
-  const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - discard older data
+  const MAX_AGE_MS = 30 * MS_PER_MINUTE // 30 minutes - discard older data
 
   // Load from localStorage on mount
   const loadSavedHistory = (): ResourcePoint[] => {
@@ -215,14 +223,14 @@ export function ResourceTrend() {
     xAxis: {
       type: 'category' as const,
       data: history.map(d => d.time),
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value' as const,
       minInterval: 1,
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
@@ -231,12 +239,12 @@ export function ResourceTrend() {
       trigger: 'axis' as const,
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-      textStyle: { color: CHART_TICK_COLOR, fontSize: 12 },
+      textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_BODY_FONT_SIZE },
     },
     legend: {
       data: lines.map(l => l.name),
       bottom: 0,
-      textStyle: { color: '#888', fontSize: 10 },
+      textStyle: { color: CHART_TEXT_MUTED, fontSize: CHART_AXIS_FONT_SIZE },
       icon: 'roundRect',
     },
     series: lines.map((line, idx) => ({
@@ -363,7 +371,7 @@ export function ResourceTrend() {
           </div>
         ) : (
           <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`Resource trend chart showing ${lines.map(l => l.name).join(', ')} over time`}>
-            <ReactECharts
+            <LazyEChart
               option={chartOption}
               style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
               notMerge={true}

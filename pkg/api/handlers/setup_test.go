@@ -49,8 +49,9 @@ func setupTestEnv(t *testing.T) *testEnv {
 	// Ensure we start with a clean state for this test run relative to the file.
 	_ = manager.Load()
 
-	// Initialize K8s Client with a fake cluster
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	// Initialize K8s Client with a non-existent kubeconfig path to ensure
+	// predictable error handling and avoid interference from local ~/.kube/config.
+	k8sClient, _ := k8s.NewMultiClusterClient("/tmp/kubestellar-test-kubeconfig")
 	// Inject a fake client for a "test-cluster" context
 	fakeClient := k8sfake.NewSimpleClientset()
 	k8sClient.InjectClient("test-cluster", fakeClient)

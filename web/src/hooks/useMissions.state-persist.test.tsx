@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
@@ -7,9 +7,27 @@ import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMission
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
+vi.mock('./mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('./useDemoMode', () => ({
   getDemoMode: vi.fn(() => false),
   default: vi.fn(() => false),
+}))
+vi.mock('./useLocalAgent', () => ({
+  useLocalAgent: vi.fn(() => ({ isConnected: false })),
+  isAgentUnavailable: vi.fn(() => false),
+  isAgentConnected: vi.fn(() => false),
+  reportAgentDataSuccess: vi.fn(),
+  reportAgentDataError: vi.fn(),
+}))
+
+vi.mock('../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: vi.fn((url: string) => url),
 }))
 
 vi.mock('./useTokenUsage', () => ({
@@ -37,6 +55,10 @@ vi.mock('../lib/analytics', () => ({
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
   emitMissionRated: vi.fn(),
+  emitAgentTokenFailure: vi.fn(),
+  emitWsAuthMissing: vi.fn(),
+  emitSseAuthFailure: vi.fn(),
+  emitSessionRefreshFailure: vi.fn(),
 }))
 
 vi.mock('../lib/missions/preflightCheck', () => ({
@@ -154,6 +176,7 @@ function seedMission(overrides: Partial<{
 }
 
 beforeEach(() => {
+  vi.useFakeTimers()
   localStorage.clear()
   MockWebSocket.lastInstance = null
   vi.clearAllMocks()
@@ -162,6 +185,10 @@ beforeEach(() => {
   // after 3 s. Tests complete before that fires, but mocking fetch avoids
   // unhandled-rejection warnings from the HTTP fallback path.
   globalThis.fetch = vi.fn().mockResolvedValue({ ok: true })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 // ── Streaming messages ────────────────────────────────────────────────────────
@@ -441,6 +468,8 @@ describe('persistence', () => {
   it('missions are saved to localStorage when state changes', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     act(() => { result.current.startMission(defaultParams) })
+    // Flush the 500ms debounced save timer (#9617)
+    act(() => { vi.advanceTimersByTime(600) })
     const stored = localStorage.getItem('kc_missions')
     expect(stored).not.toBeNull()
     const parsed = JSON.parse(stored!)
@@ -511,8 +540,9 @@ describe('localStorage quota handling', () => {
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    // Mount — loadMissions() then saveMissions() via useEffect
+    // Mount — loadMissions() then saveMissions() via useEffect (debounced 500ms)
     renderHook(() => useMissions(), { wrapper })
+    act(() => { vi.advanceTimersByTime(600) })
 
     // The pruning path must have retried
     expect(missionWriteCount).toBeGreaterThanOrEqual(2)
@@ -553,6 +583,7 @@ describe('localStorage quota handling', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     renderHook(() => useMissions(), { wrapper })
+    act(() => { vi.advanceTimersByTime(600) })
 
     // The pruning branch should have fired (retry = missionWriteCount >= 2)
     expect(missionWriteCount).toBeGreaterThanOrEqual(2)
@@ -578,6 +609,7 @@ describe('localStorage quota handling', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     renderHook(() => useMissions(), { wrapper })
+    act(() => { vi.advanceTimersByTime(600) })
 
     // Should log the inner retry error (not silently swallow it)
     expect(errorSpy).toHaveBeenCalledWith(

@@ -64,11 +64,12 @@ export function RBACExplorer() {
   const { findings, isLoading, isRefreshing, consecutiveFailures, error, isDemoData, refetch } = useRBACFindings()
 
   // ---- Loading / error state reporting ------------------------------------
+  const hasData = (findings || []).length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     consecutiveFailures,
-    hasAnyData: (findings || []).length > 0,
+    hasAnyData: hasData,
     isDemoData,
     isFailed: !!error,
     errorMessage: error || undefined })

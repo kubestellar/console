@@ -338,7 +338,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                       value={browseSearch}
                       onChange={(e) => setBrowseSearch(e.target.value)}
                       placeholder={t('dashboard.addCard.searchCards')}
-                      className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
                     />
                   </div>
                   <button
@@ -472,7 +472,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
               </div>
 
               {/* Right side - Preview Panel (always visible) */}
-              <div className="w-64 border-l border-border pl-4 flex-shrink-0">
+              <div className="w-64 border-l border-border pl-4 shrink-0">
                 <div className="text-2xs text-muted-foreground uppercase tracking-wide mb-2">{t('dashboard.addCard.preview')}</div>
 
                 {hoveredCard ? (
@@ -521,7 +521,7 @@ export function AddCardModal({ isOpen, onClose, onAddCards, existingCardTypes = 
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                     placeholder={t('dashboard.addCard.aiPlaceholder')}
-                    className="flex-1 px-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                    className="flex-1 px-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
                   />
                   <button
                     onClick={handleGenerate}

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { TrendingUp, Cpu, Server, Clock } from 'lucide-react'
 import { CardClusterFilter } from '../../lib/cards/CardComponents'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -12,12 +12,17 @@ import { Skeleton, SkeletonStats } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { normalizeClusterName } from '../../lib/gpu'
 import {
   CHART_HEIGHT_STANDARD,
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR } from '../../lib/constants'
+  CHART_TICK_COLOR,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
+  CHART_TEXT_MUTED } from '../../lib/constants'
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/constants/time'
 
 /**
  * Maximum age of a metrics-history snapshot we're willing to use as a
@@ -27,7 +32,7 @@ import {
  * `MAX_AGE_MS` used by this card's own on-screen chart history so the two
  * windows stay consistent.
  */
-const GPU_SNAPSHOT_STALENESS_MS = 30 * 60 * 1000 // 30 min
+const GPU_SNAPSHOT_STALENESS_MS = 30 * MS_PER_MINUTE // 30 min
 
 /**
  * Bucket size for the staleness-tick that forces the fallback memo to
@@ -62,18 +67,11 @@ interface EffectiveGPUNode {
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
 const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number; intervalMs: number }[] = [
-  { value: '15m', label: '15 min', points: 15, intervalMs: 60000 },
-  { value: '1h', label: '1 hour', points: 20, intervalMs: 180000 },
-  { value: '6h', label: '6 hours', points: 24, intervalMs: 900000 },
-  { value: '24h', label: '24 hours', points: 24, intervalMs: 3600000 },
+  { value: '15m', label: '15 min', points: 15, intervalMs: MS_PER_MINUTE },
+  { value: '1h', label: '1 hour', points: 20, intervalMs: 3 * MS_PER_MINUTE },
+  { value: '6h', label: '6 hours', points: 24, intervalMs: 15 * MS_PER_MINUTE },
+  { value: '24h', label: '24 hours', points: 24, intervalMs: MS_PER_HOUR },
 ]
-
-// Normalize cluster name for matching
-function normalizeClusterName(cluster: string): string {
-  if (!cluster) return ''
-  const parts = cluster.split('/')
-  return parts[parts.length - 1] || cluster
-}
 
 export function GPUUsageTrend() {
   const { t } = useTranslation()
@@ -208,7 +206,7 @@ export function GPUUsageTrend() {
 
   // Track historical data points with persistence
   const STORAGE_KEY = 'gpu-usage-trend-history'
-  const MAX_AGE_MS = 30 * 60 * 1000 // 30 minutes - discard older data
+  const MAX_AGE_MS = 30 * MS_PER_MINUTE // 30 minutes - discard older data
 
   const loadSavedHistory = (): GPUDataPoint[] => {
     try {
@@ -331,14 +329,14 @@ export function GPUUsageTrend() {
     xAxis: {
       type: 'category' as const,
       data: history.map(d => d.time),
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value' as const,
       minInterval: 1,
-      axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { show: false },
       axisTick: { show: false },
       splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
@@ -347,7 +345,7 @@ export function GPUUsageTrend() {
       trigger: 'axis' as const,
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-      textStyle: { color: CHART_TICK_COLOR, fontSize: 12 },
+      textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_BODY_FONT_SIZE },
       formatter: (params: Array<{ seriesName: string; value: number; color: string }>) => {
         let html = ''
         for (const p of (params || [])) {
@@ -360,7 +358,7 @@ export function GPUUsageTrend() {
     legend: {
       data: ['In Use', 'Free'],
       bottom: 0,
-      textStyle: { color: '#888', fontSize: 10 },
+      textStyle: { color: CHART_TEXT_MUTED, fontSize: CHART_AXIS_FONT_SIZE },
       icon: 'rect',
     },
     series: [
@@ -499,7 +497,7 @@ export function GPUUsageTrend() {
           </div>
         ) : (
           <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`GPU usage trend chart: ${currentTotals.allocated} of ${currentTotals.available} GPUs in use (${usagePercent}% utilization)`}>
-            <ReactECharts
+            <LazyEChart
               option={chartOption}
               style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
               notMerge={true}

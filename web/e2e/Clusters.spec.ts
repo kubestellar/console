@@ -1,9 +1,13 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for cluster tests
  */
 async function setupClustersTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -50,11 +54,17 @@ async function setupClustersTest(page: Page) {
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'false')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
 
   await page.goto('/clusters')
   await page.waitForLoadState('domcontentloaded')
+  // Webkit is significantly slower to stabilize the DOM after
+  // domcontentloaded — wait for the root element to be visible so
+  // assertions in beforeEach don't time out (#10433).
+  const ROOT_VISIBLE_TIMEOUT_MS = 15_000
+  await page.locator('#root').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
 }
 
 test.describe('Clusters Page', () => {
@@ -72,9 +82,11 @@ test.describe('Clusters Page', () => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
       // Should show cluster names from our mock data
-      await expect(page.getByText('prod-east')).toBeVisible({ timeout: 5000 })
-      await expect(page.getByText('prod-west')).toBeVisible()
-      await expect(page.getByText('staging')).toBeVisible()
+      // Firefox renders mock data slightly later — use consistent timeouts
+      const CLUSTER_NAME_TIMEOUT_MS = 10_000
+      await expect(page.getByText('prod-east')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
+      await expect(page.getByText('prod-west')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
+      await expect(page.getByText('staging')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
     })
 
     test('shows cluster health status indicators', async ({ page }) => {
@@ -157,8 +169,10 @@ test.describe('Clusters Page', () => {
     test('page has heading', async ({ page }) => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
-      // Should have a heading with "Clusters"
-      await expect(page.getByRole('heading', { name: /clusters/i })).toBeVisible()
+      // Should have a heading with "Clusters" — use the DashboardHeader testid
+      // to avoid strict-mode violations when card titles also match /clusters/i
+      await expect(page.getByTestId('dashboard-title')).toBeVisible()
+      await expect(page.getByTestId('dashboard-title')).toContainText(/clusters/i)
     })
   })
 
@@ -198,8 +212,10 @@ test.describe('Clusters Page', () => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
       // The Healthy filter button should show count 2 (both node-healthy-flag-false and flag-healthy-no-nodes)
+      // Firefox renders filter tabs slightly later — use generous timeout
+      const FILTER_TAB_TIMEOUT_MS = 10_000
       const healthyTab = page.getByRole('button', { name: /Healthy \(2\)/ })
-      await expect(healthyTab).toBeVisible({ timeout: 5000 })
+      await expect(healthyTab).toBeVisible({ timeout: FILTER_TAB_TIMEOUT_MS })
 
       // Click the Healthy filter
       await healthyTab.click()
@@ -241,8 +257,9 @@ test.describe('Clusters Page', () => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
       // The Unhealthy tab must show count 1
+      const FILTER_TAB_TIMEOUT_MS = 10_000
       const unhealthyTab = page.getByRole('button', { name: /Unhealthy \(1\)/ })
-      await expect(unhealthyTab).toBeVisible({ timeout: 5000 })
+      await expect(unhealthyTab).toBeVisible({ timeout: FILTER_TAB_TIMEOUT_MS })
 
       // Click the Unhealthy filter
       await unhealthyTab.click()

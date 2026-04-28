@@ -41,8 +41,12 @@ const DrillDownModal = safeLazy(() => import('./components/drilldown/DrillDownMo
 // Lazy load all page components for better code splitting.
 // safeLazy() validates the named export exists, throwing a recognisable
 // "chunk may be stale" error that ChunkErrorBoundary auto-recovers from.
-const Login = safeLazy(() => import('./components/auth/Login'), 'Login')
-const AuthCallback = safeLazy(() => import('./components/auth/AuthCallback'), 'AuthCallback')
+// Login and AuthCallback are eagerly imported — they are on the critical auth
+// path and must render reliably.  Lazy-loading them caused chunk_load errors
+// during OAuth redirects when the browser navigated away before the chunk
+// finished downloading (#9803).
+import { Login } from './components/auth/Login'
+import { AuthCallback } from './components/auth/AuthCallback'
 const CustomDashboard = safeLazy(() => import('./components/dashboard/CustomDashboard'), 'CustomDashboard')
 const Settings = safeLazy(() => import('./components/settings/Settings'), 'Settings')
 // Eagerly import key sidebar dashboards to prevent React Router's
@@ -54,11 +58,39 @@ const Storage = safeLazy(() => import('./components/storage/Storage'), 'Storage'
 const Compute = safeLazy(() => import('./components/compute/Compute'), 'Compute')
 const ClusterComparisonPage = safeLazy(() => import('./components/compute/ClusterComparisonPage'), 'ClusterComparisonPage')
 const Network = safeLazy(() => import('./components/network/Network'), 'Network')
-import { Security } from './components/security/Security'
+const Security = safeLazy(() => import('./components/security/Security'), 'Security')
 const GitOps = safeLazy(() => import('./components/gitops/GitOps'), 'GitOps')
 const Alerts = safeLazy(() => import('./components/alerts/Alerts'), 'Alerts')
 const Cost = safeLazy(() => import('./components/cost/Cost'), 'Cost')
 const Compliance = safeLazy(() => import('./components/compliance/Compliance'), 'Compliance')
+const ComplianceFrameworks = safeLazy(() => import('./components/compliance/ComplianceFrameworks'), 'default')
+const ChangeControlAudit = safeLazy(() => import('./components/compliance/ChangeControlAudit'), 'default')
+const SegregationOfDuties = safeLazy(() => import('./components/compliance/SegregationOfDuties'), 'default')
+const ComplianceReports = safeLazy(() => import('./components/compliance/ComplianceReports'), 'default')
+const DataResidency = safeLazy(() => import('./components/compliance/DataResidency'), 'default')
+const BAADashboard = safeLazy(() => import('./components/compliance/BAADashboard'), 'default')
+const HIPAADashboard = safeLazy(() => import('./components/compliance/HIPAADashboard'), 'default')
+const GxPDashboard = safeLazy(() => import('./components/compliance/GxPDashboard'), 'default')
+const NISTDashboard = safeLazy(() => import('./components/compliance/NISTDashboard'), 'default')
+const STIGDashboard = safeLazy(() => import('./components/compliance/STIGDashboard'), 'default')
+const AirGapDashboard = safeLazy(() => import('./components/compliance/AirGapDashboard'), 'default')
+const FedRAMPDashboard = safeLazy(() => import('./components/compliance/FedRAMPDashboard'), 'default')
+const OIDCDashboard = safeLazy(() => import('./components/compliance/OIDCDashboard'), 'default')
+const RBACAuditDashboard = safeLazy(() => import('./components/compliance/RBACAuditDashboard'), 'default')
+const SessionDashboard = safeLazy(() => import('./components/compliance/SessionDashboard'), 'default')
+const SIEMDashboard = safeLazy(() => import('./components/compliance/SIEMDashboard'), 'default')
+const IncidentResponseDashboard = safeLazy(() => import('./components/compliance/IncidentResponseDashboard'), 'default')
+const ThreatIntelDashboard = safeLazy(() => import('./components/compliance/ThreatIntelDashboard'), 'default')
+const SBOMDashboard = safeLazy(() => import('./components/compliance/SBOMDashboard'), 'default')
+const SigningStatusDashboard = safeLazy(() => import('./components/compliance/SigningStatusDashboard'), 'default')
+const SLSADashboard = safeLazy(() => import('./components/compliance/SLSADashboard'), 'default')
+const LicenseComplianceDashboard = safeLazy(() => import('./components/compliance/LicenseComplianceDashboard'), 'default')
+const RiskMatrixDashboard = safeLazy(() => import('./components/compliance/RiskMatrixDashboard'), 'default')
+const RiskRegisterDashboard = safeLazy(() => import('./components/compliance/RiskRegisterDashboard'), 'default')
+const RiskAppetiteDashboard = safeLazy(() => import('./components/compliance/RiskAppetiteDashboard'), 'default')
+const EnterpriseLayout = safeLazy(() => import('./components/enterprise/EnterpriseLayout'), 'default')
+const EnterprisePortal = safeLazy(() => import('./components/enterprise/EnterprisePortal'), 'default')
+const ComingSoon = safeLazy(() => import('./components/enterprise/ComingSoon'), 'default')
 const DataCompliance = safeLazy(() => import('./components/data-compliance/DataCompliance'), 'DataCompliance')
 const GPUReservations = safeLazy(() => import('./components/gpu/GPUReservations'), 'GPUReservations')
 const KarmadaOps = safeLazy(() => import('./components/karmada-ops/KarmadaOps'), 'KarmadaOps')
@@ -77,7 +109,7 @@ const Deploy = safeLazy(() => import('./components/deploy/Deploy'), 'Deploy')
 const AIML = safeLazy(() => import('./components/aiml/AIML'), 'AIML')
 const AIAgents = safeLazy(() => import('./components/aiagents/AIAgents'), 'AIAgents')
 const LLMdBenchmarks = safeLazy(() => import('./components/llmd-benchmarks/LLMdBenchmarks'), 'LLMdBenchmarks')
-import { ClusterAdmin } from './components/cluster-admin/ClusterAdmin'
+const ClusterAdmin = safeLazy(() => import('./components/cluster-admin/ClusterAdmin'), 'ClusterAdmin')
 const CICD = safeLazy(() => import('./components/cicd/CICD'), 'CICD')
 const Insights = safeLazy(() => import('./components/insights/Insights'), 'Insights')
 const MultiTenancy = safeLazy(() => import('./components/multi-tenancy/MultiTenancy'), 'MultiTenancy')
@@ -98,12 +130,17 @@ const UnifiedStatsTest = safeLazy(() => import('./pages/UnifiedStatsTest'), 'Uni
 const UnifiedDashboardTest = safeLazy(() => import('./pages/UnifiedDashboardTest'), 'UnifiedDashboardTest')
 const AllCardsPerfTest = safeLazy(() => import('./pages/AllCardsPerfTest'), 'AllCardsPerfTest')
 const CompliancePerfTest = safeLazy(() => import('./pages/CompliancePerfTest'), 'CompliancePerfTest')
+const NotFound = safeLazy(() => import('./components/NotFound'), 'default')
 
 // Dashboard ID → chunk import map (shared with hover prefetch in Sidebar)
 import { DASHBOARD_CHUNKS } from './lib/dashboardChunks'
 
 // Always prefetched regardless of enabled dashboards
 const ALWAYS_PREFETCH = new Set(['dashboard', 'settings', 'clusters', 'cluster-admin', 'security', 'deploy'])
+
+// Timing constants (milliseconds)
+const LOADING_FLASH_DELAY_MS = 200
+const PREFETCH_DEMO_CARDS_DELAY_MS = 15_000
 
 // Prefetch lazy route chunks after initial page load.
 // Batched to avoid overwhelming the Vite dev server with simultaneous
@@ -114,7 +151,13 @@ if (typeof window !== 'undefined') {
   /** Max wait (ms) for the enabled-dashboards list before prefetching all chunks */
   const PREFETCH_DASHBOARD_TIMEOUT_MS = 2_000
 
+  /** Routes where chunk prefetching is skipped to avoid errors during OAuth flow (#9767) */
+  const SKIP_PREFETCH_PATHS = new Set(['/login', '/auth/callback'])
+
   const prefetchRoutes = async () => {
+    // Skip prefetching on auth pages — during OAuth redirects, the browser
+    // navigates away before chunks finish loading, causing chunk_load errors.
+    if (SKIP_PREFETCH_PATHS.has(window.location.pathname)) return
     // Wait for the enabled dashboards list from /health so we only
     // prefetch chunks the user will actually see. Timeout after 2s
     // and prefetch all chunks — better to over-prefetch than leave
@@ -183,10 +226,10 @@ function LoadingFallback() {
   const [showLoading, setShowLoading] = useState(false)
 
   useEffect(() => {
-    // Only show loading spinner if it takes more than 200ms
+    // Only show loading spinner if it takes more than LOADING_FLASH_DELAY_MS
     const timer = setTimeout(() => {
       setShowLoading(true)
-    }, 200)
+    }, LOADING_FLASH_DELAY_MS)
 
     return () => clearTimeout(timer)
   }, [])
@@ -326,6 +369,31 @@ const ROUTE_TITLES: Record<string, string> = {
   '/security': 'Security',
   '/security-posture': 'Security Posture',
   '/compliance': 'Compliance',
+  '/compliance-frameworks': 'Compliance Frameworks',
+  '/change-control': 'Change Control',
+  '/segregation-of-duties': 'Segregation of Duties',
+  '/compliance-reports': 'Compliance Reports',
+  '/data-residency': 'Data Residency',
+  '/baa': 'BAA Tracker',
+  '/hipaa': 'HIPAA Compliance',
+  '/gxp': 'GxP Validation',
+  '/nist': 'NIST 800-53',
+  '/stig': 'DISA STIG',
+  '/air-gap': 'Air-Gap Readiness',
+  '/fedramp': 'FedRAMP Readiness',
+  '/enterprise': 'Enterprise Compliance',
+  '/enterprise/oidc': 'OIDC Federation',
+  '/enterprise/rbac-audit': 'RBAC Audit',
+  '/enterprise/sessions': 'Session Management',
+  '/enterprise/siem': 'SIEM Integration',
+  '/enterprise/incident-response': 'Incident Response',
+  '/enterprise/threat-intel': 'Threat Intelligence',
+  '/enterprise/sbom': 'SBOM Manager',
+  '/enterprise/sigstore': 'Sigstore Verification',
+  '/enterprise/slsa': 'SLSA Provenance',
+  '/enterprise/risk-matrix': 'Risk Matrix',
+  '/enterprise/risk-register': 'Risk Register',
+  '/enterprise/risk-appetite': 'Risk Appetite',
   '/data-compliance': 'Data Compliance',
   '/gitops': 'GitOps',
   '/cost': 'Cost',
@@ -428,11 +496,11 @@ function DataPrefetchInit() {
       // Prefetch default dashboard card chunks immediately — don't wait for
       // Dashboard.tsx to lazy-load and mount before starting chunk downloads.
       m.prefetchCardChunks(DEFAULT_MAIN_CARD_TYPES)
-      // Demo-only card chunks are lower priority — defer 15s in live mode.
+      // Demo-only card chunks are lower priority — defer in live mode.
       if (isDemoMode()) {
         m.prefetchDemoCardChunks()
       } else {
-        setTimeout(m.prefetchDemoCardChunks, 15_000)
+        setTimeout(m.prefetchDemoCardChunks, PREFETCH_DEMO_CARDS_DELAY_MS)
       }
     }).catch(() => {})
   }, [isAuthenticated])
@@ -572,10 +640,50 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
       <OrbitAutoRunner />
       <ChunkErrorBoundary>
       <Routes location={liveLocation}>
-        <Route path={ROUTES.LOGIN} element={<SuspenseRoute><Login /></SuspenseRoute>} />
-        <Route path={ROUTES.AUTH_CALLBACK} element={<SuspenseRoute><AuthCallback /></SuspenseRoute>} />
+        <Route path={ROUTES.LOGIN} element={<Login />} />
+        <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallback />} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path={ROUTES.WIDGET} element={<SuspenseRoute><MiniDashboard /></SuspenseRoute>} />
+
+        {/* ── Enterprise Compliance Portal ─────────────────────────────
+            Dedicated sub-portal with its own sidebar, organized by
+            compliance vertical (epic). */}
+        <Route path="/enterprise" element={<ProtectedRoute><SuspenseRoute><EnterpriseLayout /></SuspenseRoute></ProtectedRoute>}>
+          <Route index element={<SuspenseRoute><EnterprisePortal /></SuspenseRoute>} />
+          {/* Epic 1: FinTech & Regulatory */}
+          <Route path="frameworks" element={<SuspenseRoute><ComplianceFrameworks /></SuspenseRoute>} />
+          <Route path="change-control" element={<SuspenseRoute><ChangeControlAudit /></SuspenseRoute>} />
+          <Route path="sod" element={<SuspenseRoute><SegregationOfDuties /></SuspenseRoute>} />
+          <Route path="data-residency" element={<SuspenseRoute><DataResidency /></SuspenseRoute>} />
+          <Route path="reports" element={<SuspenseRoute><ComplianceReports /></SuspenseRoute>} />
+          {/* Epic 2: Healthcare & Life Sciences */}
+          <Route path="hipaa" element={<SuspenseRoute><HIPAADashboard /></SuspenseRoute>} />
+          <Route path="gxp" element={<SuspenseRoute><GxPDashboard /></SuspenseRoute>} />
+          <Route path="baa" element={<SuspenseRoute><BAADashboard /></SuspenseRoute>} />
+          {/* Epic 3: Government & Defense */}
+          <Route path="nist" element={<SuspenseRoute><NISTDashboard /></SuspenseRoute>} />
+          <Route path="stig" element={<SuspenseRoute><STIGDashboard /></SuspenseRoute>} />
+          <Route path="air-gap" element={<SuspenseRoute><AirGapDashboard /></SuspenseRoute>} />
+          <Route path="fedramp" element={<SuspenseRoute><FedRAMPDashboard /></SuspenseRoute>} />
+          {/* Epic 4: Identity & Access */}
+          <Route path="oidc" element={<SuspenseRoute><OIDCDashboard /></SuspenseRoute>} />
+          <Route path="rbac-audit" element={<SuspenseRoute><RBACAuditDashboard /></SuspenseRoute>} />
+          <Route path="sessions" element={<SuspenseRoute><SessionDashboard /></SuspenseRoute>} />
+          {/* Epic 5: SecOps */}
+          <Route path="siem" element={<SuspenseRoute><SIEMDashboard /></SuspenseRoute>} />
+          <Route path="incident-response" element={<SuspenseRoute><IncidentResponseDashboard /></SuspenseRoute>} />
+          <Route path="threat-intel" element={<SuspenseRoute><ThreatIntelDashboard /></SuspenseRoute>} />
+          {/* Epic 6: Supply Chain Security */}
+          <Route path="sbom" element={<SuspenseRoute><SBOMDashboard /></SuspenseRoute>} />
+          <Route path="sigstore" element={<SuspenseRoute><SigningStatusDashboard /></SuspenseRoute>} />
+          <Route path="slsa" element={<SuspenseRoute><SLSADashboard /></SuspenseRoute>} />
+          <Route path="licenses" element={<SuspenseRoute><LicenseComplianceDashboard /></SuspenseRoute>} />
+          {/* Epic 7: Enterprise Risk Management */}
+          <Route path="risk-matrix" element={<SuspenseRoute><RiskMatrixDashboard /></SuspenseRoute>} />
+          <Route path="risk-register" element={<SuspenseRoute><RiskRegisterDashboard /></SuspenseRoute>} />
+          <Route path="risk-appetite" element={<SuspenseRoute><RiskAppetiteDashboard /></SuspenseRoute>} />
+          <Route path="*" element={<SuspenseRoute><ComingSoon /></SuspenseRoute>} />
+        </Route>
 
         {/* Layout route — all dashboard routes share a single Layout instance.
             KeepAliveOutlet preserves component state across navigations so that
@@ -607,6 +715,18 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.SECURITY_POSTURE} element={<SuspenseRoute><Compliance /></SuspenseRoute>} />
           {/* Legacy route for backwards compatibility */}
           <Route path={ROUTES.COMPLIANCE} element={<SuspenseRoute><Compliance /></SuspenseRoute>} />
+          <Route path={ROUTES.COMPLIANCE_FRAMEWORKS} element={<SuspenseRoute><ComplianceFrameworks /></SuspenseRoute>} />
+          <Route path={ROUTES.CHANGE_CONTROL} element={<SuspenseRoute><ChangeControlAudit /></SuspenseRoute>} />
+          <Route path={ROUTES.SEGREGATION_OF_DUTIES} element={<SuspenseRoute><SegregationOfDuties /></SuspenseRoute>} />
+          <Route path={ROUTES.COMPLIANCE_REPORTS} element={<SuspenseRoute><ComplianceReports /></SuspenseRoute>} />
+          <Route path={ROUTES.DATA_RESIDENCY} element={<SuspenseRoute><DataResidency /></SuspenseRoute>} />
+          <Route path={ROUTES.BAA} element={<SuspenseRoute><BAADashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.HIPAA} element={<SuspenseRoute><HIPAADashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.GXP} element={<SuspenseRoute><GxPDashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.NIST} element={<SuspenseRoute><NISTDashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.STIG} element={<SuspenseRoute><STIGDashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.AIR_GAP} element={<SuspenseRoute><AirGapDashboard /></SuspenseRoute>} />
+          <Route path={ROUTES.FEDRAMP} element={<SuspenseRoute><FedRAMPDashboard /></SuspenseRoute>} />
           <Route path={ROUTES.DATA_COMPLIANCE} element={<SuspenseRoute><DataCompliance /></SuspenseRoute>} />
           <Route path={ROUTES.GPU_RESERVATIONS} element={<SuspenseRoute><GPUReservations /></SuspenseRoute>} />
           <Route path={ROUTES.KARMADA_OPS} element={<SuspenseRoute><KarmadaOps /></SuspenseRoute>} />
@@ -643,7 +763,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.FEATURES} element={<FeatureRedirect />} />
         </Route>
 
-        <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+        <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />
       </Routes>
       </ChunkErrorBoundary>
       </AppErrorBoundary>

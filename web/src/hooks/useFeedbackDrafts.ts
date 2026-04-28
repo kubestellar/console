@@ -101,50 +101,49 @@ export function useFeedbackDrafts() {
   ): string | null => {
     if (draft.description.trim().length < MIN_DRAFT_LENGTH) return null
 
-    setDrafts(prev => {
-      let updated: FeedbackDraft[]
+    // Compute the new drafts array from the current state snapshot
+    const prev = loadDrafts()
+    let updated: FeedbackDraft[]
+    let newId: string | null = existingId || null
 
-      if (existingId) {
-        // Update existing draft
-        updated = prev.map(d =>
-          d.id === existingId
-            ? { ...d, ...draft, updatedAt: new Date().toISOString() }
-            : d
-        )
+    if (existingId) {
+      // Update existing draft
+      updated = prev.map(d =>
+        d.id === existingId
+          ? { ...d, ...draft, updatedAt: new Date().toISOString() }
+          : d
+      )
+    } else {
+      // Create new draft
+      if (prev.length >= MAX_DRAFTS) {
+        // Drop the oldest draft to make room
+        updated = prev.slice(1)
       } else {
-        // Create new draft
-        if (prev.length >= MAX_DRAFTS) {
-          // Drop the oldest draft to make room
-          updated = prev.slice(1)
-        } else {
-          updated = [...prev]
-        }
-        const newDraft: FeedbackDraft = {
-          id: `draft-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
-          ...draft,
-          savedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString() }
-        updated.push(newDraft)
+        updated = [...prev]
       }
+      const newDraft: FeedbackDraft = {
+        id: `draft-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        ...draft,
+        savedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString() }
+      updated.push(newDraft)
+      newId = newDraft.id
+    }
 
-      saveDrafts(updated)
-      return updated
-    })
+    // Persist to localStorage BEFORE updating React state
+    saveDrafts(updated)
+    setDrafts(updated)
 
-    // Return the id for the caller
-    if (existingId) return existingId
-    // For new drafts, the id was generated inside setState — read it back
-    const latest = loadDrafts()
-    return latest.length > 0 ? latest[latest.length - 1].id : null
+    return newId
   }
 
   /** Delete a draft by id */
   const deleteDraft = (id: string) => {
-    setDrafts(prev => {
-      const updated = prev.filter(d => d.id !== id)
-      saveDrafts(updated)
-      return updated
-    })
+    const prev = loadDrafts()
+    const updated = prev.filter(d => d.id !== id)
+    // Persist to localStorage BEFORE updating React state
+    saveDrafts(updated)
+    setDrafts(updated)
   }
 
   /** Delete all drafts */

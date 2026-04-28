@@ -394,7 +394,7 @@ export function useRBACFindings() {
       // collected, surface the aggregate error so the card shows the retry
       // state instead of a misleading empty/"no findings" state.
       if (allFindings.length === 0 && clusterErrors.length > 0 && clusterErrors.length === clusters.length) {
-        setError(clusterErrors.join('; '))
+        setError((clusterErrors || []).join('; '))
         setConsecutiveFailures(prev => prev + 1)
       } else {
         setConsecutiveFailures(0)

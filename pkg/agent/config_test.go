@@ -82,6 +82,7 @@ func TestConfigManagerPrecedence(t *testing.T) {
 
 	configPath := filepath.Join(tmpDir, "config.yaml")
 
+	// 1. Setup ConfigManager with temp path
 	cm := &ConfigManager{
 		configPath:  configPath,
 		config:      &AgentConfig{Agents: make(map[string]AgentKeyConfig)},

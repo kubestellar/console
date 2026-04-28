@@ -19,6 +19,7 @@ vi.mock('../../lib/cache', () => ({
 vi.mock('../mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
   deduplicateClustersByServer: (clusters: unknown[]) => clusters,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../../lib/cache/fetcherUtils', () => ({

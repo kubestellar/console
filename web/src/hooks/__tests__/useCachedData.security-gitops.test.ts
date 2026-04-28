@@ -34,6 +34,7 @@ const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: st
 
 vi.mock('../../lib/cache', () => ({
   useCache: (...args: unknown[]) => mockUseCache(...args),
+  createCachedHook: (_config: unknown) => () => mockUseCache(_config),
   REFRESH_RATES: {
     realtime: 15_000, pods: 30_000, clusters: 60_000,
     deployments: 60_000, services: 60_000, metrics: 45_000,
@@ -58,6 +59,7 @@ vi.mock('../../lib/sseClient', () => ({
 
 vi.mock('../mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 vi.mock('../useLocalAgent', () => ({
@@ -230,6 +232,7 @@ describe('useCachedData', () => {
         clusterCacheRef: {
           clusters: [{ name: 'prod', context: 'prod-ctx', reachable: true }],
         },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(false)
 
@@ -270,6 +273,7 @@ describe('useCachedData', () => {
         clusterCacheRef: {
           clusters: [{ name: 'prod', context: 'prod-ctx', reachable: true }],
         },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(false)
 
@@ -313,6 +317,7 @@ describe('useCachedData', () => {
         clusterCacheRef: {
           clusters: [{ name: 'prod', context: 'prod-ctx', reachable: true }],
         },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(false)
 
@@ -338,14 +343,16 @@ describe('useCachedData', () => {
 
       vi.doMock('../mcp/shared', () => ({
         clusterCacheRef: { clusters: [] },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(true)
       mockIsBackendUnavailable.mockReturnValue(false)
 
-      mockAuthFetch.mockResolvedValue({
+      // fetchBackendAPI uses raw fetch(), not authFetch
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue({ issues: [{ name: 'rest-sec', namespace: 'default', issue: 'Priv', severity: 'high' }] }),
-      })
+        text: vi.fn().mockResolvedValue(JSON.stringify({ issues: [{ name: 'rest-sec', namespace: 'default', issue: 'Priv', severity: 'high' }] })),
+      }))
 
       const { useCachedSecurityIssues } = await loadModule()
       useCachedSecurityIssues()
@@ -353,6 +360,8 @@ describe('useCachedData', () => {
       const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
       const issues = await fetcher()
       expect(issues).toHaveLength(1)
+
+      vi.unstubAllGlobals()
     })
   })
 
@@ -826,6 +835,7 @@ describe('useCachedData', () => {
         clusterCacheRef: {
           clusters: [{ name: 'c1', context: 'c1-ctx', reachable: true }],
         },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(false)
       mockKubectlProxy.getPodIssues.mockResolvedValue([
@@ -841,6 +851,7 @@ describe('useCachedData', () => {
     it('coreFetchers.podIssues falls back to REST when no agent', async () => {
       vi.doMock('../mcp/shared', () => ({
         clusterCacheRef: { clusters: [] },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(true)
       mockIsBackendUnavailable.mockReturnValue(false)
@@ -860,6 +871,7 @@ describe('useCachedData', () => {
     it('coreFetchers.podIssues returns empty when both unavailable', async () => {
       vi.doMock('../mcp/shared', () => ({
         clusterCacheRef: { clusters: [] },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(true)
       mockIsBackendUnavailable.mockReturnValue(true)
@@ -875,6 +887,7 @@ describe('useCachedData', () => {
         clusterCacheRef: {
           clusters: [{ name: 'c1', context: 'c1-ctx', reachable: true }],
         },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(false)
       mockUseCache.mockReturnValue(makeCacheResult([]))
@@ -902,6 +915,7 @@ describe('useCachedData', () => {
         clusterCacheRef: {
           clusters: [{ name: 'c1', context: 'c1-ctx', reachable: true }],
         },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(false)
       mockUseCache.mockReturnValue(makeCacheResult([]))
@@ -919,19 +933,23 @@ describe('useCachedData', () => {
     it('coreFetchers.securityIssues tries kubectl then REST', async () => {
       vi.doMock('../mcp/shared', () => ({
         clusterCacheRef: { clusters: [] },
+        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
       }))
       mockIsAgentUnavailable.mockReturnValue(true)
       mockIsBackendUnavailable.mockReturnValue(false)
       mockUseCache.mockReturnValue(makeCacheResult([]))
 
-      mockAuthFetch.mockResolvedValue({
+      // fetchBackendAPI uses raw fetch(), not authFetch
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
-        json: vi.fn().mockResolvedValue({ issues: [{ name: 'sec1', namespace: 'default', issue: 'Priv', severity: 'high' }] }),
-      })
+        text: vi.fn().mockResolvedValue(JSON.stringify({ issues: [{ name: 'sec1', namespace: 'default', issue: 'Priv', severity: 'high' }] })),
+      }))
 
       const { coreFetchers } = await loadModule()
       const issues = await coreFetchers.securityIssues()
       expect(issues).toHaveLength(1)
+
+      vi.unstubAllGlobals()
     })
 
     it('coreFetchers.workloads uses agent then REST fallback', async () => {

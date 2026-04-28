@@ -15,6 +15,16 @@ func isDemoMode(c *fiber.Ctx) bool {
 	return c.Get("X-Demo-Mode") == "true"
 }
 
+// noClusterAccessMsg is the unified error message returned by every handler
+// when the Kubernetes client is unavailable (e.g., no kubeconfig loaded, or
+// the kc-agent websocket is disconnected). Keeping this as a single constant
+// ensures the message stays in sync across handlers (#9830).
+const noClusterAccessMsg = "No cluster access"
+
+func errNoClusterAccess(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": noClusterAccessMsg})
+}
+
 // Demo cluster data - matches frontend getDemoClusters() for consistency
 func getDemoClusters() []k8s.ClusterInfo {
 	return []k8s.ClusterInfo{

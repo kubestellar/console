@@ -71,29 +71,8 @@ export function isKubeFlexControlPlanePod(labels?: Record<string, string>): bool
   return Boolean(l[KUBEFLEX_CP_LABEL_KEY])
 }
 
-/**
- * Parse a Kubernetes "ready" string like "1/1" into numeric values.
- */
-export function parseReadyCount(ready?: string): { ready: number; total: number } {
-  const [readyPart, totalPart] = String(ready ?? '').split('/')
-  const readyCount = Number.parseInt(readyPart, 10)
-  const totalCount = Number.parseInt(totalPart, 10)
-  return {
-    ready: Number.isFinite(readyCount) ? readyCount : 0,
-    total: Number.isFinite(totalCount) ? totalCount : 0,
-  }
-}
-
-/**
- * Determine whether a pod is healthy based on its status and ready ratio.
- */
-export function isPodHealthy(pod: KubeFlexPodInfo): boolean {
-  const status = (pod.status ?? '').toLowerCase()
-  if (status !== 'running') return false
-
-  const { ready, total } = parseReadyCount(pod.ready)
-  return total > 0 && ready === total
-}
+import { isPodHealthy } from '../../../../lib/k8s'
+export { parseReadyCount, isPodHealthy } from '../../../../lib/k8s'
 
 /**
  * Group control-plane pods by control plane name and determine health per CP.

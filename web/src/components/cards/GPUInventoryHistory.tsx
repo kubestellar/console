@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import {
   Cpu, TrendingUp, TrendingDown, Minus, Clock, Server,
   BarChart3, Table2, ChevronDown, ArrowUpDown } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
 import { useMetricsHistory } from '../../hooks/useMetricsHistory'
 import type { MetricsSnapshot } from '../../types/predictions'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -18,7 +18,11 @@ import {
   CHART_GRID_STROKE,
   CHART_AXIS_STROKE,
   CHART_TOOLTIP_CONTENT_STYLE,
-  CHART_TICK_COLOR } from '../../lib/constants'
+  CHART_TICK_COLOR,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
+  CHART_TEXT_MUTED } from '../../lib/constants'
+import { MS_PER_HOUR, MS_PER_MINUTE, MINUTES_PER_HOUR } from '../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
 // Constants — no magic numbers
@@ -52,14 +56,8 @@ const UNKNOWN_GPU_TYPE = 'Unknown'
 const DEMO_GPU_TYPE_COUNT = 3
 /** Number of demo nodes to simulate */
 const DEMO_NODE_COUNT = 4
-/** Milliseconds per hour — used for demo data time offsets */
-const MS_PER_HOUR = 60 * 60 * 1000
-/** Milliseconds per minute — used for snapshot interval display */
-const MS_PER_MINUTE = 60 * 1000
 /** Default snapshot interval in minutes (used when actual cannot be computed) */
 const DEFAULT_SNAPSHOT_INTERVAL_MIN = 10
-/** Minutes per hour — used for converting interval-based durations */
-const MINUTES_PER_HOUR = 60
 /** Minimum snapshots needed for churn computation (need at least 2 to diff) */
 const MIN_CHURN_SNAPSHOTS = 2
 /** Maximum rows to show in the table view per page */
@@ -283,14 +281,14 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
       xAxis: {
         type: 'category' as const,
         data: timeData,
-        axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+        axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
         axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
         axisTick: { show: false },
       },
       yAxis: {
         type: 'value' as const,
         minInterval: 1,
-        axisLabel: { color: CHART_TICK_COLOR, fontSize: 10 },
+        axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
         axisLine: { show: false },
         axisTick: { show: false },
         splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
@@ -299,7 +297,7 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
         trigger: 'axis' as const,
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: CHART_TICK_COLOR, fontSize: 12 },
+        textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: Array<{ seriesName: string; value: number; color: string }>) => {
           let html = ''
           for (const p of (params || [])) {
@@ -314,7 +312,7 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
       legend: {
         data: legendNames,
         bottom: 0,
-        textStyle: { color: '#888', fontSize: 10 },
+        textStyle: { color: CHART_TEXT_MUTED, fontSize: CHART_AXIS_FONT_SIZE },
         icon: 'rect',
       },
       series,
@@ -322,7 +320,7 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
   }, [displayChartData, chartMode, chartGPUTypes, t])
 
   return (
-    <ReactECharts
+    <LazyEChart
       option={chartOption}
       style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
       notMerge={true}
@@ -361,13 +359,14 @@ export function GPUInventoryHistory() {
   const isLoading = hookLoading && !hasData
   const showDemo = isDemoMode || isDemoFallback
 
-  useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData || (history || []).length > 0,
     isDemoData: showDemo,
     isFailed,
-    consecutiveFailures })
+    consecutiveFailures,
+  })
 
   // ── Close dropdowns on outside click or Escape ─────────────────────
   useEffect(() => {
@@ -740,6 +739,25 @@ export function GPUInventoryHistory() {
     )
   }
 
+  if (showSkeleton) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-muted-foreground">{t('common:common.loading', 'Loading...')}</div>
+      </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="text-center text-muted-foreground">
+          <p className="text-sm font-medium">{t('cards:gpuInventoryHistory.loadFailed', 'Failed to load GPU inventory')}</p>
+          <p className="text-xs mt-1">{t('cards:gpuInventoryHistory.tryRefresh', 'Please refresh the page to try again.')}</p>
+        </div>
+      </div>
+    )
+  }
+
   // ── Main render ────────────────────────────────────────────────────
   // Header uses flex-wrap so controls reflow onto a second line when the card
   // is narrow, preventing overlap and ensuring the snapshots label stays
@@ -750,7 +768,7 @@ export function GPUInventoryHistory() {
       {/* Header with controls */}
       <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mb-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Clock className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <span className="text-xs text-muted-foreground truncate min-w-0 flex-1">
             {(chartData || []).length} {t('cards:gpuInventoryHistory.snapshots', 'snapshots')}
           </span>

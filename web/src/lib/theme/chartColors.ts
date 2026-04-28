@@ -34,6 +34,8 @@ export const PINK_500 = '#ec4899'
 export const TEAL_500 = '#14b8a6'
 /** Tailwind indigo-500 */
 export const INDIGO_500 = '#6366f1'
+/** Tailwind yellow-500 */
+export const YELLOW_500 = '#eab308'
 /** Tailwind green-500 (brighter variant used for "free/available" areas) */
 export const GREEN_500_BRIGHT = '#22c55e'
 
@@ -117,3 +119,28 @@ export const KAGENT_RUNTIME_BYO = '#9ca3af'
 export const KAGENT_EDGE_AGENT_TOOL = CYAN_500
 /** Agent-to-model edge color */
 export const KAGENT_EDGE_AGENT_MODEL = GREEN_500
+
+// ── Utility ─────────────────────────────────────────────────────────────────
+
+/** Number of hex digits per RGB channel */
+const HEX_CHANNEL_LEN = 2
+/** Start index of the red channel in a 7-char hex string (e.g. "#9333ea") */
+const HEX_RED_START = 1
+/** Start index of the green channel */
+const HEX_GREEN_START = 3
+/** Start index of the blue channel */
+const HEX_BLUE_START = 5
+/** Radix for parsing hex strings */
+const HEX_RADIX = 16
+
+/**
+ * Convert a hex color to an rgba() string with the given alpha.
+ * Accepts "#RRGGBB" format. Falls through to the raw hex if parsing fails.
+ */
+export function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(HEX_RED_START, HEX_RED_START + HEX_CHANNEL_LEN), HEX_RADIX)
+  const g = parseInt(hex.slice(HEX_GREEN_START, HEX_GREEN_START + HEX_CHANNEL_LEN), HEX_RADIX)
+  const b = parseInt(hex.slice(HEX_BLUE_START, HEX_BLUE_START + HEX_CHANNEL_LEN), HEX_RADIX)
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return hex
+  return `rgba(${r},${g},${b},${alpha})`
+}

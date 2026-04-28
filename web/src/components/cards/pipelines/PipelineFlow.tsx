@@ -13,6 +13,7 @@
  * cadence) so the flow looks live without hammering the function.
  */
 import { useState, useMemo, useRef, useLayoutEffect, useEffect, type CSSProperties } from 'react'
+import { useTranslation } from 'react-i18next'
 import { RefreshCw, XCircle, ExternalLink, Stethoscope } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -202,9 +203,9 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
         statusBg(run.run.status, run.run.conclusion),
       )}>
         {run.run.event}
-        {(run.run.pullRequests?.length ?? 0) > 0 && (
-          <a href={run.run.pullRequests![0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests![0].number}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline mt-0.5 block">
-            #{run.run.pullRequests![0].number}
+        {(run.run.pullRequests?.length ?? 0) > 0 && run.run.pullRequests?.[0] && (
+          <a href={run.run.pullRequests[0].url || `https://github.com/${run.run.repo}/pull/${run.run.pullRequests[0].number}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline mt-0.5 block">
+            #{run.run.pullRequests[0].number}
           </a>
         )}
       </div>
@@ -341,6 +342,7 @@ function colorForStatus(status: Status, conclusion: Conclusion): string {
 // ---------------------------------------------------------------------------
 
 export function PipelineFlow() {
+  const { t } = useTranslation()
   const shared = usePipelineFilter()
   const [localRepoFilter, setLocalRepoFilter] = useState<string | null>(null)
   const repoFilter = shared?.repoFilter ?? localRepoFilter
@@ -355,6 +357,7 @@ export function PipelineFlow() {
 
   const data = hasUnified ? unifiedData.flow : individual.data
   const isLoading = hasUnified ? unifiedData.isLoading : individual.isLoading
+  const isRefreshing = hasUnified ? unifiedData.isRefreshing : individual.isRefreshing
   const error = hasUnified ? unifiedData.error : individual.error
   const refetch = hasUnified ? unifiedData.refetch : individual.refetch
   const { run: runMutation } = usePipelineMutations()
@@ -362,7 +365,7 @@ export function PipelineFlow() {
 
   const runs = useMemo(() => data?.runs ?? [], [data])
   const hasData = runs.length > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
 
   // Auto-clear mutation message after a few seconds
   useEffect(() => {
@@ -397,7 +400,7 @@ export function PipelineFlow() {
           className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
           aria-label={LABEL_FILTER_REPO}
         >
-          <option value="">All repos</option>
+          <option value="">{t('pipelines.allRepos')}</option>
           {repos.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
@@ -416,7 +419,7 @@ export function PipelineFlow() {
             className="hover:text-foreground flex items-center gap-1"
             aria-label={LABEL_REFRESH}
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           </button>
         </div>
       </div>

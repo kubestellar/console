@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { isAgentUnavailable } from './useLocalAgent'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { MCP_HOOK_TIMEOUT_MS } from '../lib/constants/network'
@@ -28,11 +28,11 @@ function authHeaders(): Record<string, string> {
 }
 
 /** Fetch a JSON endpoint from the local agent with timeout. */
-async function agentFetch(path: string, timeout = MCP_HOOK_TIMEOUT_MS): Promise<Record<string, unknown>> {
+async function agentRequest(path: string, timeout = MCP_HOOK_TIMEOUT_MS): Promise<Record<string, unknown>> {
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), timeout)
   try {
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
       signal: ctrl.signal,
       headers: { Accept: 'application/json' } })
     if (!res.ok) throw new Error(`Agent ${res.status}`)
@@ -63,7 +63,7 @@ async function resolveViaAgent(
 
   const params = `cluster=${encodeURIComponent(context)}&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`
   // Dependency resolution can be slow — give it 30s
-  const result = await agentFetch(`/resolve-deps?${params}`, 30_000)
+  const result = await agentRequest(`/resolve-deps?${params}`, 30_000)
 
   if (result.error) {
     throw new Error(result.error as string)

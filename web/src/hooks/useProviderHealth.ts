@@ -4,6 +4,7 @@ import { useClusters } from './mcp/clusters'
 import { detectCloudProvider, getProviderLabel } from '../components/ui/CloudProviderIcon'
 import type { CloudProvider } from '../components/ui/CloudProviderIcon'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { getDemoMode } from './useDemoMode'
 
@@ -47,7 +48,7 @@ async function checkServiceHealth(providerIds: string[]): Promise<Map<string, He
   // Skip in demo mode — no local agent on Netlify deployments
   if (!getDemoMode()) {
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/providers/health`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/providers/health`, {
         signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT) })
       if (response.ok) {
         const data: BackendHealthResponse = await response.json()
@@ -153,7 +154,7 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
   // --- AI Providers from /settings/keys ---
   const unconfiguredProviders: string[] = []
   try {
-    const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
     if (response.ok) {
       const data: KeysStatusResponse = await response.json()

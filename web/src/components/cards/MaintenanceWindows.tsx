@@ -166,7 +166,7 @@ export function MaintenanceWindows() {
             <select
               value={formData.cluster}
               onChange={e => setFormData(f => ({ ...f, cluster: e.target.value }))}
-              className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
             >
               <option value="">{t('common.selectCluster')}</option>
               {clusterNames.map(name => (
@@ -179,7 +179,7 @@ export function MaintenanceWindows() {
               placeholder="Cluster name"
               value={formData.cluster}
               onChange={e => setFormData(f => ({ ...f, cluster: e.target.value }))}
-              className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
             />
           )}
           <input
@@ -187,20 +187,20 @@ export function MaintenanceWindows() {
             placeholder="Description"
             value={formData.description}
             onChange={e => setFormData(f => ({ ...f, description: e.target.value }))}
-            className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
           />
           <div className="flex gap-2">
             <input
               type="datetime-local"
               value={formData.startTime}
               onChange={e => setFormData(f => ({ ...f, startTime: e.target.value }))}
-              className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
             />
             <input
               type="datetime-local"
               value={formData.endTime}
               onChange={e => setFormData(f => ({ ...f, endTime: e.target.value }))}
-              className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
             />
           </div>
           {timeError && (
@@ -210,7 +210,7 @@ export function MaintenanceWindows() {
             <select
               value={formData.type}
               onChange={e => setFormData(f => ({ ...f, type: e.target.value as MaintenanceWindow['type'] }))}
-              className="px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-none focus:ring-1 focus:ring-primary"
+              className="px-2 py-1 text-xs rounded bg-background border border-border/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
             >
               <option value="maintenance">{t('common.maintenance')}</option>
               <option value="upgrade">{t('common.upgrade')}</option>
@@ -259,7 +259,7 @@ export function MaintenanceWindows() {
                 className={
                   pendingDeleteId === w.id
                     ? 'opacity-100 text-xs font-medium text-red-500 hover:text-red-400 px-1.5 py-0.5 rounded bg-red-500/10 border border-red-500/40 transition-opacity'
-                    : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-red-400 text-xs text-red-400 hover:text-red-300 px-1 rounded transition-opacity'
+                    : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-red-400 text-xs text-red-400 hover:text-red-300 px-1 rounded transition-opacity'
                 }
               >
                 {pendingDeleteId === w.id ? t('cards:maintenanceWindows.confirmLabel') : '✕'}

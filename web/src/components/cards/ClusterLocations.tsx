@@ -12,9 +12,15 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { CLUSTER_MARKER_FONT_SIZE } from '../../lib/constants'
 
 /** Search input debounce delay (#6213). */
 const SEARCH_DEBOUNCE_MS = 250
+
+/** Cluster name display threshold before truncation */
+const MAX_CLUSTER_NAME_DISPLAY = 12
+/** Length to truncate cluster names to when they exceed the display threshold */
+const TRUNCATED_NAME_LENGTH = 10
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -220,7 +226,7 @@ type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { showToast } = useToast()
-  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -230,7 +236,9 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -443,7 +451,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               placeholder={t('common:common.searchClusters')}
-              className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+              className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
             />
             {searchFilter && (
               <button onClick={() => setSearchFilter('')} aria-label={t('common:common.clearSearch', 'Clear search')} className="text-muted-foreground hover:text-foreground">
@@ -493,7 +501,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       {/* World Map */}
       <div
         ref={mapRef}
-        className="flex-1 relative min-h-[180px] bg-gradient-to-b from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
+        className="flex-1 relative min-h-[180px] bg-linear-to-b from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -577,11 +585,11 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                           ? 'bg-green-500/20 border-green-500/40 hover:bg-green-500/30'
                           : 'bg-red-500/20 border-red-500/40 hover:bg-red-500/30'
                       }`}
-                      style={{ fontSize: 8 }}
+                      style={{ fontSize: CLUSTER_MARKER_FONT_SIZE }}
                     >
                       <CloudProviderIcon provider={provider} size={10} />
                       <span className="text-[9px] font-medium text-foreground max-w-[60px] truncate">
-                        {cluster.name.length > 12 ? cluster.name.substring(0, 10) + '…' : cluster.name}
+                        {cluster.name.length > MAX_CLUSTER_NAME_DISPLAY ? cluster.name.substring(0, TRUNCATED_NAME_LENGTH) + '…' : cluster.name}
                       </span>
                       <div className={`w-1.5 h-1.5 rounded-full ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
                     </button>

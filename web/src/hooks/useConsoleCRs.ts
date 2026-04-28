@@ -273,7 +273,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     try {
       const response = await fetch(agentWriteURL(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify(item),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
@@ -299,7 +299,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     try {
       const response = await fetch(agentWriteURL('', { name }), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify(item),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
@@ -325,6 +325,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     try {
       const response = await fetch(agentWriteURL('', { name }), {
         method: 'DELETE',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok || response.status === 204) {
         // Optimistic update
@@ -394,7 +395,7 @@ export function useWorkloadDeployments() {
       const url = `${LOCAL_AGENT_HTTP_URL}/console-cr/deployments/status?${params.toString()}`
       const response = await fetch(url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify(status),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {

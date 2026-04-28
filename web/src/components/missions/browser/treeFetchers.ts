@@ -27,9 +27,45 @@ const KUBARA_CHART_NAMES = [
  *  loaded lazily as files; templates is a (synthetic) directory placeholder. */
 const KUBARA_CHART_FILES = ['Chart.yaml', 'values.yaml', 'templates'] as const
 
-const KUBARA_CHART_ROOT = 'go-binary/templates/embedded/managed-service-catalog/helm'
-const KUBARA_REPO_OWNER = 'kubara-io'
-const KUBARA_REPO_NAME = 'kubara'
+const KUBARA_DEFAULT_REPO_OWNER = 'kubara-io'
+const KUBARA_DEFAULT_REPO_NAME = 'kubara'
+const KUBARA_DEFAULT_CHART_ROOT = 'go-binary/templates/embedded/managed-service-catalog/helm'
+
+// ---------------------------------------------------------------------------
+// Kubara server config (resolved once from /api/kubara/config)
+// ---------------------------------------------------------------------------
+
+interface KubaraConfig {
+  repoOwner: string
+  repoName: string
+  catalogPath: string
+}
+
+let cachedKubaraConfig: KubaraConfig | null = null
+
+/** Fetch active Kubara catalog config from the backend (cached, falls back to defaults). */
+export async function getKubaraConfig(): Promise<KubaraConfig> {
+  if (cachedKubaraConfig) return cachedKubaraConfig
+  try {
+    const res = await fetch('/api/kubara/config', { signal: AbortSignal.timeout(5_000) })
+    if (res.ok) {
+      const cfg = (await res.json()) as { repo?: string; path?: string }
+      const [owner, name] = (cfg.repo ?? '').split('/')
+      cachedKubaraConfig = {
+        repoOwner: owner || KUBARA_DEFAULT_REPO_OWNER,
+        repoName: name || KUBARA_DEFAULT_REPO_NAME,
+        catalogPath: cfg.path || KUBARA_DEFAULT_CHART_ROOT,
+      }
+      return cachedKubaraConfig
+    }
+  } catch { /* fall through to defaults */ }
+  cachedKubaraConfig = {
+    repoOwner: KUBARA_DEFAULT_REPO_OWNER,
+    repoName: KUBARA_DEFAULT_REPO_NAME,
+    catalogPath: KUBARA_DEFAULT_CHART_ROOT,
+  }
+  return cachedKubaraConfig
+}
 
 /** Subset of the GitHub Contents API response we actually use. */
 interface GitHubEntry {
@@ -109,27 +145,29 @@ export async function fetchTreeChildren(node: TreeNode): Promise<TreeNode[]> {
     if (nodeId === 'kubara') {
       // Static Kubara catalog (cached, no API calls). Used in demo mode AND
       // in real mode — see KUBARA_CHART_NAMES rationale above.
+      const cfg = await getKubaraConfig()
       return KUBARA_CHART_NAMES.map(name => ({
         id: `kubara/${name}`,
         name,
-        path: `${KUBARA_CHART_ROOT}/${name}`,
+        path: `${cfg.catalogPath}/${name}`,
         type: 'directory' as const,
         source: 'github' as const,
-        repoOwner: KUBARA_REPO_OWNER,
-        repoName: KUBARA_REPO_NAME,
+        repoOwner: cfg.repoOwner,
+        repoName: cfg.repoName,
         loaded: false,
       }))
     }
 
     if (nodeId.startsWith('kubara/')) {
+      const cfg = await getKubaraConfig()
       return KUBARA_CHART_FILES.map(fname => ({
         id: `${nodeId}/${fname}`,
         name: fname,
         path: `${node.path}/${fname}`,
         type: (fname === 'templates' ? 'directory' : 'file') as TreeNode['type'],
         source: 'github' as const,
-        repoOwner: KUBARA_REPO_OWNER,
-        repoName: KUBARA_REPO_NAME,
+        repoOwner: cfg.repoOwner,
+        repoName: cfg.repoName,
         loaded: fname !== 'templates',
       }))
     }

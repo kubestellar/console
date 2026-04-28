@@ -63,7 +63,7 @@ export function OpsGenieNotificationSettings({
           value={config.opsgenieApiKey || ''}
           onChange={e => updateConfig({ opsgenieApiKey: e.target.value })}
           placeholder="e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
         />
         <p className="text-xs text-muted-foreground mt-1">
           {t('settings.notifications.opsgenie.apiKeyHint', 'Find this under Settings > API key management in OpsGenie')}
@@ -85,9 +85,9 @@ export function OpsGenieNotificationSettings({
           }`}
         >
           {testResult.success ? (
-            <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+            <Check className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
           ) : (
-            <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           )}
           <p className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
             {testResult.message}

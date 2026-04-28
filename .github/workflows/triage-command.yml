@@ -62,22 +62,16 @@ jobs:
             --description "Issue has been triaged and accepted" 2>/dev/null || true
           gh label create "ai-fix-requested" --repo "$REPO" --color "d4c5f9" \
             --description "AI fix has been requested" 2>/dev/null || true
-          gh label create "ai-processing" --repo "$REPO" --color "fbca04" \
-            --description "AI is currently processing this issue" 2>/dev/null || true
-          gh label create "ai-awaiting-fix" --repo "$REPO" --color "6f42c1" \
-            --description "Copilot is working on a fix" 2>/dev/null || true
-
           # Remove triage-needed labels (set by backend when creating issues)
           gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs-triage" 2>/dev/null || true
           gh issue edit "$ISSUE" --repo "$REPO" --remove-label "help wanted" 2>/dev/null || true
 
-          # Add triage/accepted and ensure ai-fix-requested is present, add ai-processing
+          # Add triage/accepted and ai-fix-requested (scanner picks up from here)
           gh issue edit "$ISSUE" --repo "$REPO" \
             --add-label "triage/accepted" \
-            --add-label "ai-fix-requested" \
-            --add-label "ai-processing"
+            --add-label "ai-fix-requested"
 
-          echo "Triaged issue #$ISSUE: removed needs-triage, added triage/accepted + ai-processing"
+          echo "Triaged issue #$ISSUE: removed needs-triage, added triage/accepted + ai-fix-requested"
 
       - name: Add rocket reaction to issue
         if: steps.check_perms.outputs.authorized == 'true'
@@ -282,21 +276,16 @@ jobs:
           # Create labels if they don't exist
           gh label create "ai-fix-requested" --repo "$REPO" --color "d4c5f9" \
             --description "AI fix has been requested" 2>/dev/null || true
-          gh label create "ai-processing" --repo "$REPO" --color "fbca04" \
-            --description "AI is currently processing this issue" 2>/dev/null || true
-          gh label create "ai-awaiting-fix" --repo "$REPO" --color "6f42c1" \
-            --description "Copilot is working on a fix" 2>/dev/null || true
 
           # Remove triage-needed labels
           gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs-triage" 2>/dev/null || true
           gh issue edit "$ISSUE" --repo "$REPO" --remove-label "help wanted" 2>/dev/null || true
 
-          # Add ai-fix-requested and ai-processing
+          # Add ai-fix-requested (scanner picks up from here)
           gh issue edit "$ISSUE" --repo "$REPO" \
-            --add-label "ai-fix-requested" \
-            --add-label "ai-processing"
+            --add-label "ai-fix-requested"
 
-          echo "Label-triggered triage for issue #$ISSUE: added ai-fix-requested + ai-processing"
+          echo "Label-triggered triage for issue #$ISSUE: added ai-fix-requested"
 
       - name: Add rocket reaction to issue
         if: steps.check_perms.outputs.authorized == 'true'

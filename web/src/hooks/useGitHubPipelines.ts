@@ -9,8 +9,8 @@
 import { useCallback } from 'react'
 import { useCache } from '../lib/cache'
 
-/** Client-side poll interval for the live flow card — matches Drasi's cadence */
-const FLOW_POLL_MS = 10_000
+/** Client-side poll interval for the live flow card (backend caches for 2 min) */
+const FLOW_POLL_MS = 60_000
 /** Poll interval for GitHub pipeline data. Hourly to stay within
  *  GitHub's rate limits. Manual refresh button still works instantly. */
 const DEFAULT_POLL_MS = 3_600_000
@@ -321,7 +321,9 @@ async function fetchView<T>(params: URLSearchParams): Promise<T> {
   const url = `/api/github-pipelines?${params.toString()}`
   const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  const body = (await res.json()) as T & { repos?: string[] }
+  // Guard against non-JSON responses (e.g. HTML error pages from proxies)
+  // that cause unhandled SyntaxError rejections (#10092).
+  const body = (await res.json().catch(() => ({}) as Record<string, unknown>)) as T & { repos?: string[] }
   // Update the shared repo list from the server response — this is the
   // single source of truth for which repos the backend is configured to
   // scan (set via PIPELINE_REPOS env var).
@@ -329,6 +331,24 @@ async function fetchView<T>(params: URLSearchParams): Promise<T> {
     serverRepos = body.repos
   }
   return body
+}
+
+/**
+ * Coerce string fields in a MatrixPayload that the GitHub API can return as
+ * null/undefined when a workflow run has no name (e.g., anonymous workflow
+ * runs). Without this guard the client crashes with `Cannot read properties
+ * of undefined (reading 'trim')` when rendering WorkflowRow.
+ */
+function normalizeMatrixPayload(payload: MatrixPayload): MatrixPayload {
+  return {
+    ...payload,
+    workflows: (payload.workflows ?? []).map((wf) => ({
+      ...wf,
+      name: wf.name != null ? String(wf.name) : '',
+      repo: wf.repo != null ? String(wf.repo) : '',
+      cells: wf.cells ?? [],
+    })),
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -383,10 +403,14 @@ export function useUnifiedPipelineData(repo: string | null, days: number = UNIFI
     initialData,
     demoData: initialData,
     liveInDemoMode: true,
-    fetcher: () => {
+    fetcher: async () => {
       const p = new URLSearchParams({ view: 'all', days: String(days) })
       if (repo) p.set('repo', repo)
-      return fetchView<UnifiedPipelinePayload>(p)
+      const payload = await fetchView<UnifiedPipelinePayload>(p)
+      return {
+        ...payload,
+        matrix: payload.matrix ? normalizeMatrixPayload(payload.matrix) : payload.matrix,
+      }
     },
   })
 }
@@ -424,10 +448,11 @@ export function usePipelineMatrix(repo: string | null, days: number, enabled = t
     demoData: demo,
     liveInDemoMode: true,
     enabled,
-    fetcher: () => {
+    fetcher: async () => {
       const p = new URLSearchParams({ view: 'matrix', days: String(days) })
       if (repo) p.set('repo', repo)
-      return fetchView<MatrixPayload>(p)
+      const payload = await fetchView<MatrixPayload>(p)
+      return normalizeMatrixPayload(payload)
     },
   })
 }
@@ -483,6 +508,7 @@ export function usePipelineMutations() {
       try {
         const res = await fetch(`/api/github-pipelines?${p.toString()}`, {
           method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         })
         const body = (await res.json().catch(() => ({}))) as { error?: string }
@@ -509,7 +535,8 @@ export async function fetchPipelineLog(
     const res = await fetch(`/api/github-pipelines?${p.toString()}`, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
-    const body = (await res.json()) as {
+    // Guard against non-JSON responses (#10092)
+    const body = (await res.json().catch(() => ({}) as Record<string, unknown>)) as {
       log?: string
       lines?: number
       truncatedFrom?: number

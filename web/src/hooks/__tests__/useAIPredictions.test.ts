@@ -37,12 +37,17 @@ vi.mock('../useTokenUsage', () => ({
 vi.mock('../mcp/shared', () => ({
   fullFetchClusters: mockFullFetchClusters,
   clusterCache: mockClusterCache,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws',
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws',
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
@@ -491,9 +496,11 @@ describe('useAIPredictions', () => {
     // exists to anchor the promise settlement for debugging if the test hangs.
     void done
 
-    // Advance past all internal delays (triggerAnalysis demo delay + RETRY_DELAY_MS)
+    // Advance past the triggerAnalysis demo delay (UI_FEEDBACK_TIMEOUT_MS = 2 000 ms)
+    // and then the first poll tick (ANALYSIS_POLL_INTERVAL_MS = 4 000 ms) so that
+    // cleanup() fires and clearActiveTokenCategory is called.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000)
+      await vi.advanceTimersByTimeAsync(7000)
     })
 
     // Per-operation tracking (#6016): setActiveTokenCategory called with

@@ -150,6 +150,7 @@ export function useSelfUpgrade() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ imageTag }),
         signal: AbortSignal.timeout(SELF_UPGRADE_TIMEOUT_MS) })

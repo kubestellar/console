@@ -7,6 +7,21 @@ afterEach(() => {
   cleanup()
 })
 
+// Mock agentFetch to delegate to global.fetch so test mocks intercept it
+// This fixes #10400 #10401: PR #10398 migrated to agentFetch wrapper, which
+// bypassed global.fetch mocks. Now agentFetch delegates to global.fetch,
+// allowing test mocks to work transparently.
+vi.mock('../hooks/mcp/shared', async () => {
+  const actual = await vi.importActual<typeof import('../hooks/mcp/shared')>('../hooks/mcp/shared')
+  return {
+    ...actual,
+    agentFetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      // Delegate to global.fetch so test mocks intercept this call
+      return global.fetch(url, init)
+    }),
+  }
+})
+
 // Mock localStorage
 const localStorageStore: Record<string, string> = {}
 const localStorageMock = {

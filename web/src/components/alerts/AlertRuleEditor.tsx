@@ -4,6 +4,7 @@ import { Trash2, Server, Bell, BellOff, Bot, Webhook, Siren, ShieldAlert } from 
 import { Slack } from '@/lib/icons'
 import { useClusters } from '../../hooks/useMCP'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
+import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR } from '../../lib/constants/time'
 import type {
   AlertRule,
   AlertCondition,
@@ -27,18 +28,13 @@ const DEFAULT_DURATION_SECS = 60 // Default condition duration in seconds
 const DEFAULT_TEMPERATURE_F = 100 // Default temperature threshold in Fahrenheit
 const DEFAULT_WIND_SPEED_MPH = 40 // Default wind speed threshold in mph
 
-/** Seconds per minute */
-const SECS_PER_MINUTE = 60
-/** Seconds per hour */
-const SECS_PER_HOUR = 3600
-
 /** Preset duration options shown as clickable chips in the rule editor */
 const DURATION_PRESETS = [
   { label: 'Immediate', value: 0 },
-  { label: '1 min', value: SECS_PER_MINUTE },
-  { label: '5 min', value: 5 * SECS_PER_MINUTE },
-  { label: '15 min', value: 15 * SECS_PER_MINUTE },
-  { label: '1 hour', value: SECS_PER_HOUR },
+  { label: '1 min', value: SECONDS_PER_MINUTE },
+  { label: '5 min', value: 5 * SECONDS_PER_MINUTE },
+  { label: '15 min', value: 15 * SECONDS_PER_MINUTE },
+  { label: '1 hour', value: SECONDS_PER_HOUR },
 ] as const
 
 interface AlertRuleEditorProps {
@@ -276,7 +272,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder={t('alerts.ruleNamePlaceholder')}
-                className={`w-full px-3 py-2 rounded-lg bg-secondary border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                className={`w-full px-3 py-2 rounded-lg bg-secondary border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
                   errors.name ? 'border-red-500' : 'border-border'
                 }`}
               />
@@ -296,7 +292,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                 onChange={e => setDescription(e.target.value)}
                 placeholder={t('alerts.descriptionPlaceholder')}
                 rows={2}
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 resize-none"
               />
             </div>
 
@@ -386,7 +382,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                     max={100}
                     value={threshold}
                     onChange={e => setThreshold(Number(e.target.value))}
-                    className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
                       errors.threshold ? 'border-red-500' : 'border-border'
                     }`}
                   />
@@ -412,7 +408,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                     max={100}
                     value={threshold}
                     onChange={e => setThreshold(Number(e.target.value))}
-                    className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
                       errors.threshold ? 'border-red-500' : 'border-border'
                     }`}
                   />
@@ -433,7 +429,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                     name="alertRuleWeatherCondition"
                     value={weatherCondition}
                     onChange={e => setWeatherCondition(e.target.value as typeof weatherCondition)}
-                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="severe_storm">{t('alerts.weather.severeStorm')}</option>
                     <option value="extreme_heat">{t('alerts.weather.extremeHeat')}</option>
@@ -457,7 +453,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                         max={150}
                         value={temperatureThreshold}
                         onChange={e => setTemperatureThreshold(Number(e.target.value))}
-                        className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
                           errors.temperatureThreshold ? 'border-red-500' : 'border-border'
                         }`}
                       />
@@ -483,7 +479,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                         max={200}
                         value={windSpeedThreshold}
                         onChange={e => setWindSpeedThreshold(Number(e.target.value))}
-                        className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                        className={`w-24 px-3 py-2 rounded-lg bg-secondary border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
                           errors.windSpeedThreshold ? 'border-red-500' : 'border-border'
                         }`}
                       />
@@ -525,7 +521,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                   max={3600}
                   value={duration}
                   onChange={e => setDuration(Number(e.target.value))}
-                  className="w-20 px-2 py-1.5 text-xs rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-20 px-2 py-1.5 text-xs rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                 />
                 <span className="text-xs text-muted-foreground">{t('alerts.durationHint')}</span>
               </div>
@@ -673,7 +669,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                             config: { ...channel.config, slackWebhookUrl: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                       />
                       <label htmlFor={`alertRuleSlackChannel-${index}`} className="sr-only">
                         {t('alerts.slackChannel')}
@@ -689,7 +685,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                             config: { ...channel.config, slackChannel: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                       />
                     </div>
                   )}
@@ -710,7 +706,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                             config: { ...channel.config, webhookUrl: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                       />
                     </>
                   )}
@@ -731,7 +727,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                             config: { ...channel.config, pagerdutyRoutingKey: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                       />
                     </>
                   )}
@@ -752,7 +748,7 @@ export function AlertRuleEditor({ isOpen = true, rule, onSave, onCancel }: Alert
                             config: { ...channel.config, opsgenieApiKey: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-3 py-1.5 text-sm rounded bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500"
                       />
                     </>
                   )}

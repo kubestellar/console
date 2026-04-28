@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Scale, ChevronRight } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCardLoadingState } from '../CardDataContext'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
@@ -8,7 +8,12 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR, CHART_HEIGHT_LG, CHART_TOOLTIP_TEXT_COLOR, CHART_AXIS_FONT_SIZE } from '../../../lib/constants/ui'
+
+const GRID_LEFT_PX = 105
+const GRID_RIGHT_PX = 20
+const GRID_TOP_PX = 15
+const GRID_BOTTOM_PX = 20
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
 
@@ -59,12 +64,12 @@ export function ResourceImbalanceDetector() {
     if (chartData.length === 0) return {}
     return {
       backgroundColor: 'transparent',
-      grid: { left: 105, right: 20, top: 15, bottom: 20 },
+      grid: { left: GRID_LEFT_PX, right: GRID_RIGHT_PX, top: GRID_TOP_PX, bottom: GRID_BOTTOM_PX },
       xAxis: {
         type: 'value' as const,
         min: 0,
         max: 100,
-        axisLabel: { fontSize: 10, color: CHART_TICK_COLOR, formatter: (v: number) => `${v}%` },
+        axisLabel: { fontSize: CHART_AXIS_FONT_SIZE, color: CHART_TICK_COLOR, formatter: (v: number) => `${v}%` },
         axisTick: { show: false },
         axisLine: { show: false },
         splitLine: { show: false },
@@ -72,7 +77,7 @@ export function ResourceImbalanceDetector() {
       yAxis: {
         type: 'category' as const,
         data: chartData.map(d => d.name),
-        axisLabel: { fontSize: 10, color: CHART_TICK_COLOR },
+        axisLabel: { fontSize: CHART_AXIS_FONT_SIZE, color: CHART_TICK_COLOR },
         axisTick: { show: false },
         axisLine: { show: false },
         splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
@@ -80,7 +85,7 @@ export function ResourceImbalanceDetector() {
       tooltip: {
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: '#e0e0e0', fontSize: Number(CHART_TOOLTIP_FONT_SIZE_COMPACT.replace('px', '')) },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: Number(CHART_TOOLTIP_FONT_SIZE_COMPACT.replace('px', '')) },
         formatter: (params: { name: string; value: number }) => `${params.name}: ${params.value}%`,
       },
       series: [{
@@ -94,7 +99,7 @@ export function ResourceImbalanceDetector() {
           symbol: 'none',
           data: [{
             xAxis: avgValue,
-            label: { formatter: `Avg ${avgValue}%`, position: 'start', color: '#f59e0b', fontSize: 10 },
+            label: { formatter: `Avg ${avgValue}%`, position: 'start', color: '#f59e0b', fontSize: CHART_AXIS_FONT_SIZE },
             lineStyle: { color: '#f59e0b', type: 'dashed' },
           }],
         },
@@ -152,9 +157,9 @@ export function ResourceImbalanceDetector() {
 
       {chartData.length > 0 && (
         <div className="h-48">
-          <ReactECharts
+          <LazyEChart
             option={chartOption}
-            style={{ height: 192, width: '100%' }}
+            style={{ height: CHART_HEIGHT_LG, width: '100%' }}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />

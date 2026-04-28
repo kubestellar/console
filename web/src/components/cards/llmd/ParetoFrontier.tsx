@@ -8,7 +8,9 @@
  * Connected smooth scatter lines with GPU count labels. Built with ECharts.
  */
 import { useState, useMemo, useRef } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { SECONDS_PER_HOUR } from '../../../lib/constants/time'
+import { LazyEChart } from '../../charts/LazyEChart'
+import type ReactEChartsType from 'echarts-for-react'
 import { Download, RotateCcw } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
@@ -22,6 +24,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { downloadDataUrl } from '../../../lib/download'
+import { CHART_MIN_HEIGHT_PX, CHART_AXIS_FONT_SIZE, CHART_AXIS_FONT_SIZE_SM } from '../../../lib/constants/ui'
 
 // ── Tooltip spacing constants (ECharts renders its own DOM, so Tailwind/CSS vars are unavailable) ──
 /** Spacing between tooltip header and grid body */
@@ -36,6 +39,8 @@ const TOOLTIP_GRID_GAP_ROW_PX = '4px'
 const TOOLTIP_GRID_GAP_COL_PX = '16px'
 /** Badge border-radius */
 const TOOLTIP_BADGE_RADIUS_PX = '4px'
+
+const LEGEND_PANEL_WIDTH_PX = 130
 
 // Minimal parameter type for ECharts label/tooltip formatter callbacks
 interface EChartsFormatterParam {
@@ -120,7 +125,7 @@ const CHART_PRESETS: Record<string, ChartPreset> = {
     yAxis: {
       label: 'Cost per Million Tokens',
       unit: '$',
-      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * 3600)) * 1_000_000 : 0,
+      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * SECONDS_PER_HOUR)) * 1_000_000 : 0,
       formatter: (v) => `$${v.toFixed(2)}` },
     infoPills: (points) => {
       const hwCost = new Map<string, number>()
@@ -139,7 +144,7 @@ const CHART_PRESETS: Record<string, ChartPreset> = {
     yAxis: {
       label: 'Cost per Million Tokens',
       unit: '$',
-      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * 3600)) * 1_000_000 : 0,
+      getValue: (p) => p.throughputPerGpu > 0 ? (p.tcoPerGpuHr / (p.throughputPerGpu * SECONDS_PER_HOUR)) * 1_000_000 : 0,
       formatter: (v) => `$${v.toFixed(2)}` },
     infoPills: (points) => {
       const hwCost = new Map<string, number>()
@@ -236,7 +241,7 @@ interface ParetoFrontierProps {
 
 function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const chartRef = useRef<ReactECharts>(null)
+  const chartRef = useRef<ReactEChartsType>(null)
 
   // ---- Data ----
   const { data: reports, isDemoFallback, isFailed, consecutiveFailures, isLoading, isRefreshing, lastRefresh } = useCachedBenchmarkReports()
@@ -394,7 +399,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
               const pt = p.data?.point
               return pt && pt.gpuCount > 1 ? `${pt.gpuCount}` : ''
             },
-            fontSize: 9,
+            fontSize: CHART_AXIS_FONT_SIZE_SM,
             color: '#94a3b8',
             position: 'top',
             distance: 4 },
@@ -461,7 +466,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         nameTextStyle: { color: '#94a3b8', fontSize: 11, fontWeight: 500 },
         axisLine: { lineStyle: { color: '#334155' } },
         splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
-        axisLabel: { color: '#64748b', fontSize: 10 } },
+        axisLabel: { color: '#64748b', fontSize: CHART_AXIS_FONT_SIZE } },
       yAxis: {
         type: 'value',
         name: `${preset.yAxis.label} (${preset.yAxis.unit})`,
@@ -472,7 +477,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         splitLine: { lineStyle: { color: '#1e293b', type: 'dashed' } },
         axisLabel: {
           color: '#64748b',
-          fontSize: 10,
+          fontSize: CHART_AXIS_FONT_SIZE,
           formatter: preset.yAxis.formatter ?? ((v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)) } },
       dataZoom: [
         { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
@@ -489,7 +494,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
   return (
     <div className="h-full flex flex-col pt-3 px-4 pb-2">
       {/* Dropdown filters row */}
-      <div className="flex items-end gap-3 mb-2 flex-shrink-0 flex-wrap">
+      <div className="flex items-end gap-3 mb-2 shrink-0 flex-wrap">
         <FilterDropdown label={t('paretoFrontier.model')} value={modelFilter} onChange={setModelFilter} options={filterOptions.models} />
         <FilterDropdown label={t('paretoFrontier.islOsl')} value={seqLenFilter} onChange={setSeqLenFilter} options={filterOptions.seqLens} />
         <FilterDropdown label={t('paretoFrontier.framework')} value={frameworkFilter} onChange={setFrameworkFilter} options={filterOptions.frameworks} />
@@ -504,12 +509,12 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
       </div>
 
       {/* Title + action buttons */}
-      <div className="flex items-start justify-between mb-1 flex-shrink-0">
+      <div className="flex items-start justify-between mb-1 shrink-0">
         <div className="min-w-0">
           <h3 className="text-[13px] font-bold text-foreground leading-tight truncate">{preset.title}</h3>
           <p className="text-2xs text-muted-foreground mt-0.5 truncate">{subtitle}</p>
         </div>
-        <div className="flex items-center gap-1 flex-shrink-0 ml-3">
+        <div className="flex items-center gap-1 shrink-0 ml-3">
           <button
             onClick={handleDownload}
             className="p-1.5 rounded border border-border hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
@@ -529,7 +534,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
 
       {/* Info pills (power or cost, depending on chart preset) */}
       {infoPills && (
-        <div className="flex items-center gap-2 mb-1.5 flex-shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 mb-1.5 shrink-0 flex-wrap">
           <span className="text-2xs text-muted-foreground font-medium">{infoPills.label}</span>
           {infoPills.items.map(({ hw, value }) => (
             <span
@@ -545,8 +550,8 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
       {/* Chart area + right legend */}
       <div className="flex flex-1 min-h-0 gap-2">
         {/* ECharts chart */}
-        <div className="flex-1 min-w-0 rounded overflow-hidden" style={{ minHeight: 200 }}>
-          <ReactECharts
+        <div className="flex-1 min-w-0 rounded overflow-hidden" style={{ minHeight: CHART_MIN_HEIGHT_PX }}>
+          <LazyEChart
             ref={chartRef}
             option={option}
             style={{ height: '100%', width: '100%' }}
@@ -556,7 +561,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
         </div>
 
         {/* Right legend panel */}
-        <div className="flex-shrink-0 flex flex-col" style={{ width: 130 }}>
+        <div className="shrink-0 flex flex-col" style={{ width: LEGEND_PANEL_WIDTH_PX }}>
           {/* Hardware series list */}
           <div className="flex-1 overflow-y-auto space-y-px" style={{ scrollbarWidth: 'thin' }}>
             {legendItems.map(({ hw, color }) => {
@@ -570,7 +575,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
                   }`}
                   title={`${hidden ? t('common:common.show') : t('common:common.hide')} ${hw}`}
                 >
-                  <span className="inline-block w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
                   <span className="text-foreground truncate">{hw}</span>
                 </button>
               )
@@ -592,7 +597,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
           </button>
 
           {/* Toggle controls */}
-          <div className="border-t border-border/50 mt-1 pt-1.5 space-y-1 flex-shrink-0">
+          <div className="border-t border-border/50 mt-1 pt-1.5 space-y-1 shrink-0">
             <Toggle label={t('paretoFrontier.hideNonOptimal')} active={hideNonOptimal} onChange={setHideNonOptimal} />
             <Toggle label={t('paretoFrontier.hideLabels')} active={hideLabels} onChange={setHideLabels} />
             <Toggle label={t('paretoFrontier.highContrast')} active={highContrast} onChange={setHighContrast} />
@@ -601,7 +606,7 @@ function ParetoFrontierInternal({ config }: ParetoFrontierProps) {
       </div>
 
       {/* Bottom hint */}
-      <p className="text-center text-[9px] text-muted-foreground/50 mt-1 flex-shrink-0">
+      <p className="text-center text-[9px] text-muted-foreground/50 mt-1 shrink-0">
         {t('paretoFrontier.scrollToPan')}
       </p>
     </div>

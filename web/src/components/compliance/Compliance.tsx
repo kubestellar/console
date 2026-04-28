@@ -3,7 +3,6 @@ import { AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useKyverno } from '../../hooks/useKyverno'
 import { useKubescape } from '../../hooks/useKubescape'
 import { useTrivy } from '../../hooks/useTrivy'
@@ -31,7 +30,6 @@ const MOCK_FALCO_PER_CLUSTER = 1.5
 export function Compliance() {
   const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { drillToAllSecurity, drillToCompliance } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Check if the user is explicitly in demo mode
@@ -162,11 +160,15 @@ export function Compliance() {
         return allDemo
           ? { value: (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER, sublabel: 'total checks', isDemo: true, isClickable: false }
           : { value: realData.totalChecks, sublabel: 'total checks', onClick: () => { emitComplianceDrillDown('total_checks'); drillToCompliance(undefined, { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.totalChecks > 0 }
-      case 'passing':
+      // #9717 — IDs must match COMPLIANCE_STAT_BLOCKS in StatsBlockDefinitions.ts
+      // ('checks_passing' / 'checks_failing'), not the generic 'passing'/'failing'
+      // used by the Operators dashboard. Mismatched IDs caused these blocks to fall
+      // through to the default case and return '-', misaligning the stats bar.
+      case 'checks_passing':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_PASS_RATE), sublabel: 'passing', isDemo: true, isClickable: false }
           : { value: realData.passing, sublabel: 'passing', onClick: () => { emitComplianceDrillDown('passing'); drillToCompliance('passing', { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.passing > 0 }
-      case 'failing':
+      case 'checks_failing':
         return allDemo
           ? { value: Math.floor((reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER * MOCK_FAIL_RATE), sublabel: 'failing', isDemo: true, isClickable: false }
           : { value: realData.failing, sublabel: 'failing', onClick: () => { emitComplianceDrillDown('failing'); drillToCompliance('failing', { passing: realData.passing, failing: realData.failing, totalChecks: realData.totalChecks }) }, isClickable: realData.failing > 0 }
@@ -235,7 +237,7 @@ export function Compliance() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   const hasData = realData.hasAnyRealData || reachableClusters.length > 0
 
@@ -262,7 +264,7 @@ export function Compliance() {
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-400">Error loading compliance data</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>

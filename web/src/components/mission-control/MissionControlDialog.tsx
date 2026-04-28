@@ -24,6 +24,7 @@ import {
   FlaskConical,
   Monitor,
   ArrowLeft,
+  GitPullRequestArrow,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
@@ -36,6 +37,8 @@ const FlightPlanBlueprint = lazy(() =>
   import('./FlightPlanBlueprint').then(m => ({ default: m.FlightPlanBlueprint }))
 )
 import { LaunchSequence } from './LaunchSequence'
+import { RequestApprovalModal } from './RequestApprovalModal'
+import { decodePlan, planToState } from './missionPlanCodec'
 import type { WizardPhase } from './types'
 
 interface MissionControlDialogProps {
@@ -43,6 +46,8 @@ interface MissionControlDialogProps {
   onClose: () => void
   /** Pre-populate Phase 1 with this Kubara chart project (#8483) */
   initialKubaraChart?: string
+  /** Base64-encoded plan from a deep link — opens in read-only review mode */
+  reviewPlanEncoded?: string
 }
 
 const PHASE_STEPS: {
@@ -74,10 +79,33 @@ const PHASE_STEPS: {
 /** Fallback a11y label when the user hasn't entered a mission title yet (issue 6745) */
 const DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog'
 
-export function MissionControlDialog({ open, onClose, initialKubaraChart }: MissionControlDialogProps) {
+export function MissionControlDialog({ open, onClose, initialKubaraChart, reviewPlanEncoded }: MissionControlDialogProps) {
   const mc = useMissionControl()
   const { showToast } = useToast()
   const { state } = mc
+  const [isReviewMode, setIsReviewMode] = useState(false)
+  const [reviewNotes, setReviewNotes] = useState<string | undefined>()
+
+  useEffect(() => {
+    if (!open || !reviewPlanEncoded) return
+    const plan = decodePlan(reviewPlanEncoded)
+    if (!plan) {
+      showToast('Invalid plan link — could not decode the deployment plan', 'error')
+      return
+    }
+    mc.hydrateFromPlan(planToState(plan))
+    setIsReviewMode(true)
+    setReviewNotes(plan.notes)
+  }, [open, reviewPlanEncoded]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleClose = useCallback(() => {
+    if (isReviewMode) {
+      setIsReviewMode(false)
+      setReviewNotes(undefined)
+      mc.reset()
+    }
+    onClose()
+  }, [isReviewMode, onClose, mc])
 
   // #8483 — Pre-populate Phase 1 with a Kubara chart when opened from Mission Browser
   const initialChartAdded = useRef<string | null>(null)
@@ -125,15 +153,16 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
       if (e.key === 'Escape') {
         e.stopImmediatePropagation()
         e.preventDefault()
-        onClose()
+        handleClose()
       }
     },
-    [onClose]
+    [handleClose]
   )
 
   // Track the highest phase the user has reached so they can click back to any visited phase
   const currentStepIndex = PHASE_STEPS.findIndex((s) => s.key === state.phase)
   const [highestReached, setHighestReached] = useState(currentStepIndex)
+  const [approvalModalOpen, setApprovalModalOpen] = useState(false)
   useEffect(() => {
     setHighestReached(prev => Math.max(prev, currentStepIndex))
   }, [currentStepIndex])
@@ -236,17 +265,18 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
   const MODAL_TOP_INSET_PX = 80 // NAVBAR_HEIGHT_PX (64) + 16px breathing room
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <>
           {/* ── Backdrop ──────────────────────────────────────────── */}
           <motion.div
-            className="fixed inset-0 z-modal bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-modal bg-black/60 backdrop-blur-xs"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            onClick={onClose}
+            onClick={handleClose}
             aria-hidden="true"
           />
 
@@ -274,7 +304,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
               <div className="flex items-center gap-3">
                 {/* Back to Dashboard link */}
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mr-2 shrink-0"
                   title="Close Mission Control and return to the dashboard"
                 >
@@ -282,7 +312,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                   <span className="hidden sm:inline">Back to Dashboard</span>
                 </button>
                 <span className="w-px h-5 bg-border hidden sm:block" />
-                <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
+                <div className="p-1.5 rounded-lg bg-linear-to-br from-violet-500 to-indigo-600 text-white">
                   <Rocket className="w-5 h-5" />
                 </div>
                 <div>
@@ -291,6 +321,11 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                     {state.isDryRun && (
                       <span className="px-2 py-0.5 text-2xs font-bold uppercase tracking-wider rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
                         DRY RUN
+                      </span>
+                    )}
+                    {isReviewMode && (
+                      <span className="px-2 py-0.5 text-2xs font-bold uppercase tracking-wider rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                        REVIEW
                       </span>
                     )}
                   </div>
@@ -312,8 +347,18 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
                   e.preventDefault()
                   const delta = e.key === 'ArrowRight' ? 1 : -1
-                  const nextIdx = Math.max(0, Math.min(highestReached, currentStepIndex + delta))
+                  // #9501 — Allow keyboard ArrowRight to advance beyond highestReached
+                  // when the current step's validation passes (same condition as the
+                  // Next button being enabled). Without this, highestReached clamps
+                  // the index to 0 on first pass, blocking a11y keyboard navigation.
+                  const upperBound = (delta > 0 && canAdvance)
+                    ? Math.min(highestReached + 1, PHASE_STEPS.length - 1)
+                    : highestReached
+                  const nextIdx = Math.max(0, Math.min(upperBound, currentStepIndex + delta))
                   if (nextIdx !== currentStepIndex) {
+                    if (nextIdx > highestReached) {
+                      setHighestReached(nextIdx)
+                    }
                     mc.setPhase(PHASE_STEPS[nextIdx].key)
                   }
                 }}
@@ -389,7 +434,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onClose}
+                  onClick={handleClose}
                   data-testid="mission-control-cancel"
                   className="p-1.5 hover:bg-destructive/10 hover:text-destructive"
                   aria-label="Close Mission Control"
@@ -398,6 +443,20 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                 />
               </div>
             </header>
+
+            {/* Review mode banner */}
+            {isReviewMode && (
+              <div className="px-6 py-2 bg-cyan-500/10 border-b border-cyan-500/20 text-sm">
+                <p className="text-cyan-400 font-medium">
+                  You are reviewing a shared deployment plan. This is read-only — no changes will be deployed.
+                </p>
+                {reviewNotes && (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    <span className="font-medium text-foreground">Notes from requester:</span> {reviewNotes}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* ── Content ────────────────────────────────────────────── */}
             <div
@@ -462,7 +521,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                           if (dashboardId) mc.setGroundControlDashboardId(dashboardId)
                           mc.setPhase('complete')
                         }}
-                        onClose={onClose}
+                        onClose={handleClose}
                       />
                     </ChunkErrorBoundary>
                   </PhaseWrapper>
@@ -471,7 +530,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
             </div>
 
             {/* ── Footer nav ─────────────────────────────────────────── */}
-            {!isLaunching && !isComplete && (
+            {!isLaunching && !isComplete && !isReviewMode && (
               <footer className="flex items-center justify-between px-6 py-3 border-t border-border bg-card rounded-b-xl">
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   {state.projects.length > 0 && (
@@ -527,6 +586,15 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                       <Button
                         variant="secondary"
                         size="sm"
+                        onClick={() => setApprovalModalOpen(true)}
+                        icon={<GitPullRequestArrow className="w-3.5 h-3.5" />}
+                        title="Create a GitHub issue with the deployment plan for team approval"
+                      >
+                        Request Approval
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => showToast('Local cluster simulation is not yet available', 'info')}
                         icon={<Monitor className="w-3.5 h-3.5" />}
                         title="Create local clusters to simulate the deployment"
@@ -550,7 +618,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
                           mc.setDryRun(false)
                           mc.setPhase('launching')
                         }}
-                        className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
+                        className="bg-linear-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-violet-500/25"
                         icon={<Rocket className="w-4 h-4" />}
                       >
                         Deploy to Clusters
@@ -594,6 +662,14 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart }: Miss
         </>
       )}
     </AnimatePresence>
+
+    <RequestApprovalModal
+      isOpen={approvalModalOpen}
+      onClose={() => setApprovalModalOpen(false)}
+      state={state}
+      installedProjects={mc.installedProjects}
+    />
+    </>
   )
 }
 

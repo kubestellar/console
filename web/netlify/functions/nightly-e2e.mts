@@ -10,6 +10,7 @@
  */
 import { getStore } from "@netlify/blobs";
 import { unzipSync } from "fflate";
+import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const CACHE_STORE = "nightly-e2e";
 const CACHE_KEY = "runs";
@@ -618,15 +619,18 @@ async function fetchAll(
 // ---------------------------------------------------------------------------
 
 export default async (req: Request) => {
+  // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
+  const corsOpts = {
+    methods: "GET, OPTIONS",
+    headers: "Content-Type, Authorization, Accept",
+  };
   const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
+    ...buildCorsHeaders(req, corsOpts),
     "Cache-Control": "no-cache, no-store",
   };
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return handlePreflight(req, corsOpts);
   }
 
   const token = process.env.GITHUB_TOKEN || "";

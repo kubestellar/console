@@ -92,7 +92,7 @@ export function DashboardCustomizer({
 
   return (
     <>
-    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="!max-w-[75vw] !h-[75vh]">
+    <BaseModal isOpen={isOpen} onClose={onClose} size="xl" closeOnBackdrop={false} className="max-w-[75vw]! h-[75vh]!">
       <BaseModal.Header
         title={t('dashboard.studio.title', 'Console Studio')}
         description={t('dashboard.studio.subtitle', 'Your console is built from dashboards containing cards and stat blocks that show real-time cluster data. Browse cards, apply collections, or create custom visualizations.')}
@@ -204,7 +204,7 @@ export function DashboardCustomizer({
       </div>
 
       {/* Footer — always rendered to prevent height shift when undo/redo state changes */}
-      <div className={`border-t border-border px-4 py-2 flex items-center gap-2 flex-shrink-0 transition-opacity ${
+      <div className={`border-t border-border px-4 py-2 flex items-center gap-2 shrink-0 transition-opacity ${
         canUndo || canRedo || (isCustomized && onReset) ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}>
         <button

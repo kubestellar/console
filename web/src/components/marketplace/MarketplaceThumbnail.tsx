@@ -86,6 +86,7 @@ const PROJECT_TO_GITHUB_ORG: Record<string, string> = {
   volcano: 'volcano-sh',
   kubeedge: 'kubeedge',
   spiffe: 'spiffe',
+  spire: 'spiffe',
   notary: 'notaryproject',
 }
 
@@ -108,7 +109,7 @@ function ProjectLogo({ projectName, iconPath }: { projectName: string; iconPath:
 
   if (failed) {
     return (
-      <div className="w-12 h-12 rounded-xl bg-black/25 backdrop-blur-sm shadow-sm flex items-center justify-center">
+      <div className="w-12 h-12 rounded-xl bg-black/25 backdrop-blur-xs shadow-xs flex items-center justify-center">
         <svg viewBox="0 0 24 24" className="w-8 h-8 text-white drop-shadow-md" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
           <path d={iconPath} />
         </svg>
@@ -117,7 +118,7 @@ function ProjectLogo({ projectName, iconPath }: { projectName: string; iconPath:
   }
 
   return (
-    <div className="w-12 h-12 rounded-xl bg-white/90 shadow-sm flex items-center justify-center">
+    <div className="w-12 h-12 rounded-xl bg-white/90 shadow-xs flex items-center justify-center">
       <img
         src={getProjectLogoUrl(projectName)}
         alt={projectName}

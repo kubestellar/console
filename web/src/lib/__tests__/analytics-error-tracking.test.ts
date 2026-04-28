@@ -375,6 +375,29 @@ describe('startGlobalErrorTracking sets up listeners', () => {
     const event = new ErrorEvent('error', { message: 'ReferenceError: foo is not defined' })
     expect(() => window.dispatchEvent(event)).not.toThrow()
   })
+
+  it('skips ResizeObserver loop errors (benign browser noise)', () => {
+    startGlobalErrorTracking()
+    // Chrome/Edge message
+    const event1 = new ErrorEvent('error', {
+      message: 'ResizeObserver loop completed with undelivered notifications.',
+    })
+    expect(() => window.dispatchEvent(event1)).not.toThrow()
+    // Older browser message
+    const event2 = new ErrorEvent('error', {
+      message: 'ResizeObserver loop limit exceeded',
+    })
+    expect(() => window.dispatchEvent(event2)).not.toThrow()
+    // Partial match — future browser variants
+    const event3 = new ErrorEvent('error', {
+      message: 'Uncaught: ResizeObserver loop error detected',
+    })
+    expect(() => window.dispatchEvent(event3)).not.toThrow()
+  })
+
+  // Full send-count verification (ResizeObserver errors NOT reported to GA4)
+  // is in analytics-resize-observer-filter.test.ts — it initializes the
+  // analytics pipeline end-to-end and asserts navigator.sendBeacon counts.
 })
 
 describe('markErrorReported and dedup integration', () => {

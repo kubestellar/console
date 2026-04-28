@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, KUBECTL_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** HTTP status codes that indicate authentication/authorization failure */
 const HTTP_UNAUTHORIZED = 401
@@ -48,7 +49,7 @@ async function fetchDeployEventsViaProxy(
   const response = await kubectlProxy.exec(
     ['get', 'events', '-n', namespace,
      '--sort-by=.lastTimestamp', '-o', 'json'],
-    { context, timeout: 10000 },
+    { context, timeout: KUBECTL_DEFAULT_TIMEOUT_MS },
   )
   if (response.exitCode !== 0) return []
   interface KubeEvent {
@@ -141,7 +142,7 @@ const MISSIONS_STORAGE_KEY = 'kubestellar-missions'
 const POLL_INTERVAL_MS = 5000
 const MAX_MISSIONS = 50
 /** Cache TTL: 5 minutes — stop polling completed missions after this duration */
-const CACHE_TTL_MS = 5 * 60 * 1000
+const CACHE_TTL_MS = 5 * MS_PER_MINUTE
 /** After this many consecutive HTTP error responses (4xx/5xx) a cluster is marked failed (#6412) */
 const MAX_STATUS_FAILURES = 6
 /**
@@ -430,7 +431,7 @@ export function useDeployMissions() {
                   const ctrl = new AbortController()
                   const tid = setTimeout(() => ctrl.abort(), DEPLOY_ABORT_TIMEOUT_MS)
                   try {
-                    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+                    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                       signal: ctrl.signal,
                       headers: { Accept: 'application/json' } })
                     // #6816 — If the agent returns a non-OK response (4xx/5xx

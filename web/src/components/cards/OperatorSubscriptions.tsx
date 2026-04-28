@@ -1,4 +1,5 @@
 import { Clock, AlertTriangle, AlertCircle, Settings, RefreshCw, ChevronRight } from 'lucide-react'
+import { cn } from '../../lib/cn'
 import { useClusters, OperatorSubscription } from '../../hooks/useMCP'
 import { useCachedOperatorSubscriptions } from '../../hooks/useCachedData'
 import { Skeleton } from '../ui/Skeleton'
@@ -134,7 +135,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
             onClick={() => refetch()}
             className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
             {t('common:common.retry', 'Retry')}
           </button>
         </div>

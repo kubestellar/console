@@ -12,13 +12,24 @@ const { mockUseAuth } = vi.hoisted(() => ({
   })),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../lib/auth', () => ({
   useAuth: () => mockUseAuth(),
 }))
 
-vi.mock('../../lib/constants', () => ({
-  BACKEND_DEFAULT_URL: 'http://localhost:8080',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    BACKEND_DEFAULT_URL: 'http://localhost:8080',
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,

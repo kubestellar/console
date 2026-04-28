@@ -24,7 +24,10 @@ export default defineConfig({
   // with the file itself. No project declared `dependencies: ['setup']`, so
   // the file was dead code. All tests handle auth mocking inline via
   // `helpers/setup.ts::setupDemoMode`.
-  testIgnore: [],
+  // Visual regression tests require Storybook to be built and served
+  // separately. They have their own configs (visual.config.ts,
+  // app-visual.config.ts) and must not run in the main chromium shards.
+  testIgnore: ['**/visual/**'],
 
   // Run tests in parallel
   fullyParallel: true,

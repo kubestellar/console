@@ -13,6 +13,7 @@ import {
 import { cn } from '../../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -158,7 +159,7 @@ export function ArgoAppDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
@@ -426,7 +427,7 @@ Please:
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* App Info Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20">
+            <div className="p-4 rounded-lg bg-linear-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20">
               <div className="flex items-start gap-3">
                 <GitBranch className="w-8 h-8 text-orange-400 mt-1" />
                 <div className="flex-1 min-w-0">
@@ -695,8 +696,8 @@ Please:
                     : 'bg-red-500/10 border border-red-500/20 text-red-400'
                 )}>
                   {syncResult.success
-                    ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                    : <XCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    ? <CheckCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    : <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   }
                   <span>
                     {syncResult.success
@@ -763,19 +764,19 @@ spec:
               </h5>
               <ul className="space-y-1.5 text-xs text-muted-foreground">
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
                   <span>{t('drilldown.argoApp.benefit1')}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
                   <span>{t('drilldown.argoApp.benefit2')}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
                   <span>{t('drilldown.argoApp.benefit3')}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0 mt-0.5" />
                   <span>{t('drilldown.argoApp.benefit4')}</span>
                 </li>
               </ul>

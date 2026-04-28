@@ -1,14 +1,12 @@
 import { useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
-import { Plus, Layout, RotateCcw, Download, Pencil, Undo2, Redo2, Palette } from 'lucide-react'
+import { Plus, Layout, RotateCcw, Download, Undo2, Redo2, Palette } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
 import { useFeatureHints } from '../../hooks/useFeatureHints'
 import { ResetMode } from '../../hooks/useDashboardReset'
 import { ResetDialog } from './ResetDialog'
-import { SidebarCustomizer } from '../layout/SidebarCustomizer'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
 
 /** Size classes for the FAB circle — desktop and mobile variants.
@@ -71,31 +69,14 @@ export function FloatingDashboardActions({
   const { t } = useTranslation()
   const { isSidebarOpen, isSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
   const { isMobile } = useMobile()
-  const [searchParams, setSearchParams] = useSearchParams()
   const fabHint = useFeatureHints('fab-add')
   const menu = useModalState()
   const resetDialog = useModalState()
-  const customizer = useModalState()
   const menuRef = useRef<HTMLDivElement>(null)
   const { isOpen: menuIsOpen, close: closeMenu } = menu
-  const { open: openCustomizer } = customizer
 
   // Use unified mode when onOpenCustomizer is provided
   const isUnifiedMode = !!onOpenCustomizer
-
-  // Auto-open via URL params
-  useEffect(() => {
-    if (isUnifiedMode) {
-      // Unified mode: URL params handled by parent DashboardPage
-      return
-    }
-    if (searchParams.get('customizeSidebar') === 'true') {
-      openCustomizer()
-      const cleaned = new URLSearchParams(searchParams)
-      cleaned.delete('customizeSidebar')
-      setSearchParams(cleaned, { replace: true })
-    }
-  }, [searchParams, setSearchParams, openCustomizer, isUnifiedMode])
 
   // Cmd+K shortcut — unified mode only
   useEffect(() => {
@@ -211,6 +192,7 @@ export function FloatingDashboardActions({
 
   // =========================================================================
   // Legacy mode: expandable FAB menu (for Dashboard.tsx, CustomDashboard.tsx, etc.)
+  // Opens Console Studio for customize actions.
   // =========================================================================
   return (
     <>
@@ -256,10 +238,6 @@ export function FloatingDashboardActions({
                 {t('dashboard.actions.reset')}
               </button>
             )}
-            <button role="menuitem" onClick={() => { menu.close(); customizer.open() }} className={menuBtnClass}>
-              <Pencil className="w-3.5 h-3.5" />
-              {t('dashboard.actions.customize')}
-            </button>
             {onOpenTemplates && (
               <button role="menuitem" onClick={() => { menu.close(); onOpenTemplates() }} data-tour="templates" className={menuBtnClass}>
                 <Layout className="w-3.5 h-3.5" />
@@ -294,7 +272,6 @@ export function FloatingDashboardActions({
       </div>
 
       <ResetDialog isOpen={resetDialog.isOpen} onClose={resetDialog.close} onReset={handleReset} />
-      <SidebarCustomizer isOpen={customizer.isOpen} onClose={customizer.close} />
     </>
   )
 }

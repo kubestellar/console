@@ -20,7 +20,7 @@ function StatusDot({ status }: { status: string }) {
 }
 
 // Metric tile.
-// Issue 9071: swap `bg-white/5` -> `bg-muted/30` for a theme-adapting subtle tint.
+// Semantic muted tint — adapts to both light and dark themes.
 function MetricTile({ icon: Icon, label, value, sub, accent }: {
   icon: React.ComponentType<{ className?: string }>
   label: string
@@ -164,7 +164,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
             {maxFramework.slice(0, 4).map(([fw, count]) => (
               <div key={fw} className="flex items-center gap-2">
                 <div className="text-sm text-muted-foreground w-20 truncate">{fw}</div>
-                {/* Issue 9071: swap `bg-white/5` -> `bg-muted/30` on progress track for theme adaptation. */}
+                {/* Semantic muted tint on progress track — adapts to both themes. */}
                 <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-purple-500/60"

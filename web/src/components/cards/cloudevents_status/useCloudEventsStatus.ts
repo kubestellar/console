@@ -253,7 +253,7 @@ export function useCloudEventsStatus(): UseCloudEventsStatusResult {
     : ((data.brokers.total + data.triggers.total + data.eventSources.total) > 0)
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

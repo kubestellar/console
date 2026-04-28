@@ -5,6 +5,7 @@ import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../../lib/constants'
 
 export interface CrossplaneManagedResource {
   apiVersion: string
@@ -53,7 +54,6 @@ function getDemoManagedResources(): CrossplaneManagedResource[] {
 
 const CACHE_KEY = 'kc-crossplane-managed-cache'
 const CACHE_TTL_MS = 30000
-const REFRESH_INTERVAL_MS = 120000
 
 interface ManagedCache {
   data: CrossplaneManagedResource[]

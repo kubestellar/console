@@ -451,7 +451,7 @@ export function PDDisaggregation() {
             {/* Transfer zone */}
             <div className="w-20 flex flex-col items-center justify-center relative">
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-px h-full bg-gradient-to-b from-purple-500/20 via-cyan-500/40 to-green-500/20" />
+                <div className="w-px h-full bg-linear-to-b from-purple-500/20 via-cyan-500/40 to-green-500/20" />
               </div>
 
               {/* Animated packets */}

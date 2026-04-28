@@ -26,6 +26,7 @@ import {
   type Conclusion,
 } from '../../../hooks/useGitHubPipelines'
 import { usePipelineFilter } from './PipelineFilterContext'
+import { formatTimeAgo } from '../../../lib/formatters'
 import { usePipelineData } from './PipelineDataContext'
 import { RepoSubtitle } from './RepoSubtitle'
 import { EmbedButton } from './EmbedButton'
@@ -65,15 +66,6 @@ function formatCron(cron: string | undefined | null): string {
   return cron
 }
 
-function formatTimeAgo(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
-}
 
 // ---------------------------------------------------------------------------
 // RunDot — colored dot with hover popup
@@ -276,7 +268,7 @@ function StandaloneRepoInput({ value, onChange }: { value: string; onChange: (v:
       <Search size={12} className="text-muted-foreground" />
       <input type="text" value={value} onChange={(e) => onChange(e.target.value)}
         placeholder={PLACEHOLDER_REPO}
-        className="flex-1 text-xs bg-transparent text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+        className="flex-1 text-xs bg-transparent text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden"
         aria-label={LABEL_SET_REPO} />
     </div>
   )

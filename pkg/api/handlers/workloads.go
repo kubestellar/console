@@ -39,11 +39,21 @@ const (
 	workloadDeployLogsTimeout = 15 * time.Second
 )
 
+const (
+	// clusterGroupRefreshInterval is how often the in-memory cluster group
+	// cache is re-synced from the persistent store. This ensures that in
+	// multi-instance deployments each backend picks up writes made by
+	// other instances within a bounded window (#10007).
+	clusterGroupRefreshInterval = 30 * time.Second
+)
+
 // WorkloadHandlers handles workload API endpoints
 type WorkloadHandlers struct {
 	k8sClient *k8s.MultiClusterClient
 	hub       *Hub
 	store     store.Store
+	stopOnce  sync.Once
+	stopCh    chan struct{}
 }
 
 // NewWorkloadHandlers creates a new workload handlers instance
@@ -52,6 +62,7 @@ func NewWorkloadHandlers(k8sClient *k8s.MultiClusterClient, hub *Hub, s store.St
 		k8sClient: k8sClient,
 		hub:       hub,
 		store:     s,
+		stopCh:    make(chan struct{}),
 	}
 }
 
@@ -65,7 +76,7 @@ func (h *WorkloadHandlers) requireAdmin(c *fiber.Ctx) error {
 		return nil
 	}
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
@@ -76,7 +87,7 @@ func (h *WorkloadHandlers) requireAdmin(c *fiber.Ctx) error {
 // GET /api/workloads
 func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	// Optional filters
@@ -99,7 +110,7 @@ func (h *WorkloadHandlers) ListWorkloads(c *fiber.Ctx) error {
 // GET /api/workloads/:cluster/:namespace/:name
 func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -130,7 +141,7 @@ func (h *WorkloadHandlers) GetWorkload(c *fiber.Ctx) error {
 // GET /api/workloads/resolve-deps/:cluster/:namespace/:name
 func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -187,7 +198,7 @@ func (h *WorkloadHandlers) ResolveDependencies(c *fiber.Ctx) error {
 // GET /api/workloads/monitor/:cluster/:namespace/:name
 func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -213,7 +224,7 @@ func (h *WorkloadHandlers) MonitorWorkload(c *fiber.Ctx) error {
 // GET /api/workloads/deploy-status/:cluster/:namespace/:name
 func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")
@@ -304,7 +315,7 @@ func (h *WorkloadHandlers) LoadPersistedClusterGroups() {
 	if h.store == nil {
 		return
 	}
-	persisted, err := h.store.ListClusterGroups()
+	persisted, err := h.store.ListClusterGroups(context.Background())
 	if err != nil {
 		slog.Error("[Workloads] failed to load persisted cluster groups", "error", err)
 		return
@@ -322,8 +333,40 @@ func (h *WorkloadHandlers) LoadPersistedClusterGroups() {
 	slog.Info("[Workloads] loaded persisted cluster groups", "count", len(persisted))
 }
 
+// StartCacheRefresh launches a background goroutine that periodically reloads
+// cluster groups from the persistent store. In multi-instance deployments this
+// ensures each backend converges on the same state within
+// clusterGroupRefreshInterval (#10007).
+func (h *WorkloadHandlers) StartCacheRefresh() {
+	if h.store == nil {
+		return
+	}
+	go func() {
+		ticker := time.NewTicker(clusterGroupRefreshInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-h.stopCh:
+				return
+			case <-ticker.C:
+				h.LoadPersistedClusterGroups()
+			}
+		}
+	}()
+	slog.Info("[Workloads] started periodic cluster group cache refresh",
+		"interval", clusterGroupRefreshInterval)
+}
+
+// StopCacheRefresh signals the background refresh goroutine to exit.
+func (h *WorkloadHandlers) StopCacheRefresh() {
+	h.stopOnce.Do(func() {
+		close(h.stopCh)
+		slog.Info("[Workloads] stopped periodic cluster group cache refresh")
+	})
+}
+
 // persistClusterGroup saves a cluster group to the store for durability (#7013).
-func (h *WorkloadHandlers) persistClusterGroup(name string, g ClusterGroup) {
+func (h *WorkloadHandlers) persistClusterGroup(ctx context.Context, name string, g ClusterGroup) {
 	if h.store == nil {
 		return
 	}
@@ -332,17 +375,17 @@ func (h *WorkloadHandlers) persistClusterGroup(name string, g ClusterGroup) {
 		slog.Error("[Workloads] failed to marshal cluster group for persistence", "name", name, "error", err)
 		return
 	}
-	if err := h.store.SaveClusterGroup(name, data); err != nil {
+	if err := h.store.SaveClusterGroup(ctx, name, data); err != nil {
 		slog.Error("[Workloads] failed to persist cluster group", "name", name, "error", err)
 	}
 }
 
 // deletePersistedClusterGroup removes a cluster group from the store (#7013).
-func (h *WorkloadHandlers) deletePersistedClusterGroup(name string) {
+func (h *WorkloadHandlers) deletePersistedClusterGroup(ctx context.Context, name string) {
 	if h.store == nil {
 		return
 	}
-	if err := h.store.DeleteClusterGroup(name); err != nil {
+	if err := h.store.DeleteClusterGroup(ctx, name); err != nil {
 		slog.Error("[Workloads] failed to delete persisted cluster group", "name", name, "error", err)
 	}
 }
@@ -416,7 +459,7 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 	clusterGroupsMu.Unlock()
 
 	// Persist to store so the group survives server restarts (#7013).
-	h.persistClusterGroup(group.Name, group)
+	h.persistClusterGroup(c.UserContext(), group.Name, group)
 
 	// Label cluster nodes with group membership
 	if h.k8sClient != nil {
@@ -471,7 +514,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 	clusterGroupsMu.Unlock()
 
 	// Persist to store so the group survives server restarts (#7013).
-	h.persistClusterGroup(name, group)
+	h.persistClusterGroup(c.UserContext(), name, group)
 
 	// Remove labels from clusters no longer in the group
 	if existed && h.k8sClient != nil {
@@ -539,7 +582,7 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 	clusterGroupsMu.Unlock()
 
 	// Remove from persistent store (#7013).
-	h.deletePersistedClusterGroup(name)
+	h.deletePersistedClusterGroup(c.UserContext(), name)
 
 	// Remove labels from all clusters in the deleted group
 	if existed && h.k8sClient != nil {
@@ -612,11 +655,11 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 
 	// Persist the new set and remove stale entries (#7013).
 	for n, g := range toSave {
-		h.persistClusterGroup(n, g)
+		h.persistClusterGroup(c.UserContext(), n, g)
 		delete(oldNames, n) // still exists
 	}
 	for n := range oldNames {
-		h.deletePersistedClusterGroup(n)
+		h.deletePersistedClusterGroup(c.UserContext(), n)
 	}
 
 	return c.JSON(fiber.Map{"synced": syncedCount})
@@ -626,7 +669,7 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 // POST /api/cluster-groups/evaluate
 func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	var query ClusterGroupQuery
@@ -1032,7 +1075,7 @@ func buildClusterContextForAI(healthData []k8s.ClusterHealth) string {
 // GET /api/workloads/capabilities
 func (h *WorkloadHandlers) GetClusterCapabilities(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), workloadListTimeout)
@@ -1050,7 +1093,7 @@ func (h *WorkloadHandlers) GetClusterCapabilities(c *fiber.Ctx) error {
 // GET /api/workloads/policies
 func (h *WorkloadHandlers) ListBindingPolicies(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), workloadDefaultTimeout)
@@ -1069,7 +1112,7 @@ func (h *WorkloadHandlers) ListBindingPolicies(c *fiber.Ctx) error {
 // GET /api/workloads/deploy-logs/:cluster/:namespace/:name?tail=8
 func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "Kubernetes client not available"})
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Params("cluster")

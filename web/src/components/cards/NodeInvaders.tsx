@@ -20,6 +20,7 @@ const INVADER_ROWS = 4
 const INVADER_COLS = 8
 const INVADER_WIDTH = 24
 const INVADER_HEIGHT = 16
+const SHOOT_COOLDOWN_MS = 300
 
 interface Player {
   x: number
@@ -232,7 +233,7 @@ export function NodeInvaders(_props: CardComponentProps) {
           y: CANVAS_HEIGHT - 45,
           isPlayer: true }])
         setCanShoot(false)
-        setTimeout(() => setCanShoot(true), 300)
+        setTimeout(() => setCanShoot(true), SHOOT_COOLDOWN_MS)
       }
 
       // Move bullets

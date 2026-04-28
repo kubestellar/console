@@ -44,7 +44,19 @@ export function loadMissions(): Mission[] {
   try {
     const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored)
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(stored)
+      } catch (parseErr) {
+        console.error('[Missions] Corrupted localStorage JSON — clearing:', parseErr)
+        localStorage.removeItem(MISSIONS_STORAGE_KEY)
+        return getDemoMode() ? DEMO_MISSIONS_AS_MISSIONS : []
+      }
+      if (!Array.isArray(parsed)) {
+        console.warn('[Missions] localStorage value is not an array — clearing')
+        localStorage.removeItem(MISSIONS_STORAGE_KEY)
+        return getDemoMode() ? DEMO_MISSIONS_AS_MISSIONS : []
+      }
       // In demo mode, replace stale demo data with fresh demo missions
       // (catches both empty arrays and outdated demo entries without steps)
       if (getDemoMode() && Array.isArray(parsed) && (
@@ -228,7 +240,17 @@ export function mergeMissions(prev: Mission[], reloaded: Mission[]): Mission[] {
     }
     const localTime = new Date(local.updatedAt).getTime()
     const remoteTime = new Date(remote.updatedAt).getTime()
-    merged.push(remoteTime >= localTime ? remote : local)
+    // #9699 — When timestamps are identical (same-millisecond burst-write from
+    // Tab A), `remoteTime >= localTime` used to unconditionally pick the remote
+    // copy, silently discarding local edits made in the same millisecond.
+    // Tie-break by message count: the version with more messages contains
+    // more user actions and should win. If counts also match, prefer remote
+    // (already-persisted) as before.
+    if (remoteTime === localTime) {
+      merged.push(remote.messages.length >= local.messages.length ? remote : local)
+    } else {
+      merged.push(remoteTime > localTime ? remote : local)
+    }
   }
   for (const remote of reloaded) {
     if (!seen.has(remote.id)) {

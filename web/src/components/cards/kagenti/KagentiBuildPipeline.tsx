@@ -4,6 +4,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../../lib/cards/cardHooks'
 import { Skeleton } from '../../ui/Skeleton'
+import { formatTimeAgo } from '../../../lib/formatters'
 
 interface KagentiBuildPipelineProps {
   config?: { cluster?: string }
@@ -24,15 +25,6 @@ function BuildStatusIcon({ status }: { status: string }) {
   }
 }
 
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return ''
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (seconds < 60) return `${seconds}s ago`
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  return `${Math.floor(seconds / 86400)}d ago`
-}
-
 type SortField = 'name' | 'status' | 'cluster'
 
 const SORT_OPTIONS: { value: SortField; label: string }[] = [
@@ -48,9 +40,10 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
     isDemoFallback,
     consecutiveFailures } = useKagentiBuilds({ cluster: config?.cluster })
 
+  const hasData = builds.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: builds.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
     isDemoData: isDemoFallback })
@@ -173,7 +166,7 @@ export function KagentiBuildPipeline({ config }: KagentiBuildPipelineProps) {
               </div>
             </div>
             <div className="text-xs text-muted-foreground/40">
-              {timeAgo(build.startTime || build.completionTime)}
+              {formatTimeAgo(build.startTime || build.completionTime)}
             </div>
           </div>
         ))}

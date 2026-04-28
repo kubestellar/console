@@ -297,7 +297,7 @@ describe('DashboardPage', () => {
     // The outer wrapper is the first div inside the test render. Without an
     // explicit testId it must not emit a stray `data-testid` attribute —
     // keeps existing selectors (dashboard-page, etc.) unambiguous.
-    const wrapper = container.querySelector('div.pt-16')
+    const wrapper = container.querySelector('div.pt-4')
     expect(wrapper).not.toBeNull()
     expect(wrapper?.hasAttribute('data-testid')).toBe(false)
   })

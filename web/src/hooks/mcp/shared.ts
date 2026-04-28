@@ -6,17 +6,21 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
 import { hostnameEndsWith, hostnameContainsLabel } from '../../lib/utils/urlHostname'
+import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { emitAgentTokenFailure } from '../../lib/analytics'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import {
   LOCAL_AGENT_HTTP_URL,
   MCP_HOOK_TIMEOUT_MS,
   METRICS_SERVER_TIMEOUT_MS,
-  STORAGE_KEY_TOKEN,
+  DEFAULT_REFRESH_INTERVAL_MS,
 } from '../../lib/constants'
-import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants/storage'
+import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS, KUBECTL_MAX_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ClusterInfo, ClusterHealth } from './types'
 
-// Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
-export const REFRESH_INTERVAL_MS = 120000
+// Re-export canonical constant under the name used by MCP hooks
+export const REFRESH_INTERVAL_MS = DEFAULT_REFRESH_INTERVAL_MS
 
 // Polling intervals for cluster and GPU data freshness
 export const CLUSTER_POLL_INTERVAL_MS = 60000  // 60 seconds
@@ -41,16 +45,61 @@ export const MIN_REFRESH_INDICATOR_MS = 500
 // Re-export for backward compatibility
 export const LOCAL_AGENT_URL = LOCAL_AGENT_HTTP_URL
 
+const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
+const AGENT_TOKEN_FETCH_TIMEOUT_MS = 5000
+
+let agentTokenPromise: Promise<string> | null = null
+
+/**
+ * Lazily fetch the kc-agent token from the backend. The token is cached
+ * in localStorage so subsequent calls (and page reloads) don't re-fetch.
+ */
+function getAgentToken(): Promise<string> {
+  const cached = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  if (cached) return Promise.resolve(cached)
+
+  if (!agentTokenPromise) {
+    agentTokenPromise = fetch('/api/agent/token', {
+      credentials: 'include',
+      signal: AbortSignal.timeout(AGENT_TOKEN_FETCH_TIMEOUT_MS),
+    })
+      .then(r => r.ok ? r.json() : { token: '' })
+      .then((data: { token?: string }) => {
+        const token = data.token || ''
+        if (token) {
+          localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
+        } else {
+          emitAgentTokenFailure('empty token from /api/agent/token')
+        }
+        agentTokenPromise = null
+        return token
+      })
+      .catch((err) => {
+        emitAgentTokenFailure(err?.message || 'network error')
+        agentTokenPromise = null
+        return ''
+      })
+  }
+  return agentTokenPromise
+}
+
 /**
  * Drop-in replacement for `fetch()` that auto-injects the KC_AGENT_TOKEN
  * Authorization header when calling the kc-agent HTTP API. Without this,
  * requests to kc-agent are rejected when KC_AGENT_TOKEN is configured.
  */
-export function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const token = await getAgentToken()
   const headers = new Headers(init?.headers)
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
+  }
+  // #10000 — CSRF defence-in-depth: state-changing requests must carry a
+  // custom header that browsers never attach to cross-origin form POSTs.
+  // The kc-agent requireCSRF middleware rejects POST/PUT/DELETE/PATCH
+  // without this header.
+  if (!headers.has('X-Requested-With')) {
+    headers.set('X-Requested-With', 'XMLHttpRequest')
   }
   // Use caller-provided signal, or fall back to a default timeout
   const signal = init?.signal ?? AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS)
@@ -187,8 +236,7 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
     if (stored) {
       const parsed = JSON.parse(stored)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Filter out long context-path duplicates from cached data
-        return parsed.filter((c: ClusterInfo) => !c.name.includes('/'))
+        return parsed
       }
     }
   } catch {
@@ -199,9 +247,11 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
 
 function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
   try {
-    // Only save clusters with meaningful data
-    // Filter out long context-path duplicates before saving
-    const toSave = clusters.filter(c => c.name && !c.name.includes("/")).map(c => ({
+    // Only save clusters with meaningful data.
+    // Filter out clusters whose name contains a slash — these are auto-generated
+    // OpenShift context names (e.g. "default/api-*.openshiftapps.com:6443/kube:admin")
+    // that should not pollute the persistent cache.
+    const toSave = clusters.filter(c => c.name && !c.name.includes('/')).map(c => ({
       name: c.name,
       context: c.context,
       server: c.server,
@@ -363,7 +413,7 @@ export function clearClusterCacheOnLogout(): void {
     // Ignore storage errors
   }
 
-  clusterCache = {
+  Object.assign(clusterCache, {
     clusters: [],
     lastUpdated: null,
     isLoading: true,
@@ -372,7 +422,7 @@ export function clearClusterCacheOnLogout(): void {
     consecutiveFailures: 0,
     isFailed: false,
     lastRefresh: null,
-  }
+  })
   notifyClusterSubscribers()
 }
 
@@ -399,7 +449,7 @@ function handleClusterDemoModeChange() {
       }
 
       // Reset cluster cache to demo data
-      clusterCache = {
+      Object.assign(clusterCache, {
         clusters: getDemoClusters(),
         lastUpdated: new Date(),
         isLoading: false,
@@ -408,7 +458,7 @@ function handleClusterDemoModeChange() {
         consecutiveFailures: 0,
         isFailed: false,
         lastRefresh: new Date(),
-      }
+      })
       notifyClusterSubscribers()
     }
     // When switching FROM demo mode, fullFetchClusters will be called by useClusters hook
@@ -431,7 +481,7 @@ if (typeof window !== 'undefined') {
     }
 
     // Reset to loading state (shows skeletons) with empty data
-    clusterCache = {
+    Object.assign(clusterCache, {
       clusters: [],
       lastUpdated: null,
       isLoading: true, // Triggers skeleton display
@@ -440,7 +490,7 @@ if (typeof window !== 'undefined') {
       consecutiveFailures: 0,
       isFailed: false,
       lastRefresh: null,
-    }
+    })
     notifyClusterSubscribers()
   })
 }
@@ -475,7 +525,10 @@ export function updateClusterCache(updates: Partial<ClusterCache>) {
     saveClusterCacheToStorage(updates.clusters)
     updateDistributionCache(updates.clusters)
   }
-  clusterCache = { ...clusterCache, ...updates }
+  // Mutate in place so that any module holding a reference to the exported
+  // `clusterCache` object sees the update (ESM live-binding of `let` exports
+  // is not preserved by all bundlers / test runners).
+  Object.assign(clusterCache, updates)
 
   // Route notifications based on which slice the updates touch (#7865).
   // UI fires first (urgent) so spinner on/off commits immediately, then
@@ -768,10 +821,7 @@ export function updateSingleClusterInCache(clusterName: string, updates: Partial
     updatedClusters = shareMetricsBetweenSameServerClusters(updatedClusters)
   }
 
-  clusterCache = {
-    ...clusterCache,
-    clusters: updatedClusters,
-  }
+  Object.assign(clusterCache, { clusters: updatedClusters })
   // Persist all cluster data to localStorage
   saveClusterCacheToStorage(updatedClusters)
   // Persist distribution changes
@@ -857,7 +907,7 @@ export function connectSharedWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//${window.location.host}/ws`
 
-    const ws = new WebSocket(wsUrl)
+    const ws = new WebSocket(appendWsAuthToken(wsUrl))
 
     ws.onopen = () => {
       // Guard against race condition where onclose fires before onopen
@@ -867,7 +917,7 @@ export function connectSharedWebSocket() {
         return
       }
       // Send authentication message - backend requires this within 5 seconds
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
       if (token) {
         ws.send(JSON.stringify({ type: 'auth', token }))
       } else {
@@ -949,7 +999,7 @@ if (import.meta.hot) {
     initialFetchStarted = false
     healthCheckFailures = 0 // Reset health check failures on HMR
     cleanupSharedWebSocket()
-    clusterCache = {
+    Object.assign(clusterCache, {
       clusters: [],
       lastUpdated: null,
       isLoading: true,
@@ -958,11 +1008,41 @@ if (import.meta.hot) {
       consecutiveFailures: 0,
       isFailed: false,
       lastRefresh: null,
-    }
+    })
     clusterSubscribers.clear()
     dataSubscribers.clear()
     uiSubscribers.clear()
   })
+}
+
+/** Storage key used by useKagentBackend to persist the preferred backend. */
+const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
+
+/** Read the preferred agent backend from localStorage (non-React). */
+function getPreferredBackend(): string {
+  try {
+    return localStorage.getItem(BACKEND_PREF_KEY) || 'kc-agent'
+  } catch {
+    return 'kc-agent'
+  }
+}
+
+/**
+ * Fetch cluster list from the backend API (/api/mcp/clusters).
+ * This endpoint works independently of kc-agent — it uses the MCP bridge or
+ * direct k8s client, making it the right choice when kagenti/kagent is active. (#9535)
+ */
+async function fetchClusterListFromBackendAPI(): Promise<ClusterInfo[] | null> {
+  try {
+    const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
+    if (data?.clusters) {
+      reportAgentDataSuccess()
+      return data.clusters
+    }
+  } catch {
+    // Backend API unavailable
+  }
+  return null
 }
 
 // Fetch basic cluster list from local agent (fast, no health check)
@@ -972,6 +1052,14 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
   // On localhost, always attempt to reach the agent — it may be running even if
   // AgentManager has not detected it yet.
   if (isNetlifyDeployment) return null
+
+  // When kagenti or kagent is the preferred backend, fetch clusters from the
+  // backend API (/api/mcp/clusters) which works independently of kc-agent.
+  // kc-agent's /clusters endpoint is only available when kc-agent is running. (#9535)
+  const preferred = getPreferredBackend()
+  if (preferred === 'kagenti' || preferred === 'kagent') {
+    return fetchClusterListFromBackendAPI()
+  }
 
   try {
     const controller = new AbortController()
@@ -1018,7 +1106,7 @@ const MAX_HEALTH_CHECK_FAILURES = 3
 // Per-cluster failure tracking to prevent transient errors from showing "-"
 // Track first failure timestamp - only mark unreachable after 5 minutes of consecutive failures
 const clusterHealthFailureStart = new Map<string, number>() // timestamp of first failure
-const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes before marking as offline
+const OFFLINE_THRESHOLD_MS = 5 * MS_PER_MINUTE // 5 minutes before marking as offline
 
 // Helper to check if cluster has been failing long enough to mark offline
 export function shouldMarkOffline(clusterName: string): boolean {
@@ -1073,13 +1161,13 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
   }
 
   // Fall back to backend API
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   try {
     const response = await fetch(
       `${LOCAL_AGENT_HTTP_URL}/clusters/${encodeURIComponent(clusterName)}/health`,
       {
         signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        headers: agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {},
       }
     )
     if (response.ok) {
@@ -1175,7 +1263,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     try {
       const response = await kubectlProxy.exec(
         ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
-        { context: kubectlContext || clusterName, timeout: 45000 }
+        { context: kubectlContext || clusterName, timeout: KUBECTL_MAX_TIMEOUT_MS }
       )
       if (response.exitCode === 0 && response.output) {
         const namespaces = response.output.split(/\s+/).filter(Boolean)
@@ -1194,8 +1282,8 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     return {}
   }
 
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
+  const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  const headers: Record<string, string> = agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {}
 
   // Helper to extract namespaces from API response
   const extractNamespaces = (items: Array<{ namespace?: string }>): string[] => {
@@ -1557,13 +1645,16 @@ export async function fullFetchClusters() {
         }
         return newCluster
       })
-      // Deduplicate clusters by server URL - prefers short names when available
-      // but keeps long names (e.g., '/api-pokprod001...' or 'default/api-...') if no short alias exists
-      const dedupedClusters = deduplicateClustersByServer(mergedClusters)
+      // Store the full (raw) cluster list in the cache. Deduplication is
+      // handled lazily by the useClusters() hook's `deduplicatedClusters`
+      // computed property. Premature dedup here was the root cause of
+      // #10316: when many kubeconfig contexts shared server URLs, the
+      // cache only held the dedup winners — hiding legitimate clusters
+      // (including the active kubectl context) from the dashboard.
 
       // Show clusters immediately with preserved health data
       await finishWithMinDuration({
-        clusters: dedupedClusters,
+        clusters: mergedClusters,
         error: null,
         lastUpdated: new Date(),
         isLoading: false,
@@ -1574,9 +1665,10 @@ export async function fullFetchClusters() {
       })
       // Reset flag before returning - allows subsequent refresh calls
       fetchInProgress = false
-      // Check health progressively (non-blocking) - use deduplicated list to avoid
-      // running health checks on long context-path duplicates
-      checkHealthProgressively(dedupedClusters)
+      // Check health on deduplicated clusters to avoid redundant probes
+      // against the same physical server from multiple contexts
+      const healthCheckClusters = deduplicateClustersByServer(mergedClusters)
+      checkHealthProgressively(healthCheckClusters)
       return
     }
 
@@ -1598,8 +1690,8 @@ export async function fullFetchClusters() {
       return
     }
 
-    // Fall back to backend API
-    const { data } = await api.get<{ clusters: ClusterInfo[] }>(`${LOCAL_AGENT_HTTP_URL}/clusters`)
+    // Fall back to backend API (/api/mcp/clusters works regardless of agent backend)
+    const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
     // Merge new cluster list with existing cached data (preserve distribution, health, etc.)
     const existingClusters = clusterCache.clusters
     const mergedClusters = (data.clusters || []).map(newCluster => {
@@ -1636,8 +1728,10 @@ export async function fullFetchClusters() {
       lastRefresh: new Date(),
     })
     fetchInProgress = false
-    // Check health progressively (non-blocking) - will update each cluster's data including cpuCores
-    checkHealthProgressively(data.clusters || [])
+    // Check health on deduplicated clusters to avoid redundant probes
+    // against the same physical server from multiple contexts
+    const healthCheckClusters = deduplicateClustersByServer(data.clusters || [])
+    checkHealthProgressively(healthCheckClusters)
   } catch {
     // Always fall back gracefully to demo clusters - never show blocking errors
     // This ensures the UI always has data to display
@@ -1670,12 +1764,11 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
 
   // Mark the cluster as refreshing immediately and clear stale error state
   // so it shows as "loading" instead of "offline" while fetching
-  clusterCache = {
-    ...clusterCache,
+  Object.assign(clusterCache, {
     clusters: clusterCache.clusters.map(c =>
       c.name === clusterName ? { ...c, refreshing: true, reachable: undefined, errorType: undefined, errorMessage: undefined } : c
     ),
-  }
+  })
   notifyClusterSubscribers() // Immediate notification for user feedback
 
   const health = await fetchSingleClusterHealth(clusterName, kubectlContext)
@@ -1773,13 +1866,23 @@ export function subscribeClusterUI(callback: (cache: ClusterCache) => void): () 
   return () => uiSubscribers.delete(callback)
 }
 
-// Setter functions for module-level state (ES modules can't assign to imported bindings)
+// Getter/setter functions for module-level state (vitest CJS transform does
+// not preserve ESM live bindings for `let` exports, so tests must use these
+// functions instead of reading the exported variable directly).
 export function setInitialFetchStarted(value: boolean) {
   initialFetchStarted = value
 }
 
+export function getInitialFetchStarted(): boolean {
+  return initialFetchStarted
+}
+
 export function setHealthCheckFailures(value: number) {
   healthCheckFailures = value
+}
+
+export function getHealthCheckFailures(): number {
+  return healthCheckFailures
 }
 
 // ============================================================================
@@ -1844,7 +1947,7 @@ export async function fetchWithRetry(
     }
 
     try {
-      const response = await fetch(url, {
+      const response = await agentFetch(url, {
         ...fetchOptions,
         signal: controller.signal,
       })

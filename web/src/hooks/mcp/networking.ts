@@ -413,6 +413,14 @@ export function useIngresses(cluster?: string, namespace?: string) {
         // Fall through to API
       }
     }
+    // Skip REST fallback when no token to prevent GA4 auth errors (#9957)
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    if (!token) {
+      setIngresses([])
+      setIsLoading(false)
+      setIsRefreshing(false)
+      return
+    }
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)

@@ -56,6 +56,7 @@ async function setupCustomDashboardTest(page: Page) {
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
 
@@ -87,10 +88,13 @@ test.describe('Custom Dashboard Creation', () => {
   test.describe('Sidebar Functionality', () => {
     test('sidebar has customize button', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 5000 })
+      // WebKit renders sidebar content slightly later than Chromium/Firefox —
+      // the "Add more" button depends on navSections being mounted. #10200
+      await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
     })
 
     test('customize button is clickable', async ({ page }) => {
+      // WebKit renders sidebar content slower — use a longer timeout. #10200
       await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
 
       await page.getByTestId('sidebar-customize').click()

@@ -13,6 +13,7 @@
  */
 
 import { getStore } from "@netlify/blobs";
+import { SCANNABLE_IDS_BY_LEVEL, AGENT_INSTRUCTION_FILE_IDS, ACMM_DETECTION_PATHS } from "../../src/lib/acmm/scannableIdsByLevel";
 
 const GITHUB_API = "https://api.github.com";
 const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
@@ -25,94 +26,30 @@ const LEVEL_COMPLETION_THRESHOLD = 0.7;
 const MAX_LEVEL = 6;
 /**
  * Badge cache window for successful responses. ACMM level changes slowly
- * (file-tree shape, not commit activity), so 5 min is plenty. This is shared
+ * (file-tree shape, not commit activity), so 15 min is plenty. This is shared
  * across three layers:
  *   1. shields.io respects this in its `cacheSeconds` JSON field below
  *   2. our CDN respects this in the `Cache-Control` header below
  *   3. GitHub's camo image proxy fetches the badge SVG and caches it itself
- * Kept at 5 min (was 1 h) so a transient Netlify outage doesn't lock the
- * badge into "inaccessible" for an hour (#4086).
+ * Combined with stale-while-revalidate=86400 to eliminate "inaccessible"
+ * badges during transient outages.
  */
-const BADGE_CACHE_SECONDS = 300;
+const BADGE_CACHE_SECONDS = 900;
 
 /**
- * Short cache for error/unavailable responses so shields.io retries quickly
- * after a transient failure instead of caching "inaccessible" for 5 min.
+ * Error cache window. Set to 5 min so shields.io doesn't retry too
+ * aggressively but also doesn't lock "unavailable" for ages.
  */
-const BADGE_ERROR_CACHE_SECONDS = 60;
+const BADGE_ERROR_CACHE_SECONDS = 300;
 
 /**
- * Agent instruction files are an OR group for L2: any one vendor-specific or
- * vendor-neutral file satisfies the "Instructed" signal. A project using the
- * vendor-agnostic AGENTS.md (agents.md spec) should reach L2 just as easily
- * as one that stacks multiple vendor-specific configs. The virtual criterion
- * "acmm:agent-instructions" is synthesised in computeLevel() before the level
- * walk if any member of this set is present in detectedIds. Issue #9169.
- */
-const AGENT_INSTRUCTION_FILE_IDS = new Set([
-  "acmm:claude-md",
-  "acmm:copilot-instructions",
-  "acmm:agents-md",
-  "acmm:cursor-rules",
-]);
-
-/**
- * ACMM criteria grouped by level. MUST mirror the scannable entries in
- * acmm-scan.mts CRITERIA (IDs and level assignments).
+ * ACMM_IDS_BY_LEVEL and AGENT_INSTRUCTION_FILE_IDS are now imported from
+ * the shared module (web/src/lib/acmm/scannableIdsByLevel.ts) so the badge
+ * and frontend dashboard always compute identical levels.
  *
- * Issue #8979: the previous map used legacy short IDs (acmm:pr-template,
- * acmm:style-config, acmm:test-suite, …) that no longer exist in the scan
- * taxonomy, so the badge always computed to L1 ("5/10" for kubestellar/
- * console) regardless of the repo's real maturity. When adding / renaming
- * criteria in acmm-scan.mts, update this map and the LEVEL_NAMES below.
- *
- * L2 uses a virtual "acmm:agent-instructions" criterion (synthesised in
- * computeLevel) rather than the four individual instruction-file IDs, so that
- * any one vendor-neutral or vendor-specific file satisfies the L2 gate.
+ * See scannableIdsByLevel.ts for the canonical list and derivation logic.
  */
-const ACMM_IDS_BY_LEVEL: Record<number, string[]> = {
-  2: [
-    "acmm:agent-instructions", // virtual OR: any of claude-md / agents-md / copilot-instructions / cursor-rules
-    "acmm:prompts-catalog",
-    "acmm:editor-config",
-  ],
-  3: [
-    "acmm:pr-acceptance-metric",
-    "acmm:pr-review-rubric",
-    "acmm:quality-dashboard",
-    "acmm:ci-matrix",
-    "acmm:layered-safety",
-    "acmm:mechanical-enforcement",
-    "acmm:session-summary",
-    "acmm:structural-gates",
-  ],
-  4: [
-    "acmm:auto-qa-tuning",
-    "acmm:nightly-compliance",
-    "acmm:copilot-review-apply",
-    "acmm:auto-label",
-    "acmm:ai-fix-workflow",
-    "acmm:tier-classifier",
-    "acmm:security-ai-md",
-    "acmm:session-continuity",
-    "acmm:cross-session-knowledge",
-  ],
-  5: [
-    "acmm:github-actions-ai",
-    "acmm:auto-qa-self-tuning",
-    "acmm:public-metrics",
-    "acmm:policy-as-code",
-    "acmm:reflection-log",
-  ],
-  6: [
-    "acmm:auto-issue-gen",
-    "acmm:multi-agent-orchestration",
-    "acmm:strategic-dashboard",
-    "acmm:merge-queue",
-    "acmm:risk-assessment-config",
-    "acmm:observability-runbook",
-  ],
-};
+const ACMM_IDS_BY_LEVEL = SCANNABLE_IDS_BY_LEVEL;
 
 /** Shields.io color bands by level — matches the ACMM gauge on Card 1.
  *  Level 6 (Fully Autonomous) extends the gradient beyond the original
@@ -137,14 +74,31 @@ const LEVEL_NAMES: Record<number, string> = {
 
 const ALLOWED_ORIGIN_RE = /^https?:\/\/(.*\.kubestellar\.io|localhost(:\d+)?)$/;
 
-function corsHeaders(origin: string | null): Record<string, string> {
+function corsHeaders(
+  origin: string | null,
+  cacheSeconds = BADGE_CACHE_SECONDS,
+  withSWR = true,
+): Record<string, string> {
+  // stale-while-revalidate must only appear on success responses; attaching
+  // it to error responses causes intermediary caches to serve stale error
+  // badges long after the upstream recovers.
+  const cacheControl = withSWR
+    ? `public, max-age=${cacheSeconds}, stale-while-revalidate=86400`
+    : `public, max-age=${cacheSeconds}`;
+  // This is a public, unauthenticated, embeddable badge endpoint — the `*`
+  // CORS is intentional so shields.io and any README host (github.com,
+  // raw.githubusercontent.com, pkg.go.dev, crates.io, etc.) can fetch it.
+  // Do NOT tighten this origin (see web/netlify/functions/_shared/cors.ts
+  // for the tightened console-internal endpoints per #9879).
   const headers: Record<string, string> = {
-    "Cache-Control": `public, max-age=${BADGE_CACHE_SECONDS}`,
+    "Cache-Control": cacheControl,
+    "Access-Control-Allow-Origin": "*",
   };
   if (origin && ALLOWED_ORIGIN_RE.test(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
-  } else {
-    headers["Access-Control-Allow-Origin"] = "*";
+    // Vary: Origin is required so shared caches (CDNs, proxies) key responses
+    // by origin and do not serve an origin-restricted response to other clients.
+    headers["Vary"] = "Origin";
   }
   return headers;
 }
@@ -186,28 +140,41 @@ function computeLevel(rawDetectedIds: Set<string>): { level: number; totalDetect
   return { level: currentLevel, totalDetected, totalAcmm };
 }
 
-async function fetchDetectedIds(origin: string, repo: string, force = false): Promise<string[]> {
-  // Fast path: read directly from Netlify Blobs (same store the scan function writes to).
-  // This avoids a same-origin HTTP round-trip that frequently times out inside
-  // Netlify Functions (cold-start + CDN routing overhead exceeds API_TIMEOUT_MS).
-  if (!force) {
-    try {
-      const store = getStore(BLOB_CACHE_STORE);
-      const cacheKey = `scan:${repo}`;
-      const raw = await store.get(cacheKey, { type: "json" });
-      if (raw) {
-        const entry = raw as { scannedAt?: string; detectedIds?: string[] };
-        const age = entry.scannedAt ? Date.now() - new Date(entry.scannedAt).getTime() : Infinity;
-        if (age < BLOB_CACHE_TTL_MS) {
-          return entry.detectedIds || [];
-        }
-      }
-    } catch {
-      // blob read failed — fall through to HTTP
+/** Try to read from Netlify Blobs, returning { data, fresh } or null. */
+async function readBlobCache(repo: string): Promise<{ detectedIds: string[]; fresh: boolean } | null> {
+  try {
+    const store = getStore(BLOB_CACHE_STORE);
+    const cacheKey = `scan:${repo}`;
+    const raw = await store.get(cacheKey, { type: "json" });
+    if (raw) {
+      const entry = raw as { scannedAt?: string; detectedIds?: string[] };
+      const age = entry.scannedAt ? Date.now() - new Date(entry.scannedAt).getTime() : Infinity;
+      return {
+        detectedIds: entry.detectedIds || [],
+        fresh: age < BLOB_CACHE_TTL_MS,
+      };
     }
+  } catch {
+    // blob read failed
   }
+  return null;
+}
 
-  // HTTP path: call the scan endpoint (forces a fresh GitHub scan when force=true).
+/** Write scan results to Netlify Blobs so future badge requests can use them. */
+async function writeBlobCache(repo: string, detectedIds: string[]): Promise<void> {
+  try {
+    const store = getStore(BLOB_CACHE_STORE);
+    const cacheKey = `scan:${repo}`;
+    await store.setJSON(cacheKey, {
+      scannedAt: new Date().toISOString(),
+      detectedIds,
+    });
+  } catch {
+    // best-effort — don't fail the badge
+  }
+}
+
+async function fetchFromScanEndpoint(origin: string, repo: string, force = false): Promise<string[]> {
   const forceParam = force ? "&force=true" : "";
   const url = `${origin}/api/acmm/scan?repo=${encodeURIComponent(repo)}${forceParam}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
@@ -218,80 +185,8 @@ async function fetchDetectedIds(origin: string, repo: string, force = false): Pr
   return body.detectedIds || [];
 }
 
-/**
- * Fallback: call GitHub directly when the scan endpoint isn't reachable
- * from this function (same-origin fetch timed out, scan function cold-
- * started, etc.). Detects a representative subset of criteria by path —
- * enough to produce a plausible level for the badge so we never show
- * "custom badge inaccessible" (issue #8979). Previously this used a
- * naive `id.replace("acmm:", "").replace(/-/g, "_") + ".md"` heuristic
- * that never matched anything real (e.g. `claude_md.md` is not a file
- * on any repo), so every fallback path computed to L1.
- */
-const BADGE_FALLBACK_PATHS: Record<string, readonly string[]> = {
-  // L2 — individual instruction files still detected; computeLevel synthesises
-  // the virtual "acmm:agent-instructions" from any one of these matches.
-  "acmm:claude-md": ["CLAUDE.md", ".claude/CLAUDE.md"],
-  "acmm:copilot-instructions": [".github/copilot-instructions.md"],
-  "acmm:agents-md": ["AGENTS.md"],
-  "acmm:cursor-rules": [".cursorrules", ".cursor/rules"],
-  "acmm:prompts-catalog": [
-    "prompts/",
-    ".prompts/",
-    "docs/prompts/",
-    ".github/prompts/",
-    ".github/agents/",
-  ],
-  "acmm:editor-config": [".editorconfig"],
-  // L3
-  "acmm:pr-review-rubric": [
-    ".github/review-rubric.md",
-    "docs/review-criteria.md",
-    ".github/prompts/review.md",
-  ],
-  "acmm:ci-matrix": [
-    ".github/workflows/ci.yml",
-    ".github/workflows/test.yml",
-    ".github/workflows/build.yml",
-    ".github/workflows/build-deploy.yml",
-  ],
-  "acmm:layered-safety": [".claude/settings.json", ".claude/settings.local.json"],
-  "acmm:mechanical-enforcement": [".claude/settings.json"],
-  "acmm:structural-gates": [".claude/settings.json"],
-  // L4
-  "acmm:security-ai-md": [
-    "docs/security/SECURITY-AI.md",
-    "SECURITY-AI.md",
-    "docs/SECURITY-AI.md",
-  ],
-  "acmm:ai-fix-workflow": [
-    ".github/workflows/ai-fix.yml",
-    ".github/workflows/ai-fix-requested.yml",
-    ".github/workflows/claude.yml",
-  ],
-  "acmm:nightly-compliance": [
-    ".github/workflows/nightly-compliance.yml",
-    ".github/workflows/nightly.yml",
-    ".github/workflows/nightly-test.yml",
-  ],
-  "acmm:auto-label": [
-    ".github/labeler.yml",
-    ".github/workflows/labeler.yml",
-    ".github/workflows/triage.yml",
-  ],
-  // L5
-  "acmm:github-actions-ai": [
-    ".github/workflows/claude.yml",
-    ".github/workflows/claude-code-review.yml",
-  ],
-  // L6
-  "acmm:merge-queue": [
-    ".github/workflows/merge-queue.yml",
-    ".github/merge-queue.yml",
-    ".prow.yaml",
-    "tide.yaml",
-  ],
-};
+// ACMM_DETECTION_PATHS is derived from acmmSource.criteria in scannableIdsByLevel.ts —
+// the single source of truth shared with acmm-scan.mts. No hand-maintained copy here.
 
 function pathMatches(paths: Set<string>, pattern: string): boolean {
   if (pattern.endsWith("/")) {
@@ -331,7 +226,7 @@ async function fetchDetectedIdsDirect(repo: string, token: string): Promise<stri
   const paths = new Set((body.tree || []).map((e) => e.path));
 
   const detected: string[] = [];
-  for (const [id, patterns] of Object.entries(BADGE_FALLBACK_PATHS)) {
+  for (const [id, patterns] of Object.entries(ACMM_DETECTION_PATHS)) {
     for (const p of patterns) {
       if (pathMatches(paths, p)) {
         detected.push(id);
@@ -344,12 +239,12 @@ async function fetchDetectedIdsDirect(repo: string, token: string): Promise<stri
 
 export default async (req: Request) => {
   const origin = req.headers.get("Origin");
-  const headers = corsHeaders(origin);
   const url = new URL(req.url);
   const repo = url.searchParams.get("repo") || "";
   const force = url.searchParams.get("force") === "true";
 
   if (!REPO_RE.test(repo)) {
+    const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS, false);
     return new Response(
       JSON.stringify({
         schemaVersion: 1,
@@ -365,33 +260,67 @@ export default async (req: Request) => {
     );
   }
 
-  let detectedIds: string[] = [];
-  try {
-    detectedIds = await fetchDetectedIds(url.origin, repo, force);
-  } catch {
-    const token = process.env.GITHUB_TOKEN || "";
-    try {
-      detectedIds = await fetchDetectedIdsDirect(repo, token);
-    } catch {
-      return new Response(
-        JSON.stringify({
-          schemaVersion: 1,
-          label: "ACMM",
-          message: "unavailable",
-          color: "lightgrey",
-          cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
-        }),
-        {
-          status: 200,
-          headers: { ...headers, "Content-Type": "application/json" },
-        },
-      );
+  // ── Layer 1: Blobs cache (fastest, no network) ───────────────────────
+  let blobResult: { detectedIds: string[]; fresh: boolean } | null = null;
+  if (!force) {
+    blobResult = await readBlobCache(repo);
+    if (blobResult?.fresh) {
+      return badgeResponse(blobResult.detectedIds, origin);
     }
   }
 
+  // ── Layer 2: scan endpoint ────────────────────────────────────────────
+  // If we have stale Blob data, use it as guaranteed fallback.
+  let detectedIds: string[] | null = null;
+  try {
+    detectedIds = await fetchFromScanEndpoint(url.origin, repo, force);
+    // Persist to Blobs for next request
+    writeBlobCache(repo, detectedIds).catch(() => {});
+  } catch {
+    // scan endpoint unreachable — try direct GitHub
+  }
+
+  if (detectedIds) {
+    return badgeResponse(detectedIds, origin);
+  }
+
+  // ── Layer 3: direct GitHub ────────────────────────────────────────────
+  const token = process.env.GITHUB_TOKEN || "";
+  try {
+    detectedIds = await fetchDetectedIdsDirect(repo, token);
+    writeBlobCache(repo, detectedIds).catch(() => {});
+    return badgeResponse(detectedIds, origin);
+  } catch {
+    // direct GitHub also failed
+  }
+
+  // ── Layer 4: stale Blob fallback (better than "unavailable") ──────────
+  if (blobResult) {
+    return badgeResponse(blobResult.detectedIds, origin);
+  }
+
+  // ── Layer 5: last-resort "unavailable" badge ──────────────────────────
+  const headers = corsHeaders(origin, BADGE_ERROR_CACHE_SECONDS, false);
+  return new Response(
+    JSON.stringify({
+      schemaVersion: 1,
+      label: "ACMM",
+      message: "unavailable",
+      color: "lightgrey",
+      cacheSeconds: BADGE_ERROR_CACHE_SECONDS,
+    }),
+    {
+      status: 200,
+      headers: { ...headers, "Content-Type": "application/json" },
+    },
+  );
+};
+
+function badgeResponse(detectedIds: string[], origin: string | null): Response {
   const { level, totalDetected, totalAcmm } = computeLevel(new Set(detectedIds));
   const name = LEVEL_NAMES[level];
   const color = LEVEL_COLORS[level];
+  const headers = corsHeaders(origin, BADGE_CACHE_SECONDS);
 
   return new Response(
     JSON.stringify({
@@ -407,7 +336,7 @@ export default async (req: Request) => {
       headers: { ...headers, "Content-Type": "application/json" },
     },
   );
-};
+}
 
 export const config = {
   path: "/api/acmm/badge",

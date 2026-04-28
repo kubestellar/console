@@ -53,7 +53,13 @@ export class DynamicCardErrorBoundary extends Component<Props, State> {
     console.error(`[DynamicCard:${this.props.cardId}] Render error:`, error, errorInfo)
     // Mark as reported so the global window 'error' handler skips it (prevents double-counting)
     markErrorReported(error.message)
-    emitError('card_render', `[${this.props.cardId}] ${error.message}`, this.props.cardId)
+    // Pass the Error + componentStack so emitError can derive error_type
+    // for the new GA4 custom dimensions added in #9861. cardId already
+    // serves as the component_name dimension here.
+    emitError('card_render', `[${this.props.cardId}] ${error.message}`, this.props.cardId, {
+      error,
+      componentStack: errorInfo.componentStack ?? undefined,
+    })
     this.props.onError?.(error, errorInfo)
     // Only increment retryCount when the error happens during a retry attempt,
     // so successful retries do not consume the retry budget.

@@ -5,10 +5,11 @@ import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../ho
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDemoMode } from '../../hooks/useDemoMode'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -80,7 +81,7 @@ function getTimeAgo(timestamp: string | undefined, t: TFunction): string {
   const now = new Date()
   const then = new Date(timestamp)
   const diffMs = now.getTime() - then.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
+  const diffMins = Math.floor(diffMs / MS_PER_MINUTE)
   const diffHours = Math.floor(diffMins / 60)
   if (diffHours > 0) return t('gitops.hoursAgo', { count: diffHours })
   if (diffMins > 0) return t('gitops.minutesAgo', { count: diffMins })
@@ -93,7 +94,6 @@ export function GitOps() {
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
   const { drillToAllHelm, drillToAllOperators } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { showToast } = useToast()
 
   // Local state
@@ -199,11 +199,12 @@ export function GitOps() {
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const agentAuthHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
       }
       if (token) agentAuthHeaders['Authorization'] = `Bearer ${token}`
       const promises = configs.map(async (appConfig) => {
         try {
-          const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
+          const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
             method: 'POST',
             headers: agentAuthHeaders,
             body: JSON.stringify({
@@ -416,7 +417,7 @@ export function GitOps() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Filters and Apps List - rendered before cards
   const filtersAndAppsList = (

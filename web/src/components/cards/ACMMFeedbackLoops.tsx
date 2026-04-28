@@ -152,7 +152,7 @@ export function ACMMFeedbackLoops() {
   }
 
   const hasData = detectedIds.size > 0
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
@@ -244,6 +244,17 @@ export function ACMMFeedbackLoops() {
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={6} />
+  }
+
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <div className="text-center text-muted-foreground">
+          <p className="text-sm font-medium">{t('cards:acmmFeedbackLoops.loadFailed', 'Failed to load criteria')}</p>
+          <p className="text-xs mt-1">{t('cards:acmmFeedbackLoops.tryRefresh', 'Please refresh the page or try again later.')}</p>
+        </div>
+      </div>
+    )
   }
 
   const sources: (SourceId | 'all')[] = ['all', 'acmm', 'fullsend', 'agentic-engineering-framework', 'claude-reflect']
@@ -371,8 +382,8 @@ export function ACMMFeedbackLoops() {
               key={`level-break-${curLevel}`}
               className={`flex items-center gap-3 py-2.5 px-4 my-1 rounded-md border-y transition-colors ${
                 levelBreakActive
-                  ? 'bg-gradient-to-r from-purple-500/10 to-transparent border-purple-500/20'
-                  : 'bg-gradient-to-r from-muted/10 to-transparent border-border/20 opacity-50'
+                  ? 'bg-linear-to-r from-purple-500/10 to-transparent border-purple-500/20'
+                  : 'bg-linear-to-r from-muted/10 to-transparent border-border/20 opacity-50'
               }`}
             >
               <div className="flex-1 min-w-0">
@@ -443,23 +454,23 @@ export function ACMMFeedbackLoops() {
                 title={isLocked ? `Locked — finish L${earnedLevel} first` : 'Show detection rule'}
               >
                 {isLocked ? (
-                  <Lock className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
+                  <Lock className="w-3 h-3 text-muted-foreground/60 shrink-0" />
                 ) : isExpanded ? (
-                  <ChevronDown className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
+                  <ChevronDown className="w-3 h-3 text-muted-foreground/60 shrink-0" />
                 ) : (
-                  <ChevronRight className="w-3 h-3 text-muted-foreground/60 flex-shrink-0" />
+                  <ChevronRight className="w-3 h-3 text-muted-foreground/60 shrink-0" />
                 )}
                 {isLocked ? (
-                  <Lock className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+                  <Lock className="w-4 h-4 text-muted-foreground/40 shrink-0" />
                 ) : c.scannable === false ? (
-                  <span title="Not yet scannable — practice-based"><Eye className="w-4 h-4 text-muted-foreground/30 flex-shrink-0" /></span>
+                  <span title="Not yet scannable — practice-based"><Eye className="w-4 h-4 text-muted-foreground/30 shrink-0" /></span>
                 ) : detected ? (
-                  <Check className="w-4 h-4 text-green-400 flex-shrink-0" />
+                  <Check className="w-4 h-4 text-green-400 shrink-0" />
                 ) : (
-                  <X className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+                  <X className="w-4 h-4 text-muted-foreground/40 shrink-0" />
                 )}
                 {/* Fixed-width level column for clean alignment */}
-                <span className="text-[10px] font-mono text-muted-foreground w-6 text-right flex-shrink-0">
+                <span className="text-[10px] font-mono text-muted-foreground w-6 text-right shrink-0">
                   {c.level ? `L${c.level}` : ''}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -468,7 +479,7 @@ export function ACMMFeedbackLoops() {
                 </div>
                 {c.crossCutting && (
                   <span
-                    className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 bg-violet-500/20 text-violet-400 cursor-help"
+                    className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 bg-violet-500/20 text-violet-400 cursor-help"
                     title={c.crossCutting === 'learning'
                       ? 'Cross-cutting: Learning & Feedback — how the system encodes learnings and improves over time'
                       : 'Cross-cutting: Traceability & Audit — how agent actions are logged, attributed, and reviewable'}
@@ -477,12 +488,12 @@ export function ACMMFeedbackLoops() {
                   </span>
                 )}
                 {c.scannable === false && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 bg-muted/40 text-muted-foreground/60">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 bg-muted/40 text-muted-foreground/60">
                     practice
                   </span>
                 )}
                 <span
-                  className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${SOURCE_COLORS[c.source]}`}
+                  className={`text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ${SOURCE_COLORS[c.source]}`}
                   title={SOURCES_BY_ID[c.source]?.citation}
                 >
                   {SOURCE_LABELS[c.source]}
@@ -521,8 +532,8 @@ export function ACMMFeedbackLoops() {
                 // We now render an inset detail panel with its own header and
                 // an explicit Close control, so the click-to-open interaction
                 // is unambiguous and dismissable.
-                <div className="mx-2 mb-2 rounded-md border border-border/60 bg-background/60 shadow-sm">
-                  <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-border/40 bg-muted/20 rounded-t-md">
+                <div className="mx-2 mb-2 rounded-md border border-border/60 bg-background/60 shadow-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 border-b border-border/40 bg-muted/20 rounded-t-md">
                     <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                       Details — {c.name}
                     </div>

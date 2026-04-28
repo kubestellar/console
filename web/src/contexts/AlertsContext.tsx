@@ -8,6 +8,7 @@ import type {
   AlertStats,
   AlertChannel } from '../types/alerts'
 import type { GPUHealthCheckResult } from '../hooks/mcp/types'
+import { MS_PER_MINUTE, MS_PER_HOUR } from '../lib/constants/time'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import type { AlertsMCPData } from './AlertsDataFetcher'
 import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
@@ -249,12 +250,12 @@ const DEFAULT_WIND_SPEED_THRESHOLD_MPH = 40
  *  tiered by severity so critical alerts re-notify quickly while
  *  lower-severity alerts don't spam the desktop. */
 const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
-  critical: 5 * 60 * 1000,    // 5 min — urgent, re-notify quickly
-  warning: 30 * 60 * 1000,    // 30 min — important but not urgent
-  info: 4 * 60 * 60 * 1000,   // 4 hours — informational, minimal interruption
+  critical: 5 * MS_PER_MINUTE,    // 5 min — urgent, re-notify quickly
+  warning: 30 * MS_PER_MINUTE,    // 30 min — important but not urgent
+  info: 4 * MS_PER_HOUR,   // 4 hours — informational, minimal interruption
 }
 /** Fallback cooldown when severity is unknown */
-const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000 // 30 min
+const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * MS_PER_MINUTE // 30 min
 
 /** Get the notification cooldown for a given severity level */
 function getNotificationCooldown(severity: string): number {
@@ -506,6 +507,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const alertsRef = useRef(alerts)
   alertsRef.current = alerts
 
+  // Stable ref for startMission — keeps runAIDiagnosis identity stable
+  const startMissionRef = useRef(startMission)
+  startMissionRef.current = startMission
+
   // Mutation accumulator — populated by evaluate* functions during an evaluation
   // cycle, then flushed in a single setAlerts call at the end of evaluateConditions.
   // Null when not inside an evaluation cycle (direct createAlert calls still work).
@@ -690,7 +695,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }, [isDemoMode])
 
   // Rule management
-  const createRule = (rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createRule = useCallback((rule: Omit<AlertRule, 'id' | 'createdAt' | 'updatedAt'>) => {
     const now = new Date().toISOString()
     const newRule: AlertRule = {
       ...rule,
@@ -699,9 +704,9 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       updatedAt: now }
     setRules(prev => [...prev, newRule])
     return newRule
-  }
+  }, [])
 
-  const updateRule = (id: string, updates: Partial<AlertRule>) => {
+  const updateRule = useCallback((id: string, updates: Partial<AlertRule>) => {
     setRules(prev =>
       prev.map(rule =>
         rule.id === id
@@ -709,13 +714,13 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           : rule
       )
     )
-  }
+  }, [])
 
-  const deleteRule = (id: string) => {
+  const deleteRule = useCallback((id: string) => {
     setRules(prev => prev.filter(rule => rule.id !== id))
-  }
+  }, [])
 
-  const toggleRule = (id: string) => {
+  const toggleRule = useCallback((id: string) => {
     setRules(prev =>
       prev.map(rule =>
         rule.id === id
@@ -723,7 +728,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           : rule
       )
     )
-  }
+  }, [])
 
   // Calculate alert statistics — memoize to prevent unstable references in context consumers
   // #7336 — Compute stats from deduplicated alerts so counters match
@@ -754,7 +759,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   }, [alerts, rules])
 
   // Acknowledge an alert — transitions signalType from 'state' to 'acknowledged' (#8750)
-  const acknowledgeAlert = (alertId: string, acknowledgedBy?: string) => {
+  const acknowledgeAlert = useCallback((alertId: string, acknowledgedBy?: string) => {
     setAlerts(prev =>
       prev.map(alert =>
         alert.id === alertId
@@ -762,10 +767,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           : alert
       )
     )
-  }
+  }, [])
 
   // Acknowledge multiple alerts at once — transitions signalType to 'acknowledged' (#8750)
-  const acknowledgeAlerts = (alertIds: string[], acknowledgedBy?: string) => {
+  const acknowledgeAlerts = useCallback((alertIds: string[], acknowledgedBy?: string) => {
     const now = new Date().toISOString()
     setAlerts(prev =>
       prev.map(alert =>
@@ -774,10 +779,10 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           : alert
       )
     )
-  }
+  }, [])
 
   // Resolve an alert
-  const resolveAlert = (alertId: string) => {
+  const resolveAlert = useCallback((alertId: string) => {
     const resolvedAt = new Date().toISOString()
     // Find the alert BEFORE the state updater to avoid capturing mutable
     // variables inside the updater (which React may replay in Strict Mode /
@@ -793,11 +798,12 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     // Send resolution notifications outside the state updater.
     // Because we read alertToResolve from the ref before the updater,
     // this is safe even if React replays the updater function.
+    // Snapshot rule from ref before microtask to avoid stale closure.
     if (alertToResolve) {
+      const rule = rulesRef.current.find(r => r.id === alertToResolve.ruleId)
       queueMicrotask(() => {
-        const rule = rules.find(r => r.id === alertToResolve.ruleId)
         if (rule) {
-          const enabledChannels = rule.channels.filter(ch => ch.enabled)
+          const enabledChannels = (rule.channels || []).filter(ch => ch.enabled)
           if (enabledChannels.length > 0) {
             // #7330 — Send notification with updated resolved status, not the
             // pre-update firing object. Without this, resolved notifications
@@ -808,12 +814,12 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         }
       })
     }
-  }
+  }, [])
 
   // Delete an alert
-  const deleteAlert = (alertId: string) => {
+  const deleteAlert = useCallback((alertId: string) => {
     setAlerts(prev => prev.filter(a => a.id !== alertId))
-  }
+  }, [])
 
   // Create a new alert — batching-aware.
   // When called during an evaluateConditions cycle (mutationAccRef.current is non-null),
@@ -1010,6 +1016,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           Authorization: `Bearer ${token}` },
         body: JSON.stringify({ alert, channels }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
@@ -1053,6 +1060,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
                 Authorization: `Bearer ${token}` },
               body: JSON.stringify({ alert, channels }),
               signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
@@ -1091,8 +1099,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const diagnosisInFlightRef = useRef<Set<string>>(new Set())
 
   // Run AI diagnosis on an alert (#6915 — include runbook evidence in prompt)
-  const runAIDiagnosis = async (alertId: string) => {
-      const alert = alerts.find(a => a.id === alertId)
+  const runAIDiagnosis = useCallback(async (alertId: string) => {
+      const alert = alertsRef.current.find(a => a.id === alertId)
       if (!alert) return null
 
       // #7341 — Idempotency guard: skip if diagnosis is already in-flight
@@ -1103,7 +1111,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
       // flag is always cleared, even if an unexpected error occurs.
       try {
         // Look up matching runbook for this alert condition type
-        const rule = rules.find(r => r.id === alert.ruleId)
+        const rule = rulesRef.current.find(r => r.id === alert.ruleId)
         const conditionType = rule?.condition.type
         const runbook = conditionType ? findRunbookForCondition(conditionType) : undefined
 
@@ -1144,7 +1152,7 @@ Please provide:
 2. The likely root cause
 3. Suggested actions to resolve this alert`
 
-        const missionId = startMission({
+        const missionId = startMissionRef.current({
           title: `Diagnose: ${alert.ruleName}`,
           description: `Analyzing alert on ${alert.cluster || 'cluster'}`,
           type: 'troubleshoot',
@@ -1177,7 +1185,8 @@ Please provide:
         // permanently locked from future diagnosis attempts.
         diagnosisInFlightRef.current.delete(alertId)
       }
-    }
+    // All external deps accessed via refs for stable identity
+    }, [])
 
   // #7337 — Reconcile AI diagnosis results back into alerts when the
   // associated mission completes. Without this, alerts stay in the
@@ -1207,8 +1216,8 @@ Please provide:
   // Evaluate GPU usage condition — reads from refs for stable identity
   const evaluateGPUUsage = (rule: AlertRule) => {
       const threshold = rule.condition.threshold || 90
-      const currentClusters = clustersRef.current
-      const currentGPUNodes = gpuNodesRef.current
+      const currentClusters = clustersRef.current || []
+      const currentGPUNodes = gpuNodesRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1252,7 +1261,7 @@ Please provide:
   // alert for an unreachable cluster is auto-resolved so the list clears
   // down to just the single authoritative Cluster Unreachable entry.
   const evaluateNodeReady = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1288,7 +1297,7 @@ Please provide:
       // auto-resolve alerts whose pods have recovered or been removed.
       const stillFiringKeys = new Set<string>()
 
-      for (const issue of podIssuesRef.current) {
+      for (const issue of (podIssuesRef.current || [])) {
         if (issue.restarts && issue.restarts >= threshold) {
           const clusterMatch =
             !rule.condition.clusters?.length ||
@@ -1317,7 +1326,7 @@ Please provide:
 
       // Auto-resolve any firing pod_crash alerts whose pods are no longer above
       // the threshold (pod recovered, deleted, or restarts dropped).
-      const currentAlerts = alertsRef.current
+      const currentAlerts = alertsRef.current || []
       for (const a of currentAlerts) {
         if (a.ruleId === rule.id && a.status === 'firing') {
           const key = alertDedupKey(a.ruleId, rule.condition.type, a.cluster, a.resource, a.namespace)
@@ -1414,8 +1423,8 @@ Please provide:
 
   // Evaluate GPU Health CronJob — reads cached results from ref
   const evaluateGPUHealthCronJob = (rule: AlertRule) => {
-      const cachedResults = cronJobResultsRef.current
-      const currentClusters = clustersRef.current
+      const cachedResults = cronJobResultsRef.current || {}
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1476,7 +1485,7 @@ Please provide:
 
   // Evaluate disk pressure condition — checks for DiskPressure in cluster issues
   const evaluateDiskPressure = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1530,7 +1539,7 @@ Please provide:
 
   // Evaluate memory pressure condition — checks for MemoryPressure in cluster issues
   const evaluateMemoryPressure = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1585,13 +1594,13 @@ Please provide:
 
   // Evaluate DNS failures — checks for CoreDNS pods crashing or not ready
   const evaluateDNSFailure = (rule: AlertRule) => {
-      const currentPodIssues = podIssuesRef.current
+      const currentPodIssues = podIssuesRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? rule.condition.clusters
         : undefined
 
       // Find CoreDNS pods with issues (coredns, dns-default on OpenShift)
-      const dnsIssues = (currentPodIssues || []).filter(pod => {
+      const dnsIssues = currentPodIssues.filter(pod => {
         const isDNSPod = pod.name.includes('coredns') || pod.name.includes('dns-default')
         const matchesCluster = !relevantClusters || relevantClusters.includes(pod.cluster || '')
         return isDNSPod && matchesCluster
@@ -1631,7 +1640,7 @@ Please provide:
 
       // Auto-resolve clusters that no longer have DNS issues
       const clustersWithIssues = new Set(clusterDNSIssues.keys())
-      const currentAlerts = alertsRef.current
+      const currentAlerts = alertsRef.current || []
       for (const a of currentAlerts) {
         if (a.ruleId === rule.id && a.status === 'firing' && a.cluster && !clustersWithIssues.has(a.cluster)) {
           queueAutoResolve(rule.id, a.cluster)
@@ -1641,7 +1650,7 @@ Please provide:
 
   // Evaluate certificate errors — checks for clusters with certificate connection failures
   const evaluateCertificateError = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1681,7 +1690,7 @@ Please provide:
 
   // Evaluate cluster unreachable — checks for clusters with network/auth/timeout failures
   const evaluateClusterUnreachable = (rule: AlertRule) => {
-      const currentClusters = clustersRef.current
+      const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
         ? currentClusters.filter(c => rule.condition.clusters!.includes(c.name))
         : currentClusters
@@ -1726,13 +1735,13 @@ Please provide:
 
   // Evaluate nightly E2E failures — reads cached run data from ref
   const evaluateNightlyE2EFailure = (rule: AlertRule) => {
-      const guides = nightlyE2ERef.current
+      const guides = nightlyE2ERef.current || []
       if (!guides.length) return
 
       const currentRunIds = new Set<number>()
 
       for (const guide of guides) {
-        for (const run of guide.runs) {
+        for (const run of (guide.runs || [])) {
           currentRunIds.add(run.id)
 
           // Only alert on completed failures not already alerted
@@ -1808,7 +1817,7 @@ Please provide:
     mutationAccRef.current = acc
 
     try {
-      const enabledRules = rulesRef.current.filter(r => r.enabled)
+      const enabledRules = (rulesRef.current || []).filter(r => r.enabled)
 
       for (const rule of enabledRules) {
         switch (rule.condition.type) {
@@ -1879,6 +1888,12 @@ Please provide:
   const evaluateConditionsRef = useRef(evaluateConditions)
   evaluateConditionsRef.current = evaluateConditions
 
+  // Stable proxy for evaluateConditions — delegates through ref so the
+  // identity never changes, even though the underlying callback has unstable deps.
+  const stableEvaluateConditions = useCallback(() => {
+    evaluateConditionsRef.current()
+  }, [])
+
   // Periodic evaluation (every 30 seconds) — stable, never re-creates timers
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1895,7 +1910,7 @@ Please provide:
     }
   }, [])
 
-  const value: AlertsContextValue = {
+  const value = useMemo<AlertsContextValue>(() => ({
     alerts,
     activeAlerts,
     acknowledgedAlerts,
@@ -1909,11 +1924,17 @@ Please provide:
     resolveAlert,
     deleteAlert,
     runAIDiagnosis,
-    evaluateConditions,
+    evaluateConditions: stableEvaluateConditions,
     createRule,
     updateRule,
     deleteRule,
-    toggleRule }
+    toggleRule }), [
+    alerts, activeAlerts, acknowledgedAlerts, stats, rules,
+    isEvaluating, isLoadingData, dataError,
+    acknowledgeAlert, acknowledgeAlerts, resolveAlert, deleteAlert,
+    runAIDiagnosis, stableEvaluateConditions,
+    createRule, updateRule, deleteRule, toggleRule
+  ])
 
   return (
     <AlertsContext.Provider value={value}>

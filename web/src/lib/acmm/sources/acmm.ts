@@ -847,8 +847,8 @@ const CRITERIA: Criterion[] = [
 export const acmmSource: Source = {
   id: 'acmm',
   name: 'AI Codebase Maturity Model',
-  url: 'https://arxiv.org/abs/2604.09388',
-  citation: 'Anderson, A. (2026). The AI Codebase Maturity Model. arXiv:2604.09388',
+  url: 'https://console-docs.kubestellar.io/docs/console/acmm/acmm-dashboard',
+  citation: 'Anderson, A. (2026). The AI Codebase Maturity Model. console-docs.kubestellar.io',
   definesLevels: true,
   levels: LEVELS,
   criteria: CRITERIA,

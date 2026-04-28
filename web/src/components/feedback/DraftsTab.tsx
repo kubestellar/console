@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Clock, FileText, RotateCcw, Trash2 } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { formatRelativeTime } from './FeatureRequestTypes'
@@ -33,10 +34,11 @@ export function DraftsTab({
   onClearAllDrafts,
   showToast,
 }: DraftsTabProps) {
+  const { t } = useTranslation()
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
       {/* Drafts header */}
-      <div className="p-2 border-b border-border/50 flex items-center justify-between flex-shrink-0">
+      <div className="p-2 border-b border-border/50 flex items-center justify-between shrink-0">
         <span className="text-2xs font-medium text-muted-foreground uppercase tracking-wider">
           Saved Drafts ({draftCount})
         </span>
@@ -73,7 +75,7 @@ export function DraftsTab({
         {draftCount === 0 ? (
           <div className="p-8 text-center text-muted-foreground">
             <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">No saved drafts</p>
+            <p className="text-sm">{t('drafts.noSavedDrafts', 'No saved drafts')}</p>
             <p className="text-xs mt-1">
               Save your work-in-progress bug reports and feature requests here
             </p>
@@ -92,7 +94,11 @@ export function DraftsTab({
             return (
               <div
                 key={draft.id}
-                className={`p-3 border-b border-border/50 hover:bg-secondary/30 transition-colors ${
+                role="button"
+                tabIndex={0}
+                onClick={() => onRestoreDraft(draft)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRestoreDraft(draft) } }}
+                className={`p-3 border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer ${
                   isEditing ? 'bg-purple-500/5 border-l-2 border-l-purple-500' : ''
                 }`}
               >
@@ -110,7 +116,7 @@ export function DraftsTab({
                         {draft.targetRepo === 'docs' ? 'Docs' : 'Console'}
                       </span>
                       {isEditing && (
-                        <StatusBadge color="purple" size="xs">Editing</StatusBadge>
+                        <StatusBadge color="purple" size="xs">{t('drafts.editing', 'Editing')}</StatusBadge>
                       )}
                     </div>
                     <p className="text-sm font-medium text-foreground mt-1 truncate">
@@ -124,7 +130,8 @@ export function DraftsTab({
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30">
+                    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
                       {isConfirmingDelete ? (
                         <>
                           <span className="text-xs text-muted-foreground">Delete this draft?</span>

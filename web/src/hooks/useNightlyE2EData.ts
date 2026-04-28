@@ -19,9 +19,10 @@ import {
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
-const REFRESH_IDLE_MS = 5 * 60 * 1000    // 5 minutes when idle
-const REFRESH_ACTIVE_MS = 2 * 60 * 1000  // 2 minutes when jobs are running
+const REFRESH_IDLE_MS = 5 * MS_PER_MINUTE    // 5 minutes when idle
+const REFRESH_ACTIVE_MS = 2 * MS_PER_MINUTE  // 2 minutes when jobs are running
 
 const DEMO_DATA = generateDemoNightlyData()
 
@@ -40,7 +41,7 @@ function loadCachedData(): NightlyE2EData {
       const parsed = JSON.parse(raw) as NightlyE2EData
       if (parsed.guides?.length > 0 && !parsed.isDemo) return parsed
     }
-  } catch { /* ignore */ }
+  } catch (e) { console.warn('[useNightlyE2EData] failed to read cached nightly data:', e) }
   return { guides: [], isDemo: false }
 }
 

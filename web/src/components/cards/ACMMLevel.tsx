@@ -7,7 +7,8 @@ import { acmmSource } from '../../lib/acmm/sources/acmm'
 const MAX_LEVEL = 6
 const GAUGE_SIZE = 120
 const GAUGE_STROKE = 10
-const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
+/** Live documentation — always up to date, unlike the static arXiv preprint */
+const ACMM_DOCS_URL = 'https://console-docs.kubestellar.io/docs/console/acmm/acmm-dashboard'
 
 const ALL_LEVELS = acmmSource.levels ?? []
 
@@ -48,7 +49,7 @@ export function ACMMLevel() {
   const { repo, scan } = useACMM()
   const { level, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
 
-  const hasData = scan.data.detectedIds.length > 0
+  const hasData = (scan.data.detectedIds ?? []).length > 0
   const { showSkeleton } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
@@ -73,7 +74,7 @@ export function ACMMLevel() {
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="text-xs text-muted-foreground font-mono truncate">{repo}</div>
         <a
-          href={PAPER_URL}
+          href={ACMM_DOCS_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors shrink-0 ml-2"
@@ -84,7 +85,7 @@ export function ACMMLevel() {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative flex-shrink-0">
+        <div className="relative shrink-0">
           <LevelRing level={level.level} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-2xl font-bold leading-none">L{level.level}</div>

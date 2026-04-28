@@ -46,7 +46,7 @@ export const MOCK_DEMO_USER = {
 export const EXPECTED_ERROR_PATTERNS = [
   /Failed to fetch/i, // Network errors in demo mode
   /WebSocket/i, // WebSocket not available in tests
-  /can't establish a connection/i, // Firefox WebSocket connection errors
+  /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket connection errors (Firefox uses curly apostrophes)
   /ResizeObserver loop (?:limit exceeded|completed with undelivered notifications)/i, // Benign ResizeObserver loop warning
   /validateDOMNesting/i, // Already tracked by Auto-QA DOM errors check
   /act\(\)/i, // React testing warnings
@@ -58,9 +58,15 @@ export const EXPECTED_ERROR_PATTERNS = [
   /Cross-Origin Request Blocked/i, // CORS errors when backend/agent not running
   /blocked by CORS policy/i, // Chromium CORS wording (Firefox uses pattern above)
   /Access to fetch.*has been blocked by CORS/i, // Chromium-specific phrasing; Medium blog public fallback is cross-origin from vite preview (localhost:4173 → console.kubestellar.io)
+  /Origin .* is not allowed by Access-Control-Allow-Origin/i, // WebKit/Safari CORS wording (distinct from Chromium/Firefox patterns above)
+  /Access-Control-Allow-Origin.*localhost/i, // WebKit CORS variant referencing localhost origin
+  /Access-Control-Allow-Origin.*127\.0\.0\.1/i, // WebKit CORS variant referencing loopback IP
   /Notification permission/i, // Firefox blocks notification requests outside user gestures
+  /Notification prompting can only be done from a user gesture/i, // WebKit/Safari wording for notification gesture block
   /ERR_CONNECTION_REFUSED/i, // Backend/agent not running in CI
   /net::ERR_/i, // Any network-level Chrome error in demo mode
+  /Could not connect to [0-9.]+/i, // WebKit wording for connection refused (no net:: prefix)
+  /Connection refused/i, // Generic connection refused wording across browsers
   /502.*Bad Gateway/i, // Reverse proxy errors when backend not running
   /Failed to load resource/i, // Generic resource load failures in demo mode
   // SQLite WASM cache worker — webkit/Safari can't streaming-compile the
@@ -131,7 +137,49 @@ export async function mockApiMe(page: Page) {
   )
 }
 
+/**
+ * Catch-all mock for /api/** requests and the root /health endpoint.
+ * Returns empty JSON 200 for API calls, and a minimal health payload for
+ * /health — omitting `enabled_dashboards` so all sidebar routes remain visible.
+ *
+ * Without mocking /health, useSidebarConfig.fetchEnabledDashboards() can
+ * receive an enabled_dashboards list from the CI Go backend that filters out
+ * sidebar routes like /deploy, breaking navigation-dependent tests.
+ *
+ * Register BEFORE specific mocks (Playwright matches in reverse order).
+ */
+export async function mockApiFallback(page: Page) {
+  // Mock the root /health endpoint. Omitting enabled_dashboards means all
+  // dashboards are shown (applyDashboardFilter only filters when the array
+  // is present and non-empty). Only matches the root-level path.
+  await page.route('**/health', (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname !== '/health') return route.fallback()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ok',
+        version: 'dev',
+        oauth_configured: false,
+        in_cluster: false,
+        no_local_agent: true,
+        install_method: 'dev',
+      }),
+    })
+  })
+
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+}
+
 export async function setupDemoMode(page: Page) {
+  await mockApiFallback(page)
   // Seed localStorage before page scripts execute — prevents the app from
   // briefly rendering the /login screen before the demo flag is picked up.
   await page.addInitScript(() => {
@@ -248,6 +296,7 @@ export const DEFAULT_AUTH_USER: MockApiUser = {
  * instead (or both, depending on what the app under test expects).
  */
 export async function setupAuth(page: Page, user?: Partial<MockApiUser>): Promise<void> {
+  await mockApiFallback(page)
   const u: MockApiUser = { ...DEFAULT_AUTH_USER, ...(user || {}) }
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -367,13 +416,30 @@ export async function setupMCP(page: Page, options?: SetupMCPOptions): Promise<v
 export async function setupDashboardTest(page: Page): Promise<void> {
   await setupAuth(page)
   await setupMCP(page)
+  // Mock /api/dashboards so the dashboard component doesn't wait for a
+  // backend response before falling back to demo cards. Without this mock,
+  // the unmocked request can time out on slower mobile-emulation runtimes,
+  // causing card-rendering assertions to fail.
+  await page.route('**/api/dashboards', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
   // Seed localStorage BEFORE any page script runs — page.evaluate() runs
   // after the page has already parsed and executed scripts, which is too
   // late for webkit/Safari where the auth redirect fires synchronously.
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
+  // Webkit mobile emulation (mobile-safari) is significantly slower to
+  // stabilize the DOM after domcontentloaded — wait for the main layout
+  // element to be visible so assertions in beforeEach don't time out
+  // (#nightly-playwright).
+  await page.locator('#root').waitFor({ state: 'visible', timeout: 15000 })
 }

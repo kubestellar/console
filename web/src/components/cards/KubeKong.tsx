@@ -22,6 +22,7 @@ const BARREL_SPEED = 2.5
 const PLAYER_WIDTH = 16
 const PLAYER_HEIGHT = 24
 const BARREL_SIZE = 14
+const BOSS_FRAME_RESET_MS = 300
 
 // Sloped platform structure - like classic DK
 interface Platform {
@@ -531,7 +532,7 @@ export function KubeKong(_props: CardComponentProps) {
       if (barrelSpawnCounter >= spawnRate) {
         barrelSpawnCounter = 0
         setBossFrame(1)
-        setTimeout(() => setBossFrame(0), 300)
+        setTimeout(() => setBossFrame(0), BOSS_FRAME_RESET_MS)
 
         barrelIdRef.current++
         setBarrels(bs => [...bs, {

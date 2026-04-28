@@ -52,26 +52,6 @@ export function formatStat(
 }
 
 /**
- * Format a stat only if data is available (clusters are reachable)
- * @param value - The numeric value
- * @param hasData - Whether we have valid data (e.g., clusters are reachable)
- * @param options - Formatting options
- */
-export function formatStatIfAvailable(
-  value: number | undefined | null,
-  hasData: boolean,
-  options?: {
-    formatter?: (n: number) => string
-    suffix?: string
-  }
-): string {
-  if (!hasData) {
-    return '-'
-  }
-  return formatStat(value, options)
-}
-
-/**
  * Format memory size for display
  * @param gb - Size in gigabytes
  * @param hasData - Whether we have valid data
@@ -107,17 +87,3 @@ export function formatStorageStat(gb: number | undefined | null, hasData = true)
   return formatMemoryStat(gb, hasData)
 }
 
-/**
- * Format percentage for display
- * @param value - Percentage value (0-100)
- * @param hasData - Whether we have valid data
- */
-export function formatPercentStat(value: number | undefined | null, hasData = true): string {
-  if (!hasData || value === undefined || value === null) {
-    return '-'
-  }
-
-  // Clamp between 0 and 100
-  const safeValue = Math.max(0, Math.min(100, value))
-  return `${safeValue.toFixed(0)}%`
-}

@@ -300,10 +300,10 @@ describe('Compliance dashboard component', () => {
     const totalChecks = getStatValue('total_checks')
     expect(totalChecks.value).toBe(215)
 
-    const passing = getStatValue('passing')
+    const passing = getStatValue('checks_passing')
     expect(passing.value).toBe(165)
 
-    const failing = getStatValue('failing')
+    const failing = getStatValue('checks_failing')
     expect(failing.value).toBe(42)
 
     const warning = getStatValue('warning')

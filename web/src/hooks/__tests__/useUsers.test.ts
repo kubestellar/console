@@ -28,6 +28,25 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 const mockGetDemoMode = vi.fn(() => false)
 vi.mock('../useDemoMode', () => ({
   getDemoMode: () => mockGetDemoMode(),
+  isDemoModeForced: false,
+  isNetlifyDeployment: () => false,
+  canToggleDemoMode: () => true,
+  isDemoToken: () => false,
+  hasRealToken: () => false,
+  setDemoToken: vi.fn(),
+  setGlobalDemoMode: vi.fn(),
+}))
+
+const mockAgentFetch = vi.fn((...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])))
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
+  clusterCacheRef: { clusters: [] },
+}))
+
+vi.mock('../useLocalAgent', () => ({
+  isAgentUnavailable: () => true,
+  reportAgentDataError: vi.fn(),
+  reportAgentDataSuccess: vi.fn(),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({

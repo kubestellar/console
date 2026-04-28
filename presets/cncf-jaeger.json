@@ -1,0 +1,10 @@
+{
+    "format": "kc-card-preset-v1",
+    "card_type": "jaeger_status",
+    "title": "Jaeger",
+    "description": "Distributed trace collection, service dependencies, and latency analysis.",
+    "category": "Observability",
+    "project": "jaeger",
+    "cncf_status": "graduated",
+    "config": {}
+}

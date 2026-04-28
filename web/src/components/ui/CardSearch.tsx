@@ -114,7 +114,7 @@ export function CardSearch({
         placeholder={resolvedPlaceholder}
         className={cn(
           'w-28 rounded-lg bg-secondary/50 border border-border/50 text-foreground placeholder:text-muted-foreground',
-          'focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20',
+          'focus:outline-hidden focus:border-primary/50 focus:ring-1 focus:ring-primary/20',
           'transition-all duration-200',
           sizeClasses,
           'pl-7 pr-7'

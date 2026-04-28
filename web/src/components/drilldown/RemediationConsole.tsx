@@ -397,7 +397,7 @@ Labels:       app=${resourceName.split('-')[0]}
   const REMEDIATION_MODAL_TITLE_ID = 'remediation-console-title'
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-modal">
       <div
         role="dialog"
         aria-modal="true"
@@ -464,7 +464,7 @@ Labels:       app=${resourceName.split('-')[0]}
         </div>
 
         {/* Console Output */}
-        <div className="flex-1 overflow-y-auto p-4 bg-[#0d0d0d] font-mono text-sm">
+        <div className="flex-1 overflow-y-auto p-4 bg-terminal font-mono text-sm">
           {activeTab === 'ai' ? (
             // AI Tab Content
             logs.length === 0 ? (
@@ -584,11 +584,11 @@ Labels:       app=${resourceName.split('-')[0]}
 
         {/* Shell Input (only shown in shell tab) */}
         {activeTab === 'shell' && (
-          <div className="p-3 border-t border-border bg-[#0d0d0d]">
+          <div className="p-3 border-t border-border bg-terminal">
             {shellError && (
               <div className="mb-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                  <AlertTriangle className="w-3 h-3 shrink-0" />
                   <span>{shellError}</span>
                 </div>
                 {lastFailedCommand && (
@@ -616,7 +616,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 onKeyDown={handleShellKeyDown}
                 placeholder={t('remediation.enterCommand')}
                 disabled={isExecuting}
-                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
+                className="flex-1 bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground"
                 autoFocus
               />
               <button

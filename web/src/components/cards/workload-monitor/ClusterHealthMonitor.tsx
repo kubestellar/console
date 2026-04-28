@@ -15,6 +15,8 @@ import { WorkloadMonitorDiagnose } from './WorkloadMonitorDiagnose'
 import type { MonitorIssue, ResourceHealthStatus } from '../../../types/workloadMonitor'
 import { useTranslation } from 'react-i18next'
 
+const MAX_VISIBLE_ISSUES = 5
+
 interface ClusterHealthMonitorProps {
   config?: Record<string, unknown>
 }
@@ -291,7 +293,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
                           Pod Issues ({clusterPodIssues.length})
                         </span>
                       </div>
-                      {clusterPodIssues.slice(0, 5).map((p, i) => (
+                      {clusterPodIssues.slice(0, MAX_VISIBLE_ISSUES).map((p, i) => (
                         <div key={`pod-${i}`} className="flex items-center gap-2 py-0.5 px-1 ml-4 rounded hover:bg-card/30 transition-colors">
                           <XCircle className="w-3 h-3 text-red-400 shrink-0" />
                           <span className="text-xs text-foreground truncate flex-1">{p.name}</span>
@@ -301,9 +303,9 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
                           </StatusBadge>
                         </div>
                       ))}
-                      {clusterPodIssues.length > 5 && (
+                      {clusterPodIssues.length > MAX_VISIBLE_ISSUES && (
                         <p className="text-2xs text-muted-foreground ml-4 px-1">
-                          +{clusterPodIssues.length - 5} more
+                          +{clusterPodIssues.length - MAX_VISIBLE_ISSUES} more
                         </p>
                       )}
                     </div>
@@ -318,7 +320,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
                           Deployment Issues ({clusterDeployIssues.length})
                         </span>
                       </div>
-                      {clusterDeployIssues.slice(0, 5).map((d, i) => (
+                      {clusterDeployIssues.slice(0, MAX_VISIBLE_ISSUES).map((d, i) => (
                         <div key={`deploy-${i}`} className="flex items-center gap-2 py-0.5 px-1 ml-4 rounded hover:bg-card/30 transition-colors">
                           <AlertTriangle className="w-3 h-3 text-yellow-400 shrink-0" />
                           <span className="text-xs text-foreground truncate flex-1">{d.name}</span>
@@ -328,9 +330,9 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
                           </StatusBadge>
                         </div>
                       ))}
-                      {clusterDeployIssues.length > 5 && (
+                      {clusterDeployIssues.length > MAX_VISIBLE_ISSUES && (
                         <p className="text-2xs text-muted-foreground ml-4 px-1">
-                          +{clusterDeployIssues.length - 5} more
+                          +{clusterDeployIssues.length - MAX_VISIBLE_ISSUES} more
                         </p>
                       )}
                     </div>

@@ -131,7 +131,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 
 	// Strategy 2: argocd CLI if available.
 	if _, err := exec.LookPath("argocd"); err == nil {
-		cmd := exec.CommandContext(r.Context(), "argocd", "app", "sync", req.AppName,
+		cmd := execCommandContext(r.Context(), "argocd", "app", "sync", req.AppName,
 			"--namespace", namespace,
 			"--prune",
 			"--timeout", argocdCLITimeoutSeconds,

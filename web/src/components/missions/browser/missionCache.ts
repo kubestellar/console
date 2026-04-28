@@ -5,11 +5,12 @@
  */
 import type { MissionExport, MissionMatch } from '../../../lib/missions/types'
 import type { ClusterContext } from '../../../hooks/useClusterContext'
+import { MS_PER_HOUR, MS_PER_MINUTE } from '../../../lib/constants/time'
 
 /** Cache time-to-live: 6 hours */
-const MISSION_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+const MISSION_CACHE_TTL_MS = 6 * MS_PER_HOUR
 /** Recommendation cache TTL: 10 minutes (shorter since it depends on cluster context) */
-const RECOMMENDATION_CACHE_TTL_MS = 10 * 60 * 1000
+const RECOMMENDATION_CACHE_TTL_MS = 10 * MS_PER_MINUTE
 /** localStorage key for persisted mission cache */
 const MISSION_CACHE_STORAGE_KEY = 'kc-mission-cache'
 
@@ -113,8 +114,13 @@ const MISSION_FILE_FORMAT_VERSION = 'kc-mission-v1'
 
 /** Convert an index entry to a MissionExport (browsing metadata only — steps loaded on demand) */
 function indexEntryToMission(entry: IndexEntry): MissionExport {
+  // Derive stable name from path: "fixes/cncf-install/install-opa.json" → "install-opa"
+  const name = entry.path
+    ? entry.path.replace(/^.*\//, '').replace(/\.json$/, '')
+    : undefined
   return {
     version: MISSION_FILE_FORMAT_VERSION,
+    name,
     title: entry.title || '',
     description: entry.description || '',
     type: (entry.type as MissionExport['type']) || 'custom',
@@ -222,7 +228,7 @@ async function fetchAllFromIndex() {
     missionCache.fetchError = null
     persistCacheToStorage()
   } catch (err) {
-    console.error('[MissionBrowser] Failed to fetch index:', err)
+    console.warn('[MissionBrowser] Failed to fetch index:', err)
     missionCache.fetchError = err instanceof Error ? err.message : 'Failed to load missions. Please try again.'
   } finally {
     missionCache.installersDone = true

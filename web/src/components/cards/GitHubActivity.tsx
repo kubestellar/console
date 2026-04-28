@@ -1,6 +1,8 @@
-import { useState, useMemo, useEffect, useCallback, useImperativeHandle, type Ref } from 'react'
+import { useState, useMemo, useEffect, useCallback, useImperativeHandle, memo, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
+import { formatTimeAgo } from '../../lib/formatters'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -106,22 +108,6 @@ const TIME_RANGES = [
   { value: '1y' as const, label: '1 Year' },
 ]
 
-// Utility functions
-function formatTimeAgo(date: string): string {
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  const years = Math.floor(months / 12)
-  return `${years}y ago`
-}
-
 function isStale(date: string, days: number = 30): boolean {
   const ageInDays = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24)
   return ageInDays > days
@@ -135,7 +121,7 @@ const DEFAULT_REPO = 'kubestellar/console'
 const SAVED_REPOS_KEY = 'github_activity_saved_repos'
 const CURRENT_REPO_KEY = 'github_activity_repo'
 const CACHE_KEY_PREFIX = 'github_activity_cache_v2_' // v2: fixed PR fetching
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache TTL - shorter for fresher data
+const CACHE_TTL_MS = 5 * MS_PER_MINUTE // 5 minutes cache TTL - shorter for fresher data
 
 // Cache data structure
 interface CachedGitHubData {
@@ -175,8 +161,9 @@ function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>) 
     }
     localStorage.setItem(CACHE_KEY_PREFIX + repo.replace('/', '_'), JSON.stringify(cached))
   } catch (e) {
-    // Storage might be full, ignore
-    console.error('Failed to cache GitHub data:', e)
+    // Non-critical: localStorage may be full or disabled. The card still
+    // works, it just won't persist cached data across page reloads.
+    console.warn('[GitHubActivity] Failed to cache data (storage may be full):', e)
   }
 }
 
@@ -221,8 +208,8 @@ async function githubFetchError(response: Response, label: string): Promise<Erro
 
 function getDemoGitHubData(repoName: string) {
   const now = new Date()
-  const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
-  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000).toISOString()
+  const daysAgo = (d: number) => new Date(now.getTime() - d * MS_PER_DAY).toISOString()
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * MS_PER_HOUR).toISOString()
   const demoUser = { login: 'demo-user', avatar_url: 'https://github.com/ghost.png' }
   const prs: GitHubPR[] = [
     { number: 842, title: 'feat: Add multi-cluster GPU scheduling', state: 'open', merged_at: null, created_at: hoursAgo(2), updated_at: hoursAgo(1), user: demoUser, html_url: '#', draft: false, labels: [{ name: 'enhancement', color: 'a2eeef' }] },
@@ -453,7 +440,7 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
           setOpenIssueCount(cached.openIssueCount)
           setLastRefresh(new Date(cached.timestamp))
           // Show warning that we're using cached data
-          setError(`Using cached data (${formatTimeAgo(new Date(cached.timestamp).toISOString())}). ${errorMessage}`)
+          setError(`Using cached data (${formatTimeAgo(new Date(cached.timestamp).toISOString(), { extended: true })}). ${errorMessage}`)
           return
         }
       } catch {
@@ -627,10 +614,10 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   const preFilteredData = useMemo(() => {
     const now = Date.now()
     const rangeMs = {
-      '7d': 7 * 24 * 60 * 60 * 1000,
-      '30d': 30 * 24 * 60 * 60 * 1000,
-      '90d': 90 * 24 * 60 * 60 * 1000,
-      '1y': 365 * 24 * 60 * 60 * 1000 }[timeRange]
+      '7d': 7 * MS_PER_DAY,
+      '30d': 30 * MS_PER_DAY,
+      '90d': 90 * MS_PER_DAY,
+      '1y': 365 * MS_PER_DAY }[timeRange]
 
     if (viewMode === 'prs') {
       // Sort PRs: open first, then by date within each group
@@ -878,7 +865,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Row 1: Header with repo selector and controls - inline CRUD style */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('common:common.itemCount', { count: totalItems, item: viewMode })}
@@ -909,7 +896,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
 
       {/* Inline repo editor (matching GitHubCIMonitor pattern) */}
       {isEditingRepos && (
-        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2 flex-shrink-0">
+        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2 shrink-0">
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -968,11 +955,11 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
         value={searchQuery}
         onChange={setSearchQuery}
         placeholder={`Search ${viewMode}...`}
-        className="mb-2 flex-shrink-0"
+        className="mb-2 shrink-0"
       />
 
       {/* Row 3: View Mode Tabs (act as filter pills) */}
-      <div className="flex items-center gap-1 mb-3 overflow-x-auto flex-shrink-0">
+      <div className="flex items-center gap-1 mb-3 overflow-x-auto shrink-0">
         <button
           onClick={() => setViewMode('prs')}
           className={cn(
@@ -1024,7 +1011,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3 flex-shrink-0">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3 shrink-0">
         <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <GitPullRequest className="w-4 h-4 text-blue-400" />
@@ -1062,7 +1049,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
       </div>
 
       {/* Time Range Controls */}
-      <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+      <div className="flex items-center gap-2 mb-3 shrink-0">
         <span className="text-xs text-muted-foreground">{t('cards:github.timeRange')}:</span>
         {TIME_RANGES.map(range => (
           <button
@@ -1117,7 +1104,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
 }
 
 // Sub-components for rendering different item types
-function PRItem({ pr }: { pr: GitHubPR }) {
+const PRItem = memo(function PRItem({ pr }: { pr: GitHubPR }) {
   const { t } = useTranslation(['cards', 'common'])
   const isOpen = pr.state === 'open'
   const isMerged = pr.merged_at != null
@@ -1176,18 +1163,18 @@ function PRItem({ pr }: { pr: GitHubPR }) {
               <img src={pr.user.avatar_url} alt={pr.user.login} className="w-4 h-4 rounded-full" />
               {pr.user.login}
             </span>
-            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at)}`}>
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at, { extended: true })}`}>
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(pr.updated_at)}
+              {formatTimeAgo(pr.updated_at, { extended: true })}
             </span>
           </div>
         </div>
       </div>
     </a>
   )
-}
+})
 
-function IssueItem({ issue }: { issue: GitHubIssue }) {
+const IssueItem = memo(function IssueItem({ issue }: { issue: GitHubIssue }) {
   const { t } = useTranslation(['cards', 'common'])
   const isOpen = issue.state === 'open'
   const isStaleItem = isOpen && isStale(issue.updated_at)
@@ -1233,9 +1220,9 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
               <img src={issue.user.avatar_url} alt={issue.user.login} className="w-4 h-4 rounded-full" />
               {issue.user.login}
             </span>
-            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at)}`}>
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at, { extended: true })}`}>
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(issue.updated_at)}
+              {formatTimeAgo(issue.updated_at, { extended: true })}
             </span>
             {issue.comments > 0 && (
               <span title={`${issue.comments} ${t('cards:github.comments')}`}>{issue.comments} {t('cards:github.comments')}</span>
@@ -1245,9 +1232,9 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
       </div>
     </a>
   )
-}
+})
 
-function ReleaseItem({ release }: { release: GitHubRelease }) {
+const ReleaseItem = memo(function ReleaseItem({ release }: { release: GitHubRelease }) {
   const { t } = useTranslation(['cards'])
   return (
     <a
@@ -1271,16 +1258,16 @@ function ReleaseItem({ release }: { release: GitHubRelease }) {
             <span>{release.author.login}</span>
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(release.published_at)}
+              {formatTimeAgo(release.published_at, { extended: true })}
             </span>
           </div>
         </div>
       </div>
     </a>
   )
-}
+})
 
-function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
+const ContributorItem = memo(function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
   const { t } = useTranslation(['cards'])
   return (
     <a
@@ -1301,4 +1288,4 @@ function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
       </div>
     </a>
   )
-}
+})

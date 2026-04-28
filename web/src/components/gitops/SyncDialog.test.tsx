@@ -12,6 +12,13 @@ const DETECT_DRIFT_PATH_SUFFIX = '/gitops/detect-drift'
 // Wait budget for async state transitions inside the component.
 const ASYNC_WAIT_TIMEOUT_MS = 2000
 
+vi.mock('../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../lib/modals', () => {
   const BaseModal = Object.assign(
     ({ children }: { children: React.ReactNode }) => <div data-testid='mock-base-modal'>{children}</div>,

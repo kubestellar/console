@@ -9,7 +9,8 @@
  */
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
+import type ReactEChartsType from 'echarts-for-react'
 import { Calendar, RefreshCw, GitPullRequest } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../ui/Skeleton'
@@ -17,12 +18,28 @@ import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
 import { Button } from '../ui/Button'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useToast } from '../ui/Toast'
 import { useCardLoadingState } from './CardDataContext'
 import {
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TOOLTIP_TEXT_COLOR,
   CHART_TOOLTIP_LABEL_COLOR,
+  CHART_DATAZOOM_BORDER,
+  CHART_DATAZOOM_BG,
+  CHART_DATAZOOM_FILLER,
+  CHART_DATAZOOM_HANDLE,
+  CHART_DATAZOOM_TEXT,
+  CHART_DATAZOOM_DATA_LINE,
+  CHART_DATAZOOM_DATA_AREA,
+  CHART_TICK_COLOR,
+  CHART_GRID_STROKE,
+  CHART_TEXT_MUTED,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
+  CHART_LEGEND_FONT_SIZE,
 } from '../../lib/constants'
+import { hexToRgba } from '../../lib/theme/chartColors'
+import { MS_PER_DAY, MS_PER_HOUR } from '../../lib/constants/time'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -41,11 +58,13 @@ const GITHUB_PER_PAGE = 100
  */
 const MAX_PAGES = 30
 /** Cache TTL in milliseconds (1 hour) */
-const CACHE_TTL_MS = 60 * 60 * 1000
+const CACHE_TTL_MS = MS_PER_HOUR
 /** LocalStorage cache key prefix */
 const CACHE_KEY_PREFIX = 'issue_activity_chart_cache_'
-/** Milliseconds in one day */
-const MS_PER_DAY = 86_400_000
+const CHART_GRID_LEFT = 50
+const CHART_GRID_RIGHT = 50
+const CHART_GRID_TOP = 40
+const CHART_GRID_BOTTOM = 80
 /** Bar chart color for issues opened */
 const COLOR_OPENED = '#4472C4'
 /** Bar chart color for issues closed */
@@ -60,6 +79,10 @@ const CHART_HEIGHT_PX = 320
 const DATA_ZOOM_SLIDER_HEIGHT_PX = 20
 /** Slider bottom offset in pixels */
 const DATA_ZOOM_SLIDER_BOTTOM_PX = 5
+/** Opacity for area-fill behind the PR-merged line */
+const PR_MERGED_AREA_ALPHA = 0.08
+/** Font size for dataZoom text labels */
+const DATAZOOM_FONT_SIZE = 10
 /** Full zoom range start percentage */
 const ZOOM_RANGE_START = 0
 /** Full zoom range end percentage */
@@ -291,6 +314,7 @@ async function fetchIssueStats(
 export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   const { t } = useTranslation('cards')
   const { isDemoMode } = useDemoMode()
+  const { showToast } = useToast()
   const shared = usePipelineFilter()
   const repo = shared?.repoFilter || props.config?.repo || DEFAULT_REPO
   const initialDays = props.config?.days || DEFAULT_LOOKBACK_DAYS
@@ -304,7 +328,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
     start: ZOOM_RANGE_START,
     end: ZOOM_RANGE_END,
   })
-  const chartRef = useRef<ReactECharts>(null)
+  const chartRef = useRef<ReactEChartsType>(null)
 
   const hasData = stats.length > 0
   useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode || isDemoFallback })
@@ -432,7 +456,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
 
     return {
       backgroundColor: 'transparent',
-      grid: { left: 50, right: 50, top: 40, bottom: 80, containLabel: false },
+      grid: { left: CHART_GRID_LEFT, right: CHART_GRID_RIGHT, top: CHART_GRID_TOP, bottom: CHART_GRID_BOTTOM, containLabel: false },
       legend: {
         data: [
           t('issueActivityChart.opened', 'Opened'),
@@ -440,16 +464,16 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           t('issueActivityChart.prsMerged', 'PRs Merged'),
         ],
         top: 8,
-        textStyle: { color: '#aaa', fontSize: 11 },
+        textStyle: { color: CHART_TEXT_MUTED, fontSize: CHART_LEGEND_FONT_SIZE },
         itemWidth: 14,
         itemHeight: 10,
       },
       tooltip: {
         trigger: 'axis' as const,
-        axisPointer: { type: 'shadow' as const },
+        axisPointer: { type: 'shadow-sm' as const },
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (
           params: Array<{ seriesName: string; value: number; color: string; axisValueLabel: string }>
         ) => {
@@ -470,8 +494,8 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
         type: 'category' as const,
         data: dates,
         axisLabel: {
-          color: '#888',
-          fontSize: 10,
+          color: CHART_TICK_COLOR,
+          fontSize: CHART_AXIS_FONT_SIZE,
           rotate: 45,
           formatter: (val: string) => {
             // Show "Mon Mar 15" so users can see day-of-week seasonality
@@ -483,25 +507,25 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           // Show ~15 labels max regardless of date range
           interval: Math.max(0, Math.floor(dates.length / 15) - 1),
         },
-        axisLine: { lineStyle: { color: '#333' } },
+        axisLine: { lineStyle: { color: CHART_GRID_STROKE } },
         axisTick: { show: false },
       },
       yAxis: [
         {
           type: 'value' as const,
           name: t('issueActivityChart.issues', 'Issues'),
-          nameTextStyle: { color: '#888', fontSize: 10 },
-          axisLabel: { color: '#888', fontSize: 10 },
+          nameTextStyle: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+          axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
           axisLine: { show: false },
           axisTick: { show: false },
-          splitLine: { lineStyle: { color: '#333', type: 'dashed' as const } },
+          splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
           minInterval: 1,
         },
         {
           type: 'value' as const,
           name: t('issueActivityChart.prs', 'PRs'),
-          nameTextStyle: { color: '#888', fontSize: 10 },
-          axisLabel: { color: '#888', fontSize: 10 },
+          nameTextStyle: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+          axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
           axisLine: { show: false },
           axisTick: { show: false },
           splitLine: { show: false },
@@ -533,7 +557,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           symbolSize: 4,
           lineStyle: { color: COLOR_PR_MERGED, width: 2 },
           itemStyle: { color: COLOR_PR_MERGED },
-          areaStyle: { color: 'rgba(237, 125, 49, 0.08)' },
+          areaStyle: { color: hexToRgba(COLOR_PR_MERGED, PR_MERGED_AREA_ALPHA) },
         },
       ],
       dataZoom: [
@@ -548,14 +572,14 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
           end: ZOOM_RANGE_END,
           height: DATA_ZOOM_SLIDER_HEIGHT_PX,
           bottom: DATA_ZOOM_SLIDER_BOTTOM_PX,
-          borderColor: '#444',
-          backgroundColor: 'rgba(50,50,50,0.3)',
-          fillerColor: 'rgba(68,114,196,0.15)',
-          handleStyle: { color: '#666' },
-          textStyle: { color: '#888', fontSize: 10 },
+          borderColor: CHART_DATAZOOM_BORDER,
+          backgroundColor: CHART_DATAZOOM_BG,
+          fillerColor: CHART_DATAZOOM_FILLER,
+          handleStyle: { color: CHART_DATAZOOM_HANDLE },
+          textStyle: { color: CHART_DATAZOOM_TEXT, fontSize: DATAZOOM_FONT_SIZE },
           dataBackground: {
-            lineStyle: { color: '#555' },
-            areaStyle: { color: 'rgba(100,100,100,0.2)' },
+            lineStyle: { color: CHART_DATAZOOM_DATA_LINE },
+            areaStyle: { color: CHART_DATAZOOM_DATA_AREA },
           },
         },
       ],
@@ -604,6 +628,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
               // Clear cache and reload
               try { localStorage.removeItem(getCacheKey(repo, days)) } catch { /* ignore */ }
               loadData(days)
+              showToast('Chart data refreshed', 'info')
             }}
             title={t('issueActivityChart.refresh', 'Refresh')}
           >
@@ -652,7 +677,7 @@ export function IssueActivityChart(props: { config?: IssueActivityConfig }) {
 
       {/* Chart */}
       <div className="w-full overflow-hidden" style={{ minWidth: 0 }}>
-        <ReactECharts
+        <LazyEChart
           ref={chartRef}
           option={chartOption}
           style={{ height: CHART_HEIGHT_PX, width: '100%' }}

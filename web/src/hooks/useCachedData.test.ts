@@ -25,6 +25,10 @@ const {
 
 vi.mock('../lib/cache', () => ({
   useCache: (...args: unknown[]) => mockUseCache(...args),
+  // createCachedHook is a factory that returns a React hook. Hooks that use it
+  // are re-exported through useCachedData.ts; this stub prevents load failures
+  // when the module is imported in tests that only mock useCache.
+  createCachedHook: (_config: unknown) => () => mockUseCache(_config),
   REFRESH_RATES: {
     realtime: 15_000,
     pods: 30_000,
@@ -67,6 +71,7 @@ vi.mock('../lib/schemas/validate', () => ({
 
 vi.mock('./mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
+  agentFetch: vi.fn().mockImplementation((...args: unknown[]) => fetch(args[0] as RequestInfo, args[1] as RequestInit)),
 }))
 
 vi.mock('../lib/constants', async (importOriginal) => {
@@ -916,7 +921,7 @@ describe('useCachedWarningEvents', () => {
     await capturedFetcher()
 
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
-    expect(url).toContain(`${LOCAL_AGENT_HTTP_URL}/events/warnings`)
+    expect(url).toContain('/api/mcp/events/warnings')
     expect(url).toContain('cluster=prod-east')
   })
 })

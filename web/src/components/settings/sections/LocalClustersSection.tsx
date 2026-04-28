@@ -407,7 +407,7 @@ After installation, ask:
               <select
                 value={selectedTool}
                 onChange={(e) => setSelectedTool(e.target.value)}
-                className="min-w-0 sm:w-auto sm:max-w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50 truncate"
+                className="min-w-0 sm:w-auto sm:max-w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 truncate"
               >
                 <option value="">{t('settings.localClusters.selectTool')}</option>
                 {localClusterTools.map((tool) => (
@@ -421,12 +421,12 @@ After installation, ask:
                 value={clusterName}
                 onChange={(e) => setClusterName(e.target.value)}
                 placeholder="Cluster name"
-                className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
               />
               <button
                 onClick={handleCreate}
                 disabled={!selectedTool || !clusterName.trim() || isCreating}
-                className="flex-shrink-0 whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="shrink-0 whitespace-nowrap flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCreating ? (
                   <>
@@ -567,7 +567,7 @@ After installation, ask:
                     <select
                       value={vclusterHostCluster}
                       onChange={(e) => { setVclusterHostCluster(e.target.value); if (e.target.value) checkVClusterOnCluster(e.target.value) }}
-                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
                     >
                       <option value="" disabled>{t('settings.localClusters.selectHostCluster')}</option>
                       {(healthyClusters || []).map(c => {
@@ -611,7 +611,7 @@ After installation, ask:
                       value={vclusterNamespace}
                       onChange={(e) => setVclusterNamespace(e.target.value)}
                       placeholder={t('settings.localClusters.vclusterDefaultNamespace')}
-                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -621,7 +621,7 @@ After installation, ask:
                       value={vclusterName}
                       onChange={(e) => setVclusterName(e.target.value)}
                       placeholder="my-vcluster"
-                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                      className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
                     />
                   </div>
                   <div className="flex items-end">

@@ -76,7 +76,7 @@ export function ImportTab({
               }}
               rows={6}
               placeholder="apiVersion: v1&#10;kind: Config&#10;..."
-              className="bg-secondary rounded-lg p-4 font-mono text-sm w-full resize-y border border-border dark:border-white/10 focus:border-purple-500 focus:outline-none"
+              className="bg-secondary rounded-lg p-4 font-mono text-sm w-full resize-y border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
             />
           </div>
 

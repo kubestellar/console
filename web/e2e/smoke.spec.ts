@@ -67,15 +67,59 @@ test.describe('Smoke Tests', () => {
       await waitForNetworkIdleBestEffort(page)
 
       const navLinks = [
-        { text: 'Clusters', expectedPath: '/clusters' },
-        { text: 'Deploy', expectedPath: '/deploy' },
-        { text: 'Settings', expectedPath: '/settings' },
+        { href: '/clusters', expectedPath: '/clusters' },
+        { href: '/deploy', expectedPath: '/deploy' },
+        { href: '/settings', expectedPath: '/settings' },
       ]
 
-      for (const { text, expectedPath } of navLinks) {
-        await page.click(`nav >> text="${text}"`)
+      // Scope to the sidebar (data-testid="sidebar") because the main <nav>
+      // navbar does not contain these route links — they live in the sidebar.
+      // Using a bare `nav` locator matched multiple <nav> elements (navbar +
+      // sidebar section navs) and violated strict mode. #9877
+      const sidebar = page.getByTestId('sidebar')
+
+      // On mobile viewports (<md) the sidebar is rendered off-canvas and must
+      // be opened via the hamburger button before its links are clickable.
+      // #9877
+      const hamburger = page
+        .locator('[data-testid="mobile-menu-toggle"]')
+        .or(page.locator('button[aria-label*="menu" i]'))
+        .first()
+      const viewportSize = page.viewportSize()
+      const MOBILE_SIDEBAR_MAX_WIDTH_PX = 768
+      const HAMBURGER_PROBE_TIMEOUT_MS = 2_000
+      if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+        const hamburgerVisible = await hamburger
+          .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+          .catch(() => false)
+        if (hamburgerVisible) {
+          await hamburger.click()
+        }
+      }
+
+      for (const { href, expectedPath } of navLinks) {
+        // Use href-based locators for cross-browser reliability — text labels
+        // can differ (e.g. "My Clusters" vs "Clusters") and exact text
+        // matching is fragile across browsers. #10134
+        const link = sidebar.locator(`a[href="${href}"]`).first()
+        await expect(link).toBeVisible({ timeout: 5000 })
+        await link.click()
         await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, `nav to ${expectedPath}`)
         expect(page.url()).toContain(expectedPath)
+        // Re-open mobile sidebar if navigation closed it.
+        if (viewportSize && viewportSize.width < MOBILE_SIDEBAR_MAX_WIDTH_PX) {
+          const stillVisible = await link
+            .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+            .catch(() => false)
+          if (!stillVisible) {
+            const hamburgerVisible = await hamburger
+              .isVisible({ timeout: HAMBURGER_PROBE_TIMEOUT_MS })
+              .catch(() => false)
+            if (hamburgerVisible) {
+              await hamburger.click()
+            }
+          }
+        }
       }
     })
 
@@ -101,8 +145,10 @@ test.describe('Smoke Tests', () => {
       await waitForNetworkIdleBestEffort(page, NETWORK_IDLE_TIMEOUT_MS, '/settings')
       expect(page.url()).toContain('/settings')
 
-      // Click the logo button (has aria-label "Go to home dashboard")
-      const logoButton = page.locator('nav button[aria-label*="home"]')
+      // Click the logo button (has aria-label "Go to home dashboard").
+      // The navbar renders two such buttons — the logo and the wordmark —
+      // so use .first() to avoid a strict-mode violation. #9877
+      const logoButton = page.locator('nav button[aria-label*="home"]').first()
       await expect(logoButton).toBeVisible()
       await logoButton.click()
 
@@ -139,19 +185,25 @@ test.describe('Smoke Tests', () => {
     test('settings page interactions work', async ({ page }) => {
       await setupDemoMode(page)
       await page.goto('/settings')
+      await page.waitForLoadState('domcontentloaded')
       await waitForNetworkIdleBestEffort(page)
 
-      // Check for theme toggle
-      const themeToggle = page.getByTestId('theme-toggle')
+      // Check for theme toggle — use a precise locator scoped to the navbar
+      // button (aria-label contains "theme") to avoid matching non-button
+      // elements in the ThemeSection dropdown.  Force-click because on
+      // webkit / firefox the Tooltip wrapper can report the button as "not
+      // stable" during CSS transitions (#nightly-playwright).
+      const THEME_POLL_TIMEOUT_MS = 10_000
+      const themeToggle = page.locator('nav button[aria-label*="theme" i]').first()
+        .or(page.getByTestId('theme-toggle'))
         .or(page.locator('button:has-text("Theme")'))
-        .or(page.locator('[aria-label*="theme"]'))
 
       if (await themeToggle.first().isVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS })) {
         const htmlBefore = await page.locator('html').getAttribute('class')
-        await themeToggle.first().click()
+        await themeToggle.first().click({ force: true })
 
         await expect
-          .poll(async () => page.locator('html').getAttribute('class'))
+          .poll(async () => page.locator('html').getAttribute('class'), { timeout: THEME_POLL_TIMEOUT_MS })
           .not.toBe(htmlBefore)
       }
     })
@@ -225,15 +277,16 @@ test.describe('Smoke Tests', () => {
       await page.goto('/')
       await waitForNetworkIdleBestEffort(page)
 
-      // Check for demo mode badge/indicator
-      const demoIndicator = page.locator('text=/demo/i')
-        .or(page.getByTestId('demo-mode-indicator'))
-        .or(page.locator('[aria-label*="demo"]'))
+      // Check for demo mode badge/indicator. The AgentStatusIndicator also
+      // renders a "Demo Mode" <span> that is hidden on <sm viewports (mobile)
+      // via `hidden sm:inline`; filter to visible matches so the first hit
+      // isn't a hidden element. #9877
+      const demoIndicator = page.locator(':visible').filter({
+        hasText: /demo/i,
+      })
 
-      // Should have some indication of demo mode
-      const isVisible = await demoIndicator.first().isVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS }).catch(() => false)
-      // This is informational - demo indicator may not always be visible
-      console.log(`Demo mode indicator visible: ${isVisible}`)
+      // Assert the demo indicator is visible — a missing indicator is a regression. #9524
+      await expect(demoIndicator.first()).toBeVisible({ timeout: OPTIONAL_PROBE_TIMEOUT_MS })
     })
   })
 })

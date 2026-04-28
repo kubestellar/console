@@ -1,0 +1,104 @@
+name: ACMM Level Monitor
+
+on:
+  schedule:
+    # Run daily at 08:00 UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    inputs:
+      min_level:
+        description: 'Minimum acceptable ACMM level (default: 5)'
+        required: false
+        default: '5'
+
+jobs:
+  check-acmm-level:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Fetch ACMM badge score
+        id: badge
+        run: |
+          MIN_LEVEL="${{ github.event.inputs.min_level || '5' }}"
+          RESPONSE=$(curl -sf "https://console.kubestellar.io/api/acmm/badge?repo=kubestellar%2Fconsole&force=true" || echo "")
+          if [ -z "$RESPONSE" ]; then
+            echo "level=0" >> "$GITHUB_OUTPUT"
+            echo "message=badge endpoint unreachable" >> "$GITHUB_OUTPUT"
+            echo "score=?/?" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          LEVEL=$(echo "$RESPONSE" | python3 -c "import sys,json,re; d=json.load(sys.stdin); m=re.match(r'L(\d+)', d.get('message','')); print(m.group(1) if m else '0')")
+          SCORE=$(echo "$RESPONSE" | python3 -c "import sys,json,re; d=json.load(sys.stdin); m=re.search(r'(\d+/\d+)', d.get('message','')); print(m.group(1) if m else '?/?')")
+          MESSAGE=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('message','unknown'))")
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+          echo "score=$SCORE" >> "$GITHUB_OUTPUT"
+          echo "message=$MESSAGE" >> "$GITHUB_OUTPUT"
+          echo "min_level=$MIN_LEVEL" >> "$GITHUB_OUTPUT"
+          echo "ACMM badge: $MESSAGE (level=$LEVEL, required>=$MIN_LEVEL)"
+
+      - name: Check for existing regression issue
+        id: existing
+        if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh issue list \
+            --repo kubestellar/console \
+            --state open \
+            --label "acmm-regression" \
+            --json number \
+            --jq '.[0].number // empty' 2>/dev/null || echo "")
+          echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
+
+      - name: Open regression issue
+        if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number == '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LEVEL="${{ steps.badge.outputs.level }}"
+          MIN="${{ steps.badge.outputs.min_level }}"
+          SCORE="${{ steps.badge.outputs.score }}"
+          MESSAGE="${{ steps.badge.outputs.message }}"
+          gh issue create \
+            --repo kubestellar/console \
+            --title "🔴 ACMM regression: badge dropped to L${LEVEL} (required L${MIN})" \
+            --label "bug,acmm-regression" \
+            --body "## ACMM Level Regression
+          
+          **Detected:** $(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          **Current badge:** \`${MESSAGE}\` (L${LEVEL})
+          **Required minimum:** L${MIN}
+          **Score:** ${SCORE}
+          
+          ## What this means
+          
+          The ACMM badge on the \`kubestellar/console\` README has dropped below L${MIN}. One or more criteria that the badge endpoint detects are now missing from the repo tree.
+          
+          ## Investigation steps
+          
+          1. Check the [ACMM leaderboard](https://console.kubestellar.io/acmm?repo=kubestellar%2Fconsole) for the full breakdown.
+          2. Compare the detected criteria between L${LEVEL} and L${MIN} — which L$(( LEVEL + 1 )) criteria are now missing?
+          3. Check recent merged PRs that may have removed or renamed files the scanner detects.
+          4. Restore the missing files/workflows or update detection paths in \`web/src/lib/acmm/sources/acmm.ts\`.
+          
+          ## Badge URL
+          
+          \`https://console.kubestellar.io/api/acmm/badge?repo=kubestellar%2Fconsole&force=true\`"
+
+      - name: Comment on existing issue
+        if: ${{ fromJson(steps.badge.outputs.level) < fromJson(steps.badge.outputs.min_level) && steps.existing.outputs.number != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LEVEL="${{ steps.badge.outputs.level }}"
+          SCORE="${{ steps.badge.outputs.score }}"
+          MESSAGE="${{ steps.badge.outputs.message }}"
+          gh issue comment "${{ steps.existing.outputs.number }}" \
+            --repo kubestellar/console \
+            --body "Still regressed as of $(date -u '+%Y-%m-%dT%H:%M:%SZ'): badge is \`${MESSAGE}\` (L${LEVEL}, score ${SCORE})"
+
+      - name: Pass — log and exit
+        if: ${{ fromJson(steps.badge.outputs.level) >= fromJson(steps.badge.outputs.min_level) }}
+        run: |
+          echo "✅ ACMM level L${{ steps.badge.outputs.level }} >= required L${{ steps.badge.outputs.min_level }} (score: ${{ steps.badge.outputs.score }})"

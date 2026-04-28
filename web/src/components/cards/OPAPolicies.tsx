@@ -13,6 +13,10 @@ import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { isDemoMode as checkIsDemoMode } from '../../lib/demoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_OPA_CACHE, STORAGE_KEY_OPA_CACHE_TIME } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
+import { KUBECTL_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
+const OPA_LIST_TIMEOUT_MS = 25_000
+const MIN_POLICY_PATH_PARTS = 4
 import { safeGetItem, safeGetJSON, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
 import { PolicyDetailModal, ClusterOPAModal, CreatePolicyModal } from './opa'
 import type { Policy, GatekeeperStatus, OPAClusterItem } from './opa'
@@ -69,7 +73,7 @@ async function checkGatekeeperInstalled(clusterName: string): Promise<Gatekeeper
   try {
     const nsResult = await kubectlProxy.exec(
       ['get', 'namespace', 'gatekeeper-system', '--ignore-not-found', '-o', 'name'],
-      { context: clusterName, timeout: 25000, priority: true }
+      { context: clusterName, timeout: OPA_LIST_TIMEOUT_MS, priority: true }
     )
     const installed = !!(nsResult.output && nsResult.output.includes('gatekeeper-system'))
     return { cluster: clusterName, installed, loading: installed } // loading=true means details pending
@@ -88,7 +92,7 @@ async function checkGatekeeperDetails(clusterName: string): Promise<GatekeeperSt
       ['get', 'constraints', '-A',
        '-o', 'custom-columns=NAME:.metadata.name,KIND:.kind,ENFORCEMENT:.spec.enforcementAction,VIOLATIONS:.status.totalViolations',
        '--no-headers'],
-      { context: clusterName, timeout: 10000 }
+      { context: clusterName, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
     ).catch(() => ({ output: '', error: '' }))
 
     const policies: Policy[] = []
@@ -99,7 +103,7 @@ async function checkGatekeeperDetails(clusterName: string): Promise<GatekeeperSt
       const lines = constraintsResult.output.trim().split('\n').filter((l: string) => l.trim())
       for (const line of lines) {
         const parts = line.trim().split(/\s+/)
-        if (parts.length >= 4) {
+        if (parts.length >= MIN_POLICY_PATH_PARTS) {
           const name = parts[0]
           const kind = parts[1]
           const enforcement = (parts[2] || 'warn').toLowerCase() as Policy['mode']
@@ -132,7 +136,7 @@ async function checkGatekeeperDetails(clusterName: string): Promise<GatekeeperSt
         const violationsResult = await kubectlProxy.exec(
           ['get', policyWithViolations.kind.toLowerCase(), policyWithViolations.name,
            '-o', 'jsonpath={.status.violations[*]}'],
-          { context: clusterName, timeout: 10000 }
+          { context: clusterName, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
         )
 
         if (violationsResult.output) {
@@ -186,7 +190,7 @@ function createSortComparators(statuses: Record<string, GatekeeperStatus>) {
 function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode } = useDemoMode()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isFailed, consecutiveFailures } = useClusters()
   const { startMission } = useMissions()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
 
@@ -197,7 +201,7 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
   useEffect(() => {
     if (shouldUseDemoData) return
     const controller = new AbortController()
-    fetch(`${LOCAL_AGENT_HTTP_URL}/clusters`, { signal: controller.signal })
+    agentFetch(`${LOCAL_AGENT_HTTP_URL}/clusters`, { signal: controller.signal })
       .then(res => res.json())
       .then(data => {
         if (controller.signal.aborted) return
@@ -468,7 +472,9 @@ function OPAPoliciesInternal({ config: _config }: OPAPoliciesProps) {
     isLoading: shouldUseDemoData ? false : (isLoading || (isOPAChecking && !hasOPAData)),
     isRefreshing,
     hasAnyData: shouldUseDemoData ? true : (clusters.length > 0 && hasOPAData),
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   // In demo mode, update statuses with real cluster names when they become available.
   // Initial demo statuses are already provided by useState initializer (via checkIsDemoMode).

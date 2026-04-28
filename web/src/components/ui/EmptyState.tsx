@@ -55,7 +55,7 @@ export interface EmptyStateProps {
   /** Primary title (use a short, consistent phrase) */
   title: string
   /** Supporting description — explain what to do next */
-  description?: string
+  description?: ReactNode
   /** Optional call-to-action button */
   action?: EmptyStateAction
   /** Optional secondary action */
@@ -126,9 +126,9 @@ export function EmptyState({
       )}
       <h3 className="text-lg font-medium text-foreground mb-2">{title}</h3>
       {description && (
-        <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
+        <div className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
           {description}
-        </p>
+        </div>
       )}
       {(action || secondaryAction) && (
         <div className="flex items-center justify-center gap-2 flex-wrap">

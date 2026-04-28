@@ -12,6 +12,7 @@ import {
 import { cn } from '../../../lib/cn'
 import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -128,7 +129,7 @@ export function OperatorDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
@@ -383,7 +384,7 @@ Please:
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Operator Info Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+            <div className="p-4 rounded-lg bg-linear-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
               <div className="flex items-start gap-3">
                 <Settings className="w-8 h-8 text-purple-400 mt-1" />
                 <div className="flex-1 min-w-0">

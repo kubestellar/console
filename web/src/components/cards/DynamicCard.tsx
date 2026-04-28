@@ -13,6 +13,8 @@ import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/
 import type { CardComponentProps, CardComponent } from './cardRegistry'
 import { useTranslation } from 'react-i18next'
 
+const MAX_AUTO_GRID_COLS = 3
+
 /**
  * DynamicCard: Meta-component that renders dynamic card definitions.
  *
@@ -249,7 +251,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
       {showStats && cardDefinition.stats && cardDefinition.stats.length > 0 && (
         <div className={cn(
           'grid gap-2 mb-3',
-          cardDefinition.stats.length <= 3 ? `grid-cols-${cardDefinition.stats.length}` : 'grid-cols-4',
+          cardDefinition.stats.length <= MAX_AUTO_GRID_COLS ? `grid-cols-${cardDefinition.stats.length}` : 'grid-cols-4',
         )}>
           {cardDefinition.stats.map((stat, idx) => {
             // Resolve stat value from data
@@ -281,7 +283,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
             value={filters.search}
             onChange={(e) => filters.setSearch(e.target.value)}
             placeholder={t('common:common.search')}
-            className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
           />
         </div>
       )}
@@ -318,7 +320,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
                   {(cardDefinition.columns || []).map(col => {
                     const val = String((item as Record<string, unknown>)[col.field] ?? '-')
                     if (col.format === 'badge') {
-                      // Issue 9071: swap `bg-gray-500/20` -> `bg-muted` (semantic, auto-switches).
+                      // Semantic badge color — adapts to both light and dark themes.
                       const badgeColor = col.badgeColors?.[val] || 'bg-muted text-muted-foreground'
                       return (
                         <span
@@ -463,7 +465,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-6 h-6 text-red-400 mb-2" />
         <p className="text-sm text-red-400 font-medium">{t('dynamicCard.compilationError')}</p>
-        <p className="text-xs text-muted-foreground mt-1 max-w-sm font-mono break-words">
+        <p className="text-xs text-muted-foreground mt-1 max-w-sm font-mono wrap-break-word">
           {error}
         </p>
       </div>

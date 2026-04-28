@@ -3,7 +3,6 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { useClusterGroups } from '../../hooks/useClusterGroups'
 import { useClusters, useDeployments } from '../../hooks/useMCP'
 import { useCachedDeployments } from '../../hooks/useCachedData'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -25,7 +24,6 @@ export function Deploy() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated, refetch } = useDeployments()
   const { deployments: cachedDeployments } = useCachedDeployments()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const publishCardEvent = useCardPublish()
   const { mutate: deployWorkload } = useDeployWorkload()
@@ -59,7 +57,7 @@ export function Deploy() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDeployStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDeployStatValue
 
   // Pending deploy state for confirmation dialog
   const [pendingDeploy, setPendingDeploy] = useState<{
@@ -261,7 +259,7 @@ export function Deploy() {
 
       {/* Group Picker — shown when workload is dropped on the card but not a specific group */}
       {groupPickerWorkload && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm" role="presentation" onClick={() => setGroupPickerWorkload(null)} onKeyDown={(e) => { if (e.key === 'Escape') setGroupPickerWorkload(null) }}>
+        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs" role="presentation" onClick={() => setGroupPickerWorkload(null)} onKeyDown={(e) => { if (e.key === 'Escape') setGroupPickerWorkload(null) }}>
           <div ref={groupPickerRef} className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5" role="dialog" aria-modal="true" aria-labelledby="group-picker-dialog-title" onClick={e => e.stopPropagation()}>
             <h3 id="group-picker-dialog-title" className="text-base font-medium text-foreground mb-1">
               Choose a cluster group

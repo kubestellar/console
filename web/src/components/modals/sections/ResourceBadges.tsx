@@ -31,6 +31,7 @@ import {
   FolderTree,
   Package,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { ResourceKind, ResourceContext } from '../types/modal.types'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 
@@ -142,6 +143,7 @@ export function ResourceBadges({
   onNamespaceClick,
   onKindClick,
 }: ResourceBadgesProps) {
+  const { t } = useTranslation('common')
   return (
     <div className={`flex items-center gap-1.5 flex-wrap ${className}`}>
       {/* Cluster badge */}
@@ -150,6 +152,7 @@ export function ResourceBadges({
           <button
             onClick={onClusterClick}
             className="hover:opacity-80 transition-opacity"
+            aria-label={t('resourceBadges.viewClusterAria', { cluster: resource.cluster })}
           >
             <ClusterBadge
               cluster={resource.cluster}
@@ -204,6 +207,7 @@ export function NamespaceBadge({
   className = '',
   onClick,
 }: NamespaceBadgeProps) {
+  const { t } = useTranslation('common')
   const sizeClasses = {
     sm: onClick ? 'text-2xs px-2 py-1.5 min-h-11 min-w-11' : 'text-2xs px-1.5 py-0.5',
     md: onClick ? 'text-xs px-2.5 py-2 min-h-11 min-w-11' : 'text-xs px-2 py-0.5',
@@ -224,6 +228,7 @@ export function NamespaceBadge({
       {...(onClick ? {
         role: 'button' as const,
         tabIndex: 0,
+        'aria-label': t('resourceBadges.viewNamespaceAria', { namespace }),
         onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } },
       } : {})}
     >
@@ -248,6 +253,7 @@ export function ResourceKindBadge({
   className = '',
   onClick,
 }: ResourceKindBadgeProps) {
+  const { t } = useTranslation('common')
   const Icon = RESOURCE_ICONS[kind] || File
   const colors = RESOURCE_COLORS[kind] || DEFAULT_COLORS
 
@@ -271,6 +277,7 @@ export function ResourceKindBadge({
       {...(onClick ? {
         role: 'button' as const,
         tabIndex: 0,
+        'aria-label': t('resourceBadges.viewResourceAria', { kind }),
         onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } },
       } : {})}
     >

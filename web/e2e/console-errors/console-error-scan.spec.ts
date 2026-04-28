@@ -38,10 +38,10 @@ const SETTLE_MS = 2_000
  * timeout (PRIME_NAV_TIMEOUT_MS) because `networkidle` can legitimately take
  * longer on the first paint.
  */
-const NAV_TIMEOUT_MS = 15_000
+const NAV_TIMEOUT_MS = 30_000
 
 /** Longer timeout for the initial priming load (waits on `networkidle`). */
-const PRIME_NAV_TIMEOUT_MS = 30_000
+const PRIME_NAV_TIMEOUT_MS = 45_000
 
 /** Routes that require special params or are not visitable directly */
 const _SKIP_ROUTES = new Set([

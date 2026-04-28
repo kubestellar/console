@@ -14,6 +14,7 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { KUBECTL_DEFAULT_TIMEOUT_MS, METRICS_SERVER_TIMEOUT_MS } from '../../lib/constants/network'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -71,7 +72,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
           // Check for Vault pods (helm release or operator)
           const podsResult = await kubectlProxy.exec(
             ['get', 'pods', '-A', '-l', 'app.kubernetes.io/name=vault', '-o', 'json'],
-            { context: cluster.name, timeout: 10000 }
+            { context: cluster.name, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
           )
           if (podsResult.exitCode === 0 && podsResult.output) {
             const data = JSON.parse(podsResult.output)
@@ -88,7 +89,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
           // Count opaque secrets (user-managed) in this cluster
           const secretsResult = await kubectlProxy.exec(
             ['get', 'secrets', '-A', '-o', 'jsonpath={range .items[?(@.type=="Opaque")]}1{end}'],
-            { context: cluster.name, timeout: 10000 }
+            { context: cluster.name, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
           )
           if (secretsResult.exitCode === 0 && secretsResult.output) {
             secrets += secretsResult.output.length
@@ -125,7 +126,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
     return (
       <div className="space-y-3">
         <div className="flex items-start gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-yellow-400 font-medium">Vault Integration</p>
             <p className="text-muted-foreground">
@@ -242,7 +243,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
           // Check if ESO CRD exists
           const crdCheck = await kubectlProxy.exec(
             ['get', 'crd', 'externalsecrets.external-secrets.io', '-o', 'name'],
-            { context: cluster.name, timeout: 5000 }
+            { context: cluster.name, timeout: METRICS_SERVER_TIMEOUT_MS }
           )
           if (crdCheck.exitCode !== 0) continue
           found = true
@@ -250,7 +251,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
           // Count SecretStores + ClusterSecretStores
           const storesResult = await kubectlProxy.exec(
             ['get', 'secretstores,clustersecretstores', '-A', '-o', 'jsonpath={range .items[*]}1{end}'],
-            { context: cluster.name, timeout: 10000 }
+            { context: cluster.name, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
           )
           if (storesResult.exitCode === 0 && storesResult.output) {
             stores += storesResult.output.length
@@ -259,7 +260,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
           // Count ExternalSecrets with status
           const esResult = await kubectlProxy.exec(
             ['get', 'externalsecrets', '-A', '-o', 'json'],
-            { context: cluster.name, timeout: 10000 }
+            { context: cluster.name, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
           )
           if (esResult.exitCode === 0 && esResult.output) {
             const data = JSON.parse(esResult.output)
@@ -299,7 +300,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
     return (
       <div className="space-y-3">
         <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-blue-400 font-medium">External Secrets Integration</p>
             <p className="text-muted-foreground">
@@ -389,7 +390,7 @@ export function CertManager({ config: _config }: CardConfig) {
     return (
       <div className="space-y-3">
         <div className="flex items-start gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-green-400 font-medium">Cert-Manager Integration</p>
             <p className="text-muted-foreground">

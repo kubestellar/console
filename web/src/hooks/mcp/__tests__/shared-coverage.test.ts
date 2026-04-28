@@ -24,6 +24,7 @@ import type { ClusterInfo } from '../types'
 // ---------------------------------------------------------------------------
 const CLUSTER_NOTIFY_DEBOUNCE_MS = 50
 const STORAGE_KEY_TOKEN = 'token'
+const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — same pattern as shared.test.ts
@@ -42,6 +43,14 @@ const mockResetFailuresForCluster = vi.hoisted(() => vi.fn())
 const mockResetAllCacheFailures = vi.hoisted(() => vi.fn())
 const mockKubectlProxyExec = vi.hoisted(() => vi.fn())
 const mockApiGet = vi.hoisted(() => vi.fn())
+
+// The global test setup (setup.ts) mocks agentFetch to delegate to
+// global.fetch. For tests that need the REAL agentFetch (token injection,
+// signal fallback), import the actual module and restore the real impl.
+vi.mock('../shared', async () => {
+  const actual = await vi.importActual<typeof import('../shared')>('../shared')
+  return { ...actual }
+})
 
 vi.mock('../../../lib/api', () => ({
   api: { get: mockApiGet },
@@ -86,6 +95,11 @@ vi.mock('../../../lib/constants/network', async () => {
   const actual = await vi.importActual<typeof import('../../../lib/constants/network')>('../../../lib/constants/network')
   return { ...actual }
 })
+
+const mockEmitAgentTokenFailure = vi.hoisted(() => vi.fn())
+vi.mock('../../../lib/analytics', () => ({
+  emitAgentTokenFailure: mockEmitAgentTokenFailure,
+}))
 
 // ---------------------------------------------------------------------------
 // Imports (resolved after mocks)
@@ -139,7 +153,7 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('injects Authorization header when token exists in localStorage', async () => {
-    localStorage.setItem(STORAGE_KEY_TOKEN, 'my-agent-token')
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'my-agent-token')
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -151,7 +165,7 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('does NOT inject Authorization if header already present', async () => {
-    localStorage.setItem(STORAGE_KEY_TOKEN, 'my-agent-token')
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'my-agent-token')
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -165,19 +179,21 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('does NOT inject Authorization when no token in localStorage', async () => {
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
     await agentFetch('http://localhost:8090/clusters')
 
-    const call = mockFetch.mock.calls[0]
-    const headers = call[1]?.headers as Headers
+    // First call may be the token fetch to /api/agent/token (getAgentToken fallback);
+    // the actual agentFetch call is the last one.
+    const lastCall = mockFetch.mock.calls[mockFetch.mock.calls.length - 1]
+    const headers = lastCall[1]?.headers as Headers
     expect(headers.has('Authorization')).toBe(false)
   })
 
   it('uses caller-provided signal instead of default timeout', async () => {
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'skip-token-fetch')
     const controller = new AbortController()
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
@@ -189,7 +205,7 @@ describe('agentFetch — token injection and signal fallback', () => {
   })
 
   it('falls back to AbortSignal.timeout when no signal provided', async () => {
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'skip-token-fetch')
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -198,6 +214,58 @@ describe('agentFetch — token injection and signal fallback', () => {
     const call = mockFetch.mock.calls[0]
     // Signal should exist (the AbortSignal.timeout fallback)
     expect(call[1]?.signal).toBeTruthy()
+  })
+})
+
+// ============================================================================
+// getAgentToken — GA4 failure detection
+// ============================================================================
+describe('getAgentToken — emits GA4 on failure', () => {
+  const originalFetch = globalThis.fetch
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch
+    localStorage.clear()
+    mockEmitAgentTokenFailure.mockClear()
+  })
+
+  it('emits emitAgentTokenFailure when /api/agent/token returns non-OK', async () => {
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    const mockFetch = vi.fn()
+    mockFetch.mockResolvedValueOnce(new Response('error', { status: 500 }))
+    mockFetch.mockResolvedValue(new Response('ok'))
+    globalThis.fetch = mockFetch
+
+    await agentFetch('http://localhost:8090/clusters')
+
+    expect(mockEmitAgentTokenFailure).toHaveBeenCalledWith('empty token from /api/agent/token')
+  })
+
+  it('emits emitAgentTokenFailure when fetch throws network error', async () => {
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    const mockFetch = vi.fn()
+    mockFetch.mockRejectedValueOnce(new Error('Network request failed'))
+    mockFetch.mockResolvedValue(new Response('ok'))
+    globalThis.fetch = mockFetch
+
+    await agentFetch('http://localhost:8090/clusters')
+
+    expect(mockEmitAgentTokenFailure).toHaveBeenCalledWith('Network request failed')
+  })
+
+  it('does NOT emit when /api/agent/token returns a valid token', async () => {
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    const mockFetch = vi.fn()
+    mockFetch.mockResolvedValueOnce(new Response(
+      JSON.stringify({ token: 'valid-hex-token' }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    mockFetch.mockResolvedValue(new Response('ok'))
+    globalThis.fetch = mockFetch
+
+    await agentFetch('http://localhost:8090/clusters')
+
+    expect(mockEmitAgentTokenFailure).not.toHaveBeenCalled()
   })
 })
 
@@ -685,8 +753,15 @@ describe('deduplicateClustersByServer — cross-merge scenarios', () => {
 describe('fetchWithRetry — signal forwarding and cleanup', () => {
   const originalFetch = globalThis.fetch
 
+  beforeEach(() => {
+    // Pre-seed agent token so agentFetch() skips the token-fetch call,
+    // keeping globalThis.fetch call counts predictable.
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'test-token')
+  })
+
   afterEach(() => {
     globalThis.fetch = originalFetch
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
     vi.restoreAllMocks()
   })
 
@@ -1056,7 +1131,7 @@ describe('agentFetch — passes additional RequestInit options', () => {
   })
 
   it('passes method and body through to fetch', async () => {
-    localStorage.removeItem(STORAGE_KEY_TOKEN)
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'skip-token-fetch')
     const mockFetch = vi.fn().mockResolvedValue(new Response('ok'))
     globalThis.fetch = mockFetch
 
@@ -1077,8 +1152,14 @@ describe('agentFetch — passes additional RequestInit options', () => {
 describe('fetchWithRetry — default parameter behavior', () => {
   const originalFetch = globalThis.fetch
 
+  beforeEach(() => {
+    // Pre-seed agent token so agentFetch() skips the token-fetch call
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'test-token')
+  })
+
   afterEach(() => {
     globalThis.fetch = originalFetch
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
   })
 
   it('uses default maxRetries=2 and initialBackoffMs=500 when not specified', async () => {

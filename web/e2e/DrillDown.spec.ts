@@ -131,6 +131,31 @@ test.describe('Drilldown Modal — structural assertions', () => {
     expect(laterCount).toBeLessThanOrEqual(initialCount)
   })
 
+  test('back button is visible, not obscured by sidebar, and clickable (portal z-index regression)', async ({ page }) => {
+    await setupDemoAndNavigate(page, '/')
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    const opened = await openDrillDown(page)
+    if (!opened) { test.skip(true, 'No expandable card'); return }
+
+    const modal = page.getByTestId('drilldown-modal')
+    await expect(modal).toBeVisible()
+
+    const backButton = page.getByTestId('drilldown-back')
+    await expect(backButton).toBeVisible()
+    await expect(backButton).toBeEnabled()
+
+    // Verify the back button is not hidden behind the sidebar by
+    // performing an actionability check — Playwright's click() will
+    // fail if the element is obscured by another element.
+    await backButton.click()
+
+    // At root level the back button acts as close, so the modal should dismiss.
+    // If there was a nested stack it would pop instead, but either way the
+    // click must succeed (not be intercepted by sidebar).
+    await expect(modal).not.toBeVisible({ timeout: DRILLDOWN_TIMEOUT_MS })
+  })
+
   test('drilldown close button has an accessible label (aria-label or title)', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })

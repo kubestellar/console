@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { getChartColor, getChartColors, getChartColorByName } from '../chartColors'
+import { getChartColor, getChartColorByName } from '../chartColors'
 
 describe('getChartColor', () => {
   it('returns fallback color for index 1', () => {
@@ -117,57 +117,6 @@ describe('getChartColor', () => {
     expect(color).toBe('#9333ea')
 
     vi.unstubAllGlobals()
-  })
-})
-
-describe('getChartColors', () => {
-  it('returns array of correct length', () => {
-    expect(getChartColors(3)).toHaveLength(3)
-    expect(getChartColors(8)).toHaveLength(8)
-  })
-
-  it('returns empty array for 0', () => {
-    expect(getChartColors(0)).toHaveLength(0)
-  })
-
-  it('returns valid color strings', () => {
-    const colors = getChartColors(5)
-    for (const c of colors) {
-      expect(typeof c).toBe('string')
-      expect(c.length).toBeGreaterThan(0)
-    }
-  })
-
-  // --- New edge case tests ---
-
-  it('returns colors in the correct order (1-indexed from getChartColor)', () => {
-    const colors = getChartColors(3)
-    expect(colors[0]).toBe(getChartColor(1))
-    expect(colors[1]).toBe(getChartColor(2))
-    expect(colors[2]).toBe(getChartColor(3))
-  })
-
-  it('wraps colors when count exceeds 8', () => {
-    const PALETTE_SIZE = 8
-    const colors = getChartColors(PALETTE_SIZE + 2)
-    expect(colors).toHaveLength(PALETTE_SIZE + 2)
-    // Color at index 8 (9th) wraps to color at index 0 (1st)
-    expect(colors[PALETTE_SIZE]).toBe(colors[0])
-    // Color at index 9 (10th) wraps to color at index 1 (2nd)
-    expect(colors[PALETTE_SIZE + 1]).toBe(colors[1])
-  })
-
-  it('returns all 8 unique colors for count=8', () => {
-    const PALETTE_SIZE = 8
-    const colors = getChartColors(PALETTE_SIZE)
-    const unique = new Set(colors)
-    expect(unique.size).toBe(PALETTE_SIZE)
-  })
-
-  it('returns a single color for count=1', () => {
-    const colors = getChartColors(1)
-    expect(colors).toHaveLength(1)
-    expect(colors[0]).toBe(getChartColor(1))
   })
 })
 

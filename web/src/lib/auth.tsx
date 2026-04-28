@@ -1,4 +1,5 @@
 import { createContext, use, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from 'react'
+import { MS_PER_SECOND } from './constants/time'
 import { checkOAuthConfigured, checkOAuthConfiguredWithRetry } from './api'
 import { dashboardSync } from './dashboards/dashboardSync'
 import { clearPermissionsCache } from '../hooks/usePermissions'
@@ -6,7 +7,9 @@ import { disconnectPresence } from '../hooks/useActiveUsers'
 import { clearSSECache } from './sseClient'
 import { clearClusterCacheOnLogout } from '../hooks/mcp/shared'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_DEMO_MODE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_USER_CACHE, STORAGE_KEY_HAS_SESSION, FETCH_DEFAULT_TIMEOUT_MS } from './constants'
-import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession } from './analytics'
+/** localStorage key for the kc-agent shared secret (must match shared.ts) */
+const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
+import { emitLogin, emitLogout, setAnalyticsUserId, setAnalyticsUserProperties, emitConversionStep, emitDeveloperSession, emitSessionRefreshFailure } from './analytics'
 import { setDemoMode as setGlobalDemoMode } from './demoMode'
 import { AuthRefreshResponseSchema, UserSchema } from './schemas'
 import { validateResponse } from './schemas/validate'
@@ -47,8 +50,6 @@ const EXPIRY_WARNING_THRESHOLD_MS = 30 * 60_000
 const MAX_CACHED_USER_AGE_MS = 5 * 60 * 1_000
 /** #6067 — interval for background re-validation when the backend is unreachable. */
 const BACKEND_REVALIDATE_INTERVAL_MS = 30_000
-/** Milliseconds per second — JWT `exp` is in seconds. */
-const MS_PER_SECOND = 1_000
 
 /**
  * Decode the expiry timestamp from a JWT without verifying signature.
@@ -189,7 +190,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (currentToken && currentToken !== DEMO_TOKEN_VALUE) {
       fetch('/auth/logout', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${currentToken}` } }).catch(() => {
+        headers: { Authorization: `Bearer ${currentToken}` },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      }).catch(() => {
         // Backend unreachable — token will expire naturally
       })
     }
@@ -199,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // well so that any past or future code path that parks a token there
     // can't leak into the next session (#6004).
     localStorage.removeItem(STORAGE_KEY_TOKEN)
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
     localStorage.removeItem(AUTH_USER_CACHE_KEY)
     localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
     try {
@@ -312,6 +316,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               } catch {
                 // localStorage quota — best-effort hint
               }
+              // Fetch kc-agent token so agentFetch/WebSocket can authenticate
+              try {
+                const agentRes = await fetch('/api/agent/token', {
+                  credentials: 'same-origin',
+                  headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                  signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+                })
+                if (agentRes.ok) {
+                  const agentData = await agentRes.json()
+                  if (agentData.token) localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, agentData.token)
+                }
+              } catch {
+                // Non-fatal — agent auth will fail but session is intact
+              }
               const meResponse = await fetch('/api/me', {
                 credentials: 'include',
                 signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
@@ -403,6 +421,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const meResponse = await fetch('/api/me', {
         headers: { Authorization: `Bearer ${effectiveToken}` },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      if (meResponse.status === 429) {
+        const cachedUser = getCachedUser()
+        if (cachedUser) {
+          console.warn('Backend rate-limited (429), using cached user data')
+          setUser(prev => {
+            if (prev && prev.id === cachedUser.id && prev.github_login === cachedUser.github_login) return prev
+            return cachedUser
+          })
+          setAnalyticsUserId(cachedUser.id)
+          return
+        }
+      }
       if (!meResponse.ok) throw new Error(`/api/me returned ${meResponse.status}`)
       const rawMe = await meResponse.json().catch(() => null)
       const userData = validateResponse(UserSchema, rawMe, '/api/me') as User | null
@@ -600,8 +630,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               localStorage.removeItem(STORAGE_KEY_HAS_SESSION)
             }
           }
-        } catch {
-          // Refresh failed — user will see session-expired redirect naturally
+        } catch (err) {
+          emitSessionRefreshFailure(err instanceof Error ? err.message : 'network error')
         }
       })
     }
@@ -628,7 +658,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cacheUser(null)
         try {
           localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
-        } catch { /* ignore */ }
+        } catch (e) { console.warn('[auth] failed to clear cached user validation key:', e) }
         document.getElementById('session-expiry-warning')?.remove()
         // Only redirect if we're not already on the login page to avoid a loop
         if (!window.location.pathname.startsWith('/login')) {

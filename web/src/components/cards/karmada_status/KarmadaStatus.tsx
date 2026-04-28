@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
   AlertTriangle,
@@ -47,29 +48,6 @@ function bindingStatusColor(status: KarmadaBindingStatus): string {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function StatTile({
-  icon,
-  label,
-  value,
-  colorClass,
-  borderClass }: {
-  icon: React.ReactNode
-  label: string
-  value: number
-  colorClass: string
-  borderClass: string
-}) {
-  return (
-    <div className={`p-3 rounded-lg bg-secondary/30 border ${borderClass}`}>
-      <div className="flex items-center gap-2 mb-1">
-        {icon}
-        <span className={`text-xs ${colorClass}`}>{label}</span>
-      </div>
-      <span className="text-2xl font-bold text-foreground">{value}</span>
-    </div>
-  )
-}
 
 function MemberClusterRow({ cluster }: { cluster: KarmadaMemberCluster }) {
   const statusCfg = CLUSTER_STATUS_CONFIG[cluster.status]
@@ -162,7 +140,7 @@ export function KarmadaStatus() {
           <Skeleton variant="rounded" width={140} height={28} />
           <Skeleton variant="rounded" width={80} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <Skeleton variant="rounded" height={32} />
         <SkeletonList items={4} className="flex-1" />
       </div>
@@ -270,7 +248,7 @@ export function KarmadaStatus() {
           id="karmada-clusters-tab"
           className={`flex-1 text-xs rounded-md py-1 transition-colors ${
             view === 'clusters'
-              ? 'bg-background text-foreground shadow-sm'
+              ? 'bg-background text-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setView('clusters')}
@@ -281,7 +259,7 @@ export function KarmadaStatus() {
           id="karmada-bindings-tab"
           className={`flex-1 text-xs rounded-md py-1 transition-colors ${
             view === 'bindings'
-              ? 'bg-background text-foreground shadow-sm'
+              ? 'bg-background text-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground'
           }`}
           onClick={() => setView('bindings')}

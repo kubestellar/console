@@ -24,10 +24,10 @@ export function DiscardConfirmDialog({
 }: DiscardConfirmDialogProps) {
   const { t } = useTranslation()
   return (
-    <div className="fixed inset-0 z-critical flex items-center justify-center bg-black/60 backdrop-blur-sm" role="presentation">
+    <div className="fixed inset-0 z-critical flex items-center justify-center bg-black/60 backdrop-blur-xs" role="presentation">
       <div className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-sm w-full mx-4" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-5 h-5 text-yellow-400" />
           </div>
           <h3 className="text-lg font-semibold text-foreground">
@@ -82,7 +82,7 @@ export function LoginPromptDialog({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-critical"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-critical"
         onClick={onClose}
       />
       <div className="fixed inset-0 z-critical flex items-center justify-center p-4 pointer-events-none">
@@ -221,7 +221,7 @@ export function FullscreenPreview({ description, onClose }: FullscreenPreviewPro
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-xs"
       onClick={(e) => {
         if (e.target === overlayRef.current) {
           onClose()
@@ -275,7 +275,7 @@ export function ScreenshotPreviewOverlay({ src, onClose }: ScreenshotPreviewOver
     <div
       ref={overlayRef}
       tabIndex={-1}
-      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-sm outline-none"
+      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-xs outline-hidden"
       onClick={(e) => {
         if (e.target === overlayRef.current) {
           onClose()

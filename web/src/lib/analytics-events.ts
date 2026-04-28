@@ -350,6 +350,42 @@ export function emitDemoModeToggled(enabled: boolean) {
   setAnalyticsUserProperties({ demo_mode: String(enabled) })
 }
 
+// ── Auth / Connection Failure Detection ─────────────────────────
+// These events fire when auth-dependent paths silently degrade.
+// The GA4 error monitor workflow creates issues when thresholds are hit.
+
+export function emitAgentTokenFailure(reason: string) {
+  send('ksc_error', {
+    error_category: 'agent_token_failure',
+    error_detail: reason.slice(0, 100),
+    error_page: typeof window !== 'undefined' ? window.location.pathname : '',
+  })
+}
+
+export function emitWsAuthMissing(url: string) {
+  send('ksc_error', {
+    error_category: 'ws_auth_missing',
+    error_detail: url.replace(/^wss?:\/\/[^/]+/, '').slice(0, 100),
+    error_page: typeof window !== 'undefined' ? window.location.pathname : '',
+  })
+}
+
+export function emitSseAuthFailure(url: string) {
+  send('ksc_error', {
+    error_category: 'sse_auth_failure',
+    error_detail: url.replace(/^https?:\/\/[^/]+/, '').slice(0, 100),
+    error_page: typeof window !== 'undefined' ? window.location.pathname : '',
+  })
+}
+
+export function emitSessionRefreshFailure(reason: string) {
+  send('ksc_error', {
+    error_category: 'session_refresh_failure',
+    error_detail: reason.slice(0, 100),
+    error_page: typeof window !== 'undefined' ? window.location.pathname : '',
+  })
+}
+
 // ── kc-agent Connection ─────────────────────────────────────────
 
 export function emitAgentConnected(version: string, clusterCount: number) {

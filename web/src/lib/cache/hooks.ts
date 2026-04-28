@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { MS_PER_MINUTE } from '../constants/time'
 
 // ============================================================================
 // localStorage Hook for Preferences
@@ -143,7 +144,7 @@ interface UseIndexedDataResult<T> {
  * const { data, save, isStale } = useIndexedData<EventLog[]>({
  *   key: 'events:prod-cluster',
  *   defaultValue: [],
- *   maxAge: 5 * 60 * 1000, // 5 minutes
+ *   maxAge: 5 * MS_PER_MINUTE,
  * })
  *
  * // Save new data
@@ -152,7 +153,7 @@ interface UseIndexedDataResult<T> {
 export function useIndexedData<T>({
   key,
   defaultValue,
-  maxAge = 5 * 60 * 1000 }: UseIndexedDataOptions<T>): UseIndexedDataResult<T> {
+  maxAge = 5 * MS_PER_MINUTE }: UseIndexedDataOptions<T>): UseIndexedDataResult<T> {
   const [data, setData] = useState<T>(defaultValue)
   const [isLoading, setIsLoading] = useState(true)
   const [lastSaved, setLastSaved] = useState<number | null>(null)
@@ -399,7 +400,7 @@ interface UseTrendHistoryOptions {
  * const { history, addPoint, clear, isStale } = useTrendHistory<ResourcePoint>({
  *   key: 'resource-trend',
  *   maxPoints: 24,
- *   maxAge: 30 * 60 * 1000, // 30 minutes
+ *   maxAge: 30 * MS_PER_MINUTE,
  * })
  *
  * // Add new data point
@@ -408,7 +409,7 @@ interface UseTrendHistoryOptions {
 export function useTrendHistory<T extends TrendPoint>({
   key,
   maxPoints = 50,
-  maxAge = 30 * 60 * 1000 }: UseTrendHistoryOptions) {
+  maxAge = 30 * MS_PER_MINUTE }: UseTrendHistoryOptions) {
   const {
     data: history,
     isLoading,

@@ -33,6 +33,7 @@ const mockClusterCacheRef = vi.hoisted(() => ({
 
 vi.mock('../mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 const mockKubectlExec = vi.hoisted(() => vi.fn())
@@ -41,12 +42,16 @@ vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockKubectlExec(...args) },
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-  STORAGE_KEY_TOKEN: 'kc-auth-token',
-  STORAGE_KEY_MISSIONS_ACTIVE: 'kc-missions-active',
-  STORAGE_KEY_MISSIONS_HISTORY: 'kc-missions-history',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+    STORAGE_KEY_TOKEN: 'kc-auth-token',
+    STORAGE_KEY_MISSIONS_ACTIVE: 'kc-missions-active',
+    STORAGE_KEY_MISSIONS_HISTORY: 'kc-missions-history',
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10000,

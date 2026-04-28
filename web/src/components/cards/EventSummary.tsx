@@ -140,7 +140,7 @@ export function EventSummary() {
       {/* Error Display */}
       {isFailed && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-red-400">{t('eventSummary.errorLoading')}</p>
             <p className="text-2xs text-muted-foreground mt-0.5">{t('eventSummary.fetchFailed', { count: consecutiveFailures })}</p>
@@ -174,7 +174,7 @@ export function EventSummary() {
             {summary.topReasons.map(([reason, count]) => (
               <div key={reason} className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
                 <span className="text-foreground truncate mr-2">{reason}</span>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
                     <div
                       className="h-full rounded-full bg-purple-500"
@@ -197,7 +197,7 @@ export function EventSummary() {
             {summary.topClusters.map(([cluster, count]) => (
               <div key={cluster} className="flex flex-wrap items-center justify-between gap-y-2 text-xs">
                 <span className="text-foreground truncate mr-2">{cluster}</span>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden">
                     <div
                       className="h-full rounded-full bg-blue-500"

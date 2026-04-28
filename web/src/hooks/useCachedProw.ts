@@ -5,26 +5,12 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
+import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { kubectlProxy } from '../lib/kubectlProxy'
+import { formatTimeAgo, formatProwDuration } from '../lib/formatters'
 import { KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_HOUR } from '../lib/constants/time'
 import type { ProwJob, ProwStatus } from './useProw'
-
-// ============================================================================
-// Shared Types
-// ============================================================================
-
-interface CachedHookResult<T> {
-  data: T
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
-  error: string | null
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
-}
 
 // ============================================================================
 // Constants
@@ -75,37 +61,7 @@ interface ProwJobResource {
   }
 }
 
-function formatDuration(startTime: string, endTime?: string): string {
-  const start = new Date(startTime)
-  const end = endTime ? new Date(endTime) : new Date()
-  const diffMs = end.getTime() - start.getTime()
-
-  if (diffMs < 0) return '-'
-
-  const seconds = Math.floor(diffMs / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-
-  if (hours > 0) return `${hours}h ${minutes % 60}m`
-  if (minutes > 0) return `${minutes}m`
-  return `${seconds}s`
-}
-
-export function formatTimeAgo(timestamp: string): string {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-
-  const seconds = Math.floor(diffMs / 1000)
-  const minutes = Math.floor(seconds / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) return `${days}d ago`
-  if (hours > 0) return `${hours}h ago`
-  if (minutes > 0) return `${minutes}m ago`
-  return `${seconds}s ago`
-}
+export { formatTimeAgo }
 
 /** @internal Exported for use in `lib/prefetchCardData.ts` specialtyFetchers */
 export async function fetchProwJobs(prowCluster: string, namespace: string): Promise<ProwJob[]> {
@@ -143,7 +99,7 @@ export async function fetchProwJobs(prowCluster: string, namespace: string): Pro
         cluster: prowCluster,
         startTime,
         completionTime,
-        duration: state === 'pending' || state === 'triggered' ? '-' : formatDuration(startTime, completionTime),
+        duration: state === 'pending' || state === 'triggered' ? '-' : formatProwDuration(startTime, completionTime),
         pr: pj.spec.refs?.pulls?.[0]?.number,
         url: pj.status.url,
         buildId: pj.status.build_id || pj.metadata.labels?.['prow.k8s.io/build-id'],
@@ -152,7 +108,7 @@ export async function fetchProwJobs(prowCluster: string, namespace: string): Pro
 }
 
 function computeProwStatus(jobs: ProwJob[], consecutiveFailures: number): ProwStatus {
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+  const oneHourAgo = new Date(Date.now() - MS_PER_HOUR)
   const recentJobs = jobs.filter(j => new Date(j.startTime) > oneHourAgo)
 
   const pendingJobs = jobs.filter(j => j.state === 'pending' || j.state === 'triggered').length

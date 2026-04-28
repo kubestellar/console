@@ -76,7 +76,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
         className="w-full flex items-center justify-between px-5 py-3 hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-900 to-cyan-900 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-linear-to-br from-blue-900 to-cyan-900 flex items-center justify-center">
             <GraduationCap className="w-4 h-4 text-blue-400" />
           </div>
           <div className="text-left">
@@ -97,7 +97,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
           {/* Progress bar */}
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-green-500 to-cyan-500 rounded-full transition-all duration-500"
+              className="h-full bg-linear-to-r from-green-500 to-cyan-500 rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -399,7 +399,7 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
               className="fixed z-dropdown pointer-events-none"
               style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' }}
             >
-              <div className="px-4 py-3 bg-background border border-border rounded-lg shadow-xl backdrop-blur-sm min-w-[200px]">
+              <div className="px-4 py-3 bg-background border border-border rounded-lg shadow-xl backdrop-blur-xs min-w-[200px]">
                 <div className="flex items-center gap-3 mb-2">
                   <img
                     src={`https://github.com/${github}.png?size=80`}
@@ -717,7 +717,7 @@ export function Marketplace() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('common.searchMarketplace')}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-hidden focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
           />
         </div>
 
@@ -831,14 +831,14 @@ export function Marketplace() {
           <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
             <button
               onClick={() => toggleViewMode('grid')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
               title="Grid view"
             >
               <Grid3X3 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => toggleViewMode('list')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
               title="List view"
             >
               <List className="w-3.5 h-3.5" />

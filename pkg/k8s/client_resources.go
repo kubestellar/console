@@ -246,13 +246,17 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 }
 
 // GetEvents returns events from a cluster
-func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespace string, limit int) ([]Event, error) {
+func (m *MultiClusterClient) GetEvents(ctx context.Context, contextName, namespace string, limit int, fieldSelectors ...string) ([]Event, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
 		return nil, err
 	}
 
-	events, err := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{})
+	listOpts := metav1.ListOptions{}
+	if len(fieldSelectors) > 0 && fieldSelectors[0] != "" {
+		listOpts.FieldSelector = fieldSelectors[0]
+	}
+	events, err := client.CoreV1().Events(namespace).List(ctx, listOpts)
 	if err != nil {
 		return nil, err
 	}

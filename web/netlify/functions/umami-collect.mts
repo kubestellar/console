@@ -9,46 +9,57 @@
  */
 
 import type { Config } from "@netlify/functions"
+import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
 
 const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
 
-const ALLOWED_HOSTS = new Set([
+/**
+ * Hosts allowed via Referer fallback when Origin is absent. Keep
+ * separate from the CORS allowlist because Referer is a weaker signal
+ * (can be stripped by Referrer-Policy) — only used when Origin is
+ * entirely missing (e.g. beacon sendBeacon() without CORS).
+ */
+const REFERER_FALLBACK_HOSTS = new Set([
   "console.kubestellar.io",
   "localhost",
   "127.0.0.1",
 ])
 
-function isAllowedOrigin(req: Request): boolean {
-  const origin = req.headers.get("origin") || ""
-  const referer = req.headers.get("referer") || ""
+function isRequestAllowed(req: Request): boolean {
+  // Prefer the CORS allowlist via the Origin header.
+  if (isAllowedOrigin(req.headers.get("origin"))) return true
 
-  for (const header of [origin, referer]) {
-    if (!header) continue
+  // Fall back to Referer for requests where Origin is not sent.
+  const referer = req.headers.get("referer")
+  if (referer) {
     try {
-      const hostname = new URL(header).hostname
-      if (ALLOWED_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
+      const hostname = new URL(referer).hostname
+      if (REFERER_FALLBACK_HOSTS.has(hostname) || hostname.endsWith(".netlify.app")) {
         return true
       }
     } catch {
       /* ignore parse errors */
     }
   }
-  // Allow if neither header present (browsers always send one for fetch)
-  return !origin && !referer
+
+  // Allow if neither Origin nor Referer is present (rare, same-origin POST with strict Referrer-Policy).
+  return !req.headers.get("origin") && !referer
 }
 
+// See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
+const CORS_OPTS = {
+  methods: "POST, OPTIONS",
+  headers: "Content-Type",
+} as const
+
 export default async (req: Request) => {
-  const corsHeaders: Record<string, string> = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-  }
+  const corsHeaders: Record<string, string> = buildCorsHeaders(req, CORS_OPTS)
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders })
+    return handlePreflight(req, CORS_OPTS)
   }
 
-  if (!isAllowedOrigin(req)) {
+  if (!isRequestAllowed(req)) {
     return new Response("Forbidden", { status: 403, headers: corsHeaders })
   }
 

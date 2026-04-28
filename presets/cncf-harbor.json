@@ -1,0 +1,10 @@
+{
+  "format": "kc-card-preset-v1",
+  "card_type": "harbor_status",
+  "title": "Harbor Registry",
+  "description": "Harbor registry projects, repositories, and vulnerability scan results.",
+  "category": "Provisioning",
+  "project": "harbor",
+  "cncf_status": "graduated",
+  "config": {}
+}

@@ -47,10 +47,11 @@ export function GPUStatus({ config }: GPUStatusProps) {
   const { drillToCluster } = useDrillDownActions()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = rawNodes.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
     isRefreshing,
-    hasAnyData: rawNodes.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoMode || isDemoFallback,
     isFailed,
     consecutiveFailures,

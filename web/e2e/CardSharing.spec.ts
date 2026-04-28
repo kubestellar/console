@@ -44,8 +44,92 @@ async function getSharedCard(page: Page, shareId: string): Promise<{ status: num
 }
 
 test.describe('Card & Dashboard Sharing — API contract', () => {
+  // In-memory store for round-trip tests
+  const savedCards = new Map<string, unknown>()
+
+  /** Register sharing API mocks AFTER setupDemoAndNavigate so they
+   *  override the catch-all (Playwright matches last-registered first). */
+  async function setupSharingMocks(page: Page) {
+    let shareCounter = 0
+
+    await page.route('**/api/cards/save', async (route) => {
+      const body = route.request().postDataJSON()
+      const shareId = `share-${++shareCounter}`
+      savedCards.set(shareId, body)
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          shareId,
+          shareUrl: `/shared/card/${shareId}`,
+        }),
+      })
+    })
+
+    await page.route('**/api/cards/shared/**', async (route) => {
+      const url = route.request().url()
+      const id = url.split('/api/cards/shared/')[1]?.split('?')[0]
+      const card = id ? savedCards.get(id) : undefined
+      if (card) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ card }),
+        })
+      } else {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Card not found' }),
+        })
+      }
+    })
+
+    await page.route('**/api/dashboards/save', async (route) => {
+      const shareId = `dash-${++shareCounter}`
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          shareId,
+          shareUrl: `/shared/dashboard/${shareId}`,
+        }),
+      })
+    })
+
+    await page.route('**/api/dashboards/export', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          version: '1.0.0',
+          exportedAt: new Date().toISOString(),
+          cards: [
+            { type: 'cluster_health', position: { x: 0, y: 0 } },
+            { type: 'pod_issues', position: { x: 4, y: 0 } },
+          ],
+        }),
+      })
+    })
+
+    await page.route('**/api/dashboards/import', async (route) => {
+      const body = route.request().postDataJSON()
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          imported: body,
+        }),
+      })
+    })
+  }
+
   test('saving a card returns a shareId and a resolvable shareUrl', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
+    await setupSharingMocks(page)
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const saved = await saveCardForSharing(page, {
@@ -63,6 +147,7 @@ test.describe('Card & Dashboard Sharing — API contract', () => {
 
   test('round-tripping a shared card returns the saved payload', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
+    await setupSharingMocks(page)
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const payload = { id: 'pod_issues', config: { severity: 'critical' } }
@@ -83,6 +168,7 @@ test.describe('Card & Dashboard Sharing — API contract', () => {
 
   test('requesting a nonexistent shared card returns a 404 with a structured error body', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
+    await setupSharingMocks(page)
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const fetched = await getSharedCard(page, 'does-not-exist-12345')
@@ -92,6 +178,7 @@ test.describe('Card & Dashboard Sharing — API contract', () => {
 
   test('saving a dashboard returns a shareId and dashboard share URL', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
+    await setupSharingMocks(page)
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const response = await page.evaluate(async () => {
@@ -113,6 +200,7 @@ test.describe('Card & Dashboard Sharing — API contract', () => {
 
   test('dashboard export endpoint returns a versioned JSON payload with cards', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
+    await setupSharingMocks(page)
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const exported = await page.evaluate(async () => {
@@ -142,6 +230,7 @@ test.describe('Card & Dashboard Sharing — API contract', () => {
 
   test('dashboard import endpoint accepts a previously exported payload', async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
+    await setupSharingMocks(page)
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const imported = await page.evaluate(async () => {

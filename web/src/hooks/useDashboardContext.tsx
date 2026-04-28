@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react'
 import { useDashboardHealth, type DashboardHealthInfo } from './useDashboardHealth'
 
 /** Valid initial sections for Console Studio */
@@ -65,44 +65,60 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setStudioWidgetCardType(undefined)
   }, [])
 
-  const setPendingOpenAddCardModal = (pending: boolean) => {
+  const setPendingOpenAddCardModal = useCallback((pending: boolean) => {
     setPendingOpenAddCardModalState(pending)
-  }
+  }, [])
 
-  const openTemplatesModal = () => {
+  const openTemplatesModal = useCallback(() => {
     setIsTemplatesModalOpen(true)
-  }
+  }, [])
 
-  const closeTemplatesModal = () => {
+  const closeTemplatesModal = useCallback(() => {
     setIsTemplatesModalOpen(false)
-  }
+  }, [])
 
-  const setPendingRestoreCard = (card: PendingRestoreCard | null) => {
+  const setPendingRestoreCard = useCallback((card: PendingRestoreCard | null) => {
     setPendingRestoreCardState(card)
-  }
+  }, [])
 
-  const clearPendingRestoreCard = () => {
+  const clearPendingRestoreCard = useCallback(() => {
     setPendingRestoreCardState(null)
-  }
+  }, [])
+
+  const value = useMemo(() => ({
+    isAddCardModalOpen,
+    openAddCardModal,
+    closeAddCardModal,
+    studioInitialSection,
+    studioWidgetCardType,
+    pendingOpenAddCardModal,
+    setPendingOpenAddCardModal,
+    isTemplatesModalOpen,
+    openTemplatesModal,
+    closeTemplatesModal,
+    pendingRestoreCard,
+    setPendingRestoreCard,
+    clearPendingRestoreCard,
+    health,
+  }), [
+    isAddCardModalOpen,
+    openAddCardModal,
+    closeAddCardModal,
+    studioInitialSection,
+    studioWidgetCardType,
+    pendingOpenAddCardModal,
+    setPendingOpenAddCardModal,
+    isTemplatesModalOpen,
+    openTemplatesModal,
+    closeTemplatesModal,
+    pendingRestoreCard,
+    setPendingRestoreCard,
+    clearPendingRestoreCard,
+    health,
+  ])
 
   return (
-    <DashboardContext.Provider
-      value={{
-        isAddCardModalOpen,
-        openAddCardModal,
-        closeAddCardModal,
-        studioInitialSection,
-        studioWidgetCardType,
-        pendingOpenAddCardModal,
-        setPendingOpenAddCardModal,
-        isTemplatesModalOpen,
-        openTemplatesModal,
-        closeTemplatesModal,
-        pendingRestoreCard,
-        setPendingRestoreCard,
-        clearPendingRestoreCard,
-        health }}
-    >
+    <DashboardContext.Provider value={value}>
       {children}
     </DashboardContext.Provider>
   )

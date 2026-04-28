@@ -29,7 +29,9 @@ const DEEP_LINK_RENDER_DELAY_MS = 300
 /** Build JWT auth headers for backend proxy requests */
 function authHeaders(): Record<string, string> {
   const token = safeGetItem(STORAGE_KEY_TOKEN)
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
 }
 
 export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProps) {

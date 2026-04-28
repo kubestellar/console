@@ -3,21 +3,10 @@ import { useGPUNodes, useAllPods } from '../../../hooks/useMCP'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusIndicator, type Status } from '../../charts/StatusIndicator'
+import { hasGPUResourceRequest, normalizeClusterName } from '../../../lib/gpu'
 
 interface Props {
   data: Record<string, unknown>
-}
-
-// Check if any container requests GPUs
-function hasGPUResourceRequest(containers?: { gpuRequested?: number }[]): boolean {
-  if (!containers) return false
-  return containers.some(c => (c.gpuRequested ?? 0) > 0)
-}
-
-function normalizeClusterName(cluster: string): string {
-  if (!cluster) return ''
-  const parts = cluster.split('/')
-  return parts[parts.length - 1] || cluster
 }
 
 function podStatusToIndicator(status: string): Status {

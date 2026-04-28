@@ -25,9 +25,9 @@ export type StatusLevel =
   | 'loading'
 
 export type PatternType = 'solid' | 'striped' | 'dotted' | 'dashed' | 'none'
-export type ShapeType = 'circle' | 'triangle' | 'square' | 'diamond' | 'none'
+type ShapeType = 'circle' | 'triangle' | 'square' | 'diamond' | 'none'
 
-export interface AccessibleStatusConfig {
+interface AccessibleStatusConfig {
   icon: LucideIcon
   pattern: PatternType
   shape: ShapeType

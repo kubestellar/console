@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
@@ -129,7 +129,7 @@ jobs:
 
       - name: Upload digest
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: digests-${{ matrix.arch }}
           path: ${{ runner.temp }}/digests/*
@@ -193,7 +193,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@15650b3ad78fff148532a140b8a4c821796b2d7b # v5.0.0
@@ -250,8 +250,8 @@ jobs:
       - name: Recover stuck Helm release
         run: |
           RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kc -o json 2>/dev/null | jq -r '.info.status // empty' || true)
-          if [[ "$RELEASE_STATUS" == "pending-"* ]]; then
-            echo "::warning::Helm release stuck in '$RELEASE_STATUS' — rolling back to recover"
+          if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+            echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
             helm rollback ${{ env.HELM_RELEASE_NAME }} -n kc --wait --timeout 2m || true
           fi
 
@@ -302,7 +302,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@15650b3ad78fff148532a140b8a4c821796b2d7b # v5.0.0
@@ -344,8 +344,8 @@ jobs:
       - name: Recover stuck Helm release
         run: |
           RELEASE_STATUS=$(helm status ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console -o json 2>/dev/null | jq -r '.info.status // empty' || true)
-          if [[ "$RELEASE_STATUS" == "pending-"* ]]; then
-            echo "::warning::Helm release stuck in '$RELEASE_STATUS' — rolling back to recover"
+          if [[ "$RELEASE_STATUS" == "pending-"* || "$RELEASE_STATUS" == "failed" ]]; then
+            echo "::warning::Helm release in '$RELEASE_STATUS' — rolling back to recover"
             helm rollback ${{ env.HELM_RELEASE_NAME }} -n kubestellar-console --wait --timeout 2m || true
           fi
 
@@ -374,7 +374,7 @@ jobs:
             --set securityContext.runAsGroup=null \
             --atomic \
             --wait \
-            --timeout 5m
+            --timeout 8m
 
       - name: Verify deployment
         run: |

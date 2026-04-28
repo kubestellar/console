@@ -13,6 +13,7 @@ import { BaseModal } from '../../lib/modals/BaseModal'
 import { CardComponentProps } from './cardRegistry'
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 
 // Resource types to monitor
 type ResourceType = 'pods' | 'deployments' | 'services' | 'configmaps' | 'secrets' | 'pvcs' | 'jobs'
@@ -105,10 +106,11 @@ const MAX_NAMESPACES_RENDERED_PER_CLUSTER = 30
 // Shared empty result for clusters that aren't the selected one — avoids
 // allocating a fresh Map on every render of every non-selected cluster row.
 const EMPTY_NAMESPACE_DATA: Map<string, NamespaceData> = new Map()
+const MAX_VISIBLE_ITEMS = 10
 
 export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   const { isDemoMode } = useDemoMode()
-  const { deduplicatedClusters: clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToNamespace, drillToPod, drillToDeployment, drillToService, drillToPVC } = useDrillDownActions()
   // UI state
@@ -162,11 +164,14 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
     pvcsDemoFallback || podsDemoFallback || configmapsDemoFallback || secretsDemoFallback || jobsDemoFallback
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = clusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing: namespacesRefreshing || deploymentsRefreshing || servicesRefreshing || pvcsRefreshing || podsRefreshing || configmapsRefreshing || secretsRefreshing || jobsRefreshing,
-    hasAnyData: clusters.length > 0,
-    isDemoData: isDemoMode || isDemoData })
+    hasAnyData: hasData,
+    isDemoData: isDemoMode || isDemoData,
+    isFailed,
+    consecutiveFailures })
 
   // Build snapshots and detect changes
   useEffect(() => {
@@ -491,7 +496,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   // Count recent changes by type
   const changeCountsByType = (() => {
     const counts = { added: 0, modified: 0, deleted: 0, error: 0 }
-    const recentTime = Date.now() - 60000 // Last minute
+    const recentTime = Date.now() - MS_PER_MINUTE
     recentChanges.forEach(c => {
       if (c.timestamp > recentTime && c.type) {
         counts[c.type]++
@@ -618,7 +623,7 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
   return (
     <div className="h-full flex flex-col min-h-0 relative">
       {/* Header */}
-      <div className="flex items-center justify-end mb-3 flex-shrink-0">
+      <div className="flex items-center justify-end mb-3 shrink-0">
         <div className="flex items-center gap-2">
           {/* Changes indicator */}
           <button
@@ -643,11 +648,11 @@ export function NamespaceMonitor({ config: _config }: CardComponentProps) {
         value={searchFilter}
         onChange={setSearchFilter}
         placeholder="Search clusters, namespaces..."
-        className="mb-3 flex-shrink-0"
+        className="mb-3 shrink-0"
       />
 
       {/* Resource type filters */}
-      <div className="flex flex-wrap gap-1.5 mb-3 flex-shrink-0">
+      <div className="flex flex-wrap gap-1.5 mb-3 shrink-0">
         {(Object.keys(ResourceIcons) as ResourceType[]).map(type => {
           const Icon = ResourceIcons[type]
           const isActive = activeResourceTypes.has(type)
@@ -935,7 +940,7 @@ function ResourceSection({
         <span>({items.length})</span>
       </div>
       <div className="space-y-0.5">
-        {items.slice(0, 10).map(item => {
+        {items.slice(0, MAX_VISIBLE_ITEMS).map(item => {
           const changeType = getResourceChange(cluster, namespace, type, item.name)
           const key = `${cluster}:${namespace}:${type}:${item.name}`
 
@@ -975,9 +980,9 @@ function ResourceSection({
             </div>
           )
         })}
-        {items.length > 10 && (
+        {items.length > MAX_VISIBLE_ITEMS && (
           <div className="text-2xs text-muted-foreground px-2 py-1">
-            +{items.length - 10} more
+            +{items.length - MAX_VISIBLE_ITEMS} more
           </div>
         )}
       </div>

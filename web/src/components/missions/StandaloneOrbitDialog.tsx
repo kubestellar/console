@@ -353,7 +353,7 @@ export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialo
   return (
     <>
     <div
-      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-500 flex items-center justify-center bg-black/50 backdrop-blur-xs"
       onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onClose() } }}
       tabIndex={-1}
       ref={(el) => el?.focus()}
@@ -509,7 +509,7 @@ export function StandaloneOrbitDialog({ onClose, prefill }: StandaloneOrbitDialo
                           />
                           <span className="text-xs text-foreground truncate">{c.name}</span>
                           <span className={cn(
-                            'ml-auto text-[10px] flex-shrink-0',
+                            'ml-auto text-[10px] shrink-0',
                             c.healthy ? 'text-green-400' : 'text-red-400',
                           )}>
                             {c.healthy ? 'Healthy' : 'Unhealthy'}

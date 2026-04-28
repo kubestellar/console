@@ -6,18 +6,22 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
-import { isBackendUnavailable, authFetch } from '../lib/api'
+import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
+import { VULN_SEVERITY_ORDER } from '../types/alerts'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import {
   fetchAPI,
+  fetchBackendAPI,
   fetchFromAllClusters,
+  fetchFromAllClustersViaBackend,
   fetchViaSSE,
+  fetchViaBackendSSE,
   getToken,
   AGENT_HTTP_TIMEOUT_MS,
 } from '../lib/cache/fetcherUtils'
@@ -38,12 +42,11 @@ import {
   getDemoWorkloads,
 } from './useCachedData/demoData'
 import {
-  SecurityIssuesResponseSchema,
   PodsResponseSchema,
   EventsResponseSchema,
   DeploymentsResponseSchema,
 } from '../lib/schemas'
-import { validateResponse, validateArrayResponse } from '../lib/schemas/validate'
+import { validateArrayResponse } from '../lib/schemas/validate'
 import type {
   PodInfo,
   PodIssue,
@@ -59,19 +62,6 @@ import type { Workload } from './useWorkloads'
 // Shared types
 // ============================================================================
 
-/** Shared result shape for all useCached* hooks */
-interface CachedHookResult<T> {
-  data: T
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
-  error: string | null
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
-}
-
 // ============================================================================
 // Private: Security kubectl scanner
 // ============================================================================
@@ -84,7 +74,7 @@ async function fetchSecurityIssuesViaKubectl(cluster?: string, namespace?: strin
   const clusters = getAgentClusters()
   if (clusters.length === 0) return []
 
-  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
+  const severityOrder = VULN_SEVERITY_ORDER
 
   const tasks = clusters
     .filter(c => !cluster || c.name === cluster)
@@ -403,22 +393,23 @@ export function useCachedPodIssues(
           const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
           const ctx = clusterInfo?.context || cluster
           issues = await kubectlProxy.getPodIssues(ctx, namespace)
-          issues = issues.map(i => ({ ...i, cluster: cluster }))
+          // Guard against null/undefined when proxy is disconnected or in cooldown
+          issues = (issues || []).map(i => ({ ...i, cluster: cluster }))
         } else {
           issues = await fetchPodIssuesViaAgent(namespace)
         }
         return sortIssues(issues)
       }
 
-      // Fall back to REST API
+      // Fall back to REST API — pod-issues is a backend-only endpoint (#9996)
       const token = getToken()
       const hasRealToken = token && token !== 'demo-token'
       if (hasRealToken && !isBackendUnavailable()) {
         if (cluster) {
-          const data = await fetchAPI<{ issues: PodIssue[] }>('pod-issues', { cluster, namespace })
+          const data = await fetchBackendAPI<{ issues: PodIssue[] }>('pod-issues', { cluster, namespace })
           issues = (data.issues || []).map(i => ({ ...i, cluster }))
         } else {
-          issues = await fetchFromAllClusters<PodIssue>('pod-issues', 'issues', { namespace })
+          issues = await fetchFromAllClustersViaBackend<PodIssue>('pod-issues', 'issues', { namespace })
         }
         return sortIssues(issues)
       }
@@ -435,8 +426,8 @@ export function useCachedPodIssues(
         return sortIssues(issues)
       }
 
-      // Fall back to SSE streaming -> REST per-cluster
-      const issues = await fetchViaSSE<PodIssue>('pod-issues', 'issues', { namespace }, (partial) => {
+      // Fall back to SSE streaming via backend — pod-issues is backend-only (#9996)
+      const issues = await fetchViaBackendSSE<PodIssue>('pod-issues', 'issues', { namespace }, (partial) => {
         onProgress(sortIssues([...partial]))
       })
       return sortIssues(issues)
@@ -493,7 +484,7 @@ export function useCachedDeploymentIssues(
               if (namespace) params.append('namespace', namespace)
               const ctrl = new AbortController()
               const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
-              const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+              const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                 signal: ctrl.signal, headers: { Accept: 'application/json' } })
               clearTimeout(tid)
               if (!res.ok) return []
@@ -506,11 +497,11 @@ export function useCachedDeploymentIssues(
         return deriveIssues(deployments)
       }
 
-      // Fall back to REST API
+      // Fall back to REST API — deployment-issues is a backend-only endpoint (#9996)
       const token = getToken()
       const hasRealToken = token && token !== 'demo-token'
       if (hasRealToken && !isBackendUnavailable()) {
-        const data = await fetchAPI<{ issues: DeploymentIssue[] }>('deployment-issues', { cluster, namespace })
+        const data = await fetchBackendAPI<{ issues: DeploymentIssue[] }>('deployment-issues', { cluster, namespace })
         return data.issues || []
       }
 
@@ -524,8 +515,8 @@ export function useCachedDeploymentIssues(
         return deriveIssues(deployments)
       }
 
-      // Fall back to SSE streaming -> REST per-cluster
-      const issues = await fetchViaSSE<DeploymentIssue>('deployment-issues', 'issues', { namespace }, onProgress)
+      // Fall back to SSE streaming via backend — deployment-issues is backend-only (#9996)
+      const issues = await fetchViaBackendSSE<DeploymentIssue>('deployment-issues', 'issues', { namespace }, onProgress)
       return issues
     } })
 
@@ -569,7 +560,7 @@ export function useCachedDeployments(
 
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), AGENT_HTTP_TIMEOUT_MS)
-          const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+          const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
             signal: controller.signal,
             headers: { Accept: 'application/json' } })
           clearTimeout(timeoutId)
@@ -691,25 +682,13 @@ export function useCachedSecurityIssues(
         }
       }
 
-      // Fall back to REST API
+      // Fall back to REST API — security-issues is a backend-only endpoint (#9996)
       const token = getToken()
       const hasRealToken = token && token !== 'demo-token'
       if (hasRealToken && !isBackendUnavailable()) {
         try {
-          const params = new URLSearchParams()
-          if (cluster) params.append('cluster', cluster)
-          if (namespace) params.append('namespace', namespace)
-          const response = await authFetch(`${LOCAL_AGENT_HTTP_URL}/security-issues?${params}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}` },
-            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-          if (response.ok) {
-            const rawSecurity = await response.json().catch(() => null)
-            const data = validateResponse(SecurityIssuesResponseSchema, rawSecurity, '/security-issues')
-            if (data?.issues && data.issues.length > 0) return data.issues
-          }
+          const data = await fetchBackendAPI<{ issues: SecurityIssue[] }>('security-issues', { cluster, namespace })
+          if (data?.issues && data.issues.length > 0) return data.issues
         } catch (err) {
           console.error('[useCachedSecurityIssues] API fetch failed:', err)
         }
@@ -729,8 +708,8 @@ export function useCachedSecurityIssues(
         }
       }
 
-      // Fall back to SSE streaming -> REST per-cluster
-      return await fetchViaSSE<SecurityIssue>('security-issues', 'issues', { namespace }, onProgress)
+      // Fall back to SSE streaming via backend — security-issues is backend-only (#9996)
+      return await fetchViaBackendSSE<SecurityIssue>('security-issues', 'issues', { namespace }, onProgress)
     } : undefined })
 
   return {

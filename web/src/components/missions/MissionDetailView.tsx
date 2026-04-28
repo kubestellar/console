@@ -139,7 +139,7 @@ function StepCard({ step, index, accentColor }: { step: MissionStep; index: numb
     <div className="flex gap-3 p-4 rounded-lg bg-secondary/50 border border-border">
       <span
         className={cn(
-          'flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold',
+          'shrink-0 w-7 h-7 flex items-center justify-center rounded-full text-xs font-bold',
           accentColor
         )}
       >
@@ -301,7 +301,7 @@ export function MissionDetailView({
           <h2 className="text-xl font-semibold text-foreground">{mission.title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{mission.description}</p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {matchScore != null && matchScore > 0 && (
             <StatusBadge color="purple" size="md" variant="outline" rounded="full">
               <Star className="w-3 h-3" />
@@ -525,7 +525,7 @@ export function MissionDetailView({
               <ul className="space-y-1">
                 {mission.prerequisites.map((p, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                    <CheckCircle className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
                     {p}
                   </li>
                 ))}
@@ -536,12 +536,12 @@ export function MissionDetailView({
           {/* Error banner — shown when full mission content could not be fetched */}
           {error && (
             <div role="alert" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
               <span className="text-red-400 flex-1">{error}</span>
               {onRetry && (
                 <button
                   onClick={onRetry}
-                  className="flex-shrink-0 px-3 py-1 text-xs rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors"
+                  className="shrink-0 px-3 py-1 text-xs rounded-md bg-red-500/20 hover:bg-red-500/30 text-red-300 transition-colors"
                 >
                   Retry
                 </button>
@@ -586,7 +586,7 @@ export function MissionDetailView({
               /* Shimmer skeleton placeholders while full mission content loads */
               Array.from({ length: LOADING_SKELETON_COUNT }).map((_, i) => (
                 <div key={i} className="flex gap-3 p-4 rounded-lg bg-secondary/50 border border-border">
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full animate-shimmer" />
+                  <div className="shrink-0 w-7 h-7 rounded-full animate-shimmer" />
                   <div className="flex-1 space-y-2">
                     <div className="h-4 w-1/3 rounded animate-shimmer" />
                     <div className="h-3 w-full rounded animate-shimmer" />
@@ -640,7 +640,7 @@ export function MissionDetailView({
             ) : activeTab === 'security' ? (
               <div className="py-6 px-4 rounded-lg border border-purple-500/20 bg-purple-500/5 text-sm text-muted-foreground space-y-3">
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <Shield className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
                   <div className="space-y-2">
                     <p className="font-medium text-foreground">No mission-specific security notes yet</p>
                     <p>

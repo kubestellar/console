@@ -8,9 +8,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
 import { BACKEND_DEFAULT_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** Client-side cache TTL (15 minutes) */
-const CACHE_TTL_MS = 15 * 60 * 1000
+const CACHE_TTL_MS = 15 * MS_PER_MINUTE
 const CACHE_KEY_PREFIX = 'bonus-points-cache'
 
 interface BonusEntry {

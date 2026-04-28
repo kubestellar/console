@@ -425,7 +425,7 @@ describe('useOperators – phase → status mapping', () => {
 })
 
 describe('useOperators – SSE unavailable when no token', () => {
-  it('falls back to REST when no token in localStorage', async () => {
+  it('skips REST call when no token in localStorage (prevents GA4 auth errors)', async () => {
     localStorage.removeItem('token')
     const fakeOps = [
       { name: 'op1', namespace: 'ns', version: 'v1', status: 'Succeeded', cluster: 'c1' },
@@ -435,10 +435,10 @@ describe('useOperators – SSE unavailable when no token', () => {
     const { result } = renderHook(() => useOperators())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    // SSE should not be attempted; REST should be called
+    // Neither SSE nor REST should be attempted without a token (#9957)
     expect(mockFetchSSE).not.toHaveBeenCalled()
-    expect(mockApiGet).toHaveBeenCalled()
-    expect(result.current.operators.length).toBe(1)
+    expect(mockApiGet).not.toHaveBeenCalled()
+    expect(result.current.operators.length).toBe(0)
   })
 
   it('falls back to REST when token is demo-token', async () => {
@@ -628,7 +628,7 @@ describe('useOperatorSubscriptions – SSE onClusterData progressive rendering',
 })
 
 describe('useOperatorSubscriptions – SSE unavailable when no token', () => {
-  it('falls back to REST when no token in localStorage', async () => {
+  it('skips REST call when no token in localStorage (prevents GA4 auth errors)', async () => {
     localStorage.removeItem('token')
     const fakeSubs = [
       { name: 'sub1', namespace: 'ns', channel: 'stable', source: 'src', installPlanApproval: 'Automatic', currentCSV: 'csv.v1', cluster: 'c1' },
@@ -638,9 +638,10 @@ describe('useOperatorSubscriptions – SSE unavailable when no token', () => {
     const { result } = renderHook(() => useOperatorSubscriptions())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
+    // Neither SSE nor REST should be attempted without a token (#9957)
     expect(mockFetchSSE).not.toHaveBeenCalled()
-    expect(mockApiGet).toHaveBeenCalled()
-    expect(result.current.subscriptions.length).toBe(1)
+    expect(mockApiGet).not.toHaveBeenCalled()
+    expect(result.current.subscriptions.length).toBe(0)
   })
 })
 

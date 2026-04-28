@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { isAgentUnavailable } from './useLocalAgent'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
@@ -119,7 +119,7 @@ async function fetchWorkloadsViaAgent(opts?: {
       // Abort the per-request controller if the parent signal fires
       const onParentAbort = () => ctrl.abort()
       opts?.signal?.addEventListener('abort', onParentAbort)
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
         signal: ctrl.signal,
         headers: { Accept: 'application/json' } })
       clearTimeout(tid)
@@ -338,7 +338,7 @@ export function useDeployWorkload() {
       const agentBase = requireLocalAgentHttp('Deploying workloads')
       const res = await fetch(`${agentBase}/workloads/deploy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -388,7 +388,7 @@ export function useScaleWorkload() {
       const agentBase = requireLocalAgentHttp('Scaling workloads')
       const res = await fetch(`${agentBase}/scale`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -439,7 +439,7 @@ export function useDeleteWorkload() {
       const agentBase = requireLocalAgentHttp('Deleting workloads')
       const res = await fetch(`${agentBase}/workloads/delete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify({
           cluster: params.cluster,
           namespace: params.namespace,

@@ -431,6 +431,10 @@ func TestServer_SettingsHandlers(t *testing.T) {
 		SkipKeyValidation: true,
 	}
 
+	// Register a mock "openai" provider so the validation gate accepts it.
+	// Ignore "already registered" errors from concurrent tests.
+	_ = GetRegistry().Register(&ServerMockProvider{name: "openai"})
+
 	// 2. Test handleSetKey
 	reqBody := `{"provider":"openai", "apiKey":"test-key", "model":"gpt-4"}`
 	req := httptest.NewRequest("POST", "/settings/keys", strings.NewReader(reqBody))

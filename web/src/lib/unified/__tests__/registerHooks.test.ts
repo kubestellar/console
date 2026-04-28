@@ -175,6 +175,7 @@ describe('registerUnifiedHooks', () => {
       'useArgoCDSyncStatus',
       'useGatewayStatus',
       'useKustomizationStatus',
+      'useFluxStatus',
       'useProviderHealth',
       'useUpgradeStatus',
       'useProwStatus',

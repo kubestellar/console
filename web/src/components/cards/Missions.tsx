@@ -25,6 +25,13 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from './console-missions/shared'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
+
+// Named time-offset constants for demo fixture data (CLAUDE.md: No Magic Numbers)
+const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
+const THREE_MINUTES_MS = 3 * MS_PER_MINUTE
+const FOUR_MINUTES_MS = 4 * MS_PER_MINUTE
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
 
 interface MissionsProps {
   config?: Record<string, unknown>
@@ -43,8 +50,8 @@ const DEMO_MISSIONS: DeployMission[] = [
       { cluster: 'openshift-prod', status: 'running', replicas: 3, readyReplicas: 3 },
       { cluster: 'do-nyc1-prod', status: 'running', replicas: 3, readyReplicas: 3 },
     ],
-    startedAt: Date.now() - 300000,
-    completedAt: Date.now() - 240000 },
+    startedAt: Date.now() - FIVE_MINUTES_MS,
+    completedAt: Date.now() - FOUR_MINUTES_MS },
   {
     id: 'demo-2',
     workload: 'api-gateway',
@@ -57,8 +64,8 @@ const DEMO_MISSIONS: DeployMission[] = [
       { cluster: 'aks-dev-westeu', status: 'running', replicas: 2, readyReplicas: 2 },
       { cluster: 'rancher-mgmt', status: 'running', replicas: 2, readyReplicas: 2 },
     ],
-    startedAt: Date.now() - 180000,
-    completedAt: Date.now() - 120000 },
+    startedAt: Date.now() - THREE_MINUTES_MS,
+    completedAt: Date.now() - TWO_MINUTES_MS },
 ]
 
 const STATUS_CONFIG: Record<DeployMissionStatus, {
@@ -138,7 +145,7 @@ const CLUSTER_FILTER_STORAGE_KEY = 'kubestellar-card-filter:deployment-missions-
 export function Missions(_props: MissionsProps) {
   const { t } = useTranslation(['common', 'cards'])
   const { missions: liveMissions, activeMissions: liveActive, completedMissions: liveCompleted } = useDeployMissions()
-  const { deduplicatedClusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
   const missions = demoMode ? DEMO_MISSIONS : liveMissions
   const activeMissions = demoMode ? [] : liveActive
@@ -177,7 +184,9 @@ export function Missions(_props: MissionsProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: demoMode })
+    isDemoData: demoMode,
+    isFailed,
+    consecutiveFailures })
 
   // Manual cluster filter — filters by target clusters (not source).
   // Can't use useCardData's built-in cluster filter because the global
@@ -399,7 +408,7 @@ Please:
               </button>
             ) : undefined
           }
-          className="!mb-0"
+          className="mb-0!"
         />
       </div>
 

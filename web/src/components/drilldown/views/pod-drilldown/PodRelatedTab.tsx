@@ -6,6 +6,11 @@ import { StatusBadge } from '../../../ui/StatusBadge'
 import { useTranslation } from 'react-i18next'
 import type { RelatedResource } from './types'
 
+/** Indent step (px) per tree depth level in the resource hierarchy */
+const TREE_INDENT_STEP_PX = 24
+/** Connector offset (px) for tree-drawing lines linking parent to child */
+const TREE_CONNECTOR_OFFSET_PX = 12
+
 export interface PodRelatedTabProps {
   podName: string
   namespace: string
@@ -76,7 +81,7 @@ export function PodRelatedTab({
             {[...ownerChain].reverse().map((resource, index) => {
               const isDeployment = resource.kind === 'Deployment'
               const isReplicaSet = resource.kind === 'ReplicaSet'
-              const indent = index * 24
+              const indent = index * TREE_INDENT_STEP_PX
               const isLast = index === ownerChain.length - 1
 
               return (
@@ -85,21 +90,21 @@ export function PodRelatedTab({
                   {index > 0 && (
                     <div
                       className="absolute border-l-2 border-muted-foreground/30"
-                      style={{ left: indent - 12, top: -8, height: 20 }}
+                      style={{ left: indent - TREE_CONNECTOR_OFFSET_PX, top: -8, height: 20 }}
                     />
                   )}
                   {/* Horizontal connector */}
                   {index > 0 && (
                     <div
                       className="absolute border-t-2 border-muted-foreground/30"
-                      style={{ left: indent - 12, top: 12, width: 12 }}
+                      style={{ left: indent - TREE_CONNECTOR_OFFSET_PX, top: TREE_CONNECTOR_OFFSET_PX, width: TREE_CONNECTOR_OFFSET_PX }}
                     />
                   )}
                   {/* Vertical line to children */}
                   {!isLast && (
                     <div
                       className="absolute border-l-2 border-muted-foreground/30"
-                      style={{ left: indent + 12, top: 24, height: 'calc(100% - 12px)' }}
+                      style={{ left: indent + TREE_CONNECTOR_OFFSET_PX, top: TREE_INDENT_STEP_PX, height: `calc(100% - ${TREE_CONNECTOR_OFFSET_PX}px)` }}
                     />
                   )}
                   <div style={{ paddingLeft: indent }} className="py-1">
@@ -149,10 +154,10 @@ export function PodRelatedTab({
               {(serviceAccount || configMaps.length > 0 || secrets.length > 0 || pvcs.length > 0) && (
                 <div
                   className="absolute border-l-2 border-cyan-500/30"
-                  style={{ left: ownerChain.length * 24 + 12, top: 36, height: 'calc(100% - 24px)' }}
+                  style={{ left: ownerChain.length * TREE_INDENT_STEP_PX + TREE_CONNECTOR_OFFSET_PX, top: 36, height: `calc(100% - ${TREE_INDENT_STEP_PX}px)` }}
                 />
               )}
-              <div style={{ paddingLeft: ownerChain.length * 24 }} className="py-1">
+              <div style={{ paddingLeft: ownerChain.length * TREE_INDENT_STEP_PX }} className="py-1">
                 <div className="px-3 py-2 rounded-lg bg-cyan-500/20 border-2 border-cyan-500/50 text-cyan-400 inline-flex items-center gap-2 shadow-lg shadow-cyan-500/10">
                   <Box className="w-4 h-4" />
                   <span className="text-xs text-cyan-300">{t('common.pod')}</span>
@@ -273,7 +278,7 @@ export function PodRelatedTab({
                                 child.color === 'yellow' && 'border-yellow-500/30',
                                 child.color === 'red' && 'border-red-500/30'
                               )}
-                              style={{ left: -12, top: 0, height: `calc(100% - 16px)` }}
+                              style={{ left: -TREE_CONNECTOR_OFFSET_PX, top: 0, height: 'calc(100% - 16px)' }}
                             />
                             {child.items.map((item, itemIndex) => {
                               const isLastItem = itemIndex === child.items.length - 1

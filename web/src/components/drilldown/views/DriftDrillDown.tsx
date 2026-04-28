@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -126,7 +127,7 @@ export function DriftDrillDown({ data }: Props) {
     return new Promise((resolve) => {
       let ws: WebSocket
       try {
-        ws = new WebSocket(LOCAL_AGENT_WS_URL)
+        ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       } catch {
         resolve('')
         return
@@ -399,7 +400,7 @@ Please:
             {/* Drift Status Card */}
             <div className={cn(
               'p-4 rounded-lg border',
-              driftedResources > 0 ? 'bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-500/20' : 'bg-gradient-to-r from-green-500/10 to-green-500/10 border-green-500/20'
+              driftedResources > 0 ? 'bg-linear-to-r from-red-500/10 to-orange-500/10 border-red-500/20' : 'bg-linear-to-r from-green-500/10 to-green-500/10 border-green-500/20'
             )}>
               <div className="flex items-start gap-3">
                 <GitBranch className={cn('w-8 h-8 mt-1', driftedResources > 0 ? 'text-red-400' : 'text-green-400')} />

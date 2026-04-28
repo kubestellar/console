@@ -23,6 +23,13 @@ import useDataSource from '../useDataSource'
 // Registry tests
 // ---------------------------------------------------------------------------
 
+vi.mock('../../../../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 describe('registerDataHook', () => {
   it('registers a hook that can be retrieved by name', () => {
     const mockHook = vi.fn().mockReturnValue({
@@ -637,7 +644,7 @@ describe('useDataSource — api type', () => {
     const fetchCall = mockFetch.mock.calls[0]
     expect(fetchCall[0]).toBe('/api/query')
     expect(fetchCall[1].method).toBe('POST')
-    expect(fetchCall[1].headers).toEqual({ 'Content-Type': 'application/json' })
+    expect(fetchCall[1].headers).toEqual({ 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' })
     expect(fetchCall[1].body).toBe(JSON.stringify(params))
   })
 

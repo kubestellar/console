@@ -6,7 +6,7 @@
  * Filter by experiment category, ISL/OSL, and model.
  */
 import { useState, useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { Zap, TrendingUp } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { useCachedBenchmarkReports } from '../../../hooks/useBenchmarkData'
@@ -23,6 +23,12 @@ import {
   TOOLTIP_SWATCH_SIZE_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+
+const GRID_LEFT_PX = 55
+const GRID_RIGHT_PX = 20
+const GRID_TOP_PX = 10
+const GRID_BOTTOM_PX = 45
 
 interface ChartRow {
   qps: number
@@ -111,15 +117,15 @@ export function ThroughputComparison() {
 
     return {
       backgroundColor: 'transparent',
-      grid: { left: 55, right: 20, top: 10, bottom: 45 },
+      grid: { left: GRID_LEFT_PX, right: GRID_RIGHT_PX, top: GRID_TOP_PX, bottom: GRID_BOTTOM_PX },
       xAxis: {
         type: 'category' as const,
         data: chartData.map(d => d.qps),
         name: 'QPS (queries/sec)',
         nameLocation: 'middle' as const,
         nameGap: 30,
-        nameTextStyle: { color: '#71717a', fontSize: 10 },
-        axisLabel: { color: '#71717a', fontSize: 10 },
+        nameTextStyle: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
+        axisLabel: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
         axisLine: { lineStyle: { color: '#71717a' } },
         axisTick: { show: false },
       },
@@ -128,10 +134,10 @@ export function ThroughputComparison() {
         name: 'tok/s',
         nameLocation: 'middle' as const,
         nameGap: 40,
-        nameTextStyle: { color: '#71717a', fontSize: 10 },
+        nameTextStyle: { color: '#71717a', fontSize: CHART_AXIS_FONT_SIZE },
         axisLabel: {
           color: '#71717a',
-          fontSize: 10,
+          fontSize: CHART_AXIS_FONT_SIZE,
           formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v),
         },
         axisLine: { lineStyle: { color: '#71717a' } },
@@ -142,7 +148,7 @@ export function ThroughputComparison() {
         trigger: 'axis' as const,
         backgroundColor: 'rgba(15,23,42,0.95)',
         borderColor: 'rgba(100,116,139,0.3)',
-        textStyle: { color: '#fff', fontSize: 12 },
+        textStyle: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: Array<{ seriesName: string; value: number | null; color: string; dataIndex: number }>) => {
           const qps = chartData[params[0]?.dataIndex]?.qps ?? ''
           const items = (params || [])
@@ -202,9 +208,9 @@ export function ThroughputComparison() {
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
+      <div className="flex-1 min-h-0" style={{ minHeight: CHART_MIN_HEIGHT_PX }}>
         {chartData.length > 0 ? (
-          <ReactECharts
+          <LazyEChart
             option={chartOption}
             style={{ height: '100%', width: '100%' }}
             notMerge={true}

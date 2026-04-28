@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { StatsOverview, formatStatNumber } from './StatsOverview'
+import { StatsOverview } from './StatsOverview'
+import { formatStatNumber } from '../../lib/formatters'
 
 describe('StatsOverview Component', () => {
   it('exports StatsOverview component', () => {
@@ -9,7 +10,6 @@ describe('StatsOverview Component', () => {
 
   it('formatStatNumber formats health-related counts correctly', () => {
     expect(typeof formatStatNumber).toBe('function')
-    // Health counts like cluster counts, node counts, pod counts
     expect(formatStatNumber(0)).toBe('0')
     expect(formatStatNumber(5)).toBe('5')
     expect(formatStatNumber(10_000)).toBe('10.0K')

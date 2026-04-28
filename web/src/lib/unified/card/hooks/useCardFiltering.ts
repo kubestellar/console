@@ -10,7 +10,7 @@ import type { CardFilterConfig } from '../../types'
 
 export interface UseCardFilteringResult {
   /** Filtered data */
-  filteredData: unknown[] | undefined
+  filteredData: unknown[] | unknown | undefined
   /** Filter control components to render */
   filterControls: ReactNode
   /** Current filter state */
@@ -25,7 +25,7 @@ export interface UseCardFilteringResult {
  * useCardFiltering - Apply configured filters to data
  */
 export function useCardFiltering(
-  data: unknown[] | undefined,
+  data: unknown[] | unknown | undefined,
   filters?: CardFilterConfig[]
 ): UseCardFilteringResult {
   // Filter state - keyed by field name
@@ -47,6 +47,7 @@ export function useCardFiltering(
   const filteredData = useMemo(() => {
     if (!data) return undefined
     if (!filters || filters.length === 0) return data
+    if (!Array.isArray(data)) return data
 
     let result = [...data]
 
@@ -154,7 +155,7 @@ function FilterControl({
         value: (value as string) ?? '',
         onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
         className:
-          'flex-1 px-3 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-none focus:border-blue-500 text-foreground placeholder-muted-foreground' })
+          'flex-1 px-3 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-hidden focus:border-blue-500 text-foreground placeholder-muted-foreground' })
 
     case 'select':
     case 'cluster-select':
@@ -165,7 +166,7 @@ function FilterControl({
           onChange: (e: React.ChangeEvent<HTMLSelectElement>) =>
             onChange(e.target.value || undefined),
           className:
-            'px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:border-blue-500 text-foreground' },
+            'px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:border-blue-500 text-foreground' },
         createElement('option', { value: '' }, config.placeholder ?? 'All'),
         config.options?.map((opt) =>
           createElement('option', { key: opt.value, value: opt.value }, opt.label)

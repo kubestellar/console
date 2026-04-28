@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, RefreshCw, Clock, GitBranch, ChevronRight } from 'lucide-react'
+import { formatTimeAgo } from '../../lib/formatters'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -89,19 +90,11 @@ function getStatusColor(status: Kustomization['status']) {
   }
 }
 
-function formatTime(timestamp: string) {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  return `${Math.floor(diff / 86400000)}d ago`
-}
 
 export function KustomizationStatus({ config }: KustomizationStatusProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode: demoMode } = useDemoMode()
-  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedNamespace, setSelectedNamespace] = useState<string>(config?.namespace || '')
   const {
@@ -127,10 +120,14 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
   }, [demoMode])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = kustomizationData.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: kustomizationData.length > 0,
-    isDemoData: demoMode })
+    isLoading: isLoading && !hasData,
+    isRefreshing,
+    hasAnyData: hasData,
+    isDemoData: demoMode,
+    isFailed,
+    consecutiveFailures })
 
   // Auto-select first cluster in demo mode so card shows data immediately
   useEffect(() => {
@@ -384,7 +381,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                   tabIndex={0}
                   onClick={activate}
                   onKeyDown={handleKeyDown}
-                  className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
+                  className={`p-3 rounded-lg cursor-pointer group ${ks.status === 'NotReady' ? 'bg-red-500/10 border border-red-500/20' : 'bg-secondary/30'} hover:bg-secondary/50 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400`}
                   title={`Click or press Enter to view ${ks.name} details`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1">
@@ -406,7 +403,7 @@ export function KustomizationStatus({ config }: KustomizationStatusProps) {
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-y-2">
                       <span className="truncate">{ks.revision.split('@')[1]?.slice(0, 12)}</span>
-                      <span>{formatTime(ks.lastApplied)}</span>
+                      <span>{formatTimeAgo(ks.lastApplied)}</span>
                     </div>
                   </div>
                   {(ks.status === 'NotReady' || ks.status === 'Suspended') && (
