@@ -19,9 +19,6 @@ import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../src/lib/constants/storag
 /** Vertical offset in pixels for a drag that crosses one card slot */
 const DRAG_OFFSET_PX = 200
 
-/** Pause in ms between mouse-move steps to let the UI react */
-const DRAG_STEP_PAUSE_MS = 100
-
 test.describe('Card Drag and Reorder', () => {
   test.beforeEach(async ({ page }) => {
     await setupDemoAndNavigate(page, '/')
@@ -83,7 +80,8 @@ test.describe('Card Drag and Reorder', () => {
     await page.mouse.move(startX, startY)
     await page.mouse.down()
     await page.mouse.move(startX, startY + DRAG_OFFSET_PX, { steps: 10 })
-    await page.waitForTimeout(DRAG_STEP_PAUSE_MS)
+    // Wait for the browser to process drag events before releasing
+    await expect(page.locator('body')).toBeVisible()
     await page.mouse.up()
 
     // Page must not crash after drag attempt

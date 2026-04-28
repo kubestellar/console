@@ -1,16 +1,15 @@
 import { test, expect } from '@playwright/test'
 
-// Login tests require a backend with OAuth enabled.
-// In CI (frontend only preview builds), /login redirects to the dashboard
-// because there is no auth layer. Skip the whole suite when the backend
-// health endpoint is unreachable.
-test.describe('Login Page', () => {
-  test.use({ storageState: { cookies: [], origins: [] } }) // Clear auth for login tests
+// Login tests are split into two groups:
+// 1. Tests that require a live backend with OAuth — skipped when backend is unreachable
+// 2. Tests that fully mock the backend — always run to catch frontend regressions (#10735)
+
+test.describe('Login Page — requires backend', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
 
   test.beforeEach(async ({ page }) => {
-    // Probe backend health — skip login tests if backend is not running
     const backendUp = await page.request.get('/health').then(r => r.ok()).catch(() => false)
-    test.skip(!backendUp, 'Backend not running — login tests require OAuth mode')
+    test.skip(!backendUp, 'Backend not running — these tests require OAuth mode')
   })
 
   test('displays login page correctly', async ({ page }) => {
@@ -35,6 +34,34 @@ test.describe('Login Page', () => {
     await page.goto('/')
     await expect(page).toHaveURL(/\/login/, { timeout: 10000 })
   })
+
+  test('supports keyboard navigation', async ({ page }) => {
+    await page.goto('/login')
+    await page.waitForLoadState('domcontentloaded')
+
+    await expect(page.getByTestId('login-page')).toBeVisible({ timeout: 10000 })
+
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Tab')
+
+    const loginButton = page.getByTestId('github-login-button')
+    await loginButton.focus()
+    await expect(loginButton).toBeFocused()
+  })
+
+  test('has dark background theme', async ({ page }) => {
+    await page.goto('/login')
+    await page.waitForLoadState('domcontentloaded')
+
+    const loginPage = page.getByTestId('login-page')
+    await expect(loginPage).toBeVisible({ timeout: 10000 })
+
+    await expect(page.locator('html')).toHaveClass(/dark/)
+  })
+})
+
+test.describe('Login Page — frontend-only (mocked backend)', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
 
   test('redirects to dashboard after successful login', async ({ page }) => {
     // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
@@ -120,32 +147,6 @@ test.describe('Login Page', () => {
     } else {
       await expect(page).toHaveURL(/\/login/)
     }
-  })
-
-  test('supports keyboard navigation', async ({ page }) => {
-    await page.goto('/login')
-    await page.waitForLoadState('domcontentloaded')
-
-    await expect(page.getByTestId('login-page')).toBeVisible({ timeout: 10000 })
-
-    await page.keyboard.press('Tab')
-    await page.keyboard.press('Tab')
-
-    const loginButton = page.getByTestId('github-login-button')
-    await loginButton.focus()
-    await expect(loginButton).toBeFocused()
-  })
-
-  test('has dark background theme', async ({ page }) => {
-    await page.goto('/login')
-    await page.waitForLoadState('domcontentloaded')
-
-    const loginPage = page.getByTestId('login-page')
-    await expect(loginPage).toBeVisible({ timeout: 10000 })
-
-    // Check the <html> element carries the 'dark' class rather than asserting
-    // an exact RGB value that breaks on any design-token update. #9520
-    await expect(page.locator('html')).toHaveClass(/dark/)
   })
 
   test('detects demo mode vs OAuth mode behavior', async ({ page }) => {
