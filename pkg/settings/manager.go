@@ -103,7 +103,9 @@ func (sm *SettingsManager) Load() error {
 
 	var sf SettingsFile
 	if err := json.Unmarshal(data, &sf); err != nil {
-		return fmt.Errorf("failed to parse settings: %w", err)
+		slog.Error("[settings] corrupted settings file, falling back to defaults", "path", sm.settingsPath, "error", err)
+		sm.settings = DefaultSettings()
+		return nil
 	}
 
 	// Detect missing boolean fields in older settings files (#7572).
@@ -206,8 +208,32 @@ func (sm *SettingsManager) saveLocked() error {
 		return fmt.Errorf("failed to create settings directory: %w", err)
 	}
 
-	if err := os.WriteFile(sm.settingsPath, data, settingsFileMode); err != nil {
-		return fmt.Errorf("failed to write settings: %w", err)
+	tmpFile, err := os.CreateTemp(dir, ".settings-*.tmp")
+	if err != nil {
+		return fmt.Errorf("failed to create temp settings file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to write temp settings file: %w", err)
+	}
+	if err := tmpFile.Chmod(settingsFileMode); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to chmod temp settings file: %w", err)
+	}
+	if err := tmpFile.Sync(); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to fsync temp settings file: %w", err)
+	}
+	tmpFile.Close()
+
+	if err := os.Rename(tmpPath, sm.settingsPath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to rename temp settings file: %w", err)
 	}
 
 	return nil
