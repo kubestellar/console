@@ -167,14 +167,15 @@ async function generateAISummary(mission: Mission): Promise<AISummary> {
 
     ws.onopen = () => {
       didOpen = true
-      // #9162 — Build conversation context with size caps so the assembled
-      // WebSocket frame stays under the agent's 1 MB read limit. Without
-      // this, long missions (with large tool outputs) would silently exceed
-      // the limit, the agent would close the socket, and the client would
-      // surface a misleading "Could not reach the local agent" error.
-      const conversation = buildConversationSnippet(mission.messages)
+      try {
+        // #9162 — Build conversation context with size caps so the assembled
+        // WebSocket frame stays under the agent's 1 MB read limit. Without
+        // this, long missions (with large tool outputs) would silently exceed
+        // the limit, the agent would close the socket, and the client would
+        // surface a misleading "Could not reach the local agent" error.
+        const conversation = buildConversationSnippet(mission.messages)
 
-      const prompt = `You are helping save a resolution for future reuse. Analyze this mission conversation and create a structured summary.
+        const prompt = `You are helping save a resolution for future reuse. Analyze this mission conversation and create a structured summary.
 
 MISSION: ${mission.title}
 DESCRIPTION: ${mission.description}
@@ -193,14 +194,20 @@ Create a JSON summary with these fields:
 
 Return ONLY valid JSON, no markdown code blocks or explanation.`
 
-      ws.send(JSON.stringify({
-        type: 'chat',
-        id: `summary-${crypto.randomUUID()}`,
-        payload: {
-          prompt: prompt,
-          sessionId: `resolution-${mission.id}`,
-          agent: mission.agent || undefined }
-      }))
+        ws.send(JSON.stringify({
+          type: 'chat',
+          id: `summary-${crypto.randomUUID()}`,
+          payload: {
+            prompt: prompt,
+            sessionId: `resolution-${mission.id}`,
+            agent: mission.agent || undefined }
+        }))
+      } catch (err) {
+        settle(() => {
+          ws.close()
+          reject(err instanceof Error ? err : new Error('Failed to send AI summary request'))
+        })
+      }
     }
 
     ws.onmessage = (event) => {
