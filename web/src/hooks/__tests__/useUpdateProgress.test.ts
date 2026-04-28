@@ -71,6 +71,11 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 
 vi.mock('../../lib/demoMode', () => ({
   isNetlifyDeployment: false,
+  isDemoMode: () => false,
+}))
+
+vi.mock('../../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => url,
 }))
 
 // Assign mock to global before importing the hook

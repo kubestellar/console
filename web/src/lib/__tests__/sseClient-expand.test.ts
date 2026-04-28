@@ -746,6 +746,8 @@ describe('sseClient expanded', () => {
 
   describe('SSE auth failure GA4 emit', () => {
     it('emits emitSseAuthFailure on 401 response', async () => {
+      // emitSseAuthFailure only fires when a token is present (real auth failure)
+      localStorage.setItem('token', 'fake-token')
       vi.mocked(fetch).mockResolvedValue(new Response('Unauthorized', { status: 401 }))
 
       const result = await fetchSSE({
@@ -757,6 +759,7 @@ describe('sseClient expanded', () => {
       expect(mockEmitSseAuth).toHaveBeenCalledTimes(1)
       expect(mockEmitSseAuth).toHaveBeenCalledWith(expect.stringContaining('/api/sse-401-'))
       expect(result).toEqual([])
+      localStorage.removeItem('token')
     })
 
     it('does not emit emitSseAuthFailure on 503 response', async () => {

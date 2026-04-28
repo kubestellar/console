@@ -23,9 +23,14 @@ let mockIsNetlify = false
 
 vi.mock('../demoMode', () => ({
   isDemoModeForced: false,
+  isDemoMode: () => false,
   get isNetlifyDeployment() {
     return mockIsNetlify
   },
+}))
+
+vi.mock('../utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => url,
 }))
 
 vi.mock('../../hooks/useBackendHealth', () => ({
