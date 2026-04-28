@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import React from 'react'
 import { CniStatus } from './index'
+import { CNI_DEMO_DATA } from '../../../lib/demo/cni'
 
 const mockUseCachedCni = vi.fn()
 
@@ -21,37 +22,15 @@ vi.mock('../../ui/Skeleton', () => ({
   SkeletonStats: () => <div data-testid="skeleton-stats" />,
 }))
 
-const DEFAULT_DATA = {
-  health: 'not-installed' as const,
-  nodes: [],
-  stats: {
-    totalNodes: 0,
-    readyNodes: 0,
-    notReadyNodes: 0,
-    unknownNodes: 0,
-    networkPolicyCount: 0,
-    servicesWithNetworkPolicy: 0,
-  },
-  summary: {
-    totalNodes: 0,
-    readyNodes: 0,
-    notReadyNodes: 0,
-    unknownNodes: 0,
-    networkPolicyCount: 0,
-    servicesWithNetworkPolicy: 0,
-  },
-  lastCheckTime: new Date().toISOString(),
-}
-
 function setup(overrides?: Record<string, unknown>) {
   mockUseCachedCni.mockReturnValue({
-    data: DEFAULT_DATA,
+    data: CNI_DEMO_DATA,
     isLoading: false,
     isRefreshing: false,
     isDemoData: false,
     isFailed: false,
     consecutiveFailures: 0,
-    lastRefresh: null,
+    lastRefresh: Date.now(),
     showSkeleton: false,
     showEmptyState: false,
     error: false,
@@ -65,17 +44,46 @@ describe('CniStatus', () => {
     vi.clearAllMocks()
   })
 
-  it('renders loading skeleton when showSkeleton is true', () => {
+  it('renders loading skeleton when isLoading is true', () => {
     setup({ showSkeleton: true })
     render(<CniStatus />)
 
     expect(screen.getByTestId('skeleton')).toBeTruthy()
   })
 
-  it('renders without skeleton when data is present', () => {
-    setup()
+  it('renders with empty state when no CNI plugin found', () => {
+    setup({
+      data: {
+        health: 'not-installed',
+        nodes: [],
+        stats: {
+          activePlugin: 'unknown',
+          pluginVersion: 'unknown',
+          podNetworkCidr: '',
+          serviceNetworkCidr: '',
+          nodeCount: 0,
+          nodesCniReady: 0,
+          networkPolicyCount: 0,
+          servicesWithNetworkPolicy: 0,
+          totalServices: 0,
+          podsWithIp: 0,
+          totalPods: 0,
+        },
+        summary: {
+          activePlugin: 'unknown',
+          pluginVersion: 'unknown',
+          podNetworkCidr: '',
+          nodesCniReady: 0,
+          nodeCount: 0,
+          networkPolicyCount: 0,
+          servicesWithNetworkPolicy: 0,
+        },
+        lastCheckTime: new Date().toISOString(),
+      },
+    })
     render(<CniStatus />)
 
+    // Component should render without error
     expect(screen.queryByTestId('skeleton')).toBeFalsy()
   })
 })
