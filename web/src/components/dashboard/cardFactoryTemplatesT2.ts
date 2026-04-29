@@ -427,16 +427,16 @@ export const T2_TEMPLATES: T2Template[] = [
 
       {adding && (
         <div className="grid grid-cols-2 gap-2 mb-3 p-2 rounded bg-secondary/20 border border-border/50">
-          <input placeholder="Namespace" value={form.namespace}
+          <input placeholder="Namespace" value={form.namespace} aria-label="Namespace"
             onChange={e => setForm(p => ({...p, namespace: e.target.value}))}
             className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
-          <input placeholder="pod/name or svc/name" value={form.resource}
+          <input placeholder="pod/name or svc/name" value={form.resource} aria-label="Kubernetes resource (pod/name or svc/name)"
             onChange={e => setForm(p => ({...p, resource: e.target.value}))}
             className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
-          <input placeholder="Local port" value={form.localPort} type="number"
+          <input placeholder="Local port" value={form.localPort} type="number" aria-label="Local port number"
             onChange={e => setForm(p => ({...p, localPort: e.target.value}))}
             className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
-          <input placeholder="Remote port" value={form.remotePort} type="number"
+          <input placeholder="Remote port" value={form.remotePort} type="number" aria-label="Remote port number"
             onChange={e => setForm(p => ({...p, remotePort: e.target.value}))}
             className="text-xs px-2 py-1 rounded bg-secondary text-foreground" />
           <button onClick={addForward}
