@@ -100,7 +100,6 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
 
   return (
     <ClusterFilterContext.Provider value={contextValue}>
-    >
       {children}
     </ClusterFilterContext.Provider>
   )

@@ -181,7 +181,6 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   return (
     <TourContext.Provider value={contextValue}>
-    >
       {children}
     </TourContext.Provider>
   )
