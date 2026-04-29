@@ -224,7 +224,7 @@ export function useCachedNamespaces(
       if (!cluster) return getDemoNamespaces()
       const token = getToken()
       if (!token) throw new Error('No authentication token')
-      const response = await fetch(`/api/namespaces?cluster=${encodeURIComponent(cluster)}`, {
+      const response = await fetch(`/api/mcp/namespaces?cluster=${encodeURIComponent(cluster)}`, {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
