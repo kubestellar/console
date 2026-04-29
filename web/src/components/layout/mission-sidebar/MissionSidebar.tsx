@@ -1486,7 +1486,7 @@ export function MissionSidebar() {
           onClose={() => setShowBrowser(false)}
           onImport={handleImportMission}
           initialMission={deepLinkMission || undefined}
-          onUseInMissionControl={(chartName) => {
+          onUseInMissionControl={(chartName: string) => {
             setShowBrowser(false)
             setPendingKubaraChart(chartName)
             setShowMissionControl(true)
