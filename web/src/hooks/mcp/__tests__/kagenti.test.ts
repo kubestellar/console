@@ -792,9 +792,9 @@ describe('useKagentiAgents — fetcher callback', () => {
     })
 
     renderHook(() => useKagentiAgents())
-    // agentFetch now throws on non-ok response; when all clusters fail,
-    // agentFetchAllClusters re-throws with an aggregate error
-    await expect(capturedFetcher!()).rejects.toThrow('All kagenti fetches failed')
+    // agentFetch now throws a classified error; when all clusters fail,
+    // agentFetchAllClusters re-throws with the classified message
+    await expect(capturedFetcher!()).rejects.toThrow(/Agent returned HTTP 500/)
 
     globalThis.fetch = originalFetch
   })
@@ -819,9 +819,9 @@ describe('useKagentiAgents — fetcher callback', () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'))
 
     renderHook(() => useKagentiAgents())
-    // agentFetch now throws on network error; when all clusters fail,
-    // agentFetchAllClusters re-throws with an aggregate error
-    await expect(capturedFetcher!()).rejects.toThrow('All kagenti fetches failed')
+    // agentFetch now throws a classified error; when all clusters fail,
+    // agentFetchAllClusters re-throws with the classified message
+    await expect(capturedFetcher!()).rejects.toThrow('ECONNREFUSED')
 
     globalThis.fetch = originalFetch
   })
