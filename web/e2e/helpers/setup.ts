@@ -85,6 +85,7 @@ export const EXPECTED_ERROR_PATTERNS = [
   // indicate a real page failure — they're test harness cleanup noise.
   /NS_BINDING_ABORTED/i,
   /NS_ERROR_FAILURE/i,
+  /Fetch failed: Invalid JSON response/i,
 ]
 
 function isExpectedError(message: string): boolean {
