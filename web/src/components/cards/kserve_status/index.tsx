@@ -33,6 +33,7 @@ import type { TFunction } from 'i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedKserve } from '../../../hooks/useCachedKserve'
+import { useReportCardDataState } from '../CardDataContext'
 import { cn } from '../../../lib/cn'
 import type {
   KServeService,
