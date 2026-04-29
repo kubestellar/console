@@ -54,7 +54,14 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
       }
       onCreated(cluster)
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create namespace'
+      let errorMessage: string
+      if (err instanceof TypeError) {
+        errorMessage = t('namespaces.errors.agentNotReachable')
+      } else if (err instanceof Error) {
+        errorMessage = err.message
+      } else {
+        errorMessage = t('namespaces.errors.createFailed')
+      }
       setError(errorMessage)
     } finally {
       setCreating(false)

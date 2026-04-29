@@ -3091,7 +3091,12 @@
     "adminAccessRequired": "Admin access required to view namespace details",
     "fetchAccessFailed": "Failed to fetch namespace access",
     "adminRequiredForAccess": "Admin access required to view role bindings",
-    "noRoleBindings": "No role bindings found"
+    "noRoleBindings": "No role bindings found",
+    "errors": {
+      "agentNotReachable": "Local agent is not reachable. Make sure kc-agent is running on port 8585.",
+      "requestTimedOut": "Request timed out. The cluster may be slow to respond.",
+      "createFailed": "Failed to create namespace"
+    }
   },
   "cluster": {
     "subtitle": "Manage your Kubernetes clusters",

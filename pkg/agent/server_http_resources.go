@@ -310,7 +310,9 @@ func (s *Server) handleNamespacesHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), agentExtendedTimeout)
+	// Use context.Background() so the cluster query completes even if the
+	// browser disconnects (prevents noisy "context canceled" log entries).
+	ctx, cancel := context.WithTimeout(context.Background(), agentExtendedTimeout)
 	defer cancel()
 
 	namespaces, err := s.k8sClient.ListNamespacesWithDetails(ctx, cluster)

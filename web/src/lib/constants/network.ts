@@ -275,8 +275,8 @@ export const QUICK_ABORT_TIMEOUT_MS = 3_000
 /** Abort timeout for AI prediction requests (5 seconds) */
 export const AI_PREDICTION_TIMEOUT_MS = 5_000
 
-/** Abort timeout for namespace management operations (8 seconds) */
-export const NAMESPACE_ABORT_TIMEOUT_MS = 8_000
+/** Abort timeout for namespace management operations (15 seconds — matches nsDefaultTimeout in Go backend) */
+export const NAMESPACE_ABORT_TIMEOUT_MS = 15_000
 
 /** Abort timeout for deploy mission operations (10 seconds) */
 export const DEPLOY_ABORT_TIMEOUT_MS = 10_000

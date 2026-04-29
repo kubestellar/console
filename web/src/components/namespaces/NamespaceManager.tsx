@@ -159,7 +159,12 @@ export function NamespaceManager() {
               }))
             }
           }
-        } catch {
+        } catch (err: unknown) {
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            console.warn(`[NamespaceManager] ${t('namespaces.errors.requestTimedOut')}`, cluster)
+          } else if (err instanceof TypeError) {
+            console.warn(`[NamespaceManager] ${t('namespaces.errors.agentNotReachable')}`, cluster)
+          }
           // Local agent failed, will fall back to API
         }
 
