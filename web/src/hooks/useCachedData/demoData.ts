@@ -42,6 +42,7 @@ import type {
 } from '../useMCP'
 import type { Workload } from '../useWorkloads'
 import type { CiliumStatus } from '../../types/cilium'
+import type { JaegerStatus } from '../../types/jaeger'
 
 // ---------------------------------------------------------------------------
 // Local type stubs used only by demo data — avoid circular import with
@@ -503,7 +504,7 @@ export const getDemoCiliumStatus = (): CiliumStatus => ({
 // Jaeger demo data
 // ============================================================================
 
-export const getDemoJaegerStatus = (): any => ({
+export const getDemoJaegerStatus = (): JaegerStatus => ({
   status: 'Healthy',
   version: '1.57.0',
   collectors: {

@@ -192,13 +192,14 @@ function getTypeColor(index: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
+type TranslateFn = (key: string, options?: string | Record<string, unknown>) => string
+
 /** Extracted chart sub-component to keep the main component readable */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
   displayChartData: GPUHistoryDataPoint[]
   chartMode: ChartMode
   chartGPUTypes: string[]
-  t: any
+  t: TranslateFn
 }) {
   const chartOption = useMemo(() => {
     const timeData = (displayChartData || []).map(d => d.time)
@@ -983,7 +984,7 @@ export function GPUInventoryHistory() {
                   displayChartData={displayChartData}
                   chartMode={chartMode}
                   chartGPUTypes={chartGPUTypes}
-                  t={t}
+                  t={t as unknown as TranslateFn}
                 />
               </div>
             )}
