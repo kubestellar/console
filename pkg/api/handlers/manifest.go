@@ -81,7 +81,11 @@ type manifestConversionResponse struct {
 
 // ManifestSetup renders an HTML page that auto-submits a GitHub App Manifest
 // form to GitHub. The user sees GitHub's "Create GitHub App" confirmation.
+// Returns 302 to login if OAuth is already configured (prevents duplicate apps).
 func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
+	if id, _, _ := h.store.GetOAuthCredentials(c.Context()); id != "" {
+		return c.Redirect(h.frontendURL + "/login")
+	}
 	suffix, err := randomHex(manifestAppNameSuffixBytes)
 	if err != nil {
 		slog.Error("[Manifest] failed to generate random suffix", "error", err)

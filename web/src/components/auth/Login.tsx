@@ -129,6 +129,21 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Verify your GitHub OAuth app is not suspended or deleted',
       'Check https://www.githubstatus.com for service status',
     ] },
+  manifest_missing_code: {
+    title: 'GitHub App Setup Incomplete',
+    message: 'GitHub did not return a setup code. The app creation may have been cancelled.',
+    steps: [
+      'Click "Set up GitHub Sign-In" to try again',
+      'Make sure to click "Create GitHub App" on the GitHub confirmation page',
+    ] },
+  manifest_conversion_failed: {
+    title: 'GitHub App Setup Failed',
+    message: 'The console was unable to complete the GitHub App setup. The temporary code may have expired.',
+    steps: [
+      'Click "Set up GitHub Sign-In" to try again',
+      'Check your internet connection',
+      'If the problem persists, use the manual setup option instead',
+    ] },
   user_fetch_failed: {
     title: 'Could Not Retrieve GitHub Profile',
     message: 'Login succeeded but the console was unable to fetch your GitHub profile.',
