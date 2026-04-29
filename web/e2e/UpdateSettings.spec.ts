@@ -97,6 +97,7 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
     localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc-backend-status', JSON.stringify({
       available: true,
       timestamp: Date.now(),
@@ -247,9 +248,10 @@ test.describe('Update Settings', () => {
   test('shows failed banner with error details', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    sendProgress(ws, 'failed', 'Frontend build failed, rolling back...', 30, 'npm ERR! code ELIFECYCLE')
-
-    await expect(page.getByTestId('update-failed-banner')).toBeVisible({ timeout: 5000 })
+    await expect(async () => {
+      sendProgress(ws, 'failed', 'Frontend build failed, rolling back...', 30, 'npm ERR! code ELIFECYCLE')
+      await expect(page.getByTestId('update-failed-banner')).toBeVisible({ timeout: 1000 })
+    }).toPass({ timeout: 10000 })
     await expect(page.getByTestId('update-failed-error')).toContainText('npm ERR!')
 
     // Progress and done banners should NOT be visible

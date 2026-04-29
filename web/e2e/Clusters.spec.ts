@@ -104,6 +104,7 @@ async function setupClustersTest(page: Page) {
     localStorage.setItem('kc-demo-mode', 'false')
     localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc-backend-status', JSON.stringify({
       available: true,
       timestamp: Date.now(),

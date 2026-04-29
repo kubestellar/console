@@ -36,14 +36,25 @@ async function setupDemoMode(page: Page) {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+      body: JSON.stringify({
+        clusters: DEMO_CLUSTERS.map(name => ({
+          name, healthy: true, reachable: true, nodeCount: 3, podCount: 10,
+          namespaces: ['default', 'kube-system', 'monitoring'],
+        })),
+        issues: [], events: [], nodes: [],
+      }),
     })
   )
 
   await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true, timestamp: Date.now(),
+    }))
     localStorage.removeItem('kc-ns-overview-cluster')
     localStorage.removeItem('kc-ns-overview-namespace')
     localStorage.setItem(
@@ -92,6 +103,11 @@ async function setupLiveMode(page: Page) {
     localStorage.setItem('token', 'test-token')
     localStorage.removeItem('kc-demo-mode')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true, timestamp: Date.now(),
+    }))
     localStorage.removeItem('kc-ns-overview-cluster')
     localStorage.removeItem('kc-ns-overview-namespace')
     localStorage.setItem(
