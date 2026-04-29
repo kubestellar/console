@@ -238,6 +238,11 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
       data-testid={`stat-block-${block.id}`}
       className={`group relative glass p-4 rounded-lg min-h-[100px] ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
       onClick={() => isClickable && data.onClick?.()}
+      {...(isClickable ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); data.onClick?.() } },
+      } : {})}
     >
       {/* Demo badge */}
       {isDemo && (

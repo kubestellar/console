@@ -240,7 +240,7 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
           </thead>
           <tbody>
             {filteredRisks.map(r => (
-              <tr key={r.id} className="border-b border-gray-700/50 hover:bg-gray-700/30 cursor-pointer" onClick={() => setSelectedRisk(r)}>
+              <tr key={r.id} className="border-b border-gray-700/50 hover:bg-gray-700/30 cursor-pointer" tabIndex={0} onClick={() => setSelectedRisk(r)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedRisk(r) } }}>
                 <td className="p-3 font-mono text-blue-300">{r.id}</td>
                 <td className="p-3 text-white">{r.name}</td>
                 <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 text-xs">{r.category}</span></td>
