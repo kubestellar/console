@@ -272,7 +272,7 @@ export function ACMMFeedbackLoops() {
             onClick={() => setViewMode(m)}
             className={`px-2 py-0.5 text-[10px] rounded-full transition-colors ${
               viewMode === m
-                ? 'bg-violet-500/30 text-violet-300'
+                ? 'bg-purple-500/30 text-purple-300'
                 : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
             }`}
           >
@@ -346,7 +346,7 @@ export function ACMMFeedbackLoops() {
           const prevDim = idx > 0 ? filtered[idx - 1].crossCutting : undefined
           const showDimHeader = viewMode === 'cross-cutting' && c.crossCutting && c.crossCutting !== prevDim
           const dimHeader = showDimHeader && c.crossCutting ? (
-            <div key={`dim-${c.crossCutting}`} className="text-[10px] uppercase tracking-wide text-violet-400 font-medium pt-2 pb-1 px-2 border-b border-violet-500/20">
+            <div key={`dim-${c.crossCutting}`} className="text-[10px] uppercase tracking-wide text-purple-400 font-medium pt-2 pb-1 px-2 border-b border-purple-500/20">
               {CROSS_CUTTING_LABELS[c.crossCutting]}
             </div>
           ) : null
@@ -479,7 +479,7 @@ export function ACMMFeedbackLoops() {
                 </div>
                 {c.crossCutting && (
                   <span
-                    className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 bg-violet-500/20 text-violet-400 cursor-help"
+                    className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 bg-purple-500/20 text-purple-400 cursor-help"
                     title={c.crossCutting === 'learning'
                       ? 'Cross-cutting: Learning & Feedback — how the system encodes learnings and improves over time'
                       : 'Cross-cutting: Traceability & Audit — how agent actions are logged, attributed, and reviewable'}

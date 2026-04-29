@@ -169,7 +169,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
         {info.dependencies.length > 0 ? (
           <div className="flex flex-wrap gap-1">
             {info.dependencies.map((dep) => (
-              <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20">
+              <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
                 {dep}
               </span>
             ))}
@@ -582,21 +582,21 @@ export function DeployModeInfoPanel({ mode, phases, projects, onShowProject, ins
           <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             All Launched Simultaneously
           </h4>
-          <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
+          <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3">
             <div className="flex flex-wrap gap-1.5">
               {projects.map((proj) => (
                 <span key={proj.name} className={cn(
                   'text-[10px] px-2 py-1 rounded-md border',
                   installedProjects.has(proj.name)
                     ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                    : 'bg-violet-500/10 text-violet-300 border-violet-500/20'
+                    : 'bg-purple-500/10 text-purple-300 border-purple-500/20'
                 )}>
                   {proj.displayName}
                   {installedProjects.has(proj.name) && <span className="ml-1 opacity-60">✓</span>}
                 </span>
               ))}
             </div>
-            <p className="text-[10px] text-violet-400/60 mt-2 italic">
+            <p className="text-[10px] text-purple-400/60 mt-2 italic">
               No ordering — all {projects.length} projects deploy at once
             </p>
           </div>

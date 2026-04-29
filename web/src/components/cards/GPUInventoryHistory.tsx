@@ -74,7 +74,7 @@ const GPU_TYPE_COLORS: string[] = [
   '#06b6d4', // cyan-500
   '#ec4899', // pink-500
   '#84cc16', // lime-500
-  '#8b5cf6', // violet-500
+  '#8b5cf6', // purple-500
 ]
 
 /** Color used for the "free" series area */

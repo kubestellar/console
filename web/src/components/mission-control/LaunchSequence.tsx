@@ -471,7 +471,7 @@ export function LaunchSequence({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="inline-flex p-3 rounded-2xl bg-linear-to-br from-violet-500/20 to-indigo-500/20 mb-3"
+          className="inline-flex p-3 rounded-2xl bg-linear-to-br from-purple-500/20 to-indigo-500/20 mb-3"
         >
           {allComplete ? (
             allSuccess ? (
@@ -480,7 +480,7 @@ export function LaunchSequence({
               <AlertTriangle className="w-8 h-8 text-amber-400" />
             )
           ) : (
-            <Rocket className="w-8 h-8 text-violet-400" />
+            <Rocket className="w-8 h-8 text-purple-400" />
           )}
         </motion.div>
         <h2 className="text-2xl font-bold">

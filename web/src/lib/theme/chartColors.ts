@@ -20,8 +20,8 @@ export const GREEN_500 = '#10b981'
 export const AMBER_500 = '#f59e0b'
 /** Tailwind red-500 */
 export const RED_500 = '#ef4444'
-/** Tailwind violet-500 */
-export const VIOLET_500 = '#8b5cf6'
+/** Tailwind purple-500 */
+export const PURPLE_500 = '#8b5cf6'
 /** Tailwind cyan-500 */
 export const CYAN_500 = '#06b6d4'
 /** Tailwind lime-500 */
@@ -44,12 +44,12 @@ export const GREEN_500_BRIGHT = '#22c55e'
 /** 10-color palette for multi-series cluster charts (ClusterMetrics, etc.) */
 export const CLUSTER_CHART_PALETTE: readonly string[] = [
   PURPLE_600, BLUE_500, GREEN_500, AMBER_500, RED_500,
-  VIOLET_500, CYAN_500, LIME_500, ORANGE_500, PINK_500,
+  PURPLE_500, CYAN_500, LIME_500, ORANGE_500, PINK_500,
 ] as const
 
 /** 10-color palette for cross-cluster event correlation timeline */
 export const CROSS_CLUSTER_EVENT_PALETTE: readonly string[] = [
-  BLUE_500, GREEN_500_BRIGHT, AMBER_500, RED_500, VIOLET_500,
+  BLUE_500, GREEN_500_BRIGHT, AMBER_500, RED_500, PURPLE_500,
   CYAN_500, PINK_500, TEAL_500, ORANGE_500, INDIGO_500,
 ] as const
 
@@ -62,7 +62,7 @@ export const GPU_TYPE_CHART_PALETTE: readonly string[] = [
   CYAN_500,     // cyan-500
   PINK_500,     // pink-500
   LIME_500,     // lime-500
-  VIOLET_500,   // violet-500
+  PURPLE_500,   // purple-500
 ] as const
 
 /** Color for the "free/available" GPU area series */

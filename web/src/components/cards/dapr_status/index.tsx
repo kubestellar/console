@@ -62,7 +62,7 @@ function componentTypeLabel(
 
 function componentTypeColor(type: DaprComponentType): string {
   if (type === 'state-store') return 'text-emerald-400'
-  if (type === 'pubsub') return 'text-violet-400'
+  if (type === 'pubsub') return 'text-purple-400'
   return 'text-cyan-400'
 }
 
@@ -233,7 +233,7 @@ export function DaprStatus() {
           label={t('daprStatus.components', 'Components')}
           value={data.summary.totalComponents}
           colorClass="text-foreground"
-          icon={<Layers className="w-4 h-4 text-violet-400" />}
+          icon={<Layers className="w-4 h-4 text-purple-400" />}
         />
         <MetricTile
           label={t('daprStatus.namespaces', 'Namespaces')}
@@ -257,7 +257,7 @@ export function DaprStatus() {
           </div>
         </div>
         <div className="rounded-md bg-secondary/30 px-3 py-2 flex items-center gap-2">
-          <Radio className="w-4 h-4 text-violet-400 shrink-0" />
+          <Radio className="w-4 h-4 text-purple-400 shrink-0" />
           <div className="min-w-0">
             <div className="text-[11px] text-muted-foreground uppercase tracking-wide">
               {t('daprStatus.pubsubs', 'Pub/sub')}
@@ -305,7 +305,7 @@ export function DaprStatus() {
 
         <section className="space-y-2">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-violet-400" />
+            <Layers className="w-4 h-4 text-purple-400" />
             <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               {t('daprStatus.sectionComponents', 'Components')}
             </h4>
