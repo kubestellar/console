@@ -77,6 +77,16 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
       await page.waitForLoadState('networkidle').catch(() => {})
 
       const refreshButton = page.locator('button[data-testid="dashboard-refresh-button"]')
+      const visible = await refreshButton.first().isVisible().catch(() => false)
+      if (!visible && dashboard.route === '/') {
+        const url = page.url()
+        const title = await page.title()
+        const bodyText = await page.locator('body').innerText().catch(() => 'BODY_ERROR')
+        const html = await page.locator('#root').innerHTML().catch(() => 'ROOT_ERROR')
+        console.log(`[DEBUG /] URL: ${url}, Title: ${title}`)
+        console.log(`[DEBUG /] Body text (first 500): ${bodyText.substring(0, 500)}`)
+        console.log(`[DEBUG /] Root HTML (first 1000): ${html.substring(0, 1000)}`)
+      }
       await expect(refreshButton.first()).toBeVisible({ timeout: 10000 })
     })
 
