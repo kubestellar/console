@@ -52,7 +52,12 @@ async function setupDemoMode(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
     // Pre-pin the RBACExplorer card using the correct storage key and Card
     // shape. The main dashboard reads 'kubestellar-main-dashboard-cards' and
     // expects { id, card_type, config, position } (snake_case field names).
@@ -99,7 +104,7 @@ async function setupLiveMode(page: Page, withClusters = false) {
   )
 
   // Stub local agent (kc-agent) health — returns no clusters accessible via kubectl
-  await page.route('**/127.0.0.1:8585/**', (route) =>
+  await page.route('http://127.0.0.1:8585/**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -110,7 +115,12 @@ async function setupLiveMode(page: Page, withClusters = false) {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.removeItem('kc-demo-mode')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
     // Pre-pin the RBACExplorer card using the correct storage key and Card
     // shape. The main dashboard reads 'kubestellar-main-dashboard-cards' and
     // expects { id, card_type, config, position } (snake_case field names).

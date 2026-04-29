@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 // Login tests are split into two groups:
 // 1. Tests that require a live backend with OAuth — skipped when backend is unreachable
@@ -64,14 +65,7 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
   test('redirects to dashboard after successful login', async ({ page }) => {
-    // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
-    await page.route('**/api/**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({}),
-      })
-    )
+    await mockApiFallback(page)
 
     // Mock the /api/me endpoint to simulate an authenticated user
     await page.route('**/api/me', (route) =>
@@ -88,26 +82,16 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
       })
     )
 
-    // Mock MCP endpoints required for dashboard rendering
-    await page.route('**/api/mcp/**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ clusters: [], events: [], issues: [], nodes: [] }),
-      })
-    )
-
-    // Seed localStorage BEFORE any page script runs so the auth guard sees
-    // the token on first execution. page.evaluate() runs after the page has
-    // already parsed and executed scripts, which is too late for webkit/Safari
-    // where the auth redirect fires synchronously on script evaluation.
-    // page.addInitScript() injects the snippet ahead of any page code (#9096).
     await page.addInitScript(() => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
     })
 
-    // Navigate to home — should land on dashboard since user is authenticated
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
 
@@ -116,12 +100,13 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
   })
 
   test('handles login errors gracefully', async ({ page }, testInfo) => {
-    // Skip on mobile Chrome — OAuth redirect mocking unreliable on mobile emulation (#nightly-playwright)
     if (testInfo.project.name === 'mobile-chrome') {
       test.skip()
     }
 
-    // Mock /health so the app doesn't hang waiting for backend
+    await mockApiFallback(page)
+
+    // Override /health to report OAuth configured (mockApiFallback sets oauth_configured: false)
     await page.route('**/health', (route) => {
       const url = new URL(route.request().url())
       if (url.pathname !== '/health') return route.fallback()
@@ -131,15 +116,6 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
         body: JSON.stringify({ status: 'ok', version: 'dev', oauth_configured: true }),
       })
     })
-
-    // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
-    await page.route('**/api/**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({}),
-      })
-    )
 
     // Mock GitHub auth endpoint failure — redirect back to /login with error
     // param, matching real OAuth error flow (backend redirects to /login?error=)
@@ -175,26 +151,7 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
   })
 
   test('detects demo mode vs OAuth mode behavior', async ({ page }) => {
-    // Mock /health so the app doesn't redirect to /auth/github on
-    // webkit/firefox where the redirect fires before JS can intercept. #10790
-    await page.route('**/health', (route) => {
-      const url = new URL(route.request().url())
-      if (url.pathname !== '/health') return route.fallback()
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ status: 'ok', version: 'dev', oauth_configured: false }),
-      })
-    })
-
-    // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
-    await page.route('**/api/**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({}),
-      })
-    )
+    await mockApiFallback(page)
 
     await page.goto('/')
 

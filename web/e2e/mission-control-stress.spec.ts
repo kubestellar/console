@@ -394,6 +394,11 @@ async function navigateTo(page: Page) {
   await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
     localStorage.setItem('kc_onboarded', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '12345', github_login: 'demo-user',
@@ -448,6 +453,11 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
     ({ mc, mcKey }) => {
       localStorage.setItem('token', 'demo-token')
       localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('kc-has-session', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
       localStorage.setItem('kc_onboarded', 'true')
       localStorage.setItem('kc_user_cache', JSON.stringify({
         id: 'demo-user', github_id: '12345', github_login: 'demo-user',
@@ -483,6 +493,11 @@ async function ensureDashboard(page: Page) {
     await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
     localStorage.setItem('kc_onboarded', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '12345', github_login: 'demo-user',

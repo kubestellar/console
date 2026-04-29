@@ -302,6 +302,11 @@ test('console error scan — all routes', async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 
   // ── Traverse all routes ───────────────────────────────────────────────

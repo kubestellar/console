@@ -180,6 +180,15 @@ test.describe('Dashboard Page', () => {
         })
       )
 
+      // Mock the local kc-agent HTTP endpoint to prevent hangs in CI.
+      await page.route('http://127.0.0.1:8585/**', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [], pods: [] }),
+        })
+      )
+
       // Delay the API response to see loading state
       await page.route('**/api/mcp/**', async (route) => {
         const API_DELAY_MS = 2000
@@ -196,6 +205,11 @@ test.describe('Dashboard Page', () => {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kc-demo-mode', 'false')
+        localStorage.setItem('kc-has-session', 'true')
+        localStorage.setItem('kc-backend-status', JSON.stringify({
+          available: true,
+          timestamp: Date.now(),
+        }))
       })
 
       await page.goto('/')
@@ -223,6 +237,15 @@ test.describe('Dashboard Page', () => {
         })
       )
 
+      // Mock the local kc-agent HTTP endpoint to prevent hangs in CI.
+      await page.route('http://127.0.0.1:8585/**', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [], pods: [] }),
+        })
+      )
+
       await page.route('**/api/mcp/clusters', (route) =>
         route.fulfill({
           status: 500,
@@ -236,6 +259,11 @@ test.describe('Dashboard Page', () => {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kc-demo-mode', 'false')
+        localStorage.setItem('kc-has-session', 'true')
+        localStorage.setItem('kc-backend-status', JSON.stringify({
+          available: true,
+          timestamp: Date.now(),
+        }))
       })
 
       await page.goto('/')
@@ -407,6 +435,11 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem('kc-demo-mode', 'false')
+      localStorage.setItem('kc-has-session', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
     })
   })
 

@@ -15,6 +15,11 @@ test.describe('Resolution Memory System', () => {
       localStorage.setItem('token', 'demo-token')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('kc-has-session', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
     })
     await page.goto('/', { waitUntil: 'domcontentloaded' })
   })
