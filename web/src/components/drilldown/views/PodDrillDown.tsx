@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
@@ -7,7 +7,7 @@ import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Terminal, Zap, Code, Info, Tag, Loader2, Box, Layers, Server, AlertTriangle, RefreshCw, TerminalSquare } from 'lucide-react'
-import { PodExecTerminal } from '../../terminal/PodExecTerminal'
+const PodExecTerminal = lazy(() => import('../../terminal/PodExecTerminal'))
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -1546,13 +1546,15 @@ Please:
 
         {activeTab === 'exec' && (
           <div className="h-[500px] rounded-lg overflow-hidden border border-border">
-            <PodExecTerminal
-              cluster={cluster}
-              namespace={namespace}
-              pod={podName}
-              containers={containerNames}
-              defaultContainer={containerNames[0]}
-            />
+            <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground"><Loader2 className="animate-spin mr-2 h-4 w-4" />Loading terminal…</div>}>
+              <PodExecTerminal
+                cluster={cluster}
+                namespace={namespace}
+                pod={podName}
+                containers={containerNames}
+                defaultContainer={containerNames[0]}
+              />
+            </Suspense>
           </div>
         )}
 
