@@ -585,6 +585,7 @@ export async function setMode(page: Page, mode: 'demo' | 'live' | 'live+cache', 
     'kc-user-cache': JSON.stringify(u),
     'kc-backend-status': JSON.stringify({ available: true, timestamp: Date.now() }),
     'kc-sqlite-migrated': '2',
+    'kc-agent-setup-dismissed': 'true',
   }
 
   if (mode === 'live+cache') {

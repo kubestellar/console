@@ -303,6 +303,7 @@ async function seedAuth(page: Page) {
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('kc_onboarded', 'true')
     localStorage.setItem('kc_tour_completed', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '99999', github_login: 'journey-tester',
       email: 'journey@test.dev', role: 'admin', onboarded: true,

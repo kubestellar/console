@@ -400,6 +400,7 @@ async function navigateTo(page: Page) {
       timestamp: Date.now(),
     }))
     localStorage.setItem('kc_onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '12345', github_login: 'demo-user',
       email: 'demo@example.com', role: 'viewer', onboarded: true,
@@ -499,6 +500,7 @@ async function ensureDashboard(page: Page) {
       timestamp: Date.now(),
     }))
     localStorage.setItem('kc_onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '12345', github_login: 'demo-user',
       email: 'demo@example.com', role: 'viewer', onboarded: true,

@@ -383,6 +383,7 @@ async function navigateToConsole(page: Page) {
       available: true,
       timestamp: Date.now(),
     }))
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_RENDER_TIMEOUT_MS })
