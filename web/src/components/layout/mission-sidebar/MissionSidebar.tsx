@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { safeLazy } from '../../../lib/safeLazy'
 import { isAnyModalOpen } from '../../../lib/modals'
 import {
   X,
@@ -31,9 +32,7 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { cn } from '../../../lib/cn'
 import { AgentSelector } from '../../agent/AgentSelector'
 import { LogoWithStar } from '../../ui/LogoWithStar'
-const MissionBrowser = lazy(() =>
-  import('../../missions/MissionBrowser').then(m => ({ default: m.MissionBrowser }))
-)
+const MissionBrowser = safeLazy(() => import('../../missions/MissionBrowser'), 'MissionBrowser')
 import { MissionControlDialog } from '../../mission-control/MissionControlDialog'
 import { MissionDetailView } from '../../missions/MissionDetailView'
 import type { MissionExport, OrbitResourceFilter } from '../../../lib/missions/types'

@@ -1,4 +1,5 @@
-import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, use, ComponentType, Suspense, lazy } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, use, ComponentType, Suspense } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import {
   Maximize2, RefreshCw, ChevronRight, ChevronDown, Bug, AlertTriangle, Info,
 } from 'lucide-react'
@@ -26,13 +27,9 @@ import { CardActionMenu } from './card-wrapper/CardActionMenu'
 import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
 import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
-const WidgetExportModal = lazy(() =>
-  import('../widgets/WidgetExportModal').then(m => ({ default: m.WidgetExportModal }))
-)
+const WidgetExportModal = safeLazy(() => import('../widgets/WidgetExportModal'), 'WidgetExportModal')
 // Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
-const FeatureRequestModal = lazy(() =>
-  import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
-)
+const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
 
 
 // Minimum duration to show spin animation (ensures at least one full rotation)

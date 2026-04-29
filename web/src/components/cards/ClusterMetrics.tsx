@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef, lazy, Suspense, memo } from 'react'
+import { useState, useMemo, useEffect, useRef, Suspense, memo } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { useClusters } from '../../hooks/useMCP'
 import { CLUSTER_POLL_INTERVAL_MS } from '../../hooks/mcp/shared'
 import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
@@ -107,12 +108,8 @@ interface MetricPoint {
 // Lazy-load chart components to defer the echarts vendor chunk (~1.14 MB)
 // from the critical loading path. The card itself stays eager — only the
 // chart subtrees are deferred behind React.lazy + Suspense.
-const LazyTimeSeriesChart = lazy(() =>
-  import('../charts/TimeSeriesChart').then(m => ({ default: m.TimeSeriesChart }))
-)
-const LazyMultiSeriesChart = lazy(() =>
-  import('../charts/TimeSeriesChart').then(m => ({ default: m.MultiSeriesChart }))
-)
+const LazyTimeSeriesChart = safeLazy(() => import('../charts/TimeSeriesChart'), 'TimeSeriesChart')
+const LazyMultiSeriesChart = safeLazy(() => import('../charts/TimeSeriesChart'), 'MultiSeriesChart')
 
 /** Height (px) of the chart area — used for both the chart and its Suspense fallback */
 const CHART_AREA_MIN_HEIGHT = 160

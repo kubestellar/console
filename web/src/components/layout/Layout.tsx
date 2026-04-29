@@ -1,4 +1,5 @@
-import { ReactNode, Suspense, lazy, useState, useEffect, useRef } from 'react'
+import { ReactNode, Suspense, useState, useEffect, useRef } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import {
@@ -59,14 +60,8 @@ import { copyToClipboard } from '../../lib/clipboard'
 
 // Lazy-load the AI mission sidebar so react-markdown and remark plugins are
 // not part of the initial bundle — they only load when the sidebar is first rendered.
-const MissionSidebar = lazy(() =>
-  import('./mission-sidebar').then((m) => ({ default: m.MissionSidebar })),
-)
-const MissionSidebarToggle = lazy(() =>
-  import('./mission-sidebar').then((m) => ({
-    default: m.MissionSidebarToggle,
-  })),
-)
+const MissionSidebar = safeLazy(() => import('./mission-sidebar'), 'MissionSidebar')
+const MissionSidebarToggle = safeLazy(() => import('./mission-sidebar'), 'MissionSidebarToggle')
 
 // Module-level constant — computed once, never changes on re-render.
 // Prevents star field from flickering when Layout re-renders due to hooks.

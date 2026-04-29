@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { Tooltip } from '../ui/Tooltip'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
@@ -14,9 +15,7 @@ import { checkOAuthConfigured } from '../../lib/api'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
 // Lazy-load the feedback modal (~67 KB) — only needed when user opens it
-const FeatureRequestModal = lazy(() =>
-  import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
-)
+const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
 
 interface UserProfileDropdownProps {
   user: {

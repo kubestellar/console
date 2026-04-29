@@ -10,7 +10,8 @@
  * Phase 3: Flight Plan (SVG blueprint + deploy)
  */
 
-import { useEffect, useCallback, useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useCallback, useRef, useState, Suspense } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -33,9 +34,7 @@ import { ChunkErrorBoundary } from '../ChunkErrorBoundary'
 import { useMissionControl, consumePersistQuotaBanner } from './useMissionControl'
 import { FixerDefinitionPanel } from './FixerDefinitionPanel'
 import { ClusterAssignmentPanel } from './ClusterAssignmentPanel'
-const FlightPlanBlueprint = lazy(() =>
-  import('./FlightPlanBlueprint').then(m => ({ default: m.FlightPlanBlueprint }))
-)
+const FlightPlanBlueprint = safeLazy(() => import('./FlightPlanBlueprint'), 'FlightPlanBlueprint')
 import { LaunchSequence } from './LaunchSequence'
 import { RequestApprovalModal } from './RequestApprovalModal'
 import { decodePlan, planToState } from './missionPlanCodec'

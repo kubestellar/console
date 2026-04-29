@@ -1,4 +1,5 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { safeLazy } from '../../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink, Sparkles } from 'lucide-react'
@@ -15,15 +16,11 @@ import { AlertBadge } from '../../ui/AlertBadge'
 import { FeatureRequestButton } from '../../feedback'
 // Lazy-load SearchDropdown — it imports useSearchIndex which pulls in 5 MCP
 // modules (~135 KB). The search bar appears after the chunk loads (near-instant).
-const SearchDropdown = lazy(() =>
-  import('./SearchDropdown').then(m => ({ default: m.SearchDropdown }))
-)
+const SearchDropdown = safeLazy(() => import('./SearchDropdown'), 'SearchDropdown')
 
 // Lazy-load AgentSelector — agent UI components (~41 KB) are only needed
 // when a local kc-agent is available (never on console.kubestellar.io).
-const AgentSelector = lazy(() =>
-  import('../../agent/AgentSelector').then(m => ({ default: m.AgentSelector }))
-)
+const AgentSelector = safeLazy(() => import('../../agent/AgentSelector'), 'AgentSelector')
 import { useMissions } from '../../../hooks/useMissions'
 import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'

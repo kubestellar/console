@@ -5,7 +5,7 @@
  *   src/components/dashboard/AddCardModal.tsx → CARD_CATALOG
  * See src/config/cards/index.ts for the full registration checklist.
  */
-import { lazy, createElement, ComponentType } from 'react'
+import { createElement, ComponentType } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { getCardConfig } from '../../config/cards'
@@ -597,9 +597,9 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
   rbac_audit_dashboard: RBACAuditDashboardCard,
   session_dashboard: SessionDashboardCard,
   // Enterprise Risk Management dashboard content cards
-  risk_matrix_dashboard: lazy(() => import('../compliance/RiskMatrixDashboard').then(m => ({ default: m.RiskMatrixDashboardContent }))),
-  risk_register_dashboard: lazy(() => import('../compliance/RiskRegisterDashboard').then(m => ({ default: m.RiskRegisterDashboardContent }))),
-  risk_appetite_dashboard: lazy(() => import('../compliance/RiskAppetiteDashboard').then(m => ({ default: m.RiskAppetiteDashboardContent }))),
+  risk_matrix_dashboard: safeLazy(() => import('../compliance/RiskMatrixDashboard'), 'RiskMatrixDashboardContent'),
+  risk_register_dashboard: safeLazy(() => import('../compliance/RiskRegisterDashboard'), 'RiskRegisterDashboardContent'),
+  risk_appetite_dashboard: safeLazy(() => import('../compliance/RiskAppetiteDashboard'), 'RiskAppetiteDashboardContent'),
   // ISO 27001 audit checklist
   iso27001_audit: ISO27001Audit,
   // Cross-cluster compliance cards
@@ -905,9 +905,7 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
 }
 
 // Lazy-load UnifiedCard — keeps it out of the main bundle for fast page load
-const LazyUnifiedCard = lazy(() =>
-  import('../../lib/unified/card/UnifiedCard').then(m => ({ default: m.UnifiedCard })),
-)
+const LazyUnifiedCard = safeLazy(() => import('../../lib/unified/card/UnifiedCard'), 'UnifiedCard')
 
 /** Supported unified content types that the adapter can render */
 const _UNIFIED_CONTENT_TYPES = ['list', 'table', 'chart', 'status-grid']

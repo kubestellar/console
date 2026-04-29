@@ -9,7 +9,8 @@
  * content area needs an explicit left margin to clear it — mirroring the
  * approach used by the primary Layout component.
  */
-import { lazy, Suspense, useCallback, useMemo } from 'react'
+import { Suspense, useCallback, useMemo } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { Outlet, useLocation } from 'react-router-dom'
 import EnterpriseSidebar from './EnterpriseSidebar'
 import { VersionCheckProvider } from '../../hooks/useVersionCheck'
@@ -90,14 +91,8 @@ function readExistingPlacements(storageKey: string): DashboardCardPlacement[] {
   return []
 }
 
-const MissionSidebar = lazy(() =>
-  import('../layout/mission-sidebar').then((m) => ({ default: m.MissionSidebar })),
-)
-const MissionSidebarToggle = lazy(() =>
-  import('../layout/mission-sidebar').then((m) => ({
-    default: m.MissionSidebarToggle,
-  })),
-)
+const MissionSidebar = safeLazy(() => import('../layout/mission-sidebar'), 'MissionSidebar')
+const MissionSidebarToggle = safeLazy(() => import('../layout/mission-sidebar'), 'MissionSidebarToggle')
 
 export default function EnterpriseLayout() {
   const { config } = useSidebarConfig()

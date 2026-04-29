@@ -1,4 +1,5 @@
-import { useState, memo, lazy, Suspense } from 'react'
+import { useState, memo, Suspense } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import {
@@ -15,9 +16,7 @@ import { StatBlockModePicker } from './StatBlockModePicker'
 // Lazy-load Sparkline to defer the echarts vendor chunk from the critical path.
 // The Gauge and CircularProgress components are smaller and less common, but they
 // share the same echarts import chain, so lazy-loading them too is low-cost.
-const LazySparkline = lazy(() =>
-  import('../charts/Sparkline').then(m => ({ default: m.Sparkline }))
-)
+const LazySparkline = safeLazy(() => import('../charts/Sparkline'), 'Sparkline')
 import { Gauge } from '../charts/Gauge'
 import { CircularProgress } from '../charts/ProgressBar'
 import { useLocalAgent } from '../../hooks/useLocalAgent'

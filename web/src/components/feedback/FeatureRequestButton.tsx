@@ -1,4 +1,5 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { Bug, Loader2 } from 'lucide-react'
 import { useFeatureRequests } from '../../hooks/useFeatureRequests'
 import type { RequestType } from '../../hooks/useFeatureRequests'
@@ -7,9 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 
 // Lazy-load the modal (~67 KB) — only needed when the user clicks the bug icon
-const FeatureRequestModal = lazy(() =>
-  import('./FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
-)
+const FeatureRequestModal = safeLazy(() => import('./FeatureRequestModal'), 'FeatureRequestModal')
 
 /** Badge displays "99+" for counts above this threshold. */
 const MAX_BADGE_DISPLAY = 99

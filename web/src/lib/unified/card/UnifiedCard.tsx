@@ -10,7 +10,8 @@
  *   <UnifiedCard config={clusterHealthConfig} title="Custom Title" />
  */
 
-import { ReactNode, useMemo, lazy, Suspense } from 'react'
+import { ReactNode, useMemo, Suspense } from 'react'
+import { safeLazy } from '../../safeLazy'
 import {
   AlertTriangle,
   Info,
@@ -31,9 +32,7 @@ import { ListVisualization } from './visualizations/ListVisualization'
 import { TableVisualization } from './visualizations/TableVisualization'
 // Lazy-load ChartVisualization to defer the echarts vendor chunk from the
 // critical loading path — it is only needed for cards with chartType content.
-const LazyChartVisualization = lazy(() =>
-  import('./visualizations/ChartVisualization').then(m => ({ default: m.ChartVisualization }))
-)
+const LazyChartVisualization = safeLazy(() => import('./visualizations/ChartVisualization'), 'ChartVisualization')
 import { StatusGridVisualization } from './visualizations/StatusGridVisualization'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useReportCardDataState } from '../../../components/cards/CardDataContext'
