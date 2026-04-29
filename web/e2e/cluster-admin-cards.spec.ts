@@ -472,9 +472,9 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       // Wait for data to load — cluster name should appear
       await expect(card.getByText('prod-east').or(card.getByText('staging')).first()).toBeVisible({ timeout: 15000 })
 
-      // DNS card shows green (healthy) or yellow (degraded) status dots
-      const statusDots = card.locator('.rounded-full.w-2.h-2, .bg-green-500, .bg-yellow-500')
-      await expect(statusDots.first()).toBeVisible({ timeout: 10000 })
+      // DNS card shows per-pod status pills (✓ for running, ✗ for non-running)
+      const statusPills = card.getByText('✓').or(card.getByText('✗'))
+      await expect(statusPills.first()).toBeVisible({ timeout: 10000 })
     })
 
     test('DNSHealth shows restart count when pods have restarts', async ({ page }) => {
