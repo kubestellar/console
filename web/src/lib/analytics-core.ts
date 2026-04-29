@@ -1127,3 +1127,13 @@ export function startGlobalErrorTracking() {
     }
   })
 }
+
+export const __testables = {
+  inferErrorType,
+  inferComponentName,
+  isBrowserExtensionNoise,
+  isBareNetworkNoise,
+  isErrorThrottled,
+  markErrorReported,
+  wasAlreadyReported,
+}

@@ -557,3 +557,10 @@ export function useSearchIndex(query: string) {
 
   return { results, totalCount }
 }
+
+export const __testables = {
+  matchesQuery,
+  buildDashboardStorage,
+  scanPlacedCards,
+  scanPlacedStats,
+}
