@@ -177,6 +177,7 @@ export function AlertListItem({
               onClick={(e) => { e.stopPropagation(); unsnoozeAlert(alert.id) }}
               className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors"
               title="Snoozed — click to unsnooze"
+              aria-label="Unsnooze alert"
             >
               <BellOff className="w-3 h-3" />
               {formatSnoozeRemaining(snoozeRemaining ?? 0)}
@@ -186,6 +187,7 @@ export function AlertListItem({
               onClick={(e) => { e.stopPropagation(); setSnoozeMenuOpen(!snoozeMenuOpen) }}
               className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
               title="Snooze this alert"
+              aria-label="Snooze this alert"
             >
               <BellOff className="w-3.5 h-3.5" />
             </button>
@@ -202,6 +204,7 @@ export function AlertListItem({
                   key={duration}
                   onClick={(e) => { e.stopPropagation(); snoozeAlert(alert.id, duration); setSnoozeMenuOpen(false) }}
                   className="w-full px-3 py-1.5 text-xs text-left text-foreground hover:bg-muted/50 transition-colors"
+                  aria-label={`Snooze for ${duration}`}
                 >
                   {duration}
                 </button>

@@ -256,6 +256,7 @@ export function PodLogs({ config }: PodLogsProps) {
           disabled={!effectivePod || isBusy}
           className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
           title="Refresh logs"
+          aria-label="Refresh logs"
         >
           <RefreshCw className={`w-3 h-3 ${isBusy ? 'animate-spin' : ''}`} />
           Refresh

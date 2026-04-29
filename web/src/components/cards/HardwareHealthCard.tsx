@@ -480,6 +480,7 @@ export function HardwareHealthCard() {
         <button
           onClick={() => { userSelectedView.current = true; setViewMode('inventory') }}
           className="p-2 rounded-lg border bg-muted/20 border-muted/30 hover:bg-muted/40 transition-colors cursor-pointer text-left"
+          aria-label="View nodes inventory"
         >
           <div className="text-xl font-bold text-foreground">{deduplicatedNodeCount}</div>
           <div className="text-2xs text-muted-foreground">
@@ -499,6 +500,8 @@ export function HardwareHealthCard() {
                 ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             )}
+            aria-label="Switch to inventory view"
+            aria-pressed={viewMode === 'inventory'}
           >
             <List className="w-3.5 h-3.5" />
             Inventory
@@ -516,6 +519,8 @@ export function HardwareHealthCard() {
                 ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             )}
+            aria-label="Switch to alerts view"
+            aria-pressed={viewMode === 'alerts'}
           >
             <AlertCircle className="w-3.5 h-3.5" />
             Alerts
@@ -580,6 +585,7 @@ export function HardwareHealthCard() {
                           setSnoozeAllMenuOpen(false)
                         }}
                         className="w-full px-3 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors flex items-center gap-2"
+                        aria-label={`Snooze all alerts for ${duration}`}
                       >
                         <Clock className="w-3 h-3 text-muted-foreground" />
                         {duration}
@@ -594,6 +600,7 @@ export function HardwareHealthCard() {
                             setSnoozeAllMenuOpen(false)
                           }}
                           className="w-full px-3 py-1.5 text-xs text-left text-yellow-400 hover:bg-muted/50 transition-colors"
+                          aria-label="Clear all snoozed alerts"
                         >
                           Clear all snoozes
                         </button>
@@ -649,6 +656,7 @@ export function HardwareHealthCard() {
             <button
               onClick={() => refetch()}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors whitespace-nowrap"
+              aria-label="Retry fetching hardware health data"
             >
               <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
               Retry
@@ -739,6 +747,7 @@ export function HardwareHealthCard() {
                         }}
                         className="flex items-center gap-1 px-1.5 py-0.5 rounded text-yellow-400 bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors"
                         title="Click to unsnooze"
+                        aria-label="Unsnooze alert"
                       >
                         <BellOff className="w-3 h-3" />
                         <span className="text-2xs font-medium">
@@ -754,6 +763,7 @@ export function HardwareHealthCard() {
                           }}
                           className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                           title="Snooze alert"
+                          aria-label="Snooze alert"
                         >
                           <BellOff className="w-3 h-3" />
                         </button>
@@ -768,6 +778,7 @@ export function HardwareHealthCard() {
                                   setSnoozeMenuOpen(null)
                                 }}
                                 className="w-full px-3 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors"
+                                aria-label={`Snooze for ${duration}`}
                               >
                                 {duration}
                               </button>
@@ -783,6 +794,7 @@ export function HardwareHealthCard() {
                       }}
                       className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                       title="Clear alert (after power cycle)"
+                      aria-label="Clear alert"
                     >
                       <XCircle className="w-3 h-3" />
                     </button>
