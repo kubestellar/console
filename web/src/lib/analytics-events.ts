@@ -356,6 +356,7 @@ export function emitDemoModeToggled(enabled: boolean) {
 
 export function emitAgentTokenFailure(reason: string) {
   send('ksc_error', {
+    error_code: 'agent_token_failure',
     error_category: 'agent_token_failure',
     error_detail: reason.slice(0, 100),
     error_page: typeof window !== 'undefined' ? window.location.pathname : '',
@@ -364,6 +365,7 @@ export function emitAgentTokenFailure(reason: string) {
 
 export function emitWsAuthMissing(url: string) {
   send('ksc_error', {
+    error_code: 'ws_auth_missing',
     error_category: 'ws_auth_missing',
     error_detail: url.replace(/^wss?:\/\/[^/]+/, '').slice(0, 100),
     error_page: typeof window !== 'undefined' ? window.location.pathname : '',
@@ -372,6 +374,7 @@ export function emitWsAuthMissing(url: string) {
 
 export function emitSseAuthFailure(url: string) {
   send('ksc_error', {
+    error_code: 'sse_auth_failure',
     error_category: 'sse_auth_failure',
     error_detail: url.replace(/^https?:\/\/[^/]+/, '').slice(0, 100),
     error_page: typeof window !== 'undefined' ? window.location.pathname : '',
@@ -380,6 +383,7 @@ export function emitSseAuthFailure(url: string) {
 
 export function emitSessionRefreshFailure(reason: string) {
   send('ksc_error', {
+    error_code: 'session_refresh_failure',
     error_category: 'session_refresh_failure',
     error_detail: reason.slice(0, 100),
     error_page: typeof window !== 'undefined' ? window.location.pathname : '',
