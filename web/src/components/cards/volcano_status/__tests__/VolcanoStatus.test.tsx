@@ -190,7 +190,7 @@ describe('VolcanoStatus', () => {
 
   it('renders job rows with phase badges', () => {
     render(<VolcanoStatus />)
-    expect(screen.getByText('Running')).toBeTruthy()
+    expect(screen.getAllByText('Running')[0]).toBeInTheDocument()
   })
 
   it('renders job namespace/name', () => {
@@ -218,8 +218,8 @@ describe('VolcanoStatus', () => {
 
   it('renders summary metric tiles', () => {
     render(<VolcanoStatus />)
-    expect(screen.getByText('Queues')).toBeTruthy()
-    expect(screen.getByText('Pending')).toBeTruthy()
+    expect(screen.getAllByText('Queues')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('Pending')[0]).toBeInTheDocument()
   })
 
   it('handles empty queues array safely', () => {

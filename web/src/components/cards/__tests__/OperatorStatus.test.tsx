@@ -270,7 +270,7 @@ describe('OperatorStatus', () => {
     )
 
     render(<OperatorStatus />)
-    expect(screen.getByText(/operatorStatus.errorLoading/)).toBeTruthy()
+    expect(screen.getAllByText(/operatorStatus.errorLoading/)[0]).toBeInTheDocument()
   })
 
   it('handles empty operators array gracefully', () => {

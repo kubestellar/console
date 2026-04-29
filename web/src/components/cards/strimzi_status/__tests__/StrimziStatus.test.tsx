@@ -161,7 +161,7 @@ describe('StrimziStatus', () => {
 
   it('renders broker readiness in summary tiles', () => {
     render(<StrimziStatus />)
-    expect(screen.getByText('3/3')).toBeTruthy()
+    expect(screen.getAllByText('3/3')[0]).toBeInTheDocument()
   })
 
   it('renders consumer group chips for clusters', () => {

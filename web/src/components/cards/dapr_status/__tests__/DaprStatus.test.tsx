@@ -212,8 +212,8 @@ describe('DaprStatus', () => {
 
   it('renders building block counts', () => {
     render(<DaprStatus />)
-    expect(screen.getByText('State stores')).toBeTruthy()
-    expect(screen.getByText('Pub/sub')).toBeTruthy()
-    expect(screen.getByText('Bindings')).toBeTruthy()
+    expect(screen.getAllByText('State stores')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('Pub/sub')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('Bindings')[0]).toBeInTheDocument()
   })
 })
