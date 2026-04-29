@@ -773,6 +773,7 @@ func (s *Server) setupRoutes() {
 		"/api/feedback/requests": true, // feedback submission has its own feedbackLimiter
 		"/api/me":                true, // user identity — must survive for login to work
 		"/api/version":           true, // version check for update dialog
+		"/api/mcp/clusters":     true, // cluster discovery — must not be blocked by auth-retry cascades (#10925)
 	}
 	apiLimiterSkipPrefixes := []string{
 		"/api/github/", // GitHub proxy (updates dialog, contributions list) has its own per-user limiter
