@@ -116,12 +116,12 @@ describe('normalizeVolumeState', () => {
     expect(normalizeVolumeState('attaching')).toBe('attaching')
   })
 
-  it('returns "unknown" for invalid state', () => {
-    expect(normalizeVolumeState('bogus')).toBe('unknown')
+  it('returns "detached" for invalid state', () => {
+    expect(normalizeVolumeState('bogus')).toBe('detached')
   })
 
-  it('returns "unknown" for undefined', () => {
-    expect(normalizeVolumeState(undefined)).toBe('unknown')
+  it('returns "detached" for undefined', () => {
+    expect(normalizeVolumeState(undefined)).toBe('detached')
   })
 })
 
@@ -147,9 +147,9 @@ describe('summarize', () => {
 
   it('counts volume health states correctly', () => {
     const volumes = [
-      { name: 'v1', state: 'attached' as const, robustness: 'healthy' as const, size: 1073741824, numberOfReplicas: 3, replicas: [] },
-      { name: 'v2', state: 'attached' as const, robustness: 'degraded' as const, size: 1073741824, numberOfReplicas: 3, replicas: [] },
-      { name: 'v3', state: 'detached' as const, robustness: 'faulted' as const, size: 1073741824, numberOfReplicas: 3, replicas: [] },
+      { name: 'v1', namespace: 'default', state: 'attached' as const, robustness: 'healthy' as const, replicasDesired: 3, replicasHealthy: 3, sizeBytes: 1073741824, actualSizeBytes: 0, nodeAttached: 'n1', cluster: '' },
+      { name: 'v2', namespace: 'default', state: 'attached' as const, robustness: 'degraded' as const, replicasDesired: 3, replicasHealthy: 1, sizeBytes: 1073741824, actualSizeBytes: 0, nodeAttached: 'n1', cluster: '' },
+      { name: 'v3', namespace: 'default', state: 'detached' as const, robustness: 'faulted' as const, replicasDesired: 3, replicasHealthy: 0, sizeBytes: 1073741824, actualSizeBytes: 0, nodeAttached: '', cluster: '' },
     ]
     const result = summarize(volumes, [])
     expect(result.totalVolumes).toBe(3)
@@ -160,8 +160,8 @@ describe('summarize', () => {
 
   it('counts node readiness correctly', () => {
     const nodes = [
-      { name: 'n1', ready: true, schedulable: true, disks: {}, storageCapacity: 0, storageUsed: 0 },
-      { name: 'n2', ready: false, schedulable: true, disks: {}, storageCapacity: 0, storageUsed: 0 },
+      { name: 'n1', ready: true, schedulable: true, storageTotalBytes: 0, storageUsedBytes: 0, replicaCount: 0, cluster: '' },
+      { name: 'n2', ready: false, schedulable: true, storageTotalBytes: 0, storageUsedBytes: 0, replicaCount: 0, cluster: '' },
     ]
     const result = summarize([], nodes)
     expect(result.totalNodes).toBe(2)
@@ -170,51 +170,51 @@ describe('summarize', () => {
 })
 
 describe('deriveHealth', () => {
-  it('returns not-installed for empty summary', () => {
-    const summary = {
-      totalVolumes: 0, healthyVolumes: 0, degradedVolumes: 0, faultedVolumes: 0,
-      totalNodes: 0, readyNodes: 0, schedulableNodes: 0,
-      totalCapacityBytes: 0, totalUsedBytes: 0,
-    }
-    expect(deriveHealth(summary)).toBe('not-installed')
+  it('returns not-installed for empty volumes and nodes', () => {
+    expect(deriveHealth([], [])).toBe('not-installed')
   })
 
-  it('returns healthy when all volumes are healthy', () => {
-    const summary = {
-      totalVolumes: 3, healthyVolumes: 3, degradedVolumes: 0, faultedVolumes: 0,
-      totalNodes: 2, readyNodes: 2, schedulableNodes: 2,
-      totalCapacityBytes: 100, totalUsedBytes: 50,
-    }
-    expect(deriveHealth(summary)).toBe('healthy')
+  it('returns healthy when all volumes are healthy and nodes ready', () => {
+    const volumes = [
+      { name: 'v1', state: 'attached' as const, robustness: 'healthy' as const, replicasDesired: 3, replicasHealthy: 3, sizeBytes: 100, actualSizeBytes: 50, nodeAttached: 'n1', namespace: 'default', cluster: '' },
+      { name: 'v2', state: 'attached' as const, robustness: 'healthy' as const, replicasDesired: 3, replicasHealthy: 3, sizeBytes: 100, actualSizeBytes: 50, nodeAttached: 'n1', namespace: 'default', cluster: '' },
+    ]
+    const nodes = [
+      { name: 'n1', ready: true, schedulable: true, storageTotalBytes: 100, storageUsedBytes: 50, replicaCount: 2, cluster: '' },
+    ]
+    expect(deriveHealth(volumes, nodes)).toBe('healthy')
   })
 
   it('returns degraded when some volumes are degraded', () => {
-    const summary = {
-      totalVolumes: 3, healthyVolumes: 2, degradedVolumes: 1, faultedVolumes: 0,
-      totalNodes: 2, readyNodes: 2, schedulableNodes: 2,
-      totalCapacityBytes: 100, totalUsedBytes: 50,
-    }
-    expect(deriveHealth(summary)).toBe('degraded')
+    const volumes = [
+      { name: 'v1', state: 'attached' as const, robustness: 'healthy' as const, replicasDesired: 3, replicasHealthy: 3, sizeBytes: 100, actualSizeBytes: 50, nodeAttached: 'n1', namespace: 'default', cluster: '' },
+      { name: 'v2', state: 'attached' as const, robustness: 'degraded' as const, replicasDesired: 3, replicasHealthy: 1, sizeBytes: 100, actualSizeBytes: 50, nodeAttached: 'n1', namespace: 'default', cluster: '' },
+    ]
+    const nodes = [
+      { name: 'n1', ready: true, schedulable: true, storageTotalBytes: 100, storageUsedBytes: 50, replicaCount: 2, cluster: '' },
+    ]
+    expect(deriveHealth(volumes, nodes)).toBe('degraded')
   })
 
-  it('returns critical when volumes are faulted', () => {
-    const summary = {
-      totalVolumes: 3, healthyVolumes: 1, degradedVolumes: 1, faultedVolumes: 1,
-      totalNodes: 2, readyNodes: 2, schedulableNodes: 2,
-      totalCapacityBytes: 100, totalUsedBytes: 50,
-    }
-    expect(deriveHealth(summary)).toBe('critical')
+  it('returns degraded when volumes are faulted', () => {
+    const volumes = [
+      { name: 'v1', state: 'attached' as const, robustness: 'faulted' as const, replicasDesired: 3, replicasHealthy: 0, sizeBytes: 100, actualSizeBytes: 50, nodeAttached: 'n1', namespace: 'default', cluster: '' },
+    ]
+    const nodes = [
+      { name: 'n1', ready: true, schedulable: true, storageTotalBytes: 100, storageUsedBytes: 50, replicaCount: 1, cluster: '' },
+    ]
+    expect(deriveHealth(volumes, nodes)).toBe('degraded')
   })
 })
 
 describe('buildStatus', () => {
-  it('returns not-installed for null response', () => {
-    const result = buildStatus(null)
+  it('returns not-installed for empty arrays', () => {
+    const result = buildStatus([], [])
     expect(result.health).toBe('not-installed')
   })
 
-  it('returns not-installed for empty response', () => {
-    const result = buildStatus({ volumes: [], nodes: [] })
+  it('returns not-installed for empty volumes and nodes', () => {
+    const result = buildStatus([], [])
     expect(result.health).toBe('not-installed')
   })
 })

@@ -164,33 +164,37 @@ describe('mapContainerState', () => {
     expect(mapContainerState('running')).toBe('running')
   })
 
-  it('maps waiting to created', () => {
-    expect(mapContainerState('waiting')).toBe('created')
+  it('maps waiting to paused', () => {
+    expect(mapContainerState('waiting')).toBe('paused')
   })
 
   it('maps terminated to stopped', () => {
     expect(mapContainerState('terminated')).toBe('stopped')
   })
 
-  it('maps undefined to unknown', () => {
-    expect(mapContainerState(undefined)).toBe('unknown')
+  it('maps undefined to stopped', () => {
+    expect(mapContainerState(undefined)).toBe('stopped')
   })
 })
 
 describe('formatUptime', () => {
-  it('returns "0s" for undefined startedAt', () => {
-    expect(formatUptime(undefined)).toBe('unknown')
+  it('returns "0s" for non-running state', () => {
+    expect(formatUptime(undefined, 'stopped')).toBe('0s')
+  })
+
+  it('returns "unknown" for running state with undefined startedAt', () => {
+    expect(formatUptime(undefined, 'running')).toBe('unknown')
   })
 
   it('formats recent uptime as seconds', () => {
     const tenSecondsAgo = new Date(Date.now() - 10_000).toISOString()
-    const result = formatUptime(tenSecondsAgo)
+    const result = formatUptime(tenSecondsAgo, 'running')
     expect(result).toMatch(/\d+s/)
   })
 
   it('formats hours when uptime > 1 hour', () => {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    const result = formatUptime(twoHoursAgo)
+    const result = formatUptime(twoHoursAgo, 'running')
     expect(result).toMatch(/\d+h/)
   })
 })

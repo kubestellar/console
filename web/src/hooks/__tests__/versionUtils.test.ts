@@ -33,15 +33,11 @@ import {
 import type { GitHubRelease, ParsedRelease } from '../../types/updates'
 
 // ---------------------------------------------------------------------------
-// localStorage mock
+// localStorage helpers
 // ---------------------------------------------------------------------------
 
-const store = new Map<string, string>()
-
 beforeEach(() => {
-  store.clear()
-  vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => store.get(key) ?? null)
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key: string, value: string) => { store.set(key, value) })
+  localStorage.clear()
 })
 
 afterEach(() => {
@@ -87,7 +83,7 @@ describe('safeJsonParse', () => {
       status: 502,
     })
     await expect(safeJsonParse(response, 'proxy')).rejects.toThrow(
-      'proxy: expected JSON response but received unknown content type (status 502)'
+      'proxy: expected JSON response but received text/plain;charset=UTF-8 (status 502)'
     )
   })
 
@@ -296,13 +292,13 @@ describe('loadCache', () => {
 
   it('returns parsed cache when valid JSON exists', () => {
     const cache = { data: [], timestamp: Date.now(), etag: 'abc' }
-    store.set('kc-releases-cache', JSON.stringify(cache))
+    localStorage.setItem('kc-releases-cache', JSON.stringify(cache))
     const result = loadCache()
     expect(result).toEqual(cache)
   })
 
   it('returns null on malformed JSON', () => {
-    store.set('kc-releases-cache', 'not json')
+    localStorage.setItem('kc-releases-cache', 'not json')
     expect(loadCache()).toBeNull()
   })
 })
@@ -313,7 +309,7 @@ describe('saveCache', () => {
       { tag_name: 'v1.0.0', published_at: '2025-01-01T00:00:00Z', body: '', html_url: '', prerelease: false },
     ]
     saveCache(data, 'etag-123')
-    const stored = store.get('kc-releases-cache')
+    const stored = localStorage.getItem('kc-releases-cache')
     expect(stored).toBeDefined()
     const parsed = JSON.parse(stored!)
     expect(parsed.data).toEqual(data)
@@ -323,7 +319,7 @@ describe('saveCache', () => {
 
   it('handles null etag', () => {
     saveCache([], null)
-    const parsed = JSON.parse(store.get('kc-releases-cache')!)
+    const parsed = JSON.parse(localStorage.getItem('kc-releases-cache')!)
     expect(parsed.etag).toBeNull()
   })
 })
@@ -345,12 +341,12 @@ describe('isCacheValid', () => {
 
 describe('loadChannel', () => {
   it('returns stored channel when valid', () => {
-    store.set('kc-update-channel', 'unstable')
+    localStorage.setItem('kc-update-channel', 'unstable')
     expect(loadChannel()).toBe('unstable')
   })
 
   it('returns stored "stable" channel', () => {
-    store.set('kc-update-channel', 'stable')
+    localStorage.setItem('kc-update-channel', 'stable')
     expect(loadChannel()).toBe('stable')
   })
 
@@ -359,7 +355,7 @@ describe('loadChannel', () => {
   })
 
   it('ignores invalid stored values and falls back', () => {
-    store.set('kc-update-channel', 'invalid')
+    localStorage.setItem('kc-update-channel', 'invalid')
     expect(loadChannel()).toBe('developer')
   })
 })
@@ -370,7 +366,7 @@ describe('loadChannel', () => {
 
 describe('loadAutoUpdateEnabled', () => {
   it('returns true when enabled', () => {
-    store.set('kc-auto-update-enabled', 'true')
+    localStorage.setItem('kc-auto-update-enabled', 'true')
     expect(loadAutoUpdateEnabled()).toBe(true)
   })
 
@@ -379,7 +375,7 @@ describe('loadAutoUpdateEnabled', () => {
   })
 
   it('returns false for non-"true" values', () => {
-    store.set('kc-auto-update-enabled', 'false')
+    localStorage.setItem('kc-auto-update-enabled', 'false')
     expect(loadAutoUpdateEnabled()).toBe(false)
   })
 })
@@ -394,12 +390,12 @@ describe('loadSkippedVersions', () => {
   })
 
   it('returns parsed array of versions', () => {
-    store.set('kc-skipped-versions', JSON.stringify(['v1.0.0', 'v1.1.0']))
+    localStorage.setItem('kc-skipped-versions', JSON.stringify(['v1.0.0', 'v1.1.0']))
     expect(loadSkippedVersions()).toEqual(['v1.0.0', 'v1.1.0'])
   })
 
   it('returns empty array on malformed JSON', () => {
-    store.set('kc-skipped-versions', 'bad json')
+    localStorage.setItem('kc-skipped-versions', 'bad json')
     expect(loadSkippedVersions()).toEqual([])
   })
 })

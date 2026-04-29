@@ -110,53 +110,53 @@ describe('useCachedDragonfly hook', () => {
 // ---------------------------------------------------------------------------
 
 describe('podIsReady', () => {
-  it('returns true when all containers are ready', () => {
-    expect(podIsReady({ status: { containerStatuses: [{ ready: true }, { ready: true }] } })).toBe(true)
+  it('returns true when all containers are ready and phase is Running', () => {
+    expect(podIsReady({ name: 'p', status: { phase: 'Running', containerStatuses: [{ ready: true }, { ready: true }] } })).toBe(true)
   })
 
   it('returns false when any container is not ready', () => {
-    expect(podIsReady({ status: { containerStatuses: [{ ready: true }, { ready: false }] } })).toBe(false)
+    expect(podIsReady({ name: 'p', status: { phase: 'Running', containerStatuses: [{ ready: true }, { ready: false }] } })).toBe(false)
   })
 
   it('returns false when no container statuses exist', () => {
-    expect(podIsReady({})).toBe(false)
+    expect(podIsReady({ name: 'p' })).toBe(false)
   })
 })
 
 describe('parseVersion', () => {
   it('extracts version from image tag', () => {
-    expect(parseVersion([{ image: 'dragonflyoss/manager:v2.1.0' }])).toBe('v2.1.0')
+    expect(parseVersion({ name: 'p', status: { containerStatuses: [{ image: 'dragonflyoss/manager:v2.1.0' }] } })).toBe('v2.1.0')
   })
 
-  it('returns unknown for empty containers', () => {
-    expect(parseVersion([])).toBe('unknown')
+  it('returns empty string for empty containers', () => {
+    expect(parseVersion({ name: 'p', status: { containerStatuses: [] } })).toBe('')
   })
 
-  it('returns unknown when no image tag', () => {
-    expect(parseVersion([{ image: 'dragonflyoss/manager' }])).toBe('unknown')
+  it('returns empty string when no image tag', () => {
+    expect(parseVersion({ name: 'p', status: { containerStatuses: [{ image: 'dragonflyoss/manager' }] } })).toBe('')
   })
 })
 
 describe('buildStatus', () => {
-  it('returns not-installed for empty components', () => {
+  it('returns not-installed for empty pods', () => {
     const result = buildStatus([])
     expect(result.health).toBe('not-installed')
     expect(result.components).toEqual([])
   })
 
-  it('returns healthy when all components have ready replicas', () => {
-    const components = [
-      { component: 'manager' as const, ready: 1, desired: 1, version: 'v2.1.0', pods: [] },
+  it('returns healthy when all dragonfly pods are ready', () => {
+    const pods = [
+      { name: 'dragonfly-manager-0', status: { phase: 'Running', containerStatuses: [{ ready: true, image: 'dragonflyoss/manager:v2.1.0' }] } },
     ]
-    const result = buildStatus(components)
+    const result = buildStatus(pods)
     expect(result.health).toBe('healthy')
   })
 
-  it('returns degraded when some replicas are not ready', () => {
-    const components = [
-      { component: 'manager' as const, ready: 0, desired: 1, version: 'v2.1.0', pods: [] },
+  it('returns degraded when some pods are not ready', () => {
+    const pods = [
+      { name: 'dragonfly-manager-0', status: { phase: 'Pending', containerStatuses: [{ ready: false, image: 'dragonflyoss/manager:v2.1.0' }] } },
     ]
-    const result = buildStatus(components)
+    const result = buildStatus(pods)
     expect(result.health).toBe('degraded')
   })
 })

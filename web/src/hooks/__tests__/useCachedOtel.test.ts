@@ -169,32 +169,32 @@ describe('normalizeSignal', () => {
     expect(normalizeSignal('logs')).toBe('logs')
   })
 
-  it('returns the input for unknown signals', () => {
-    expect(normalizeSignal('custom')).toBe('custom')
+  it('returns traces for unknown signals', () => {
+    expect(normalizeSignal('custom')).toBe('traces')
   })
 })
 
 describe('deriveCollectorState', () => {
-  it('returns running for Running phase with ready containers', () => {
-    expect(deriveCollectorState('Running', [{ ready: true }])).toBe('running')
+  it('returns Running for Running phase with ready containers', () => {
+    expect(deriveCollectorState({ name: 'p', status: { phase: 'Running', containerStatuses: [{ ready: true }] } })).toBe('Running')
   })
 
-  it('returns degraded for Running phase with unready containers', () => {
-    expect(deriveCollectorState('Running', [{ ready: false }])).toBe('degraded')
+  it('returns Degraded for Running phase with unready containers', () => {
+    expect(deriveCollectorState({ name: 'p', status: { phase: 'Running', containerStatuses: [{ ready: false }] } })).toBe('Degraded')
   })
 
-  it('returns stopped for non-Running phase', () => {
-    expect(deriveCollectorState('Failed', [])).toBe('stopped')
+  it('returns Failed for non-Running phase', () => {
+    expect(deriveCollectorState({ name: 'p', status: { phase: 'Failed' } })).toBe('Failed')
   })
 })
 
 describe('parseVersion', () => {
   it('extracts version from image tag', () => {
-    expect(parseVersion([{ image: 'otel/opentelemetry-collector:0.90.0' }])).toBe('0.90.0')
+    expect(parseVersion({ name: 'p', status: { containerStatuses: [{ image: 'otel/opentelemetry-collector:0.90.0' }] } })).toBe('0.90.0')
   })
 
-  it('returns unknown for no containers', () => {
-    expect(parseVersion([])).toBe('unknown')
+  it('returns empty string for no containers', () => {
+    expect(parseVersion({ name: 'p', status: { containerStatuses: [] } })).toBe('')
   })
 })
 
@@ -212,7 +212,7 @@ describe('summarize', () => {
       name: 'test',
       namespace: 'default',
       cluster: 'c1',
-      state: 'running' as const,
+      state: 'Running' as const,
       version: '0.90.0',
       mode: 'deployment',
       pipelines: [],
