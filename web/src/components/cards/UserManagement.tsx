@@ -18,7 +18,8 @@ import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import type { TFunction } from 'i18next'
+/** Loose translation function type for helper functions that use dynamic keys */
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 import { StatusBadge } from '../ui/StatusBadge'
 import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
@@ -37,7 +38,7 @@ type OpenShiftUserSortBy = 'name' | 'kind'
 type SASortBy = 'name' | 'namespace'
 
 // Sort options defined in component to access t()
-function getConsoleUserSortOptions(t: TFunction) {
+function getConsoleUserSortOptions(t: TranslateFn) {
   return [
     { value: 'name' as const, label: t('common:common.name') },
     { value: 'role' as const, label: t('common:common.role') },
@@ -45,14 +46,14 @@ function getConsoleUserSortOptions(t: TFunction) {
   ]
 }
 
-function getOpenShiftUserSortOptions(t: TFunction) {
+function getOpenShiftUserSortOptions(t: TranslateFn) {
   return [
     { value: 'name' as const, label: t('userManagement.username') },
     { value: 'kind' as const, label: t('userManagement.fullName') },
   ]
 }
 
-function getSASortOptions(t: TFunction) {
+function getSASortOptions(t: TranslateFn) {
   return [
     { value: 'name' as const, label: t('common:common.name') },
     { value: 'namespace' as const, label: t('common:common.namespace') },

@@ -14,7 +14,8 @@ import { useCardExpanded } from '../CardWrapper'
 import { generateAIInsights, type AIInsight } from '../../../lib/llmd/mockData'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
-import type { TFunction } from 'i18next'
+/** Loose translation function type for helper functions that use dynamic keys */
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 import { PROGRESS_SIMULATION_MS } from '../../../lib/constants/network'
 
 const INSIGHT_ICONS = {
@@ -112,7 +113,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
 /**
  * Generate real insights based on the selected stack's state
  */
-function generateStackInsights(stack: LLMdStack, t?: TFunction): AIInsight[] {
+function generateStackInsights(stack: LLMdStack, t?: TranslateFn): AIInsight[] {
   const insights: AIInsight[] = []
   const now = new Date()
 
