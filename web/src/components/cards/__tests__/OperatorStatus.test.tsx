@@ -85,6 +85,81 @@ vi.mock('../../../hooks/useTokenUsage', () => ({
   },
 }))
 
+// Mock useCardData and useCardFilters from cardHooks
+vi.mock('../../../lib/cards/cardHooks', () => ({
+  useCardData: (items: unknown[]) => ({
+    items,
+    allFilteredItems: items,
+    totalItems: (items as unknown[]).length,
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 5,
+    goToPage: vi.fn(),
+    needsPagination: false,
+    setItemsPerPage: vi.fn(),
+    filters: {
+      search: '',
+      setSearch: vi.fn(),
+      localClusterFilter: [],
+      toggleClusterFilter: vi.fn(),
+      clearClusterFilter: vi.fn(),
+      availableClusters: [{ name: 'cluster-1' }],
+      showClusterFilter: false,
+      setShowClusterFilter: vi.fn(),
+      clusterFilterRef: { current: null },
+    },
+    sorting: {
+      sortBy: 'status',
+      setSortBy: vi.fn(),
+      sortDirection: 'asc',
+      setSortDirection: vi.fn(),
+    },
+    containerRef: { current: null },
+    containerStyle: {},
+  }),
+  useCardFilters: (items: unknown[]) => ({
+    filtered: items,
+    search: '',
+    setSearch: vi.fn(),
+    localClusterFilter: [],
+    toggleClusterFilter: vi.fn(),
+    clearClusterFilter: vi.fn(),
+    availableClusters: [],
+    showClusterFilter: false,
+    setShowClusterFilter: vi.fn(),
+    clusterFilterRef: { current: null },
+  }),
+  commonComparators: {
+    string: () => () => 0,
+    number: () => () => 0,
+    date: () => () => 0,
+  },
+}))
+
+// Mock card UI components
+vi.mock('../../../lib/cards/CardComponents', () => ({
+  CardSearchInput: () => <input data-testid="search" />,
+  CardControlsRow: () => <div data-testid="controls-row" />,
+  CardPaginationFooter: () => <div data-testid="pagination" />,
+  CardAIActions: () => <div data-testid="ai-actions" />,
+}))
+
+vi.mock('../../ui/Skeleton', () => ({
+  Skeleton: () => <div data-testid="skeleton" className="animate-pulse" />,
+}))
+
+vi.mock('../../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
+}))
+
+vi.mock('../../ui/StatusBadge', () => ({
+  StatusBadge: ({ children }: { children: React.ReactNode }) => <span data-testid="status-badge">{children}</span>,
+}))
+
+vi.mock('../DynamicCardErrorBoundary', () => ({
+  DynamicCardErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
 // Import component after mocks
 import { OperatorStatus } from '../OperatorStatus'
 
@@ -164,10 +239,8 @@ describe('OperatorStatus', () => {
     })
     mockUseCachedOperators.mockReturnValue(defaultHookResult({ operators: [], isLoading: true }))
 
-    const { container } = render(<OperatorStatus />)
-    // Skeleton renders animate-pulse elements
-    const skeletons = container.querySelectorAll('.animate-pulse')
-    expect(skeletons.length).toBeGreaterThan(0)
+    render(<OperatorStatus />)
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
   })
 
   it('shows empty state when no operators', () => {

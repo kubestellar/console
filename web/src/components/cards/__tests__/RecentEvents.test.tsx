@@ -79,6 +79,61 @@ vi.mock('../../../hooks/useTokenUsage', () => ({
   },
 }))
 
+// Mock useCardData from cardHooks
+vi.mock('../../../lib/cards/cardHooks', () => ({
+  useCardData: (items: unknown[]) => ({
+    items,
+    allFilteredItems: items,
+    totalItems: (items as unknown[]).length,
+    currentPage: 1,
+    totalPages: 1,
+    itemsPerPage: 5,
+    goToPage: vi.fn(),
+    needsPagination: false,
+    setItemsPerPage: vi.fn(),
+    filters: {
+      search: '',
+      setSearch: vi.fn(),
+      localClusterFilter: [],
+      toggleClusterFilter: vi.fn(),
+      clearClusterFilter: vi.fn(),
+      availableClusters: [{ name: 'test-cluster' }],
+      showClusterFilter: false,
+      setShowClusterFilter: vi.fn(),
+      clusterFilterRef: { current: null },
+    },
+    sorting: {
+      sortBy: 'time',
+      setSortBy: vi.fn(),
+      sortDirection: 'desc',
+      setSortDirection: vi.fn(),
+    },
+    containerRef: { current: null },
+    containerStyle: {},
+  }),
+  commonComparators: {
+    string: () => () => 0,
+    number: () => () => 0,
+    date: () => () => 0,
+  },
+}))
+
+// Mock card UI components
+vi.mock('../../../lib/cards/CardComponents', () => ({
+  CardSearchInput: () => <input data-testid="search" />,
+  CardControlsRow: () => <div data-testid="controls-row" />,
+  CardPaginationFooter: () => <div data-testid="pagination" />,
+  CardSkeleton: () => <div data-testid="card-skeleton" />,
+}))
+
+vi.mock('../../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster }: { cluster: string }) => <span>{cluster}</span>,
+}))
+
+vi.mock('../../ui/RefreshIndicator', () => ({
+  RefreshButton: () => <button data-testid="refresh-button">Refresh</button>,
+}))
+
 // Import component after mocks
 import { RecentEvents } from '../RecentEvents'
 import type { ClusterEvent } from '../../../hooks/useMCP'
@@ -158,9 +213,8 @@ describe('RecentEvents', () => {
     })
     mockUseCachedEvents.mockReturnValue(defaultHookResult({ events: [], isLoading: true }))
 
-    const { container } = render(<RecentEvents />)
-    // CardSkeleton renders animated loading indicators
-    expect(container.innerHTML.length).toBeGreaterThan(0)
+    render(<RecentEvents />)
+    expect(screen.getByTestId('card-skeleton')).toBeTruthy()
   })
 
   it('shows empty state when no events and showEmptyState is true', () => {
