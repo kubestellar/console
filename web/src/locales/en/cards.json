@@ -2132,7 +2132,9 @@
     "confirmTitle": "Confirm {{action}} on {{node}}?",
     "confirmCordonDescription": "Cordoning this node will prevent new pods from being scheduled on it.",
     "confirmUncordonDescription": "Uncordoning this node will allow new pods to be scheduled on it again.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "emptyTitle": "No nodes found",
+    "emptyMessage": "Node conditions will appear here once clusters with nodes are connected."
   },
   "clusterChangelog": {
     "noChanges": "No changes in selected time range",
@@ -2195,7 +2197,9 @@
     "estimated": "Estimated (policy API unavailable)",
     "estimatedTooltip": "NetworkPolicy resources could not be fetched. Coverage is estimated based on namespace type (system vs user). Connect the agent or check API access for accurate data.",
     "showingOf": "Showing {{shown}} of {{total}} namespaces",
-    "failedToLoad": "Failed to load network policy data"
+    "failedToLoad": "Failed to load network policy data",
+    "emptyTitle": "No namespaces found",
+    "emptyMessage": "Network policy coverage will appear here once pods are running in your clusters."
   },
   "quotaHeatmap": {
     "noNamespaceData": "No namespace data",
@@ -4611,5 +4615,9 @@
   },
   "clusterDropZone": {
     "deployToClusterAria": "Deploy {{workload}} to cluster {{cluster}}"
+  },
+  "serviceStatus": {
+    "emptyTitle": "No services found",
+    "emptyMessage": "Services will appear here once they are deployed to your clusters."
   }
 }

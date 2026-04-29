@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useNetworkPolicies } from '../../hooks/mcp/networking'
 import { useCardLoadingState } from './CardDataContext'
+import { CardEmptyState } from '../../lib/cards/CardComponents'
+import { Shield } from 'lucide-react'
 
 /** Maximum number of namespaces to display before showing a truncation indicator */
 const MAX_DISPLAYED_NAMESPACES = 30
@@ -103,6 +105,16 @@ export function NetworkPolicyCoverage() {
           <div key={i} className="h-8 rounded bg-muted/50 animate-pulse" />
         ))}
       </div>
+    )
+  }
+
+  if (!hasData && !podsLoading) {
+    return (
+      <CardEmptyState
+        icon={Shield}
+        title={t('networkPolicyCoverage.emptyTitle', 'No namespaces found')}
+        message={t('networkPolicyCoverage.emptyMessage', 'Network policy coverage will appear here once pods are running in your clusters.')}
+      />
     )
   }
 

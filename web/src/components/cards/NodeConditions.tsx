@@ -4,6 +4,8 @@ import { useCachedNodes } from '../../hooks/useCachedData'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useCardLoadingState } from './CardDataContext'
+import { CardEmptyState } from '../../lib/cards/CardComponents'
+import { Server } from 'lucide-react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
 const MAX_VISIBLE_CONDITIONS = 20
@@ -24,7 +26,7 @@ export function NodeConditions() {
   const { execute } = useKubectl()
 
   const hasData = nodes.length > 0
-  useCardLoadingState({
+  const { showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
@@ -102,6 +104,16 @@ export function NodeConditions() {
           <div key={i} className="h-10 rounded bg-muted/50 animate-pulse" />
         ))}
       </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <CardEmptyState
+        icon={Server}
+        title={t('nodeConditions.emptyTitle', 'No nodes found')}
+        message={t('nodeConditions.emptyMessage', 'Node conditions will appear here once clusters with nodes are connected.')}
+      />
     )
   }
 

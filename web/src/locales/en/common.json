@@ -3918,5 +3918,9 @@
     "cacheWriteFailed": "Failed to cache data. Browser storage may be full.",
     "cardRegistryLoadFailed": "Failed to load card catalog.",
     "cacheResetFailed": "Failed to reset some caches during mode switch."
+  },
+  "serviceStatus": {
+    "emptyTitle": "No services found",
+    "emptyMessage": "Services will appear here once they are deployed to your clusters."
   }
 }
