@@ -105,11 +105,17 @@ function startGlobalStream(since: string) {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   abortController = new AbortController()
 
+  // Connection timeout: abort if the server doesn't respond within the default timeout.
+  // Once the response arrives (stream connected), the timer is cleared so the
+  // long-lived SSE stream can run indefinitely until done or manually aborted.
+  const connectTimer = setTimeout(() => abortController?.abort(), FETCH_DEFAULT_TIMEOUT_MS)
+
   fetch(`/api/benchmarks/reports/stream?since=${encodeURIComponent(since)}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     signal: abortController.signal,
   })
     .then(async (res) => {
+      clearTimeout(connectTimer)
       if (!res.ok || !res.body) {
         streamState = { ...streamState, isStreaming: false, isDone: true, error: `Stream error: ${res.status}` }
         notifySubscribers()
@@ -179,6 +185,7 @@ function startGlobalStream(since: string) {
       notifySubscribers()
     })
     .catch((err) => {
+      clearTimeout(connectTimer)
       if (err.name !== 'AbortError') {
         streamState = { ...streamState, error: err.message, isStreaming: false, isDone: true }
         notifySubscribers()

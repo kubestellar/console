@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { CLUSTER_MARKER_FONT_SIZE } from '../../lib/constants'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 
 /** Search input debounce delay (#6213). */
 const SEARCH_DEBOUNCE_MS = 250
@@ -256,7 +257,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     setMapLoading(true)
     setMapError(false)
     
-    fetch(WorldMapSvgUrl, { signal: controller.signal })
+    fetch(WorldMapSvgUrl, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS)]) })
       .then(res => {
         if (!res.ok) throw new Error('Failed to load map')
         return res.text()
