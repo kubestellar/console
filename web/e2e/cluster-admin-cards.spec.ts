@@ -469,6 +469,9 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       const card = page.locator('[data-card-type="dns_health"]')
       await expect(card).toBeVisible({ timeout: 15000 })
 
+      // Wait for data to load — cluster name should appear
+      await expect(card.getByText('prod-east').or(card.getByText('staging')).first()).toBeVisible({ timeout: 15000 })
+
       // DNS card shows green (healthy) or yellow (degraded) status dots
       const statusDots = card.locator('.rounded-full.w-2.h-2, .bg-green-500, .bg-yellow-500')
       await expect(statusDots.first()).toBeVisible({ timeout: 10000 })
@@ -496,11 +499,12 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       const card = page.locator('[data-card-type="admission_webhooks"]')
       await expect(card).toBeVisible({ timeout: 15000 })
 
+      // Wait for tab buttons to appear (indicates data has loaded)
+      await expect(card.locator('button.rounded-full').first()).toBeVisible({ timeout: 15000 })
+
       // Should show webhook names from mock data (or demo fallback)
-      // Look for any webhook-related text content rendered in the card
       const webhookEntries = card.locator('.bg-muted\\/30')
-      const count = await webhookEntries.count()
-      expect(count).toBeGreaterThan(0)
+      await expect(webhookEntries.first()).toBeVisible({ timeout: 10000 })
     })
 
     test('AdmissionWebhooks shows type badges (M for mutating, V for validating)', async ({ page }) => {
@@ -594,13 +598,13 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
     test('page does not crash when all APIs return errors', async ({ page }) => {
       await setupWithErrors(page)
 
-      // The cluster-admin page should still render
-      await expect(page.locator('.pt-16')).toBeVisible({ timeout: 15000 })
+      // The cluster-admin page should still render (DashboardPage uses pt-4)
+      await expect(page.locator('.pt-4')).toBeVisible({ timeout: 15000 })
 
       // All three cards should still be in the DOM
-      await expect(page.locator('[data-card-type="etcd_status"]')).toBeVisible()
-      await expect(page.locator('[data-card-type="dns_health"]')).toBeVisible()
-      await expect(page.locator('[data-card-type="admission_webhooks"]')).toBeVisible()
+      await expect(page.locator('[data-card-type="etcd_status"]')).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('[data-card-type="dns_health"]')).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('[data-card-type="admission_webhooks"]')).toBeVisible({ timeout: 10000 })
     })
   })
 
