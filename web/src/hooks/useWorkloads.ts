@@ -15,6 +15,7 @@ export interface Workload {
   targetClusters?: string[]
   replicas: number
   readyReplicas: number
+  updatedReplicas?: number
   status: 'Running' | 'Degraded' | 'Failed' | 'Pending'
   image: string
   labels?: Record<string, string>
@@ -25,7 +26,22 @@ export interface Workload {
     readyReplicas: number
     lastUpdated: string
   }>
+  reason?: string
+  message?: string
   createdAt: string
+  updatedAt?: string
+}
+
+export interface WorkloadClusterError {
+  cluster: string
+  errorType: string
+  message: string
+}
+
+export interface WorkloadList {
+  items: Workload[]
+  totalCount: number
+  clusterErrors?: WorkloadClusterError[]
 }
 
 export interface ClusterCapability {
