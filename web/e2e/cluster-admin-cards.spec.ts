@@ -153,12 +153,36 @@ async function setupClusterAdminTest(page: Page) {
     })
   )
 
+  // Mock the local kc-agent HTTP endpoint (fetchAPI uses http://127.0.0.1:8585/)
+  await page.route('http://127.0.0.1:8585/**', route => {
+    const url = route.request().url()
+    if (url.includes('/clusters') || url.includes('clusters')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ clusters: MOCK_CLUSTERS }),
+      })
+    } else if (url.includes('/pods') || url.includes('pods')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ pods: MOCK_PODS }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ issues: [], events: [], nodes: [] }),
+      })
+    }
+  })
+
   // Set auth token and inject cards under test via addInitScript
   // so localStorage is set BEFORE any app code runs
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
-      localStorage.setItem('token', 'demo-token')
-      localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'false')
       localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem('kc-backend-status', JSON.stringify({
@@ -205,6 +229,16 @@ async function setupWithLoadingDelay(page: Page) {
     })
   })
 
+  // Delay local agent responses too
+  await page.route('http://127.0.0.1:8585/**', async route => {
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [], pods: [] }),
+    })
+  })
+
   await page.route('**/api/admission-webhooks', async route => {
     await new Promise(resolve => setTimeout(resolve, 3000))
     await route.fulfill({
@@ -216,8 +250,8 @@ async function setupWithLoadingDelay(page: Page) {
 
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
-      localStorage.setItem('token', 'demo-token')
-      localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'false')
       localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem('kc-backend-status', JSON.stringify({
@@ -278,6 +312,24 @@ async function setupWithErrors(page: Page) {
     }
   })
 
+  // Mock local agent with empty clusters (error scenario)
+  await page.route('http://127.0.0.1:8585/**', route => {
+    const url = route.request().url()
+    if (url.includes('clusters')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ clusters: [] }),
+      })
+    } else {
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Internal server error' }),
+      })
+    }
+  })
+
   await page.route('**/api/admission-webhooks', route =>
     route.fulfill({
       status: 503,
@@ -288,8 +340,8 @@ async function setupWithErrors(page: Page) {
 
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
-      localStorage.setItem('token', 'demo-token')
-      localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'false')
       localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem('kc-backend-status', JSON.stringify({
@@ -456,9 +508,8 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       await expect(card).toBeVisible({ timeout: 15000 })
 
       // Type badges: "M" for mutating (blue), "V" for validating (purple)
-      const mBadge = card.locator('.bg-blue-500\\/10').first()
-      const vBadge = card.locator('.bg-purple-500\\/10').first()
-      await expect(mBadge.or(vBadge)).toBeVisible({ timeout: 10000 })
+      const badge = card.locator('.bg-blue-500\\/10, .bg-purple-500\\/10').first()
+      await expect(badge).toBeVisible({ timeout: 10000 })
     })
 
     test('AdmissionWebhooks shows failure policy badges', async ({ page }) => {
