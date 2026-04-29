@@ -75,6 +75,7 @@ async function getVisibleSidebarRoutes(page: Page): Promise<string[]> {
         const href = node.getAttribute('href')
         if (!href || !href.startsWith('/')) continue
         if (href.startsWith('/custom-dashboard/')) continue
+        if (href.startsWith('/enterprise')) continue
 
         if (!seen.has(href)) {
           seen.add(href)
