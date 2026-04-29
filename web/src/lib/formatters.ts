@@ -240,8 +240,7 @@ function cardSyncKeys(prefix: string): CardSyncKeys {
  * or an explicit {@link CardSyncKeys} object for non-standard cards.
  */
 export function createCardSyncFormatter(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: (key: any, options?: any) => string,
+  t: (key: string, options?: Record<string, unknown>) => string,
   keys: string | CardSyncKeys,
 ): (isoString: string) => string {
   const k = typeof keys === 'string' ? cardSyncKeys(keys) : keys

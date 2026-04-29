@@ -8,7 +8,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
-import { StatusIndicator } from '../charts/StatusIndicator'
+import { StatusIndicator, type Status } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -363,7 +363,7 @@ export function Workloads() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <StatusIndicator status={status as any} size="lg" />
+                    <StatusIndicator status={status as Status} size="lg" />
                     <div>
                       <h3 className="font-semibold text-foreground">{isDeployment ? deploy.name : app.namespace}</h3>
                       <div className="flex items-center gap-2">
