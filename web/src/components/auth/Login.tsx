@@ -144,6 +144,13 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Check your internet connection',
       'If the problem persists, use the manual setup option instead',
     ] },
+  manifest_already_configured: {
+    title: 'GitHub Sign-In Already Configured',
+    message: 'OAuth credentials are already set up. You can sign in directly.',
+    steps: [
+      'Click "Continue with GitHub" to sign in',
+      'If you need to reconfigure, remove existing credentials first',
+    ] },
   user_fetch_failed: {
     title: 'Could Not Retrieve GitHub Profile',
     message: 'Login succeeded but the console was unable to fetch your GitHub profile.',

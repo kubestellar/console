@@ -712,6 +712,7 @@ func (s *Server) setupRoutes() {
 	manifest := handlers.NewManifestHandler(
 		s.store, s.backendURL(), s.config.FrontendURL, s.config.GitHubURL,
 		func(clientID, clientSecret string) { s.reloadOAuth(clientID, clientSecret) },
+		s.oauthConfigured,
 	)
 	s.app.Get("/auth/manifest/setup", authLimiter, manifest.ManifestSetup)
 	s.app.Get("/auth/manifest/callback", authLimiter, manifest.ManifestCallback)
