@@ -5,6 +5,7 @@ import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from 
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
+import { clusterCacheRef, setClusterCacheRefClusters } from './clusterCacheRef'
 import { hostnameEndsWith, hostnameContainsLabel } from '../../lib/utils/urlHostname'
 import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { emitAgentTokenFailure } from '../../lib/analytics'
@@ -348,6 +349,9 @@ export let clusterCache: ClusterCache = {
   lastRefresh: storedClusters.length > 0 ? new Date() : null,
 }
 
+// Seed the standalone clusterCacheRef at module init
+setClusterCacheRefClusters(storedClusters)
+
 // Subscribers that get notified when cluster state changes.
 // Split into two sets (#7865):
 //  - dataSubscribers: notified inside React.startTransition(), so navigation
@@ -535,6 +539,11 @@ export function updateClusterCache(updates: Partial<ClusterCache>) {
   // `clusterCache` object sees the update (ESM live-binding of `let` exports
   // is not preserved by all bundlers / test runners).
   Object.assign(clusterCache, updates)
+
+  // Keep the standalone clusterCacheRef in sync (breaks circular import)
+  if (updates.clusters) {
+    setClusterCacheRefClusters(clusterCache.clusters)
+  }
 
   // Route notifications based on which slice the updates touch (#7865).
   // UI fires first (urgent) so spinner on/off commits immediately, then
@@ -1844,13 +1853,8 @@ function getDemoClusters(): ClusterInfo[] {
   ]
 }
 
-// Lightweight reference to cluster cache for domain modules
-// Modules that don't need the full singleton can import this
-export const clusterCacheRef = {
-  get clusters(): ClusterInfo[] {
-    return clusterCache.clusters
-  },
-}
+// Re-exported from clusterCacheRef.ts for backward compatibility
+export { clusterCacheRef }
 
 // Subscribe to cluster cache changes (for modules that need reactive updates).
 // Back-compat API: receives BOTH data and UI updates. Prefer the split
