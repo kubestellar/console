@@ -80,20 +80,20 @@ export function prefetchCardData(): void {
   if (isDemoMode()) return
 
   // Tier 1: Priority data for initial dashboard cards.
-  runPrefetchQueue(PRIORITY_ENTRIES).catch(() => {})
+  runPrefetchQueue(PRIORITY_ENTRIES).catch((err) => { console.warn('[prefetchCardData] priority prefetch failed:', err) })
 
   // Tier 2: Core data after priority warm-up.
   setTimeout(() => {
-    runPrefetchQueue(CORE_ENTRIES).catch(() => {})
+    runPrefetchQueue(CORE_ENTRIES).catch((err) => { console.warn('[prefetchCardData] core prefetch failed:', err) })
   }, CORE_PREFETCH_DELAY_MS)
 
   // Tier 3: Heavy fetchers in background (security scans can be expensive).
   setTimeout(() => {
-    runPrefetchQueue(BACKGROUND_ENTRIES).catch(() => {})
+    runPrefetchQueue(BACKGROUND_ENTRIES).catch((err) => { console.warn('[prefetchCardData] background prefetch failed:', err) })
   }, BACKGROUND_DELAY_MS)
 
   // Tier 4: Specialty data — starts after core prefetch begins.
   setTimeout(() => {
-    runPrefetchQueue(SPECIALTY_ENTRIES).catch(() => {})
+    runPrefetchQueue(SPECIALTY_ENTRIES).catch((err) => { console.warn('[prefetchCardData] specialty prefetch failed:', err) })
   }, SPECIALTY_DELAY_MS)
 }

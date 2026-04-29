@@ -809,7 +809,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             // pre-update firing object. Without this, resolved notifications
             // are sent with status: "firing".
             const resolvedAlert: Alert = { ...alertToResolve, status: 'resolved', resolvedAt }
-            sendNotifications(resolvedAlert, enabledChannels).catch(() => {})
+            sendNotifications(resolvedAlert, enabledChannels).catch((err) => { console.warn('[AlertsContext] resolved notification send failed:', err) })
           }
         }
       })
@@ -969,7 +969,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           if (rule.channels && rule.channels.length > 0) {
             const enabledChannels = rule.channels.filter(ch => ch.enabled)
             if (enabledChannels.length > 0) {
-              sendNotifications(newAlertObj, enabledChannels).catch(() => {})
+              sendNotifications(newAlertObj, enabledChannels).catch((err) => { console.warn('[AlertsContext] firing notification send failed:', err) })
             }
           }
         })

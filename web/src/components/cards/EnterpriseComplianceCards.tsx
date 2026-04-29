@@ -264,7 +264,7 @@ export function NISTCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/compliance/nist/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/compliance/nist/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] compliance/nist/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="NIST 800-53" icon={Shield} onClick={() => nav('/nist')}>
@@ -289,7 +289,7 @@ export function STIGCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/compliance/stig/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/compliance/stig/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] compliance/stig/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="DISA STIG" icon={Shield} onClick={() => nav('/stig')}>
@@ -314,7 +314,7 @@ export function AirGapCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/compliance/airgap/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/compliance/airgap/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] compliance/airgap/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="Air-Gap Readiness" icon={WifiOff} onClick={() => nav('/air-gap')}>
@@ -339,7 +339,7 @@ export function SIEMIntegrationCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/siem/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/siem/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/siem/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="SIEM Integration" icon={Activity} onClick={() => nav('/enterprise/siem')}>
@@ -361,7 +361,7 @@ export function IncidentResponseCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, unknown> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/incidents/metrics').then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/incidents/metrics').then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/incidents/metrics fetch failed:", err) })
   }, [])
   return (
     <CardShell title="Incident Response" icon={Shield} onClick={() => nav('/enterprise/incident-response')}>
@@ -383,7 +383,7 @@ export function ThreatIntelCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/threat-intel/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/threat-intel/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/threat-intel/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="Threat Intelligence" icon={Shield} onClick={() => nav('/enterprise/threat-intel')}>
@@ -408,7 +408,7 @@ export function FedRAMPCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, unknown> | null>(null)
   useEffect(() => {
-    authFetch('/api/compliance/fedramp/score').then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/compliance/fedramp/score').then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] compliance/fedramp/score fetch failed:", err) })
   }, [])
   return (
     <CardShell title="FedRAMP Readiness" icon={Award} onClick={() => nav('/fedramp')}>
@@ -433,7 +433,7 @@ export function OIDCFederationCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/identity/oidc/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/identity/oidc/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] identity/oidc/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="OIDC Federation" icon={KeyRound} onClick={() => nav('/enterprise/oidc')}>
@@ -455,7 +455,7 @@ export function RBACAuditCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/identity/rbac/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/identity/rbac/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] identity/rbac/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="RBAC Audit" icon={Lock} onClick={() => nav('/enterprise/rbac-audit')}>
@@ -480,7 +480,7 @@ export function SessionManagementCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/identity/sessions/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/identity/sessions/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] identity/sessions/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="Session Management" icon={Clock} onClick={() => nav('/enterprise/sessions')}>
@@ -502,7 +502,7 @@ export function SBOMManagerCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/sbom/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/sbom/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/sbom/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="SBOM Manager" icon={Package} onClick={() => nav('/enterprise/sbom')}>
@@ -524,7 +524,7 @@ export function SigstoreVerifyCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/sigstore/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/sigstore/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/sigstore/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="Sigstore Verify" icon={Shield} onClick={() => nav('/enterprise/sigstore')}>
@@ -546,7 +546,7 @@ export function SLSAProvenanceCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/slsa/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/slsa/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/slsa/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="SLSA Provenance" icon={Lock} onClick={() => nav('/enterprise/slsa')}>
@@ -568,7 +568,7 @@ export function RiskMatrixCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/erm/risk-matrix/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/erm/risk-matrix/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/erm/risk-matrix/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="Risk Matrix" icon={Scale} onClick={() => nav('/enterprise/risk-matrix')}>
@@ -590,7 +590,7 @@ export function RiskRegisterCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/erm/risk-register/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/erm/risk-register/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/erm/risk-register/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="Risk Register" icon={Scale} onClick={() => nav('/enterprise/risk-register')}>
@@ -612,7 +612,7 @@ export function RiskAppetiteCard() {
   const nav = useNavigate()
   const [data, setData] = useState<Record<string, number> | null>(null)
   useEffect(() => {
-    authFetch('/api/v1/compliance/erm/risk-appetite/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch(() => {})
+    authFetch('/api/v1/compliance/erm/risk-appetite/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/erm/risk-appetite/summary fetch failed:", err) })
   }, [])
   return (
     <CardShell title="Risk Appetite" icon={Scale} onClick={() => nav('/enterprise/risk-appetite')}>
