@@ -192,6 +192,16 @@ export async function mockApiFallback(page: Page) {
     })
   )
 
+  // /api/dashboards expects an array — the catch-all returns {} which is
+  // truthy but not an array, causing (data || []).filter crashes (#10818).
+  await page.route('**/api/dashboards*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+
   // Mock the local kc-agent HTTP endpoint. Even in demo mode, the cluster
   // cache probes http://127.0.0.1:8585/clusters before falling back to demo
   // data. Without this mock the probe hangs in CI (nobody on port 8585),
