@@ -211,7 +211,7 @@ function buildScopeString(filters: Record<string, OrbitResourceFilter[]>): strin
         r.clusterScoped
           ? `${r.kind} (cluster-scoped)`
           : (r.namespaces ?? []).length
-            ? `${r.kind} in namespaces: ${r.namespaces!.join(', ')}`
+            ? `${r.kind} in namespaces: ${(r.namespaces ?? []).join(', ') || 'all namespaces'}`
             : `${r.kind} (all namespaces)`
       )
       return `- ${cluster}: ${parts.join('; ')}`

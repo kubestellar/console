@@ -231,7 +231,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
             try {
               // Extract JSON if wrapped in code blocks
               const jsonMatch = content.match(/\{[\s\S]*\}/)
-              if (jsonMatch) {
+              if (jsonMatch?.[0]) {
                 const parsed = JSON.parse(jsonMatch[0])
                 resolve({
                   title: parsed.title || mission.title,

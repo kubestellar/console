@@ -25,6 +25,9 @@ const VIEW_MODE_KEY = 'kc-marketplace-view-mode'
 const CONTRIBUTE_URL = 'https://github.com/kubestellar/console-marketplace'
 const ISSUES_URL = 'https://github.com/kubestellar/console-marketplace/issues?q=is%3Aissue%20is%3Aopen%20field.label%3Ahelp%20wanted'
 const BANNER_COLLAPSED_KEY = 'kc-cncf-banner-collapsed'
+const MAX_SKILLS = 3
+const MAX_TAGS = 3
+const MAX_THEME_COLORS = 5
 
 const TYPE_LABELS: Record<MarketplaceItemType, { label: string; icon: typeof LayoutGrid }> = {
   dashboard: { label: 'Dashboards', icon: LayoutGrid },
@@ -247,13 +250,13 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
         {/* Tags / Skills */}
         <div className="flex flex-wrap gap-1 mb-3">
           {isHelpWanted && item.skills ? (
-            item.skills.slice(0, 3).map(skill => (
+            (item.skills || []).slice(0, MAX_SKILLS).map(skill => (
               <span key={skill} className="text-2xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded">
                 {skill}
               </span>
             ))
           ) : (
-            (item.tags || []).slice(0, 3).map(tag => (
+            (item.tags || []).slice(0, MAX_TAGS).map(tag => (
               <span key={tag} className="text-2xs px-1.5 py-0.5 bg-primary/80 text-primary-foreground rounded">
                 {tag}
               </span>
@@ -272,7 +275,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
                 <span>&middot;</span>
                 {item.type === 'theme' && item.themeColors ? (
                   <div className="flex gap-0.5">
-                    {item.themeColors.slice(0, 5).map((color, i) => (
+                    {(item.themeColors || []).slice(0, MAX_THEME_COLORS).map((color, i) => (
                       <div key={i} className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: color }} />
                     ))}
                   </div>

@@ -69,7 +69,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     const savedFeeds = config?.feedUrl
       ? [{ url: config.feedUrl, name: config.feedName || 'Custom Feed' }]
       : loadSavedFeeds()
-    const firstFeed = savedFeeds[0]
+    const firstFeed = savedFeeds?.[0]
     if (firstFeed) {
       const cacheKey = firstFeed.isAggregate
         ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`

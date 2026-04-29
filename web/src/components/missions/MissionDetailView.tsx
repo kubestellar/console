@@ -267,7 +267,7 @@ export function MissionDetailView({
   ]
 
   const [activeTab, setActiveTab] = useState<TabId>('install')
-  const activeTabDef = tabs.find((t) => t.id === activeTab) || tabs[0]
+  const activeTabDef = tabs.find((t) => t.id === activeTab) ?? tabs?.[0]
 
   const typeColors: Record<string, string> = {
     troubleshoot: 'bg-red-500/10 text-red-400 border-red-500/20',
