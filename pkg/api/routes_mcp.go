@@ -13,12 +13,13 @@ func (s *Server) setupMCPRoutes(api fiber.Router, namespaces *handlers.Namespace
 // MCP handlers (cluster operations via kubestellar tools and direct k8s)
 mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
 
-// MCP routes — SECURITY: All MCP routes require authentication
+// MCP routes — SECURITY: All MCP routes require authentication.
+// NOTE: /mcp/clusters and /mcp/clusters/health are registered as
+// standalone routes in setupRoutes() with dev-mode-conditional auth
+// (#10925). They are NOT registered here to avoid duplicate routes.
 api.Get("/mcp/status", mcpHandlers.GetStatus)
 api.Get("/mcp/tools/ops", mcpHandlers.GetOpsTools)
 api.Get("/mcp/tools/deploy", mcpHandlers.GetDeployTools)
-api.Get("/mcp/clusters", mcpHandlers.ListClusters)
-api.Get("/mcp/clusters/health", mcpHandlers.GetAllClusterHealth)
 api.Get("/mcp/clusters/:cluster/health", mcpHandlers.GetClusterHealth)
 api.Get("/mcp/pods", mcpHandlers.GetPods)
 api.Get("/mcp/pod-issues", mcpHandlers.FindPodIssues)

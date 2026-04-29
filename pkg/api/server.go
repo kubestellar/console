@@ -1008,6 +1008,21 @@ func (s *Server) setupRoutes() {
 	api.Get("/timeline", timeline.GetTimeline)
 	timeline.StartEventCollector(s.done)
 
+	// Cluster discovery routes — registered outside the /api JWTAuth group so
+	// that in dev mode they are accessible before the browser has completed
+	// auto-login. Without this, the frontend's initial /api/mcp/clusters call
+	// hits 401, retries cascade, and eventually trigger 429 rate-limits
+	// (#10925). In production (OAuth configured) full JWTAuth is applied.
+	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
+	clusterDiscoveryAuth := middleware.JWTAuth(s.config.JWTSecret)
+	if s.config.DevMode {
+		// In dev mode, allow unauthenticated cluster discovery so the
+		// dashboard can render cluster data while the auto-login completes.
+		clusterDiscoveryAuth = func(c *fiber.Ctx) error { return c.Next() }
+	}
+	s.app.Get("/api/mcp/clusters", bodyGuard, csrfGuard, clusterDiscoveryAuth, mcpHandlers.ListClusters)
+	s.app.Get("/api/mcp/clusters/health", bodyGuard, csrfGuard, clusterDiscoveryAuth, mcpHandlers.GetAllClusterHealth)
+
 	s.setupMCPRoutes(api, namespaces)
 
 	s.setupGitOpsRoutes(api)
@@ -1448,6 +1463,16 @@ func LoadConfigFromEnv() Config {
 
 	devMode := os.Getenv("DEV_MODE") == "true"
 
+	// Defense-in-depth: auto-activate dev mode when OAuth is unconfigured (#10925).
+	// Without this, a missing DEV_MODE export (e.g. older start.sh) causes the
+	// auth-retry cascade: JWTAuth rejects every request → frontend retries → 429.
+	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
+	githubSecret := os.Getenv("GITHUB_CLIENT_SECRET")
+	if !devMode && githubClientID == "" && githubSecret == "" {
+		slog.Warn("[Config] No GitHub OAuth credentials and DEV_MODE not set — auto-activating dev mode")
+		devMode = true
+	}
+
 	// Frontend URL can be explicitly set via env var
 	// If not set, leave empty and compute default in NewServer based on final DevMode
 	// (This allows --dev flag to override env var for frontend URL default)
@@ -1470,8 +1495,8 @@ func LoadConfigFromEnv() Config {
 		Port:                  port,
 		DevMode:               devMode,
 		DatabasePath:          dbPath,
-		GitHubClientID:        os.Getenv("GITHUB_CLIENT_ID"),
-		GitHubSecret:          os.Getenv("GITHUB_CLIENT_SECRET"),
+		GitHubClientID:        githubClientID,
+		GitHubSecret:          githubSecret,
 		GitHubURL:             getEnvOrDefault("GITHUB_URL", "https://github.com"),
 		JWTSecret:             jwtSecret,
 		FrontendURL:           frontendURL,
