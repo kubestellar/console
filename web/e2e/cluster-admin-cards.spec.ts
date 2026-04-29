@@ -157,9 +157,14 @@ async function setupClusterAdminTest(page: Page) {
   // so localStorage is set BEFORE any app code runs
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
-      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('token', 'demo-token')
       localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },
     { storageKey: CLUSTER_ADMIN_STORAGE_KEY, cards: CARDS_UNDER_TEST }
@@ -211,9 +216,14 @@ async function setupWithLoadingDelay(page: Page) {
 
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
-      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('token', 'demo-token')
       localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },
     { storageKey: CLUSTER_ADMIN_STORAGE_KEY, cards: CARDS_UNDER_TEST }
@@ -278,9 +288,14 @@ async function setupWithErrors(page: Page) {
 
   await page.addInitScript(
     ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
-      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('token', 'demo-token')
       localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },
     { storageKey: CLUSTER_ADMIN_STORAGE_KEY, cards: CARDS_UNDER_TEST }
