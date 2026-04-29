@@ -122,7 +122,7 @@ export function GettingStartedBanner({
           <button
             key={id}
             onClick={onClick}
-            className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50 hover:border-purple-500/30 hover:bg-secondary/50 transition-all text-left group"
+            className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border/50 hover:border-purple-500/30 hover:bg-secondary/50 transition-all text-left group min-h-11"
           >
             <div className="p-2 rounded-lg bg-purple-500/10 group-hover:bg-purple-500/20 transition-colors shrink-0">
               <Icon className="w-4 h-4 text-purple-400" />

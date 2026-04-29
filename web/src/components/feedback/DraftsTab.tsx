@@ -213,13 +213,13 @@ export function DraftsTab({
                     <span className="text-xs text-muted-foreground">{t('drafts.emptyAllConfirm', 'Remove all?')}</span>
                     <button
                       onClick={() => { onEmptyRecentlyDeleted(); setShowEmptyAllConfirm(false); showToast(t('drafts.permanentlyDeletedAll', 'All deleted drafts removed'), 'success') }}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                      className="text-xs text-red-400 hover:text-red-300 transition-colors min-h-11 min-w-11"
                     >
                       {t('drafts.confirm', 'Confirm')}
                     </button>
                     <button
                       onClick={() => setShowEmptyAllConfirm(false)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors min-h-11 min-w-11"
                     >
                       {t('drafts.cancel', 'Cancel')}
                     </button>
