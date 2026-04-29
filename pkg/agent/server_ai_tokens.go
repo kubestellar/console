@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/fileutil"
 )
 
 func (s *Server) checkClaudeAvailable() bool {
@@ -253,15 +254,10 @@ func (s *Server) saveTokenUsage() {
 		return
 	}
 
-	// Atomic write: write to a temp file then rename to avoid corruption
+	// Atomic write: temp file → fsync → rename to avoid corruption
 	// if the process is killed mid-write (#6996).
-	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, data, agentFileMode); err != nil {
-		slog.Warn("could not write token usage temp file", "error", err)
-		return
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		slog.Warn("could not rename token usage temp file", "error", err)
+	if err := fileutil.AtomicWriteFile(path, data, agentFileMode); err != nil {
+		slog.Warn("could not write token usage file", "error", err)
 		return
 	}
 

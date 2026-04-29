@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/fileutil"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 )
@@ -231,7 +232,7 @@ func (p *PersistenceStore) Save() error {
 		return fmt.Errorf("failed to marshal persistence config: %w", err)
 	}
 
-	if err := os.WriteFile(p.configPath, data, configFileMode); err != nil {
+	if err := fileutil.AtomicWriteFile(p.configPath, data, configFileMode); err != nil {
 		return fmt.Errorf("failed to write persistence config: %w", err)
 	}
 

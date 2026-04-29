@@ -33,6 +33,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/fileutil"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/kagenti_provider"
@@ -1628,7 +1629,7 @@ func persistSecret(path, secret string) {
 		slog.Warn("Could not create directory for JWT secret", "dir", dir, "error", err)
 		return
 	}
-	if err := os.WriteFile(path, []byte(secret+"\n"), secretFilePerms); err != nil {
+	if err := fileutil.AtomicWriteFile(path, []byte(secret+"\n"), secretFilePerms); err != nil {
 		slog.Warn("Could not persist dev JWT secret", "path", path, "error", err)
 	} else {
 		slog.Info("Persisted dev JWT secret", "path", path)
