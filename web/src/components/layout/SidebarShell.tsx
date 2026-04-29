@@ -248,6 +248,11 @@ export function SidebarShell({
 
   // ---- Resize handle ----
   const [isResizing, setIsResizing] = useState(false)
+  const resizeCleanupRef = useRef<(() => void) | null>(null)
+
+  // Clean up resize listeners on unmount to prevent leaks if mouseup never fires
+  useEffect(() => () => { resizeCleanupRef.current?.() }, [])
+
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
@@ -268,12 +273,14 @@ export function SidebarShell({
       document.removeEventListener('mouseup', handleMouseUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      resizeCleanupRef.current = null
     }
 
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
+    resizeCleanupRef.current = handleMouseUp
   }
 
   // ---- Inline rename state ----

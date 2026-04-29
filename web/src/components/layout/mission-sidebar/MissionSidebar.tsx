@@ -152,6 +152,11 @@ export function MissionSidebar() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  const resizeCleanupRef = useRef<(() => void) | null>(null)
+
+  // Clean up resize listeners on unmount to prevent leaks if mouseup never fires
+  useEffect(() => () => { resizeCleanupRef.current?.() }, [])
+
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
@@ -175,6 +180,7 @@ export function MissionSidebar() {
       document.removeEventListener('mouseup', onMouseUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      resizeCleanupRef.current = null
       // Persist final width using ref to avoid state-updater side effects
       try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(latestWidthRef.current)) } catch { /* ignore */ }
     }
@@ -183,6 +189,7 @@ export function MissionSidebar() {
     document.body.style.userSelect = 'none'
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
+    resizeCleanupRef.current = onMouseUp
   }
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
