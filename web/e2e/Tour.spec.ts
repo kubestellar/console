@@ -54,6 +54,7 @@ async function setupTourTest(page: Page, tourCompleted: boolean = true) {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
     if (isCompleted) {
       localStorage.setItem('kubestellar-console-tour-completed', 'true')
     } else {

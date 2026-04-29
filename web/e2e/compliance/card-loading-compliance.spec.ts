@@ -806,6 +806,7 @@ async function runColdBatch(page: Page, batch: number): Promise<BatchResult | nu
     // Ensure live mode
     localStorage.setItem('kc-demo-mode', 'false')
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
 
   mockControl.sseRequestLog.length = 0

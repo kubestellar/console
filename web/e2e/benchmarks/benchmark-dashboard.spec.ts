@@ -81,6 +81,7 @@ async function setupAndNavigate(page: Page, route: string) {
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
 
   await page.goto(route, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })

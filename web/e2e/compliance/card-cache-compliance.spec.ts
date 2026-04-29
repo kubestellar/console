@@ -604,6 +604,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
       }
       localStorage.setItem('kc-demo-mode', 'false')
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
     })
 
     const manifest = await navigateToBatch(page, batch, BATCH_NAV_TIMEOUT_MS)
