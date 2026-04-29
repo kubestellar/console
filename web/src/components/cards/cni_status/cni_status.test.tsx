@@ -78,7 +78,7 @@ describe('CniStatus', () => {
     })
     render(<CniStatus />)
 
-    expect(screen.getByTestId('skeleton')).toBeTruthy()
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
   })
 
   it('renders with empty state when no CNI plugin found', () => {
