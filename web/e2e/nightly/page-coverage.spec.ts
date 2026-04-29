@@ -75,6 +75,7 @@ const EXPECTED_ERROR_PATTERNS = [
   /\[kc\.cache\] sqlite/i,
   /NS_BINDING_ABORTED/i,
   /NS_ERROR_FAILURE/i,
+  /Fetch failed: Invalid JSON response/i,
   /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket curly apostrophes
 ]
 

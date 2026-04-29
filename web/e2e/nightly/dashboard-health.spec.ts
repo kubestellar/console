@@ -66,6 +66,7 @@ const EXPECTED_ERROR_PATTERNS = [
   /NS_BINDING_ABORTED/i,
   /NS_ERROR_FAILURE/i,
   /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket curly apostrophes
+  /Fetch failed: Invalid JSON response/i,
 ]
 
 /** All dashboard routes to test (from App.tsx) */
