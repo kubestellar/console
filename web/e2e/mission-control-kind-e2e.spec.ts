@@ -233,6 +233,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
       localStorage.setItem('token', 'demo-token')
       localStorage.setItem('kc_demo_mode', 'true')
       localStorage.setItem('kc_onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
       localStorage.setItem('kc_user_cache', JSON.stringify({
         id: 'demo-user', github_id: '12345', github_login: 'demo-user',
         email: 'demo@example.com', role: 'viewer', onboarded: true,

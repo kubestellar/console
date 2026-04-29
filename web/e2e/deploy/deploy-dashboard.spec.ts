@@ -397,6 +397,7 @@ async function setupAuthAndNavigate(page: Page, route: string, opts?: {
     localStorage.setItem('kc-demo-mode', 'false')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
   })
 

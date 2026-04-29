@@ -86,6 +86,7 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
       localStorage.setItem('kc-backend-status', JSON.stringify({
         available: true,
         timestamp: Date.now(),

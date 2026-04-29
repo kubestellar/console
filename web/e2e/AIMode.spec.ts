@@ -36,6 +36,7 @@ async function setupAIModeTest(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
 
   await page.goto('/settings')

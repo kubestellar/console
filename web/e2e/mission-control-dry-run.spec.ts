@@ -125,6 +125,7 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
       localStorage.setItem('kc-demo-mode', 'true')
       localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
       localStorage.setItem('kc-backend-status', JSON.stringify({
         available: true,
         timestamp: Date.now(),

@@ -31,6 +31,7 @@ test.describe('Hourglass Visibility', () => {
     await page.evaluate(() => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
     })
     await page.waitForLoadState('domcontentloaded')
   })
