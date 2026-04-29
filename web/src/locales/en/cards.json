@@ -1209,7 +1209,17 @@
     "showSnoozedAlerts": "Show snoozed alerts",
     "snoozeAllVisible": "Snooze all visible alerts",
     "viewAlertAria": "View alert details for {{nodeName}} on {{cluster}} ({{device}})",
-    "viewNodeAria": "View node {{nodeName}} on {{cluster}}"
+    "viewNodeAria": "View node {{nodeName}} on {{cluster}}",
+    "viewNodesInventoryAria": "View nodes inventory",
+    "switchToInventoryAria": "Switch to inventory view",
+    "switchToAlertsAria": "Switch to alerts view",
+    "snoozeAllForAria": "Snooze all alerts for {{duration}}",
+    "clearAllSnoozesAria": "Clear all snoozed alerts",
+    "retryFetchAria": "Retry fetching hardware health data",
+    "unsnoozeAlertAria": "Unsnooze alert",
+    "snoozeAlertAria": "Snooze alert",
+    "snoozeForAria": "Snooze for {{duration}}",
+    "clearAlertAria": "Clear alert"
   },
   "networkOverview": {
     "policies": "Policies",
@@ -2273,7 +2283,10 @@
     "yes": "Yes",
     "no": "No",
     "checkSystemSettings": "Check System Settings → Notifications → Chrome",
-    "viewAlertDetailsAria": "View alert details: {{rule}}"
+    "viewAlertDetailsAria": "View alert details: {{rule}}",
+    "unsnoozeAlertAria": "Unsnooze alert",
+    "snoozeAlertAria": "Snooze this alert",
+    "snoozeForAria": "Snooze for {{duration}}"
   },
   "alertRules": {
     "sortName": "Name",
@@ -4619,5 +4632,8 @@
   "serviceStatus": {
     "emptyTitle": "No services found",
     "emptyMessage": "Services will appear here once they are deployed to your clusters."
+  },
+  "podLogs": {
+    "refreshLogsAria": "Refresh logs"
   }
 }

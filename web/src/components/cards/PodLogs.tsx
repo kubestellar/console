@@ -29,6 +29,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Select } from '../ui/Select'
 import { Input } from '../ui/Input'
+import { useTranslation } from 'react-i18next'
 
 // ── Tunables (no magic numbers) ────────────────────────────────────────────
 /** Default number of tail lines requested from the backend. */
@@ -55,6 +56,7 @@ interface PodLogsProps {
 }
 
 export function PodLogs({ config }: PodLogsProps) {
+  const { t } = useTranslation('cards')
   const {
     deduplicatedClusters: allClusters,
     isLoading: clustersLoading,
@@ -256,7 +258,7 @@ export function PodLogs({ config }: PodLogsProps) {
           disabled={!effectivePod || isBusy}
           className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
           title="Refresh logs"
-          aria-label="Refresh logs"
+          aria-label={t('podLogs.refreshLogsAria')}
         >
           <RefreshCw className={`w-3 h-3 ${isBusy ? 'animate-spin' : ''}`} />
           Refresh
