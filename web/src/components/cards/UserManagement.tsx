@@ -18,13 +18,14 @@ import type { ConsoleUser, UserRole, OpenShiftUser } from '../../types/users'
 import { Skeleton } from '../ui/Skeleton'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-/** Loose translation function type for helper functions that use dynamic keys */
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 import { StatusBadge } from '../ui/StatusBadge'
 import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { emitUserRoleChanged, emitUserRemoved } from '../../lib/analytics'
 import { ConfirmDialog } from '../../lib/modals'
+
+/** Loose translation function type for helper functions that use dynamic keys */
+type TranslateFn = (key: string, ...rest: unknown[]) => string
 
 const MAX_VISIBLE_GROUPS = 3
 

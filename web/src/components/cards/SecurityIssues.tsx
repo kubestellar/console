@@ -15,7 +15,7 @@ import { SEVERITY_COLORS, SeverityLevel } from '../../lib/accessibility'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 /** Loose translation function type for helper functions that use dynamic keys */
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string
+type TranslateFn = (key: string, ...rest: unknown[]) => string
 
 // Demo security issues data for demo mode
 function getDemoSecurityIssues(): SecurityIssue[] {

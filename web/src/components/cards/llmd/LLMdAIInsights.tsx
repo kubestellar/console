@@ -14,9 +14,10 @@ import { useCardExpanded } from '../CardWrapper'
 import { generateAIInsights, type AIInsight } from '../../../lib/llmd/mockData'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
-/** Loose translation function type for helper functions that use dynamic keys */
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 import { PROGRESS_SIMULATION_MS } from '../../../lib/constants/network'
+
+/** Loose translation function type for helper functions that use dynamic keys */
+type TranslateFn = (key: string, ...rest: unknown[]) => string
 
 const INSIGHT_ICONS = {
   optimization: Lightbulb,
