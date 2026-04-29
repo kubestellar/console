@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { PROGRESS_SIMULATION_MS } from '../../../lib/constants/network'
 
 /** Loose translation function type for helper functions that use dynamic keys */
-type TranslateFn = (key: string, ...rest: unknown[]) => string
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 
 const INSIGHT_ICONS = {
   optimization: Lightbulb,
@@ -321,7 +321,7 @@ export function LLMdAIInsights() {
     }
 
     if (stackContext?.selectedStack) {
-      return generateStackInsights(stackContext.selectedStack, t)
+      return generateStackInsights(stackContext.selectedStack, t as unknown as TranslateFn)
     }
 
     return []

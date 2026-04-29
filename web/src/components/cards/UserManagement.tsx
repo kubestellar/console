@@ -25,7 +25,7 @@ import { emitUserRoleChanged, emitUserRemoved } from '../../lib/analytics'
 import { ConfirmDialog } from '../../lib/modals'
 
 /** Loose translation function type for helper functions that use dynamic keys */
-type TranslateFn = (key: string, ...rest: unknown[]) => string
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 
 const MAX_VISIBLE_GROUPS = 3
 
@@ -259,9 +259,9 @@ export function UserManagement({ config: _config }: UserManagementProps) {
     : activeTab === 'serviceAccounts' ? setSaItemsPerPage
     : setConsoleUserItemsPerPage
 
-  const activeSortOptions = activeTab === 'clusterUsers' ? getOpenShiftUserSortOptions(t)
-    : activeTab === 'serviceAccounts' ? getSASortOptions(t)
-    : getConsoleUserSortOptions(t)
+  const activeSortOptions = activeTab === 'clusterUsers' ? getOpenShiftUserSortOptions(t as unknown as TranslateFn)
+    : activeTab === 'serviceAccounts' ? getSASortOptions(t as unknown as TranslateFn)
+    : getConsoleUserSortOptions(t as unknown as TranslateFn)
 
   const isAdmin = currentUser?.role === 'admin'
 
