@@ -448,6 +448,12 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       // makes a fresh health check instead of returning a cached
       // "unavailable" result from a previous test. (#10784)
       localStorage.removeItem('kc-backend-status')
+      // Clear sessionStorage snapshots so the SWR cache layer cannot
+      // rehydrate stale cluster data from a previous test. sessionStorage
+      // survives page.reload() and on webkit/firefox the sync rehydration
+      // outraces the async IndexedDB delete, causing row-count
+      // mismatches. (#10828)
+      sessionStorage.clear()
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('demo-user-onboarded', 'true')
       localStorage.setItem('kc-demo-mode', 'false')
@@ -467,9 +473,16 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     await page.goto('/clusters')
     await page.waitForLoadState('domcontentloaded')
 
-    // Wait for clusters page to fully render — Firefox may need extra time
+    // Wait for clusters page to fully render — Firefox/webkit may need extra time
     const PAGE_RENDER_TIMEOUT_MS = 30_000
-    await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS }).catch(() => {})
+    await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS })
+
+    // Wait for cluster data to actually render before counting rows.
+    // On webkit/firefox the SWR cache hydrates slower than Chromium, so
+    // the container can be visible before any cluster rows appear. (#10828)
+    const DATA_RENDER_TIMEOUT_MS = 20_000
+    const firstClusterName = page.getByText('accuracy-cluster-1').first()
+    await expect(firstClusterName).toBeVisible({ timeout: DATA_RENDER_TIMEOUT_MS }).catch(() => {})
 
     // The clusters page renders a row per cluster. We count any element
     // whose data-testid matches the cluster-row pattern. If the test

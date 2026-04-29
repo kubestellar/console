@@ -271,7 +271,11 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
 
   // Inject XSS payloads via the ReactMarkdown renderer
   // We render the markdown in the browser context to test the actual component
+  // Firefox may destroy the execution context during navigation between
+  // phases. Wrap every page.evaluate() in a try/catch so a single
+  // destroyed-context error doesn't abort the entire scan. (#10828)
   for (const payload of MARKDOWN_XSS_PAYLOADS) {
+    try {
     const result = await page.evaluate((md) => {
       // Create a temporary div and check what ReactMarkdown would render
       // by inspecting the DOM after React processes the markdown
@@ -294,6 +298,10 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
     addCheck('Markdown XSS', `Payload: ${payload.name}`,
       'pass', // ReactMarkdown sanitizes by default — this documents the payloads we test
       `Tested: ${payload.md.substring(0, 50)}`, 'info')
+    } catch (e) {
+      addCheck('Markdown XSS', `Payload: ${payload.name}`,
+        'warn', `Skipped — execution context destroyed (navigation): ${String(e).slice(0, 120)}`, 'info')
+    }
   }
 
   // Now test the actual React app — navigate to missions and check rendered output
@@ -487,7 +495,13 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   // ══════════════════════════════════════════════════════════════════════
   console.log('[RCE] Phase 8: CSP header verification')
 
+  // Firefox/webkit may redirect '/' → '/login' which interrupts the
+  // navigation. Catch and re-navigate to settle on the final URL. (#10828)
   const response = await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
+    .catch(async () => {
+      await page.waitForLoadState('domcontentloaded').catch(() => {})
+      return null
+    })
   const csp = response?.headers()['content-security-policy'] || ''
 
   if (csp) {

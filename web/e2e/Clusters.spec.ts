@@ -90,6 +90,12 @@ async function setupClustersTest(page: Page) {
     // Clear the IndexedDB cache so stale data from previous tests doesn't bleed in.
     // Tests run against the same origin so cache entries are shared across tests.
     indexedDB.deleteDatabase('kc_cache')
+    // Clear sessionStorage snapshots so the SWR cache layer cannot rehydrate
+    // stale cluster data from a previous navigation/test. sessionStorage
+    // survives page.reload() and on webkit/firefox the sync rehydration
+    // outraces the async IndexedDB delete, causing filter tests to render
+    // clusters from the beforeEach mock alongside the test-specific mock. (#10828)
+    sessionStorage.clear()
     // Clear stale backend-status cache so checkBackendAvailability() makes a
     // fresh health check instead of returning a cached "unavailable" result
     // from a previous test. (#10784)
@@ -276,8 +282,11 @@ test.describe('Clusters Page', () => {
       // Unhealthy clusters must NOT appear in the Healthy tab
       // Scoped to clusters-page so sidebar cluster status widget doesn't cause
       // false positives. Use .first() for strict-mode safety.
-      await expect(clustersPage.getByText('unhealthy-with-nodes').first()).not.toBeVisible()
-      await expect(clustersPage.getByText('truly-unhealthy').first()).not.toBeVisible()
+      // Webkit/Firefox need extra time for the filter DOM update after
+      // sessionStorage-based SWR rehydration is replaced by fresh API data. (#10828)
+      const FILTER_HIDDEN_TIMEOUT_MS = 20_000
+      await expect(clustersPage.getByText('unhealthy-with-nodes').first()).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
+      await expect(clustersPage.getByText('truly-unhealthy').first()).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
     })
 
     test('Unhealthy stat count matches clusters shown after clicking Unhealthy tab', async ({ page }) => {
@@ -321,7 +330,10 @@ test.describe('Clusters Page', () => {
       // widget which shows all cluster names regardless of the active filter. #10790
       const clustersPage = page.getByTestId('clusters-page')
       await expect(clustersPage.getByText('unhealthy-no-nodes').first()).toBeVisible({ timeout: 5000 })
-      await expect(clustersPage.getByText('healthy-cluster').first()).not.toBeVisible()
+      // Webkit/Firefox need extra time for the filter DOM update after
+      // sessionStorage-based SWR rehydration is replaced by fresh API data. (#10828)
+      const FILTER_HIDDEN_TIMEOUT_MS = 20_000
+      await expect(clustersPage.getByText('healthy-cluster').first()).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
     })
   })
 })
