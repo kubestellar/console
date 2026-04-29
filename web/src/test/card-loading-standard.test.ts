@@ -130,8 +130,8 @@ function relPath(filePath: string): string {
 
 /** Check if a file is exempt from all checks */
 function isExempt(filePath: string): boolean {
-  const basename = basename(filePath)
-  return !!EXEMPT_CARDS[basename]
+  const base = basename(filePath)
+  return !!EXEMPT_CARDS[base]
 }
 
 /** Check if file uses useCardLoadingState */
@@ -202,8 +202,8 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isRefreshing must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = basename(filePath)
-      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+      const base = basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(base)) continue
 
       const rel = relPath(filePath)
       const src = readFileSync(filePath, 'utf-8')
@@ -224,8 +224,8 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isDemoData must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = basename(filePath)
-      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+      const base = basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(base)) continue
 
       const rel = relPath(filePath)
       const src = readFileSync(filePath, 'utf-8')
@@ -248,8 +248,8 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isFailed must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = basename(filePath)
-      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+      const base = basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(base)) continue
 
       const rel = relPath(filePath)
       const src = readFileSync(filePath, 'utf-8')
@@ -270,8 +270,8 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('consecutiveFailures must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = basename(filePath)
-      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+      const base = basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(base)) continue
 
       const rel = relPath(filePath)
       const src = readFileSync(filePath, 'utf-8')
