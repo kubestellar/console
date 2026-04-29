@@ -58,6 +58,16 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
       route.fulfill({ status: 200, json: { dashboards: [] } })
     )
 
+    // Mock local kc-agent HTTP endpoint — even in demo mode, the cluster
+    // cache probes http://127.0.0.1:8585 before falling back to demo data
+    await page.route('http://127.0.0.1:8585/**', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [], pods: [] }),
+      })
+    )
+
     // Seed localStorage BEFORE any page script runs
     await page.addInitScript(() => {
       localStorage.setItem('token', 'demo-token')
