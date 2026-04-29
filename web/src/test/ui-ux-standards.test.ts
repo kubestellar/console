@@ -29,15 +29,15 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // ── Named constants ──────────────────────────────────────────────────────────
 
 /** Root directory for all components */
-const COMPONENTS_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
+const COMPONENTS_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
   '../components',
 )
 
@@ -156,10 +156,10 @@ interface Violation {
 /** Recursively find all .tsx/.ts component files, excluding tests and design system files */
 function findComponentFiles(dir: string): string[] {
   const results: string[] = []
-  if (!fs.existsSync(dir)) return results
+  if (!existsSync(dir)) return results
 
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name)
     if (entry.isDirectory()) {
       if (entry.name === '__tests__' || entry.name === 'node_modules') continue
       results.push(...findComponentFiles(fullPath))
@@ -182,7 +182,7 @@ function findComponentFiles(dir: string): string[] {
 
 /** Get relative path from COMPONENTS_DIR for readable output */
 function relPath(filePath: string): string {
-  return path.relative(COMPONENTS_DIR, filePath).replace(/\\/g, '/')
+  return relative(COMPONENTS_DIR, filePath).replace(/\\/g, '/')
 }
 
 // ── Line-level filters ──────────────────────────────────────────────────────
@@ -377,7 +377,7 @@ function scanForViolations(): Violation[] {
 
   for (const filePath of allFiles) {
     const rel = relPath(filePath)
-    const src = fs.readFileSync(filePath, 'utf-8')
+    const src = readFileSync(filePath, 'utf-8')
     const lines = src.split('\n')
 
     for (let i = 0; i < lines.length; i++) {

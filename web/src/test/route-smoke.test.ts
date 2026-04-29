@@ -21,14 +21,14 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // ── Named constants ────────────────────────────────────────────────────────
-const SRC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const APP_FILE = path.join(SRC_DIR, 'App.tsx')
-const ROUTES_FILE = path.join(SRC_DIR, 'config', 'routes.ts')
+const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const APP_FILE = join(SRC_DIR, 'App.tsx')
+const ROUTES_FILE = join(SRC_DIR, 'config', 'routes.ts')
 /** Minimum number of routes expected — guards against accidental deletion */
 const MIN_EXPECTED_ROUTES = 30
 /** Minimum number of modal/dialog files expected */
@@ -37,7 +37,7 @@ const MIN_EXPECTED_MODALS = 5
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 function readFile(filePath: string): string {
-  return fs.readFileSync(filePath, 'utf-8')
+  return readFileSync(filePath, 'utf-8')
 }
 
 /**
@@ -92,9 +92,9 @@ function findModalFiles(): string[] {
   const results: string[] = []
 
   function walk(dir: string) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true })
+    const entries = readdirSync(dir, { withFileTypes: true })
     for (const entry of entries) {
-      const full = path.join(dir, entry.name)
+      const full = join(dir, entry.name)
       if (entry.isDirectory()) {
         walk(full)
       } else if (
@@ -109,8 +109,8 @@ function findModalFiles(): string[] {
     }
   }
 
-  walk(path.join(SRC_DIR, 'components'))
-  walk(path.join(SRC_DIR, 'lib', 'modals'))
+  walk(join(SRC_DIR, 'components'))
+  walk(join(SRC_DIR, 'lib', 'modals'))
   return results
 }
 
@@ -180,15 +180,15 @@ describe('Lazy import integrity', () => {
     const missing: string[] = []
     for (const [name, modulePath] of lazyImports) {
       // Resolve the module path relative to App.tsx (src/)
-      const resolved = path.resolve(SRC_DIR, modulePath)
+      const resolved = resolve(SRC_DIR, modulePath)
       // Check .tsx, .ts, and /index.tsx
       const candidates = [
         `${resolved}.tsx`,
         `${resolved}.ts`,
-        path.join(resolved, 'index.tsx'),
-        path.join(resolved, 'index.ts'),
+        join(resolved, 'index.tsx'),
+        join(resolved, 'index.ts'),
       ]
-      const exists = candidates.some(c => fs.existsSync(c))
+      const exists = candidates.some(c => existsSync(c))
       if (!exists) {
         missing.push(`${name} → ${modulePath}`)
       }
@@ -204,14 +204,14 @@ describe('Lazy import integrity', () => {
     while ((match = re.exec(appContent)) !== null) {
       const modulePath = match[1]
       const exportName = match[2]
-      const resolved = path.resolve(SRC_DIR, modulePath)
+      const resolved = resolve(SRC_DIR, modulePath)
       const candidates = [
         `${resolved}.tsx`,
         `${resolved}.ts`,
-        path.join(resolved, 'index.tsx'),
-        path.join(resolved, 'index.ts'),
+        join(resolved, 'index.tsx'),
+        join(resolved, 'index.ts'),
       ]
-      const existingFile = candidates.find(c => fs.existsSync(c))
+      const existingFile = candidates.find(c => existsSync(c))
       if (existingFile) {
         const content = readFile(existingFile)
         // Check for named export: export function/const/class ExportName
@@ -239,7 +239,7 @@ describe('Modal/Dialog component integrity', () => {
   })
 
   for (const filePath of modalFiles) {
-    const relativePath = path.relative(SRC_DIR, filePath)
+    const relativePath = relative(SRC_DIR, filePath)
 
     it(`${relativePath} — exports a component function`, () => {
       const content = readFile(filePath)

@@ -22,14 +22,14 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
-const CARDS_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
+const CARDS_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
   '../components/cards',
 )
 
@@ -108,10 +108,10 @@ function isKnownViolation(rel: string, check: string): boolean {
 /** Recursively find all .tsx/.ts files under a directory */
 function findCardFiles(dir: string): string[] {
   const results: string[] = []
-  if (!fs.existsSync(dir)) return results
+  if (!existsSync(dir)) return results
 
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name)
     if (entry.isDirectory()) {
       results.push(...findCardFiles(fullPath))
     } else if (/\.(tsx?)$/.test(entry.name) && !entry.name.endsWith('.test.ts') && !entry.name.endsWith('.test.tsx')) {
@@ -123,14 +123,14 @@ function findCardFiles(dir: string): string[] {
 
 /** Get relative path from CARDS_DIR for readable test names */
 function relPath(filePath: string): string {
-  const rel = path.relative(CARDS_DIR, filePath)
+  const rel = relative(CARDS_DIR, filePath)
   // Normalize to POSIX-style separators so this matches KNOWN_VIOLATIONS keys
   return rel.replace(/\\/g, '/')
 }
 
 /** Check if a file is exempt from all checks */
 function isExempt(filePath: string): boolean {
-  const basename = path.basename(filePath)
+  const basename = basename(filePath)
   return !!EXEMPT_CARDS[basename]
 }
 
@@ -157,7 +157,7 @@ describe('Card Loading State Gold Standard', () => {
 
   // Files that use useCardLoadingState or useReportCardDataState
   const filesWithLoadingHook = cardFiles.filter(f => {
-    const src = fs.readFileSync(f, 'utf-8')
+    const src = readFileSync(f, 'utf-8')
     return usesLoadingStateHook(src)
   })
 
@@ -173,7 +173,7 @@ describe('Card Loading State Gold Standard', () => {
       it(`${rel}: no bare isLoading in useCardLoadingState`, () => {
         if (isKnownViolation(rel, 'bare-isLoading')) return // grandfathered
 
-        const src = fs.readFileSync(filePath, 'utf-8')
+        const src = readFileSync(filePath, 'utf-8')
         const calls = extractLoadingStateCalls(src)
         for (const call of calls) {
           const barePattern = /isLoading:\s*(?!false\b)(\w+)\s*[,}]/
@@ -202,11 +202,11 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isRefreshing must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = path.basename(filePath)
+      const basename = basename(filePath)
       if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
 
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (!usesCachedHook(src) && !usesClustersHook(src)) continue
 
@@ -224,11 +224,11 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isDemoData must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = path.basename(filePath)
+      const basename = basename(filePath)
       if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
 
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (!usesCachedHook(src) && !usesClustersHook(src)) continue
 
@@ -248,11 +248,11 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isFailed must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = path.basename(filePath)
+      const basename = basename(filePath)
       if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
 
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (!usesCachedHook(src) && !usesClustersHook(src)) continue
 
@@ -270,11 +270,11 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('consecutiveFailures must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = path.basename(filePath)
+      const basename = basename(filePath)
       if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
 
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (!usesCachedHook(src) && !usesClustersHook(src)) continue
 
@@ -293,7 +293,7 @@ describe('Card Loading State Gold Standard', () => {
   describe('No hardcoded isLoading: false', () => {
     for (const filePath of filesWithLoadingHook) {
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (src.includes('DEMO_DATA_CARDS') || (!usesCachedHook(src) && !usesClustersHook(src))) continue
 

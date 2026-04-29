@@ -13,20 +13,20 @@
  * Run: npx vitest run src/test/auth-contract.test.ts
  */
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 
 // ── Paths ───────────────────────────────────────────────────────────────────
 
 // process.cwd() is the web/ directory when vitest runs; go up one level.
-const REPO_ROOT = path.resolve(process.cwd(), '..')
+const REPO_ROOT = resolve(process.cwd(), '..')
 
-const AUTH_HANDLER_PATH = path.join(
+const AUTH_HANDLER_PATH = join(
   REPO_ROOT,
   'pkg/api/handlers/auth.go',
 )
 
-const AUTH_CALLBACK_PATH = path.join(
+const AUTH_CALLBACK_PATH = join(
   REPO_ROOT,
   'web/src/components/auth/AuthCallback.tsx',
 )
@@ -47,17 +47,17 @@ function getRefreshTokenBody(authGo: string): string {
 describe('Cross-stack /auth/refresh contract (#6590)', () => {
   it('both files exist', () => {
     expect(
-      fs.existsSync(AUTH_HANDLER_PATH),
+      existsSync(AUTH_HANDLER_PATH),
       `Backend handler missing: ${AUTH_HANDLER_PATH}`,
     ).toBe(true)
     expect(
-      fs.existsSync(AUTH_CALLBACK_PATH),
+      existsSync(AUTH_CALLBACK_PATH),
       `Frontend callback missing: ${AUTH_CALLBACK_PATH}`,
     ).toBe(true)
   })
 
   it('backend RefreshToken does NOT return "token" in the JSON body (#6590)', () => {
-    const authGo = fs.readFileSync(AUTH_HANDLER_PATH, 'utf-8')
+    const authGo = readFileSync(AUTH_HANDLER_PATH, 'utf-8')
     const fnBody = getRefreshTokenBody(authGo)
     expect(fnBody.length).toBeGreaterThan(0)
 
@@ -74,14 +74,14 @@ describe('Cross-stack /auth/refresh contract (#6590)', () => {
   })
 
   it('backend RefreshToken returns "refreshed" and "onboarded" in the JSON body', () => {
-    const authGo = fs.readFileSync(AUTH_HANDLER_PATH, 'utf-8')
+    const authGo = readFileSync(AUTH_HANDLER_PATH, 'utf-8')
     const fnBody = getRefreshTokenBody(authGo)
     expect(fnBody).toMatch(/"refreshed"\s*:/)
     expect(fnBody).toMatch(/"onboarded"\s*:/)
   })
 
   it('backend RefreshToken still sets the HttpOnly cookie via setJWTCookie', () => {
-    const authGo = fs.readFileSync(AUTH_HANDLER_PATH, 'utf-8')
+    const authGo = readFileSync(AUTH_HANDLER_PATH, 'utf-8')
     const fnBody = getRefreshTokenBody(authGo)
     expect(
       fnBody,
@@ -92,7 +92,7 @@ describe('Cross-stack /auth/refresh contract (#6590)', () => {
   })
 
   it('frontend AuthCallback reads data.refreshed from the response', () => {
-    const callbackTsx = fs.readFileSync(AUTH_CALLBACK_PATH, 'utf-8')
+    const callbackTsx = readFileSync(AUTH_CALLBACK_PATH, 'utf-8')
     // AuthCallback must reference data.refreshed (the success signal from
     // /auth/refresh). It must NOT depend on data.token any more.
     expect(
@@ -102,8 +102,8 @@ describe('Cross-stack /auth/refresh contract (#6590)', () => {
   })
 
   it('backend and frontend agree on the "onboarded" field', () => {
-    const authGo = fs.readFileSync(AUTH_HANDLER_PATH, 'utf-8')
-    const callbackTsx = fs.readFileSync(AUTH_CALLBACK_PATH, 'utf-8')
+    const authGo = readFileSync(AUTH_HANDLER_PATH, 'utf-8')
+    const callbackTsx = readFileSync(AUTH_CALLBACK_PATH, 'utf-8')
 
     // Backend must include "onboarded" in the response
     expect(

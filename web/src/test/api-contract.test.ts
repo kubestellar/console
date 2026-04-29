@@ -6,19 +6,19 @@
  * without requiring a running backend.
  */
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import { z } from 'zod'
 
 // ── Paths ───────────────────────────────────────────────────────────────────
 
 // process.cwd() is the web/ directory when vitest runs; go up one level.
-const REPO_ROOT = path.resolve(process.cwd(), '..')
+const REPO_ROOT = resolve(process.cwd(), '..')
 
-const SERVER_GO_PATH = path.join(REPO_ROOT, 'pkg/api/server.go')
-const ROUTES_HEALTH_GO_PATH = path.join(REPO_ROOT, 'pkg/api/routes_health.go')
-const USER_MODEL_PATH = path.join(REPO_ROOT, 'pkg/models/user.go')
-const SETTINGS_TYPES_PATH = path.join(REPO_ROOT, 'pkg/settings/types.go')
+const SERVER_GO_PATH = join(REPO_ROOT, 'pkg/api/server.go')
+const ROUTES_HEALTH_GO_PATH = join(REPO_ROOT, 'pkg/api/routes_health.go')
+const USER_MODEL_PATH = join(REPO_ROOT, 'pkg/models/user.go')
+const SETTINGS_TYPES_PATH = join(REPO_ROOT, 'pkg/settings/types.go')
 
 // ── Schemas (Frontend Expectations) ─────────────────────────────────────────
 
@@ -117,7 +117,7 @@ function getFiberMapKeys(source: string, routePath: string, methodName: string =
 
 describe('API Contract — /health', () => {
     it('backend /health response contains all expected top-level keys', () => {
-        const source = fs.readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
+        const source = readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
         const keys = getFiberMapKeys(source, '/health')
 
         // Check required top-level keys in HealthSchema
@@ -129,7 +129,7 @@ describe('API Contract — /health', () => {
     })
 
     it('backend /health branding sub-object contains all expected keys', () => {
-        const source = fs.readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
+        const source = readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
         // Find the branding fiber.Map inside /health
         const healthPattern = /app\.Get\("\/health",/
         const match = source.match(healthPattern)
@@ -155,7 +155,7 @@ describe('API Contract — /health', () => {
 
 describe('API Contract — /api/version', () => {
     it('backend /api/version response contains all expected keys', () => {
-        const source = fs.readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
+        const source = readFileSync(ROUTES_HEALTH_GO_PATH, 'utf-8')
         const keys = getFiberMapKeys(source, '/api/version')
 
         const expectedKeys = Object.keys(VersionSchema.shape)
@@ -167,7 +167,7 @@ describe('API Contract — /api/version', () => {
 
 describe('API Contract — Models (User)', () => {
     it('User struct in Go matches UserSchema in TypeScript', () => {
-        const source = fs.readFileSync(USER_MODEL_PATH, 'utf-8')
+        const source = readFileSync(USER_MODEL_PATH, 'utf-8')
         const fields = getGoStructFields(source, 'User')
 
         const expectedKeys = Object.keys(UserSchema.shape)
@@ -179,7 +179,7 @@ describe('API Contract — Models (User)', () => {
 
 describe('API Contract — Settings', () => {
     it('AllSettings struct in Go contains core fields expected by UI', () => {
-        const source = fs.readFileSync(SETTINGS_TYPES_PATH, 'utf-8')
+        const source = readFileSync(SETTINGS_TYPES_PATH, 'utf-8')
         const fields = getGoStructFields(source, 'AllSettings')
 
         // UI expects these core fields for settings to load
