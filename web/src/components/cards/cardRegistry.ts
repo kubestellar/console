@@ -142,10 +142,14 @@ const CrossClusterPolicyComparison = safeLazy(() => import('./CrossClusterPolicy
 const RecommendedPolicies = safeLazy(() => import('./RecommendedPolicies'), 'RecommendedPolicies')
 const KyvernoPolicies = safeLazy(() => import('./KyvernoPolicies'), 'KyvernoPolicies')
 const IntotoSupplyChain = safeLazy(() => import('./intoto_supply_chain'), 'IntotoSupplyChain')
-// Eagerly import demo-only compliance cards — they're tiny (~255 lines total),
-// contain only hardcoded demo data, and lazy loading them causes blank cards
-// while heavier modules (OPA) saturate the dev server's transform pipeline.
-import { FalcoAlerts, TrivyScan, KubescapeScan, PolicyViolations, ComplianceScore } from './ComplianceCards'
+// ComplianceCards — 5 named exports, ~1200 LOC. Lazy-loaded; originally
+// eager but the comment was stale (file grew from 255 → 1200 lines).
+const _complianceBundle = import('./ComplianceCards').catch(() => undefined as never)
+const FalcoAlerts = safeLazy(() => _complianceBundle, 'FalcoAlerts')
+const TrivyScan = safeLazy(() => _complianceBundle, 'TrivyScan')
+const KubescapeScan = safeLazy(() => _complianceBundle, 'KubescapeScan')
+const PolicyViolations = safeLazy(() => _complianceBundle, 'PolicyViolations')
+const ComplianceScore = safeLazy(() => _complianceBundle, 'ComplianceScore')
 const TrestleScan = safeLazy(() => import('./TrestleScan'), 'TrestleScan')
 const VaultSecrets = safeLazy(() => import('./DataComplianceCards'), 'VaultSecrets')
 const ExternalSecrets = safeLazy(() => import('./DataComplianceCards'), 'ExternalSecrets')
