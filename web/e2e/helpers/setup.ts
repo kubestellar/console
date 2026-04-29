@@ -200,7 +200,12 @@ export async function setupDemoMode(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
   // Mock /api/me so AuthProvider has a deterministic user without a backend.
   await mockApiMe(page)
@@ -361,6 +366,11 @@ export async function setupAuthLocalStorage(
   }
   await page.addInitScript((o: typeof opts) => {
     localStorage.setItem('token', o.token)
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
     if (o.demoMode !== undefined) {
       localStorage.setItem('kc-demo-mode', String(o.demoMode))
     }
@@ -446,9 +456,14 @@ export async function setupDashboardTest(page: Page): Promise<void> {
   // after the page has already parsed and executed scripts, which is too
   // late for webkit/Safari where the auth redirect fires synchronously.
   await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')

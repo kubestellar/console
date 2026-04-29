@@ -524,6 +524,7 @@ export async function setLiveColdMode(page: Page, user?: typeof mockUser): Promi
       try {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('kc-demo-mode', 'false')
+        localStorage.setItem('kc-has-session', 'true')
         localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kubestellar-console-tour-completed', 'true')
         localStorage.setItem('kc-user-cache', JSON.stringify(usr))
@@ -578,6 +579,7 @@ export async function setMode(page: Page, mode: 'demo' | 'live' | 'live+cache', 
   const lsValues: Record<string, string> = {
     token: isLive ? 'test-token' : 'demo-token',
     'kc-demo-mode': String(!isLive),
+    'kc-has-session': 'true',
     'demo-user-onboarded': 'true',
     'kubestellar-console-tour-completed': 'true',
     'kc-user-cache': JSON.stringify(u),

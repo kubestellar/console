@@ -119,13 +119,16 @@ async function setupAllMocks(page: Page) {
 async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
   await setupAllMocks(page)
 
-  await page.goto('/login')
-  await page.waitForLoadState('domcontentloaded')
-
-  await page.evaluate(
-    ({ mc, mcKey }) => {
+  await page.addInitScript(
+    ({ mc, mcKey }: { mc: Record<string, unknown>; mcKey: string }) => {
       localStorage.setItem('token', 'demo-token')
       localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('kc-has-session', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
       localStorage.setItem('kc_onboarded', 'true')
       localStorage.setItem('kc_user_cache', JSON.stringify({
         id: 'demo-user', github_id: '12345', github_login: 'demo-user',
@@ -144,18 +147,9 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
     { mc: overrides, mcKey: MC_STORAGE_KEY }
   )
 
-  await page.goto('/')
-  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
-  await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
-
-  // Open MC dialog via JS click (button is in fixed sidebar)
-  await page.evaluate(() => {
-    const btn = document.querySelector('button[title*="Mission Control"]') as HTMLElement
-    if (btn) { btn.click(); return }
-    const buttons = Array.from(document.querySelectorAll('button'))
-    const mcBtn = buttons.find(b => b.textContent?.includes('Mission Control'))
-    if (mcBtn) (mcBtn as HTMLElement).click()
-  })
+  await page.goto('/?mission-control=open')
+  await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_TIMEOUT_MS })
+  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch(() => {})
 
   await expect(
     page.getByText(/Define Mission|Chart Course|Flight Plan|Define Your|Chart Your|Launch|Dry Run/i).first()
@@ -165,11 +159,15 @@ async function seedAndOpenMC(page: Page, overrides: Record<string, unknown>) {
 async function navigateTo(page: Page) {
   await setupAllMocks(page)
 
-  await page.goto('/login')
-  await page.waitForLoadState('domcontentloaded')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
     localStorage.setItem('kc_onboarded', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '12345', github_login: 'demo-user',
@@ -177,7 +175,8 @@ async function navigateTo(page: Page) {
     }))
   })
   await page.goto('/')
-  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
+  await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_TIMEOUT_MS })
+  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS }).catch(() => {})
   await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
 }
 

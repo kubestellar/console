@@ -42,21 +42,19 @@ test.describe('404 / not-found route', () => {
   test('unmatched route exposes a return-home affordance (sidebar or nav)', async ({ page }) => {
     await setupDemoAndNavigate(page, `${UNMATCHED_ROUTE_PREFIX}${Date.now()}`)
 
-    // The current app redirects unmatched routes to HOME via <Navigate>, so
-    // the dashboard chrome (sidebar / navbar) should be visible. If a future
-    // change introduces a dedicated 404 page, this test should still pass as
-    // long as SOME navigation affordance back to / is rendered.
+    // The app renders a NotFound page with navigation affordances (Home button,
+    // Go back button, quick links) rather than redirecting to /.
+    const RENDER_TIMEOUT_MS = 20_000
 
-    // Wait for the redirect to complete — assert we land on HOME, not the unmatched route.
-    // CI shared runners can be slow; allow extra time for the SPA redirect.
-    const REDIRECT_TIMEOUT_MS = 20_000
-    await expect(page).toHaveURL(/\/($|\?)/, { timeout: REDIRECT_TIMEOUT_MS })
+    // Wait for the NotFound page content to render
+    await expect(page.getByText('Page not found')).toBeVisible({ timeout: RENDER_TIMEOUT_MS })
 
-    const sidebarOrNav = page
-      .locator('nav')
+    // Assert a return-home affordance is present (Home button or sidebar nav)
+    const homeAffordance = page
+      .getByRole('button', { name: /home/i })
+      .or(page.locator('nav'))
       .or(page.locator('[data-testid*="sidebar"]'))
-      .or(page.getByRole('link', { name: /home|dashboard/i }))
 
-    await expect(sidebarOrNav.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(homeAffordance.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
   })
 })

@@ -141,12 +141,12 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
       })
     )
 
-    // Mock GitHub auth endpoint failure
+    // Mock GitHub auth endpoint failure — redirect back to /login with error
+    // param, matching real OAuth error flow (backend redirects to /login?error=)
     await page.route('**/auth/github', (route) =>
       route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Auth service unavailable' }),
+        status: 302,
+        headers: { Location: '/login?error=server_error' },
       })
     )
 

@@ -92,10 +92,15 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
 
   // Set auth token + skip onboarding/tour BEFORE navigation
   await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 
   await page.goto('/settings')
