@@ -26,7 +26,7 @@ import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/t
 // Types
 // ---------------------------------------------------------------------------
 
-export type OpenfgaHealth = 'healthy' | 'degraded' | 'not-installed'
+export type OpenfgaHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 export type OpenfgaStoreStatus = 'active' | 'paused' | 'draining'
 
 export interface OpenfgaStore {

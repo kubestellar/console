@@ -21,7 +21,7 @@
 // Types
 // ---------------------------------------------------------------------------
 
-export type CniHealth = 'healthy' | 'degraded' | 'not-installed'
+export type CniHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 export type CniPlugin =
   | 'cilium'
   | 'calico'

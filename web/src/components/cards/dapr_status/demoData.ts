@@ -16,7 +16,7 @@
 
 export type DaprControlPlanePodStatus = 'running' | 'pending' | 'failed' | 'unknown'
 export type DaprComponentType = 'state-store' | 'pubsub' | 'binding'
-export type DaprHealth = 'healthy' | 'degraded' | 'not-installed'
+export type DaprHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 
 export interface DaprControlPlanePod {
   /** Logical name of the control plane component. */

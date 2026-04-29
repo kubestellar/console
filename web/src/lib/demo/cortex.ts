@@ -34,7 +34,7 @@ export type CortexComponentName =
   | 'ruler'
   | 'alertmanager'
 
-export type CortexHealth = 'healthy' | 'degraded' | 'not-installed'
+export type CortexHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 
 export interface CortexComponentPod {
   /** Cortex microservice component this pod belongs to. */

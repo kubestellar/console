@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------------------
 
 export type GrpcServingStatus = 'serving' | 'not-serving' | 'unknown'
-export type GrpcHealth = 'healthy' | 'degraded' | 'not-installed'
+export type GrpcHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 
 export interface GrpcService {
   name: string

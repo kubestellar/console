@@ -20,7 +20,7 @@
 // Types
 // ---------------------------------------------------------------------------
 
-export type OpenFeatureHealth = 'healthy' | 'degraded' | 'not-installed'
+export type OpenFeatureHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 export type OpenFeatureProviderStatus = 'healthy' | 'degraded' | 'unhealthy'
 export type OpenFeatureFlagType = 'boolean' | 'string' | 'number' | 'json'
 

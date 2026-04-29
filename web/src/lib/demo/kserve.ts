@@ -22,7 +22,7 @@ import { MS_PER_MINUTE } from '../constants/time'
 // Types
 // ---------------------------------------------------------------------------
 
-export type KServeHealth = 'healthy' | 'degraded' | 'not-installed'
+export type KServeHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 export type KServeServiceStatus = 'ready' | 'not-ready' | 'unknown'
 
 export interface KServeControllerPods {

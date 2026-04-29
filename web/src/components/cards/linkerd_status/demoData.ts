@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------------
 
 export type LinkerdPodStatus = 'meshed' | 'partial' | 'unmeshed'
-export type LinkerdHealth = 'healthy' | 'degraded' | 'not-installed'
+export type LinkerdHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 
 export interface LinkerdMeshedDeployment {
   namespace: string

@@ -15,7 +15,7 @@
 
 export type EnvoyListenerStatus = 'active' | 'draining' | 'warming'
 export type EnvoyClusterHealth = 'healthy' | 'degraded' | 'unhealthy'
-export type EnvoyHealth = 'healthy' | 'degraded' | 'not-installed'
+export type EnvoyHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 
 export interface EnvoyListener {
   name: string

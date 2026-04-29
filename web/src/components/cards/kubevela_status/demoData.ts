@@ -23,7 +23,7 @@
 // Types
 // ---------------------------------------------------------------------------
 
-export type KubeVelaHealth = 'healthy' | 'degraded' | 'not-installed'
+export type KubeVelaHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 
 export type KubeVelaAppStatus =
   | 'running'
