@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedOpenfga } from '../../../hooks/useCachedOpenfga'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   OpenfgaAuthorizationModel,
   OpenfgaStore,
@@ -132,8 +133,10 @@ function ModelRow({ model }: { model: OpenfgaAuthorizationModel }) {
 
 export function OpenfgaStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } =
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } =
     useCachedOpenfga()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
   const stores = data.stores ?? []

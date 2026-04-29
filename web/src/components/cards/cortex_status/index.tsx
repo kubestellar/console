@@ -31,6 +31,7 @@ import type { TFunction } from 'i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedCortex } from '../../../hooks/useCachedCortex'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   CortexComponentName,
   CortexComponentPod,
@@ -156,8 +157,10 @@ function ComponentRow({
 
 export function CortexStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } =
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } =
     useCachedCortex()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
   const components = data.components ?? []

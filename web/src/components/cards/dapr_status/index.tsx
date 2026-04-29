@@ -30,6 +30,7 @@ import type { TFunction } from 'i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedDapr } from '../../../hooks/useCachedDapr'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   DaprComponent,
   DaprComponentType,
@@ -143,7 +144,9 @@ function ComponentRow({
 
 export function DaprStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCachedDapr()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedDapr()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
 

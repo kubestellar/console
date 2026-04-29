@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedGrpc } from '../../../hooks/useCachedGrpc'
+import { useReportCardDataState } from '../CardDataContext'
 import type { GrpcService } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { formatThroughput } from '../../../lib/cards/formatters'
@@ -106,7 +107,9 @@ function ServiceRow({ service }: { service: GrpcService }) {
 
 export function GrpcStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCachedGrpc()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedGrpc()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
 

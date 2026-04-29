@@ -168,11 +168,15 @@ export function KServeStatus() {
   const {
     data,
     isRefreshing,
+    isDemoData,
+    isFailed,
+    consecutiveFailures,
     error,
     showSkeleton,
     showEmptyState,
-    isDemoData,
   } = useCachedKserve()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   if (showSkeleton) {
     return (

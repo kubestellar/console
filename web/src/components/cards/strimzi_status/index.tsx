@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedStrimzi } from '../../../hooks/useCachedStrimzi'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   ClusterHealth,
   StrimziConsumerGroup,
@@ -177,7 +178,9 @@ function ClusterRow({ cluster }: { cluster: StrimziKafkaCluster }) {
 
 export function StrimziStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCachedStrimzi()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedStrimzi()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
   const clusters = data.clusters ?? []

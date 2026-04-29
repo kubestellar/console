@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedEnvoy } from './useCachedEnvoy'
+import { useReportCardDataState } from '../CardDataContext'
 import type { EnvoyListener, EnvoyUpstreamCluster } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { formatThroughput } from '../../../lib/cards/formatters'
@@ -102,7 +103,9 @@ function ClusterRow({ cluster }: { cluster: EnvoyUpstreamCluster }) {
 
 export function EnvoyStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCachedEnvoy()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedEnvoy()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
 

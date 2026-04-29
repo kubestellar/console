@@ -28,6 +28,7 @@ import type { TFunction } from 'i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedWasmcloud } from '../../../hooks/useCachedWasmcloud'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   WasmcloudHost,
   WasmcloudLink,
@@ -171,7 +172,9 @@ function LinkRow({ link }: { link: WasmcloudLink }) {
 
 export function WasmcloudStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCachedWasmcloud()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedWasmcloud()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
   const hosts = data.hosts ?? []

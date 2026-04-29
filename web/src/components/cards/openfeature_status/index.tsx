@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedOpenfeature } from '../../../hooks/useCachedOpenfeature'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   OpenFeatureFlag,
   OpenFeatureFlagType,
@@ -174,8 +175,10 @@ function FlagRow({
 
 export function OpenFeatureStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } =
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } =
     useCachedOpenfeature()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
   const providers = data.providers ?? []

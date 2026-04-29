@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedSpiffe } from '../../../hooks/useCachedSpiffe'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   SpiffeFederatedDomain,
   SpiffeRegistrationEntry,
@@ -121,7 +122,9 @@ function FederatedRow({ domain }: { domain: SpiffeFederatedDomain }) {
 
 export function SpiffeStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCachedSpiffe()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedSpiffe()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
   const entries = data.entries ?? []

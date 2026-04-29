@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedCni } from '../../../hooks/useCachedCni'
+import { useReportCardDataState } from '../CardDataContext'
 import type { CniNodeState, CniNodeStatus } from '../../../lib/demo/cni'
 import { formatTimeAgo } from '../../../lib/formatters'
 
@@ -93,7 +94,9 @@ function NodeRow({ node }: { node: CniNodeStatus }) {
 
 export function CniStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCachedCni()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedCni()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
   const nodes = data.nodes ?? []

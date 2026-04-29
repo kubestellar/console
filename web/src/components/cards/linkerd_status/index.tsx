@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedLinkerd } from '../../../hooks/useCachedLinkerd'
+import { useReportCardDataState } from '../CardDataContext'
 import type { LinkerdMeshedDeployment } from './demoData'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { formatThroughput } from '../../../lib/cards/formatters'
@@ -109,7 +110,9 @@ function DeploymentRow({ deployment }: { deployment: LinkerdMeshedDeployment }) 
 
 export function LinkerdStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCachedLinkerd()
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedLinkerd()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const isHealthy = data.health === 'healthy'
 

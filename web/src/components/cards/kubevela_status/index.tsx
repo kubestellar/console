@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedKubevela } from '../../../hooks/useCachedKubevela'
+import { useReportCardDataState } from '../CardDataContext'
 import type {
   KubeVelaApplication,
   KubeVelaAppStatus,
@@ -263,8 +264,10 @@ function ApplicationRow({
 
 export function KubeVelaStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } =
+  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } =
     useCachedKubevela()
+
+  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
 
   const applications = data.applications ?? []
   const displayedApps = applications.slice(0, MAX_APPS_DISPLAYED)
