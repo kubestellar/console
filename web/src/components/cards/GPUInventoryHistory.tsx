@@ -627,6 +627,12 @@ export function GPUInventoryHistory() {
     return { arrivalRate, departureRate, avgDurationIntervals }
   }, [history, showDemo, filterGPUNodes, chartData])
 
+  const meanAllocatedGPUs = useMemo(() => {
+    const safeData = chartData || []
+    if (safeData.length === 0) return 0
+    return Math.round(safeData.reduce((s, d) => s + d.allocated, 0) / safeData.length)
+  }, [chartData])
+
   // ── Snapshot interval (computed from history timestamps) ────────────
   /** Median interval between consecutive snapshots in minutes, used to display churn metrics in real time units */
   const snapshotIntervalMin = (() => {
@@ -1077,7 +1083,7 @@ export function GPUInventoryHistory() {
           <span>
             {t('cards:gpuInventoryHistory.avgUsage', 'Avg')}:{' '}
             <span className="text-foreground font-medium">
-              {Math.round((chartData || []).reduce((s, d) => s + d.allocated, 0) / (chartData || []).length)} GPUs
+              {meanAllocatedGPUs} GPUs
             </span>
           </span>
           {churnMetrics && (

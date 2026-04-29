@@ -578,10 +578,14 @@ Please:
       context: { clusterName } })
   }
 
-  const installedCount = Object.values(statuses).filter(s => s.installed).length
-  const totalViolations = Object.values(statuses)
-    .filter(s => s.installed)
-    .reduce((sum, s) => sum + (s.violationCount || 0), 0)
+  const { installedCount, totalViolations, activePolicies } = useMemo(() => {
+    const installed = Object.values(statuses).filter(s => s.installed)
+    return {
+      installedCount: installed.length,
+      totalViolations: installed.reduce((sum, s) => sum + (s.violationCount || 0), 0),
+      activePolicies: installed.reduce((sum, s) => sum + (s.policyCount || 0), 0),
+    }
+  }, [statuses])
 
   const handleShowViolations = (clusterName: string) => {
     setSelectedClusterForViolations(clusterName)
@@ -708,7 +712,7 @@ Please:
           <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
             <p className="text-2xs text-orange-400">Policies Active</p>
             <p className="text-lg font-bold text-foreground">
-              {Object.values(statuses).filter(s => s.installed).reduce((sum, s) => sum + (s.policyCount || 0), 0)}
+              {activePolicies}
             </p>
           </div>
           <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/20">
