@@ -2,6 +2,7 @@
  * Utility functions for formatting values for display
  */
 
+import type { TFunction } from 'i18next'
 import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY, MS_PER_MONTH, MS_PER_YEAR, SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from './constants/time'
 
 /**
@@ -240,7 +241,7 @@ function cardSyncKeys(prefix: string): CardSyncKeys {
  * or an explicit {@link CardSyncKeys} object for non-standard cards.
  */
 export function createCardSyncFormatter(
-  t: (key: string, options?: Record<string, unknown>) => string,
+  t: TFunction<'cards'>,
   keys: string | CardSyncKeys,
 ): (isoString: string) => string {
   const k = typeof keys === 'string' ? cardSyncKeys(keys) : keys
