@@ -84,7 +84,7 @@ func (s *Server) handleNvidiaOperatorsHTTP(w http.ResponseWriter, r *http.Reques
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
 	defer cancel()
 
-	var results []nvidiaOperatorStatus
+	results := make([]nvidiaOperatorStatus, 0)
 
 	if cluster != "" {
 		client, err := s.k8sClient.GetClient(cluster)
@@ -131,9 +131,6 @@ func (s *Server) handleNvidiaOperatorsHTTP(w http.ResponseWriter, r *http.Reques
 		wg.Wait()
 	}
 
-	if results == nil {
-		results = make([]nvidiaOperatorStatus, 0)
-	}
 	writeJSON(w, map[string]interface{}{"operators": results})
 }
 
