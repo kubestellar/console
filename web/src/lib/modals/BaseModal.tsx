@@ -38,7 +38,7 @@
  * ```
  */
 
-import { ReactNode, createContext, useContext, useId, useRef } from 'react'
+import { ReactNode, createContext, useContext, useId, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ChevronLeft } from 'lucide-react'
 import { useModalNavigation, useModalFocusTrap } from './useModalNavigation'
@@ -124,6 +124,8 @@ export function BaseModal({
   // Trap focus within modal so Tab cannot escape to background content
   useModalFocusTrap(modalRef, isOpen)
 
+  const escapeContextValue = useMemo(() => ({ escapeEnabled: closeOnEscape }), [closeOnEscape])
+
   if (!isOpen) return null
 
   // #9165 — Outside-click detection.
@@ -190,7 +192,7 @@ export function BaseModal({
           onClick={(e) => e.stopPropagation()}
         >
           <ModalTitleIdContext.Provider value={titleId}>
-            <ModalEscapeContext.Provider value={{ escapeEnabled: closeOnEscape }}>
+            <ModalEscapeContext.Provider value={escapeContextValue}>
               {children}
             </ModalEscapeContext.Provider>
           </ModalTitleIdContext.Provider>
