@@ -40,6 +40,50 @@ vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
 }))
 
+vi.mock('../../../hooks/useCachedData', () => ({
+  useCachedHardwareHealth: vi.fn(() => ({
+    data: { alerts: [], inventory: [], nodeCount: 0, lastUpdate: null },
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+    error: null,
+    refetch: vi.fn(),
+  })),
+}))
+
+vi.mock('../../../hooks/useMCP', () => ({
+  useClusters: vi.fn(() => ({ clusters: [], deduplicatedClusters: [], isLoading: false })),
+}))
+
+vi.mock('../../../hooks/useSnoozedAlerts', () => ({
+  useSnoozedAlerts: vi.fn(() => ({
+    isSnoozed: vi.fn(() => false),
+    snooze: vi.fn(),
+    unsnooze: vi.fn(),
+    snoozedCount: 0,
+  })),
+  SNOOZE_DURATIONS: [],
+  formatSnoozeRemaining: vi.fn(() => ''),
+}))
+
+vi.mock('../../../hooks/useDrillDown', () => ({
+  useDrillDownActions: vi.fn(() => ({})),
+}))
+
+vi.mock('../../ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
+vi.mock('../../../hooks/useGlobalFilters', () => ({
+  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, filterByCluster: <T,>(items: T[]) => items }),
+}))
+
+vi.mock('../../../hooks/useMissions', () => ({
+  useMissions: vi.fn(() => ({ startMission: vi.fn() })),
+}))
+
 import { HardwareHealthCard } from '../HardwareHealthCard'
 
 describe('HardwareHealthCard', () => {

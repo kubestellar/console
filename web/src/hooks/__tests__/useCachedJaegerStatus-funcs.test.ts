@@ -59,8 +59,23 @@ const mockUseCache = vi.fn(() => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
-    createCachedHook: vi.fn(),
-  useCache: (...args: unknown[]) => mockUseCache(...args),
+    createCachedHook: (config: Record<string, unknown>) => {
+        return () => {
+            const result = mockUseCache(config)
+            return {
+                data: result.data,
+                isLoading: result.isLoading,
+                isRefreshing: result.isRefreshing,
+                isDemoFallback: result.isDemoFallback && !result.isLoading,
+                error: result.error,
+                isFailed: result.isFailed,
+                consecutiveFailures: result.consecutiveFailures,
+                lastRefresh: result.lastRefresh,
+                refetch: result.refetch,
+            }
+        }
+    },
+    useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
 import { useCachedJaegerStatus } from '../useCachedJaegerStatus'

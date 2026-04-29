@@ -49,10 +49,30 @@ vi.mock('../../../hooks/useCachedData', () => ({
     isFailed: false,
     consecutiveFailures: 0,
   })),
+  useCachedNamespaces: vi.fn(() => ({
+    namespaces: [],
+    isLoading: false,
+    isRefreshing: false,
+    isDemoFallback: false,
+    isFailed: false,
+    consecutiveFailures: 0,
+  })),
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true }),
+  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, filterByCluster: <T extends { cluster?: string }>(items: T[]) => items, filterByStatus: <T,>(items: T[]) => items, customFilter: '' }),
+}))
+
+vi.mock('../../../hooks/useMCP', () => ({
+  useClusters: vi.fn(() => ({ deduplicatedClusters: [], clusters: [], isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0 })),
+  useResourceQuotas: vi.fn(() => ({ resourceQuotas: [], isLoading: false, refetch: vi.fn() })),
+  useLimitRanges: vi.fn(() => ({ limitRanges: [], isLoading: false })),
+  LimitRange: {},
+  ResourceQuota: {},
+  createOrUpdateResourceQuota: vi.fn(),
+  deleteResourceQuota: vi.fn(),
+  COMMON_RESOURCE_TYPES: [],
+  GPU_RESOURCE_TYPES: [],
 }))
 
 import { NamespaceQuotas } from '../NamespaceQuotas'

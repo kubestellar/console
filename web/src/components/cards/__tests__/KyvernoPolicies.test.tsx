@@ -22,6 +22,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(), markErrorReported: vi.fn(),
+  emitError: vi.fn(),
 }))
 
 vi.mock('../../../hooks/useTokenUsage', () => ({
@@ -54,6 +55,14 @@ vi.mock('../../../hooks/useKyverno', () => ({
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true }),
+}))
+
+vi.mock('../../../hooks/useMissions', () => ({
+  useMissions: vi.fn(() => ({ startMission: vi.fn() })),
+}))
+
+vi.mock('../../../hooks/useDrillDown', () => ({
+  useDrillDownActions: vi.fn(() => ({ drillToPolicy: vi.fn() })),
 }))
 
 import { KyvernoPolicies } from '../KyvernoPolicies'

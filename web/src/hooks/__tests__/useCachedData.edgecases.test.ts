@@ -11,6 +11,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // Mocks — must be declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
+const mockClusterCacheRef = vi.hoisted(() => ({ clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }> }))
+
 const mockUseCache = vi.fn()
 const mockIsBackendUnavailable = vi.fn(() => false)
 const mockAuthFetch = vi.fn()
@@ -60,8 +62,14 @@ vi.mock('../../lib/sseClient', () => ({
 
 vi.mock('../mcp/shared', () => ({
     createCachedHook: vi.fn(),
-  clusterCacheRef: { clusters: [] },
+  clusterCacheRef: mockClusterCacheRef,
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  deduplicateClustersByServer: (clusters: unknown[]) => clusters,
+}))
+
+vi.mock('../mcp/clusterCacheRef', () => ({
+  clusterCacheRef: mockClusterCacheRef,
+  setClusterCacheRefClusters: vi.fn(),
 }))
 
 vi.mock('../useLocalAgent', () => ({
@@ -156,6 +164,7 @@ describe('useCachedData', () => {
     localStorage.clear()
     // Set a valid token so fetchAPI doesn't throw
     localStorage.setItem('kc_token', 'test-jwt-token')
+    mockClusterCacheRef.clusters = []
     // Default useCache implementation
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
       makeCacheResult(opts.initialData)
@@ -298,12 +307,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'z-cluster', reachable: true }, { name: 'a-cluster', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'z-cluster', reachable: true }, { name: 'a-cluster', reachable: true }] as typeof mockClusterCacheRef.clusters
 
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
@@ -334,10 +338,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: { clusters: [{ name: 'c1', reachable: true }] },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }] as typeof mockClusterCacheRef.clusters
 
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
@@ -480,15 +481,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [
-            { name: 'c1', reachable: true },
-            { name: 'c2', reachable: true },
-          ],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [ { name: 'c1', reachable: true }, { name: 'c2', reachable: true }, ] as typeof mockClusterCacheRef.clusters
 
       const c1Res = { ok: true, text: vi.fn().mockResolvedValue(JSON.stringify({ pods: [{ name: 'p1' }] })) }
       const c2Res = { ok: true, text: vi.fn().mockResolvedValue(JSON.stringify({ pods: [{ name: 'p2' }] })) }
@@ -525,15 +518,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [
-            { name: 'ok-cluster', context: 'ok-ctx', reachable: true },
-            { name: 'bad-cluster', context: 'bad-ctx', reachable: true },
-          ],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [ { name: 'ok-cluster', context: 'ok-ctx', reachable: true }, { name: 'bad-cluster', context: 'bad-ctx', reachable: true }, ] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
 
       mockKubectlProxy.getEvents
@@ -559,10 +544,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: { clusters: [] },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(true)
 
       mockFetchSSE.mockResolvedValue([{ type: 'Warning', reason: 'sse-event' }])
@@ -600,12 +582,7 @@ describe('useCachedData', () => {
         }),
       })
       vi.stubGlobal('fetch', mockFetch)
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'c1', context: 'c1-ctx', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
 
       const { useCachedDeploymentIssues } = await loadModule()
@@ -636,12 +613,7 @@ describe('useCachedData', () => {
         }),
       })
       vi.stubGlobal('fetch', mockFetch)
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'c1', context: 'c1-ctx', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
 
       const { useCachedDeploymentIssues } = await loadModule()
       useCachedDeploymentIssues()
@@ -660,12 +632,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'c1', context: 'c1-ctx', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
 
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
@@ -791,12 +758,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'prod', context: 'admin@prod-cluster', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'prod', context: 'admin@prod-cluster', reachable: true }] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
       mockKubectlProxy.getPodIssues.mockResolvedValue([
         { name: 'issue-pod', status: 'Error', restarts: 1 },
@@ -820,12 +782,7 @@ describe('useCachedData', () => {
   // ========================================================================
   describe('coreFetchers.securityIssues — kubectl empty result', () => {
     it('falls through to REST when kubectl returns no issues', async () => {
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'c1', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
 
       // kubectl succeeds but finds no security issues
@@ -970,12 +927,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'prod', context: 'prod-ctx', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'prod', context: 'prod-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
 
       mockKubectlProxy.exec.mockResolvedValue({
@@ -1013,15 +965,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [
-            { name: 'ok', context: 'ok-ctx', reachable: true },
-            { name: 'bad', context: 'bad-ctx', reachable: true },
-          ],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [ { name: 'ok', context: 'ok-ctx', reachable: true }, { name: 'bad', context: 'bad-ctx', reachable: true }, ] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
 
       // First cluster succeeds, second fails
@@ -1047,12 +991,7 @@ describe('useCachedData', () => {
         return makeCacheResult([])
       })
 
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: {
-          clusters: [{ name: 'c1', context: 'c1-ctx', reachable: true }],
-        },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
 
       const now = Date.now()
@@ -1188,10 +1127,7 @@ describe('useCachedData', () => {
 
     it('throws when no clusters are available', async () => {
       // Ensure clusterCacheRef is empty and fetchClusters returns []
-      vi.doMock('../mcp/shared', () => ({
-        clusterCacheRef: { clusters: [] },
-        agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-      }))
+      mockClusterCacheRef.clusters = [] as typeof mockClusterCacheRef.clusters
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         text: vi.fn().mockResolvedValue(JSON.stringify({ clusters: [] })),

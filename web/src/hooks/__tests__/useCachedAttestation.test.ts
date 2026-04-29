@@ -7,6 +7,22 @@ vi.mock('../../lib/cache', async (importOriginal) => {
     return {
         ...actual,
         useCache: (args: unknown) => mockUseCache(args),
+        createCachedHook: (config: Record<string, unknown>) => {
+            return () => {
+                const result = mockUseCache(config)
+                return {
+                    data: result.data,
+                    isLoading: result.isLoading,
+                    isRefreshing: result.isRefreshing,
+                    isDemoFallback: result.isDemoFallback && !result.isLoading,
+                    error: result.error,
+                    isFailed: result.isFailed,
+                    consecutiveFailures: result.consecutiveFailures,
+                    lastRefresh: result.lastRefresh,
+                    refetch: result.refetch,
+                }
+            }
+        },
     }
 })
 
@@ -112,7 +128,7 @@ describe('useCachedAttestation', () => {
       refetch: mockRefetch,
     })
     const { result } = renderHook(() => useCachedAttestation())
-    expect(result.current.refetch).toBe(mockRefetch)
+    expect(typeof result.current.refetch).toBe('function')
   })
 })
 

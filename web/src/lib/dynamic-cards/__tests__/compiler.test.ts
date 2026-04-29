@@ -238,7 +238,7 @@ describe('createCardComponent', () => {
           commonComparators.__evilInjection = function() { return 'pwned'; };
           module.exports.default = function() { return null; };
           module.exports.mutated = true;
-        } catch (e: unknown) {
+        } catch (e) {
           module.exports.default = function() { return null; };
           module.exports.mutated = false;
         }

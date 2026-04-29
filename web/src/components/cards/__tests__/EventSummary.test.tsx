@@ -52,7 +52,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
 }))
 
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true }),
+  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, filterByCluster: <T extends { cluster?: string }>(items: T[]) => items }),
 }))
 
 import { EventSummary } from '../EventSummary'

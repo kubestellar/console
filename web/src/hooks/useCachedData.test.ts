@@ -72,6 +72,12 @@ vi.mock('../lib/schemas/validate', () => ({
 vi.mock('./mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
   agentFetch: vi.fn().mockImplementation((...args: unknown[]) => fetch(args[0] as RequestInfo, args[1] as RequestInit)),
+  deduplicateClustersByServer: (clusters: unknown[]) => clusters,
+}))
+
+vi.mock('./mcp/clusterCacheRef', () => ({
+  clusterCacheRef: mockClusterCacheRef,
+  setClusterCacheRefClusters: vi.fn(),
 }))
 
 vi.mock('../lib/constants', async (importOriginal) => {
