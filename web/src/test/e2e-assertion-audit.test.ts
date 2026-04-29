@@ -17,7 +17,7 @@
  * Run:   npx vitest run src/test/e2e-assertion-audit.test.ts
  */
 import { describe, it, expect } from 'vitest'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -49,7 +49,7 @@ const BARE_RETURN_AFTER_CATCH_RE =
  *   if (hasFoo) { await expect(foo).toBeVisible() }
  *   // but when hasFoo is false, nothing is checked
  */
-const POSITIVE_ONLY_ASSERTION_RE =
+const _POSITIVE_ONLY_ASSERTION_RE =
   /if\s*\(has\w+\)\s*\{[^}]*expect\([^)]*\)[^}]*\}\s*(?!\s*else)/
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -57,8 +57,7 @@ const POSITIVE_ONLY_ASSERTION_RE =
 describe('user-flows/ assertion hygiene (#8508)', () => {
   /** All .spec.ts files in the user-flows directory */
   const specFiles = existsSync(E2E_USER_FLOWS_DIR)
-    ? fs
-        .readdirSync(E2E_USER_FLOWS_DIR)
+    ? readdirSync(E2E_USER_FLOWS_DIR)
         .filter((f) => f.endsWith('.spec.ts'))
         .map((f) => join(E2E_USER_FLOWS_DIR, f))
     : []
