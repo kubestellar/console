@@ -72,6 +72,7 @@ async function setMode(page: Page) {
     const lsValues: Record<string, string> = {
       token: REAL_TOKEN,
       'kc-demo-mode': 'false',
+      'kc-has-session': 'true',
       'demo-user-onboarded': 'true',
       'kubestellar-console-tour-completed': 'true',
       'kc-user-cache': REAL_USER || JSON.stringify(mockUser),

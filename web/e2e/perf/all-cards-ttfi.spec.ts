@@ -261,6 +261,7 @@ async function setMode(page: Page, mode: PerfMode) {
       try {
         localStorage.setItem('token', demo ? 'demo-token' : 'test-token')
         localStorage.setItem('kc-demo-mode', String(demo))
+        localStorage.setItem('kc-has-session', 'true')
         localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kubestellar-console-tour-completed', 'true')
         localStorage.setItem('kc-user-cache', JSON.stringify(user))
