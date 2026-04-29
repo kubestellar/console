@@ -92,7 +92,7 @@ function componentColor(name: CortexComponentName): string {
   const map: Record<CortexComponentName, string> = {
     distributor: 'text-blue-400',
     ingester: 'text-emerald-400',
-    querier: 'text-violet-400',
+    querier: 'text-purple-400',
     'store-gateway': 'text-cyan-400',
     ruler: 'text-amber-400',
     alertmanager: 'text-rose-400',
@@ -264,8 +264,8 @@ export function CortexStatus() {
         <MetricTile
           label={t('cortexStatus.ingestionRate', 'Ingest/s')}
           value={formatCompactNumber(data.metrics.ingestionRatePerSec)}
-          colorClass="text-violet-400"
-          icon={<BarChart3 className="w-4 h-4 text-violet-400" />}
+          colorClass="text-purple-400"
+          icon={<BarChart3 className="w-4 h-4 text-purple-400" />}
         />
         <MetricTile
           label={t('cortexStatus.tenants', 'Tenants')}

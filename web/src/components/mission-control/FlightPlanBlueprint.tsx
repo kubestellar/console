@@ -465,7 +465,7 @@ export function FlightPlanBlueprint({
                 'px-3 py-1.5 text-xs font-medium transition-all duration-150 border',
                 'rounded-l-lg',
                 state.deployMode === 'phased'
-                  ? 'bg-violet-500/20 text-violet-300 border-violet-500/40 shadow-inner'
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-inner'
                   : 'bg-secondary/30 text-muted-foreground border-border hover:text-foreground hover:bg-secondary/50'
               )}
             >

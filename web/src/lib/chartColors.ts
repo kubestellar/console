@@ -33,7 +33,7 @@ export function getChartColor(index: number): string {
     4: '#f59e0b', // amber/warning
     5: '#ef4444', // red
     6: '#06b6d4', // cyan
-    7: '#8b5cf6', // violet
+    7: '#8b5cf6', // purple
     8: '#14b8a6', // teal
   }
   

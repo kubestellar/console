@@ -551,7 +551,7 @@ function ExecutiveAnalysis({
               <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Shared Dependencies</h4>
               <div className="flex flex-wrap gap-1">
                 {Array.from(allDeps).map((dep) => (
-                  <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                  <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
                     {dep}
                   </span>
                 ))}
@@ -755,7 +755,7 @@ function ProjectDetailPanel({
           <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Dependencies</h4>
           <div className="flex flex-wrap gap-1">
             {project.dependencies.map((dep) => (
-              <span key={dep} className="text-xs px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20">
+              <span key={dep} className="text-xs px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
                 {dep}
               </span>
             ))}
@@ -866,8 +866,8 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Network Security': <Network className="w-3 h-3 text-sky-400" />,
   'Service Mesh': <Network className="w-3 h-3 text-cyan-400" />,
   'Observability': <Eye className="w-3 h-3 text-blue-400" />,
-  'Identity & Encryption': <Lock className="w-3 h-3 text-violet-400" />,
-  'Authentication & IAM': <Lock className="w-3 h-3 text-violet-400" />,
+  'Identity & Encryption': <Lock className="w-3 h-3 text-purple-400" />,
+  'Authentication & IAM': <Lock className="w-3 h-3 text-purple-400" />,
   'Secrets Management': <Lock className="w-3 h-3 text-emerald-400" />,
   'Storage': <Box className="w-3 h-3 text-green-400" />,
   'Custom': <Layers className="w-3 h-3 text-slate-400" />

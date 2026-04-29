@@ -70,7 +70,7 @@ function policyStatusBadgeClass(policy: CustodianPolicy): string {
 function modeBadgeClass(mode: CustodianPolicyMode): string {
   switch (mode) {
     case 'event':
-      return 'bg-violet-500/20 text-violet-400'
+      return 'bg-purple-500/20 text-purple-400'
     case 'periodic':
       return 'bg-cyan-500/20 text-cyan-400'
     case 'pull':
