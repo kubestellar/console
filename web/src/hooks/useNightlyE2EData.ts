@@ -72,8 +72,9 @@ export function useNightlyE2EData() {
     demoData: { guides: DEMO_DATA, isDemo: true },
     persist: true,
     refreshInterval,
-    demoWhenEmpty: true, // Show demo data immediately during cold start instead of skeleton loading
-    liveInDemoMode: isNetlifyDeployment, // Only fetch live in demo mode on console.kubestellar.io
+    demoWhenEmpty: true,
+    isEmpty: (d) => !d.guides || d.guides.length === 0 || d.guides.every(g => (g.runs || []).length === 0),
+    liveInDemoMode: isNetlifyDeployment,
     fetcher: async () => {
       // Try authenticated endpoint first, then public fallback
       const endpoints = ['/api/nightly-e2e/runs', '/api/public/nightly-e2e/runs']

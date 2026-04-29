@@ -18,6 +18,7 @@ const IMAGE_CACHE_KEY = "guide-images";
 const RUN_IMAGE_CACHE_KEY = "run-images"; // per-run artifact image metadata
 const CACHE_IDLE_TTL_MS = 5 * 60 * 1000;   // 5 minutes
 const CACHE_ACTIVE_TTL_MS = 2 * 60 * 1000; // 2 minutes when jobs running
+const STALE_SERVE_WINDOW_MS = 60 * 60 * 1000; // serve stale data up to 1 hour past TTL
 const IMAGE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes for image tags
 const ARTIFACT_FETCH_TIMEOUT_MS = 10_000;   // timeout for individual artifact downloads
 const RUNS_PER_PAGE = 7;
@@ -641,13 +642,17 @@ export default async (req: Request) => {
     );
   }
 
-  // Check blob cache
+  // Check blob cache — stale-while-revalidate: serve stale data immediately
+  // when TTL has expired but data is still within the stale window, then
+  // refresh in the background so the next request gets fresh data.
   const store = getStore(CACHE_STORE);
+  let staleEntry: CacheEntry | null = null;
   try {
     const cached = await store.get(CACHE_KEY, { type: "text" });
     if (cached) {
       const entry: CacheEntry = JSON.parse(cached);
-      if (Date.now() < entry.expiresAt) {
+      const now = Date.now();
+      if (now < entry.expiresAt) {
         return new Response(
           JSON.stringify({
             guides: entry.guides,
@@ -659,6 +664,10 @@ export default async (req: Request) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           }
         );
+      }
+      // TTL expired but within stale window — serve stale, revalidate below
+      if (now < entry.expiresAt + STALE_SERVE_WINDOW_MS) {
+        staleEntry = entry;
       }
     }
   } catch {
@@ -689,6 +698,21 @@ export default async (req: Request) => {
       }
     );
   } catch (err) {
+    // If we have stale data, serve it instead of erroring
+    if (staleEntry) {
+      return new Response(
+        JSON.stringify({
+          guides: staleEntry.guides,
+          cachedAt: staleEntry.cachedAt,
+          fromCache: true,
+          stale: true,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
     return new Response(
       JSON.stringify({
         error: `Failed to fetch nightly E2E data: ${err instanceof Error ? err.message : String(err)}`,

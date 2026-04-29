@@ -1075,6 +1075,10 @@ export interface UseCacheOptions<T> {
   /** When true and demoData is provided, fall back to demoData if live fetch returns empty data.
    *  Use this for "demo until X is installed" cards that are in DEMO_DATA_CARDS. (default: false) */
   demoWhenEmpty?: boolean
+  /** Custom predicate to check whether data is "empty" for demoWhenEmpty logic.
+   *  Default checks Array.isArray(data) && length === 0.  Override for object-shaped
+   *  data (e.g. { guides: [] }) where the top-level value is truthy but semantically empty. */
+  isEmpty?: (data: T) => boolean
   /** When true, the fetcher runs even in demo mode. Use for cards that serve live data
    *  on Netlify (e.g. nightly E2E status backed by a Netlify Function). (default: false) */
   liveInDemoMode?: boolean
@@ -1124,6 +1128,7 @@ export function useCache<T>({
   autoRefresh = true,
   enabled = true,
   demoWhenEmpty = false,
+  isEmpty: isEmptyFn,
   liveInDemoMode = false,
   merge,
   shared = true,
@@ -1344,8 +1349,11 @@ export function useCache<T>({
   // demoWhenEmpty: fall back to demoData when live fetch returned empty results.
   // This handles "demo until X is installed" cards (e.g., Kagenti) that are in DEMO_DATA_CARDS
   // but fetch live data that returns empty when the feature isn't installed.
+  const dataIsEmpty = isEmptyFn
+    ? isEmptyFn(state.data)
+    : Array.isArray(state.data) && (state.data as unknown[]).length === 0
   const shouldFallbackToDemo = effectiveEnabled && demoWhenEmpty && stableDemoData !== undefined
-    && !state.isLoading && Array.isArray(state.data) && (state.data as unknown[]).length === 0
+    && !state.isLoading && dataIsEmpty
 
   // Optimistic demo: for demoWhenEmpty hooks, show demoData immediately while
   // the live fetch runs in the background.  This avoids skeleton flicker for
@@ -1354,9 +1362,8 @@ export function useCache<T>({
   // IMPORTANT: Only apply when current data is empty — if the store already has
   // real cached data (e.g. from initialData populated via localStorage), showing
   // demo data would discard that warm cache (#3397).
-  const hasNonEmptyData = Array.isArray(state.data) ? (state.data as unknown[]).length > 0 : !!state.data
   const showOptimisticDemo = effectiveEnabled && demoWhenEmpty && stableDemoData !== undefined
-    && state.isLoading && !hasNonEmptyData
+    && state.isLoading && dataIsEmpty
 
   return {
     data: !effectiveEnabled ? demoDisplayData
