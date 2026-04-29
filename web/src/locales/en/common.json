@@ -3086,7 +3086,12 @@
     "subjectUser": "User",
     "subjectGroup": "Group",
     "subjectServiceAccount": "Service Account",
-    "rolesNamespaceScoped": "These roles are scoped to this namespace only - not cluster-wide."
+    "rolesNamespaceScoped": "These roles are scoped to this namespace only - not cluster-wide.",
+    "accessManagement": "Access Management",
+    "adminAccessRequired": "Admin access required to view namespace details",
+    "fetchAccessFailed": "Failed to fetch namespace access",
+    "adminRequiredForAccess": "Admin access required to view role bindings",
+    "noRoleBindings": "No role bindings found"
   },
   "cluster": {
     "subtitle": "Manage your Kubernetes clusters",

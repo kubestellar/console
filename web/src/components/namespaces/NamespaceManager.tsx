@@ -27,6 +27,7 @@ import { RotatingTip } from '../ui/RotatingTip'
 import { api, authFetch } from '../../lib/api'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../../lib/auth'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { NAMESPACE_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
 import { NamespaceCard, NamespaceCardSkeleton } from './NamespaceCard'
@@ -43,6 +44,8 @@ const namespaceCache = new Map<string, NamespaceDetails[]>()
 export function NamespaceManager() {
   const { t } = useTranslation()
   const { showToast } = useToast()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const { clusters, deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   // Note: We don't check permissions upfront - the API will return auth errors for inaccessible clusters
@@ -249,11 +252,14 @@ export function NamespaceManager() {
     } catch (err) {
       console.error('Failed to fetch access:', err)
       setAccessEntries([])
-      showToast('Failed to fetch namespace access', 'error')
+      const message = err instanceof Error && err.message?.includes('403')
+        ? t('namespaces.adminAccessRequired', 'Admin access required to view namespace details')
+        : t('namespaces.fetchAccessFailed', 'Failed to fetch namespace access')
+      showToast(message, 'error')
     } finally {
       setAccessLoading(false)
     }
-  }, [showToast])
+  }, [showToast, t])
 
   // Initial fetch when clusters are loaded - fetches ALL clusters to populate cache
   // Subsequent filter changes will just filter cached data, no refetch needed
@@ -274,10 +280,10 @@ export function NamespaceManager() {
   }, [fetchNamespaces])
 
   useEffect(() => {
-    if (selectedNamespace) {
+    if (selectedNamespace && isAdmin) {
       fetchAccess(selectedNamespace)
     }
-  }, [selectedNamespace, fetchAccess])
+  }, [selectedNamespace, fetchAccess, isAdmin])
 
   const filteredNamespaces = namespaces.filter(ns =>
     ns.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -339,6 +345,7 @@ export function NamespaceManager() {
   }
 
   const handleRevokeAccess = async (binding: NamespaceAccessEntry) => {
+    if (!isAdmin) return
     if (!selectedNamespace) return
 
     if (!confirm(`Revoke access for ${binding.subjectName}?`)) {
@@ -641,27 +648,34 @@ export function NamespaceManager() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-medium text-white">{selectedNamespace.name}</h3>
-                <p className="text-sm text-muted-foreground">Access Management</p>
+                <p className="text-sm text-muted-foreground">{t('namespaces.accessManagement', 'Access Management')}</p>
               </div>
-              <button
-                onClick={() => openGrantAccessModal()}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors text-sm"
-              >
-                <UserPlus className="w-4 h-4" />
-                Grant Access
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => openGrantAccessModal()}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors text-sm"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  {t('namespaces.grantAccess', 'Grant Access')}
+                </button>
+              )}
             </div>
 
             <ClusterBadge cluster={selectedNamespace.cluster} size="sm" className="mb-4" />
 
-            {accessLoading ? (
+            {!isAdmin ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">{t('namespaces.adminRequiredForAccess', 'Admin access required to view role bindings')}</p>
+              </div>
+            ) : accessLoading ? (
               <div className="flex items-center justify-center h-20">
                 <div className="spinner w-6 h-6" />
               </div>
             ) : accessEntries.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No role bindings found</p>
+                <p className="text-sm">{t('namespaces.noRoleBindings', 'No role bindings found')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -684,7 +698,7 @@ export function NamespaceManager() {
                     <button
                       onClick={() => handleRevokeAccess(entry)}
                       className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      title="Revoke access"
+                      title={t('namespaces.revokeAccess', 'Revoke access')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
