@@ -546,7 +546,7 @@ describe('CardAIActions', () => {
   it('stops propagation on container click', () => {
     const parentClick = vi.fn()
     render(
-      <div onClick={parentClick}>
+      <div role="button" onClick={parentClick}>
         <CardAIActions resource={defaultResource} />
       </div>
     )
@@ -558,7 +558,7 @@ describe('CardAIActions', () => {
   it('stops propagation on button clicks', () => {
     const parentClick = vi.fn()
     render(
-      <div onClick={parentClick}>
+      <div role="button" onClick={parentClick}>
         <CardAIActions resource={defaultResource} />
       </div>
     )

@@ -86,7 +86,7 @@ interface ConfirmDeleteDialogProps {
 function ConfirmDeleteDialog({ title, message, onConfirm, onCancel }: ConfirmDeleteDialogProps) {
   return (
     <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay" onClick={onCancel} />
+      <div role="button" tabIndex={0} className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay" onClick={onCancel} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onCancel(); } }} aria-label="Close dialog" />
       <div className="fixed inset-0 flex items-center justify-center z-modal p-4">
         <div className="bg-card border border-border rounded-xl shadow-xl max-w-sm w-full p-6">
           <div className="flex items-center gap-3 mb-4">

@@ -149,8 +149,7 @@ export function DraftsTab({
                     </div>
 
                     {/* Actions */}
-                    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
+                    <div role="group" className="flex items-center gap-2 mt-2 pt-2 border-t border-border/30" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                       {isConfirmingDelete ? (
                         <>
                           <span className="text-xs text-muted-foreground">{t('drafts.deleteThisDraft', 'Delete this draft?')}</span>
@@ -208,8 +207,7 @@ export function DraftsTab({
               </span>
               {recentlyDeletedOpen && (
                 showEmptyAllConfirm ? (
-                  /* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */
-                  <span className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <span role="group" className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     <span className="text-xs text-muted-foreground">{t('drafts.emptyAllConfirm', 'Remove all?')}</span>
                     <button
                       onClick={() => { onEmptyRecentlyDeleted(); setShowEmptyAllConfirm(false); showToast(t('drafts.permanentlyDeletedAll', 'All deleted drafts removed'), 'success') }}
