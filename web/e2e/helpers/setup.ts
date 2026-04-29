@@ -229,6 +229,7 @@ export async function setupDemoMode(page: Page) {
       available: true,
       timestamp: Date.now(),
     }))
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
   // Mock /api/me so AuthProvider has a deterministic user without a backend.
   await mockApiMe(page)
