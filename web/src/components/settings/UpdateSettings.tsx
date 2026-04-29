@@ -663,6 +663,8 @@ export function UpdateSettings() {
                 if (!result.success) {
                   setCancelState('error')
                   setCancelError(result.error ?? t('settings.updates.cancelFailed'))
+                } else {
+                  setCancelState('idle')
                 }
               }}
               disabled={!canCancel || cancelState === 'pending'}
@@ -867,6 +869,8 @@ export function UpdateSettings() {
               if (!result.success) {
                 setTriggerState('error')
                 setTriggerError(result.error ?? 'Unknown error')
+                triggerGuardRef.current = false
+              } else {
                 triggerGuardRef.current = false
               }
             }}
