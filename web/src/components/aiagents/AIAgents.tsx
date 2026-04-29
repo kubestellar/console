@@ -140,7 +140,12 @@ export function AIAgents() {
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
           <div className="font-medium">{t('aiAgents.errorLoading')}</div>
-          <div className="text-sm text-muted-foreground">{error}</div>
+          <div className="text-sm text-muted-foreground mt-1">{String(error)}</div>
+          {/not connected|not reachable|timed out|not found/i.test(String(error)) && (
+            <div className="text-sm text-muted-foreground mt-2">
+              {t('aiAgents.notConnectedHint')}
+            </div>
+          )}
         </div>
       )}
     </DashboardPage>

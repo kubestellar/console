@@ -3538,7 +3538,8 @@
     "subtitle": "Kagenti agent platform — deploy, secure, and manage AI agents",
     "emptyStateTitle": "AI Agents Dashboard",
     "emptyStateDescription": "Add cards to monitor kagenti agents, MCP tools, build pipelines, and security posture across your clusters.",
-    "errorLoading": "Error loading kagenti data"
+    "errorLoading": "Error loading kagenti data",
+    "notConnectedHint": "Install Kagenti or connect your agent to see live data. Demo data is shown below."
   },
   "aiml": {
     "title": "AI/ML",
