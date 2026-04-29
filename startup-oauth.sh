@@ -175,24 +175,14 @@ if [ -f .env ]; then
     done < .env
 fi
 
-# Check required OAuth credentials
-if [ -z "$GITHUB_CLIENT_ID" ]; then
-    echo -e "${RED}Error: GITHUB_CLIENT_ID is not set${NC}"
+# Check OAuth credentials — optional when using the one-click manifest flow.
+# The console will check SQLite for credentials saved by a previous manifest
+# setup, or show the one-click setup button on the login page.
+if [ -z "$GITHUB_CLIENT_ID" ] || [ -z "$GITHUB_CLIENT_SECRET" ]; then
+    echo -e "${YELLOW}⚠ GitHub OAuth not configured via .env${NC}"
+    echo "  You can set it up from the login page (one-click GitHub App setup)"
+    echo "  Or add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to .env"
     echo ""
-    echo "Create a .env file with:"
-    echo "  GITHUB_CLIENT_ID=<your-client-id>"
-    echo "  GITHUB_CLIENT_SECRET=<your-client-secret>"
-    echo ""
-    echo "Or create a GitHub OAuth App at:"
-    echo "  https://github.com/settings/developers"
-    echo "  Homepage URL: http://localhost:8080"
-    echo "  Callback URL: http://localhost:8080/auth/github/callback"
-    exit 1
-fi
-
-if [ -z "$GITHUB_CLIENT_SECRET" ]; then
-    echo -e "${RED}Error: GITHUB_CLIENT_SECRET is not set${NC}"
-    exit 1
 fi
 
 # Generate JWT_SECRET if not set (production mode requires it)

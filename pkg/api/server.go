@@ -200,6 +200,8 @@ type Server struct {
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
 	loadingSrv          *http.Server // temporary loading screen server
+	authHandler         *handlers.AuthHandler // guarded by oauthMu for hot-reload
+	oauthMu             sync.RWMutex          // protects authHandler during manifest flow hot-reload
 	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
 	gpuUtilWorker       *GPUUtilizationWorker
 	workloadHandlers    *handlers.WorkloadHandlers // for cache refresh shutdown (#10007)
@@ -584,11 +586,63 @@ setInterval(async function(){try{var r=await fetch('/healthz');if(r.ok){var d=aw
 // was set, which caused downstream UIs to show a "GitHub login" button
 // that was guaranteed to fail on click.
 func (s *Server) oauthConfigured() bool {
+	s.oauthMu.RLock()
+	defer s.oauthMu.RUnlock()
 	return s.config.GitHubClientID != "" && s.config.GitHubSecret != ""
+}
+
+// resolveOAuthCredentials checks the SQLite store for persisted OAuth
+// credentials (from the GitHub App Manifest flow) when env vars are empty.
+func (s *Server) resolveOAuthCredentials() {
+	if s.config.GitHubClientID != "" && s.config.GitHubSecret != "" {
+		return
+	}
+	dbID, dbSecret, err := s.store.GetOAuthCredentials(context.Background())
+	if err != nil || dbID == "" {
+		return
+	}
+	s.config.GitHubClientID = dbID
+	s.config.GitHubSecret = dbSecret
+	slog.Info("[Server] loaded OAuth credentials from database (manifest flow)")
+}
+
+// reloadOAuth hot-swaps the auth handler with new OAuth credentials after
+// the GitHub App Manifest flow completes. Existing in-flight requests
+// finish against the old handler; new requests use the updated one.
+func (s *Server) reloadOAuth(clientID, clientSecret string) {
+	s.oauthMu.Lock()
+	defer s.oauthMu.Unlock()
+
+	s.config.GitHubClientID = clientID
+	s.config.GitHubSecret = clientSecret
+
+	if s.authHandler != nil {
+		s.authHandler.Stop()
+	}
+
+	s.authHandler = handlers.NewAuthHandler(s.store, handlers.AuthConfig{
+		GitHubClientID: clientID,
+		GitHubSecret:   clientSecret,
+		GitHubURL:      s.config.GitHubURL,
+		JWTSecret:      s.config.JWTSecret,
+		FrontendURL:    s.config.FrontendURL,
+		BackendURL:     s.backendURL(),
+		DevUserLogin:   s.config.DevUserLogin,
+		DevUserEmail:   s.config.DevUserEmail,
+		DevUserAvatar:  s.config.DevUserAvatar,
+		GitHubToken:    s.config.GitHubToken,
+		DevMode:        s.config.DevMode,
+		SkipOnboarding: s.config.SkipOnboarding,
+	})
+	s.authHandler.SetHub(s.hub)
+	slog.Info("[Server] OAuth config hot-reloaded after manifest flow")
 }
 
 func (s *Server) setupRoutes() {
 	s.setupHealthRoutes()
+
+	// Resolve OAuth credentials from SQLite if env vars are empty (manifest flow).
+	s.resolveOAuthCredentials()
 
 	// Auth routes (public)
 	auth := handlers.NewAuthHandler(s.store, handlers.AuthConfig{
@@ -605,6 +659,7 @@ func (s *Server) setupRoutes() {
 		DevMode:        s.config.DevMode,
 		SkipOnboarding: s.config.SkipOnboarding,
 	})
+	s.authHandler = auth
 	// FailureTracker for per-user/IP auth failure counting (#8676 Phase 1).
 	// Exposed via c.Locals for use in auth handlers in future phases.
 	failureTracker := middleware.NewFailureTracker()
@@ -637,8 +692,29 @@ func (s *Server) setupRoutes() {
 
 	// Wire WebSocket hub into auth handler so logout disconnects WS sessions (#4906)
 	auth.SetHub(s.hub)
-	s.app.Get("/auth/github", authLimiter, injectTracker, auth.GitHubLogin)
-	s.app.Get("/auth/github/callback", authLimiter, injectTracker, auth.GitHubCallback)
+
+	// Auth routes delegate through s.authHandler (behind oauthMu) so the
+	// GitHub App Manifest flow can hot-swap credentials without a restart.
+	s.app.Get("/auth/github", authLimiter, injectTracker, func(c *fiber.Ctx) error {
+		s.oauthMu.RLock()
+		h := s.authHandler
+		s.oauthMu.RUnlock()
+		return h.GitHubLogin(c)
+	})
+	s.app.Get("/auth/github/callback", authLimiter, injectTracker, func(c *fiber.Ctx) error {
+		s.oauthMu.RLock()
+		h := s.authHandler
+		s.oauthMu.RUnlock()
+		return h.GitHubCallback(c)
+	})
+
+	// GitHub App Manifest one-click OAuth setup (kubestellar/kubestellar#3761).
+	manifest := handlers.NewManifestHandler(
+		s.store, s.backendURL(), s.config.FrontendURL, s.config.GitHubURL,
+		func(clientID, clientSecret string) { s.reloadOAuth(clientID, clientSecret) },
+	)
+	s.app.Get("/auth/manifest/setup", authLimiter, manifest.ManifestSetup)
+	s.app.Get("/auth/manifest/callback", authLimiter, manifest.ManifestCallback)
 	// #6587 — /auth/logout now requires JWTAuth. Previously anyone could
 	// POST /auth/logout with any JWT (even a stolen one) because the route
 	// was registered without the auth middleware. Requiring JWTAuth proves
@@ -650,8 +726,18 @@ func (s *Server) setupRoutes() {
 	// token is rejected by the middleware before the handler even runs.
 	jwtAuth := middleware.JWTAuth(s.config.JWTSecret)
 	csrfGuard := middleware.RequireCSRF()
-	s.app.Post("/auth/refresh", authLimiter, injectTracker, csrfGuard, jwtAuth, auth.RefreshToken)
-	s.app.Post("/auth/logout", authLimiter, injectTracker, csrfGuard, jwtAuth, auth.Logout)
+	s.app.Post("/auth/refresh", authLimiter, injectTracker, csrfGuard, jwtAuth, func(c *fiber.Ctx) error {
+		s.oauthMu.RLock()
+		h := s.authHandler
+		s.oauthMu.RUnlock()
+		return h.RefreshToken(c)
+	})
+	s.app.Post("/auth/logout", authLimiter, injectTracker, csrfGuard, jwtAuth, func(c *fiber.Ctx) error {
+		s.oauthMu.RLock()
+		h := s.authHandler
+		s.oauthMu.RUnlock()
+		return h.Logout(c)
+	})
 
 	// Public endpoint rate limiter — loose limit to prevent DoS on unauthenticated
 	// routes (active-users, ping, nightly-e2e, youtube, medium, analytics) (#7029).

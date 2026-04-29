@@ -551,6 +551,15 @@ func (s *SQLiteStore) migrate() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_ce_cluster_time ON cluster_events(cluster_name, last_seen DESC);
 	CREATE INDEX IF NOT EXISTS idx_ce_uid ON cluster_events(event_uid);
+
+	-- OAuth credentials persisted by the GitHub App Manifest one-click flow.
+	-- Single-row table (CHECK constraint) so only one app registration exists.
+	CREATE TABLE IF NOT EXISTS oauth_credentials (
+		id INTEGER PRIMARY KEY CHECK (id = 1),
+		client_id TEXT NOT NULL,
+		client_secret TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
 	`
 	_, err := s.db.ExecContext(ctx, schema)
 	if err != nil {

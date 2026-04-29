@@ -351,6 +351,12 @@ func (m *MockStore) AddUserTokenDelta(ctx context.Context, userID string, catego
 	}, nil
 }
 
+// OAuth credentials — GitHub App Manifest one-click flow.
+func (m *MockStore) SaveOAuthCredentials(_ context.Context, _, _ string) error { return nil }
+func (m *MockStore) GetOAuthCredentials(_ context.Context) (string, string, error) {
+	return "", "", nil
+}
+
 // OAuth state — overridable via testify/mock expectations so tests can
 // exercise restart-resilience of the OAuth flow (#6028).
 func (m *MockStore) StoreOAuthState(ctx context.Context, state string, ttl time.Duration) error {

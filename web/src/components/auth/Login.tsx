@@ -517,16 +517,22 @@ export function Login() {
           )}
 
           {/* Two-button layout when OAuth is not configured:
-              primary "Sign in with GitHub" (links to setup) + secondary "Demo Mode" */}
+              primary "Sign in with GitHub" (one-click manifest flow) + secondary "Demo Mode" */}
           {showOAuthSetup && (
             <div className="space-y-3">
               <button
                 data-testid="github-setup-button"
-                onClick={() => setOauthSetupExpanded(true)}
+                onClick={() => { window.location.href = '/auth/manifest/setup' }}
                 className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg"
               >
                 <Github className="w-5 h-5" />
                 {t('login.setupGitHubSignIn')}
+              </button>
+              <button
+                onClick={() => setOauthSetupExpanded(!oauthSetupExpanded)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto block"
+              >
+                {oauthSetupExpanded ? t('login.hideManualSetup') : t('login.showManualSetup')}
               </button>
               <button
                 data-testid="demo-mode-button"

@@ -242,6 +242,11 @@ type Store interface {
 	// #6613: accepts a context (see IncrementUserCoins).
 	AddUserTokenDelta(ctx context.Context, userID string, category string, delta int64, agentSessionID string) (*UserTokenUsage, error)
 
+	// OAuth Credentials — persisted by the GitHub App Manifest one-click flow
+	// so credentials survive restarts without requiring .env configuration.
+	SaveOAuthCredentials(ctx context.Context, clientID, clientSecret string) error
+	GetOAuthCredentials(ctx context.Context) (clientID, clientSecret string, err error)
+
 	// OAuth State (persisted across server restarts so in-flight OAuth
 	// flows survive a backend restart between /auth/login and /auth/callback).
 	StoreOAuthState(ctx context.Context, state string, ttl time.Duration) error

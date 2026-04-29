@@ -272,11 +272,9 @@ fi
 # Warn when GitHub OAuth credentials are not configured
 if [ -z "$GITHUB_CLIENT_ID" ] || [ -z "$GITHUB_CLIENT_SECRET" ]; then
     echo ""
-    echo "Note: No GitHub OAuth credentials found."
-    echo "  Console will start in dev mode (auto-login, no GitHub authentication)."
-    echo "  To enable GitHub login, create a .env file with:"
-    echo "    GITHUB_CLIENT_ID=<your-client-id>"
-    echo "    GITHUB_CLIENT_SECRET=<your-client-secret>"
+    echo "Note: No GitHub OAuth credentials found in .env."
+    echo "  You can set up GitHub sign-in from the login page (one-click setup)"
+    echo "  or add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to .env manually."
     echo ""
 fi
 
