@@ -31,7 +31,7 @@ const CONTRIBUTIONS_PER_PAGE = 20
 const CONTRIBUTIONS_SEARCH_ORGS = ['kubestellar', 'llm-d']
 
 /** Returns a per-user localStorage cache key */
-function userCacheKey(login: string): string {
+export function userCacheKey(login: string): string {
   return `${CACHE_KEY_PREFIX}:${login}`
 }
 
@@ -84,7 +84,7 @@ function saveCache(login: string, data: GitHubRewardsResponse): void {
   }
 }
 
-interface GitHubSearchItem {
+export interface GitHubSearchItem {
   html_url: string
   title: string
   number: number
@@ -94,7 +94,7 @@ interface GitHubSearchItem {
   repository_url: string
 }
 
-function classifySearchItem(item: GitHubSearchItem): GitHubRewardType {
+export function classifySearchItem(item: GitHubSearchItem): GitHubRewardType {
   const isPR = !!item.pull_request
   if (isPR) {
     return item.pull_request?.merged_at ? 'pr_merged' : 'pr_opened'
@@ -105,7 +105,7 @@ function classifySearchItem(item: GitHubSearchItem): GitHubRewardType {
   return 'issue_other'
 }
 
-function repoFromUrl(repositoryUrl: string): string {
+export function repoFromUrl(repositoryUrl: string): string {
   const parts = repositoryUrl.split('/')
   const len = parts.length
   return len >= 2 ? `${parts[len - 2]}/${parts[len - 1]}` : repositoryUrl

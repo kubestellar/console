@@ -115,6 +115,22 @@ describe('api.ts', () => {
       expect(err.message).toBe('Backend API is currently unavailable')
       expect(err).toBeInstanceOf(Error)
     })
+
+    it('RateLimitError has correct name, message, and retryAfter', async () => {
+      const { RateLimitError } = await importFresh()
+      const err = new RateLimitError(30)
+      expect(err.name).toBe('RateLimitError')
+      expect(err.message).toBe('Rate limited. Try again in 30 seconds.')
+      expect(err.retryAfter).toBe(30)
+      expect(err).toBeInstanceOf(Error)
+    })
+
+    it('RateLimitError stores arbitrary retryAfter values', async () => {
+      const { RateLimitError } = await importFresh()
+      const err = new RateLimitError(120)
+      expect(err.retryAfter).toBe(120)
+      expect(err.message).toContain('120')
+    })
   })
 
   // ── checkBackendAvailability ────────────────────────────────────────────
@@ -579,6 +595,247 @@ describe('api.ts', () => {
       const call = vi.mocked(fetch).mock.calls[0]
       const headers = call[1]?.headers as Headers
       expect(headers.has('Authorization')).toBe(false)
+    })
+  })
+
+  // ── handle429 (via api.get 429 responses) ──────────────────────────────
+
+  describe('handle429 / RateLimitError on 429', () => {
+    it('throws RateLimitError with Retry-After header (numeric)', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      const RETRY_AFTER_SECONDS = 45
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(
+          new Response('', {
+            status: 429,
+            headers: { 'Retry-After': String(RETRY_AFTER_SECONDS) },
+          }),
+        )
+
+      const { api, RateLimitError } = await importFresh()
+      await expect(api.get('/api/data')).rejects.toThrow(RateLimitError)
+
+      try {
+        await api.get('/api/data')
+      } catch (err) {
+        // Already threw above; use a fresh call is not possible since
+        // the module is the same instance. Instead verify via the first throw.
+      }
+    })
+
+    it('RateLimitError.retryAfter matches numeric Retry-After header', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      const RETRY_AFTER_SECONDS = 45
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(
+          new Response('', {
+            status: 429,
+            headers: { 'Retry-After': String(RETRY_AFTER_SECONDS) },
+          }),
+        )
+
+      const { api } = await importFresh()
+      try {
+        await api.get('/api/data')
+        expect.unreachable('should have thrown')
+      } catch (err: unknown) {
+        expect((err as { retryAfter: number }).retryAfter).toBe(RETRY_AFTER_SECONDS)
+      }
+    })
+
+    it('defaults retryAfter to 60 when Retry-After header is missing', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      const DEFAULT_RETRY_AFTER = 60
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(new Response('', { status: 429 })) // no Retry-After header
+
+      const { api } = await importFresh()
+      try {
+        await api.get('/api/data')
+        expect.unreachable('should have thrown')
+      } catch (err: unknown) {
+        expect((err as { retryAfter: number }).retryAfter).toBe(DEFAULT_RETRY_AFTER)
+      }
+    })
+
+    it('defaults retryAfter to 60 when Retry-After header is non-numeric', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      const DEFAULT_RETRY_AFTER = 60
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(
+          new Response('', {
+            status: 429,
+            headers: { 'Retry-After': 'not-a-number' },
+          }),
+        )
+
+      const { api } = await importFresh()
+      try {
+        await api.get('/api/data')
+        expect.unreachable('should have thrown')
+      } catch (err: unknown) {
+        expect((err as { retryAfter: number }).retryAfter).toBe(DEFAULT_RETRY_AFTER)
+      }
+    })
+
+    it('stores rate-limit backoff deadline in localStorage', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      const RETRY_AFTER_SECONDS = 30
+      const RATE_LIMIT_STORAGE_KEY = 'kc-api-rate-limit-until'
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(
+          new Response('', {
+            status: 429,
+            headers: { 'Retry-After': String(RETRY_AFTER_SECONDS) },
+          }),
+        )
+
+      const { api } = await importFresh()
+      try {
+        await api.get('/api/data')
+      } catch {
+        // expected
+      }
+
+      const stored = localStorage.getItem(RATE_LIMIT_STORAGE_KEY)
+      expect(stored).not.toBeNull()
+      const deadline = Number(stored)
+      expect(deadline).toBeGreaterThan(0)
+    })
+
+    it('throws RateLimitError on 429 from POST', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(
+          new Response('', {
+            status: 429,
+            headers: { 'Retry-After': '10' },
+          }),
+        )
+
+      const { api, RateLimitError } = await importFresh()
+      await expect(api.post('/api/items', { name: 'test' })).rejects.toThrow(RateLimitError)
+    })
+
+    it('defaults retryAfter to 60 when Retry-After is zero', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      const DEFAULT_RETRY_AFTER = 60
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(
+          new Response('', {
+            status: 429,
+            headers: { 'Retry-After': '0' },
+          }),
+        )
+
+      const { api } = await importFresh()
+      try {
+        await api.get('/api/data')
+        expect.unreachable('should have thrown')
+      } catch (err: unknown) {
+        expect((err as { retryAfter: number }).retryAfter).toBe(DEFAULT_RETRY_AFTER)
+      }
+    })
+
+    it('defaults retryAfter to 60 when Retry-After is negative', async () => {
+      localStorage.setItem(STORAGE_KEY_TOKEN, 'valid-token')
+      const DEFAULT_RETRY_AFTER = 60
+      vi.mocked(fetch)
+        .mockResolvedValueOnce(makeResponse({ status: 'ok' })) // health
+        .mockResolvedValueOnce(
+          new Response('', {
+            status: 429,
+            headers: { 'Retry-After': '-5' },
+          }),
+        )
+
+      const { api } = await importFresh()
+      try {
+        await api.get('/api/data')
+        expect.unreachable('should have thrown')
+      } catch (err: unknown) {
+        expect((err as { retryAfter: number }).retryAfter).toBe(DEFAULT_RETRY_AFTER)
+      }
+    })
+  })
+
+  // ── safeJson ──────────────────────────────────────────────────────────
+
+  describe('safeJson', () => {
+    it('parses valid JSON response with application/json content-type', async () => {
+      const { safeJson } = await importFresh()
+      const response = new Response(JSON.stringify({ foo: 'bar' }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const result = await safeJson<{ foo: string }>(response)
+      expect(result).toEqual({ foo: 'bar' })
+    })
+
+    it('parses JSON when content-type includes charset', async () => {
+      const { safeJson } = await importFresh()
+      const response = new Response(JSON.stringify({ ok: true }), {
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      })
+      const result = await safeJson<{ ok: boolean }>(response)
+      expect(result).toEqual({ ok: true })
+    })
+
+    it('throws descriptive error for text/html content-type', async () => {
+      const { safeJson } = await importFresh()
+      const response = new Response('<html></html>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' },
+      })
+      await expect(safeJson(response)).rejects.toThrow(
+        'Expected JSON response but received text/html (status 200)',
+      )
+    })
+
+    it('throws descriptive error for text/plain content-type', async () => {
+      const { safeJson } = await importFresh()
+      const response = new Response('plain text', {
+        status: 500,
+        headers: { 'Content-Type': 'text/plain' },
+      })
+      await expect(safeJson(response)).rejects.toThrow(
+        'Expected JSON response but received text/plain (status 500)',
+      )
+    })
+
+    it('throws with "unknown content-type" when content-type header is absent', async () => {
+      const { safeJson } = await importFresh()
+      const response = new Response('{}', { status: 200 })
+      // Remove Content-Type header to simulate missing content-type
+      response.headers.delete('Content-Type')
+      await expect(safeJson(response)).rejects.toThrow(
+        /unknown content-type/i,
+      )
+    })
+
+    it('parses an array JSON body', async () => {
+      const { safeJson } = await importFresh()
+      const body = [1, 2, 3]
+      const response = new Response(JSON.stringify(body), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const result = await safeJson<number[]>(response)
+      expect(result).toEqual([1, 2, 3])
+    })
+
+    it('includes status code in the error message', async () => {
+      const { safeJson } = await importFresh()
+      const response = new Response('not json', {
+        status: 404,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      })
+      await expect(safeJson(response)).rejects.toThrow('status 404')
     })
   })
 

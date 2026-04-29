@@ -104,7 +104,7 @@ export function useClusterContext(): {
 }
 
 /** Derive cloud provider from distribution string or cluster name */
-function deriveProvider(distribution?: string, name?: string): string | undefined {
+export function deriveProvider(distribution?: string, name?: string): string | undefined {
   const d = (distribution ?? '').toLowerCase()
   const n = (name ?? '').toLowerCase()
   if (d.includes('eks') || n.includes('eks')) return 'eks'

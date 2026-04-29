@@ -69,7 +69,7 @@ export interface DeployResult {
   message: string
 }
 
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -82,7 +82,7 @@ function authHeaders(): Record<string, string> {
 // relative path and 404 (plus a confusing non-JSON response). Throw early with
 // a clear message so the UI can surface "local agent required" instead of a
 // cryptic 404 (#8021).
-function requireLocalAgentHttp(action: string): string {
+export function requireLocalAgentHttp(action: string): string {
   if (!LOCAL_AGENT_HTTP_URL) {
     throw new Error(`${action} requires the local kc-agent; this browser is not connected to one.`)
   }
@@ -90,7 +90,7 @@ function requireLocalAgentHttp(action: string): string {
 }
 
 
-function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
+export function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
   const workloads: Workload[] = [
     { name: 'api-server', namespace: 'production', type: 'Deployment', cluster: 'eks-prod-us-east-1', replicas: 3, readyReplicas: 3, status: 'Running', image: 'api-server:v2.1.0', createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
     { name: 'web-frontend', namespace: 'production', type: 'Deployment', cluster: 'eks-prod-us-east-1', replicas: 2, readyReplicas: 2, status: 'Running', image: 'web-frontend:v1.8.3', createdAt: new Date(Date.now() - 14 * 86400000).toISOString() },

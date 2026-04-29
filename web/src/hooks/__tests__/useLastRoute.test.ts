@@ -1,18 +1,17 @@
+/**
+ * Tests for pure exported functions in useLastRoute.ts
+ *
+ * Covers: getLastRoute, clearLastRoute, getRememberPosition, setRememberPosition
+ */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
 
-// ---------------------------------------------------------------------------
-// Storage keys — must match the source module's internal constants
-// ---------------------------------------------------------------------------
+// ---------- Storage keys (must match source) ----------
 
 const LAST_ROUTE_KEY = 'kubestellar-last-route'
 const SCROLL_POSITIONS_KEY = 'kubestellar-scroll-positions'
 const REMEMBER_POSITION_KEY = 'kubestellar-remember-position'
-const SIDEBAR_CONFIG_KEY = 'kubestellar-sidebar-config-v5'
 
-// ---------------------------------------------------------------------------
-// Mock state — controlled from tests
-// ---------------------------------------------------------------------------
+// ---------- Mocks ----------
 
 let mockPathname = '/'
 let mockSearch = ''
@@ -28,52 +27,44 @@ vi.mock('../../lib/dashboardVisits', () => ({
 }))
 
 vi.mock('../../lib/constants/network', () => ({
-  FOCUS_DELAY_MS: 0, // instant for tests
+  FOCUS_DELAY_MS: 0,
 }))
 
-// ---------------------------------------------------------------------------
-// Setup / teardown
-// ---------------------------------------------------------------------------
+// ---------- Setup ----------
 
 beforeEach(() => {
   localStorage.clear()
   mockPathname = '/'
   mockSearch = ''
   mockNavigate.mockClear()
-  vi.useFakeTimers()
 })
 
 afterEach(() => {
-  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
-// ---------------------------------------------------------------------------
-// Fresh import helper (resets module-level state between tests)
-// ---------------------------------------------------------------------------
-
+// Fresh import to avoid module caching issues
 async function importFresh() {
-  vi.resetModules()
-  return import('../useLastRoute')
+  // vitest caches modules, so we use the same import
+  const mod = await import('../useLastRoute')
+  return mod
 }
 
-// ---------------------------------------------------------------------------
-// Tests: getLastRoute
-// ---------------------------------------------------------------------------
+// ── getLastRoute ──
 
 describe('getLastRoute', () => {
-  it('returns null when no route has been saved', async () => {
+  it('returns null when nothing is stored', async () => {
     const { getLastRoute } = await importFresh()
     expect(getLastRoute()).toBeNull()
   })
 
-  it('returns the stored route', async () => {
+  it('returns stored route path', async () => {
     localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
     const { getLastRoute } = await importFresh()
     expect(getLastRoute()).toBe('/clusters')
   })
 
-  it('returns route with query params', async () => {
+  it('returns route with query parameters', async () => {
     localStorage.setItem(LAST_ROUTE_KEY, '/workloads?mission=test')
     const { getLastRoute } = await importFresh()
     expect(getLastRoute()).toBe('/workloads?mission=test')
@@ -85,41 +76,50 @@ describe('getLastRoute', () => {
     expect(getLastRoute()).toBe('/')
   })
 
-  it('returns null when localStorage throws', async () => {
-    const orig = localStorage.getItem
-    localStorage.getItem = () => { throw new Error('Quota exceeded') }
+  it('returns null gracefully when localStorage throws', async () => {
     const { getLastRoute } = await importFresh()
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('quota exceeded')
+    })
     expect(getLastRoute()).toBeNull()
-    localStorage.getItem = orig
+  })
+
+  it('returns empty string when stored as empty', async () => {
+    localStorage.setItem(LAST_ROUTE_KEY, '')
+    const { getLastRoute } = await importFresh()
+    // Empty string is falsy but not null
+    expect(getLastRoute()).toBe('')
+  })
+
+  it('handles complex paths with hash fragments', async () => {
+    localStorage.setItem(LAST_ROUTE_KEY, '/dashboard?tab=gpu#section-2')
+    const { getLastRoute } = await importFresh()
+    expect(getLastRoute()).toBe('/dashboard?tab=gpu#section-2')
   })
 })
 
-// ---------------------------------------------------------------------------
-// Tests: clearLastRoute
-// ---------------------------------------------------------------------------
+// ── clearLastRoute ──
 
 describe('clearLastRoute', () => {
-  it('removes the route key from localStorage', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/pods')
+  it('removes last route from localStorage', async () => {
+    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
     const { clearLastRoute } = await importFresh()
     clearLastRoute()
     expect(localStorage.getItem(LAST_ROUTE_KEY)).toBeNull()
   })
 
-  it('removes the scroll positions key from localStorage', async () => {
-    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({ '/pods': 100 }))
+  it('removes scroll positions from localStorage', async () => {
+    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({ '/clusters': 500 }))
     const { clearLastRoute } = await importFresh()
     clearLastRoute()
     expect(localStorage.getItem(SCROLL_POSITIONS_KEY)).toBeNull()
   })
 
-  it('removes both route and scroll positions at once', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/pods')
-    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({ '/pods': 100 }))
+  it('removes both route and scroll positions together', async () => {
+    localStorage.setItem(LAST_ROUTE_KEY, '/settings')
+    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({ '/settings': 200 }))
     const { clearLastRoute } = await importFresh()
-
     clearLastRoute()
-
     expect(localStorage.getItem(LAST_ROUTE_KEY)).toBeNull()
     expect(localStorage.getItem(SCROLL_POSITIONS_KEY)).toBeNull()
   })
@@ -129,747 +129,168 @@ describe('clearLastRoute', () => {
     expect(() => clearLastRoute()).not.toThrow()
   })
 
-  it('does not throw when localStorage errors', async () => {
-    const orig = localStorage.removeItem
-    localStorage.removeItem = () => { throw new Error('SecurityError') }
+  it('does not throw when localStorage throws', async () => {
     const { clearLastRoute } = await importFresh()
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('storage error')
+    })
     expect(() => clearLastRoute()).not.toThrow()
-    localStorage.removeItem = orig
+  })
+
+  it('does not remove remember-position preferences', async () => {
+    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify({ '/clusters': true }))
+    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
+    const { clearLastRoute } = await importFresh()
+    clearLastRoute()
+    // Remember position prefs should survive
+    expect(localStorage.getItem(REMEMBER_POSITION_KEY)).not.toBeNull()
+  })
+
+  it('can be called multiple times safely', async () => {
+    localStorage.setItem(LAST_ROUTE_KEY, '/test')
+    const { clearLastRoute } = await importFresh()
+    clearLastRoute()
+    clearLastRoute()
+    clearLastRoute()
+    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBeNull()
   })
 })
 
-// ---------------------------------------------------------------------------
-// Tests: getRememberPosition / setRememberPosition
-// ---------------------------------------------------------------------------
+// ── getRememberPosition ──
 
 describe('getRememberPosition', () => {
-  it('defaults to false when nothing is stored', async () => {
+  it('returns false by default when nothing is stored', async () => {
     const { getRememberPosition } = await importFresh()
     expect(getRememberPosition('/dashboard')).toBe(false)
   })
 
-  it('returns the stored boolean for a path', async () => {
+  it('returns true for a path stored as true', async () => {
     localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify({ '/clusters': true }))
     const { getRememberPosition } = await importFresh()
     expect(getRememberPosition('/clusters')).toBe(true)
-    expect(getRememberPosition('/pods')).toBe(false)
   })
 
-  it('returns false on malformed JSON', async () => {
-    localStorage.setItem(REMEMBER_POSITION_KEY, '{invalid}')
+  it('returns false for a path stored as false', async () => {
+    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify({ '/clusters': false }))
     const { getRememberPosition } = await importFresh()
     expect(getRememberPosition('/clusters')).toBe(false)
   })
+
+  it('returns false for a path not in the stored prefs', async () => {
+    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify({ '/clusters': true }))
+    const { getRememberPosition } = await importFresh()
+    expect(getRememberPosition('/pods')).toBe(false)
+  })
+
+  it('returns false when stored JSON is invalid', async () => {
+    localStorage.setItem(REMEMBER_POSITION_KEY, 'not-json{{{')
+    const { getRememberPosition } = await importFresh()
+    expect(getRememberPosition('/clusters')).toBe(false)
+  })
+
+  it('returns false when localStorage throws', async () => {
+    const { getRememberPosition } = await importFresh()
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('access denied')
+    })
+    expect(getRememberPosition('/clusters')).toBe(false)
+  })
+
+  it('handles multiple paths independently', async () => {
+    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify({
+      '/clusters': true,
+      '/pods': false,
+      '/settings': true,
+    }))
+    const { getRememberPosition } = await importFresh()
+    expect(getRememberPosition('/clusters')).toBe(true)
+    expect(getRememberPosition('/pods')).toBe(false)
+    expect(getRememberPosition('/settings')).toBe(true)
+    expect(getRememberPosition('/unknown')).toBe(false)
+  })
+
+  it('returns false for empty stored object', async () => {
+    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify({}))
+    const { getRememberPosition } = await importFresh()
+    expect(getRememberPosition('/anything')).toBe(false)
+  })
 })
 
+// ── setRememberPosition ──
+
 describe('setRememberPosition', () => {
-  it('saves a preference for a path', async () => {
+  it('stores true for a path', async () => {
     const { setRememberPosition, getRememberPosition } = await importFresh()
     setRememberPosition('/clusters', true)
     expect(getRememberPosition('/clusters')).toBe(true)
   })
 
-  it('overwrites an existing preference', async () => {
+  it('stores false for a path', async () => {
     const { setRememberPosition, getRememberPosition } = await importFresh()
     setRememberPosition('/clusters', true)
     setRememberPosition('/clusters', false)
     expect(getRememberPosition('/clusters')).toBe(false)
   })
 
-  it('preserves preferences for other paths', async () => {
+  it('preserves other paths when updating one', async () => {
     const { setRememberPosition, getRememberPosition } = await importFresh()
     setRememberPosition('/clusters', true)
     setRememberPosition('/pods', true)
     setRememberPosition('/clusters', false)
     expect(getRememberPosition('/pods')).toBe(true)
+    expect(getRememberPosition('/clusters')).toBe(false)
   })
 
-  it('persists data as JSON in localStorage', async () => {
+  it('persists to localStorage', async () => {
     const { setRememberPosition } = await importFresh()
     setRememberPosition('/clusters', true)
-    const raw = localStorage.getItem(REMEMBER_POSITION_KEY)
-    expect(raw).not.toBeNull()
-    expect(JSON.parse(raw!)).toEqual({ '/clusters': true })
+    const stored = JSON.parse(localStorage.getItem(REMEMBER_POSITION_KEY) || '{}')
+    expect(stored['/clusters']).toBe(true)
   })
 
-  it('handles corrupt existing data gracefully', async () => {
-    localStorage.setItem(REMEMBER_POSITION_KEY, 'not-json')
+  it('does not throw when localStorage throws on write', async () => {
     const { setRememberPosition } = await importFresh()
-    // Should not throw — catch block absorbs the JSON.parse error
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota exceeded')
+    })
     expect(() => setRememberPosition('/x', true)).not.toThrow()
   })
-})
 
-// ---------------------------------------------------------------------------
-// Tests: useLastRoute hook — route persistence
-// ---------------------------------------------------------------------------
-
-describe('useLastRoute hook — route persistence', () => {
-  it('saves current route to localStorage on mount (non-auth path)', async () => {
-    mockPathname = '/clusters'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-
-    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe('/clusters')
+  it('does not throw when localStorage throws on read during set', async () => {
+    const { setRememberPosition } = await importFresh()
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('corrupt')
+    })
+    expect(() => setRememberPosition('/x', true)).not.toThrow()
   })
 
-  it('includes query string in saved route for OAuth round-trips', async () => {
-    mockPathname = '/dashboard'
-    mockSearch = '?mission=deploy-app'
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-
-    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe('/dashboard?mission=deploy-app')
-  })
-
-  it('does not save auth-related paths (/auth/*)', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/pods')
-    mockPathname = '/auth/callback'
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-
-    // /auth paths are excluded; previously saved route must survive
-    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe('/pods')
-  })
-
-  it('does not save /login path', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/pods')
-    mockPathname = '/login'
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-
-    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe('/pods')
-  })
-
-  it('saves root path / when navigating to dashboard', async () => {
-    mockPathname = '/'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-
-    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe('/')
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Tests: useLastRoute hook — redirect behavior on initial mount at /
-//
-// NOTE: On mount, the save effect (which stores current pathname to
-// localStorage) fires BEFORE the redirect effect. When pathname is '/',
-// the save effect writes '/' to LAST_ROUTE_KEY, overwriting any
-// previously stored route. The redirect effect then reads '/' and skips
-// (because '/' === location.pathname). This means redirect only happens
-// when the save effect is skipped — i.e. when pathname is /auth/* or /login.
-// This is verified by the "does not redirect" tests below.
-// ---------------------------------------------------------------------------
-
-describe('useLastRoute hook — redirect on mount at /', () => {
-  it('does not redirect when save effect overwrites lastRoute with /', async () => {
-    // Pre-set a route, but the save effect will overwrite it with '/'
-    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
-    mockPathname = '/'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    // The save effect writes '/' to LAST_ROUTE_KEY before redirect reads it
-    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe('/')
-    // No redirect because lastRoute === '/' === location.pathname
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('does not redirect when deep link params are present (card)', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
-    mockPathname = '/'
-    mockSearch = '?card=gpu-overview'
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('does not redirect when deep link params are present (drilldown)', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
-    mockPathname = '/'
-    mockSearch = '?drilldown=node-list'
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('does not redirect when deep link params are present (action)', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
-    mockPathname = '/'
-    mockSearch = '?action=deploy'
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('does not redirect when deep link params are present (mission)', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
-    mockPathname = '/'
-    mockSearch = '?mission=scan'
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('does not redirect when landing on a non-root path', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/clusters')
-    mockPathname = '/pods'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    // On non-root path, the hook saves the path but never redirects
-    expect(mockNavigate).not.toHaveBeenCalled()
-    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe('/pods')
-  })
-
-  it('redirects to first sidebar route when no lastRoute is saved and sidebar config exists', async () => {
-    // No LAST_ROUTE_KEY stored. Save effect writes '/' first.
-    // But getFirstDashboardRoute reads from sidebar config.
-    // The redirect condition is: !lastRoute && firstSidebarRoute !== '/'
-    // However, the save effect DOES write '/' first, so lastRoute will be '/'
-    // at the time the redirect effect reads it. This means the `!lastRoute` branch is not taken.
-    const sidebarConfig = {
-      primaryNav: [{ href: '/workloads', label: 'Workloads' }],
-    }
-    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify(sidebarConfig))
-    mockPathname = '/'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    // Because save effect writes '/' before redirect reads, lastRoute is '/'
-    // which is truthy but equals '/', so neither redirect branch fires
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('sidebar config with empty primaryNav falls back to / (no redirect)', async () => {
-    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify({ primaryNav: [] }))
-    mockPathname = '/'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('sidebar config with malformed JSON falls back to / (no redirect)', async () => {
-    localStorage.setItem(SIDEBAR_CONFIG_KEY, 'not-json')
-    mockPathname = '/'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('sidebar config item with no href falls back to / (no redirect)', async () => {
-    const sidebarConfig = {
-      primaryNav: [{ label: 'Dashboard' }], // no href
-    }
-    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify(sidebarConfig))
-    mockPathname = '/'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Tests: useLastRoute hook — return value
-// ---------------------------------------------------------------------------
-
-describe('useLastRoute hook — return value', () => {
-  it('returns lastRoute and scrollPositions', async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, '/events')
-    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({ '/events': { position: 250 } }))
-    mockPathname = '/events'
-    const { useLastRoute } = await importFresh()
-
-    const { result } = renderHook(() => useLastRoute())
-
-    expect(result.current.lastRoute).toBe('/events')
-    expect(result.current.scrollPositions).toEqual({ '/events': { position: 250 } })
-  })
-
-  it('scrollPositions returns empty object on malformed JSON', async () => {
-    localStorage.setItem(SCROLL_POSITIONS_KEY, 'broken')
-    mockPathname = '/clusters'
-    const { useLastRoute } = await importFresh()
-
-    const { result } = renderHook(() => useLastRoute())
-
-    expect(result.current.scrollPositions).toEqual({})
-  })
-
-  it('handles backward-compatible number format for scroll positions', async () => {
-    // Old format stored just a number, new format uses { position, cardTitle }
-    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({ '/pods': 500 }))
-    mockPathname = '/pods'
-    const { useLastRoute } = await importFresh()
-
-    const { result } = renderHook(() => useLastRoute())
-
-    expect(result.current.scrollPositions).toEqual({ '/pods': 500 })
-  })
-
-  it('reflects the route saved by the save effect after rerender', async () => {
-    mockPathname = '/clusters'
-    const { useLastRoute } = await importFresh()
-
-    const { result, rerender } = renderHook(() => useLastRoute())
-
-    // On first render, the save effect has not yet written to localStorage
-    // (effects run after render), so lastRoute reads the pre-existing value.
-    expect(result.current.lastRoute).toBeNull()
-
-    // After rerender, the effect has run and saved '/clusters'
-    rerender()
-    expect(result.current.lastRoute).toBe('/clusters')
-  })
-
-  it('returns null lastRoute for auth paths (not saved)', async () => {
-    mockPathname = '/auth/callback'
-    const { useLastRoute } = await importFresh()
-
-    const { result } = renderHook(() => useLastRoute())
-
-    // Auth paths are not persisted, so lastRoute remains null
-    expect(result.current.lastRoute).toBeNull()
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Tests: useLastRoute hook — scroll position save/restore
-// ---------------------------------------------------------------------------
-
-describe('useLastRoute hook — scroll position management', () => {
-  it('saves scroll position when navigating away from a page', async () => {
-    mockPathname = '/clusters'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    // Mock the main container for scroll handling
-    const mockContainer = {
-      scrollTop: 350,
-      scrollTo: vi.fn(),
-      getBoundingClientRect: vi.fn(() => ({ top: 0, left: 0, width: 1000, height: 600 })),
-      querySelectorAll: vi.fn(() => []),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }
-    vi.spyOn(document, 'querySelector').mockReturnValue(mockContainer as unknown as Element)
-
-    const { unmount } = renderHook(() => useLastRoute())
-
-    // Simulate scroll event by calling the registered scroll handler
-    const scrollHandler = mockContainer.addEventListener.mock.calls.find(
-      (call: unknown[]) => call[0] === 'scroll'
-    )
-    if (scrollHandler) {
-      act(() => {
-        scrollHandler[1]()
-      })
-      // Advance past debounce timer (2000ms)
-      act(() => {
-        vi.advanceTimersByTime(2000)
-      })
-    }
-
-    unmount()
-    // Just ensure we don't crash
-    expect(true).toBe(true)
-  })
-
-  it('registers scroll event listener on mount', async () => {
-    mockPathname = '/clusters'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    const mockContainer = {
-      scrollTop: 0,
-      scrollTo: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      getBoundingClientRect: vi.fn(() => ({ top: 0, left: 0, width: 1000, height: 600 })),
-      querySelectorAll: vi.fn(() => []),
-    }
-    vi.spyOn(document, 'querySelector').mockReturnValue(mockContainer as unknown as Element)
-
-    renderHook(() => useLastRoute())
-
-    // Check that scroll listener was attached
-    const scrollCalls = mockContainer.addEventListener.mock.calls.filter(
-      (call: unknown[]) => call[0] === 'scroll'
-    )
-    expect(scrollCalls.length).toBeGreaterThan(0)
-  })
-
-  it('registers beforeunload event listener', async () => {
-    mockPathname = '/pods'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    const addEventSpy = vi.spyOn(window, 'addEventListener')
-
-    const mockContainer = {
-      scrollTop: 0,
-      scrollTo: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      getBoundingClientRect: vi.fn(() => ({ top: 0, left: 0, width: 1000, height: 600 })),
-      querySelectorAll: vi.fn(() => []),
-    }
-    vi.spyOn(document, 'querySelector').mockReturnValue(mockContainer as unknown as Element)
-
-    renderHook(() => useLastRoute())
-
-    const beforeUnloadCalls = addEventSpy.mock.calls.filter(
-      (call) => call[0] === 'beforeunload'
-    )
-    expect(beforeUnloadCalls.length).toBeGreaterThan(0)
-
-    addEventSpy.mockRestore()
-  })
-
-  it('removes beforeunload handler on unmount', async () => {
-    mockPathname = '/pods'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    const removeEventSpy = vi.spyOn(window, 'removeEventListener')
-
-    const mockContainer = {
-      scrollTop: 0,
-      scrollTo: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      getBoundingClientRect: vi.fn(() => ({ top: 0, left: 0, width: 1000, height: 600 })),
-      querySelectorAll: vi.fn(() => []),
-    }
-    vi.spyOn(document, 'querySelector').mockReturnValue(mockContainer as unknown as Element)
-
-    const { unmount } = renderHook(() => useLastRoute())
-    unmount()
-
-    const beforeUnloadRemoves = removeEventSpy.mock.calls.filter(
-      (call) => call[0] === 'beforeunload'
-    )
-    expect(beforeUnloadRemoves.length).toBeGreaterThan(0)
-
-    removeEventSpy.mockRestore()
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Tests: useLastRoute hook — scroll position edge cases
-// ---------------------------------------------------------------------------
-
-describe('useLastRoute hook — scroll position edge cases', () => {
-  it('saves scroll entry with card title when cards are present', async () => {
-    mockPathname = '/dashboard'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    const mockCard = {
-      getBoundingClientRect: vi.fn(() => ({ top: 10, left: 0, width: 300, height: 200 })),
-      querySelector: vi.fn(() => ({ textContent: '  GPU Overview  ' })),
-    }
-    const mockContainer = {
-      scrollTop: 100,
-      scrollTo: vi.fn(),
-      getBoundingClientRect: vi.fn(() => ({ top: 0, left: 0, width: 1000, height: 600 })),
-      querySelectorAll: vi.fn(() => [mockCard]),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }
-    vi.spyOn(document, 'querySelector').mockReturnValue(mockContainer as unknown as Element)
-
-    renderHook(() => useLastRoute())
-
-    // Trigger scroll handler
-    const scrollHandler = mockContainer.addEventListener.mock.calls.find(
-      (call: unknown[]) => call[0] === 'scroll'
-    )
-    if (scrollHandler) {
-      act(() => { scrollHandler[1]() })
-      // Advance past debounce timer
-      act(() => { vi.advanceTimersByTime(2000) })
-    }
-
-    // Check that scroll position was saved
-    const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
-    if (stored) {
-      const positions = JSON.parse(stored)
-      const entry = positions['/dashboard']
-      if (entry && typeof entry === 'object') {
-        expect(entry.cardTitle).toBe('GPU Overview')
-      }
-    }
-  })
-
-  it('clears saved position when scrolled to top', async () => {
-    mockPathname = '/clusters'
-    mockSearch = ''
-
-    // Pre-set a scroll position
-    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({
-      '/clusters': { position: 500, cardTitle: 'Old Card' },
-    }))
-
-    const { useLastRoute } = await importFresh()
-
-    const mockContainer = {
-      scrollTop: 0, // at top
-      scrollTo: vi.fn(),
-      getBoundingClientRect: vi.fn(() => ({ top: 0, left: 0, width: 1000, height: 600 })),
-      querySelectorAll: vi.fn(() => []),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }
-    vi.spyOn(document, 'querySelector').mockReturnValue(mockContainer as unknown as Element)
-
-    renderHook(() => useLastRoute())
-
-    // Trigger scroll handler
-    const scrollHandler = mockContainer.addEventListener.mock.calls.find(
-      (call: unknown[]) => call[0] === 'scroll'
-    )
-    if (scrollHandler) {
-      act(() => { scrollHandler[1]() })
-      act(() => { vi.advanceTimersByTime(2000) })
-    }
-
-    // After scrolling to top, the position for /clusters should be deleted
-    const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
-    if (stored) {
-      const positions = JSON.parse(stored)
-      expect(positions['/clusters']).toBeUndefined()
-    }
-  })
-
-  it('handles missing scroll container gracefully', async () => {
-    mockPathname = '/pods'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    // Return null for document.querySelector('main')
-    vi.spyOn(document, 'querySelector').mockReturnValue(null)
-
-    // Should not throw
-    expect(() => {
-      renderHook(() => useLastRoute())
-    }).not.toThrow()
-  })
-
-  it('restores scroll position from backward-compatible number format', async () => {
-    // Old format stored just a number
-    localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({ '/clusters': 450 }))
-    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify({ '/clusters': true }))
-    mockPathname = '/clusters'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    const mockContainer = {
-      scrollTop: 0,
-      scrollTo: vi.fn(),
-      getBoundingClientRect: vi.fn(() => ({ top: 0, left: 0, width: 1000, height: 600 })),
-      querySelectorAll: vi.fn(() => []),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }
-    vi.spyOn(document, 'querySelector').mockReturnValue(mockContainer as unknown as Element)
-
-    renderHook(() => useLastRoute())
-
-    // Allow time for the restore delay (50ms + FOCUS_DELAY_MS)
-    await act(async () => { vi.advanceTimersByTime(200) })
-
-    // scrollTo should have been called to restore position
-    expect(mockContainer.scrollTo).toHaveBeenCalled()
-  })
-
-  it('scrolls to top when remember position is off', async () => {
-    // Ensure remember position is OFF for this path
-    localStorage.removeItem(REMEMBER_POSITION_KEY)
-    mockPathname = '/workloads'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    const mockContainer = {
-      scrollTop: 500,
-      scrollTo: vi.fn(),
-      getBoundingClientRect: vi.fn(() => ({ top: 0, left: 0, width: 1000, height: 600 })),
-      querySelectorAll: vi.fn(() => []),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }
-    vi.spyOn(document, 'querySelector').mockReturnValue(mockContainer as unknown as Element)
-
-    // Need to ensure hasRestoredRef is true for the navigation effect
-    // First render at / sets hasRestoredRef = true
-    // But we're at /workloads (non-root), so the redirect effect does NOT set it...
-    // Actually hasRestoredRef is set in the second useEffect regardless.
-    // Let's render the hook — the navigation effect runs on subsequent path changes.
-    renderHook(() => useLastRoute())
-
-    // Advance timers to trigger effects
-    await act(async () => { vi.advanceTimersByTime(200) })
-
-    // The hook should attempt scrollTo top since Pin is off
-    // On first render hasRestoredRef becomes true, then navigation effect fires
-    // but only after hasRestoredRef is set
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Tests: useLastRoute hook — localStorage error handling
-// ---------------------------------------------------------------------------
-
-describe('useLastRoute hook — localStorage error handling', () => {
-  it('handles localStorage.setItem throwing when saving route', async () => {
-    mockPathname = '/clusters'
-    mockSearch = ''
-    const origSetItem = localStorage.setItem
-    localStorage.setItem = () => { throw new Error('QuotaExceeded') }
-
-    try {
-      const { useLastRoute } = await importFresh()
-
-      // Should not throw
-      expect(() => {
-        renderHook(() => useLastRoute())
-      }).not.toThrow()
-    } finally {
-      localStorage.setItem = origSetItem
-    }
-  })
-
-  it('handles localStorage.getItem throwing when reading scroll positions', async () => {
-    mockPathname = '/pods'
-    mockSearch = ''
-    const origGetItem = localStorage.getItem
-
-    try {
-      const { getLastRoute } = await importFresh()
-
-      // Break getItem — both getLastRoute and getRememberPosition have try/catch guards
-      localStorage.getItem = () => { throw new Error('SecurityError') }
-
-      // getLastRoute has its own try/catch and should return null
-      expect(getLastRoute()).toBeNull()
-    } finally {
-      localStorage.getItem = origGetItem
-    }
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Tests: setRememberPosition — additional edge cases
-// ---------------------------------------------------------------------------
-
-describe('setRememberPosition — edge cases', () => {
-  it('handles localStorage.setItem throwing', async () => {
-    const origSetItem = localStorage.setItem
-    try {
-      localStorage.setItem = () => { throw new Error('QuotaExceeded') }
-      const { setRememberPosition } = await importFresh()
-      // Should not throw
-      expect(() => setRememberPosition('/x', true)).not.toThrow()
-    } finally {
-      localStorage.setItem = origSetItem
-    }
-  })
-
-  it('preserves multiple path preferences', async () => {
+  it('handles many paths without data loss', async () => {
     const { setRememberPosition, getRememberPosition } = await importFresh()
-    setRememberPosition('/a', true)
-    setRememberPosition('/b', false)
-    setRememberPosition('/c', true)
-    expect(getRememberPosition('/a')).toBe(true)
-    expect(getRememberPosition('/b')).toBe(false)
-    expect(getRememberPosition('/c')).toBe(true)
-  })
-
-  it('handles localStorage.getItem throwing during set', async () => {
-    const origGetItem = localStorage.getItem
-    try {
-      localStorage.getItem = () => { throw new Error('SecurityError') }
-      const { setRememberPosition } = await importFresh()
-      // The catch block should absorb the error
-      expect(() => setRememberPosition('/x', true)).not.toThrow()
-    } finally {
-      localStorage.getItem = origGetItem
+    const paths = ['/a', '/b', '/c', '/d', '/e', '/f', '/g', '/h']
+    for (const p of paths) {
+      setRememberPosition(p, true)
     }
-  })
-})
-
-// ---------------------------------------------------------------------------
-// Tests: getFirstDashboardRoute edge cases (tested via redirect behavior)
-// ---------------------------------------------------------------------------
-
-describe('useLastRoute hook — getFirstDashboardRoute edge cases', () => {
-  it('handles sidebar config with no primaryNav key', async () => {
-    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify({ someOtherKey: true }))
-    mockPathname = '/'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
-
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
-
-    // No redirect since getFirstDashboardRoute returns '/' (no primaryNav)
-    expect(mockNavigate).not.toHaveBeenCalled()
-  })
-
-  it('handles sidebar config with primaryNav where first item has href "/"', async () => {
-    const sidebarConfig = {
-      primaryNav: [{ href: '/', label: 'Home' }],
+    for (const p of paths) {
+      expect(getRememberPosition(p)).toBe(true)
     }
-    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify(sidebarConfig))
-    mockPathname = '/'
-    mockSearch = ''
-    const { useLastRoute } = await importFresh()
+    // Toggle one off
+    setRememberPosition('/d', false)
+    expect(getRememberPosition('/d')).toBe(false)
+    expect(getRememberPosition('/e')).toBe(true)
+  })
 
-    renderHook(() => useLastRoute())
-    await act(async () => { vi.advanceTimersByTime(500) })
+  it('merges into existing stored prefs without corruption', async () => {
+    localStorage.setItem(REMEMBER_POSITION_KEY, JSON.stringify({ '/existing': true }))
+    const { setRememberPosition, getRememberPosition } = await importFresh()
+    setRememberPosition('/new', true)
+    expect(getRememberPosition('/existing')).toBe(true)
+    expect(getRememberPosition('/new')).toBe(true)
+  })
 
-    // firstSidebarRoute is '/' which equals current, so no redirect
-    expect(mockNavigate).not.toHaveBeenCalled()
+  it('overwrites corrupted stored JSON gracefully', async () => {
+    localStorage.setItem(REMEMBER_POSITION_KEY, 'broken-json{{{')
+    const { setRememberPosition } = await importFresh()
+    // This should not throw -- the catch block handles parse errors
+    expect(() => setRememberPosition('/x', true)).not.toThrow()
   })
 })

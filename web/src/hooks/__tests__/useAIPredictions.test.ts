@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mockReportAgentDataSuccess, mockReportAgentDataError, mockGetSettingsForBackend, mockSetActiveTokenCategory, mockClearActiveTokenCategory, mockFullFetchClusters, mockClusterCache } = vi.hoisted(() => ({
+const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mockReportAgentDataSuccess, mockReportAgentDataError, mockGetSettingsForBackend, mockSetActiveTokenCategory, mockClearActiveTokenCategory, mockFullFetchClusters, mockClusterCache, mockAppendWsAuthToken } = vi.hoisted(() => ({
   mockGetPredictionSettings: vi.fn(() => ({ aiEnabled: true, minConfidence: 50 })),
   mockGetDemoMode: vi.fn(() => true),
   mockIsAgentUnavailable: vi.fn(() => true),
@@ -12,6 +12,7 @@ const { mockGetPredictionSettings, mockGetDemoMode, mockIsAgentUnavailable, mock
   mockClearActiveTokenCategory: vi.fn(),
   mockFullFetchClusters: vi.fn(),
   mockClusterCache: { consecutiveFailures: 0, isFailed: false },
+  mockAppendWsAuthToken: vi.fn((url: string) => url),
 }))
 
 vi.mock('../usePredictionSettings', () => ({
@@ -40,6 +41,10 @@ vi.mock('../mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
+vi.mock('../../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: mockAppendWsAuthToken,
+}))
+
 vi.mock('../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
@@ -55,6 +60,8 @@ vi.mock('../../lib/constants/network', () => ({
   WS_RECONNECT_DELAY_MS: 5000,
   UI_FEEDBACK_TIMEOUT_MS: 500,
   RETRY_DELAY_MS: 100,
+  MAX_WS_RECONNECT_ATTEMPTS: 5,
+  getWsBackoffDelay: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 30000),
 }))
 
 import { useAIPredictions, getRawAIPredictions, isWSConnected, syncSettingsToBackend } from '../useAIPredictions'
@@ -106,6 +113,11 @@ describe('useAIPredictions', () => {
   it('refresh function is callable', () => {
     const { result } = renderHook(() => useAIPredictions())
     expect(typeof result.current.refresh).toBe('function')
+  })
+
+  it('reconnect function is callable', () => {
+    const { result } = renderHook(() => useAIPredictions())
+    expect(typeof result.current.reconnect).toBe('function')
   })
 
   // ---------- REGRESSION TESTS ----------
@@ -310,7 +322,7 @@ describe('useAIPredictions', () => {
     expect(r1.current.isEnabled).toBe(r2.current.isEnabled)
   })
 
-  // ---------- NEW: aiPredictionToRisk transformation tests ----------
+  // ---------- aiPredictionToRisk transformation (via hook output) ----------
 
   it('demo predictions set source to "ai"', async () => {
     const { result } = renderHook(() => useAIPredictions())
@@ -355,7 +367,7 @@ describe('useAIPredictions', () => {
     }
   })
 
-  // ---------- NEW: fetchAIPredictions in non-demo mode ----------
+  // ---------- fetchAIPredictions in non-demo mode ----------
 
   it('returns early if agent is unavailable (non-demo mode)', async () => {
     mockGetDemoMode.mockReturnValue(false)
@@ -481,7 +493,23 @@ describe('useAIPredictions', () => {
     expect(Array.isArray(result.current.predictions)).toBe(true)
   })
 
-  // ---------- NEW: triggerAnalysis tests ----------
+  it('reports fetch_failed for non-Error thrown values', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockIsAgentUnavailable.mockReturnValue(false)
+
+    // Throw a non-Error value (string) to cover the fallback branch
+    globalThis.fetch = vi.fn().mockRejectedValue('string error') as unknown as typeof fetch
+
+    const { result } = renderHook(() => useAIPredictions())
+    await act(async () => {
+      await result.current.refresh()
+    })
+
+    expect(result.current.isStale).toBe(true)
+    expect(mockReportAgentDataError).toHaveBeenCalledWith('/predictions/ai', 'fetch_failed')
+  })
+
+  // ---------- triggerAnalysis tests ----------
 
   it('analyze in demo mode simulates delay and regenerates predictions', async () => {
     mockGetDemoMode.mockReturnValue(true)
@@ -496,7 +524,7 @@ describe('useAIPredictions', () => {
     // exists to anchor the promise settlement for debugging if the test hangs.
     void done
 
-    // Advance past the triggerAnalysis demo delay (UI_FEEDBACK_TIMEOUT_MS = 2 000 ms)
+    // Advance past the triggerAnalysis demo delay (UI_FEEDBACK_TIMEOUT_MS = 500 ms)
     // and then the first poll tick (ANALYSIS_POLL_INTERVAL_MS = 4 000 ms) so that
     // cleanup() fires and clearActiveTokenCategory is called.
     await act(async () => {
@@ -614,7 +642,93 @@ describe('useAIPredictions', () => {
     })
   })
 
-  // ---------- NEW: connectWebSocket tests ----------
+  it('analyze clears token category when trigger fails', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockIsAgentUnavailable.mockReturnValue(false)
+
+    // Make the POST to /predictions/analyze fail
+    globalThis.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (typeof url === 'string' && url.includes('/predictions/analyze') && opts?.method === 'POST') {
+        return Promise.resolve({ ok: false, status: 503 })
+      }
+      // GET /predictions/ai returns OK
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          predictions: [],
+          lastAnalyzed: new Date().toISOString(),
+          providers: [],
+          stale: false,
+        }),
+      })
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+
+    await act(async () => {
+      await result.current.analyze()
+    })
+
+    // After failed trigger, clearActiveTokenCategory should have been called
+    expect(mockClearActiveTokenCategory).toHaveBeenCalled()
+  })
+
+  it('analyze polls until lastAnalyzed timestamp changes', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockIsAgentUnavailable.mockReturnValue(false)
+
+    let callCount = 0
+    const INITIAL_TIMESTAMP = '2025-01-01T00:00:00Z'
+    const UPDATED_TIMESTAMP = '2025-01-01T00:01:00Z'
+    const CALLS_BEFORE_UPDATE = 3
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (typeof url === 'string' && url.includes('/predictions/analyze') && opts?.method === 'POST') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'started' }) })
+      }
+      callCount++
+      // Return updated timestamp after a few polls
+      const timestamp = callCount > CALLS_BEFORE_UPDATE ? UPDATED_TIMESTAMP : INITIAL_TIMESTAMP
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          predictions: [],
+          lastAnalyzed: timestamp,
+          providers: [],
+          stale: false,
+        }),
+      })
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+
+    // Start analyze and let it poll
+    act(() => {
+      result.current.analyze()
+    })
+
+    // Advance through several poll cycles (ANALYSIS_POLL_INTERVAL_MS = 4000)
+    const POLL_CYCLES = 5
+    const POLL_INTERVAL = 4000
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(POLL_CYCLES * POLL_INTERVAL)
+    })
+
+    // Should eventually stop analyzing
+    expect(mockClearActiveTokenCategory).toHaveBeenCalled()
+  })
+
+  // ---------- connectWebSocket tests ----------
 
   it('does not create WebSocket in demo mode', () => {
     mockGetDemoMode.mockReturnValue(true)
@@ -623,7 +737,7 @@ describe('useAIPredictions', () => {
     expect(isWSConnected()).toBe(false)
   })
 
-  // ---------- NEW: polling fallback ----------
+  // ---------- polling fallback ----------
 
   it('sets up polling interval for fetchAIPredictions', async () => {
     mockGetDemoMode.mockReturnValue(true)
@@ -648,7 +762,7 @@ describe('useAIPredictions', () => {
     clearIntervalSpy.mockRestore()
   })
 
-  // ---------- NEW: settings change event listener cleanup ----------
+  // ---------- settings change event listener cleanup ----------
 
   it('removes settings change event listener on unmount', () => {
     const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
@@ -661,7 +775,7 @@ describe('useAIPredictions', () => {
     removeEventListenerSpy.mockRestore()
   })
 
-  // ---------- NEW: confidence filtering on HTTP fetch ----------
+  // ---------- confidence filtering on HTTP fetch ----------
 
   it('filters fetched predictions by minConfidence setting', async () => {
     mockGetDemoMode.mockReturnValue(false)
@@ -703,7 +817,65 @@ describe('useAIPredictions', () => {
       expect(filtered.length).toBe(0)
     })
   })
+
+  // ---------- reconnect ----------
+
+  it('reconnect resets WS state and is safe to call', () => {
+    const { result } = renderHook(() => useAIPredictions())
+    // Should not throw even when no WS exists
+    expect(() => {
+      act(() => {
+        result.current.reconnect()
+      })
+    }).not.toThrow()
+  })
+
+  // ---------- analysis timeout ----------
+
+  it('analyze stops polling after max timeout', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockIsAgentUnavailable.mockReturnValue(false)
+
+    // Always return the same old timestamp so the poll never detects completion
+    const STALE_TIMESTAMP = '2025-01-01T00:00:00Z'
+    globalThis.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (typeof url === 'string' && url.includes('/predictions/analyze') && opts?.method === 'POST') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ status: 'started' }) })
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          predictions: [],
+          lastAnalyzed: STALE_TIMESTAMP,
+          providers: [],
+          stale: false,
+        }),
+      })
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+
+    act(() => {
+      result.current.analyze()
+    })
+
+    // Advance past max timeout (ANALYSIS_MAX_TIMEOUT_MS = 60000)
+    const MAX_TIMEOUT_PLUS_BUFFER_MS = 65000
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MAX_TIMEOUT_PLUS_BUFFER_MS)
+    })
+
+    // Should have cleared the token category even without detecting new results
+    expect(mockClearActiveTokenCategory).toHaveBeenCalled()
+  })
 })
+
+// ---------- getRawAIPredictions ----------
 
 describe('getRawAIPredictions', () => {
   it('returns an array', () => {
@@ -727,7 +899,42 @@ describe('getRawAIPredictions', () => {
       expect(typeof pred.confidence).toBe('number')
     }
   })
+
+  it('returns predictions that have id, category, severity, name, cluster, reason fields', () => {
+    const raw = getRawAIPredictions()
+    for (const pred of raw) {
+      expect(typeof pred.id).toBe('string')
+      expect(typeof pred.category).toBe('string')
+      expect(typeof pred.severity).toBe('string')
+      expect(typeof pred.name).toBe('string')
+      expect(typeof pred.cluster).toBe('string')
+      expect(typeof pred.reason).toBe('string')
+    }
+  })
+
+  it('returns predictions with reasonDetailed as string', () => {
+    const raw = getRawAIPredictions()
+    for (const pred of raw) {
+      expect(typeof pred.reasonDetailed).toBe('string')
+      expect(pred.reasonDetailed.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('returns predictions with provider field', () => {
+    const raw = getRawAIPredictions()
+    for (const pred of raw) {
+      expect(typeof pred.provider).toBe('string')
+    }
+  })
+
+  it('returns same reference on consecutive calls (singleton)', () => {
+    const first = getRawAIPredictions()
+    const second = getRawAIPredictions()
+    expect(first).toBe(second)
+  })
 })
+
+// ---------- isWSConnected ----------
 
 describe('isWSConnected', () => {
   it('returns a boolean', () => {
@@ -738,7 +945,17 @@ describe('isWSConnected', () => {
     // In test environment with demo mode, no real WS connects
     expect(isWSConnected()).toBe(false)
   })
+
+  it('returns false consistently in demo/test environment', () => {
+    // Multiple calls should return same value
+    const first = isWSConnected()
+    const second = isWSConnected()
+    expect(first).toBe(second)
+    expect(first).toBe(false)
+  })
 })
+
+// ---------- syncSettingsToBackend ----------
 
 describe('syncSettingsToBackend', () => {
   it('is callable without error', () => {
@@ -756,5 +973,290 @@ describe('syncSettingsToBackend', () => {
       syncSettingsToBackend()
       syncSettingsToBackend()
     }).not.toThrow()
+  })
+})
+
+// ---------- aiPredictionToRisk (exercised via hook transformation) ----------
+
+describe('aiPredictionToRisk transformation', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.clearAllMocks()
+    mockGetDemoMode.mockReturnValue(false)
+    mockIsAgentUnavailable.mockReturnValue(false)
+    mockGetPredictionSettings.mockReturnValue({ aiEnabled: true, minConfidence: 0 })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    globalThis.fetch = originalFetch
+  })
+
+  it('maps category to type field', async () => {
+    const TIMESTAMP = '2025-06-15T12:00:00Z'
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        predictions: [
+          {
+            id: 'map-test-1', category: 'pod-crash', severity: 'critical',
+            name: 'crashing-pod', cluster: 'prod', reason: 'OOMKilled',
+            reasonDetailed: 'Pod killed by OOM', confidence: 95,
+            generatedAt: TIMESTAMP, provider: 'openai',
+          },
+        ],
+        lastAnalyzed: TIMESTAMP,
+        providers: ['openai'],
+        stale: false,
+      }),
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await waitFor(() => {
+      expect(result.current.predictions.length).toBeGreaterThan(0)
+    })
+
+    const pred = result.current.predictions.find(p => p.id === 'map-test-1')
+    expect(pred).toBeDefined()
+    // category 'pod-crash' becomes type 'pod-crash'
+    expect(pred!.type).toBe('pod-crash')
+    // source is always 'ai'
+    expect(pred!.source).toBe('ai')
+    // generatedAt is converted from string to Date
+    expect(pred!.generatedAt).toBeInstanceOf(Date)
+    expect(pred!.generatedAt!.toISOString()).toBe('2025-06-15T12:00:00.000Z')
+    // provider is preserved
+    expect(pred!.provider).toBe('openai')
+    // cluster is preserved
+    expect(pred!.cluster).toBe('prod')
+    // name is preserved
+    expect(pred!.name).toBe('crashing-pod')
+    // reason is preserved
+    expect(pred!.reason).toBe('OOMKilled')
+    // reasonDetailed is preserved
+    expect(pred!.reasonDetailed).toBe('Pod killed by OOM')
+    // confidence is preserved
+    expect(pred!.confidence).toBe(95)
+    // severity is preserved
+    expect(pred!.severity).toBe('critical')
+  })
+
+  it('preserves optional namespace field when present', async () => {
+    const TIMESTAMP = '2025-06-15T12:00:00Z'
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        predictions: [
+          {
+            id: 'ns-test', category: 'resource-exhaustion', severity: 'warning',
+            name: 'busy-pod', cluster: 'staging', namespace: 'kube-system',
+            reason: 'CPU near limit', reasonDetailed: 'Details here',
+            confidence: 80, generatedAt: TIMESTAMP, provider: 'claude',
+          },
+        ],
+        lastAnalyzed: TIMESTAMP,
+        providers: ['claude'],
+        stale: false,
+      }),
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await waitFor(() => {
+      expect(result.current.predictions.length).toBeGreaterThan(0)
+    })
+
+    const pred = result.current.predictions.find(p => p.id === 'ns-test')
+    expect(pred).toBeDefined()
+    expect(pred!.namespace).toBe('kube-system')
+  })
+
+  it('preserves optional trend field when present', async () => {
+    const TIMESTAMP = '2025-06-15T12:00:00Z'
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        predictions: [
+          {
+            id: 'trend-test', category: 'resource-trend', severity: 'warning',
+            name: 'trending-node', cluster: 'prod', reason: 'Memory rising',
+            reasonDetailed: 'Trending upward', confidence: 70,
+            generatedAt: TIMESTAMP, provider: 'claude', trend: 'worsening',
+          },
+        ],
+        lastAnalyzed: TIMESTAMP,
+        providers: ['claude'],
+        stale: false,
+      }),
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await waitFor(() => {
+      expect(result.current.predictions.length).toBeGreaterThan(0)
+    })
+
+    const pred = result.current.predictions.find(p => p.id === 'trend-test')
+    expect(pred).toBeDefined()
+    expect(pred!.trend).toBe('worsening')
+  })
+
+  it('leaves namespace undefined when not present in prediction', async () => {
+    const TIMESTAMP = '2025-06-15T12:00:00Z'
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        predictions: [
+          {
+            id: 'no-ns-test', category: 'node-pressure', severity: 'critical',
+            name: 'stressed-node', cluster: 'prod', reason: 'High CPU',
+            reasonDetailed: 'Node under load', confidence: 88,
+            generatedAt: TIMESTAMP, provider: 'claude',
+          },
+        ],
+        lastAnalyzed: TIMESTAMP,
+        providers: ['claude'],
+        stale: false,
+      }),
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await waitFor(() => {
+      expect(result.current.predictions.length).toBeGreaterThan(0)
+    })
+
+    const pred = result.current.predictions.find(p => p.id === 'no-ns-test')
+    expect(pred).toBeDefined()
+    expect(pred!.namespace).toBeUndefined()
+    expect(pred!.trend).toBeUndefined()
+  })
+
+  it('transforms all prediction categories correctly', async () => {
+    const TIMESTAMP = '2025-06-15T12:00:00Z'
+    const ALL_CATEGORIES = [
+      'pod-crash', 'node-pressure', 'gpu-exhaustion',
+      'resource-exhaustion', 'resource-trend', 'capacity-risk', 'anomaly',
+    ] as const
+
+    const predictions = ALL_CATEGORIES.map((category, idx) => ({
+      id: `cat-${idx}`, category, severity: 'warning' as const,
+      name: `resource-${idx}`, cluster: 'test', reason: `reason-${idx}`,
+      reasonDetailed: `detail-${idx}`, confidence: 90,
+      generatedAt: TIMESTAMP, provider: 'claude',
+    }))
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        predictions,
+        lastAnalyzed: TIMESTAMP,
+        providers: ['claude'],
+        stale: false,
+      }),
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await waitFor(() => {
+      expect(result.current.predictions.length).toBe(ALL_CATEGORIES.length)
+    })
+
+    // Each prediction's type should match the original category
+    for (let i = 0; i < ALL_CATEGORIES.length; i++) {
+      const pred = result.current.predictions.find(p => p.id === `cat-${i}`)
+      expect(pred).toBeDefined()
+      expect(pred!.type).toBe(ALL_CATEGORIES[i])
+      expect(pred!.source).toBe('ai')
+    }
+  })
+
+  it('handles edge case with confidence at exact threshold', async () => {
+    const TIMESTAMP = '2025-06-15T12:00:00Z'
+    const THRESHOLD = 75
+    mockGetPredictionSettings.mockReturnValue({ aiEnabled: true, minConfidence: THRESHOLD })
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        predictions: [
+          {
+            id: 'exact-threshold', category: 'anomaly', severity: 'warning',
+            name: 'border-case', cluster: 'test', reason: 'Edge case',
+            reasonDetailed: 'At exact threshold', confidence: THRESHOLD,
+            generatedAt: TIMESTAMP, provider: 'claude',
+          },
+          {
+            id: 'below-threshold', category: 'anomaly', severity: 'warning',
+            name: 'below-case', cluster: 'test', reason: 'Below',
+            reasonDetailed: 'Below threshold', confidence: THRESHOLD - 1,
+            generatedAt: TIMESTAMP, provider: 'claude',
+          },
+        ],
+        lastAnalyzed: TIMESTAMP,
+        providers: ['claude'],
+        stale: false,
+      }),
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await waitFor(() => {
+      expect(result.current.predictions.length).toBe(1)
+    })
+
+    // Prediction at exact threshold should be included (>=)
+    expect(result.current.predictions[0]!.id).toBe('exact-threshold')
+  })
+
+  it('returns providers from successful fetch', async () => {
+    const TIMESTAMP = '2025-06-15T12:00:00Z'
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        predictions: [],
+        lastAnalyzed: TIMESTAMP,
+        providers: ['claude', 'openai', 'gemini'],
+        stale: false,
+      }),
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await waitFor(() => {
+      expect(result.current.providers.length).toBe(3)
+    })
+
+    expect(result.current.providers).toContain('claude')
+    expect(result.current.providers).toContain('openai')
+    expect(result.current.providers).toContain('gemini')
+  })
+
+  it('reports stale flag from server response', async () => {
+    const TIMESTAMP = '2025-06-15T12:00:00Z'
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        predictions: [],
+        lastAnalyzed: TIMESTAMP,
+        providers: [],
+        stale: true,
+      }),
+    })
+
+    const { result } = renderHook(() => useAIPredictions())
+
+    await waitFor(() => {
+      expect(result.current.isStale).toBe(true)
+    })
   })
 })
