@@ -35,13 +35,8 @@ import type { SearchItem } from '../useSearchIndex'
 
 const { matchesQuery, buildDashboardStorage, scanPlacedCards } = __testables
 
-const store = new Map<string, string>()
-
 beforeEach(() => {
-  store.clear()
-  vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => store.get(key) ?? null)
-  vi.spyOn(Storage.prototype, 'setItem').mockImplementation((key: string, value: string) => { store.set(key, value) })
-  vi.restoreAllMocks
+  localStorage.clear()
 })
 
 // ---------------------------------------------------------------------------
@@ -112,17 +107,13 @@ describe('buildDashboardStorage', () => {
 // ---------------------------------------------------------------------------
 
 describe('scanPlacedCards', () => {
-  beforeEach(() => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => store.get(key) ?? null)
-  })
-
   it('returns empty array when no cards in localStorage', () => {
     const result = scanPlacedCards([])
     expect(result).toEqual([])
   })
 
   it('finds cards placed on built-in dashboards', () => {
-    store.set('kubestellar-main-dashboard-cards', JSON.stringify([
+    localStorage.setItem('kubestellar-main-dashboard-cards', JSON.stringify([
       { card_type: 'gpu_overview', title: 'GPU Overview' },
       { card_type: 'cluster_health' },
     ]))
@@ -134,7 +125,7 @@ describe('scanPlacedCards', () => {
   })
 
   it('finds cards on custom dashboards', () => {
-    store.set('kubestellar-custom-dashboard-abc-cards', JSON.stringify([
+    localStorage.setItem('kubestellar-custom-dashboard-abc-cards', JSON.stringify([
       { card_type: 'gpu_overview' },
     ]))
     const result = scanPlacedCards([{ id: 'abc', name: 'My Dashboard' }])
@@ -144,13 +135,13 @@ describe('scanPlacedCards', () => {
   })
 
   it('handles malformed JSON gracefully', () => {
-    store.set('kubestellar-main-dashboard-cards', 'not json')
+    localStorage.setItem('kubestellar-main-dashboard-cards', 'not json')
     expect(() => scanPlacedCards([])).not.toThrow()
     expect(scanPlacedCards([])).toEqual([])
   })
 
   it('skips cards without card_type', () => {
-    store.set('kubestellar-main-dashboard-cards', JSON.stringify([
+    localStorage.setItem('kubestellar-main-dashboard-cards', JSON.stringify([
       { title: 'No Type' },
       { card_type: 'gpu_overview' },
     ]))
