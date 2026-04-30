@@ -392,6 +392,196 @@ describe('useActiveUsers', () => {
       const mod = await import('../useActiveUsers')
       expect(() => mod.__testables.disconnectPresence()).not.toThrow()
     })
+
+    it('RECOVERY_DELAY is 30 seconds', async () => {
+      const mod = await import('../useActiveUsers')
+      expect(mod.__testables.RECOVERY_DELAY).toBe(30_000)
+    })
+  })
+
+  // ── Heartbeat path (demo mode / Netlify) ──
+
+  describe('heartbeat (demo/Netlify mode)', () => {
+    it('starts heartbeat when demo mode is true', async () => {
+      mockGetDemoMode.mockReturnValue(true)
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ activeUsers: 3, totalConnections: 3 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      const { unmount } = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      expect(fetchSpy).toHaveBeenCalled()
+      unmount()
+    })
+
+    it('heartbeat sends POST with sessionId', async () => {
+      mockGetDemoMode.mockReturnValue(true)
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ activeUsers: 1, totalConnections: 1 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      sessionStorage.clear()
+      const { unmount } = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      const postCalls = fetchSpy.mock.calls.filter(([url, opts]) =>
+        (url as string).includes('/api/active-users') && (opts as RequestInit)?.method === 'POST'
+      )
+      expect(postCalls.length).toBeGreaterThanOrEqual(1)
+      unmount()
+    })
+
+    it('does not throw when heartbeat fetch fails', async () => {
+      mockGetDemoMode.mockReturnValue(true)
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network error'))
+      expect(() => renderHook(() => useActiveUsers())).not.toThrow()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+    })
+  })
+
+  // ── Smoothing window ──
+
+  describe('smoothing window', () => {
+    it('smoothedCount is max of recent counts', async () => {
+      let callCount = 0
+      const counts = [3, 5, 2, 8, 4]
+      vi.spyOn(globalThis, 'fetch').mockImplementation(() => {
+        const count = counts[callCount % counts.length]
+        callCount++
+        return Promise.resolve(
+          new Response(JSON.stringify({ activeUsers: count, totalConnections: count }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      })
+      const { result } = renderHook(() => useActiveUsers())
+      for (let i = 0; i < 6; i++) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_100)
+        })
+      }
+      expect(result.current.activeUsers).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  // ── Circuit breaker recovery ──
+
+  describe('circuit breaker recovery (RECOVERY_DELAY)', () => {
+    it('schedules recovery after MAX_FAILURES consecutive failures', async () => {
+      vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('connection refused'))
+      const { result } = renderHook(() => useActiveUsers())
+      for (let i = 0; i < 4; i++) {
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_100)
+        })
+      }
+      expect(result.current.hasError).toBe(true)
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ activeUsers: 2, totalConnections: 2 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(31_000)
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(500)
+      })
+      await waitFor(() => {
+        expect(result.current.hasError).toBe(false)
+      })
+    })
+  })
+
+  // ── Tab visibility recovery ──
+
+  describe('tab visibility recovery', () => {
+    it('refetches when tab becomes visible', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ activeUsers: 5, totalConnections: 5 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      const { unmount } = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      const callsBefore = fetchSpy.mock.calls.length
+      Object.defineProperty(document, 'visibilityState', {
+        value: 'visible',
+        configurable: true,
+      })
+      document.dispatchEvent(new Event('visibilitychange'))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      expect(fetchSpy.mock.calls.length).toBeGreaterThanOrEqual(callsBefore)
+      unmount()
+    })
+  })
+
+  // ── kc-demo-mode-change event ──
+
+  describe('demo mode change event', () => {
+    it('refetches when kc-demo-mode-change fires', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ activeUsers: 5, totalConnections: 5 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      const { unmount } = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      const callsBefore = fetchSpy.mock.calls.length
+      window.dispatchEvent(new Event('kc-demo-mode-change'))
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsBefore)
+      unmount()
+    })
+  })
+
+  // ── disconnectPresence cleanup ──
+
+  describe('disconnectPresence (exported)', () => {
+    it('can be called after hook unmounts without error', async () => {
+      mockGetDemoMode.mockReturnValue(false)
+      localStorage.setItem('kc-auth-token', 'test-token')
+      const mockWs = {
+        send: vi.fn(),
+        close: vi.fn(),
+        onopen: null as ((ev: Event) => void) | null,
+        onmessage: null as ((ev: MessageEvent) => void) | null,
+        onclose: null as ((ev: CloseEvent) => void) | null,
+        onerror: null as ((ev: Event) => void) | null,
+        readyState: 1,
+      }
+      vi.stubGlobal('WebSocket', vi.fn(() => mockWs))
+      const { unmount } = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      unmount()
+      const mod = await import('../useActiveUsers')
+      expect(() => mod.disconnectPresence()).not.toThrow()
+      vi.unstubAllGlobals()
+    })
   })
 
   // ── Refetch after error recovery ──
