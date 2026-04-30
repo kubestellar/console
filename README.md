@@ -4,7 +4,7 @@
 [![ACMM](https://img.shields.io/endpoint?url=https%3A%2F%2Fconsole.kubestellar.io%2Fapi%2Facmm%2Fbadge%3Frepo%3Dkubestellar%252Fconsole%26v%3D3)](https://console.kubestellar.io/acmm?repo=kubestellar%2Fconsole)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/kubestellar/console/badge)](https://securityscorecards.dev/viewer/?uri=github.com/kubestellar/console)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12343/badge?v=2)](https://www.bestpractices.dev/projects/12343)
-[![MTTR](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fclubanderson%2F4ae525a9797e8f83231ac344fcb47226%2Fraw%2Fmedian-fix.json&style=for-the-badge "Mean Time to Resolution — median time from issue filed to PR merged, updated every 5 minutes")](https://github.com/kubestellar/console/issues)
+[![MTTR](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fclubanderson%2F4ae525a9797e8f83231ac344fcb47226%2Fraw%2Fmedian-fix.json "Mean Time to Resolution — median time from issue filed to PR merged, updated every 5 minutes")](https://github.com/kubestellar/console/issues)
 
 AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 
