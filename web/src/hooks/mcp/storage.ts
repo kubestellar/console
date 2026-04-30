@@ -564,7 +564,8 @@ export async function createOrUpdateResourceQuota(spec: ResourceQuotaSpec): Prom
 
 // Delete a ResourceQuota
 export async function deleteResourceQuota(cluster: string, namespace: string, name: string): Promise<void> {
-  const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=${cluster}&namespace=${namespace}&name=${name}`, {
+  const params = new URLSearchParams({ cluster, namespace, name })
+  const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params.toString()}`, {
     method: 'DELETE',
   })
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`)

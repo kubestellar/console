@@ -81,7 +81,7 @@ export function InsightDetailModal({ isOpen, onClose, insight }: InsightDetailMo
   const handleCreateMission = () => {
     if (!insight) return
     emitActionClicked('create_mission', insight.category, 'insights')
-    onClose() // Close modal so mission sidebar is visible
+    handleClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Fix: ${insight.title}`,
       description: insight.description,
@@ -97,7 +97,6 @@ Help me investigate and resolve this.`,
         severity: insight.severity,
         affectedClusters: insight.affectedClusters } })
     openSidebar()
-    handleClose()
   }
 
   if (!insight) return null

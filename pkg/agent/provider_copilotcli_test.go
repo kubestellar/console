@@ -81,7 +81,7 @@ func TestIsAuthError(t *testing.T) {
 	}
 }
 
-func TestFreshEnv_StripsStalTokens(t *testing.T) {
+func TestFreshEnv_StripsStaleTokens(t *testing.T) {
 	t.Setenv("GH_TOKEN", "stale-gh-token")
 	t.Setenv("GITHUB_TOKEN", "stale-github-token")
 

@@ -97,7 +97,6 @@ Please proceed step by step.`,
         critical: img.critical,
         high: img.high } })
     openSidebar()
-    onClose()
   }
 
   const handleTriageCritical = () => {
@@ -134,7 +133,6 @@ Please proceed step by step.`,
         totalCritical: critical,
         imageCount: criticalImages.length } })
     openSidebar()
-    onClose()
   }
 
   return (

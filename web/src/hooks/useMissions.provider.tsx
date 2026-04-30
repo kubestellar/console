@@ -1701,7 +1701,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // Clear active token tracking for this mission and emit completion
         // event (#6016 — per-operation tracking keyed by missionId).
         clearActiveTokenCategory(missionId)
-        if (m.status === 'running') {
+        const resultIsError = !!chatPayload.isError
+        if (m.status === 'running' && !resultIsError) {
           // #7326 — Cap duration at 24 hours to prevent numeric overflow
           // from clock skew or backgrounded tabs.
           const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
@@ -1712,6 +1713,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           window.dispatchEvent(new CustomEvent('kc-mission-completed', {
             detail: { missionId, missionType: m.type },
           }))
+        } else if (m.status === 'running' && resultIsError) {
+          emitMissionError(m.type, chatPayload.content || 'Mission failed')
         }
 
         const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
@@ -1761,9 +1764,6 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // is only used while streaming is in progress (stream done w/o result).
         // The UI shows a completion panel with feedback buttons when status is
         // 'completed', so reaching this state is the correct lifecycle end (#5479).
-        // #11070 — If the backend flagged this result as an error (e.g. non-zero
-        // exit code from a CLI provider), mark the mission 'failed' instead.
-        const resultIsError = !!(chatPayload as unknown as Record<string, unknown>).isError
         return {
           ...m,
           status: (resultIsError ? 'failed' : 'completed') as MissionStatus,

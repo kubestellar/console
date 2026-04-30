@@ -47,7 +47,7 @@ export function PolicyViolationDetailModal({ isOpen, onClose, violation }: Polic
   const handleFixWithAI = () => {
     if (!violation) return
     emitActionClicked('fix_with_ai', 'policy_violations', 'compliance')
-    onClose() // Close modal so mission sidebar is visible
+    handleClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Fix: ${violation.policy} violations`,
       description: `${violation.count} violations from ${violation.tool} on ${(violation.clusters || []).join(', ')}`,
@@ -68,7 +68,6 @@ Please proceed step by step.`,
         clusters: violation.clusters,
         violationCount: violation.count } })
     openSidebar()
-    handleClose()
   }
 
   if (!violation) return null

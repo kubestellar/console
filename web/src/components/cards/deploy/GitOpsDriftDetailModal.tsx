@@ -96,7 +96,6 @@ Please proceed step by step.`,
         driftType: drift.driftType,
         severity: drift.severity } })
     openSidebar()
-    handleClose()
   }
 
   if (!drift) return null

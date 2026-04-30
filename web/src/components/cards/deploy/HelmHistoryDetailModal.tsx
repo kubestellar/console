@@ -57,7 +57,7 @@ export function HelmHistoryDetailModal({
   const handleRollback = () => {
     if (!entry) return
     emitActionClicked('rollback', 'helm_history', 'deploy')
-    onClose() // Close modal so mission sidebar is visible
+    handleClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Rollback: ${releaseName} to rev ${entry.revision}`,
       description: `Rollback Helm release ${releaseName} in ${namespace} on ${clusterName} to revision ${entry.revision}`,
@@ -85,7 +85,6 @@ Please proceed step by step.`,
         targetRevision: entry.revision,
         currentRevision } })
     openSidebar()
-    handleClose()
   }
 
   if (!entry) return null

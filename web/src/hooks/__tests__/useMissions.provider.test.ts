@@ -121,7 +121,7 @@ vi.mock('../../lib/missions/preflightCheck', () => ({
   classifyKubectlError: vi.fn(),
   getRemediationActions: vi.fn(() => []),
   resolveRequiredTools: vi.fn(() => []),
-  runToolPreflightCheck: vi.fn().mockResolvedValue({ passed: true, tools: [] }),
+  runToolPreflightCheck: vi.fn().mockResolvedValue({ ok: true, tools: [] }),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({
