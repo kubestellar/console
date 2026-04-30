@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -291,7 +291,7 @@ export function Dashboard() {
   // Custom collision detection: when dragging a workload, prioritize cluster-group
   // and cluster-drop droppable zones (detected via pointerWithin) over the larger
   // sortable card containers that would otherwise always win with closestCenter.
-  const collisionDetection: CollisionDetection = (args) => {
+  const collisionDetection: CollisionDetection = useCallback((args) => {
     const isWorkloadDrag = args.active.data.current?.type === 'workload'
     if (isWorkloadDrag) {
       // For workload drags, prioritize cluster-group drop targets.
@@ -335,7 +335,7 @@ export function Dashboard() {
     )
     if (dashboardDropTarget) return [dashboardDropTarget]
     return centerCollisions
-  }
+  }, [])
 
   const handleDragStart = (event: DragStartEvent) => {
     const id = event.active.id as string

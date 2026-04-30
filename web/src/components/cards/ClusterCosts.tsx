@@ -259,14 +259,14 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
   const memoryCost = config?.memoryCostPerGBHour ?? pricing.memory
   const gpuCost = config?.gpuCostPerHour ?? pricing.gpu
 
-  const gpuByCluster = (() => {
+  const gpuByCluster = useMemo(() => {
     const map: Record<string, number> = {}
     gpuNodes.forEach(node => {
       const clusterKey = (node.cluster ?? '').split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
     return map
-  })()
+  }, [gpuNodes])
 
   // Get the provider for a specific cluster (memoized to prevent re-renders)
   const getClusterProvider = useCallback((clusterName: string, context?: string): CloudProvider => {
@@ -350,6 +350,20 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
 
   const totalMonthly = clusterCosts.reduce((sum, c) => sum + c.monthly, 0)
   const totalDaily = clusterCosts.reduce((sum, c) => sum + c.daily, 0)
+
+  // Memoize provider breakdown counts to avoid recomputing in render
+  const providerBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const c of clusterCosts) {
+      counts[c.provider] = (counts[c.provider] || 0) + 1
+    }
+    return counts
+  }, [clusterCosts])
+
+  const uniqueProviders = useMemo(() =>
+    Array.from(new Set(clusterCosts.map(c => c.provider))),
+    [clusterCosts]
+  )
 
   if (isLoading && allClusters.length === 0) {
     return (
@@ -608,7 +622,7 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
                 {(Object.keys(CLOUD_PRICING) as CloudProvider[]).filter(p => p !== 'estimate').map(provider => {
                   const p = CLOUD_PRICING[provider]
                   const icon = PROVIDER_ICONS[provider]
-                  const count = clusterCosts.filter(c => c.provider === provider).length
+                  const count = providerBreakdown[provider] || 0
                   if (count === 0 && !showRatesInfo) return null
                   return (
                     <div key={provider} className={`flex items-center gap-2 p-1.5 rounded ${count > 0 ? 'bg-secondary/50' : 'opacity-50'}`}>
@@ -804,8 +818,8 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
               <>
                 <span>{t('cards:clusterCosts.mixedPricing')}</span>
                 {/* Show unique providers used */}
-                {Array.from(new Set(clusterCosts.map(c => c.provider))).map(provider => {
-                  const count = clusterCosts.filter(c => c.provider === provider).length
+                {uniqueProviders.map(provider => {
+                  const count = providerBreakdown[provider] || 0
                   const icon = PROVIDER_ICONS[provider]
                   return (
                     <span

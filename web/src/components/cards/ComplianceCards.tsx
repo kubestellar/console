@@ -243,7 +243,7 @@ export function TrivyScan({ config: _config }: CardConfig) {
   const allChecked = clustersChecked >= totalClusters && totalClusters > 0
 
   // Filter by selected clusters
-  const filtered = (() => {
+  const filtered = useMemo(() => {
     if (selectedClusters.length === 0) return aggregated
     const agg = { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 }
     for (const [name, s] of Object.entries(statuses)) {
@@ -257,7 +257,7 @@ export function TrivyScan({ config: _config }: CardConfig) {
       agg.unknown += vuln.unknown
     }
     return agg
-  })()
+  }, [selectedClusters, aggregated, statuses])
 
   const hasData = installed || isDemoData
   // #6219: surface failure state. `hasErrors` from useTrivy means at least
@@ -460,6 +460,11 @@ export function KubescapeScan({ config: _config }: CardConfig) {
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
+
+  const installedClusters = useMemo(() =>
+    Object.keys(statuses).filter(c => statuses[c].installed),
+    [statuses]
+  )
 
   /** Whether all clusters have been checked */
   const allChecked = clustersChecked >= totalClusters && totalClusters > 0
@@ -715,7 +720,7 @@ Please proceed step by step.`,
           onClose={() => setModalCluster(null)}
           clusterName={modalCluster}
           status={statuses[modalCluster]}
-          clusters={Object.keys(statuses).filter(c => statuses[c].installed)}
+          clusters={installedClusters}
           onClusterChange={(newCluster) => setModalCluster(newCluster)}
           onRefresh={() => refetch()}
           isRefreshing={isRefreshing}

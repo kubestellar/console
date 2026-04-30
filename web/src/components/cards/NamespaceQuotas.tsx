@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Gauge, Cpu, HardDrive, Box, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
 import { Button } from '../ui/Button'
@@ -400,10 +400,10 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   }
 
   // Open edit modal for a quota
-  const openEditModal = (quota: ResourceQuota) => {
+  const openEditModal = useCallback((quota: ResourceQuota) => {
     setEditingQuota(quota)
     openModal()
-  }
+  }, [openModal])
 
   // Transform ResourceQuotas to QuotaUsage format for display (pre-filter by selectors only)
   const quotaUsages = useMemo(() => {

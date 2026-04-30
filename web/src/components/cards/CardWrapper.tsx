@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, createContext, use, ComponentType, Suspense } from 'react'
+import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, ComponentType, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import {
   Maximize2, RefreshCw, ChevronRight, ChevronDown, Bug, AlertTriangle, Info,
@@ -202,7 +202,7 @@ interface CardWrapperProps {
 // Re-export for backwards compatibility — data now lives in cardMetadata.ts and cardIcons.ts
 export { CARD_TITLES, CARD_DESCRIPTIONS } from './cardMetadata'
 
-export function CardWrapper({
+export const CardWrapper = memo(function CardWrapper({
   cardId,
   cardType,
   title: customTitle,
@@ -1002,4 +1002,4 @@ export function CardWrapper({
     </CardExpandedContext.Provider>
     </CardTypeContext.Provider>
   )
-}
+})
