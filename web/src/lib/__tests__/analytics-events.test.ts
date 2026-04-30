@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('../analytics-core', () => ({
   send: vi.fn(),
   setAnalyticsUserProperties: vi.fn(),
+  emitError: vi.fn(),
 }))
 
 vi.mock('../demoMode', () => ({
@@ -19,7 +20,7 @@ vi.mock('../analytics-session', () => ({
   getDeploymentType: vi.fn(() => 'localhost'),
 }))
 
-import { send, setAnalyticsUserProperties } from '../analytics-core'
+import { send, setAnalyticsUserProperties, emitError } from '../analytics-core'
 import { isDemoMode } from '../demoMode'
 import { getDeploymentType } from '../analytics-session'
 import { CAPABILITY_TOOL_EXEC, CAPABILITY_CHAT } from '../analytics-types'
@@ -203,6 +204,7 @@ import {
 
 const mockSend = vi.mocked(send)
 const mockSetProps = vi.mocked(setAnalyticsUserProperties)
+const mockEmitError = vi.mocked(emitError)
 const mockIsDemoMode = vi.mocked(isDemoMode)
 const mockGetDeploymentType = vi.mocked(getDeploymentType)
 
@@ -210,6 +212,7 @@ describe('analytics-events', () => {
   beforeEach(() => {
     mockSend.mockClear()
     mockSetProps.mockClear()
+    mockEmitError.mockClear()
     mockIsDemoMode.mockClear()
     mockGetDeploymentType.mockClear()
     mockIsDemoMode.mockReturnValue(false)
@@ -681,54 +684,54 @@ describe('analytics-events', () => {
   })
 
   describe('Auth / Connection Failure Detection', () => {
-    it('emitAgentTokenFailure sends ksc_error with agent_token_failure category', () => {
+    it('emitAgentTokenFailure delegates to throttled emitError with agent_token_failure category', () => {
       emitAgentTokenFailure('empty token from /api/agent/token')
-      expect(mockSend).toHaveBeenCalledWith('ksc_error', expect.objectContaining({
-        error_category: 'agent_token_failure',
-        error_detail: 'empty token from /api/agent/token',
-      }))
+      expect(mockEmitError).toHaveBeenCalledWith(
+        'agent_token_failure',
+        'empty token from /api/agent/token',
+      )
     })
 
     it('emitAgentTokenFailure truncates reason to 100 characters', () => {
       const longReason = 'x'.repeat(150)
       emitAgentTokenFailure(longReason)
-      expect(mockSend).toHaveBeenCalledWith('ksc_error', expect.objectContaining({
-        error_category: 'agent_token_failure',
-        error_detail: 'x'.repeat(100),
-      }))
+      expect(mockEmitError).toHaveBeenCalledWith(
+        'agent_token_failure',
+        'x'.repeat(100),
+      )
     })
 
-    it('emitWsAuthMissing sends ksc_error with ws_auth_missing category and strips host', () => {
+    it('emitWsAuthMissing delegates to throttled emitError with ws_auth_missing category and strips host', () => {
       emitWsAuthMissing('ws://127.0.0.1:8585/ws')
-      expect(mockSend).toHaveBeenCalledWith('ksc_error', expect.objectContaining({
-        error_category: 'ws_auth_missing',
-        error_detail: '/ws',
-      }))
+      expect(mockEmitError).toHaveBeenCalledWith(
+        'ws_auth_missing',
+        '/ws',
+      )
     })
 
-    it('emitSseAuthFailure sends ksc_error with sse_auth_failure category and strips host', () => {
+    it('emitSseAuthFailure delegates to throttled emitError with sse_auth_failure category and strips host', () => {
       emitSseAuthFailure('http://127.0.0.1:8585/pods/stream?cluster=test')
-      expect(mockSend).toHaveBeenCalledWith('ksc_error', expect.objectContaining({
-        error_category: 'sse_auth_failure',
-        error_detail: '/pods/stream?cluster=test',
-      }))
+      expect(mockEmitError).toHaveBeenCalledWith(
+        'sse_auth_failure',
+        '/pods/stream?cluster=test',
+      )
     })
 
-    it('emitSessionRefreshFailure sends ksc_error with session_refresh_failure category', () => {
+    it('emitSessionRefreshFailure delegates to throttled emitError with session_refresh_failure category', () => {
       emitSessionRefreshFailure('network error')
-      expect(mockSend).toHaveBeenCalledWith('ksc_error', expect.objectContaining({
-        error_category: 'session_refresh_failure',
-        error_detail: 'network error',
-      }))
+      expect(mockEmitError).toHaveBeenCalledWith(
+        'session_refresh_failure',
+        'network error',
+      )
     })
 
     it('emitSessionRefreshFailure truncates reason to 100 characters', () => {
       const longReason = 'a]'.repeat(75)
       emitSessionRefreshFailure(longReason)
-      expect(mockSend).toHaveBeenCalledWith('ksc_error', expect.objectContaining({
-        error_category: 'session_refresh_failure',
-        error_detail: longReason.slice(0, 100),
-      }))
+      expect(mockEmitError).toHaveBeenCalledWith(
+        'session_refresh_failure',
+        longReason.slice(0, 100),
+      )
     })
   })
 

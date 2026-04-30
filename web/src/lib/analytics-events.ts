@@ -6,7 +6,7 @@
  * in the original analytics.ts.
  */
 
-import { send, setAnalyticsUserProperties } from './analytics-core'
+import { send, setAnalyticsUserProperties, emitError } from './analytics-core'
 import type { InstallCopySource, ProviderSummary } from './analytics-types'
 import { CAPABILITY_TOOL_EXEC, CAPABILITY_CHAT } from './analytics-types'
 import { isDemoMode } from './demoMode'
@@ -353,41 +353,28 @@ export function emitDemoModeToggled(enabled: boolean) {
 // ── Auth / Connection Failure Detection ─────────────────────────
 // These events fire when auth-dependent paths silently degrade.
 // The GA4 error monitor workflow creates issues when thresholds are hit.
+//
+// All four emitters route through emitError() so they respect the
+// per-category throttle window (ERROR_THROTTLE_MS) and the per-page
+// session budget (MAX_ERRORS_PER_PAGE_SESSION). Previously they called
+// send('ksc_error', …) directly — bypassing throttling — which caused
+// the agent_token_failure 4→17→60 trend (#10996) and the ksc_error
+// 3.6× spike (#11006) when polling hooks retried every 30-60 s.
 
 export function emitAgentTokenFailure(reason: string) {
-  send('ksc_error', {
-    error_code: 'agent_token_failure',
-    error_category: 'agent_token_failure',
-    error_detail: reason.slice(0, 100),
-    error_page: typeof window !== 'undefined' ? window.location.pathname : '',
-  })
+  emitError('agent_token_failure', reason.slice(0, 100))
 }
 
 export function emitWsAuthMissing(url: string) {
-  send('ksc_error', {
-    error_code: 'ws_auth_missing',
-    error_category: 'ws_auth_missing',
-    error_detail: url.replace(/^wss?:\/\/[^/]+/, '').slice(0, 100),
-    error_page: typeof window !== 'undefined' ? window.location.pathname : '',
-  })
+  emitError('ws_auth_missing', url.replace(/^wss?:\/\/[^/]+/, '').slice(0, 100))
 }
 
 export function emitSseAuthFailure(url: string) {
-  send('ksc_error', {
-    error_code: 'sse_auth_failure',
-    error_category: 'sse_auth_failure',
-    error_detail: url.replace(/^https?:\/\/[^/]+/, '').slice(0, 100),
-    error_page: typeof window !== 'undefined' ? window.location.pathname : '',
-  })
+  emitError('sse_auth_failure', url.replace(/^https?:\/\/[^/]+/, '').slice(0, 100))
 }
 
 export function emitSessionRefreshFailure(reason: string) {
-  send('ksc_error', {
-    error_code: 'session_refresh_failure',
-    error_category: 'session_refresh_failure',
-    error_detail: reason.slice(0, 100),
-    error_page: typeof window !== 'undefined' ? window.location.pathname : '',
-  })
+  emitError('session_refresh_failure', reason.slice(0, 100))
 }
 
 // ── kc-agent Connection ─────────────────────────────────────────

@@ -50,6 +50,8 @@ const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
 const AGENT_TOKEN_FETCH_TIMEOUT_MS = 5000
 
 let agentTokenPromise: Promise<string> | null = null
+/** Session-level dedup: only emit one agent_token_failure per page load */
+let agentTokenFailureEmitted = false
 
 /**
  * Lazily fetch the kc-agent token from the backend. The token is cached
@@ -75,14 +77,18 @@ function getAgentToken(): Promise<string> {
         const token = data.token || ''
         if (token) {
           localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
-        } else {
+        } else if (!agentTokenFailureEmitted) {
+          agentTokenFailureEmitted = true
           emitAgentTokenFailure('empty token from /api/agent/token')
         }
         agentTokenPromise = null
         return token
       })
       .catch((err) => {
-        emitAgentTokenFailure(err?.message || 'network error')
+        if (!agentTokenFailureEmitted) {
+          agentTokenFailureEmitted = true
+          emitAgentTokenFailure(err?.message || 'network error')
+        }
         agentTokenPromise = null
         return ''
       })
