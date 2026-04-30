@@ -1,41 +1,21 @@
-import { test, expect, Page } from '@playwright/test'
-import { mockApiFallback } from './helpers/setup'
+import { test, expect } from '@playwright/test'
+import { setupDemoMode } from './helpers/setup'
 
 /**
  * Sets up authentication and mocks for custom dashboard tests
+ * Uses canonical setupDemoMode helper from helpers/setup.ts
  */
-async function setupCustomDashboardTest(page: Page) {
-  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox.
-  // Must be registered BEFORE specific mocks (Playwright matches in reverse
-  // registration order). Without this, unmocked /health and /api/** requests
-  // cause Firefox/WebKit to wait indefinitely or redirect to /login. (#11003)
-  await mockApiFallback(page)
+async function setupCustomDashboardTest(page) {
+  // Use canonical setupDemoMode helper for consistent demo-mode setup
+  // across all E2E tests. This handles:
+  // - localStorage seeding (demo mode, auth token, onboarding state)
+  // - /api/me mock with fallback behavior
+  // - Catch-all /api/** mock to prevent hanging on unmocked requests
+  // - Page navigation to /
+  // - DOM readiness verification (WebKit/Firefox compatibility)
+  await setupDemoMode(page)
 
-  // Mock authentication
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1',
-        github_id: '12345',
-        github_login: 'testuser',
-        email: 'test@example.com',
-        onboarded: true,
-      }),
-    })
-  )
-
-  // Mock MCP endpoints
-  await page.route('**/api/mcp/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
-    })
-  )
-
-  // Mock dashboards API
+  // Mock dashboards API (custom dashboard test-specific mock)
   await page.route('**/api/dashboards', (route) => {
     if (route.request().method() === 'POST') {
       route.fulfill({
@@ -55,30 +35,6 @@ async function setupCustomDashboardTest(page: Page) {
       })
     }
   })
-
-  // Seed localStorage BEFORE any page script runs so the auth guard sees
-  // the token on first execution. page.evaluate() runs after the page has
-  // already parsed and executed scripts, which is too late for webkit/Safari
-  // where the auth redirect fires synchronously on script evaluation.
-  // page.addInitScript() injects the snippet ahead of any page code (#9096).
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('kc-has-session', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-    localStorage.setItem('kc-agent-setup-dismissed', 'true')
-    localStorage.setItem('kc-backend-status', JSON.stringify({
-      available: true,
-      timestamp: Date.now(),
-    }))
-  })
-
-  await page.goto('/')
-  await page.waitForLoadState('domcontentloaded')
-  // WebKit/Firefox are slower to stabilize the DOM — wait for the root
-  // layout to be visible so assertions in beforeEach don't time out. (#11003)
-  const ROOT_VISIBLE_TIMEOUT_MS = 15_000
-  await page.locator('#root').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
 }
 
 test.describe('Custom Dashboard Creation', () => {

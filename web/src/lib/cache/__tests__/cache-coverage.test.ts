@@ -1004,9 +1004,22 @@ describe('saveMeta localStorage fallback', () => {
 // ============================================================================
 
 describe('worker-active IndexedDB mirror write', () => {
+  let originalWorker: typeof Worker
+
+  afterEach(() => {
+    // Always restore Worker and reset modules to prevent mock leakage into subsequent tests.
+    // This is critical because globalThis.Worker is a global singleton — if not restored,
+    // subsequent tests will get the mocked version. See #11039.
+    if (originalWorker) {
+      globalThis.Worker = originalWorker
+    }
+    vi.resetModules()
+    vi.doUnmock('../workerRpc')
+  })
+
   it('mirrors data to _idbStorage.set when workerRpc is active', async () => {
     // Mock the Worker constructor so initCacheWorker() doesn't try to spawn a real worker
-    const originalWorker = globalThis.Worker
+    originalWorker = globalThis.Worker
     globalThis.Worker = vi.fn() as unknown as typeof Worker
 
     const mockRpc = {
@@ -1054,7 +1067,6 @@ describe('worker-active IndexedDB mirror write', () => {
     expect(idbSetSpy).toHaveBeenCalledWith('idb-mirror-test', testData)
 
     idbSetSpy.mockRestore()
-    globalThis.Worker = originalWorker
   })
 
   it('does not mirror to IDB when workerRpc is null (fallback mode)', async () => {

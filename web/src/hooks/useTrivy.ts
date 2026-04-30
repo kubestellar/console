@@ -235,6 +235,9 @@ async function fetchSingleCluster(cluster: string): Promise<TrivyClusterStatus> 
 
 export function useTrivy() {
   const { isDemoMode } = useDemoMode()
+  // ⚠️  CAUTION: deduplicatedClusters aggregates reachability across aliases but keeps the primary context name.
+  // If primary context is unreachable/unauthorized but an alias works, this may still include the primary context
+  // in scans. For kubectl-based operations, verify selected context is actually reachable before execution.
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
 
   // Snapshot ref value to avoid reading ref during render
