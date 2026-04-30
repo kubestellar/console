@@ -15,10 +15,21 @@ import { mockApiFallback } from './helpers/setup'
 // Helpers
 // ---------------------------------------------------------------------------
 
-const DEMO_CLUSTERS = ['prod-us-east', 'prod-eu-west', 'staging']
-const _DEMO_NAMESPACES = ['default', 'kube-system', 'monitoring']
+// Must match the first entries from getDemoClusters() in hooks/mcp/shared.ts
+const DEMO_CLUSTERS = [
+  'kind-local', 'minikube', 'k3s-edge', 'eks-prod-us-east-1', 'gke-staging',
+  'aks-dev-westeu', 'openshift-prod', 'oci-oke-phoenix', 'alibaba-ack-shanghai',
+  'do-nyc1-prod', 'rancher-mgmt', 'vllm-gpu-cluster',
+]
+// Must match getDemoNamespaces() in hooks/useCachedData/demoData.ts
+const _DEMO_NAMESPACES = [
+  'default', 'kube-system', 'kube-public', 'monitoring', 'production',
+  'staging', 'batch', 'data', 'ingress', 'security',
+]
 
 async function setupDemoMode(page: Page) {
+  // mockApiFallback returns 503 for the kc-agent probe so fullFetchClusters()
+  // falls through to the built-in getDemoClusters() demo data path.
   await mockApiFallback(page)
 
   await page.route('**/api/me', route =>
@@ -28,20 +39,6 @@ async function setupDemoMode(page: Page) {
       body: JSON.stringify({
         id: '1', github_id: '12345', github_login: 'testuser',
         email: 'test@example.com', onboarded: true,
-      }),
-    })
-  )
-
-  await page.route('**/api/mcp/**', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        clusters: DEMO_CLUSTERS.map(name => ({
-          name, healthy: true, reachable: true, nodeCount: 3, podCount: 10,
-          namespaces: ['default', 'kube-system', 'monitoring'],
-        })),
-        issues: [], events: [], nodes: [],
       }),
     })
   )
@@ -91,13 +88,9 @@ async function setupLiveMode(page: Page) {
     })
   )
 
-  await page.route('**/127.0.0.1:8585/**', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ clusters: [], health: {} }),
-    })
-  )
+  // mockApiFallback already returns 503 for the kc-agent probe. Do NOT
+  // re-register a 200 mock here — a 200 with { clusters: [] } is truthy and
+  // short-circuits the backend-API fallback, leaving the cluster list empty.
 
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
