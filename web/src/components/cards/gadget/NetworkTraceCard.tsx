@@ -24,7 +24,7 @@ export function NetworkTraceCard({ config }: NetworkTraceCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const connections = [...data].slice(0, 20)
+  const connections = (Array.isArray(data) ? data : []).slice(0, 20)
 
   if (showSkeleton) {
     return (

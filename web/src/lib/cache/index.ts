@@ -687,6 +687,17 @@ class CacheStore<T> {
     ssWrite(this.key, data, Date.now())
     try {
       await cacheStorage.set(this.key, data)
+      // When the SQLite worker is the active backend, also mirror data to the
+      // IndexedDB fallback.  This keeps the IDB in-memory snapshot current so
+      // that after a full page navigation (page.goto / F5) the CacheStore
+      // constructor can hydrate via getFromSnapshot() *before* the worker
+      // re-initialises.  Without this, cards that relied solely on worker
+      // storage would show a skeleton flash after navigation because the IDB
+      // snapshot had stale/missing data.  Fire-and-forget — IDB write failures
+      // are non-fatal since sessionStorage is the primary sync fallback.
+      if (workerRpc) {
+        _idbStorage.set(this.key, data).catch(() => { /* best-effort IDB mirror */ })
+      }
     } catch (e: unknown) {
       console.error(`[Cache] Failed to save ${this.key}:`, e)
     }

@@ -23,7 +23,7 @@ export function DNSTraceCard({ config }: DNSTraceCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const queries = [...data].slice(0, 20)
+  const queries = (Array.isArray(data) ? data : []).slice(0, 20)
   const failures = data.filter(d => d.responseCode !== 'NOERROR')
 
   if (showSkeleton) {

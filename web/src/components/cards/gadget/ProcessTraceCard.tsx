@@ -23,7 +23,7 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const processes = [...data].slice(0, 20)
+  const processes = (Array.isArray(data) ? data : []).slice(0, 20)
 
   if (showSkeleton) {
     return (

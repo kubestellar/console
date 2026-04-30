@@ -23,7 +23,7 @@ export function SecurityAuditCard({ config }: SecurityAuditCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const audits = [...data].slice(0, 20)
+  const audits = (Array.isArray(data) ? data : []).slice(0, 20)
 
   if (showSkeleton) {
     return (
