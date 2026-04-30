@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { Globe, Server, Cloud, ZoomIn, ZoomOut, Maximize2, Filter, X } from 'lucide-react'
 import { useClusters, type ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -10,8 +10,8 @@ import DOMPurify from 'dompurify'
 import WorldMapSvgUrl from '../../assets/world-map.svg'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCache } from '../../lib/cache'
 import { CLUSTER_MARKER_FONT_SIZE } from '../../lib/constants'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 
@@ -226,7 +226,6 @@ type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { showToast } = useToast()
   const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
@@ -246,37 +245,20 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     isAllClustersSelected,
     customFilter } = useGlobalFilters()
 
-  // Map SVG state
-  const [mapSvg, setMapSvg] = useState<string>('')
-  const [mapLoading, setMapLoading] = useState(true)
-  const [mapError, setMapError] = useState(false)
-
-  // Fetch SVG content
-  useEffect(() => {
-    const controller = new AbortController()
-    setMapLoading(true)
-    setMapError(false)
-    
-    fetch(WorldMapSvgUrl, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS)]) })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load map')
-        return res.text()
-      })
-      .then(svg => {
-        // Sanitize SVG to prevent XSS from embedded scripts or event handlers
-        setMapSvg(DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }))
-        setMapLoading(false)
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === 'AbortError') return
-        console.error('Failed to load world map:', err)
-        showToast('Failed to load world map', 'error')
-        setMapError(true)
-        setMapLoading(false)
-      })
-    
-    return () => controller.abort()
-  }, [])
+  // Map SVG via useCache (persists across navigation, avoids re-fetch)
+  const { data: mapSvg, isLoading: mapLoading, isFailed: mapError } = useCache<string>({
+    key: 'cluster-locations-map-svg',
+    initialData: '',
+    persist: true,
+    fetcher: async () => {
+      const res = await fetch(WorldMapSvgUrl, { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      if (!res.ok) throw new Error('Failed to load map')
+      const svg = await res.text()
+      // Sanitize SVG to prevent XSS from embedded scripts or event handlers
+      return DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } })
+    },
+    autoRefresh: false,
+  })
 
   // Map controls state
   const [zoom, setZoom] = useState(1)

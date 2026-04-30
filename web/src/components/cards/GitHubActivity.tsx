@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect, useCallback, useImperativeHandle, memo, type Ref } from 'react'
+import { useState, useMemo, useImperativeHandle, memo, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
-import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
-import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
+import { MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { formatTimeAgo } from '../../lib/formatters'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCache } from '../../lib/cache'
 import { cn } from '../../lib/cn'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardData } from '../../lib/cards/cardHooks'
@@ -121,53 +121,6 @@ const DEFAULT_REPO = 'kubestellar/console'
 // LocalStorage key for saved repos
 const SAVED_REPOS_KEY = 'github_activity_saved_repos'
 const CURRENT_REPO_KEY = 'github_activity_repo'
-const CACHE_KEY_PREFIX = 'github_activity_cache_v2_' // v2: fixed PR fetching
-const CACHE_TTL_MS = 5 * MS_PER_MINUTE // 5 minutes cache TTL - shorter for fresher data
-
-// Cache data structure
-interface CachedGitHubData {
-  timestamp: number
-  repoInfo: GitHubRepo | null
-  prs: GitHubPR[]
-  issues: GitHubIssue[]
-  releases: GitHubRelease[]
-  contributors: GitHubContributor[]
-  openPRCount: number
-  openIssueCount: number
-}
-
-// Get cached data for a repo
-function getCachedData(repo: string): CachedGitHubData | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const cached = localStorage.getItem(CACHE_KEY_PREFIX + repo.replace('/', '_'))
-    if (!cached) return null
-    const data = JSON.parse(cached) as CachedGitHubData
-    // Check if cache is still fresh
-    if (Date.now() - data.timestamp < CACHE_TTL_MS) {
-      return data
-    }
-    return null // Cache expired
-  } catch {
-    return null
-  }
-}
-
-// Save data to cache
-function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>, onError?: (msg: string) => void) {
-  try {
-    const cached: CachedGitHubData = {
-      ...data,
-      timestamp: Date.now()
-    }
-    localStorage.setItem(CACHE_KEY_PREFIX + repo.replace('/', '_'), JSON.stringify(cached))
-  } catch (e: unknown) {
-    // Non-critical: localStorage may be full or disabled. The card still
-    // works, it just won't persist cached data across page reloads.
-    console.warn('[GitHubActivity] Failed to cache data (storage may be full):', e)
-    onError?.('[GitHubActivity] Failed to cache data. Browser storage may be full.')
-  }
-}
 
 // Get saved repos from localStorage
 function getSavedRepos(): string[] {
@@ -244,107 +197,65 @@ function getDemoGitHubData(repoName: string) {
   return { prs, issues, releases, contributors, repoInfo, openPRCount: 2, openIssueCount: 2 }
 }
 
-// Custom hook for GitHub data fetching
+// Custom hook for GitHub data fetching via useCache (SWR, demo fallback, persistence)
+interface GitHubActivityData {
+  repoInfo: GitHubRepo | null
+  prs: GitHubPR[]
+  issues: GitHubIssue[]
+  releases: GitHubRelease[]
+  contributors: GitHubContributor[]
+  openPRCount: number
+  openIssueCount: number
+}
+
+const INITIAL_GITHUB_DATA: GitHubActivityData = {
+  repoInfo: null,
+  prs: [],
+  issues: [],
+  releases: [],
+  contributors: [],
+  openPRCount: 0,
+  openIssueCount: 0,
+}
+
 function useGitHubActivity(config?: GitHubActivityConfig) {
-  const [prs, setPRs] = useState<GitHubPR[]>([])
-  const [issues, setIssues] = useState<GitHubIssue[]>([])
-  const [releases, setReleases] = useState<GitHubRelease[]>([])
-  const [contributors, setContributors] = useState<GitHubContributor[]>([])
-  const [repoInfo, setRepoInfo] = useState<GitHubRepo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
-  const [openPRCount, setOpenPRCount] = useState(0)
-  const [openIssueCount, setOpenIssueCount] = useState(0)
-  const { isDemoMode } = useDemoMode()
   const { showToast } = useToast()
 
   // Use configured repos or default to kubestellar/console
   const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
-  const org = config?.org
-  // Note: Token stored in localStorage base64 encoded - decode before use
-  // Token is injected server-side by the GitHub proxy — no client-side token needed
-  const reposKey = useMemo(() => repos.join(','), [repos])
+  const targetRepo = repos[0] || DEFAULT_REPO
 
-  const fetchGitHubData = useCallback(async (isManualRefresh = false, signal?: AbortSignal) => {
-    if (isDemoMode) {
-      const targetRepo = repos[0] || DEFAULT_REPO
-      const demo = getDemoGitHubData(targetRepo)
-      if (signal?.aborted) return
-      setRepoInfo(demo.repoInfo)
-      setPRs(demo.prs)
-      setIssues(demo.issues)
-      setReleases(demo.releases)
-      setContributors(demo.contributors)
-      setOpenPRCount(demo.openPRCount)
-      setOpenIssueCount(demo.openIssueCount)
-      setIsLoading(false)
-      setLastRefresh(new Date())
-      setError(null)
-      return
-    }
+  const demoData = useMemo(() => getDemoGitHubData(targetRepo), [targetRepo])
 
-    if (repos.length === 0 && !org) {
-      setIsLoading(false)
-      setError('No repositories or organization configured')
-      return
-    }
-
-    // For simplicity, fetch data for the first repo
-    const targetRepo = repos[0]
-
-    if (!targetRepo) {
-      setIsLoading(false)
-      setError('No valid repository specified. Please configure at least one repository in the format "owner/repo".')
-      return
-    }
-
-    // Check cache first (unless manual refresh)
-    if (!isManualRefresh) {
-      const cached = getCachedData(targetRepo)
-      // Use cached data only if it has valid PR data (not empty from old buggy cache)
-      if (cached && cached.prs && cached.prs.length > 0) {
-        if (signal?.aborted) return
-        setRepoInfo(cached.repoInfo)
-        setPRs(cached.prs)
-        setIssues(cached.issues)
-        setReleases(cached.releases)
-        setContributors(cached.contributors)
-        setOpenPRCount(cached.openPRCount)
-        setOpenIssueCount(cached.openIssueCount)
-        setLastRefresh(new Date(cached.timestamp))
-        setIsLoading(false)
-        setError(null)
-        return
-      }
-    }
-
-    if (isManualRefresh) {
-      setIsRefreshing(true)
-    } else {
-      setIsLoading(true)
-    }
-    setError(null)
-
-    try {
+  const {
+    data,
+    isLoading,
+    isRefreshing,
+    error,
+    isDemoFallback,
+    isFailed,
+    consecutiveFailures,
+    refetch,
+  } = useCache<GitHubActivityData>({
+    key: `github-activity-${targetRepo}`,
+    category: 'default',
+    initialData: INITIAL_GITHUB_DATA,
+    demoData: demoData,
+    persist: true,
+    demoWhenEmpty: true,
+    isEmpty: (d) => !d.repoInfo && d.prs.length === 0,
+    fetcher: async () => {
       const headers: HeadersInit = {
         'Accept': 'application/vnd.github.v3+json' }
-      // Use the provided signal for all fetch calls to support cancellation
-      const fetchOptions = { headers, signal }
+      const fetchOptions = { headers }
 
       // Fetch repository info
       const repoResponse = await fetch(`/api/github/repos/${targetRepo}`, fetchOptions)
       if (!repoResponse.ok) throw await githubFetchError(repoResponse, 'Failed to fetch repo')
-      // Use .catch() directly on .json() to prevent Firefox from firing unhandledrejection
-      // before the outer try/catch processes the rejection (Firefox-specific microtask timing).
       const repoData = await repoResponse.json().catch(() => null)
       if (!repoData) throw new Error('Failed to parse GitHub repo response: invalid JSON')
-      if (signal?.aborted) return
-      setRepoInfo(repoData)
 
-      // Fetch open PRs and closed/merged PRs separately to ensure we get merged PRs
-      // For active repos, all "recently updated" PRs might be open ones
+      // Fetch open PRs and closed/merged PRs separately
       const [openPRsResponse, closedPRsResponse] = await Promise.all([
         fetch(`/api/github/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, fetchOptions),
         fetch(`/api/github/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, fetchOptions)
@@ -357,14 +268,9 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const closedPRsData = await closedPRsResponse.json().catch(() => null)
       if (!openPRsData || !closedPRsData) throw new Error('Failed to parse GitHub PR response: invalid JSON')
 
-      // Combine and sort by updated_at (most recent first)
-      const allPRs = [...openPRsData, ...closedPRsData]
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-        .slice(0, 100) // Keep top 100 for display
-
-      if (signal?.aborted) return
-      setPRs(allPRs)
-      setOpenPRCount(openPRsData.length)
+      const allPRs = [...(openPRsData || []), ...(closedPRsData || [])]
+        .sort((a: GitHubPR, b: GitHubPR) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 100)
 
       // Fetch open Issues count and recent issues
       const [openIssuesResponse, recentIssuesResponse] = await Promise.all([
@@ -372,7 +278,6 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
         fetch(`/api/github/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, fetchOptions)
       ])
 
-      // Get open issue count from Link header or response body
       let calculatedOpenIssueCount = 0
       if (openIssuesResponse.ok) {
         const linkHeader = openIssuesResponse.headers.get('Link')
@@ -383,111 +288,50 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
           const openIssues = await openIssuesResponse.json().catch(() => null)
           calculatedOpenIssueCount = (openIssues || []).filter((i: GitHubIssue & { pull_request?: unknown }) => !i.pull_request).length
         }
-        if (signal?.aborted) return
-        setOpenIssueCount(calculatedOpenIssueCount)
       }
 
       if (!recentIssuesResponse.ok) throw await githubFetchError(recentIssuesResponse, 'Failed to fetch issues')
       const issuesData: GitHubIssue[] = await recentIssuesResponse.json().catch(() => null) ?? []
-      // Filter out pull requests (they come with issues endpoint but have pull_request field)
       const filteredIssues = issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request)
-      if (signal?.aborted) return
-      setIssues(filteredIssues)
 
       // Fetch Releases
       const releasesResponse = await fetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, fetchOptions)
       if (!releasesResponse.ok) throw await githubFetchError(releasesResponse, 'Failed to fetch releases')
       const releasesData = await releasesResponse.json().catch(() => null)
       if (!releasesData) throw new Error('Failed to parse GitHub releases response: invalid JSON')
-      if (signal?.aborted) return
-      setReleases(releasesData)
 
       // Fetch Contributors
       const contributorsResponse = await fetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, fetchOptions)
       if (!contributorsResponse.ok) throw await githubFetchError(contributorsResponse, 'Failed to fetch contributors')
       const contributorsData = await contributorsResponse.json().catch(() => null)
       if (!contributorsData) throw new Error('Failed to parse GitHub contributors response: invalid JSON')
-      if (signal?.aborted) return
-      setContributors(contributorsData)
 
-      // Cache the fetched data using the calculated counts
-      setCachedData(targetRepo, {
+      return {
         repoInfo: repoData,
         prs: allPRs,
         issues: filteredIssues,
         releases: releasesData,
         contributors: contributorsData,
-        openPRCount: openPRsData.length,
-        openIssueCount: calculatedOpenIssueCount }, (msg) => showToast(msg, 'warning'))
-
-      setLastRefresh(new Date())
-    } catch (err: unknown) {
-      // Abort errors are expected during cleanup — do not treat as failures
-      if (err instanceof DOMException && err.name === 'AbortError') return
-      if (signal?.aborted) return
-
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch GitHub data'
-      console.error('GitHub API error:', err)
-
-      // Try to use stale cache as fallback (ignore TTL)
-      try {
-        const cachedStr = localStorage.getItem(CACHE_KEY_PREFIX + targetRepo.replace('/', '_'))
-        if (cachedStr) {
-          const cached = JSON.parse(cachedStr) as CachedGitHubData
-          setRepoInfo(cached.repoInfo)
-          setPRs(cached.prs)
-          setIssues(cached.issues)
-          setReleases(cached.releases)
-          setContributors(cached.contributors)
-          setOpenPRCount(cached.openPRCount)
-          setOpenIssueCount(cached.openIssueCount)
-          setLastRefresh(new Date(cached.timestamp))
-          // Show warning that we're using cached data
-          setError(`Using cached data (${formatTimeAgo(new Date(cached.timestamp).toISOString(), { extended: true })}). ${errorMessage}`)
-          return
-        }
-      } catch {
-        // Cache read failed, show original error
+        openPRCount: (openPRsData || []).length,
+        openIssueCount: calculatedOpenIssueCount,
       }
-
-      setError(errorMessage)
-    } finally {
-      if (!signal?.aborted) {
-        setIsLoading(false)
-        setIsRefreshing(false)
-      }
-    }
-  }, [isDemoMode, repos, org])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetchGitHubData(false, controller.signal).catch(() => { /* errors handled inside fetchGitHubData */ })
-    // Auto-refresh every 60 seconds (bypasses cache for fresh data) — skip in demo mode
-    let interval: ReturnType<typeof setInterval> | undefined
-    if (!isDemoMode) {
-      interval = setInterval(() => fetchGitHubData(true, controller.signal).catch(() => { /* errors handled inside fetchGitHubData */ }), POLL_INTERVAL_SLOW_MS)
-    }
-    return () => {
-      controller.abort()
-      if (interval) clearInterval(interval)
-    }
-     
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reposKey, org, isDemoMode])
+    },
+  })
 
   return {
-    prs,
-    issues,
-    releases,
-    contributors,
-    repoInfo,
+    prs: data.prs,
+    issues: data.issues,
+    releases: data.releases,
+    contributors: data.contributors,
+    repoInfo: data.repoInfo,
     isLoading,
     isRefreshing,
     error,
-    lastRefresh,
-    openPRCount,
-    openIssueCount,
-    refetch: () => fetchGitHubData(true) }
+    lastRefresh: new Date(),
+    openPRCount: data.openPRCount,
+    openIssueCount: data.openIssueCount,
+    isDemoData: isDemoFallback && !isLoading,
+    refetch: () => refetch() }
 }
 
 // Sort comparators for GitHub items (open-first sorting applied separately after)
@@ -565,12 +409,14 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
     contributors,
     repoInfo,
     isLoading,
+    isRefreshing,
     error,
+    isDemoData,
     refetch } = useGitHubActivity(effectiveConfig)
   const { isDemoMode } = useDemoMode()
 
   const hasData = !!repoInfo
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode || isDemoData })
 
   // Expose refresh method via ref for CardWrapper refresh button
   useImperativeHandle(ref, () => ({

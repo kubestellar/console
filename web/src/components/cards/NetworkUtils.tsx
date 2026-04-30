@@ -5,6 +5,7 @@ import {
   AlertTriangle, Loader2
 } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 // Types
@@ -57,6 +58,19 @@ const PING_INTERVALS = [
   { value: 30000, label: '30s' },
 ]
 
+// Demo ping result for demo mode (avoids backend API calls)
+function getDemoPingResult(host: string): PingResult {
+  const DEMO_LATENCIES = [12, 45, 28, 67, 8, 35, 92]
+  const latency = DEMO_LATENCIES[Math.abs(host.length) % DEMO_LATENCIES.length]
+  return {
+    host,
+    latency,
+    status: 'success',
+    timestamp: new Date(),
+    statusCode: 200,
+  }
+}
+
 // Default hosts to ping
 const DEFAULT_HOSTS = [
   'https://www.google.com',
@@ -66,9 +80,10 @@ const DEFAULT_HOSTS = [
 
 export function NetworkUtils() {
   const { t } = useTranslation()
+  const { isDemoMode } = useDemoMode()
   const [activeTab, setActiveTab] = useState<'ping' | 'ports' | 'info'>('ping')
   const [isInitialized, setIsInitialized] = useState(false)
-  useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized, isDemoData: false })
+  useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized, isDemoData: isDemoMode })
   const [savedHosts, setSavedHosts] = useState<SavedHost[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -131,7 +146,11 @@ export function NetworkUtils() {
   // The backend performs a real HTTP HEAD request and returns the actual
   // status code and server-side measured latency, avoiding the browser's
   // no-cors limitation where opaque responses hide failures.
+  // In demo mode, returns simulated results to avoid backend dependency.
   const pingHost = useCallback(async (host: string): Promise<PingResult> => {
+    if (isDemoMode) {
+      return getDemoPingResult(host)
+    }
     try {
       // Ensure URL has protocol for the backend
       let targetUrl = host
@@ -191,7 +210,7 @@ export function NetworkUtils() {
         timestamp: new Date(),
         error: error instanceof Error ? error.message : 'unknown error' }
     }
-  }, [])
+  }, [isDemoMode])
 
   // Ping all saved hosts
   const pingAllHosts = useCallback(async () => {

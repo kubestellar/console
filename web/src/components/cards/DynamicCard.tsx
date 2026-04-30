@@ -9,6 +9,7 @@ import { useCardData } from '../../lib/cards/cardHooks'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useCardDemoState, useReportCardDataState } from './CardDataContext'
 import { cn } from '../../lib/cn'
+import { useCache } from '../../lib/cache'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/dynamic-cards/types'
 import type { CardComponentProps, CardComponent } from './cardRegistry'
 import { useTranslation } from 'react-i18next'
@@ -117,13 +118,38 @@ export interface Tier1Props {
 
 export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const { t } = useTranslation(['cards', 'common'])
-  const [apiData, setApiData] = useState<Record<string, unknown>[]>([])
-  const [apiLoading, setApiLoading] = useState(false)
-  const [apiError, setApiError] = useState<string | null>(null)
 
   // Compute validation flags up front (before hooks) to keep hook call order stable (#4910)
   const isInvalidConfig = !cardDefinition || typeof cardDefinition !== 'object'
   const isMissingEndpoint = !isInvalidConfig && cardDefinition?.dataSource === 'api' && !cardDefinition?.apiEndpoint
+
+  const isApiSource = !isInvalidConfig && cardDefinition?.dataSource === 'api'
+  const apiEndpoint = cardDefinition?.apiEndpoint || ''
+
+  // API data via useCache (persists across navigation, SWR pattern, demo fallback)
+  const {
+    data: apiData,
+    isLoading: apiLoading,
+    isFailed: apiFailed,
+    isDemoFallback,
+    error: apiError,
+    consecutiveFailures,
+  } = useCache<Record<string, unknown>[]>({
+    key: `dynamic-card-api-${apiEndpoint}`,
+    initialData: [],
+    demoData: [{ id: 'demo-1', name: 'Demo Item', status: 'active' }],
+    persist: true,
+    enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint,
+    fetcher: async () => {
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const res = await fetch(apiEndpoint, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      return Array.isArray(json) ? json : (json.items || json.data || [json])
+    },
+  })
 
   const data = isInvalidConfig
     ? []
@@ -132,46 +158,14 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
         : apiData)
 
   // Report loading state to CardWrapper so header stays in sync with body (#5208)
-  const isApiSource = !isInvalidConfig && cardDefinition?.dataSource === 'api'
   useReportCardDataState({
-    isFailed: !!apiError,
-    consecutiveFailures: apiError ? 1 : 0,
+    isFailed: apiFailed,
+    consecutiveFailures,
     errorMessage: apiError ?? undefined,
     isLoading: isApiSource ? apiLoading : false,
     hasData: isApiSource ? apiData.length > 0 : true,
-    isDemoData: false,
+    isDemoData: isDemoFallback && !apiLoading,
   })
-
-  // Fetch API data if needed
-  useEffect(() => {
-    if (isInvalidConfig || isMissingEndpoint) return
-    if (cardDefinition?.dataSource !== 'api' || !cardDefinition?.apiEndpoint) return
-
-    let cancelled = false
-    setApiLoading(true)
-    setApiError(null)
-
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-    fetch(cardDefinition.apiEndpoint, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
-      .then((json) => {
-        if (cancelled) return
-        setApiData(Array.isArray(json) ? json : json.items || json.data || [json])
-        setApiLoading(false)
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        setApiError(err instanceof Error ? err.message : String(err))
-        setApiLoading(false)
-      })
-
-    return () => { cancelled = true }
-  }, [isInvalidConfig, isMissingEndpoint, cardDefinition?.dataSource, cardDefinition?.apiEndpoint])
 
   // useCardData for search/pagination — guard against undefined cardDefinition
   const searchFields = ((cardDefinition?.searchFields || []) as (keyof Record<string, unknown>)[])

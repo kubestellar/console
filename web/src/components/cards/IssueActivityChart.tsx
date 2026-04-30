@@ -8,7 +8,7 @@
  * Falls back to demo data when in demo mode.
  */
 
-import { memo, useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { memo, useState, useMemo, useCallback, useRef } from 'react'
 import { LazyEChart } from '../charts/LazyEChart'
 import type ReactEChartsType from 'echarts-for-react'
 import { Calendar, RefreshCw, GitPullRequest } from 'lucide-react'
@@ -18,8 +18,8 @@ import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
 import { Button } from '../ui/Button'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { useToast } from '../ui/Toast'
 import { useCardLoadingState } from './CardDataContext'
+import { useCache } from '../../lib/cache'
 import {
   CHART_TOOLTIP_CONTENT_STYLE,
   CHART_TOOLTIP_TEXT_COLOR,
@@ -39,7 +39,7 @@ import {
   CHART_LEGEND_FONT_SIZE,
 } from '../../lib/constants'
 import { hexToRgba } from '../../lib/theme/chartColors'
-import { MS_PER_DAY, MS_PER_HOUR } from '../../lib/constants/time'
+import { MS_PER_DAY } from '../../lib/constants/time'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -57,10 +57,6 @@ const GITHUB_PER_PAGE = 100
  * cap only matters as a safety bound.
  */
 const MAX_PAGES = 30
-/** Cache TTL in milliseconds (1 hour) */
-const CACHE_TTL_MS = MS_PER_HOUR
-/** LocalStorage cache key prefix */
-const CACHE_KEY_PREFIX = 'issue_activity_chart_cache_'
 const CHART_GRID_LEFT = 50
 const CHART_GRID_RIGHT = 50
 const CHART_GRID_TOP = 40
@@ -111,41 +107,6 @@ interface DailyStats {
 interface IssueActivityConfig {
   repo?: string
   days?: number
-}
-
-interface CachedIssueData {
-  timestamp: number
-  stats: DailyStats[]
-  repo: string
-  days: number
-}
-
-// ── Cache helpers ───────────────────────────────────────────────────────────
-
-function getCacheKey(repo: string, days: number): string {
-  return `${CACHE_KEY_PREFIX}${repo.replace('/', '_')}_${days}`
-}
-
-function getCachedStats(repo: string, days: number): DailyStats[] | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = localStorage.getItem(getCacheKey(repo, days))
-    if (!raw) return null
-    const cached: CachedIssueData = JSON.parse(raw)
-    if (Date.now() - cached.timestamp > CACHE_TTL_MS) return null
-    return cached.stats
-  } catch {
-    return null
-  }
-}
-
-function setCachedStats(repo: string, days: number, stats: DailyStats[]): void {
-  try {
-    const data: CachedIssueData = { timestamp: Date.now(), stats, repo, days }
-    localStorage.setItem(getCacheKey(repo, days), JSON.stringify(data))
-  } catch {
-    // Storage might be full — silently ignore
-  }
 }
 
 // ── Date helpers ────────────────────────────────────────────────────────────
@@ -314,78 +275,44 @@ async function fetchIssueStats(
 const IssueActivityChart = memo(function IssueActivityChart(props: { config?: IssueActivityConfig }) {
   const { t } = useTranslation('cards')
   const { isDemoMode } = useDemoMode()
-  const { showToast } = useToast()
   const shared = usePipelineFilter()
   const repo = shared?.repoFilter || props.config?.repo || DEFAULT_REPO
   const initialDays = props.config?.days || DEFAULT_LOOKBACK_DAYS
 
   const [days, setDays] = useState(initialDays)
-  const [stats, setStats] = useState<DailyStats[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isDemoFallback, setIsDemoFallback] = useState(false)
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({
     start: ZOOM_RANGE_START,
     end: ZOOM_RANGE_END,
   })
   const chartRef = useRef<ReactEChartsType>(null)
 
-  const hasData = stats.length > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode || isDemoFallback })
+  const demoData = useMemo(() => generateDemoData(days), [days])
 
-  const loadData = useCallback(async (lookbackDays: number, signal?: AbortSignal) => {
-    // No early demo guard — try live data first (liveInDemoMode pattern).
-    // Falls back to demo fixtures in the fetch-error catch path.
-
-    // Check cache
-    const cached = getCachedStats(repo, lookbackDays)
-    if (cached) {
-      setStats(cached)
-      setIsLoading(false)
-      setError(null)
-      setIsDemoFallback(false)
-      return
-    }
-
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await fetchIssueStats(repo, lookbackDays, signal, (partial) => {
-        // Show issues data immediately while PRs are still loading
-        if (!signal?.aborted) {
-          setStats(partial)
-          setIsLoading(false)
-          setIsDemoFallback(false)
-        }
+  // Issue stats via useCache (SWR pattern, persistent cache, demo fallback)
+  const {
+    data: stats,
+    isLoading,
+    isRefreshing,
+    isDemoFallback,
+    error,
+    refetch,
+  } = useCache<DailyStats[]>({
+    key: `issue-activity-chart-${repo}-${days}`,
+    initialData: [],
+    demoData: demoData,
+    persist: true,
+    demoWhenEmpty: true,
+    isEmpty: (d) => d.length === 0,
+    progressiveFetcher: async (onProgress) => {
+      return fetchIssueStats(repo, days, undefined, (partial) => {
+        onProgress(partial)
       })
-      if (signal?.aborted) return
-      setStats(data)
-      setIsDemoFallback(false)
-      setCachedStats(repo, lookbackDays, data)
-    } catch (err: unknown) {
-      if (signal?.aborted) return
-      const message = err instanceof Error ? err.message : 'Failed to fetch issue data'
-      setError(message)
-      // If we already have partial data (issues loaded, PRs failed), keep it.
-      // Only fall back to demo data if we have nothing at all.
-      setStats((prev) => {
-        if (prev.length > 0 && prev.some(d => d.opened > 0 || d.closed > 0)) {
-          // Keep partial real data — PRs column will just be zero
-          return prev
-        }
-        setIsDemoFallback(true)
-        return generateDemoData(lookbackDays)
-      })
-    } finally {
-      if (!signal?.aborted) setIsLoading(false)
-    }
-  }, [isDemoMode, repo])
+    },
+    fetcher: async () => fetchIssueStats(repo, days),
+  })
 
-  useEffect(() => {
-    const controller = new AbortController()
-    loadData(days, controller.signal)
-    return () => controller.abort()
-  }, [days, loadData])
+  const hasData = (stats || []).length > 0
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode || (isDemoFallback && !isLoading) })
 
   // Compute summary stats from the visible zoom window
   const visibleStats = useMemo(() => {
@@ -625,10 +552,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
             size="sm"
             className="h-6 w-6 p-0"
             onClick={() => {
-              // Clear cache and reload
-              try { localStorage.removeItem(getCacheKey(repo, days)) } catch { /* ignore */ }
-              loadData(days)
-              showToast('Chart data refreshed', 'info')
+              refetch()
             }}
             title={t('issueActivityChart.refresh', 'Refresh')}
           >
