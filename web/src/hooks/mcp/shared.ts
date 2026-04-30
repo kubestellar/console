@@ -48,15 +48,20 @@ export const LOCAL_AGENT_URL = LOCAL_AGENT_HTTP_URL
 
 const AGENT_TOKEN_STORAGE_KEY = 'kc-agent-token'
 const AGENT_TOKEN_FETCH_TIMEOUT_MS = 5000
+/** How long to remember that the backend returned no token (avoids repeated 5s timeouts). */
+const AGENT_TOKEN_NEGATIVE_CACHE_MS = 30_000
 
 let agentTokenPromise: Promise<string> | null = null
 /** Session-level dedup: only emit one agent_token_failure per page load */
 let agentTokenFailureEmitted = false
+/** Timestamp of last negative result (empty/error) — used for short-TTL in-memory cache. */
+let agentTokenNegativeCacheUntil = 0
 
 /** Reset internal getAgentToken state — exposed for tests only. */
 export function _resetAgentTokenState(): void {
   agentTokenPromise = null
   agentTokenFailureEmitted = false
+  agentTokenNegativeCacheUntil = 0
 }
 
 /**
@@ -66,12 +71,18 @@ export function _resetAgentTokenState(): void {
  * On Netlify / demo mode there is no kc-agent backend, so we skip the
  * fetch entirely to avoid 404 → HTML parse errors that pollute GA4
  * (#10643, root cause of the 48-hour blank dashboard in #10398).
+ *
+ * Negative results (empty token or fetch error) are cached in memory for
+ * AGENT_TOKEN_NEGATIVE_CACHE_MS to avoid repeated 5s timeouts (#11120).
  */
 function getAgentToken(): Promise<string> {
   if (isDemoMode() || isNetlifyDeployment || isLocalAgentSuppressed()) return Promise.resolve('')
 
   const cached = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   if (cached) return Promise.resolve(cached)
+
+  // Short-circuit if we recently got an empty/failed result
+  if (Date.now() < agentTokenNegativeCacheUntil) return Promise.resolve('')
 
   if (!agentTokenPromise) {
     agentTokenPromise = fetch('/api/agent/token', {
@@ -83,14 +94,18 @@ function getAgentToken(): Promise<string> {
         const token = data.token || ''
         if (token) {
           localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, token)
-        } else if (!agentTokenFailureEmitted) {
-          agentTokenFailureEmitted = true
-          emitAgentTokenFailure('empty token from /api/agent/token')
+        } else {
+          agentTokenNegativeCacheUntil = Date.now() + AGENT_TOKEN_NEGATIVE_CACHE_MS
+          if (!agentTokenFailureEmitted) {
+            agentTokenFailureEmitted = true
+            emitAgentTokenFailure('empty token from /api/agent/token')
+          }
         }
         agentTokenPromise = null
         return token
       })
       .catch((err) => {
+        agentTokenNegativeCacheUntil = Date.now() + AGENT_TOKEN_NEGATIVE_CACHE_MS
         if (!agentTokenFailureEmitted) {
           agentTokenFailureEmitted = true
           emitAgentTokenFailure(err?.message || 'network error')
@@ -108,13 +123,7 @@ function getAgentToken(): Promise<string> {
  * requests to kc-agent are rejected when KC_AGENT_TOKEN is configured.
  */
 export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  // Check if we're calling the local agent (127.0.0.1:8585)
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
-  const isLocalAgent = url.includes('127.0.0.1:8585') || url.includes('localhost:8585')
-  
-  // Skip token fetch for local agent in dev mode to avoid 5-second timeout
-  // that causes cluster health checks to fail (#11120)
-  const token = isLocalAgent ? '' : await getAgentToken()
+  const token = await getAgentToken()
   const headers = new Headers(init?.headers)
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
