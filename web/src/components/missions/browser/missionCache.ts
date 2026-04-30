@@ -177,16 +177,17 @@ export async function fetchMissionContent(
 
     // Extract steps from the nested `mission` object (console-kb file format)
     // Falls back to top-level fields if the nested structure isn't present
-    const nested = (parsed as Record<string, Record<string, unknown>>).mission || {}
-    const fileMeta = (parsed as Record<string, Record<string, unknown>>).metadata || {}
+    const nested = ((parsed as Record<string, unknown>).mission || {}) as Partial<MissionExport>
+    const topLevel = parsed as Partial<MissionExport>
+    const fileMeta = ((parsed as Record<string, unknown>).metadata || {}) as NonNullable<MissionExport['metadata']>
     const merged: MissionExport = {
       ...indexMission,
-      steps: nested.steps || parsed.steps || indexMission.steps,
-      uninstall: nested.uninstall || parsed.uninstall,
-      upgrade: nested.upgrade || parsed.upgrade,
-      troubleshooting: nested.troubleshooting || parsed.troubleshooting,
-      resolution: nested.resolution || parsed.resolution,
-      prerequisites: parsed.prerequisites || indexMission.prerequisites,
+      steps: nested.steps || topLevel.steps || indexMission.steps,
+      uninstall: nested.uninstall || topLevel.uninstall,
+      upgrade: nested.upgrade || topLevel.upgrade,
+      troubleshooting: nested.troubleshooting || topLevel.troubleshooting,
+      resolution: nested.resolution || topLevel.resolution,
+      prerequisites: topLevel.prerequisites || indexMission.prerequisites,
       metadata: {
         ...indexMission.metadata,
         qualityScore: fileMeta.qualityScore,
