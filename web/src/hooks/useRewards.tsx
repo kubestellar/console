@@ -480,3 +480,16 @@ export function useRewards() {
 
 // Export for components that need action info
 export { REWARD_ACTIONS, ACHIEVEMENTS }
+
+export const __testables = {
+  generateId,
+  loadRewards,
+  saveRewards,
+  createInitialRewards,
+  resolveRewardsUserId,
+  checkAchievements,
+  REWARDS_STORAGE_KEY,
+  MAX_REWARD_EVENTS,
+  RECENT_EVENTS_LIMIT,
+  DEMO_REWARDS_USER_ID,
+}

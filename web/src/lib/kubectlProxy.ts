@@ -1287,3 +1287,8 @@ export interface Deployment {
 
 // Singleton instance
 export const kubectlProxy = new KubectlProxy()
+
+export const __testables = {
+  parseResourceQuantity,
+  parseResourceQuantityMillicores,
+}

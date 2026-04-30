@@ -702,3 +702,12 @@ if (typeof window !== 'undefined') {
     }, 0)
   })
 }
+
+export const __storageTestables = {
+  getDemoPVCs,
+  getDemoResourceQuotas,
+  getDemoLimitRanges,
+  loadPVCsCacheFromStorage,
+  savePVCsCacheToStorage,
+  PVCS_CACHE_KEY,
+}

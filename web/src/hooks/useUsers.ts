@@ -727,3 +727,9 @@ export function useClusterPermissions(cluster?: string) {
 
   return { permissions, isLoading, error, refetch: fetchPermissions }
 }
+
+export const __testables = {
+  agentAuthHeaders,
+  getDemoConsoleUsers,
+  getDemoUserManagementSummary,
+}

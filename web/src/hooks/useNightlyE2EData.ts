@@ -174,3 +174,12 @@ export function useNightlyE2EData() {
     refetch: cacheResult.refetch,
   }
 }
+
+export const __testables = {
+  loadCachedData,
+  saveCachedData,
+  getAuthHeaders,
+  REFRESH_IDLE_MS,
+  REFRESH_ACTIVE_MS,
+  LS_CACHE_KEY,
+}

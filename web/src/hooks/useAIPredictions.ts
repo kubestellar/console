@@ -540,3 +540,12 @@ export function syncSettingsToBackend(): void {
     }))
   }
 }
+
+export const __testables = {
+  aiPredictionToRisk,
+  DEMO_AI_PREDICTIONS,
+  DEGRADED_RECONNECT_INTERVAL_MS,
+  POLL_INTERVAL_MS,
+  ANALYSIS_POLL_INTERVAL_MS,
+  ANALYSIS_MAX_TIMEOUT_MS,
+}
