@@ -85,3 +85,82 @@
 - `reviewer-m3s`: **closed** (coverage ≥91% confirmed, PR merged)
 - `reviewer-1po`: blocked (V8CoverageProvider/TTY infrastructure — separate infra issue)
 - `reviewer-oxr`: blocked (same as above)
+
+---
+
+## Pass 75 — 2026-04-30T10:16–10:45 UTC
+
+**Trigger:** KICK — RED indicators: nightlyPlaywright=RED, coverage=90%<91%
+
+### Pre-flight
+- Beads: `reviewer-1po`, `reviewer-oxr` blocked (V8CoverageProvider TTY infrastructure — ongoing)
+- No in-progress reviewer beads — starting fresh
+- Scanner in-progress: `scanner-beads-11019` (Playwright mobile-safari), `scanner-beads-11006` (ksc_error GA4 spike)
+
+### GA4 Watch (30-min window vs 7d baseline)
+- No fresher GA4 data than 00:31 UTC (9.5h stale) — same state as Pass 74
+- **ksc_error**: 3.6× spike → issue **#11006** open, scanner owns, in-progress
+- **agent_token_failure**: 4→17→60 trend → issue **#10996** open, outstanding
+- No new anomaly classes detected in current window
+- **auth-login-smoke**: ✅ Green (ran 09:41, 08:46, 07:46 UTC — all success)
+
+### Coverage RED (89.7% < 91%) → FIX IN PROGRESS
+- Coverage Suite: `89.7%` (lines) = 29,209/32,561 covered. Need 421 more lines.
+- Coverage Suite 09:30: ❌ FAILED (shard 6: `useLastRoute.test.ts > does not throw when localStorage throws on redirect read`)
+  - **Root cause**: same test that PR #11023 fixed — the 09:30 run was on pre-fix SHA. 10:04 run succeeded ✅
+- Bead: `reviewer-ao9` (P1, in_progress)
+- **Background agent dispatched**: targeting `lib/cards/formatters.ts` (0%), `useLastRoute.ts` (54.6%), `useActiveUsers.ts` (67%), `useWorkloads.ts` (79%), `useSelfUpgrade.ts` (77%), and others
+- Will open PR `fix/reviewer-coverage-pass75` — CI to verify
+
+### Playwright Cross-Browser (Nightly) RED → FILE ONLY (scanner owns fix)
+- 3 consecutive failures (Apr 28, 29, 30) — mobile-safari `route.fulfill: Cannot fulfill with redirect status: 302`
+- Issue **#11019** already filed (Pass 74, scanner owns). **Lane: scanner**. No new action.
+
+### B.5 CI Workflow Health Sweep
+- Nightly Test Suite: ✅ 2026-04-30T06:47
+- Nightly Compliance & Perf: ✅ 2026-04-30T06:01
+- Nightly Dashboard Health: ✅ 2026-04-30T05:46
+- Nightly gh-aw Version Check: ✅ 2026-04-30T07:03
+- Playwright Cross-Browser (Nightly): ❌ 2026-04-30T07:18 — issue #11019 (scanner)
+- UI/UX Standards: ✅ 2026-04-30T04:12
+- Nil Safety: ✅ 2026-04-30T05:39
+- Build and Deploy KC: ✅ 2026-04-30T10:04
+- Coverage Suite: ⚠️ 1 flake (09:30 pre-fix SHA), then ✅ 10:04
+- CodeQL Security Analysis: ✅ 2026-04-30T10:05
+- Performance TTFI Gate: ✅ 2026-04-30T09:03
+- Startup Smoke Tests: ✅ 2026-04-30T07:48
+
+### CodeQL / Scorecard Drain
+- **11 open Scorecard alerts** (5 high TokenPermissionsID, 6 medium PinnedDependenciesID)
+- All from Scorecard/v5.0.0 — workflow-level permission + unpinned action findings
+- Alert #10 is from 2026-01-16 (3.5 months old)
+- Filed consolidated issue **#11024**: "security: 5 TokenPermissions + 6 PinnedDependencies"
+- Bead: `reviewer-cb1` (P1, in_progress)
+- **Background agent: PR #11025 opened — pinning action SHAs + adding permissions to `kb-nightly-validation.yml` + `pr-verifier.yml`
+- Lane: `@main` refs to `kubestellar/infra` reusable workflows NOT changed (intentional internal refs)
+
+### OAuth Health
+- Static code presence: 95 hits in Go (pkg/api/) — handlers, routes present ✅
+- `auth-login-smoke.yml` runs: ✅ Green (3 consecutive: 09:41, 08:46, 07:46)
+- OAuth code check: `AUTH_CALLBACK: '/auth/callback'` present in routes.ts ✅
+- No OAuth regressions detected
+
+### Merged PRs (48h) — Copilot Comments
+- PR #11023 (fix useLastRoute localStorage guard): Copilot COMMENTED (summary only, no inline action items) ✅
+- PR #10989 (fix E2E for NamespaceOverview card): Copilot COMMENTED (summary only) ✅
+- PR #10988 (fix nightly mission 502 retries): Copilot COMMENTED (summary only) ✅
+- 0 unaddressed inline Copilot review comments
+
+### Open Items for Next Pass
+- **#11006**: ksc_error 3.6× spike — scanner in-progress
+- **#10996**: agent_token_failure 4→17→60 — outstanding
+- **#10985**: worker-active `_idbStorage` not in `__testables` — blocking test
+- **#11019**: Playwright mobile-safari nightly — scanner in-progress
+- **#11024**: Scorecard TokenPermissions + PinnedDependencies — fix agent in-flight
+- **Coverage 89.7%**: coverage fix agent in-flight (PR expected)
+
+### Bead Status
+- `reviewer-ao9`: in_progress (coverage fix agent running)
+- `reviewer-cb1`: in_progress (Scorecard workflow fix agent running)
+- `reviewer-1po`: blocked (V8CoverageProvider TTY infrastructure)
+- `reviewer-oxr`: blocked (same as above)
