@@ -108,7 +108,13 @@ function getAgentToken(): Promise<string> {
  * requests to kc-agent are rejected when KC_AGENT_TOKEN is configured.
  */
 export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const token = await getAgentToken()
+  // Check if we're calling the local agent (127.0.0.1:8585)
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  const isLocalAgent = url.includes('127.0.0.1:8585') || url.includes('localhost:8585')
+  
+  // Skip token fetch for local agent in dev mode to avoid 5-second timeout
+  // that causes cluster health checks to fail (#11120)
+  const token = isLocalAgent ? '' : await getAgentToken()
   const headers = new Headers(init?.headers)
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
