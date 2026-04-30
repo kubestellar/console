@@ -139,7 +139,7 @@ export function useConsoleUsers() {
     setError(null)
     try {
       const { data } = await api.get<ConsoleUser[]>('/api/users')
-      setUsers(data || [])
+      setUsers(Array.isArray(data) ? data : [])
     } catch (err: unknown) {
       // Don't fall back to demo data - show error state
       // Users will be empty, but the current user is displayed from auth context
@@ -294,7 +294,7 @@ export function useOpenShiftUsers(cluster?: string) {
     try {
       // Always try API first - agent may be connected even in demo mode
       const { data } = await api.get<OpenShiftUser[]>(`/api/openshift/users?cluster=${cluster}`)
-      setUsers(data || [])
+      setUsers(Array.isArray(data) ? data : [])
     } catch {
       // Fall back to demo data when API is unavailable (backend not running, no auth, etc.)
       setUsers(getDemoOpenShiftUsers(cluster))
@@ -349,7 +349,7 @@ export function useAllOpenShiftUsers(clusters: Array<{ name: string }>) {
       async (cluster) => {
         try {
           const { data } = await api.get<OpenShiftUser[]>(`/api/openshift/users?cluster=${cluster.name}`)
-          return { cluster: cluster.name, users: data || [] }
+          return { cluster: cluster.name, users: Array.isArray(data) ? data : [] }
         } catch {
           // Mark cluster as failed but don't break the whole fetch
           return { cluster: cluster.name, users: [] as OpenShiftUser[], failed: true }
@@ -398,7 +398,7 @@ export function useK8sUsers(cluster?: string) {
     setError(null)
     try {
       const { data } = await api.get<K8sUser[]>(`/api/rbac/users?cluster=${cluster}`)
-      setUsers(data || [])
+      setUsers(Array.isArray(data) ? data : [])
     } catch {
       // Silently fail - backend may be unavailable
     } finally {
@@ -473,7 +473,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       params.set('cluster', cluster)
       if (namespace) params.set('namespace', namespace)
       const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
-      setServiceAccounts(data || [])
+      setServiceAccounts(Array.isArray(data) ? data : [])
       setError(null)
     } catch (err: unknown) {
       // Set error message for unreachable clusters
@@ -558,7 +558,7 @@ export function useAllK8sServiceAccounts(clusters: Array<{ name: string }>) {
       async (cluster) => {
         try {
           const { data } = await api.get<K8sServiceAccount[]>(`/api/rbac/service-accounts?cluster=${cluster.name}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
-          return { cluster: cluster.name, sas: data || [] }
+          return { cluster: cluster.name, sas: Array.isArray(data) ? data : [] }
         } catch {
           // Mark cluster as failed but don't break the whole fetch
           return { cluster: cluster.name, sas: [] as K8sServiceAccount[], failed: true }
@@ -610,7 +610,7 @@ export function useK8sRoles(cluster: string, namespace?: string, includeSystem?:
       if (namespace) params.set('namespace', namespace)
       if (includeSystem) params.set('includeSystem', 'true')
       const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
-      setRoles(data || [])
+      setRoles(Array.isArray(data) ? data : [])
     } catch {
       // Silently fail - backend may be unavailable
     } finally {
@@ -643,7 +643,7 @@ export function useK8sRoleBindings(cluster: string, namespace?: string, includeS
       if (namespace) params.set('namespace', namespace)
       if (includeSystem) params.set('includeSystem', 'true')
       const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
-      setBindings(data || [])
+      setBindings(Array.isArray(data) ? data : [])
     } catch {
       // Silently fail - backend may be unavailable
     } finally {

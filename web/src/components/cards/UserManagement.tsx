@@ -111,7 +111,7 @@ export function UserManagement({ config: _config }: UserManagementProps) {
 
   // Ensure current user is always included from auth context
   const usersWithCurrent = useMemo(() => {
-    let result = [...allUsers]
+    let result = [...(allUsers || [])]
     if (currentUser && !result.some(u => u.github_id === currentUser.github_id)) {
       const authUser: ConsoleUser = {
         id: currentUser.id,
