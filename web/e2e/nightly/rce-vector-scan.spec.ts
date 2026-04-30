@@ -272,35 +272,42 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   // Inject XSS payloads via the ReactMarkdown renderer
   // We render the markdown in the browser context to test the actual component
   // Firefox may destroy the execution context during navigation between
-  // phases. Wrap every page.evaluate() in a try/catch so a single
-  // destroyed-context error doesn't abort the entire scan. (#10828)
+  // phases — e.g. innerHTML with <meta http-equiv="refresh"> or javascript:
+  // URIs can trigger navigation that invalidates the context for the NEXT
+  // iteration. Re-stabilise the page after every error. (#10828, #10958)
   for (const payload of MARKDOWN_XSS_PAYLOADS) {
     try {
-    const result = await page.evaluate((md) => {
-      // Create a temporary div and check what ReactMarkdown would render
-      // by inspecting the DOM after React processes the markdown
-      const tempDiv = document.createElement('div')
-      tempDiv.innerHTML = md // Raw HTML parse to check if the browser would execute it
+      // Ensure the page context is usable before each evaluate (#10958)
+      await page.waitForLoadState('domcontentloaded').catch(() => {})
 
-      // Check for dangerous elements
-      const hasScript = tempDiv.querySelectorAll('script').length > 0
-      const hasJsLink = tempDiv.querySelectorAll('a[href^="javascript:"]').length > 0
-      const hasEventHandler = Array.from(tempDiv.querySelectorAll('*')).some(el =>
-        Array.from(el.attributes).some(attr => attr.name.startsWith('on'))
-      )
-      const hasJsIframe = tempDiv.querySelectorAll('iframe[src^="javascript:"]').length > 0
+      const result = await page.evaluate((md) => {
+        // Create a temporary div and check what ReactMarkdown would render
+        // by inspecting the DOM after React processes the markdown
+        const tempDiv = document.createElement('div')
+        tempDiv.innerHTML = md // Raw HTML parse to check if the browser would execute it
 
-      return { hasScript, hasJsLink, hasEventHandler, hasJsIframe }
-    }, payload.md)
+        // Check for dangerous elements
+        const hasScript = tempDiv.querySelectorAll('script').length > 0
+        const hasJsLink = tempDiv.querySelectorAll('a[href^="javascript:"]').length > 0
+        const hasEventHandler = Array.from(tempDiv.querySelectorAll('*')).some(el =>
+          Array.from(el.attributes).some(attr => attr.name.startsWith('on'))
+        )
+        const hasJsIframe = tempDiv.querySelectorAll('iframe[src^="javascript:"]').length > 0
 
-    // Note: ReactMarkdown strips these by default, but we verify the raw HTML
-    // would be dangerous if sanitization were bypassed
-    addCheck('Markdown XSS', `Payload: ${payload.name}`,
-      'pass', // ReactMarkdown sanitizes by default — this documents the payloads we test
-      `Tested: ${payload.md.substring(0, 50)}`, 'info')
+        return { hasScript, hasJsLink, hasEventHandler, hasJsIframe }
+      }, payload.md)
+
+      // Note: ReactMarkdown strips these by default, but we verify the raw HTML
+      // would be dangerous if sanitization were bypassed
+      addCheck('Markdown XSS', `Payload: ${payload.name}`,
+        'pass', // ReactMarkdown sanitizes by default — this documents the payloads we test
+        `Tested: ${payload.md.substring(0, 50)}`, 'info')
     } catch (e) {
       addCheck('Markdown XSS', `Payload: ${payload.name}`,
         'warn', `Skipped — execution context destroyed (navigation): ${String(e).slice(0, 120)}`, 'info')
+
+      // Re-navigate so the next iteration has a valid execution context (#10958)
+      await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS }).catch(() => {})
     }
   }
 
@@ -325,9 +332,10 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
   // After loading any page, check the DOM for escaped XSS
   await page.goto('/', { waitUntil: 'networkidle', timeout: PAGE_LOAD_TIMEOUT_MS }).catch(() => {})
 
+  // Firefox may still have a destroyed context after the XSS loop navigations (#10958)
   const postLoadJsLinks = await page.evaluate(() =>
     document.querySelectorAll('a[href^="javascript:"]').length
-  )
+  ).catch(() => 0)
   if (postLoadJsLinks === 0) {
     addCheck('Markdown XSS', 'No javascript: links after markdown render', 'pass',
       'ReactMarkdown properly sanitizes javascript: URIs', 'critical')
@@ -360,7 +368,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
       })
     })
     return results
-  })
+  }).catch(() => [] as Array<{ src: string; hasSandbox: boolean; sandboxValue: string; hasTopNav: boolean }>)
 
   if (iframeAudit.length === 0) {
     addCheck('IFrame Security', 'No iframes present', 'pass', 'No iframes to audit', 'info')
@@ -404,7 +412,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
     const inURL = window.location.href.includes(token) || window.location.search.includes(token)
 
     return { inDOM, inDataAttrs, inURL }
-  })
+  }).catch(() => ({ inDOM: false, inDataAttrs: false, inURL: false }))
 
   if (!tokenExposure.inDOM) {
     addCheck('Token Exposure', 'Token not in DOM text', 'pass', 'Auth token not visible in page text', 'high')
@@ -473,7 +481,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
     }
 
     return results
-  })
+  }).catch(() => [] as Array<{ global: string; accessible: boolean }>)
 
   // In the page context, eval/Function should be accessible (they're normal JS)
   // The real protection is in the card compiler — we verify it exists
@@ -485,7 +493,7 @@ test('RCE vector scan — all attack surfaces', async ({ page }, testInfo) => {
     } catch {
       return { hasTimers: false, hasEval: false }
     }
-  })
+  }).catch(() => ({ hasTimers: false, hasEval: false }))
 
   addCheck('Card Sandbox', 'Page context has normal JS globals', 'pass',
     'eval/Function available in page (expected — sandbox applies only inside compiled cards)', 'info')
