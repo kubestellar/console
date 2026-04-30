@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os/exec"
 	"strings"
 
 	"runtime/debug"
@@ -950,15 +951,18 @@ func (h *FeedbackHandler) createNotification(ctx context.Context, userID uuid.UU
 
 func vcsRevision() string {
 	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return ""
-	}
-	for _, s := range info.Settings {
-		if s.Key == "vcs.revision" {
-			return s.Value
+	if ok {
+		for _, s := range info.Settings {
+			if s.Key == "vcs.revision" {
+				return s.Value
+			}
 		}
 	}
-	return ""
+	out, err := exec.Command("git", "rev-parse", "HEAD").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // extractFeatureRequestID extracts the feature request ID from a PR body
