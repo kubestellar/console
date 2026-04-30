@@ -1679,3 +1679,17 @@ export {
 // Re-export hook factory
 export { createCachedHook } from './createCachedHook'
 export type { CreateCachedHookConfig } from './createCachedHook'
+
+export const __testables = {
+  ssWrite,
+  ssRead,
+  clearSessionSnapshots,
+  isEquivalentToInitial,
+  getEffectiveInterval,
+  CACHE_VERSION,
+  SS_PREFIX,
+  META_PREFIX,
+  MAX_FAILURES,
+  FAILURE_BACKOFF_MULTIPLIER,
+  MAX_BACKOFF_INTERVAL,
+}

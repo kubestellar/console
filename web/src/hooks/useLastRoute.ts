@@ -421,3 +421,12 @@ export function setRememberPosition(path: string, enabled: boolean): void {
     // Ignore localStorage errors
   }
 }
+
+export const __testables = {
+  getFirstDashboardRoute,
+  getScrollContainer,
+  LAST_ROUTE_KEY,
+  SCROLL_POSITIONS_KEY,
+  REMEMBER_POSITION_KEY,
+  SIDEBAR_CONFIG_KEY,
+}

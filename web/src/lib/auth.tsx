@@ -800,3 +800,12 @@ export function useAuth() {
   }
   return context
 }
+
+export const __testables = {
+  getJwtExpiryMs,
+  showExpiryWarningBanner,
+  AUTH_USER_CACHE_KEY,
+  EXPIRY_CHECK_INTERVAL_MS,
+  EXPIRY_WARNING_THRESHOLD_MS,
+  MAX_CACHED_USER_AGE_MS,
+}

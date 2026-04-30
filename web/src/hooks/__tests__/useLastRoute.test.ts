@@ -294,3 +294,48 @@ describe('setRememberPosition', () => {
     expect(() => setRememberPosition('/x', true)).not.toThrow()
   })
 })
+
+// ── __testables: getFirstDashboardRoute ──
+
+const SIDEBAR_CONFIG_KEY = 'kubestellar-sidebar-config-v5'
+
+describe('getFirstDashboardRoute', () => {
+  it('returns "/" when no sidebar config exists', async () => {
+    const { __testables } = await importFresh()
+    expect(__testables.getFirstDashboardRoute()).toBe('/')
+  })
+
+  it('returns first primaryNav href', async () => {
+    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify({
+      primaryNav: [{ href: '/clusters', label: 'Clusters' }, { href: '/pods', label: 'Pods' }],
+    }))
+    const { __testables } = await importFresh()
+    expect(__testables.getFirstDashboardRoute()).toBe('/clusters')
+  })
+
+  it('returns "/" when primaryNav is empty', async () => {
+    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify({ primaryNav: [] }))
+    const { __testables } = await importFresh()
+    expect(__testables.getFirstDashboardRoute()).toBe('/')
+  })
+
+  it('returns "/" when first nav item has no href', async () => {
+    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify({
+      primaryNav: [{ label: 'No Href' }],
+    }))
+    const { __testables } = await importFresh()
+    expect(__testables.getFirstDashboardRoute()).toBe('/')
+  })
+
+  it('returns "/" when sidebar config is invalid JSON', async () => {
+    localStorage.setItem(SIDEBAR_CONFIG_KEY, 'not-json{{{')
+    const { __testables } = await importFresh()
+    expect(__testables.getFirstDashboardRoute()).toBe('/')
+  })
+
+  it('returns "/" when sidebar config has no primaryNav', async () => {
+    localStorage.setItem(SIDEBAR_CONFIG_KEY, JSON.stringify({ version: 5 }))
+    const { __testables } = await importFresh()
+    expect(__testables.getFirstDashboardRoute()).toBe('/')
+  })
+})

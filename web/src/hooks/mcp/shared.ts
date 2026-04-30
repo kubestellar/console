@@ -2009,3 +2009,11 @@ export function clusterDisplayName(name: string): string {
   }
   return base
 }
+
+export const __testables = {
+  detectDistributionFromNamespaces,
+  detectDistributionFromServer,
+  updatesTouchData,
+  updatesTouchUI,
+  applyDistributionCache,
+}

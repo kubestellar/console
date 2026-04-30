@@ -101,8 +101,11 @@ function makeJwt(payload: Record<string, unknown>): string {
 // behavior — any divergence in the source will break consumer tests.
 // ---------------------------------------------------------------------------
 
-// We'll test the pure logic by re-implementing and cross-checking:
-// getJwtExpiryMs
+// Import real __testables from auth module to test actual source lines
+const authMod = await import('../auth')
+const realGetJwtExpiryMs = authMod.__testables.getJwtExpiryMs
+
+// Local re-implementation for cross-checking (kept for backward compat)
 function getJwtExpiryMs(token: string): number | null {
   try {
     const parts = token.split('.')
@@ -218,6 +221,53 @@ describe('getJwtExpiryMs', () => {
     const token = makeJwt({ exp: -100 })
     const MS_PER_SECOND = 1000
     expect(getJwtExpiryMs(token)).toBe(-100 * MS_PER_SECOND)
+  })
+})
+
+// ============================================================================
+// getJwtExpiryMs — real source function via __testables
+// ============================================================================
+
+describe('getJwtExpiryMs (real source via __testables)', () => {
+  it('returns exp * 1000 for valid JWT', () => {
+    const token = makeJwt({ exp: 1700000000 })
+    expect(realGetJwtExpiryMs(token)).toBe(1700000000 * 1000)
+  })
+
+  it('returns null for no exp', () => {
+    expect(realGetJwtExpiryMs(makeJwt({ sub: 'x' }))).toBeNull()
+  })
+
+  it('returns null for non-3-part token', () => {
+    expect(realGetJwtExpiryMs('a.b')).toBeNull()
+  })
+
+  it('returns null for bad base64', () => {
+    expect(realGetJwtExpiryMs('a.!!!.c')).toBeNull()
+  })
+})
+
+// ============================================================================
+// isJWTExpired — real exported function
+// ============================================================================
+
+describe('isJWTExpired', () => {
+  it('returns true for expired token', () => {
+    const expired = makeJwt({ exp: Math.floor(Date.now() / 1000) - 3600 })
+    expect(authMod.isJWTExpired(expired)).toBe(true)
+  })
+
+  it('returns false for future token', () => {
+    const future = makeJwt({ exp: Math.floor(Date.now() / 1000) + 3600 })
+    expect(authMod.isJWTExpired(future)).toBe(false)
+  })
+
+  it('returns false for non-JWT token (no exp)', () => {
+    expect(authMod.isJWTExpired('opaque-token-string')).toBe(false)
+  })
+
+  it('returns false for JWT without exp claim', () => {
+    expect(authMod.isJWTExpired(makeJwt({ sub: 'user' }))).toBe(false)
   })
 })
 
