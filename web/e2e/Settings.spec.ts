@@ -1,9 +1,15 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for settings tests
  */
 async function setupSettingsTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox.
+  // Without this, unmocked /health requests cause Firefox/WebKit to redirect
+  // to /login before the settings page loads. (#11003)
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -36,12 +42,21 @@ async function setupSettingsTest(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 
   await page.goto('/settings')
   await page.waitForLoadState('domcontentloaded')
+  // WebKit is slower to stabilize after domcontentloaded — wait for the
+  // settings page element so assertions don't time out. (#11003)
+  const SETTINGS_VISIBLE_TIMEOUT_MS = 15_000
+  await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: SETTINGS_VISIBLE_TIMEOUT_MS })
 }
 
 test.describe('Settings Page', () => {
@@ -84,6 +99,10 @@ test.describe('Settings Page', () => {
 
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
+      // Wait for the settings page to fully stabilize before evaluating
+      // localStorage — on Firefox/WebKit the execution context can be
+      // destroyed if evaluate() runs mid-navigation. (#11003)
+      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 15_000 })
 
       // Theme should be preserved in localStorage
       const storedTheme = await page.evaluate(() =>

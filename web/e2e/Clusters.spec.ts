@@ -265,12 +265,12 @@ test.describe('Clusters Page', () => {
         }
       })
 
-      // Clear sessionStorage before reload so the SWR cache layer cannot
-      // sync-rehydrate stale cluster data from the beforeEach mock. The
-      // addInitScript also clears it, but on firefox/webkit the browser may
-      // restore sessionStorage from its page cache before addInitScript runs,
-      // causing a brief render with stale data that outraces the filter. (#10956)
-      await page.evaluate(() => sessionStorage.clear())
+      // sessionStorage is already cleared by the addInitScript registered in
+      // setupClustersTest (which runs on every navigation including reload).
+      // Previously we had a page.evaluate(() => sessionStorage.clear()) here,
+      // but on Firefox/WebKit the page can be mid-navigation when evaluate()
+      // runs, causing "Execution context was destroyed" errors. Removing the
+      // redundant evaluate avoids this race entirely. (#11003)
 
       // Reload and wait for the test-specific mock API response to arrive so
       // the component renders with the correct cluster set before we interact.
@@ -280,6 +280,12 @@ test.describe('Clusters Page', () => {
       ])
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
+
+      // Wait for the cluster grid to stabilize — on Firefox/WebKit the SWR
+      // cache can trigger a secondary render after domcontentloaded that
+      // briefly restores stale data. Waiting for the expected row ensures
+      // the test-specific mock data has fully propagated. (#11003)
+      await expect(page.locator('[data-testid="cluster-row-healthy-cluster"]')).toBeVisible({ timeout: 20_000 })
 
       // The Healthy filter button should show count 1 (only healthy-cluster with healthy: true)
       // Webkit/Firefox render filter tabs slightly later — use generous timeout
@@ -332,9 +338,9 @@ test.describe('Clusters Page', () => {
         }
       })
 
-      // Clear sessionStorage before reload so the SWR cache layer cannot
-      // sync-rehydrate stale cluster data from the beforeEach mock. (#10956)
-      await page.evaluate(() => sessionStorage.clear())
+      // sessionStorage is already cleared by the addInitScript registered in
+      // setupClustersTest (which runs on every navigation including reload).
+      // See the Healthy filter test above for why page.evaluate was removed. (#11003)
 
       // Reload and wait for the test-specific mock API response to arrive so
       // the component renders with the correct cluster set before we interact.
@@ -344,6 +350,9 @@ test.describe('Clusters Page', () => {
       ])
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
+
+      // Wait for the cluster grid to stabilize with the test-specific mock data. (#11003)
+      await expect(page.locator('[data-testid="cluster-row-unhealthy-no-nodes"]')).toBeVisible({ timeout: 20_000 })
 
       // The Unhealthy tab must show count 1
       const FILTER_TAB_TIMEOUT_MS = 20_000

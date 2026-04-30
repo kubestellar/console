@@ -1,9 +1,16 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Sets up authentication and mocks for custom dashboard tests
  */
 async function setupCustomDashboardTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox.
+  // Must be registered BEFORE specific mocks (Playwright matches in reverse
+  // registration order). Without this, unmocked /health and /api/** requests
+  // cause Firefox/WebKit to wait indefinitely or redirect to /login. (#11003)
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -57,12 +64,21 @@ async function setupCustomDashboardTest(page: Page) {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
+  // WebKit/Firefox are slower to stabilize the DOM — wait for the root
+  // layout to be visible so assertions in beforeEach don't time out. (#11003)
+  const ROOT_VISIBLE_TIMEOUT_MS = 15_000
+  await page.locator('#root').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
 }
 
 test.describe('Custom Dashboard Creation', () => {
