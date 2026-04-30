@@ -487,3 +487,14 @@ function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
 
   return baseSubscriptions.slice(0, subCount)
 }
+
+export const __operatorsTestables = {
+  loadOperatorsCacheFromStorage,
+  saveOperatorsCacheToStorage,
+  loadSubscriptionsCacheFromStorage,
+  saveSubscriptionsCacheToStorage,
+  getDemoOperators,
+  getDemoOperatorSubscriptions,
+  OPERATORS_CACHE_KEY,
+  SUBSCRIPTIONS_CACHE_KEY,
+}

@@ -818,3 +818,19 @@ export function useDeployMissions() {
     hasActive: activeMissions.length > 0,
     clearCompleted }
 }
+
+export const __testables = {
+  safeReplicaCount,
+  isTerminalStatus,
+  authHeaders,
+  loadMissions,
+  saveMissions,
+  runWithConcurrency,
+  MISSIONS_STORAGE_KEY,
+  MAX_MISSIONS,
+  MAX_STATUS_FAILURES,
+  MAX_NETWORK_FAILURES,
+  MIN_ACTIVE_MS,
+  LOG_RECOVERY_EXTRA_POLLS,
+  DEPLOY_POLL_MAX_CONCURRENCY,
+}

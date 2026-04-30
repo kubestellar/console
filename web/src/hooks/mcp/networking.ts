@@ -593,3 +593,8 @@ if (typeof window !== 'undefined') {
     }, 0)
   })
 }
+
+export const __networkingTestables = {
+  loadServicesCacheFromStorage,
+  getDemoServices,
+}

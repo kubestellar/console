@@ -433,3 +433,14 @@ export function useActiveUsers() {
     refetch
   }
 }
+
+export const __testables = {
+  isJsonResponse,
+  getSessionId,
+  disconnectPresence,
+  POLL_INTERVAL,
+  HEARTBEAT_INTERVAL,
+  MAX_FAILURES,
+  RECOVERY_DELAY,
+  SMOOTHING_WINDOW,
+}
