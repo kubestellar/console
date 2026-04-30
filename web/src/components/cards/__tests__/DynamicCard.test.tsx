@@ -27,9 +27,10 @@ vi.mock('../../../lib/dynamic-cards/compiler', () => ({
   createCardComponent: (...args: unknown[]) => mockCreateCardComponent(...args),
 }))
 
-vi.mock('../../../lib/constants', () => ({
-  STORAGE_KEY_TOKEN: 'kc_token',
-}))
+vi.mock('../../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/constants')>()
+  return { ...actual, STORAGE_KEY_TOKEN: 'kc_token' }
+})
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
