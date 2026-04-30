@@ -984,10 +984,12 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	// Set permissions on the staged binary *before* moving it to the final
 	// location. This prevents a window where power loss leaves a non-executable
 	// binary at consolePath (#7445).
+	// On Windows, chmod is a no-op — Windows does not use POSIX permission
+	// bits and attempting to set them can return "Permission denied" (#11075).
 	stagedBinary := filepath.Join(stagingDir, "console")
 	// fileModeBinary is the permission bits for the installed console binary.
 	const fileModeBinary = 0755
-	if err := os.Chmod(stagedBinary, fileModeBinary); err != nil {
+	if err := chmodIfSupported(stagedBinary, fileModeBinary); err != nil {
 		if rbErr := renameOrCopy(backupPath, consolePath); rbErr != nil {
 			slog.Error("[AutoUpdate] backup restore failed after chmod error", "error", rbErr)
 		}

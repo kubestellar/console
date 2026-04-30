@@ -256,7 +256,10 @@ func (s *Server) killBackendProcess() bool {
 	// Fallback: find only the LISTEN process on the resolved backend port
 	// (not connected clients). Using -sTCP:LISTEN ensures we only kill the
 	// server, not browsers/proxies.
-	// NOTE: lsof is Unix-only; on Windows this falls through to return false (#7263).
+	// lsof is Unix-only; on Windows skip to return false (#7263, #11075).
+	if isWindows() {
+		return false
+	}
 	portArg := fmt.Sprintf(":%d", resolveBackendPort())
 	out, err := exec.Command("lsof", "-ti", portArg, "-sTCP:LISTEN").Output()
 	if err != nil || len(strings.TrimSpace(string(out))) == 0 {

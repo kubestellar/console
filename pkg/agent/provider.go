@@ -157,8 +157,12 @@ type MixedModeConfig struct {
 	Enabled bool `json:"enabled"`
 }
 
-// DefaultSystemPrompt is the default system prompt for KubeStellar console
-const DefaultSystemPrompt = `You are a helpful AI assistant embedded in the KubeStellar Console.
+// DefaultSystemPrompt is the default system prompt for KubeStellar console.
+// It is a var (not const) so that init-time OS detection can be appended (#11076).
+var DefaultSystemPrompt = defaultSystemPromptBase + OSCommandHint()
+
+// defaultSystemPromptBase is the OS-independent portion of DefaultSystemPrompt.
+const defaultSystemPromptBase = `You are a helpful AI assistant embedded in the KubeStellar Console.
 Your job is to help users with:
 - Managing Kubernetes clusters and workloads
 - Creating and managing BindingPolicies for multi-cluster deployments
@@ -200,7 +204,10 @@ Only analyze and summarize this data for the user.`
 // CANNOT execute kubectl or shell commands (#10463). It avoids promising
 // command-execution capabilities that would confuse users when the provider
 // later refuses or fails to execute anything.
-const ChatOnlySystemPrompt = `You are a helpful AI assistant embedded in the KubeStellar Console.
+// Includes OS detection so suggested commands match the user's platform (#11076).
+var ChatOnlySystemPrompt = chatOnlySystemPromptBase + OSCommandHint()
+
+const chatOnlySystemPromptBase = `You are a helpful AI assistant embedded in the KubeStellar Console.
 Your job is to help users with:
 - Understanding Kubernetes clusters and workloads
 - Explaining BindingPolicies for multi-cluster deployments

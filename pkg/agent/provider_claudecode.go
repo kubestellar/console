@@ -200,8 +200,11 @@ func (c *ClaudeCodeProvider) Capabilities() ProviderCapability {
 	return CapabilityChat | CapabilityToolExec
 }
 
-// ClaudeCodeSystemPrompt instructs Claude Code CLI to actually execute commands using tools
-const ClaudeCodeSystemPrompt = `You are an AI assistant helping manage Kubernetes clusters through the KubeStellar Console.
+// ClaudeCodeSystemPrompt instructs Claude Code CLI to actually execute commands using tools.
+// Includes OS detection so the agent uses platform-appropriate commands (#11076).
+var ClaudeCodeSystemPrompt = claudeCodeSystemPromptBase + OSCommandHint()
+
+const claudeCodeSystemPromptBase = `You are an AI assistant helping manage Kubernetes clusters through the KubeStellar Console.
 
 IMPORTANT INSTRUCTIONS:
 1. When asked to run kubectl commands, CHECK something, or ANALYZE something - you MUST actually execute the commands using the Bash tool. Do NOT just output commands as text.
