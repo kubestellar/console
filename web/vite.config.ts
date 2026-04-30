@@ -291,6 +291,15 @@ export default defineConfig(({ mode }) => ({
         '**/*.md',
         '**/demo*Data*.{ts,tsx}',
         '**/icons.{ts,tsx}',
+        // Barrel re-export files: V8 cannot count ESM re-export bindings as
+        // executable lines. These files contain only `export { } from` or
+        // `export * from` statements with no executable logic — excluding them
+        // prevents structurally-uncoverable lines from dragging down the metric.
+        'src/lib/analytics.ts',
+        'src/hooks/useMCP.ts',
+        'src/hooks/useCachedKeda.ts',
+        // Type-only file: pure TypeScript interfaces/types compile to no JS bytecode.
+        'src/lib/cache/workerMessages.ts',
       ],
     },
   },
