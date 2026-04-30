@@ -118,6 +118,10 @@ vi.mock('../../lib/constants/time', () => ({
 
 vi.mock('../../lib/missions/preflightCheck', () => ({
   runPreflightCheck: vi.fn(async () => ({ ok: true, checks: [] })),
+  classifyKubectlError: vi.fn(),
+  getRemediationActions: vi.fn(() => []),
+  resolveRequiredTools: vi.fn(() => []),
+  runToolPreflightCheck: vi.fn().mockResolvedValue({ passed: true, tools: [] }),
 }))
 
 vi.mock('../../lib/kubectlProxy', () => ({

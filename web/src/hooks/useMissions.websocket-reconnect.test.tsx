@@ -65,6 +65,8 @@ vi.mock('../lib/missions/preflightCheck', () => ({
   runPreflightCheck: vi.fn().mockResolvedValue({ ok: true }),
   classifyKubectlError: vi.fn().mockReturnValue({ code: 'UNKNOWN_EXECUTION_FAILURE', message: 'mock' }),
   getRemediationActions: vi.fn().mockReturnValue([]),
+  resolveRequiredTools: vi.fn(() => []),
+  runToolPreflightCheck: vi.fn().mockResolvedValue({ passed: true, tools: [] }),
 }))
 
 vi.mock('../lib/missions/scanner/malicious', () => ({
