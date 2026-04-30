@@ -1763,7 +1763,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // 'completed', so reaching this state is the correct lifecycle end (#5479).
         // #11070 — If the backend flagged this result as an error (e.g. non-zero
         // exit code from a CLI provider), mark the mission 'failed' instead.
-        const resultIsError = !!(chatPayload as Record<string, unknown>).isError
+        const resultIsError = !!(chatPayload as unknown as Record<string, unknown>).isError
         return {
           ...m,
           status: (resultIsError ? 'failed' : 'completed') as MissionStatus,
