@@ -4,11 +4,14 @@ on:
     - cron: '0 4 * * *'  # 4 AM UTC daily
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   validate-kb:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.2.2
 
       - name: Validate mission structure
         run: |
@@ -35,7 +38,7 @@ jobs:
 
       - name: Upload reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: kb-validation-reports
           path: |

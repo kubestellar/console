@@ -11,6 +11,9 @@ on:
         required: false
         default: '5'
 
+permissions:
+  contents: read
+
 jobs:
   check-acmm-level:
     runs-on: ubuntu-latest
