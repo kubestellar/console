@@ -449,11 +449,16 @@ export async function runToolPreflightCheck(
         tools: [],
       }
     }
-    const detected: ToolCheckResult[] = await resp.json()
+    const responseData = await resp.json()
+    const detected: ToolCheckResult[] = Array.isArray(responseData)
+      ? responseData
+      : Array.isArray(responseData?.tools)
+        ? responseData.tools
+        : []
 
     // Build a lookup of installed tools
     const installedSet = new Set(
-      (detected || [])
+      detected
         .filter((t: ToolCheckResult) => t.installed)
         .map((t: ToolCheckResult) => t.name.toLowerCase()),
     )
@@ -467,7 +472,7 @@ export async function runToolPreflightCheck(
 
     // Merge required tools into the result so the UI can show a full checklist
     const toolResults: ToolCheckResult[] = requiredTools.map(name => {
-      const match = (detected || []).find(
+      const match = detected.find(
         (d: ToolCheckResult) => d.name.toLowerCase() === name.toLowerCase(),
       )
       return match || { name, installed: installedSet.has(name.toLowerCase()) }
