@@ -12,7 +12,6 @@ import { useCardData } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import type { SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
-import { useToast } from '../ui/Toast'
 import { StatusBadge } from '../ui/StatusBadge'
 import { usePipelineFilter } from './pipelines/PipelineFilterContext'
 import { RepoSubtitle } from './pipelines/RepoSubtitle'
@@ -219,7 +218,6 @@ const INITIAL_GITHUB_DATA: GitHubActivityData = {
 }
 
 function useGitHubActivity(config?: GitHubActivityConfig) {
-  const { showToast } = useToast()
 
   // Use configured repos or default to kubestellar/console
   const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
@@ -233,8 +231,6 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
     isRefreshing,
     error,
     isDemoFallback,
-    isFailed,
-    consecutiveFailures,
     refetch,
   } = useCache<GitHubActivityData>({
     key: `github-activity-${targetRepo}`,
