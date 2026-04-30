@@ -135,7 +135,7 @@ export function useCachedNodes(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -297,7 +297,7 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
     // multi-cluster drill-down can explain an empty list with "lacks
     // list-nodes RBAC on cluster X" rather than a generic warning.
     clusterErrors,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 // fetches coredns pods from kube-system and builds per-cluster health info
@@ -362,5 +362,5 @@ export function useCachedCoreDNSStatus(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }

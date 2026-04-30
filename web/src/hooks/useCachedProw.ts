@@ -159,7 +159,7 @@ export function useCachedProwJobs(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
+    refetch: result.refetch, retryFetch: result.retryFetch,
     formatTimeAgo,
   }
 }

@@ -84,7 +84,7 @@ function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
       isFailed: result.isFailed,
       consecutiveFailures: result.consecutiveFailures,
       lastRefresh: result.lastRefresh,
-      refetch: result.refetch,
+      refetch: result.refetch, retryFetch: result.retryFetch,
     } as CachedHookResult<T[]> & Record<string, T[]>
   }
 }
@@ -140,7 +140,7 @@ function createRbacHook<T extends object>(config: RbacConfig<T>) {
       isFailed: result.isFailed,
       consecutiveFailures: result.consecutiveFailures,
       lastRefresh: result.lastRefresh,
-      refetch: result.refetch,
+      refetch: result.refetch, retryFetch: result.retryFetch,
     } as CachedHookResult<T[]> & Record<string, T[]>
   }
 }
@@ -211,7 +211,7 @@ export function useCachedHelmHistory(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
+    refetch: result.refetch, retryFetch: result.retryFetch,
   }
 }
 
@@ -246,7 +246,7 @@ export function useCachedHelmValues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
+    refetch: result.refetch, retryFetch: result.retryFetch,
   }
 }
 
@@ -283,7 +283,7 @@ export function useCachedGitOpsDrifts(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
+    refetch: result.refetch, retryFetch: result.retryFetch,
   }
 }
 
@@ -329,7 +329,7 @@ export function useCachedBuildpackImages(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
+    refetch: result.refetch, retryFetch: result.retryFetch,
   }
 }
 

@@ -99,7 +99,7 @@ function createCachedK8sResourceHook<T extends object>(
       isFailed: result.isFailed,
       consecutiveFailures: result.consecutiveFailures,
       lastRefresh: result.lastRefresh,
-      refetch: result.refetch,
+      refetch: result.refetch, retryFetch: result.retryFetch,
     } as CachedHookResult<T[]> & Record<string, T[]>
   }
 }
@@ -244,6 +244,6 @@ export function useCachedNamespaces(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
+    refetch: result.refetch, retryFetch: result.retryFetch,
   }
 }

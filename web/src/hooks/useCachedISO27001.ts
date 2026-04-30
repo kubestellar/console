@@ -313,6 +313,6 @@ export function useCachedISO27001Audit(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
+    refetch: result.refetch, retryFetch: result.retryFetch,
   }
 }

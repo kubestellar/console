@@ -240,7 +240,7 @@ export function useCachedGPUNodes(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -280,7 +280,7 @@ export function useCachedGPUNodeHealth(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -377,7 +377,7 @@ export function useGPUHealthCronJob(cluster?: string) {
     actionInProgress,
     install,
     uninstall,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -452,7 +452,7 @@ export function useCachedWarningEvents(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 // Re-export AGENT_HTTP_TIMEOUT_MS for use in the workaround in useCachedCoreWorkloads

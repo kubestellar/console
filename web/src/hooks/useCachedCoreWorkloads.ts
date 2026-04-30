@@ -225,7 +225,7 @@ export function useCachedPods(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -266,7 +266,7 @@ export function useCachedAllPods(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -362,7 +362,7 @@ export function useCachedEvents(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -443,7 +443,7 @@ export function useCachedPodIssues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -530,7 +530,7 @@ export function useCachedDeploymentIssues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -611,7 +611,7 @@ export function useCachedDeployments(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -651,7 +651,7 @@ export function useCachedServices(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -722,7 +722,7 @@ export function useCachedSecurityIssues(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -794,5 +794,5 @@ export function useCachedWorkloads(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
