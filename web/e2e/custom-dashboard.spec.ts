@@ -1,21 +1,17 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { setupDemoMode } from './helpers/setup'
 
 /**
- * Sets up authentication and mocks for custom dashboard tests
- * Uses canonical setupDemoMode helper from helpers/setup.ts
+ * Sets up authentication and mocks for custom dashboard tests.
+ * Uses canonical setupDemoMode helper from helpers/setup.ts which handles
+ * localStorage seeding, /api/me mock, and catch-all API fallback.
+ * Then registers test-specific dashboard mocks before navigating.
  */
-async function setupCustomDashboardTest(page) {
-  // Use canonical setupDemoMode helper for consistent demo-mode setup
-  // across all E2E tests. This handles:
-  // - localStorage seeding (demo mode, auth token, onboarding state)
-  // - /api/me mock with fallback behavior
-  // - Catch-all /api/** mock to prevent hanging on unmocked requests
-  // - Page navigation to /
-  // - DOM readiness verification (WebKit/Firefox compatibility)
+async function setupCustomDashboardTest(page: Page) {
   await setupDemoMode(page)
 
-  // Mock dashboards API (custom dashboard test-specific mock)
+  // Mock dashboards API (test-specific — must be registered before navigation
+  // so page-load requests are intercepted ahead of the catch-all fallback)
   await page.route('**/api/dashboards', (route) => {
     if (route.request().method() === 'POST') {
       route.fulfill({
@@ -35,6 +31,8 @@ async function setupCustomDashboardTest(page) {
       })
     }
   })
+
+  await page.goto('/')
 }
 
 test.describe('Custom Dashboard Creation', () => {
