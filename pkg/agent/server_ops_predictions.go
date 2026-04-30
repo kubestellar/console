@@ -17,17 +17,11 @@ import (
 
 // handlePredictionsAI returns current AI predictions
 func (s *Server) handlePredictionsAI(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -54,17 +48,11 @@ func (s *Server) handlePredictionsAI(w http.ResponseWriter, r *http.Request) {
 
 // handlePredictionsAnalyze triggers a manual AI analysis
 func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -122,17 +110,11 @@ type PredictionFeedbackRequest struct {
 
 // handlePredictionsFeedback handles prediction feedback submissions
 func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -168,17 +150,11 @@ func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Reques
 
 // handlePredictionsStats returns prediction accuracy statistics
 func (s *Server) handlePredictionsStats(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -205,17 +181,11 @@ func (s *Server) handlePredictionsStats(w http.ResponseWriter, r *http.Request) 
 
 // handleMetricsHistory returns historical metrics for trend analysis
 func (s *Server) handleMetricsHistory(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 

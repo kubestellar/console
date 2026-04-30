@@ -238,15 +238,10 @@ func (q *agentTerminalSizeQueue) Next() *remotecommand.TerminalSize {
 func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// CORS + Private Network Access preflight (same pattern as handleWebSocket).
 	if r.Method == http.MethodOptions {
-		origin := r.Header.Get("Origin")
-		if s.isAllowedOrigin(origin) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-		}
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Private-Network", "true")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol")
-		w.WriteHeader(http.StatusOK)
+		s.setCORSHeaders(w, r, http.MethodGet, http.MethodOptions)
+		// WebSocket upgrades need additional headers beyond what setCORSHeaders provides
+		w.Header().Add("Access-Control-Allow-Headers", "Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol")
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 

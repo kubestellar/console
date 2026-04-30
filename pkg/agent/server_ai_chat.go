@@ -512,17 +512,10 @@ func (s *Server) cancelAllChatsForConn(conn *websocket.Conn) {
 // handleCancelChatHTTP is the HTTP fallback for cancelling in-progress chat sessions.
 // Used when the WebSocket connection is unavailable (e.g., disconnected during long agent runs).
 func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if r.Method != "POST" {

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { api } from '../../lib/api'
 import { fetchSSE } from '../../lib/sseClient'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
@@ -212,7 +211,9 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       } catch {
         // SSE failed, try REST fallback
         try {
-          const { data } = await api.get<{ nodes: GPUNode[] }>(`${LOCAL_AGENT_HTTP_URL}/gpu-nodes?${params}`)
+          const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gpu-nodes?${params}`)
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+          const data = await resp.json()
           newNodes = data.nodes || []
           fetchSucceeded = true
         } catch {
@@ -638,7 +639,9 @@ export function useNVIDIAOperators(cluster?: string) {
       // REST fallback
       const urlParams = new URLSearchParams()
       if (cluster) urlParams.append('cluster', cluster)
-      const { data } = await api.get<{ operators?: NVIDIAOperatorStatus[], operator?: NVIDIAOperatorStatus }>(`${LOCAL_AGENT_HTTP_URL}/nvidia-operators?${urlParams}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/nvidia-operators?${urlParams}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       if (data.operators) {
         setOperators(data.operators)
       } else if (data.operator) {

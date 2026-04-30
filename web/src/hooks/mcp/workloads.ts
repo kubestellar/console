@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api, isBackendUnavailable } from '../../lib/api'
+import { isBackendUnavailable } from '../../lib/api'
 import { fetchSSE } from '../../lib/sseClient'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef, fetchWithRetry } from './shared'
+import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef, fetchWithRetry, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
@@ -1471,7 +1471,9 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ hpas: HPA[] }>(`${LOCAL_AGENT_HTTP_URL}/hpas?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/hpas?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setHPAs(data.hpas || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1536,7 +1538,9 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ replicasets: ReplicaSet[] }>(`${LOCAL_AGENT_HTTP_URL}/replicasets?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/replicasets?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setReplicaSets(data.replicasets || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1599,7 +1603,9 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ statefulsets: StatefulSet[] }>(`${LOCAL_AGENT_HTTP_URL}/statefulsets?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/statefulsets?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setStatefulSets(data.statefulsets || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1662,7 +1668,9 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ daemonsets: DaemonSet[] }>(`${LOCAL_AGENT_HTTP_URL}/daemonsets?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/daemonsets?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setDaemonSets(data.daemonsets || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1725,7 +1733,9 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ cronjobs: CronJob[] }>(`${LOCAL_AGENT_HTTP_URL}/cronjobs?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/cronjobs?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setCronJobs(data.cronjobs || [])
       setError(null)
       setConsecutiveFailures(0)
@@ -1778,7 +1788,9 @@ export function usePodLogs(cluster: string, namespace: string, pod: string, cont
       params.append('pod', pod)
       if (container) params.append('container', container)
       params.append('tail', tail.toString())
-      const { data } = await api.get<{ logs: string }>(`${LOCAL_AGENT_HTTP_URL}/pods/logs?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pods/logs?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setLogs(data.logs || '')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to fetch logs')

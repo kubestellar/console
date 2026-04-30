@@ -670,16 +670,9 @@ func (s *Server) Start() error {
 	// browser's allowed methods. Per-handler setCORSHeaders() calls still
 	// narrow this to the exact methods each endpoint accepts.
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if s.isAllowedOrigin(origin) {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-		}
-		w.Header().Set("Access-Control-Allow-Methods", catchallCORSAllowedMethods)
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Private-Network", "true")
+		s.setCORSHeaders(w, r, catchallCORSAllowedMethods)
 		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		http.NotFound(w, r)
@@ -771,20 +764,12 @@ func (s *Server) Start() error {
 
 // handleHealth handles HTTP health checks
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	// CORS headers - only allow configured origins
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	// Handle preflight
 	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -820,18 +805,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 // handleProviderCheck runs a readiness handshake for a specific provider.
 // GET /provider/check?name=antigravity
 func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With")
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 

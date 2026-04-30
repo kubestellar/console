@@ -17,17 +17,11 @@ import (
 )
 
 func (s *Server) handleSettingsKeys(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodGet, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -50,17 +44,11 @@ func (s *Server) handleSettingsKeys(w http.ResponseWriter, r *http.Request) {
 
 // handleSettingsKeyByProvider handles DELETE for /settings/keys/:provider
 func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodDelete, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -115,17 +103,11 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 
 // handleSettingsAll handles GET and PUT for /settings (persists to ~/.kc/settings.json)
 func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodGet, http.MethodPut, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -181,16 +163,10 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 
 // handleSettingsExport handles POST for /settings/export (returns encrypted backup)
 func (s *Server) handleSettingsExport(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -225,17 +201,11 @@ func (s *Server) handleSettingsExport(w http.ResponseWriter, r *http.Request) {
 
 // handleSettingsImport handles PUT/POST for /settings/import (imports encrypted backup)
 func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodPut, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -841,17 +811,11 @@ type ProvidersHealthResponse struct {
 }
 
 func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 

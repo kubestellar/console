@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { api } from '../../lib/api'
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
 import { triggerAggressiveDetection } from '../useLocalAgent'
@@ -27,6 +26,7 @@ import {
 import type { ClusterInfo } from './types'
 import { subscribePolling } from './pollingManager'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { agentFetch } from './shared'
 
 /** Data slice returned by useClusters — heavy, arrives via startTransition. */
 interface ClusterDataSlice {
@@ -53,7 +53,9 @@ export function useMCPStatus() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const { data } = await api.get<MCPStatus>(`${LOCAL_AGENT_HTTP_URL}/status`)
+        const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/status`)
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const data = await resp.json()
         setStatus(data)
         setError(null)
       } catch {

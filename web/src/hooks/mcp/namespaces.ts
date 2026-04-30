@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { isDemoMode } from '../../lib/demoMode'
@@ -143,7 +142,9 @@ export function useNamespaces(cluster?: string, forceLive = false) {
     try {
       const podNs: string[] = []
       try {
-        const { data } = await api.get<{ pods: PodInfo[] }>(`${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}`)
+        const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}`)
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const data = await resp.json()
         for (const pod of (data.pods || [])) {
           if (pod.namespace) podNs.push(pod.namespace)
         }
@@ -194,11 +195,13 @@ export function useNamespaceStats(cluster?: string) {
     setIsLoading(true)
     try {
       // Fetch all pods for the cluster (no limit)
-      const { data } = await api.get<{ pods: PodInfo[] }>(`${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
 
       // Group pods by namespace and calculate stats
       const nsMap: Record<string, NamespaceStats> = {}
-      data.pods?.forEach(pod => {
+      data.pods?.forEach((pod: PodInfo) => {
         const ns = pod.namespace || 'default'
         if (!nsMap[ns]) {
           nsMap[ns] = { name: ns, podCount: 0, runningPods: 0, pendingPods: 0, failedPods: 0 }

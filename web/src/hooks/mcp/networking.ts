@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
@@ -425,7 +424,9 @@ export function useIngresses(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ ingresses: Ingress[] }>(`${LOCAL_AGENT_HTTP_URL}/ingresses?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/ingresses?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setIngresses(data.ingresses || [])
       setIsDemoFallback(false)
       setError(null)
@@ -508,7 +509,9 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ networkpolicies: NetworkPolicy[] }>(`${LOCAL_AGENT_HTTP_URL}/networkpolicies?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/networkpolicies?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setNetworkPolicies(data.networkpolicies || [])
       setError(null)
       setConsecutiveFailures(0)

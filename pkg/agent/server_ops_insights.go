@@ -9,17 +9,11 @@ import (
 
 // handleInsightsEnrich accepts heuristic insight summaries and returns AI enrichments
 func (s *Server) handleInsightsEnrich(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -64,17 +58,11 @@ func (s *Server) handleInsightsEnrich(w http.ResponseWriter, r *http.Request) {
 
 // handleInsightsAI returns cached AI enrichments
 func (s *Server) handleInsightsAI(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -106,7 +94,7 @@ func (s *Server) handleVClusterCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 

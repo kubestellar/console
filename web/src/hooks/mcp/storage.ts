@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
@@ -266,7 +265,9 @@ export function usePVCs(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ pvcs: PVC[] }>(`${LOCAL_AGENT_HTTP_URL}/pvcs?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pvcs?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       const newData = data.pvcs || []
       const now = new Date()
 
@@ -377,7 +378,9 @@ export function usePVs(cluster?: string) {
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
-      const { data } = await api.get<{ pvs: PV[] }>(`${LOCAL_AGENT_HTTP_URL}/pvs?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pvs?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       if (!isMountedRef.current) return
       setPVs(data.pvs || [])
       setError(null)
@@ -447,7 +450,9 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ resourceQuotas: ResourceQuota[] }>(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setResourceQuotas(data.resourceQuotas || [])
       setIsDemoFallback(false)
       setError(null)
@@ -507,7 +512,9 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ limitRanges: LimitRange[] }>(`${LOCAL_AGENT_HTTP_URL}/limitranges?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/limitranges?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setLimitRanges(data.limitRanges || [])
       setError(null)
     } catch {
@@ -545,13 +552,22 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
 
 // Create or update a ResourceQuota
 export async function createOrUpdateResourceQuota(spec: ResourceQuotaSpec): Promise<ResourceQuota> {
-  const { data } = await api.post<{ resourceQuota: ResourceQuota }>(`${LOCAL_AGENT_HTTP_URL}/resourcequotas`, spec)
+  const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(spec),
+  })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+  const data = await resp.json()
   return data.resourceQuota
 }
 
 // Delete a ResourceQuota
 export async function deleteResourceQuota(cluster: string, namespace: string, name: string): Promise<void> {
-  await api.delete(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=${cluster}&namespace=${namespace}&name=${name}`)
+  const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=${cluster}&namespace=${namespace}&name=${name}`, {
+    method: 'DELETE',
+  })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 }
 
 // Common GPU resource types for quotas
