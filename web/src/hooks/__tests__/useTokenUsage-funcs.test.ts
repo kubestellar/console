@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { __testables } from '../useTokenUsage'
 
 const {
@@ -196,6 +196,10 @@ describe('persistUsage', () => {
 })
 
 describe('getNextResetDate', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('returns a valid ISO date string', () => {
     const result = getNextResetDate()
     expect(() => new Date(result)).not.toThrow()
@@ -232,7 +236,6 @@ describe('getNextResetDate', () => {
     expect(parsed.getFullYear()).toBe(2026)
     expect(parsed.getMonth()).toBe(0)
     expect(parsed.getDate()).toBe(1)
-    vi.useRealTimers()
   })
 
   it('handles January correctly', () => {
@@ -243,7 +246,6 @@ describe('getNextResetDate', () => {
     expect(parsed.getFullYear()).toBe(2025)
     expect(parsed.getMonth()).toBe(1)
     expect(parsed.getDate()).toBe(1)
-    vi.useRealTimers()
   })
 
   it('handles last day of month', () => {
@@ -254,7 +256,6 @@ describe('getNextResetDate', () => {
     expect(parsed.getFullYear()).toBe(2025)
     expect(parsed.getMonth()).toBe(3)
     expect(parsed.getDate()).toBe(1)
-    vi.useRealTimers()
   })
 
   it('handles first day of month', () => {
@@ -265,6 +266,5 @@ describe('getNextResetDate', () => {
     expect(parsed.getFullYear()).toBe(2025)
     expect(parsed.getMonth()).toBe(6)
     expect(parsed.getDate()).toBe(1)
-    vi.useRealTimers()
   })
 })

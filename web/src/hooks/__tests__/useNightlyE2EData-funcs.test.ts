@@ -78,9 +78,13 @@ describe('loadCachedData', () => {
   it('returns empty guides when localStorage has invalid JSON', () => {
     localStorage.setItem(LS_CACHE_KEY, '{not valid json')
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const result = loadCachedData()
-    expect(result).toEqual({ guides: [], isDemo: false })
-    expect(warnSpy).toHaveBeenCalledOnce()
+    try {
+      const result = loadCachedData()
+      expect(result).toEqual({ guides: [], isDemo: false })
+      expect(warnSpy).toHaveBeenCalledOnce()
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 
   it('returns empty guides when cached data has no guides property', () => {

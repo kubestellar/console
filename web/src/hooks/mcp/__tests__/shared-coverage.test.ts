@@ -233,6 +233,7 @@ describe('getAgentToken — emits GA4 on failure', () => {
     globalThis.fetch = originalFetch
     localStorage.clear()
     mockEmitAgentTokenFailure.mockClear()
+    _resetAgentTokenState()
   })
 
   it('emits emitAgentTokenFailure when /api/agent/token returns non-OK', async () => {

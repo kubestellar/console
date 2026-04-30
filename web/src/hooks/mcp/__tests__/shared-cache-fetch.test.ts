@@ -103,6 +103,7 @@ import {
   clearClusterFailure,
   clusterDisplayName,
   fetchWithRetry,
+  _resetAgentTokenState,
   // Async functions
   fullFetchClusters,
   refreshSingleCluster,
@@ -631,6 +632,7 @@ describe('fetchSingleClusterHealth', () => {
   const originalFetch = globalThis.fetch
 
   beforeEach(() => {
+    _resetAgentTokenState()
     mockIsAgentUnavailable.mockReturnValue(false)
     mockIsNetlifyDeployment.value = false
     mockIsDemoToken.mockReturnValue(false)
@@ -640,6 +642,7 @@ describe('fetchSingleClusterHealth', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch
     vi.restoreAllMocks()
+    _resetAgentTokenState()
   })
 
   it('returns health data from agent HTTP endpoint', async () => {
