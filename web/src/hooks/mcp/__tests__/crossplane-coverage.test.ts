@@ -45,6 +45,7 @@ vi.mock('../../../lib/modeTransition', () => ({
 vi.mock('../shared', () => ({
   MIN_REFRESH_INDICATOR_MS: 0,
   getEffectiveInterval: (ms: number) => ms,
+  agentFetch: vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })),
 }))
 
 vi.mock('../pollingManager', () => ({
