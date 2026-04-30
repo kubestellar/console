@@ -575,9 +575,12 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     renderHook(() => useLastRoute())
     window.dispatchEvent(new Event('beforeunload'))
     const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
+    // Either nothing was written, or the entry for this path is absent
     if (stored) {
       const positions = JSON.parse(stored)
       expect(positions['/clusters']).toBeUndefined()
+    } else {
+      expect(stored).toBeNull()
     }
   })
 
@@ -589,8 +592,11 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     } as DOMRect)
     renderHook(() => useLastRoute())
     window.dispatchEvent(new Event('beforeunload'))
-    // No exception thrown is the main assertion
-    expect(true).toBe(true)
+    const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
+    expect(stored).not.toBeNull()
+    const positions = JSON.parse(stored!)
+    expect(positions['/clusters']).toBeDefined()
+    expect(positions['/clusters'].position).toBe(500)
   })
 
   it('saves position with card elements present (card-finding path)', () => {
@@ -615,13 +621,11 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     window.dispatchEvent(new Event('beforeunload'))
 
     const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
-    if (stored) {
-      const positions = JSON.parse(stored)
-      if (positions['/clusters'] && typeof positions['/clusters'] === 'object') {
-        expect(typeof positions['/clusters'].position).toBe('number')
-      }
-    }
-    expect(true).toBe(true)
+    expect(stored).not.toBeNull()
+    const positions = JSON.parse(stored!)
+    expect(positions['/clusters']).toBeDefined()
+    expect(typeof positions['/clusters'].position).toBe('number')
+    expect(positions['/clusters'].cardTitle).toBe('My Card')
   })
 
   it('handles cards with zero-size getBoundingClientRect (hidden/KeepAlive)', () => {
@@ -646,7 +650,13 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     renderHook(() => useLastRoute())
     window.dispatchEvent(new Event('beforeunload'))
 
-    expect(true).toBe(true)
+    // Zero-size card should be skipped — position saved without cardTitle from hidden card
+    const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
+    expect(stored).not.toBeNull()
+    const positions = JSON.parse(stored!)
+    expect(positions['/clusters']).toBeDefined()
+    expect(positions['/clusters'].position).toBe(200)
+    // cardTitle should not reference the zero-size card (no h3 text available)
   })
 
   it('scroll event triggers position save via debounce', () => {
@@ -662,9 +672,15 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     main.dispatchEvent(new Event('scroll'))
     vi.advanceTimersByTime(2500)
 
+    // After debounce fires, localStorage should have been updated
+    const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
+    expect(stored).not.toBeNull()
+    const positions = JSON.parse(stored!)
+    expect(positions['/clusters']).toBeDefined()
+    expect(positions['/clusters'].position).toBe(150)
+
     unmount()
     vi.useRealTimers()
-    expect(true).toBe(true)
   })
 })
 
@@ -700,7 +716,8 @@ describe('restoreScrollPosition (via hook navigation path)', () => {
     }))
     mockPathname = '/clusters'
     renderHook(() => useLastRoute())
-    expect(true).toBe(true)
+    // scrollTo should be called with the saved position
+    expect(main.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 400 }))
   })
 
   it('restores by cardTitle when card with matching h3 exists', () => {
@@ -731,8 +748,13 @@ describe('restoreScrollPosition (via hook navigation path)', () => {
     renderHook(() => useLastRoute())
 
     vi.advanceTimersByTime(200)
+    // Should attempt to scroll to the card's position relative to the container
+    expect(main.scrollTo).toHaveBeenCalled()
+    const scrollCall = (main.scrollTo as ReturnType<typeof vi.fn>).mock.calls.find(
+      (call) => call[0]?.top !== undefined && call[0].top > 0
+    )
+    expect(scrollCall).toBeDefined()
     vi.useRealTimers()
-    expect(true).toBe(true)
   })
 })
 

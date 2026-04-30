@@ -906,9 +906,11 @@ describe('useWorkloads via agent with clusters', () => {
     const { result } = renderHook(() => useWorkloads())
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined()
       expect(result.current.isLoading).toBe(false)
     })
+    expect(result.current.data).toBeDefined()
+    // Verify the agent concurrency path was actually invoked
+    expect(mapSettledMock).toHaveBeenCalled()
   })
 
   it('falls back to REST when agent returns null (no clusters)', async () => {
@@ -916,7 +918,7 @@ describe('useWorkloads via agent with clusters', () => {
     const mockWorkloads = [
       { name: 'web', namespace: 'default', type: 'Deployment', replicas: 1, readyReplicas: 1, status: 'Running', image: 'web:v2', createdAt: '2025-01-01T00:00:00Z' },
     ]
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ items: mockWorkloads }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -926,9 +928,13 @@ describe('useWorkloads via agent with clusters', () => {
     const { result } = renderHook(() => useWorkloads())
 
     await waitFor(() => {
-      expect(result.current.data).toBeDefined()
       expect(result.current.isLoading).toBe(false)
     })
+    // Verify it fell back to REST API fetch (not agent path)
+    expect(fetchSpy).toHaveBeenCalled()
+    const fetchUrl = fetchSpy.mock.calls[0][0] as string
+    expect(fetchUrl).toContain('/api/')
+    expect(result.current.data).toBeDefined()
   })
 
   it('authHeaders returns empty object when no token stored', async () => {
