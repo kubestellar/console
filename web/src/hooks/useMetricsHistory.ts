@@ -473,8 +473,8 @@ export function getMetricsHistoryContext(): string {
     }).filter((v): v is { cpu: number; mem: number } => v !== null)
 
     if (values.length > 0) {
-      const cpuTrend = values.map(v => `${(v.cpu ?? 0).toFixed(0)}%`).join(' → ')
-      const memTrend = values.map(v => `${(v.mem ?? 0).toFixed(0)}%`).join(' → ')
+      const cpuTrend = values.map(v => v.cpu != null ? `${v.cpu.toFixed(0)}%` : 'N/A').join(' → ')
+      const memTrend = values.map(v => v.mem != null ? `${v.mem.toFixed(0)}%` : 'N/A').join(' → ')
       context += `${name}:\n  CPU: ${cpuTrend}\n  Memory: ${memTrend}\n`
     }
   })
