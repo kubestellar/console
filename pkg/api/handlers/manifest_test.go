@@ -96,6 +96,14 @@ func TestManifestSetup_ManifestContainsExpectedFields(t *testing.T) {
 	callbacks := manifest["callback_urls"].([]any)
 	assert.Len(t, callbacks, 1)
 	assert.Equal(t, "http://localhost:8080/auth/github/callback", callbacks[0])
+
+	hookAttrs := manifest["hook_attributes"].(map[string]any)
+	assert.Equal(t, false, hookAttrs["active"])
+	assert.NotEmpty(t, hookAttrs["url"], "hook_attributes.url is required by GitHub")
+
+	perms := manifest["default_permissions"].(map[string]any)
+	_, hasEmailAddresses := perms["email_addresses"]
+	assert.False(t, hasEmailAddresses, "email_addresses is not a valid GitHub App permission")
 }
 
 func TestManifestCallback_RedirectsWhenAlreadyConfigured(t *testing.T) {

@@ -103,11 +103,9 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 		URL:          h.backendURL,
 		CallbackURLs: []string{h.backendURL + "/auth/github/callback"},
 		RedirectURL:  h.backendURL + "/auth/manifest/callback",
-		HookAttributes: map[string]any{"active": false},
+		HookAttributes: map[string]any{"url": "https://example.com/events", "active": false},
 		Public:       false,
-		DefaultPermissions: map[string]string{
-			"email_addresses": "read",
-		},
+		DefaultPermissions: map[string]string{},
 		RequestOAuth: true,
 	}
 
@@ -120,7 +118,7 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 	formAction := h.githubURL + "/settings/apps/new"
 	manifestB64 := base64.StdEncoding.EncodeToString(manifestJSON)
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+	page := fmt.Sprintf(`<!DOCTYPE html>
 <html>
 <head><title>Setting up GitHub Sign-In…</title></head>
 <body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0f;color:#e0e0e0;font-family:system-ui">
@@ -139,7 +137,7 @@ func (h *ManifestHandler) ManifestSetup(c *fiber.Ctx) error {
 </html>`, formAction, manifestB64)
 
 	c.Set("Content-Type", "text/html; charset=utf-8")
-	return c.SendString(html)
+	return c.SendString(page)
 }
 
 // ManifestCallback handles the redirect from GitHub after the user creates

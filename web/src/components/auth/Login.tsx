@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState, useRef } from 'react'
-import { AlertTriangle, ExternalLink, Settings, Copy, Check, ChevronDown, ChevronRight, KeyRound, Monitor } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ExternalLink, Settings, Copy, Check, ChevronDown, ChevronRight, KeyRound, Monitor } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
@@ -198,6 +198,7 @@ export function Login() {
   const { login, isAuthenticated, isLoading } = useAuth()
   const [searchParams] = useSearchParams()
   const sessionExpired = searchParams.get('reason') === 'session_expired'
+  const manifestSuccess = searchParams.get('manifest') === 'success'
   const oauthError = useMemo(() => searchParams.get('error'), [searchParams])
   const errorDetail = searchParams.get('error_detail')
   const errorInfo = (() => {
@@ -254,7 +255,7 @@ export function Login() {
   // (addresses kubestellar/kubestellar#3761).
   // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info.
   useEffect(() => {
-    if (isLoading || isAuthenticated || oauthError) return
+    if (isLoading || isAuthenticated || oauthError || manifestSuccess) return
 
     const isNetlifyPreview = window.location.hostname.includes('deploy-preview-') ||
       window.location.hostname.includes('netlify.app')
@@ -279,7 +280,7 @@ export function Login() {
         setShowOAuthSetup(true)
       }
     }).catch(() => { /* checkOAuthConfiguredWithRetry always resolves — defensive catch */ })
-  }, [isLoading, isAuthenticated, login, oauthError, branding.hostedDomain])
+  }, [isLoading, isAuthenticated, login, oauthError, manifestSuccess, branding.hostedDomain])
 
   // Show loading while checking auth status
   if (isLoading) {
@@ -330,6 +331,17 @@ export function Login() {
               <div>
                 <div className="font-medium">{t('login.sessionExpired')}</div>
                 <div className="text-xs text-yellow-400/80 mt-0.5">{t('login.sessionTimedOut')}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Manifest setup success banner */}
+          {manifestSuccess && (
+            <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg border border-green-500/50 bg-green-500/10 text-green-300 text-sm">
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-green-400" />
+              <div>
+                <div className="font-medium">{t('login.manifestSuccess')}</div>
+                <div className="text-xs text-green-400/80 mt-0.5">{t('login.manifestSuccessDetail')}</div>
               </div>
             </div>
           )}
@@ -386,7 +398,7 @@ export function Login() {
           {/* Welcome text */}
           <div className="text-center mb-8">
             <h2 data-testid="login-welcome-heading" className="text-xl font-semibold text-foreground mb-2">
-              {oauthError ? 'Login Failed' : sessionExpired ? t('login.sessionExpired') : t('login.welcomeBack')}
+              {oauthError ? 'Login Failed' : manifestSuccess ? t('login.manifestSuccess') : sessionExpired ? t('login.sessionExpired') : t('login.welcomeBack')}
             </h2>
             <p className="text-muted-foreground">
               {oauthError ? 'Fix the issue above and try again' : t('login.signInDescription')}
@@ -539,9 +551,21 @@ export function Login() {
           )}
 
           {/* Two-button layout when OAuth is not configured:
-              primary "Sign in with GitHub" (one-click manifest flow) + secondary "Demo Mode" */}
+              primary "Sign in with GitHub" (one-click manifest flow) + secondary "Demo Mode".
+              GitHub's /settings/apps/new requires an authenticated session — if the
+              user isn't logged in, the POST body (manifest) is silently dropped during
+              the login redirect (#10931). We show a "sign in first" hint. */}
           {showOAuthSetup && (
             <div className="space-y-3">
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center text-xs text-muted-foreground hover:text-blue-400 transition-colors mb-1"
+              >
+                {t('login.signInToGitHubFirst')}
+                <ExternalLink className="w-3 h-3 inline ml-1 -mt-0.5" />
+              </a>
               <button
                 data-testid="github-setup-button"
                 onClick={() => { window.location.href = '/auth/manifest/setup' }}

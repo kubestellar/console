@@ -1548,14 +1548,17 @@ func LoadConfigFromEnv() Config {
 		dbPath = p
 	}
 
-	devMode := os.Getenv("DEV_MODE") == "true"
+	devModeEnv := os.Getenv("DEV_MODE")
+	devMode := devModeEnv == "true"
 
 	// Defense-in-depth: auto-activate dev mode when OAuth is unconfigured (#10925).
 	// Without this, a missing DEV_MODE export (e.g. older start.sh) causes the
 	// auth-retry cascade: JWTAuth rejects every request → frontend retries → 429.
+	// Skip auto-activation when DEV_MODE is explicitly "false" — the one-click
+	// manifest flow intentionally starts with no OAuth credentials (#10931).
 	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
 	githubSecret := os.Getenv("GITHUB_CLIENT_SECRET")
-	if !devMode && githubClientID == "" && githubSecret == "" {
+	if !devMode && devModeEnv != "false" && githubClientID == "" && githubSecret == "" {
 		slog.Warn("[Config] No GitHub OAuth credentials and DEV_MODE not set — auto-activating dev mode")
 		devMode = true
 	}

@@ -61,9 +61,10 @@ h1{font-size:1.25rem;font-weight:500;margin-bottom:.25rem}
 <div class="stars" id="stars"></div>
 <div class="wrap">
 <h1>KubeStellar Console</h1>
-<p class="subtitle">Starting up&hellip;</p>
+<p class="subtitle">Initializing&hellip;</p>
 
 <div class="steps" id="steps">
+  <div class="step active" data-stage="watchdog"><span class="step-icon"></span>Preparing environment</div>
   <div class="step waiting" data-stage="npm_install"><span class="step-icon"></span>Installing dependencies</div>
   <div class="step waiting" data-stage="frontend_build"><span class="step-icon"></span>Building frontend</div>
   <div class="step waiting" data-stage="backend_compiling"><span class="step-icon"></span>Compiling backend</div>
@@ -125,7 +126,7 @@ var reloading=false;
 var elapsedEl=document.getElementById('elapsed');
 
 // Stage ordering
-var STAGES=['npm_install','frontend_build','vite_starting','backend_compiling','backend_starting','ready'];
+var STAGES=['watchdog','npm_install','frontend_build','vite_starting','backend_compiling','backend_starting','ready'];
 
 function normalizeStage(s){
   if(s==='vite_starting') return 'frontend_build';
@@ -160,7 +161,7 @@ function updateSteps(stage){
 
   var subtitle=document.querySelector('.subtitle');
   var labels={
-    'watchdog':'Initializing\u2026',
+    'watchdog':'Preparing environment\u2026',
     'npm_install':'Installing dependencies\u2026',
     'frontend_build':'Building frontend\u2026',
     'vite_starting':'Starting dev server\u2026',
