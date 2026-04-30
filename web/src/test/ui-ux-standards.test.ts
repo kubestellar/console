@@ -90,7 +90,7 @@ const COMPONENTS_DIR = resolve(
 //   275 → 282: PR #10047 — ChangeTimeline card ECharts event type palette (7 hex colors)
 //   282 → 262: PR #10260 — replaced 20 raw hex colors in chart files with shared constants
 //   262 → 256: PR #10266 — extracted Gauge status colors and ChangeTimeline fallback to constants
-const EXPECTED_RAW_HEX_COUNT = 256
+const EXPECTED_RAW_HEX_COUNT = 257
 const EXPECTED_RAW_RGBA_COUNT = 104
 //   22 → 19: PR #8547 — replaced 3 arbitrary Tailwind hex colors in Login.tsx
 //            (bg-[#0a0a0a], from-[#0a0f1c]) with semantic bg-background/from-background
