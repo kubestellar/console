@@ -230,3 +230,12 @@ export function useSelfUpgrade() {
     /** Cancel restart polling */
     cancelRestartPoll }
 }
+
+export const __testables = {
+  getToken,
+  SELF_UPGRADE_TIMEOUT_MS,
+  RESTART_POLL_INTERVAL_MS,
+  RESTART_POLL_MAX_MS,
+  RESTART_HEALTH_TIMEOUT_MS,
+  RELOAD_DELAY_MS,
+}
