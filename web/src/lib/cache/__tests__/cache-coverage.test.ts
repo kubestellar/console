@@ -1025,7 +1025,7 @@ describe('worker-active IndexedDB mirror write', () => {
     // (vi.resetModules clears pending doMock registrations, so ordering matters.)
     vi.resetModules()
     vi.doMock('../workerRpc', () => ({
-      CacheWorkerRpc: vi.fn().mockImplementation(() => mockRpc),
+      CacheWorkerRpc: vi.fn().mockImplementation(function () { return mockRpc }),
     }))
 
     const mod = await import('../index')
