@@ -336,15 +336,23 @@ async function navigateToDashboard(page: Page) {
 
 async function openMissionSidebar(page: Page) {
   const clicked = await page.evaluate(() => {
+    // Prefer the dedicated sidebar toggle button
+    const toggle = document.querySelector('[data-testid="mission-sidebar-toggle"]') as HTMLElement
+      || document.querySelector('[data-tour="ai-missions-toggle"]') as HTMLElement
+    if (toggle) { toggle.click(); return true }
+    // Fallback: any button with "Mission" in its title
     const btn = document.querySelector('button[title*="Mission"]') as HTMLElement
     if (btn) { btn.click(); return true }
+    // Fallback: any button with "Mission" in its text
     const buttons = Array.from(document.querySelectorAll('button'))
     const mcBtn = buttons.find(b => b.textContent?.includes('Mission'))
     if (mcBtn) { (mcBtn as HTMLElement).click(); return true }
     return false
   })
   if (!clicked) {
-    await page.locator('button', { hasText: /Mission/i }).first().click({ force: true, timeout: 5000 }).catch(() => {})
+    await page.locator('[data-testid="mission-sidebar-toggle"]')
+      .or(page.locator('button', { hasText: /Mission/i }))
+      .first().click({ force: true, timeout: 5000 }).catch(() => {})
   }
   // Wait for sidebar to appear
   await page.waitForTimeout(UI_ANIMATION_SETTLE_MS)

@@ -705,6 +705,7 @@ export function MissionSidebar() {
 
       <div
         data-tour="ai-missions"
+        data-testid="mission-sidebar"
         className={cn(
           "fixed bg-card border-border flex flex-col overflow-hidden shadow-2xl",
           isMobile ? "z-modal" : "z-sidebar",
@@ -1572,6 +1573,7 @@ export function MissionSidebarToggle() {
     <button
       onClick={openSidebar}
       data-tour="ai-missions-toggle"
+      data-testid="mission-sidebar-toggle"
       className={cn(
         'fixed flex items-center gap-2 rounded-full shadow-lg transition-all z-50',
         // Mobile: smaller padding, bottom right

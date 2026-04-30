@@ -515,23 +515,26 @@ async function ensureDashboard(page: Page) {
 async function openMC(page: Page) {
   await ensureDashboard(page)
 
-  // The Mission Control button is in a fixed sidebar — Playwright can't scroll
-  // to it reliably. Use JS click to trigger the React state change.
+  // Strategy: first try the deep-link (most reliable), then fall back to
+  // finding the Mission Control button inside the sidebar.
   const clicked = await page.evaluate(() => {
-    // Try the titled button first (sidebar icon)
-    const titledBtn = document.querySelector('button[title*="Mission Control"]') as HTMLElement
-    if (titledBtn) { titledBtn.click(); return true }
-    // Try text-based fallback
+    // 1. Try the sidebar toggle first — open the sidebar so buttons are interactive
+    const toggleBtn = document.querySelector('[data-testid="mission-sidebar-toggle"]') as HTMLElement
+      || document.querySelector('[data-tour="ai-missions-toggle"]') as HTMLElement
+    if (toggleBtn) toggleBtn.click()
+
+    // 2. Find the "Mission Control" button (inside the sidebar empty-state or add menu)
     const buttons = Array.from(document.querySelectorAll('button'))
-    const mcBtn = buttons.find(b => b.textContent?.includes('Mission Control'))
+    const mcBtn = buttons.find(b => b.textContent?.trim() === 'Mission Control')
+      || buttons.find(b => b.textContent?.includes('Mission Control'))
     if (mcBtn) { (mcBtn as HTMLElement).click(); return true }
     return false
   })
 
   if (!clicked) {
-    // Final fallback — click via Playwright with force
-    const btn = page.locator('button', { hasText: 'Mission Control' }).first()
-    await btn.click({ force: true, timeout: 5000 }).catch(() => {})
+    // Final fallback — use the deep-link URL param
+    await page.goto('/?mission-control=open')
+    await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_TIMEOUT_MS })
   }
 
   // Wait for the wizard dialog to render — look for phase stepper text

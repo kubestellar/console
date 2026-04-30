@@ -393,6 +393,19 @@ async function navigateToConsole(page: Page) {
 }
 
 async function openMissionControl(page: Page) {
+  // First open the sidebar so the "Mission Control" button is accessible
+  const toggled = await page.evaluate(() => {
+    const toggle = document.querySelector('[data-testid="mission-sidebar-toggle"]') as HTMLElement
+      || document.querySelector('[data-tour="ai-missions-toggle"]') as HTMLElement
+    if (toggle) { toggle.click(); return true }
+    return false
+  })
+
+  if (toggled) {
+    // Wait for sidebar animation
+    await page.waitForTimeout(500)
+  }
+
   const mcButton = page.getByText('Mission Control', { exact: false }).first()
   if (await mcButton.isVisible({ timeout: 5000 }).catch(() => false)) {
     await mcButton.click()

@@ -144,6 +144,7 @@ test.describe('Mission System Regression Tests', () => {
       // Open mission sidebar if present
       const missionToggle = page.locator('[data-testid="mission-sidebar-toggle"]')
         .or(page.locator('button[aria-label*="mission" i]'))
+        .or(page.locator('[data-tour="ai-missions-toggle"]'))
         .or(page.locator('button:has-text("Missions")'))
 
       if (await missionToggle.first().isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -158,12 +159,12 @@ test.describe('Mission System Regression Tests', () => {
 
           // Wait for mission content to load in the sidebar
           const missionSidebar = page.locator('[data-testid="mission-sidebar"]')
-            .or(page.locator('[class*="mission"][class*="sidebar"]'))
+            .or(page.locator('[data-tour="ai-missions"]'))
             .first()
           await expect(missionSidebar).toBeVisible({ timeout: 5000 })
 
           const sidebarContent = await page.locator('[data-testid="mission-sidebar"]')
-            .or(page.locator('[class*="mission"][class*="sidebar"]'))
+            .or(page.locator('[data-tour="ai-missions"]'))
             .first()
             .textContent()
             .catch(() => '')

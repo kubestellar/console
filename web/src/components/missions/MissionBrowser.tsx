@@ -975,6 +975,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     // overlaps the modal header (issue #9150).
     <div className="fixed inset-0 z-modal bg-black/60 backdrop-blur-xs">
     <div
+      role="dialog"
+      aria-label="Mission browser"
       data-testid="mission-browser"
       className="fixed bg-background rounded-xl shadow-2xl border border-border flex flex-col overflow-hidden"
       style={{
