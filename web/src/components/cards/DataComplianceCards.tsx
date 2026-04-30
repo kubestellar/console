@@ -41,7 +41,7 @@ const DEMO_VAULT: VaultStatus = {
 export function VaultSecrets({ config: _config }: CardConfig) {
   const { t } = useTranslation()
   const { isDemoMode } = useDemoMode()
-  const { clusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
   const [vaultStatus, setVaultStatus] = useState<VaultStatus>(DEMO_VAULT)
   const [isLoading, setIsLoading] = useState(true)
   const [secretCount, setSecretCount] = useState(0)
@@ -212,7 +212,7 @@ const DEMO_ESO: ESOStatus = {
 export function ExternalSecrets({ config: _config }: CardConfig) {
   const { t } = useTranslation()
   const { isDemoMode } = useDemoMode()
-  const { clusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
   const [esoStatus, setEsoStatus] = useState<ESOStatus>(DEMO_ESO)
   const [isLoading, setIsLoading] = useState(true)
 

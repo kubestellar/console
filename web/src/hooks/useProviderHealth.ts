@@ -250,7 +250,7 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
  * Uses useCache for persistent caching, SWR, and demo fallback.
  */
 export function useProviderHealth() {
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
 
   // Always use a stable cache key — refetch when the cluster set changes
   const clustersRef = useRef(clusters)

@@ -355,7 +355,7 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
 
 export function useIntoto() {
   const { isDemoMode } = useDemoMode()
-  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
 
   // Snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())

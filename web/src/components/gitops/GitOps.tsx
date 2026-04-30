@@ -90,7 +90,7 @@ function getTimeAgo(timestamp: string | undefined, t: TFunction): string {
 
 export function GitOps() {
   const { t } = useTranslation(['common', 'cards'])
-  const { clusters, isRefreshing: dataRefreshing, refetch } = useClusters()
+  const { clusters, deduplicatedClusters, isRefreshing: dataRefreshing, refetch } = useClusters()
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
   const { drillToAllHelm, drillToAllOperators } = useDrillDownActions()
@@ -138,10 +138,10 @@ export function GitOps() {
     c.context || c.name.split('/').pop() || ''
   const resolveAppCluster = (preferred: string): { cluster: string; ambiguous: boolean } => {
     if (preferred) return { cluster: preferred, ambiguous: false }
-    if (clusters.length === EXACTLY_ONE_CLUSTER) {
-      return { cluster: clusterDisplayName(clusters[0]), ambiguous: false }
+    if (deduplicatedClusters.length === EXACTLY_ONE_CLUSTER) {
+      return { cluster: clusterDisplayName(deduplicatedClusters[0]), ambiguous: false }
     }
-    return { cluster: '', ambiguous: clusters.length > EXACTLY_ONE_CLUSTER }
+    return { cluster: '', ambiguous: deduplicatedClusters.length > EXACTLY_ONE_CLUSTER }
   }
 
   // #5952 — detectAllDrift is now a callable ref so the refresh button can
@@ -260,9 +260,9 @@ export function GitOps() {
     detectAllDriftRef.current = detectAllDrift
     detectAllDrift()
     return () => { cancelled = true }
-    // resolveAppCluster depends on `clusters`, which is the effective dep here.
+    // resolveAppCluster depends on `deduplicatedClusters`, which is the effective dep here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusters])
+  }, [deduplicatedClusters])
 
   // Handle sync action - open the sync dialog
   const handleSync = (app: GitOpsApp) => {

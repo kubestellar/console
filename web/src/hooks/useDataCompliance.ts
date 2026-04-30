@@ -209,7 +209,7 @@ async function fetchClusterCompliance(cluster: string): Promise<ClusterComplianc
 
 export function useDataCompliance() {
   const { isDemoMode } = useDemoMode()
-  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
   const { status: certStatus, isLoading: certLoading } = useCertManager()
 
   // Snapshot ref value to avoid reading ref during render

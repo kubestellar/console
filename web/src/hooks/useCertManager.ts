@@ -208,7 +208,7 @@ function getDemoIssuers(): Issuer[] {
 
 export function useCertManager() {
   const { isDemoMode: demoMode } = useDemoMode()
-  const { clusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
 
   // Initialize state from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())

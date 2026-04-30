@@ -20,7 +20,7 @@ type ReportFormat = 'pdf' | 'json'
 
 export const ComplianceReportsContent = memo(function ComplianceReportsContent() {
   const { frameworks, isLoading: fwLoading, refetch } = useComplianceFrameworks()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const clusterNames = useMemo(() => clusters?.map((c: { name: string }) => c.name) ?? [], [clusters])
 
   const [selectedFw, setSelectedFw] = useState<string>('')
