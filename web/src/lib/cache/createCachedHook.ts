@@ -82,6 +82,7 @@ export function createCachedHook<T>(
       consecutiveFailures: result.consecutiveFailures,
       lastRefresh: result.lastRefresh,
       refetch: result.refetch,
+      retryFetch: result.retryFetch,
     }
   }
 }
