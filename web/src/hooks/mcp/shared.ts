@@ -816,15 +816,17 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
       }
     }
 
-    // Determine best health status (prefer healthy, then reachable)
+    // Determine best health status.
+    // Since sorting already places reachable contexts first, the primary's
+    // reachable flag is authoritative — don't aggregate across aliases which
+    // may have a different auth context (#11149).
     const anyHealthy = group.some(c => c.healthy)
-    const anyReachable = group.some(c => c.reachable !== false)
 
     deduplicatedClusters.push({
       ...primary,
       ...bestMetrics,
       healthy: anyHealthy || primary.healthy,
-      reachable: anyReachable ? true : primary.reachable,
+      reachable: primary.reachable,
       aliases,
     })
   }
