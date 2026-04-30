@@ -642,6 +642,38 @@ describe('useDeployWorkload', () => {
     expect(result.current.error).toBeDefined()
     expect(result.current.error!.message).toBe('Cluster unreachable')
   })
+
+  it('throws error when response is 200 OK but success is false', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: false, error: 'Logic failure' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    const { useDeployWorkload } = await importFresh()
+    const onError = vi.fn()
+
+    const { result } = renderHook(() => useDeployWorkload())
+    await act(async () => {
+      try {
+        await result.current.mutate(
+          {
+            workloadName: 'api-server',
+            namespace: 'production',
+            sourceCluster: 'staging',
+            targetClusters: ['prod'],
+          },
+          { onError }
+        )
+      } catch {
+        // expected
+      }
+    })
+
+    expect(onError).toHaveBeenCalled()
+    expect(result.current.error).toBeDefined()
+    expect(result.current.error!.message).toBe('Logic failure')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -689,6 +721,33 @@ describe('useScaleWorkload', () => {
 
     expect(result.current.error).toBeInstanceOf(Error)
     expect(result.current.error!.message).toBe('Unknown error')
+  })
+
+  it('throws error when response is 200 OK but success is false', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: false, error: 'Scaling logic failure' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    const { useScaleWorkload } = await importFresh()
+    const onError = vi.fn()
+
+    const { result } = renderHook(() => useScaleWorkload())
+    await act(async () => {
+      try {
+        await result.current.mutate(
+          { workloadName: 'api-server', namespace: 'production', replicas: 5 },
+          { onError }
+        )
+      } catch {
+        // expected
+      }
+    })
+
+    expect(onError).toHaveBeenCalled()
+    expect(result.current.error).toBeDefined()
+    expect(result.current.error!.message).toBe('Scaling logic failure')
   })
 })
 
@@ -774,5 +833,32 @@ describe('useDeleteWorkload', () => {
     })
 
     expect(result.current.error!.message).toBe('Failed to delete workload')
+  })
+
+  it('throws error when response is 200 OK but success is false', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ success: false, error: 'Deletion logic failure' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    )
+    const { useDeleteWorkload } = await importFresh()
+    const onError = vi.fn()
+
+    const { result } = renderHook(() => useDeleteWorkload())
+    await act(async () => {
+      try {
+        await result.current.mutate(
+          { cluster: 'prod', namespace: 'production', name: 'api-server' },
+          { onError }
+        )
+      } catch {
+        // expected
+      }
+    })
+
+    expect(onError).toHaveBeenCalled()
+    expect(result.current.error).toBeDefined()
+    expect(result.current.error!.message).toBe('Deletion logic failure')
   })
 })

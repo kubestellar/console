@@ -234,7 +234,7 @@ export function DashboardRuntime({
       },
       onError: (error: Error) => {
         showToast(`Failed to deploy: ${error.message}`, 'error')
-      } })
+      } }).catch(console.error)
   }
 
   // Get stats value getter from registry or props

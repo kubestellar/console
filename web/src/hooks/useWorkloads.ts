@@ -362,6 +362,9 @@ export function useDeployWorkload() {
         throw new Error(errorData.error || 'Failed to deploy workload')
       }
       const result = await res.json()
+      if (result.success === false) {
+        throw new Error(result.error || result.message || 'Failed to deploy workload')
+      }
       options?.onSuccess?.(result)
       return result
     } catch (err: unknown) {
@@ -412,6 +415,9 @@ export function useScaleWorkload() {
         throw new Error(errorData.error || 'Failed to scale workload')
       }
       const result = await res.json()
+      if (result.success === false) {
+        throw new Error(result.error || result.message || 'Failed to scale workload')
+      }
       options?.onSuccess?.(result)
       return result
     } catch (err: unknown) {
@@ -465,6 +471,10 @@ export function useDeleteWorkload() {
       if (!res.ok) {
         const errorData = await res.json()
         throw new Error(errorData.error || 'Failed to delete workload')
+      }
+      const result = await res.json()
+      if (result.success === false) {
+        throw new Error(result.error || result.message || 'Failed to delete workload')
       }
       options?.onSuccess?.()
     } catch (err: unknown) {
