@@ -359,8 +359,14 @@ export function useLastRoute() {
     }
   }, [location.pathname, restoreScrollPosition])
 
+  let lastRouteValue: string | null = null
+  try {
+    lastRouteValue = localStorage.getItem(LAST_ROUTE_KEY)
+  } catch {
+    // Ignore localStorage errors
+  }
   return {
-    lastRoute: localStorage.getItem(LAST_ROUTE_KEY),
+    lastRoute: lastRouteValue,
     scrollPositions: getScrollPositions(),
   }
 }
