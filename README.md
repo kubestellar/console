@@ -80,6 +80,19 @@ sudo apt-get update && sudo apt-get install -y curl
 curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 ```
 
+> **⚠️ Windows PowerShell `curl` gotcha:** In PowerShell, `curl` is an alias
+> for `Invoke-WebRequest`, which behaves completely differently from the real
+> curl. If you need to test endpoints from PowerShell (outside WSL), always
+> use **`curl.exe`** instead of `curl`, or use the native PowerShell cmdlet:
+>
+> ```powershell
+> # Option 1 — use curl.exe (the real curl shipped with Windows 10+)
+> curl.exe -s http://localhost:8080/api/health
+>
+> # Option 2 — use PowerShell native cmdlet
+> Invoke-RestMethod http://localhost:8080/api/health
+> ```
+
 **Building `kc-agent` from source is a separate path** — only needed if you want a development build of the agent rather than the prebuilt binary that `start.sh` already installs. It requires Go **1.25+** (the version pinned in `go.mod`) and `git`. Ubuntu's `golang-go` package usually lags the current release; use the [official Go install](https://go.dev/doc/install) or the `longsleep/golang-backports` PPA to get a recent version:
 
 ```bash

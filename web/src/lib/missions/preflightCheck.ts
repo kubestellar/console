@@ -16,6 +16,7 @@ export type PreflightErrorCode =
   | 'RBAC_DENIED'
   | 'CONTEXT_NOT_FOUND'
   | 'CLUSTER_UNREACHABLE'
+  | 'MISSING_TOOLS'
   | 'UNKNOWN_EXECUTION_FAILURE'
 
 export interface PreflightError {
@@ -280,6 +281,45 @@ export function getRemediationActions(error: PreflightError, context?: string): 
         },
       ]
 
+    case 'MISSING_TOOLS': {
+      const actions: RemediationAction[] = [
+        {
+          label: 'Missing tools',
+          description: error.message,
+          actionType: 'info',
+        },
+      ]
+
+      // Generate platform-aware install commands from the missing tool list
+      const missingTools = (error.details?.missingTools as string[] | undefined) || []
+      if (missingTools.length > 0) {
+        const brewCmds = missingTools.map(t => `brew install ${t}`).join('\n')
+        const wingetCmds = missingTools
+          .map(t => WINGET_PACKAGE_MAP[t] || `winget install ${t}`)
+          .join('\n')
+        actions.push({
+          label: 'Install with Homebrew (macOS/Linux)',
+          description: 'Run these commands to install the missing tools via Homebrew.',
+          codeSnippet: brewCmds,
+          actionType: 'copy',
+        })
+        actions.push({
+          label: 'Install with winget (Windows)',
+          description: 'On Windows 10+, use winget (built-in) to install the missing tools.',
+          codeSnippet: wingetCmds,
+          actionType: 'copy',
+        })
+      }
+
+      actions.push({
+        label: 'Retry preflight check',
+        description: 'After installing the missing tools, retry the preflight check.',
+        actionType: 'retry',
+      })
+
+      return actions
+    }
+
     case 'CLUSTER_UNREACHABLE':
       return [
         {
@@ -316,6 +356,146 @@ export function getRemediationActions(error: PreflightError, context?: string): 
           actionType: 'retry',
         },
       ]
+  }
+}
+
+// ============================================================================
+// Winget Package Mapping (Windows)
+// ============================================================================
+
+/** Maps CLI tool names to their winget package identifiers (#11081). */
+const WINGET_PACKAGE_MAP: Record<string, string> = {
+  kind: 'winget install Kubernetes.kind',
+  kubectl: 'winget install Kubernetes.kubectl',
+  helm: 'winget install Helm.Helm',
+  git: 'winget install Git.Git',
+  docker: 'winget install Docker.DockerDesktop',
+  k3d: 'winget install k3d-io.k3d',
+  minikube: 'winget install Kubernetes.minikube',
+}
+
+// ============================================================================
+// Tool Preflight Check (#11077)
+// ============================================================================
+
+/** A single tool availability result. */
+export interface ToolCheckResult {
+  name: string
+  installed: boolean
+  version?: string
+  path?: string
+}
+
+/** Outcome of the tool pre-flight scan. */
+export interface ToolPreflightResult {
+  ok: boolean
+  /** Present when ok is false. */
+  error?: PreflightError
+  /** Per-tool details regardless of pass/fail. */
+  tools: ToolCheckResult[]
+}
+
+/** Default tools every mission needs. */
+const DEFAULT_REQUIRED_TOOLS = ['kubectl']
+
+/** Extra tools required by specific mission types. */
+const MISSION_TOOL_MAP: Record<string, string[]> = {
+  deploy: ['kubectl', 'helm'],
+  upgrade: ['kubectl', 'helm'],
+  repair: ['kubectl'],
+  troubleshoot: ['kubectl'],
+  analyze: ['kubectl'],
+  maintain: ['kubectl', 'helm'],
+  custom: ['kubectl'],
+}
+
+/**
+ * Resolve the set of tools a mission needs based on its type and optional
+ * explicit list from the mission definition.
+ */
+export function resolveRequiredTools(
+  missionType?: string,
+  explicitTools?: string[],
+): string[] {
+  if (explicitTools && explicitTools.length > 0) return explicitTools
+  const typeTools = missionType ? MISSION_TOOL_MAP[missionType] || [] : []
+  const merged = new Set([...DEFAULT_REQUIRED_TOOLS, ...typeTools])
+  return [...merged]
+}
+
+/**
+ * Fetch detected tools from the kc-agent and verify every required tool is
+ * present.  Returns a structured result the UI can render as a checklist.
+ *
+ * @param agentBaseUrl - Base URL for the kc-agent HTTP API (e.g. "http://127.0.0.1:8585")
+ * @param requiredTools - Tool names that must be installed
+ */
+export async function runToolPreflightCheck(
+  agentBaseUrl: string,
+  requiredTools: string[],
+): Promise<ToolPreflightResult> {
+  const TOOL_CHECK_TIMEOUT_MS = 10_000
+  try {
+    const resp = await fetch(`${agentBaseUrl}/local-cluster-tools`, {
+      signal: AbortSignal.timeout(TOOL_CHECK_TIMEOUT_MS),
+    })
+    if (!resp.ok) {
+      return {
+        ok: false,
+        error: {
+          code: 'UNKNOWN_EXECUTION_FAILURE',
+          message: `Tool check request failed (HTTP ${resp.status}). Is the local agent running?`,
+        },
+        tools: [],
+      }
+    }
+    const detected: ToolCheckResult[] = await resp.json()
+
+    // Build a lookup of installed tools
+    const installedSet = new Set(
+      (detected || [])
+        .filter((t: ToolCheckResult) => t.installed)
+        .map((t: ToolCheckResult) => t.name.toLowerCase()),
+    )
+
+    // kubectl is always on PATH if kc-agent can shell out, but the endpoint
+    // only returns cluster-tool binaries.  Add kubectl as installed if the
+    // agent itself is reachable (it proxies kubectl).
+    installedSet.add('kubectl')
+
+    const missing = requiredTools.filter(t => !installedSet.has(t.toLowerCase()))
+
+    // Merge required tools into the result so the UI can show a full checklist
+    const toolResults: ToolCheckResult[] = requiredTools.map(name => {
+      const match = (detected || []).find(
+        (d: ToolCheckResult) => d.name.toLowerCase() === name.toLowerCase(),
+      )
+      return match || { name, installed: installedSet.has(name.toLowerCase()) }
+    })
+
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        error: {
+          code: 'MISSING_TOOLS',
+          message: `Required tools not found: ${missing.join(', ')}. Install them before running this mission.`,
+          details: { missingTools: missing },
+        },
+        tools: toolResults,
+      }
+    }
+
+    return { ok: true, tools: toolResults }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    return {
+      ok: false,
+      error: {
+        code: 'UNKNOWN_EXECUTION_FAILURE',
+        message: `Failed to check required tools: ${message}`,
+      },
+      tools: [],
+    }
   }
 }
 

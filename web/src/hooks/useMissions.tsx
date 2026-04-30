@@ -10,7 +10,7 @@ import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
-import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
+import { runPreflightCheck, runToolPreflightCheck, resolveRequiredTools, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
@@ -1959,21 +1959,48 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     enhancedPrompt: string,
     params: { cluster?: string; context?: Record<string, unknown>; type?: string },
   ) => {
-    const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || '')
-    // Run preflight on ALL target clusters, not just the first one (#7177).
-    const clusterContexts = params.cluster?.split(',').map(c => c.trim()).filter(Boolean) || []
-    const preflightPromise = missionNeedsCluster && clusterContexts.length > 0
-      ? Promise.all(
-          clusterContexts.map(ctx =>
-            runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts), ctx)
-          )
-        ).then(results => {
-          const failed = results.find(r => !r.ok)
-          return failed || { ok: true as const }
-        })
-      : missionNeedsCluster
-        ? runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts))
-        : Promise.resolve({ ok: true } as PreflightResult)
+    // --- Phase 1: Tool availability check (#11077) ---
+    const requiredTools = resolveRequiredTools(params.type)
+    const toolCheckPromise = runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools)
+
+    toolCheckPromise.then(toolResult => {
+      if (!toolResult.ok && toolResult.error) {
+        setMissions(prev => prev.map(m =>
+          m.id === missionId ? {
+            ...m,
+            status: 'blocked' as MissionStatus,
+            currentStep: 'Missing required tools',
+            preflightError: toolResult.error,
+            messages: [
+              ...m.messages,
+              {
+                id: generateMessageId('tool-preflight'),
+                role: 'system' as const,
+                content: `**Pre-flight Tool Check Failed**\n\n${toolResult.error?.message || 'Required tools are missing.'}\n\nInstall the missing tools and retry the mission.`,
+                timestamp: new Date(),
+              },
+            ],
+          } : m
+        ))
+        return
+      }
+
+      // --- Phase 2: Cluster access check (existing logic) ---
+      const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || '')
+      // Run preflight on ALL target clusters, not just the first one (#7177).
+      const clusterContexts = params.cluster?.split(',').map(c => c.trim()).filter(Boolean) || []
+      const preflightPromise = missionNeedsCluster && clusterContexts.length > 0
+        ? Promise.all(
+            clusterContexts.map(ctx =>
+              runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts), ctx)
+            )
+          ).then(results => {
+            const failed = results.find(r => !r.ok)
+            return failed || { ok: true as const }
+          })
+        : missionNeedsCluster
+          ? runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts))
+          : Promise.resolve({ ok: true } as PreflightResult)
 
     preflightPromise.then(preflight => {
       if (!preflight.ok && 'error' in preflight && preflight.error) {
@@ -2037,6 +2064,31 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
               content: `**Preflight Check Error**\n\nThe preflight check encountered an unexpected error. The mission has been blocked to prevent unvalidated execution.\n\nError: ${err instanceof Error ? err.message : 'Unknown error'}`,
               timestamp: new Date() }
           ]
+        } : m
+      ))
+    })
+    }) // end toolCheckPromise.then
+    .catch((err) => {
+      // Tool check itself threw — block with a generic error
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? {
+          ...m,
+          status: 'blocked' as MissionStatus,
+          currentStep: 'Tool check error',
+          preflightError: {
+            code: 'UNKNOWN_EXECUTION_FAILURE',
+            message: err instanceof Error ? err.message : 'Unknown error',
+            details: { hint: 'The tool pre-flight check threw an unexpected error. Verify the local agent is running.' },
+          },
+          messages: [
+            ...m.messages,
+            {
+              id: generateMessageId('tool-check-error'),
+              role: 'system' as const,
+              content: `**Tool Check Error**\n\nFailed to verify required tools: ${err instanceof Error ? err.message : 'Unknown error'}`,
+              timestamp: new Date(),
+            },
+          ],
         } : m
       ))
     })
