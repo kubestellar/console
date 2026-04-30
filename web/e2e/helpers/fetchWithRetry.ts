@@ -12,13 +12,20 @@ const MAX_RETRIES = 3
 /** Base delay between retries in milliseconds */
 const RETRY_BASE_DELAY_MS = 1_000
 
-/** Request timeout per attempt in milliseconds */
-const PER_ATTEMPT_TIMEOUT_MS = 30_000
+/** Default request timeout per attempt in milliseconds */
+const DEFAULT_PER_ATTEMPT_TIMEOUT_MS = 30_000
+
+export interface FetchWithRetryOptions {
+  /** Per-attempt timeout in milliseconds (default: 30 000) */
+  timeout?: number
+}
 
 export async function fetchWithRetry(
   request: APIRequestContext,
   url: string,
+  options?: FetchWithRetryOptions,
 ): Promise<APIResponse> {
+  const perAttemptTimeout = options?.timeout ?? DEFAULT_PER_ATTEMPT_TIMEOUT_MS
   let lastResp: APIResponse | null = null
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -28,7 +35,7 @@ export async function fetchWithRetry(
       await new Promise((r) => setTimeout(r, delay))
     }
 
-    lastResp = await request.get(url, { timeout: PER_ATTEMPT_TIMEOUT_MS })
+    lastResp = await request.get(url, { timeout: perAttemptTimeout })
 
     // Don't retry client errors (4xx) — only transient 5xx
     if (lastResp.ok() || lastResp.status() < 500) {

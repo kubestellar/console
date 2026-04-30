@@ -173,6 +173,7 @@ async function fetchFixesIndex(page: Page): Promise<IndexEntry[]> {
   const resp = await fetchWithRetry(
     page.request,
     '/api/missions/file?path=fixes%2Findex.json',
+    { timeout: MISSION_FETCH_TIMEOUT },
   )
   expect(resp.ok(), `Index fetch failed: ${resp.status()}`).toBeTruthy()
   const body = await resp.json()
@@ -254,6 +255,7 @@ test.describe('Mission Explorer Import (Nightly)', () => {
         const fileResp = await fetchWithRetry(
           page.request,
           `/api/missions/file?path=${encodeURIComponent(path)}`,
+          { timeout: MISSION_FETCH_TIMEOUT },
         )
 
         if (!fileResp.ok()) {
@@ -358,6 +360,7 @@ test.describe('Mission Explorer Import (Nightly)', () => {
       const fileResp = await fetchWithRetry(
         page.request,
         `/api/missions/file?path=${encodeURIComponent(path)}`,
+        { timeout: MISSION_FETCH_TIMEOUT },
       )
       if (!fileResp.ok()) continue
 
