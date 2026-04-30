@@ -9,6 +9,7 @@ vi.mock('../../sseClient', () => ({
 }))
 vi.mock('../../../hooks/mcp/shared', () => ({
   clusterCacheRef: { clusters: [] },
+  agentFetch: vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })),
 }))
 vi.mock('../../constants', () => ({
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',

@@ -76,6 +76,7 @@ vi.mock('../sseClient', () => ({
 
 vi.mock('../../hooks/mcp/shared', () => ({
   clearClusterCacheOnLogout: vi.fn(),
+  agentFetch: vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })),
 }))
 
 // ---------------------------------------------------------------------------

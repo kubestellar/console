@@ -76,6 +76,7 @@ vi.mock('../shared', async () => {
     fetchSingleClusterHealth: mockFetchSingleClusterHealth,
     fullFetchClusters: mockFullFetchClusters,
     connectSharedWebSocket: mockConnectSharedWebSocket,
+    agentFetch: m.agentFetch,
   }
 })
 
