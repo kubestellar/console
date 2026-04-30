@@ -1021,13 +1021,14 @@ describe('worker-active IndexedDB mirror write', () => {
       migrate: vi.fn().mockResolvedValue(undefined),
     }
 
-    // Must register doMock BEFORE importFresh() resets modules, so the fresh
-    // cache/index.ts import picks up the mocked CacheWorkerRpc constructor.
+    // resetModules first, THEN register doMock so the fresh import picks it up.
+    // (vi.resetModules clears pending doMock registrations, so ordering matters.)
+    vi.resetModules()
     vi.doMock('../workerRpc', () => ({
       CacheWorkerRpc: vi.fn().mockImplementation(() => mockRpc),
     }))
 
-    const mod = await importFresh()
+    const mod = await import('../index')
     const { useCache, initCacheWorker, isSQLiteWorkerActive, __testables: testables } = mod
 
     // Activate the SQLite worker path

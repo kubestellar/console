@@ -137,7 +137,9 @@ describe('FilterControl – toggle type', () => {
     const { result, container } = renderControls(filters, data)
 
     const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement
-    fireEvent.change(checkbox, { target: { checked: true } })
+    act(() => {
+      fireEvent.click(checkbox)
+    })
 
     expect(result.current.filteredData).toHaveLength(1)
   })

@@ -53,6 +53,12 @@ let agentTokenPromise: Promise<string> | null = null
 /** Session-level dedup: only emit one agent_token_failure per page load */
 let agentTokenFailureEmitted = false
 
+/** Reset internal getAgentToken state — exposed for tests only. */
+export function _resetAgentTokenState(): void {
+  agentTokenPromise = null
+  agentTokenFailureEmitted = false
+}
+
 /**
  * Lazily fetch the kc-agent token from the backend. The token is cached
  * in localStorage so subsequent calls (and page reloads) don't re-fetch.

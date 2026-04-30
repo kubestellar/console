@@ -107,6 +107,7 @@ vi.mock('../../../lib/analytics', () => ({
 // ---------------------------------------------------------------------------
 import {
   agentFetch,
+  _resetAgentTokenState,
   clearClusterCacheOnLogout,
   clusterCache,
   clusterSubscribers,
@@ -223,6 +224,10 @@ describe('agentFetch — token injection and signal fallback', () => {
 // ============================================================================
 describe('getAgentToken — emits GA4 on failure', () => {
   const originalFetch = globalThis.fetch
+
+  beforeEach(() => {
+    _resetAgentTokenState()
+  })
 
   afterEach(() => {
     globalThis.fetch = originalFetch
