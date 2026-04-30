@@ -298,6 +298,23 @@ export default defineConfig(({ mode }) => ({
         'src/lib/analytics.ts',
         'src/hooks/useMCP.ts',
         'src/hooks/useCachedKeda.ts',
+        // lib/demo barrel re-exports: each of these is a thin `export { } from`
+        // wrapper pointing at the card-level demoData. V8 cannot mark ESM
+        // re-export bindings as covered even when tests import them — same issue
+        // as src/lib/analytics.ts. Exclude to prevent 0% drag.
+        'src/lib/demo/chaos_mesh.ts',
+        'src/lib/demo/dapr.ts',
+        'src/lib/demo/envoy.ts',
+        'src/lib/demo/grpc.ts',
+        'src/lib/demo/keda.ts',
+        'src/lib/demo/kubevela.ts',
+        'src/lib/demo/linkerd.ts',
+        'src/lib/demo/openfeature.ts',
+        'src/lib/demo/openfga.ts',
+        'src/lib/demo/spiffe.ts',
+        'src/lib/demo/strimzi.ts',
+        'src/lib/demo/volcano.ts',
+        'src/lib/demo/wasmcloud.ts',
         // Type-only file: pure TypeScript interfaces/types compile to no JS bytecode.
         'src/lib/cache/workerMessages.ts',
       ],
