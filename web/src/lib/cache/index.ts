@@ -1119,6 +1119,8 @@ export interface UseCacheResult<T> {
   lastRefresh: number | null
   /** Manually trigger a refresh */
   refetch: () => Promise<void>
+  /** Reset failure counters and refetch — for explicit user retries */
+  retryFetch: () => Promise<void>
   /** Clear cache and refetch */
   clearAndRefetch: () => Promise<void>
   /** Whether demoWhenEmpty fallback is active (live data returned empty, showing demo data) */
@@ -1215,6 +1217,14 @@ export function useCache<T>({
   progressiveFetcherRef.current = progressiveFetcher
 
   const refetch = useCallback(async () => {
+    if (!effectiveEnabled || !keepAliveActive) return
+    await store.fetch(() => fetcherRef.current(), mergeRef.current, progressiveFetcherRef.current)
+  }, [effectiveEnabled, keepAliveActive, store])
+
+  /** Reset failure counters then refetch — use for explicit user-triggered retries
+   *  so backoff is cleared and the fetch runs immediately. */
+  const retryFetch = useCallback(async () => {
+    store.resetFailures()
     if (!effectiveEnabled || !keepAliveActive) return
     await store.fetch(() => fetcherRef.current(), mergeRef.current, progressiveFetcherRef.current)
   }, [effectiveEnabled, keepAliveActive, store])
@@ -1389,6 +1399,7 @@ export function useCache<T>({
     lastRefresh: state.lastRefresh,
     isDemoFallback: shouldFallbackToDemo || !effectiveEnabled || showOptimisticDemo,
     refetch,
+    retryFetch,
     clearAndRefetch }
 }
 

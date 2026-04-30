@@ -384,7 +384,7 @@ export function useGPUHealthCronJob(cluster?: string) {
  * Hook for fetching hardware health data (device alerts + inventory) with caching.
  * Uses IndexedDB persistence so data survives navigation.
  */
-export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> {
+export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> & { retryFetch: () => Promise<void> } {
   const result = useCache({
     key: 'hardware-health',
     category: 'pods', // 30-second refresh
@@ -405,7 +405,8 @@ export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> 
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch,
+    retryFetch: result.retryFetch }
 }
 
 /**

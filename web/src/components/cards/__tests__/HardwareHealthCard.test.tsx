@@ -50,6 +50,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     consecutiveFailures: 0,
     error: null,
     refetch: vi.fn(),
+    retryFetch: vi.fn(),
   })),
 }))
 

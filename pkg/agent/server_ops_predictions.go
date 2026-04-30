@@ -243,13 +243,7 @@ func (s *Server) handleMetricsHistory(w http.ResponseWriter, r *http.Request) {
 
 // handleDeviceAlerts returns current hardware device alerts
 func (s *Server) handleDeviceAlerts(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -281,13 +275,7 @@ func (s *Server) handleDeviceAlerts(w http.ResponseWriter, r *http.Request) {
 
 // handleDeviceAlertsClear clears a specific device alert
 func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
@@ -330,13 +318,7 @@ func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleDeviceInventory(w http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if s.isAllowedOrigin(origin) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-	}
-	w.Header().Set("Access-Control-Allow-Private-Network", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With")
+	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {

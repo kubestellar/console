@@ -75,6 +75,7 @@ function defaultCache(overrides = {}) {
     consecutiveFailures: 0,
     lastRefresh: null,
     refetch: vi.fn(),
+    retryFetch: vi.fn(),
     ...overrides,
   }
 }

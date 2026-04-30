@@ -107,7 +107,8 @@ export function HardwareHealthCard() {
     consecutiveFailures,
     isDemoFallback,
     error: fetchError,
-    refetch } = useCachedHardwareHealth()
+    refetch,
+    retryFetch } = useCachedHardwareHealth()
 
   const alerts = hwData.alerts
   const inventory = hwData.inventory
@@ -654,12 +655,12 @@ export function HardwareHealthCard() {
               <span>{fetchError}</span>
             </div>
             <button
-              onClick={() => refetch()}
+              onClick={() => retryFetch()}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors whitespace-nowrap"
               aria-label={t('cards:hardwareHealth.retryFetchAria')}
             >
               <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
-              Retry
+              {t('common:common.retry', 'Retry')}
             </button>
           </div>
         </div>
