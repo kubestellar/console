@@ -958,6 +958,7 @@ const BARE_NETWORK_NOISE_SUBSTRINGS = [
   'Failed to fetch',
   'NetworkError',
   'net::ERR_',
+  'Index fetch failed',
 ] as const
 
 /** True when the message is a generic network failure with no chunk context. */
@@ -1065,6 +1066,10 @@ export function startGlobalErrorTracking() {
       // these as ksc_error creates false-positive alert spikes (#9994).
       if (errorName === 'UnauthenticatedError' || errorName === 'UnauthorizedError') return
       if (msg.includes('No authentication token') || msg.includes('Token is invalid or expired')) return
+      // Skip upstream proxy errors — these are transient backend/GitHub hiccups
+      // already handled by retry logic in the fetch layer. Emitting them as
+      // ksc_error creates false-positive alert spikes (#10957).
+      if (/\b50[234]\b/.test(msg) && (msg.includes('fetch') || msg.includes('Fetch') || msg.includes('upstream'))) return
       emitError('unhandled_rejection', msg, undefined, { error: event.reason })
     } finally {
       isEmitting = false

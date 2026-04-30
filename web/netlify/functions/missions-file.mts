@@ -25,6 +25,11 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
 
+/** Number of retry attempts for transient upstream errors (#10966) */
+const MAX_RETRIES = 2;
+/** Base delay between retries in milliseconds */
+const RETRY_BASE_DELAY_MS = 500;
+
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
   methods: "GET, OPTIONS",
@@ -68,11 +73,24 @@ export default async (request: Request): Promise<Response> => {
       });
     }
 
-    // Fetch from GitHub
+    // Fetch from GitHub with retry for transient errors (#10966)
     const rawUrl = `${GITHUB_RAW_URL}/${KB_REPO}/${ref}/${path}`;
-    const resp = await fetch(rawUrl, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
+    let resp: Response | null = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, RETRY_BASE_DELAY_MS * (1 << (attempt - 1))));
+      }
+      resp = await fetch(rawUrl, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      // Don't retry 4xx (client errors) — only transient 5xx
+      if (resp.ok || resp.status === 404 || resp.status < 500) break;
+      console.warn(`[missions-file] Upstream ${resp.status}, attempt ${attempt + 1}/${MAX_RETRIES + 1}`);
+    }
+
+    if (!resp) {
+      return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
+    }
 
     if (resp.status === 404) {
       return jsonResponse(corsHeaders, { error: "file not found" }, 404);

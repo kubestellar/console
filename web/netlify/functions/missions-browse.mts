@@ -22,6 +22,11 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
 
+/** Number of retry attempts for transient upstream errors (#10966) */
+const MAX_RETRIES = 2;
+/** Base delay between retries in milliseconds */
+const RETRY_BASE_DELAY_MS = 500;
+
 // See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
 const CORS_OPTS = {
   methods: "GET, OPTIONS",
@@ -67,12 +72,25 @@ export default async (request: Request): Promise<Response> => {
       });
     }
 
-    // Fetch from GitHub Contents API
+    // Fetch from GitHub Contents API with retry for transient errors (#10966)
     const apiUrl = `${GITHUB_API_URL}/repos/${KB_REPO}/contents/${path}?ref=${DEFAULT_REF}`;
-    const resp = await fetch(apiUrl, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
+    let resp: Response | null = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, RETRY_BASE_DELAY_MS * (1 << (attempt - 1))));
+      }
+      resp = await fetch(apiUrl, {
+        headers: { Accept: "application/vnd.github.v3+json" },
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      // Don't retry 4xx (client errors) — only transient 5xx
+      if (resp.ok || resp.status < 500) break;
+      console.warn(`[missions-browse] Upstream ${resp.status}, attempt ${attempt + 1}/${MAX_RETRIES + 1}`);
+    }
+
+    if (!resp) {
+      return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
+    }
 
     if (!resp.ok) {
       // If GitHub fails but we have stale cache, serve it

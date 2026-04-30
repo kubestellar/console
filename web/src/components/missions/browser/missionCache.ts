@@ -195,10 +195,17 @@ export async function fetchMissionContent(
 /** Request timeout for the index fetch in milliseconds */
 const INDEX_FETCH_TIMEOUT_MS = 30_000
 
+/** Maximum retry attempts for transient index fetch failures (#10966) */
+const INDEX_FETCH_MAX_RETRIES = 2
+
+/** Base delay between retry attempts in milliseconds */
+const INDEX_FETCH_RETRY_BASE_DELAY_MS = 500
+
 /**
  * Load all missions from the pre-built index in a single API call.
  * Splits results into installers and fixes, populating both caches at once.
  * Persists to localStorage for instant restore on next page load.
+ * Retries transient failures (5xx, network) with exponential backoff (#10966).
  */
 async function fetchAllFromIndex() {
   try {
@@ -206,8 +213,28 @@ async function fetchAllFromIndex() {
     // be gated by the api.get() backend-availability check (which can block when
     // the health check hasn't resolved yet on initial page load).
     const url = `/api/missions/file?path=${encodeURIComponent(FIXES_INDEX_PATH)}`
-    const response = await fetch(url, { signal: AbortSignal.timeout(INDEX_FETCH_TIMEOUT_MS) })
-    if (!response.ok) throw new Error(`Index fetch failed: ${response.status}`)
+
+    let response: Response | null = null
+    for (let attempt = 0; attempt <= INDEX_FETCH_MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, INDEX_FETCH_RETRY_BASE_DELAY_MS * (1 << (attempt - 1))))
+      }
+      try {
+        response = await fetch(url, { signal: AbortSignal.timeout(INDEX_FETCH_TIMEOUT_MS) })
+        // Success or client error (4xx) — don't retry
+        if (response.ok || response.status < 500) break
+        // 5xx — retry if attempts remain
+        console.warn(`[MissionBrowser] Index fetch returned ${response.status}, attempt ${attempt + 1}/${INDEX_FETCH_MAX_RETRIES + 1}`)
+      } catch (err) {
+        // Network error — retry if attempts remain
+        if (attempt === INDEX_FETCH_MAX_RETRIES) throw err
+        console.warn(`[MissionBrowser] Index fetch network error, attempt ${attempt + 1}/${INDEX_FETCH_MAX_RETRIES + 1}:`, err)
+      }
+    }
+
+    if (!response || !response.ok) {
+      throw new Error(`Index fetch failed: ${response?.status ?? 'no response'}`)
+    }
     const parsed = await response.json()
     const missions: IndexEntry[] = parsed?.missions || []
 
