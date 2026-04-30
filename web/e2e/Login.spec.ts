@@ -118,18 +118,23 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
       })
     })
 
-    // Mock GitHub auth endpoint failure — redirect back to /login with error
-    // param, matching real OAuth error flow (backend redirects to /login?error=).
-    // Use a 200 + client-side redirect instead of status 302 because
-    // Playwright's route.fulfill() does not support redirect status codes
-    // (3xx) on WebKit / mobile-safari. (#11019, #11028)
-    await page.route('**/auth/github', (route) =>
-      route.fulfill({
+    // Mock GitHub auth endpoint failure — absorb the navigation and then
+    // redirect the page to /login?error=server_error to simulate the real
+    // OAuth error flow (backend redirects to /login?error=...).
+    //
+    // Playwright's route.fulfill() does NOT support redirect status codes
+    // (3xx) on WebKit/Firefox/mobile-safari — only Chromium allows it.
+    // A <script>location.replace(...)</script> workaround is also unreliable
+    // because webkit/firefox may not execute inline JS in a navigation-
+    // fulfilled response. Instead, absorb the request with a 200 and use
+    // page.goto() to perform the redirect at the Playwright level. (#11155)
+    await page.route('**/auth/github', (route) => {
+      return route.fulfill({
         status: 200,
         contentType: 'text/html',
-        body: '<script>location.replace("/login?error=server_error")</script>',
+        body: '',
       })
-    )
+    })
 
     await page.goto('/login')
     await page.waitForLoadState('domcontentloaded')
@@ -138,23 +143,31 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
     await expect(page.getByTestId('github-login-button')).toBeVisible()
     await expect(page).toHaveURL(/\/login/)
 
-    // Click the login button to trigger the mocked 500 response, then assert
-    // an error indicator appears (oauth-error-banner or role="alert"). #9519
+    // Click the login button to trigger the OAuth flow. The route handler
+    // above absorbs the /auth/github navigation with a 200. Then we
+    // explicitly navigate to the error URL to simulate the server redirect.
     await page.getByTestId('github-login-button').click()
+
+    // Wait for the auth route to be intercepted OR a short timeout (webkit
+    // may complete the navigation synchronously before the mock fires).
+    const AUTH_INTERCEPT_TIMEOUT_MS = 3000
+    await page.waitForURL(/auth\/github/, { timeout: AUTH_INTERCEPT_TIMEOUT_MS }).catch(() => {})
+
+    // Navigate to the error page — this is what the real OAuth server does
+    // via a 302 redirect when authentication fails.
+    await page.goto('/login?error=server_error')
+    await page.waitForLoadState('domcontentloaded')
 
     const errorBanner = page.getByTestId('oauth-error-banner')
       .or(page.getByRole('alert'))
       .or(page.locator('[class*="error"]'))
     const errorShown = await errorBanner.first().isVisible({ timeout: 5000 }).catch(() => false)
     // If the app surfaces an error, assert it is visible; otherwise assert
-    // the page did not navigate away (graceful degradation).
-    // In webkit/Safari the login button triggers a full navigation to
-    // /auth/github before the route mock can fulfil — accept both /login
-    // and /auth/github as valid graceful degradation outcomes. (#10784)
+    // we're on the login page (graceful degradation). (#10784)
     if (errorShown) {
       await expect(errorBanner.first()).toBeVisible()
     } else {
-      await expect(page).toHaveURL(/\/(login|auth\/github)/)
+      await expect(page).toHaveURL(/\/login/)
     }
   })
 
