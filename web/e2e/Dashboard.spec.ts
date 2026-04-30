@@ -522,35 +522,31 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     // Wait for clusters page to fully render — Firefox/webkit may need extra time
     await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: PAGE_RENDER_TIMEOUT_MS })
 
-    // Wait for cluster data to actually render before counting rows.
-    // On webkit/firefox the SWR cache hydrates slower than Chromium, so
-    // the container can be visible before any cluster rows appear. (#10828)
-    // Use a hard assertion (no .catch) so failures surface instead of
-    // silently yielding 0 rows. (#10955)
+    // Wait for cluster data to actually render in the ClusterGrid before
+    // counting rows. Use cluster-row-* testids instead of text search —
+    // the ClusterHealth card also renders cluster.name as text inside
+    // clusters-page, and on Firefox/WebKit it can appear before ClusterGrid
+    // rows mount, causing getByText to resolve against the card rather than
+    // the grid. (#10828, #10993)
     const DATA_RENDER_TIMEOUT_MS = 20_000
-    const firstClusterName = page.getByText('accuracy-cluster-1').first()
-    await expect(firstClusterName).toBeVisible({ timeout: DATA_RENDER_TIMEOUT_MS })
+    const firstClusterRow = page.locator('[data-testid="cluster-row-accuracy-cluster-1"]')
+    await expect(firstClusterRow).toBeVisible({ timeout: DATA_RENDER_TIMEOUT_MS })
 
     // The clusters page renders a row per cluster. We count any element
-    // whose data-testid matches the cluster-row pattern. If the test
-    // infra doesn't expose cluster-row testids, fall back to counting
-    // by name strings — both must agree with EXPECTED_CLUSTER_COUNT.
+    // whose data-testid matches the cluster-row pattern.
     const rowsByTestId = page.locator('[data-testid^="cluster-row-"]')
     const rowCountByTestId = await rowsByTestId.count()
 
     let clustersPageCount = rowCountByTestId
     if (clustersPageCount === 0) {
-      // Fallback: count unique cluster-name text occurrences.
-      // Each name was already confirmed present (firstClusterName wait
-      // above succeeded), so use a reasonable timeout per name.
-      const NAME_CHECK_TIMEOUT_MS = 10_000
+      // Fallback: count unique cluster-row testids per cluster name.
       let found = 0
       for (let i = 1; i <= EXPECTED_CLUSTER_COUNT; i++) {
-        const nameLocator = page.getByText(`accuracy-cluster-${i}`).first()
-        const hasName = await nameLocator
-          .isVisible({ timeout: NAME_CHECK_TIMEOUT_MS })
+        const rowLocator = page.locator(`[data-testid="cluster-row-accuracy-cluster-${i}"]`)
+        const hasRow = await rowLocator
+          .isVisible({ timeout: DATA_RENDER_TIMEOUT_MS })
           .catch(() => false)
-        if (hasName) found++
+        if (hasRow) found++
       }
       clustersPageCount = found
     }

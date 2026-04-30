@@ -294,21 +294,18 @@ test.describe('Clusters Page', () => {
       // asserting hidden clusters — firefox/webkit may batch the DOM update. (#10956)
       await expect(healthyTab).toHaveClass(/bg-green-500/, { timeout: 5000 })
 
-      // Only healthy-cluster must be visible
-      // Scope assertions to clusters-page to exclude sidebar cluster status
-      // widget which shows all cluster names regardless of the active filter.
-      // Use .first() — cluster name can appear in both the list row and header. #10790
-      const clustersPage = page.getByTestId('clusters-page')
-      await expect(clustersPage.getByText('healthy-cluster').first()).toBeVisible({ timeout: 5000 })
+      // Only healthy-cluster must be visible in the ClusterGrid.
+      // Use cluster-row-* testids (rendered by ClusterGrid) instead of text
+      // search — the ClusterHealth card also renders cluster names inside
+      // clusters-page, and those are NOT filtered by the tab. On Chromium the
+      // card hasn't mounted by the time assertions run; on Firefox/WebKit it
+      // has, causing getByText to find unfiltered names. (#10992)
+      await expect(page.locator('[data-testid="cluster-row-healthy-cluster"]')).toBeVisible({ timeout: 10_000 })
 
-      // Unhealthy clusters must NOT appear in the Healthy tab
-      // Scoped to clusters-page so sidebar cluster status widget doesn't cause
-      // false positives. Use .first() for strict-mode safety.
-      // Webkit/Firefox need extra time for the filter DOM update after
-      // sessionStorage-based SWR rehydration is replaced by fresh API data. (#10828)
+      // Unhealthy cluster rows must NOT appear in the Healthy tab.
       const FILTER_HIDDEN_TIMEOUT_MS = 20_000
-      await expect(clustersPage.getByText('unhealthy-with-nodes').first()).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
-      await expect(clustersPage.getByText('truly-unhealthy').first()).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
+      await expect(page.locator('[data-testid="cluster-row-unhealthy-with-nodes"]')).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
+      await expect(page.locator('[data-testid="cluster-row-truly-unhealthy"]')).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
     })
 
     test('Unhealthy stat count matches clusters shown after clicking Unhealthy tab', async ({ page }) => {
@@ -359,15 +356,13 @@ test.describe('Clusters Page', () => {
       // Wait for the filter to visually activate before asserting hidden clusters. (#10956)
       await expect(unhealthyTab).toHaveClass(/bg-orange-500/, { timeout: 5000 })
 
-      // Only the truly unhealthy cluster should appear
-      // Scope assertions to clusters-page to exclude sidebar cluster status
-      // widget which shows all cluster names regardless of the active filter. #10790
-      const clustersPage = page.getByTestId('clusters-page')
-      await expect(clustersPage.getByText('unhealthy-no-nodes').first()).toBeVisible({ timeout: 5000 })
-      // Webkit/Firefox need extra time for the filter DOM update after
-      // sessionStorage-based SWR rehydration is replaced by fresh API data. (#10828)
+      // Only the truly unhealthy cluster row should appear in the ClusterGrid.
+      // Use cluster-row-* testids — the ClusterHealth card renders cluster
+      // names for ALL clusters regardless of filter tab. (#10992)
+      await expect(page.locator('[data-testid="cluster-row-unhealthy-no-nodes"]')).toBeVisible({ timeout: 10_000 })
+      // Healthy cluster row must NOT appear under the Unhealthy filter.
       const FILTER_HIDDEN_TIMEOUT_MS = 20_000
-      await expect(clustersPage.getByText('healthy-cluster').first()).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
+      await expect(page.locator('[data-testid="cluster-row-healthy-cluster"]')).not.toBeVisible({ timeout: FILTER_HIDDEN_TIMEOUT_MS })
     })
   })
 })
