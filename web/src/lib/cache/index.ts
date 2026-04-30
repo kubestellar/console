@@ -1703,4 +1703,6 @@ export const __testables = {
   MAX_FAILURES,
   FAILURE_BACKOFF_MULTIPLIER,
   MAX_BACKOFF_INTERVAL,
+  /** Exposed for testing the worker→IDB mirror write path. */
+  _idbStorage,
 }
