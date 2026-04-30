@@ -313,18 +313,24 @@ jobs:
           # 5. Clean up FIRST so a verify failure still closes the issue.
           #    Use || true so cleanup failures don't mask the attribution result.
           echo "Closing + locking test issue #$ISSUE_NUMBER..."
-          curl -sS -X PATCH \
+          CLOSE_HTTP=$(curl -sS -o /dev/null -w "%{http_code}" -X PATCH \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d '{"state":"closed","state_reason":"not_planned"}' \
-            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}" \
-            > /dev/null || echo "::warning::Failed to close test issue #$ISSUE_NUMBER (curl exit $?)"
-          curl -sS -X PUT \
+            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}") \
+            || echo "::warning::curl failed closing test issue #$ISSUE_NUMBER (exit $?)"
+          if [ "$CLOSE_HTTP" != "200" ]; then
+            echo "::warning::Failed to close test issue #$ISSUE_NUMBER — HTTP $CLOSE_HTTP"
+          fi
+          LOCK_HTTP=$(curl -sS -o /dev/null -w "%{http_code}" -X PUT \
             -H "Authorization: Bearer $TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d '{"lock_reason":"resolved"}' \
-            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}/lock" \
-            > /dev/null || echo "::warning::Failed to lock test issue #$ISSUE_NUMBER (curl exit $?)"
+            "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}/lock") \
+            || echo "::warning::curl failed locking test issue #$ISSUE_NUMBER (exit $?)"
+          if [ "$LOCK_HTTP" != "204" ] && [ "$LOCK_HTTP" != "200" ]; then
+            echo "::warning::Failed to lock test issue #$ISSUE_NUMBER — HTTP $LOCK_HTTP"
+          fi
 
           # 6a. PRIMARY assertion — the issue.user.login must match the
           #     App's bot login. GitHub stamps this from the auth token

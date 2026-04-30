@@ -29,6 +29,9 @@ describe('useSelfUpgrade', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    // Ensure stubGlobal('location', ...) from pollForRestart tests is always cleaned up,
+    // even if the test fails before reaching vi.unstubAllGlobals() inline.
+    vi.unstubAllGlobals()
   })
 
   it('starts with null status and not loading', () => {
@@ -475,8 +478,6 @@ describe('useSelfUpgrade', () => {
       expect(result.current.restartComplete).toBe(true)
       expect(result.current.isRestarting).toBe(false)
     })
-
-    vi.unstubAllGlobals()
   })
 
   it('pollForRestart sets restartError after max poll time exceeded', async () => {
