@@ -21,7 +21,6 @@ import {
   AlertCircle,
   WifiOff,
   BarChart3,
-  X,
 } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { useAuth } from '../../lib/auth'
@@ -42,7 +41,6 @@ import {
   UI_FEEDBACK_TIMEOUT_MS,
   TOOLTIP_HIDE_DELAY_MS,
 } from '../../lib/constants/network'
-import { ROUTES } from '../../config/routes'
 import { UpdateSettings } from './UpdateSettings'
 import {
   AISettingsSection,
@@ -220,19 +218,6 @@ export function Settings() {
 
   const [activeSection, setActiveSection] = useState<string>('ai-mode-settings')
   const [showRestoredToast, setShowRestoredToast] = useState(false)
-
-  /** Close settings and return to previous page (or home as fallback).
-   *  Uses location.key to detect whether the user arrived via in-app
-   *  navigation (key !== 'default') or by directly loading the URL
-   *  (key === 'default'). navigate(-1) on a direct load would exit the
-   *  app, so we fall back to HOME in that case. */
-  const handleClose = () => {
-    if (location.key !== 'default') {
-      navigate(-1)
-    } else {
-      navigate(ROUTES.HOME)
-    }
-  }
 
   // Suppresses IntersectionObserver updates during programmatic scrolls
   // so the sidebar highlight stays on the clicked item instead of flickering
@@ -455,14 +440,6 @@ export function Settings() {
               >
                 {t('settings.title')}
               </h1>
-              <button
-                data-testid="settings-close-desktop"
-                onClick={handleClose}
-                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-                title={t('common.close', { defaultValue: 'Close' })}
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
             <p className="text-sm text-muted-foreground">
               {t('settings.subtitle')}
@@ -532,14 +509,6 @@ export function Settings() {
             >
               {t('settings.title')}
             </h1>
-            <button
-              data-testid="settings-close-mobile"
-              onClick={handleClose}
-              className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-              title={t('common.close', { defaultValue: 'Close' })}
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
           <p className="text-muted-foreground">{t('settings.subtitle')}</p>
           <div
