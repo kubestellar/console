@@ -752,3 +752,17 @@ if (typeof window !== 'undefined') {
     })
   })
 }
+
+export const __helmTestables = {
+  getDemoHelmReleases,
+  getDemoHelmHistory,
+  getDemoHelmValues,
+  loadHelmReleasesFromStorage,
+  saveHelmReleasesToStorage,
+  loadHelmHistoryFromStorage,
+  saveHelmHistoryToStorage,
+  HELM_RELEASES_CACHE_KEY,
+  HELM_HISTORY_CACHE_KEY,
+  HELM_CACHE_TTL_MS,
+  HELM_REFRESH_INTERVAL_MS,
+}

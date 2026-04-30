@@ -435,3 +435,13 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   inflightRequests.set(cacheKey, promise as Promise<unknown[]>)
   return promise
 }
+
+export const __testables = {
+  parseSSEChunk,
+  SSE_TIMEOUT_MS,
+  SSE_RECONNECT_BASE_MS,
+  SSE_RECONNECT_MAX_MS,
+  SSE_RECONNECT_BACKOFF_FACTOR,
+  SSE_MAX_RECONNECT_ATTEMPTS,
+  RESULT_CACHE_TTL_MS,
+}

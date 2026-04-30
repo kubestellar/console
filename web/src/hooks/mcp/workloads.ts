@@ -1832,3 +1832,14 @@ if (typeof window !== 'undefined') {
     }, 0)
   })
 }
+
+export const __workloadsTestables = {
+  getDemoPods,
+  getDemoPodIssues,
+  getDemoDeploymentIssues,
+  getDemoDeployments,
+  getDemoAllPods,
+  loadPodsCacheFromStorage,
+  savePodsCacheToStorage,
+  PODS_CACHE_KEY,
+}

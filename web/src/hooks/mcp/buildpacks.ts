@@ -334,3 +334,12 @@ if (typeof window !== 'undefined') {
     )
   })
 }
+
+export const __buildpacksTestables = {
+  getDemoBuildpackImages,
+  loadFromStorage,
+  saveToStorage,
+  BUILDPACK_CACHE_KEY,
+  BUILDPACK_CACHE_TTL_MS,
+  BUILDPACK_REFRESH_INTERVAL_MS,
+}
