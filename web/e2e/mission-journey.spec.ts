@@ -291,6 +291,17 @@ async function setupHTTPMocks(page: Page, overrides?: {
     }
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
+
+  // Mock the local kc-agent HTTP endpoint. The cluster cache probes
+  // http://127.0.0.1:8585/clusters before falling back to demo data.
+  // Without this mock, the probe hangs in CI (#11179).
+  await page.route('http://127.0.0.1:8585/**', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Service unavailable (test mock)' }),
+    })
+  )
 }
 
 // ---------------------------------------------------------------------------

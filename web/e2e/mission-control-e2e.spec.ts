@@ -1,8 +1,8 @@
 import { test, expect, Page} from '@playwright/test'
-import { setupAuth } from './mocks/liveMocks'
+import { setupAuth } from './helpers/setup'
 
 // Mission Control requires an admin-role user to see all phases of the wizard.
-// The shared `setupAuth` (from ./mocks/liveMocks) accepts a custom user override.
+// The shared `setupAuth` (from ./helpers/setup) includes mockApiFallback catch-all.
 const MISSION_CONTROL_ADMIN_USER = {
   id: '1',
   github_id: '12345',

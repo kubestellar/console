@@ -412,12 +412,13 @@ async function setupAllMocks(page: Page) {
 async function navigateTo(page: Page) {
   await setupAllMocks(page)
 
-  await page.goto('/login')
-  await page.waitForLoadState('domcontentloaded')
-  await page.evaluate(() => {
+  // Seed localStorage BEFORE any page script runs — prevents the app from
+  // briefly rendering the /login screen and firing auth redirects (#11179).
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kc-backend-status', JSON.stringify({
       available: true,
       timestamp: Date.now(),
@@ -430,8 +431,8 @@ async function navigateTo(page: Page) {
     }))
   })
   await page.goto('/')
-  await page.waitForLoadState('networkidle', { timeout: DIALOG_TIMEOUT_MS })
-  await expect(page.locator('body')).not.toBeEmpty({ timeout: DIALOG_TIMEOUT_MS })
+  await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_TIMEOUT_MS })
+  await page.locator('#root').waitFor({ state: 'visible', timeout: DIALOG_TIMEOUT_MS })
 }
 
 async function seedMCState(page: Page, overrides: Record<string, unknown> = {}) {

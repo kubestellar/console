@@ -109,6 +109,18 @@ interface MissionResult {
 // ---------------------------------------------------------------------------
 
 async function setupDemoMode(page: Page) {
+  // Catch-all for any /api/** route not explicitly mocked below.
+  // Registered FIRST (lowest priority in Playwright's reverse-order matching)
+  // so specific mocks below override it. Without this, unmocked API calls
+  // hit the real network and fail with ERR_FAILED in CI (#11179).
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+
   // Mock authentication — same pattern as mission-import.spec.ts
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -146,21 +158,26 @@ async function setupDemoMode(page: Page) {
     }
   })
 
-  // Mock local agent
-  await page.route('**/127.0.0.1:8585/**', (route) =>
+  // Mock local agent HTTP endpoint
+  await page.route('http://127.0.0.1:8585/**', (route) =>
     route.fulfill({
-      status: 200,
+      status: 503,
       contentType: 'application/json',
-      body: JSON.stringify({ events: [], health: { hasClaude: true, hasBob: false } }),
+      body: JSON.stringify({ error: 'Service unavailable (test mock)' }),
     })
   )
 
-  // Set up demo mode auth
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Set up demo mode auth via localStorage before page scripts run
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 }
 
