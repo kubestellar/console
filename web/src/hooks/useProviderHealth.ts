@@ -278,8 +278,8 @@ export function useProviderHealth() {
     }
   }, [clusters.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const aiProviders = cacheResult.data.filter(p => p.category === 'ai')
-  const cloudProviders = cacheResult.data.filter(p => p.category === 'cloud')
+  const aiProviders = (cacheResult.data || []).filter(p => p.category === 'ai')
+  const cloudProviders = (cacheResult.data || []).filter(p => p.category === 'cloud')
 
   // Don't signal demo fallback while still loading — card should show skeleton, not demo data
   const effectiveIsDemoFallback = cacheResult.isDemoFallback && !cacheResult.isLoading

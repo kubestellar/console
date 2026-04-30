@@ -523,9 +523,9 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
   }, [isDeploying, hasLogs])
 
   // Calculate overall progress
-  const totalClusters = mission.clusterStatuses.length
-  const readyClusters = mission.clusterStatuses.filter(s => s.status === 'running').length
-  const failedClusters = mission.clusterStatuses.filter(s => s.status === 'failed').length
+  const totalClusters = (mission.clusterStatuses || []).length
+  const readyClusters = (mission.clusterStatuses || []).filter(s => s.status === 'running').length
+  const failedClusters = (mission.clusterStatuses || []).filter(s => s.status === 'failed').length
   const progressPct = totalClusters > 0 ? ((readyClusters + failedClusters) / totalClusters) * 100 : 0
 
   return (
@@ -635,9 +635,9 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
       )}
 
       {/* Per-cluster progress — visible for active missions; completed missions show on expand */}
-      {isActive && !isExpanded && mission.clusterStatuses.length > 0 && (
+      {isActive && !isExpanded && (mission.clusterStatuses || []).length > 0 && (
         <div className="px-3 pb-2 space-y-1">
-          {mission.clusterStatuses.map(cs => (
+          {(mission.clusterStatuses || []).map(cs => (
             <ClusterStatusRow key={cs.cluster} status={cs} />
           ))}
           {mission.dependencies && mission.dependencies.length > 0 && (
@@ -721,7 +721,7 @@ function MissionRow({ mission, isExpanded, onToggle, isActive, onDiagnose, onRep
               Deployed by: <span className="text-muted-foreground">{mission.deployedBy}</span>
             </div>
           )}
-          {mission.clusterStatuses.map(cs => (
+          {(mission.clusterStatuses || []).map(cs => (
             <ClusterStatusRow key={cs.cluster} status={cs} />
           ))}
 

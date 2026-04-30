@@ -207,7 +207,15 @@ async function runWithConcurrency<T>(
 function loadMissions(): DeployMission[] {
   try {
     const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
-    if (stored) return JSON.parse(stored)
+    if (stored) {
+      const parsed: DeployMission[] = JSON.parse(stored)
+      // Ensure required arrays exist — older stored data or corruption may omit them
+      return (parsed || []).map(m => ({
+        ...m,
+        targetClusters: m.targetClusters || [],
+        clusterStatuses: m.clusterStatuses || [],
+      }))
+    }
     // Migrate from old split keys
     const oldActive = localStorage.getItem(STORAGE_KEY_MISSIONS_ACTIVE)
     const oldHistory = localStorage.getItem(STORAGE_KEY_MISSIONS_HISTORY)
@@ -233,7 +241,7 @@ function saveMissions(missions: DeployMission[]) {
   // Strip logs for active missions (transient data, re-fetched on each poll cycle).
   const clean = missions.slice(0, MAX_MISSIONS).map(m => ({
     ...m,
-    clusterStatuses: m.clusterStatuses.map(cs => ({
+    clusterStatuses: (m.clusterStatuses || []).map(cs => ({
       ...cs,
       logs: isTerminalStatus(m.status) ? cs.logs : undefined })) }))
   localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(clean))
@@ -275,7 +283,7 @@ export function useDeployMissions() {
         groupName: p.groupName,
         deployedBy: p.deployedBy,
         status: 'launching',
-        clusterStatuses: p.targetClusters.map(c => ({
+        clusterStatuses: (p.targetClusters || []).map(c => ({
           cluster: c,
           status: 'pending',
           replicas: 0,
@@ -328,7 +336,7 @@ export function useDeployMissions() {
       const allTerminal = current.every(m => isTerminalStatus(m.status))
       const anyNeedsRecovery = allTerminal && current.some(m => {
         if (!m.completedAt || (Date.now() - m.completedAt) <= CACHE_TTL_MS) return false
-        const hasAnyLogs = m.clusterStatuses.some(cs => cs.logs && cs.logs.length > 0)
+        const hasAnyLogs = (m.clusterStatuses || []).some(cs => cs.logs && cs.logs.length > 0)
         const recoveryPolls = m.logRecoveryPolls ?? 0
         // Still needs recovery if: has logs but under budget, OR has no logs at all
         return !hasAnyLogs || recoveryPolls < LOG_RECOVERY_EXTRA_POLLS
@@ -360,7 +368,7 @@ export function useDeployMissions() {
           let inRecoveryWindow = false
           if (isCompleted && mission.completedAt &&
               (Date.now() - mission.completedAt) > CACHE_TTL_MS) {
-            const hasAnyLogs = mission.clusterStatuses.some(cs => cs.logs && cs.logs.length > 0)
+            const hasAnyLogs = (mission.clusterStatuses || []).some(cs => cs.logs && cs.logs.length > 0)
             const recoveryPolls = mission.logRecoveryPolls ?? 0
             if (hasAnyLogs) {
               if (recoveryPolls >= LOG_RECOVERY_EXTRA_POLLS) {
@@ -380,9 +388,9 @@ export function useDeployMissions() {
           // #6640 — Bounded concurrency over clusters. Each cluster task is
           // wrapped in a thunk so runWithConcurrency can schedule them.
           const clusterTasks: Array<() => Promise<DeployClusterStatus>> =
-            mission.targetClusters.map((cluster) => async (): Promise<DeployClusterStatus> => {
+            (mission.targetClusters || []).map((cluster) => async (): Promise<DeployClusterStatus> => {
               // Track consecutive failures from previous poll cycle
-              const prevStatus = mission.clusterStatuses.find(cs => cs.cluster === cluster)
+              const prevStatus = (mission.clusterStatuses || []).find(cs => cs.cluster === cluster)
               const prevFailures = prevStatus?.consecutiveFailures ?? 0
               const prevNetworkFailures = prevStatus?.networkFailureCount ?? 0
 

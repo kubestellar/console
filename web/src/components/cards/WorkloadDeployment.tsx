@@ -280,7 +280,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
       await scaleWorkload({
         workloadName: workload.name,
         namespace: workload.namespace,
-        targetClusters: workload.targetClusters,
+        targetClusters: workload.targetClusters || [],
         replicas: desiredReplicas })
       setScaleSuccess(true)
       onScaled?.()
@@ -288,7 +288,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
     } catch {
       // Backend failed — try agent fallback for all target clusters
       try {
-        const clusters = workload.targetClusters.length > 0 ? workload.targetClusters : ['unknown']
+        const clusters = (workload.targetClusters || []).length > 0 ? workload.targetClusters : ['unknown']
         const results = await Promise.all(
           clusters.map(async c => {
             const r = await scaleViaAgent(c, workload.namespace, workload.name, desiredReplicas)
@@ -327,7 +327,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
     }
   }
   // Source cluster is the first cluster in the list (where we'll copy from)
-  const sourceCluster = workload.targetClusters[0] || 'unknown'
+  const sourceCluster = (workload.targetClusters || [])[0] || 'unknown'
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `workload-${sourceCluster}-${workload.namespace}-${workload.name}`,
@@ -338,7 +338,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
         namespace: workload.namespace,
         type: workload.type,
         sourceCluster,
-        currentClusters: workload.targetClusters } } })
+        currentClusters: workload.targetClusters || [] } } })
 
   // When dragging, fade the original — the DragOverlay renders the floating preview as a portal
   const style: React.CSSProperties = isDragging
@@ -420,7 +420,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
           <div className="flex flex-wrap items-center justify-between gap-y-2">
             <span className="text-xs text-muted-foreground">Target Clusters</span>
             <div className="flex gap-1">
-              {workload.targetClusters.map((c) => (
+              {(workload.targetClusters || []).map((c) => (
                 <ClusterBadge key={c} cluster={c} size="sm" />
               ))}
             </div>
@@ -672,7 +672,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       degradedCount: workloads.filter(w => w.status === 'Degraded').length,
       pendingCount: workloads.filter(w => w.status === 'Pending').length,
       failedCount: workloads.filter(w => w.status === 'Failed').length,
-      totalClusters: new Set(workloads.flatMap(w => w.targetClusters)).size }
+      totalClusters: new Set(workloads.flatMap(w => w.targetClusters || [])).size }
   })()
 
   // Pre-filter by type, status, and cluster before passing to useCardData
@@ -690,7 +690,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     const validClusterFilter = localClusterFilter.filter(c => availableClusterNames.has(c))
     if (validClusterFilter.length > 0) {
       result = result.filter(w =>
-        w.targetClusters.some(c => validClusterFilter.includes(c)),
+        (w.targetClusters || []).some(c => validClusterFilter.includes(c)),
       )
     }
     return result
@@ -718,7 +718,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     filter: {
       searchFields: ['name', 'namespace', 'image'] as (keyof Workload)[],
       customPredicate: (w, query) =>
-        w.targetClusters.some(c => c.toLowerCase().includes(query)),
+        (w.targetClusters || []).some(c => c.toLowerCase().includes(query)),
       storageKey: 'workload-deployment' },
     sort: {
       defaultField: 'status',
