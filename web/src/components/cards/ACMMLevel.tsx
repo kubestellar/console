@@ -7,8 +7,7 @@ import { acmmSource } from '../../lib/acmm/sources/acmm'
 const MAX_LEVEL = 6
 const GAUGE_SIZE = 120
 const GAUGE_STROKE = 10
-/** Live documentation — always up to date, unlike the static arXiv preprint */
-const ACMM_DOCS_URL = 'https://console-docs.kubestellar.io/docs/console/acmm/acmm-dashboard'
+const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
 
 const ALL_LEVELS = acmmSource.levels ?? []
 
@@ -74,7 +73,7 @@ export function ACMMLevel() {
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="text-xs text-muted-foreground font-mono truncate">{repo}</div>
         <a
-          href={ACMM_DOCS_URL}
+          href={PAPER_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors shrink-0 ml-2"

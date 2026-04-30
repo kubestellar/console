@@ -3859,6 +3859,7 @@
     "actionInventory": "Browse detected vs missing criteria on the Feedback Loops Inventory card.",
     "actionAgent": "Click Ask agent for help on any missing criterion to launch an agent that adds it.",
     "actionBadge": "Generate a shields.io badge for your README — it updates as your score changes.",
+    "paperLink": "Read the paper on arXiv (2604.09388v2)",
     "docsLink": "Read the full ACMM documentation",
     "dontShowAgain": "Don't show this again",
     "gotIt": "Got it — let's go"

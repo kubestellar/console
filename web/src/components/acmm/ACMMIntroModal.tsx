@@ -3,7 +3,7 @@
  *
  * Educational modal shown on first visit to /acmm. Explains what the
  * AI Codebase Maturity Model is, the 6 levels, the 4 source frameworks,
- * and links to the ACMM documentation.
+ * and links to the underlying paper and ACMM documentation.
  *
  * Key concepts introduced:
  * - Learning — how ACMM helps teams learn AI-assisted development practices
@@ -38,7 +38,7 @@ import {
 import { BaseModal } from '../../lib/modals'
 
 const STORAGE_KEY = 'kc-acmm-intro-dismissed'
-/** Live documentation — always up to date, unlike the static arXiv preprint */
+const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
 const ACMM_DOCS_URL = 'https://console-docs.kubestellar.io/docs/console/acmm/acmm-dashboard'
 
 /** Level definitions for rendering the level grid */
@@ -211,8 +211,17 @@ export function ACMMIntroModal({ isOpen, onClose }: ACMMIntroModalProps) {
             </ul>
           </section>
 
-          {/* Documentation link */}
-          <section className="border-t border-border pt-3">
+          {/* Paper + documentation links */}
+          <section className="border-t border-border pt-3 flex flex-wrap gap-x-4 gap-y-1">
+            <a
+              href={PAPER_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-primary hover:underline text-xs"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              {t('acmmIntro.paperLink')}
+            </a>
             <a
               href={ACMM_DOCS_URL}
               target="_blank"
