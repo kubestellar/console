@@ -82,18 +82,21 @@ describe('getDemoWorkloads', () => {
     const { getDemoWorkloads } = await importFresh()
     const workloads = getDemoWorkloads()
 
-    expect(workloads.length).toBeGreaterThan(0)
-    // Every workload must have required fields
+    expect(workloads.length).toBe(7)
+    // Every workload must have required fields with correct types
     for (const w of workloads) {
-      expect(w.name).toBeTruthy()
-      expect(w.namespace).toBeTruthy()
-      expect(w.type).toBeTruthy()
-      expect(w.cluster).toBeTruthy()
-      expect(w.replicas).toBeGreaterThanOrEqual(0)
-      expect(w.readyReplicas).toBeGreaterThanOrEqual(0)
-      expect(w.status).toBeTruthy()
-      expect(w.image).toBeTruthy()
-      expect(w.createdAt).toBeTruthy()
+      expect(typeof w.name).toBe('string')
+      expect(w.name.length).toBeGreaterThan(0)
+      expect(typeof w.namespace).toBe('string')
+      expect(w.namespace.length).toBeGreaterThan(0)
+      expect(['Deployment', 'StatefulSet', 'DaemonSet']).toContain(w.type)
+      expect(typeof w.cluster).toBe('string')
+      expect(w.cluster!.length).toBeGreaterThan(0)
+      expect(typeof w.replicas).toBe('number')
+      expect(w.readyReplicas).toBeLessThanOrEqual(w.replicas)
+      expect(['Running', 'Degraded', 'Failed', 'Pending']).toContain(w.status)
+      expect(w.image).toMatch(/:/)
+      expect(new Date(w.createdAt).getTime()).not.toBeNaN()
     }
   })
 

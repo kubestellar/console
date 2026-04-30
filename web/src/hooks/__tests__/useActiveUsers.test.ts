@@ -222,8 +222,9 @@ describe('useActiveUsers', () => {
         await vi.advanceTimersByTimeAsync(100)
       })
       const id = sessionStorage.getItem('kc-session-id')
-      expect(id).toBeTruthy()
+      expect(id).not.toBeNull()
       expect(typeof id).toBe('string')
+      expect(id!.length).toBeGreaterThan(0)
     })
 
     it('reuses existing session ID from sessionStorage', async () => {
@@ -434,7 +435,7 @@ describe('useActiveUsers', () => {
       const postCalls = fetchSpy.mock.calls.filter(([url, opts]) =>
         (url as string).includes('/api/active-users') && (opts as RequestInit)?.method === 'POST'
       )
-      expect(postCalls.length).toBeGreaterThanOrEqual(1)
+      expect(postCalls.length).toBe(1)
       // Verify the POST body includes a sessionId
       const firstPostBody = (postCalls[0][1] as RequestInit)?.body
       expect(firstPostBody).toBeDefined()
@@ -477,9 +478,8 @@ describe('useActiveUsers', () => {
           await vi.advanceTimersByTimeAsync(10_100)
         })
       }
-      expect(result.current.activeUsers).toBeGreaterThanOrEqual(2)
-      // Smoothed count should be the max of the counts seen so far
-      expect(result.current.activeUsers).toBeLessThanOrEqual(8)
+      // Smoothed count should be the max of the recent window (max of [3,5,2,8,4,3] = 8)
+      expect(result.current.activeUsers).toBe(8)
     })
   })
 
