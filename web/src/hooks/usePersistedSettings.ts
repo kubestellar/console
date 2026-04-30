@@ -70,6 +70,7 @@ export function usePersistedSettings() {
         const current = collectFromLocalStorage()
         // Retry once after a delay — transient failures are common during page
         // transitions when the agent's connection pool is saturated.
+        let lastError: unknown
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
             await settingsFetch('/settings', {
@@ -80,14 +81,18 @@ export function usePersistedSettings() {
               setLastSaved(new Date())
             }
             return
-          } catch {
+          } catch (err) {
+            lastError = err
             if (attempt === 0) {
               await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
             }
           }
         }
         if (mountedRef.current) {
-          setSyncStatus('error')
+          // Network/connection errors mean the agent is offline — show 'offline'
+          // rather than 'error' to stay consistent with the initial load behaviour.
+          const isNetworkError = lastError instanceof TypeError
+          setSyncStatus(isNetworkError ? 'offline' : 'error')
         }
         console.debug('[settings] failed to persist to local agent')
       } catch {
