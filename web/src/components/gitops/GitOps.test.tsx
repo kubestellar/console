@@ -38,7 +38,7 @@ let mockClusters: Array<{ name: string; context?: string }> = []
 const stableRefetch = vi.fn()
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    clusters: mockClusters, isRefreshing: false, refetch: stableRefetch,
+    clusters: mockClusters, deduplicatedClusters: mockClusters, isRefreshing: false, refetch: stableRefetch,
   }),
   useHelmReleases: () => ({ releases: [] }),
   useOperatorSubscriptions: () => ({ subscriptions: [] }),

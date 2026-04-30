@@ -1009,8 +1009,6 @@ describe('worker-active IndexedDB mirror write', () => {
     const originalWorker = globalThis.Worker
     globalThis.Worker = vi.fn() as unknown as typeof Worker
 
-    // Make CacheWorkerRpc constructor return a mock with the required methods
-    const { CacheWorkerRpc } = await import('../workerRpc')
     const mockRpc = {
       waitForReady: vi.fn().mockResolvedValue(undefined),
       set: vi.fn(),
@@ -1022,7 +1020,12 @@ describe('worker-active IndexedDB mirror write', () => {
       getMeta: vi.fn().mockResolvedValue(null),
       migrate: vi.fn().mockResolvedValue(undefined),
     }
-    vi.mocked(CacheWorkerRpc).mockImplementation(() => mockRpc as unknown as InstanceType<typeof CacheWorkerRpc>)
+
+    // Must register doMock BEFORE importFresh() resets modules, so the fresh
+    // cache/index.ts import picks up the mocked CacheWorkerRpc constructor.
+    vi.doMock('../workerRpc', () => ({
+      CacheWorkerRpc: vi.fn().mockImplementation(() => mockRpc),
+    }))
 
     const mod = await importFresh()
     const { useCache, initCacheWorker, isSQLiteWorkerActive, __testables: testables } = mod

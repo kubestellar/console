@@ -26,7 +26,6 @@ const mockCacheResult = {
 // ---------------------------------------------------------------------------
 
 vi.mock('../mcp/shared', () => ({
-    createCachedHook: vi.fn(),
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
   clusterCacheRef: { clusters: [] },
   REFRESH_INTERVAL_MS: 120_000,
@@ -34,7 +33,6 @@ vi.mock('../mcp/shared', () => ({
 }))
 
 vi.mock('../useDemoMode', () => ({
-    createCachedHook: vi.fn(),
   getDemoMode: () => mockDemoMode,
   useDemoMode: () => ({ isDemoMode: mockDemoMode }),
 }))
@@ -56,12 +54,10 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 })
 
 vi.mock('../mcp/clusters', () => ({
-    createCachedHook: vi.fn(),
   useClusters: () => ({ clusters: mockClusters }),
 }))
 
 vi.mock('../../lib/cache', () => ({
-    createCachedHook: vi.fn(),
   useCache: (opts: { fetcher: () => Promise<unknown>; demoData?: unknown[] }) => {
     capturedFetcher = opts.fetcher
     return {
@@ -72,7 +68,6 @@ vi.mock('../../lib/cache', () => ({
 }))
 
 vi.mock('../../components/ui/CloudProviderIcon', () => ({
-    createCachedHook: vi.fn(),
   detectCloudProvider: (name: string, server?: string) => {
     if (name.includes('eks') || (server && server.includes('amazonaws'))) return 'eks'
     if (name.includes('gke') || (server && server.includes('googleapis'))) return 'gke'
@@ -95,7 +90,6 @@ vi.mock('../../components/ui/CloudProviderIcon', () => ({
 }))
 
 vi.mock('../useLocalAgent', () => ({
-    createCachedHook: vi.fn(),
   isAgentUnavailable: vi.fn(() => true),
   reportAgentDataSuccess: vi.fn(),
   reportAgentDataError: vi.fn(),
