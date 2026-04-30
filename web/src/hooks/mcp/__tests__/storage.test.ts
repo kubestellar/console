@@ -132,9 +132,7 @@ beforeEach(() => {
   mockIsAgentUnavailable.mockReturnValue(true)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockClusterCacheRef.clusters = []
-  mockApiGet.mockResolvedValue({ data: { pvcs: [], pvs: [] } })
-  mockApiPost.mockResolvedValue({ data: { resourceQuota: {} } })
-  mockApiDelete.mockResolvedValue({})
+  globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [], pvs: [], resourceQuotas: [], limitRanges: [], resourceQuota: {} }), { status: 200 })))
   // Reset module-level caches to prevent cross-test contamination.
   // The registerCacheReset callback sets pvcsCache = null internally.
   const resetStorage = capturedCacheResets.get('storage')
@@ -152,7 +150,7 @@ afterEach(() => {
 
 describe('usePVCs', () => {
   it('returns initial loading state when no cache exists', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const { result } = renderHook(() => usePVCs())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.pvcs).toEqual([])
@@ -162,7 +160,7 @@ describe('usePVCs', () => {
     const fakePVCs = [
       { name: 'pvc-1', namespace: 'default', cluster: 'c1', status: 'Bound', capacity: '10Gi', storageClass: 'standard' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pvcs: fakePVCs } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: fakePVCs }), { status: 200 })))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -172,58 +170,58 @@ describe('usePVCs', () => {
   })
 
   it('forwards cluster and namespace when provided', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvcs: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [] }), { status: 200 })))
 
     renderHook(() => usePVCs('my-cluster', 'my-ns'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url: string = mockApiGet.mock.calls[0][0]
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const url: string = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(url).toContain('cluster=my-cluster')
     expect(url).toContain('namespace=my-ns')
   })
 
   it('refetch() triggers a new fetch', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvcs: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [] }), { status: 200 })))
     const { result } = renderHook(() => usePVCs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { result.current.refetch() })
 
-    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
   it('polls every REFRESH_INTERVAL_MS and clears the interval on unmount', async () => {
     vi.useFakeTimers()
-    mockApiGet.mockResolvedValue({ data: { pvcs: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [] }), { status: 200 })))
 
     const { unmount } = renderHook(() => usePVCs())
 
     // Advance time past one interval
     await act(async () => { vi.advanceTimersByTime(150_000) })
 
-    const callsAfterPoll = mockApiGet.mock.calls.length
+    const callsAfterPoll = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
     expect(callsAfterPoll).toBeGreaterThan(0)
 
     unmount()
 
     // After unmount the interval is cleared; no new API calls
     await act(async () => { vi.advanceTimersByTime(150_000) })
-    expect(mockApiGet.mock.calls.length).toBe(callsAfterPoll)
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterPoll)
   })
 
   it('reacts to storage cache reset by clearing data and entering loading state', async () => {
     const fakePVCs = [
       { name: 'pvc-1', namespace: 'default', cluster: 'c1', status: 'Bound', capacity: '10Gi', storageClass: 'standard' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pvcs: fakePVCs } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: fakePVCs }), { status: 200 })))
 
     const { result } = renderHook(() => usePVCs())
     await waitFor(() => expect(result.current.pvcs.length).toBeGreaterThan(0))
 
     // Block the next fetch so loading state is visible after reset
-    mockApiGet.mockReturnValue(new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
 
     // Trigger the real cache reset via the captured registerCacheReset callback
     const reset = capturedCacheResets.get('storage')
@@ -247,7 +245,7 @@ describe('usePVCs', () => {
   })
 
   it('returns empty PVCs with error message on fetch failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('fetch error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fetch error'))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -262,7 +260,7 @@ describe('usePVCs', () => {
 
 describe('usePVs', () => {
   it('returns empty array with loading state on mount', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const { result } = renderHook(() => usePVs())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.pvs).toEqual([])
@@ -270,7 +268,7 @@ describe('usePVs', () => {
 
   it('returns PVs after successful fetch', async () => {
     const fakePVs = [{ name: 'pv-1', cluster: 'c1', capacity: '100Gi', storageClass: 'gp2', status: 'Available' }]
-    mockApiGet.mockResolvedValue({ data: { pvs: fakePVs } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: fakePVs }), { status: 200 })))
 
     const { result } = renderHook(() => usePVs())
 
@@ -280,48 +278,48 @@ describe('usePVs', () => {
   })
 
   it('forwards cluster when provided', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvs: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: [] }), { status: 200 })))
 
     renderHook(() => usePVs('target-cluster'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url: string = mockApiGet.mock.calls[0][0]
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const url: string = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(url).toContain('cluster=target-cluster')
   })
 
   it('refetch() triggers a new fetch', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvs: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: [] }), { status: 200 })))
     const { result } = renderHook(() => usePVs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { result.current.refetch() })
 
-    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
   it('polls every REFRESH_INTERVAL_MS and clears interval on unmount', async () => {
     vi.useFakeTimers()
-    mockApiGet.mockResolvedValue({ data: { pvs: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: [] }), { status: 200 })))
 
     const { unmount } = renderHook(() => usePVs())
 
     // Advance time past one interval
     await act(async () => { vi.advanceTimersByTime(150_000) })
 
-    const callsAfterPoll = mockApiGet.mock.calls.length
+    const callsAfterPoll = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
     expect(callsAfterPoll).toBeGreaterThan(0)
 
     unmount()
 
     // After unmount the interval is cleared; no new API calls
     await act(async () => { vi.advanceTimersByTime(150_000) })
-    expect(mockApiGet.mock.calls.length).toBe(callsAfterPoll)
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAfterPoll)
   })
 
   it('returns empty list with error message on fetch failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('network error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => usePVs())
 
@@ -337,7 +335,7 @@ describe('usePVs', () => {
 
 describe('useResourceQuotas', () => {
   it('returns empty array with loading state on mount', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const { result } = renderHook(() => useResourceQuotas())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.resourceQuotas).toEqual([])
@@ -345,7 +343,7 @@ describe('useResourceQuotas', () => {
 
   it('returns resource quotas after fetch resolves', async () => {
     const fakeQuotas = [{ name: 'compute-quota', namespace: 'production', cluster: 'c1', hard: { pods: '50' }, used: { pods: '10' }, age: '30d' }]
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: fakeQuotas } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: fakeQuotas }), { status: 200 })))
 
     const { result } = renderHook(() => useResourceQuotas())
 
@@ -355,26 +353,26 @@ describe('useResourceQuotas', () => {
   })
 
   it('forwards cluster and namespace when provided', async () => {
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: [] }), { status: 200 })))
 
     renderHook(() => useResourceQuotas('my-cluster', 'my-ns'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url: string = mockApiGet.mock.calls[0][0]
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const url: string = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(url).toContain('cluster=my-cluster')
     expect(url).toContain('namespace=my-ns')
   })
 
   it('refetch() triggers a new fetch', async () => {
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: [] }), { status: 200 })))
     const { result } = renderHook(() => useResourceQuotas())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { result.current.refetch() })
 
-    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
   it('returns demo quotas in demo mode (without forceLive)', async () => {
@@ -390,19 +388,19 @@ describe('useResourceQuotas', () => {
   it('bypasses demo mode and fetches live data when forceLive=true', async () => {
     mockIsDemoMode.mockReturnValue(true)
     const liveQuotas = [{ name: 'live-quota', namespace: 'prod', cluster: 'c1', hard: { pods: '100' }, used: { pods: '20' }, age: '1d' }]
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: liveQuotas } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: liveQuotas }), { status: 200 })))
 
     const { result } = renderHook(() => useResourceQuotas(undefined, undefined, true))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     // forceLive=true skips demo data; real API is called and live data is returned
-    expect(mockApiGet).toHaveBeenCalled()
+    expect(globalThis.fetch).toHaveBeenCalled()
     expect(result.current.resourceQuotas).toEqual(liveQuotas)
     expect(result.current.error).toBeNull()
   })
 
   it('returns empty list with error: null on failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('API error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useResourceQuotas())
 
@@ -418,7 +416,7 @@ describe('useResourceQuotas', () => {
 
 describe('useLimitRanges', () => {
   it('returns empty array with loading state on mount', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const { result } = renderHook(() => useLimitRanges())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.limitRanges).toEqual([])
@@ -426,7 +424,7 @@ describe('useLimitRanges', () => {
 
   it('returns limit ranges after fetch resolves', async () => {
     const fakeLRs = [{ name: 'container-limits', namespace: 'production', cluster: 'c1', limits: [], age: '30d' }]
-    mockApiGet.mockResolvedValue({ data: { limitRanges: fakeLRs } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ limitRanges: fakeLRs }), { status: 200 })))
 
     const { result } = renderHook(() => useLimitRanges())
 
@@ -436,26 +434,26 @@ describe('useLimitRanges', () => {
   })
 
   it('forwards cluster and namespace when provided', async () => {
-    mockApiGet.mockResolvedValue({ data: { limitRanges: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ limitRanges: [] }), { status: 200 })))
 
     renderHook(() => useLimitRanges('test-cluster', 'test-ns'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url: string = mockApiGet.mock.calls[0][0]
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const url: string = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(url).toContain('cluster=test-cluster')
     expect(url).toContain('namespace=test-ns')
   })
 
   it('refetch() triggers a new fetch', async () => {
-    mockApiGet.mockResolvedValue({ data: { limitRanges: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ limitRanges: [] }), { status: 200 })))
     const { result } = renderHook(() => useLimitRanges())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { result.current.refetch() })
 
-    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
   it('returns demo limit ranges in demo mode', async () => {
@@ -469,7 +467,7 @@ describe('useLimitRanges', () => {
   })
 
   it('returns empty list with error: null on failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('API error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useLimitRanges())
 
@@ -490,7 +488,7 @@ describe('usePVCs - capacity and data shape variants', () => {
       { name: 'medium-pvc', namespace: 'ns1', cluster: 'c1', status: 'Bound', capacity: '50Gi', storageClass: 'gp3' },
       { name: 'large-pvc', namespace: 'ns1', cluster: 'c1', status: 'Bound', capacity: '2Ti', storageClass: 'fast-ssd' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pvcs: pvcsMixed } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: pvcsMixed }), { status: 200 })))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -505,7 +503,7 @@ describe('usePVCs - capacity and data shape variants', () => {
     const sparseData = [
       { name: 'minimal-pvc', namespace: 'default', status: 'Pending' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pvcs: sparseData } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: sparseData }), { status: 200 })))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -516,7 +514,7 @@ describe('usePVCs - capacity and data shape variants', () => {
   })
 
   it('handles API returning null pvcs field gracefully', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvcs: null } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: null }), { status: 200 })))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -526,7 +524,7 @@ describe('usePVCs - capacity and data shape variants', () => {
   })
 
   it('handles API returning undefined pvcs field gracefully', async () => {
-    mockApiGet.mockResolvedValue({ data: {} })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 })))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -708,7 +706,7 @@ describe('usePVCs - kubectl proxy fallback', () => {
 
 describe('usePVCs - consecutive failure tracking', () => {
   it('sets isFailed=true after 3 consecutive API failures', async () => {
-    mockApiGet.mockRejectedValue(new Error('server error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('server error'))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -729,13 +727,13 @@ describe('usePVCs - consecutive failure tracking', () => {
 
   it('resets consecutiveFailures to 0 on successful fetch', async () => {
     // Start with failures
-    mockApiGet.mockRejectedValue(new Error('fail'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fail'))
 
     const { result } = renderHook(() => usePVCs())
     await waitFor(() => expect(result.current.consecutiveFailures).toBe(1))
 
     // Now succeed
-    mockApiGet.mockResolvedValue({ data: { pvcs: [{ name: 'pvc-ok', namespace: 'ns', status: 'Bound' }] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [{ name: 'pvc-ok', namespace: 'ns', status: 'Bound' }] }), { status: 200 })))
     await act(async () => { result.current.refetch() })
 
     await waitFor(() => expect(result.current.consecutiveFailures).toBe(0))
@@ -750,7 +748,7 @@ describe('usePVCs - consecutive failure tracking', () => {
 
 describe('usePVs - additional edge cases', () => {
   it('handles API returning null pvs field', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvs: null } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: null }), { status: 200 })))
 
     const { result } = renderHook(() => usePVs())
 
@@ -760,7 +758,7 @@ describe('usePVs - additional edge cases', () => {
   })
 
   it('handles API returning undefined pvs field', async () => {
-    mockApiGet.mockResolvedValue({ data: {} })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 })))
 
     const { result } = renderHook(() => usePVs())
 
@@ -769,7 +767,7 @@ describe('usePVs - additional edge cases', () => {
   })
 
   it('tracks consecutive failures and isFailed for PVs', async () => {
-    mockApiGet.mockRejectedValue(new Error('fail'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fail'))
 
     const { result } = renderHook(() => usePVs())
 
@@ -792,7 +790,7 @@ describe('usePVs - additional edge cases', () => {
       { name: 'pv-released', cluster: 'c2', capacity: '50Gi', storageClass: 'fast-ssd', status: 'Released' },
       { name: 'pv-failed', cluster: 'c2', capacity: '10Gi', storageClass: 'cold-storage', status: 'Failed' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pvs: mixedPVs } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: mixedPVs }), { status: 200 })))
 
     const { result } = renderHook(() => usePVs())
 
@@ -809,7 +807,7 @@ describe('usePVs - additional edge cases', () => {
 
 describe('useResourceQuotas - additional edge cases', () => {
   it('handles API returning null resourceQuotas field', async () => {
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: null } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: null }), { status: 200 })))
 
     const { result } = renderHook(() => useResourceQuotas())
 
@@ -845,7 +843,7 @@ describe('useResourceQuotas - additional edge cases', () => {
 
 describe('useLimitRanges - additional edge cases', () => {
   it('handles API returning null limitRanges field', async () => {
-    mockApiGet.mockResolvedValue({ data: { limitRanges: null } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ limitRanges: null }), { status: 200 })))
 
     const { result } = renderHook(() => useLimitRanges())
 
@@ -888,16 +886,16 @@ describe('createOrUpdateResourceQuota', () => {
       hard: { pods: '100', 'requests.cpu': '10' },
     }
     const createdQuota = { ...spec, used: { pods: '0', 'requests.cpu': '0' }, age: '0s' }
-    mockApiPost.mockResolvedValue({ data: { resourceQuota: createdQuota } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuota: createdQuota }), { status: 200 })))
 
     const result = await createOrUpdateResourceQuota(spec)
 
-    expect(mockApiPost).toHaveBeenCalledWith(`${LOCAL_AGENT_HTTP_URL}/resourcequotas`, spec)
+    expect(globalThis.fetch).toHaveBeenCalledWith(`${LOCAL_AGENT_HTTP_URL}/resourcequotas`, expect.objectContaining({ method: 'POST', body: JSON.stringify(spec) }))
     expect(result).toEqual(createdQuota)
   })
 
   it('propagates API error on failure', async () => {
-    mockApiPost.mockRejectedValue(new Error('403 Forbidden'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('403 Forbidden'))
 
     await expect(createOrUpdateResourceQuota({
       cluster: 'c1',
@@ -914,17 +912,18 @@ describe('createOrUpdateResourceQuota', () => {
 
 describe('deleteResourceQuota', () => {
   it('sends DELETE request with correct query parameters', async () => {
-    mockApiDelete.mockResolvedValue({})
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response('{}', { status: 200 })))
 
     await deleteResourceQuota('prod-east', 'default', 'compute-quota')
 
-    expect(mockApiDelete).toHaveBeenCalledWith(
-      `${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=prod-east&namespace=default&name=compute-quota`
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      `${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=prod-east&namespace=default&name=compute-quota`,
+      expect.objectContaining({ method: 'DELETE' })
     )
   })
 
   it('propagates API error on delete failure', async () => {
-    mockApiDelete.mockRejectedValue(new Error('404 Not Found'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('404 Not Found'))
 
     await expect(deleteResourceQuota('c1', 'ns', 'missing')).rejects.toThrow('404 Not Found')
   })
@@ -1016,7 +1015,7 @@ describe('COMMON_RESOURCE_TYPES', () => {
 
 describe('usePVCs — additional branches', () => {
   it('returns the complete return shape with all expected keys', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvcs: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [] }), { status: 200 })))
     const { result } = renderHook(() => usePVCs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -1066,7 +1065,7 @@ describe('usePVCs — additional branches', () => {
 
     // REST API succeeds
     const restPvc = { name: 'rest-pvc', namespace: 'ns', cluster: 'cluster-z', status: 'Bound', capacity: '10Gi' }
-    mockApiGet.mockResolvedValue({ data: { pvcs: [restPvc] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [restPvc] }), { status: 200 })))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -1077,13 +1076,13 @@ describe('usePVCs — additional branches', () => {
 
   it('preserves stale data on error when cache exists', async () => {
     const initialPvc = { name: 'cached-pvc', namespace: 'ns', cluster: 'c1', status: 'Bound', capacity: '10Gi', storageClass: 'gp3' }
-    mockApiGet.mockResolvedValueOnce({ data: { pvcs: [initialPvc] } })
+    globalThis.fetch = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ pvcs: [initialPvc] }), { status: 200 }))
 
     const { result } = renderHook(() => usePVCs())
     await waitFor(() => expect(result.current.pvcs).toHaveLength(1))
 
     // Next fetch fails
-    mockApiGet.mockRejectedValue(new Error('server error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('server error'))
     await act(async () => { result.current.refetch() })
 
     // Should preserve cached data, not clear it
@@ -1093,7 +1092,7 @@ describe('usePVCs — additional branches', () => {
   })
 
   it('sets lastUpdated and lastRefresh after successful fetch', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvcs: [{ name: 'p', namespace: 'n', status: 'Bound' }] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvcs: [{ name: 'p', namespace: 'n', status: 'Bound' }] }), { status: 200 })))
 
     const { result } = renderHook(() => usePVCs())
 
@@ -1115,7 +1114,7 @@ describe('usePVCs — additional branches', () => {
 
 describe('usePVs — additional branches', () => {
   it('returns the complete return shape with all expected keys', async () => {
-    mockApiGet.mockResolvedValue({ data: { pvs: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: [] }), { status: 200 })))
     const { result } = renderHook(() => usePVs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -1131,12 +1130,12 @@ describe('usePVs — additional branches', () => {
 
   it('resets consecutiveFailures to 0 on successful fetch after errors', async () => {
     // First: fail
-    mockApiGet.mockRejectedValueOnce(new Error('fail'))
+    globalThis.fetch = vi.fn().mockRejectedValueOnce(new Error('fail'))
     const { result } = renderHook(() => usePVs())
     await waitFor(() => expect(result.current.consecutiveFailures).toBe(1))
 
     // Then: succeed
-    mockApiGet.mockResolvedValue({ data: { pvs: [{ name: 'pv', status: 'Available' }] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ pvs: [{ name: 'pv', status: 'Available' }] }), { status: 200 })))
     await act(async () => { result.current.refetch() })
     await waitFor(() => expect(result.current.consecutiveFailures).toBe(0))
     expect(result.current.isFailed).toBe(false)
@@ -1144,7 +1143,7 @@ describe('usePVs — additional branches', () => {
 
   it('sets isRefreshing during fetch and clears after', async () => {
     let resolvePromise: (v: unknown) => void
-    mockApiGet.mockReturnValue(new Promise((resolve) => { resolvePromise = resolve }))
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise((resolve) => { resolvePromise = resolve }))
 
     const { result } = renderHook(() => usePVs())
 
@@ -1152,7 +1151,7 @@ describe('usePVs — additional branches', () => {
     expect(result.current.isLoading).toBe(true)
 
     // Resolve the API call
-    await act(async () => { resolvePromise!({ data: { pvs: [] } }) })
+    await act(async () => { resolvePromise!(new Response(JSON.stringify({ pvs: [] }), { status: 200 })) })
 
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isRefreshing).toBe(false)
@@ -1173,7 +1172,7 @@ describe('useResourceQuotas — additional branches', () => {
   })
 
   it('handles API returning undefined resourceQuotas field', async () => {
-    mockApiGet.mockResolvedValue({ data: {} })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 })))
 
     const { result } = renderHook(() => useResourceQuotas())
 
@@ -1182,16 +1181,16 @@ describe('useResourceQuotas — additional branches', () => {
   })
 
   it('provides a refetch function that can be called multiple times', async () => {
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: [] }), { status: 200 })))
     const { result } = renderHook(() => useResourceQuotas())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { result.current.refetch() })
     await act(async () => { result.current.refetch() })
 
-    expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore)
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore)
   })
 })
 
@@ -1211,7 +1210,7 @@ describe('useResourceQuotas — isDemoFallback wiring (Issue 9356)', () => {
 
   it('returns isDemoFallback: false when serving live API data', async () => {
     const liveQuotas = [{ name: 'live-quota', namespace: 'prod', cluster: 'c1', hard: { pods: '100' }, used: { pods: '20' }, age: '1d' }]
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: liveQuotas } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: liveQuotas }), { status: 200 })))
 
     const { result } = renderHook(() => useResourceQuotas())
 
@@ -1221,7 +1220,7 @@ describe('useResourceQuotas — isDemoFallback wiring (Issue 9356)', () => {
   })
 
   it('returns isDemoFallback: false when live API fails (empty, not demo)', async () => {
-    mockApiGet.mockRejectedValue(new Error('API error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useResourceQuotas())
 
@@ -1233,7 +1232,7 @@ describe('useResourceQuotas — isDemoFallback wiring (Issue 9356)', () => {
   it('returns isDemoFallback: false when forceLive bypasses demo mode', async () => {
     mockIsDemoMode.mockReturnValue(true)
     const liveQuotas = [{ name: 'live-quota', namespace: 'prod', cluster: 'c1', hard: { pods: '100' }, used: { pods: '20' }, age: '1d' }]
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: liveQuotas } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: liveQuotas }), { status: 200 })))
 
     const { result } = renderHook(() => useResourceQuotas(undefined, undefined, true))
 
@@ -1251,7 +1250,7 @@ describe('useResourceQuotas — isDemoFallback wiring (Issue 9356)', () => {
     await waitFor(() => expect(result.current.isDemoFallback).toBe(true))
 
     mockIsDemoMode.mockReturnValue(false)
-    mockApiGet.mockResolvedValue({ data: { resourceQuotas: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ resourceQuotas: [] }), { status: 200 })))
     await act(async () => { result.current.refetch() })
 
     await waitFor(() => expect(result.current.isDemoFallback).toBe(false))
@@ -1272,7 +1271,7 @@ describe('useLimitRanges — additional branches', () => {
   })
 
   it('handles API returning undefined limitRanges field', async () => {
-    mockApiGet.mockResolvedValue({ data: {} })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 })))
 
     const { result } = renderHook(() => useLimitRanges())
 
@@ -1311,13 +1310,14 @@ describe('subscribeStorageCache', () => {
 describe('deleteResourceQuota', () => {
   it('calls DELETE with correct params', async () => {
     await deleteResourceQuota('cluster-x', 'namespace-y', 'quota-z')
-    expect(mockApiDelete).toHaveBeenCalledWith(
-      `${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=cluster-x&namespace=namespace-y&name=quota-z`
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      `${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=cluster-x&namespace=namespace-y&name=quota-z`,
+      expect.objectContaining({ method: 'DELETE' })
     )
   })
 
   it('propagates API error on failure', async () => {
-    mockApiDelete.mockRejectedValue(new Error('403 Forbidden'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('403 Forbidden'))
     await expect(deleteResourceQuota('c', 'ns', 'q')).rejects.toThrow('403 Forbidden')
   })
 })

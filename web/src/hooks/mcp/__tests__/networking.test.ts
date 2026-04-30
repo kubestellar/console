@@ -119,13 +119,8 @@ beforeEach(() => {
   // Reset module-level servicesCache by calling the captured cache reset callback
   const servicesReset = capturedCacheResets.get('services')
   if (servicesReset) servicesReset()
-  // Default: services REST fetch returns empty list
-  globalThis.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ services: [] }),
-  })
-  // Default: ingresses and networkpolicies REST fetch returns empty
-  mockApiGet.mockResolvedValue({ data: { ingresses: [], networkpolicies: [] } })
+  // Default: REST fetch returns empty data (services, ingresses, networkpolicies)
+  globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ services: [], ingresses: [], networkpolicies: [] }), { status: 200 })))
   // Re-clear localStorage after cache reset (which may have set items)
   localStorage.clear()
   localStorage.setItem('token', 'test-token')
@@ -563,7 +558,7 @@ describe('useServices', () => {
 
 describe('useIngresses', () => {
   it('returns empty array with loading state on mount', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const { result } = renderHook(() => useIngresses())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.ingresses).toEqual([])
@@ -571,7 +566,7 @@ describe('useIngresses', () => {
 
   it('returns ingresses after fetch resolves', async () => {
     const fakeIngresses = [{ name: 'ing-1', namespace: 'default', cluster: 'c1' }]
-    mockApiGet.mockResolvedValue({ data: { ingresses: fakeIngresses } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: fakeIngresses }), { status: 200 })))
 
     const { result } = renderHook(() => useIngresses())
 
@@ -581,29 +576,29 @@ describe('useIngresses', () => {
   })
 
   it('forwards cluster and namespace when provided', async () => {
-    mockApiGet.mockResolvedValue({ data: { ingresses: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: [] }), { status: 200 })))
     renderHook(() => useIngresses('prod-cluster', 'production'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url: string = mockApiGet.mock.calls[0][0]
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const url: string = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(url).toContain('cluster=prod-cluster')
     expect(url).toContain('namespace=production')
   })
 
   it('refetch() triggers a new fetch', async () => {
-    mockApiGet.mockResolvedValue({ data: { ingresses: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: [] }), { status: 200 })))
     const { result } = renderHook(() => useIngresses())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { result.current.refetch() })
 
-    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
   it('returns empty list with error: null on fetch failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('network error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => useIngresses())
 
@@ -613,7 +608,7 @@ describe('useIngresses', () => {
   })
 
   it('re-fetches when demo mode changes', async () => {
-    mockApiGet.mockResolvedValue({ data: { ingresses: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: [] }), { status: 200 })))
     const { result, rerender } = renderHook(
       ({ demoMode }) => {
         mockUseDemoMode.mockReturnValue({ isDemoMode: demoMode })
@@ -623,11 +618,11 @@ describe('useIngresses', () => {
     )
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     rerender({ demoMode: true })
 
-    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
   // -------------------------------------------------------------------------
@@ -642,7 +637,7 @@ describe('useIngresses', () => {
         address: '10.0.0.100',
       },
     ]
-    mockApiGet.mockResolvedValue({ data: { ingresses: multiHostIngress } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: multiHostIngress }), { status: 200 })))
 
     const { result } = renderHook(() => useIngresses('prod', 'production'))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -655,7 +650,7 @@ describe('useIngresses', () => {
     const noHostIngress = [
       { name: 'catch-all', namespace: 'default', cluster: 'c1', hosts: [], class: 'nginx' },
     ]
-    mockApiGet.mockResolvedValue({ data: { ingresses: noHostIngress } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: noHostIngress }), { status: 200 })))
 
     const { result } = renderHook(() => useIngresses())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -671,7 +666,7 @@ describe('useIngresses', () => {
         class: 'alb', hosts: ['app.example.com'], address: '52.14.0.1', age: '10d',
       },
     ]
-    mockApiGet.mockResolvedValue({ data: { ingresses: ingress } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: ingress }), { status: 200 })))
 
     const { result } = renderHook(() => useIngresses())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -686,7 +681,7 @@ describe('useIngresses', () => {
   // -------------------------------------------------------------------------
 
   it('handles null ingresses field in API response gracefully', async () => {
-    mockApiGet.mockResolvedValue({ data: { ingresses: null } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: null }), { status: 200 })))
 
     const { result } = renderHook(() => useIngresses())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -697,7 +692,7 @@ describe('useIngresses', () => {
   })
 
   it('increments consecutiveFailures on ingress fetch failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('server error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('server error'))
 
     const { result } = renderHook(() => useIngresses())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -706,7 +701,7 @@ describe('useIngresses', () => {
   })
 
   it('sets isFailed after 3 consecutive ingress failures', async () => {
-    mockApiGet.mockRejectedValue(new Error('server error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('server error'))
 
     const { result } = renderHook(() => useIngresses())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -723,12 +718,12 @@ describe('useIngresses', () => {
   it('clears ingresses on API failure (unlike services which keep stale data)', async () => {
     // First succeed with data
     const fakeIngresses = [{ name: 'ing-1', namespace: 'default', cluster: 'c1', hosts: ['a.com'] }]
-    mockApiGet.mockResolvedValue({ data: { ingresses: fakeIngresses } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: fakeIngresses }), { status: 200 })))
     const { result } = renderHook(() => useIngresses())
     await waitFor(() => expect(result.current.ingresses).toHaveLength(1))
 
     // Then fail
-    mockApiGet.mockRejectedValue(new Error('network error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
     await act(async () => { result.current.refetch() })
     await waitFor(() => expect(result.current.ingresses).toEqual([]))
   })
@@ -740,7 +735,7 @@ describe('useIngresses', () => {
 
 describe('useNetworkPolicies', () => {
   it('returns empty array with loading state on mount', () => {
-    mockApiGet.mockReturnValue(new Promise(() => {}))
+    globalThis.fetch = vi.fn().mockImplementation(() => new Promise(() => {}))
     const { result } = renderHook(() => useNetworkPolicies())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.networkpolicies).toEqual([])
@@ -748,7 +743,7 @@ describe('useNetworkPolicies', () => {
 
   it('returns network policies after fetch resolves', async () => {
     const fakePolicies = [{ name: 'np-1', namespace: 'default', cluster: 'c1' }]
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: fakePolicies } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: fakePolicies }), { status: 200 })))
 
     const { result } = renderHook(() => useNetworkPolicies())
 
@@ -758,29 +753,29 @@ describe('useNetworkPolicies', () => {
   })
 
   it('forwards cluster and namespace when provided', async () => {
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: [] }), { status: 200 })))
     renderHook(() => useNetworkPolicies('test-cluster', 'test-ns'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url: string = mockApiGet.mock.calls[0][0]
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const url: string = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(url).toContain('cluster=test-cluster')
     expect(url).toContain('namespace=test-ns')
   })
 
   it('refetch() triggers a new fetch', async () => {
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: [] }), { status: 200 })))
     const { result } = renderHook(() => useNetworkPolicies())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { result.current.refetch() })
 
-    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
   it('returns empty list with error: null on fetch failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('network error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => useNetworkPolicies())
 
@@ -790,7 +785,7 @@ describe('useNetworkPolicies', () => {
   })
 
   it('re-fetches when demo mode changes', async () => {
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: [] }), { status: 200 })))
     const { result, rerender } = renderHook(
       ({ demoMode }) => {
         mockUseDemoMode.mockReturnValue({ isDemoMode: demoMode })
@@ -800,11 +795,11 @@ describe('useNetworkPolicies', () => {
     )
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     rerender({ demoMode: true })
 
-    await waitFor(() => expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore))
+    await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
   // -------------------------------------------------------------------------
@@ -818,7 +813,7 @@ describe('useNetworkPolicies', () => {
         policyTypes: ['Ingress', 'Egress'], podSelector: 'app=api',
       },
     ]
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: policies } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: policies }), { status: 200 })))
 
     const { result } = renderHook(() => useNetworkPolicies('prod', 'secure'))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -834,7 +829,7 @@ describe('useNetworkPolicies', () => {
         policyTypes: ['Ingress'], podSelector: 'role=frontend',
       },
     ]
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: policies } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: policies }), { status: 200 })))
 
     const { result } = renderHook(() => useNetworkPolicies())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -850,7 +845,7 @@ describe('useNetworkPolicies', () => {
         policyTypes: ['Ingress'], podSelector: '',
       },
     ]
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: policies } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: policies }), { status: 200 })))
 
     const { result } = renderHook(() => useNetworkPolicies())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -864,7 +859,7 @@ describe('useNetworkPolicies', () => {
   // -------------------------------------------------------------------------
 
   it('handles null networkpolicies field in API response gracefully', async () => {
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: null } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: null }), { status: 200 })))
 
     const { result } = renderHook(() => useNetworkPolicies())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -874,7 +869,7 @@ describe('useNetworkPolicies', () => {
   })
 
   it('sets isFailed after 3 consecutive network policy failures', async () => {
-    mockApiGet.mockRejectedValue(new Error('server error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('server error'))
 
     const { result } = renderHook(() => useNetworkPolicies())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -892,17 +887,17 @@ describe('useNetworkPolicies', () => {
     const fakePolicies = [
       { name: 'np-1', namespace: 'default', cluster: 'c1', policyTypes: ['Ingress'], podSelector: '' },
     ]
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: fakePolicies } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: fakePolicies }), { status: 200 })))
     const { result } = renderHook(() => useNetworkPolicies())
     await waitFor(() => expect(result.current.networkpolicies).toHaveLength(1))
 
-    mockApiGet.mockRejectedValue(new Error('network error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
     await act(async () => { result.current.refetch() })
     await waitFor(() => expect(result.current.networkpolicies).toEqual([]))
   })
 
   it('registers for mode transition refetch with correct key pattern', async () => {
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: [] }), { status: 200 })))
     renderHook(() => useNetworkPolicies('test-cluster', 'test-ns'))
 
     await waitFor(() => expect(mockRegisterRefetch).toHaveBeenCalled())
@@ -1225,11 +1220,9 @@ describe('useIngresses — local agent path', () => {
   it('falls through to API when agent returns non-ok for ingresses', async () => {
     mockIsAgentUnavailable.mockReturnValue(false)
 
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-    })
-    mockApiGet.mockResolvedValue({ data: { ingresses: [{ name: 'api-ing', namespace: 'ns', hosts: [] }] } })
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce(new Response('error', { status: 500 }))
+      .mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: [{ name: 'api-ing', namespace: 'ns', hosts: [] }] }), { status: 200 })))
 
     const { result } = renderHook(() => useIngresses('cluster-1'))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -1240,8 +1233,9 @@ describe('useIngresses — local agent path', () => {
   it('falls through to API when agent fetch throws for ingresses', async () => {
     mockIsAgentUnavailable.mockReturnValue(false)
 
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'))
-    mockApiGet.mockResolvedValue({ data: { ingresses: [] } })
+    globalThis.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+      .mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: [] }), { status: 200 })))
 
     const { result } = renderHook(() => useIngresses('cluster-1'))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -1269,8 +1263,9 @@ describe('useNetworkPolicies — local agent path', () => {
   it('falls through to API when agent returns non-ok for network policies', async () => {
     mockIsAgentUnavailable.mockReturnValue(false)
 
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 })
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: [] } })
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce(new Response('error', { status: 500 }))
+      .mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: [] }), { status: 200 })))
 
     const { result } = renderHook(() => useNetworkPolicies('cluster-1'))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -1281,8 +1276,9 @@ describe('useNetworkPolicies — local agent path', () => {
   it('falls through to API when agent fetch throws for network policies', async () => {
     mockIsAgentUnavailable.mockReturnValue(false)
 
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'))
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: [] } })
+    globalThis.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('Network error'))
+      .mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: [] }), { status: 200 })))
 
     const { result } = renderHook(() => useNetworkPolicies('cluster-1'))
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -1292,11 +1288,11 @@ describe('useNetworkPolicies — local agent path', () => {
 
   it('skips agent path for network policies when no cluster specified', async () => {
     mockIsAgentUnavailable.mockReturnValue(false)
-    mockApiGet.mockResolvedValue({ data: { networkpolicies: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ networkpolicies: [] }), { status: 200 })))
 
     renderHook(() => useNetworkPolicies())
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
     expect(mockReportAgentDataSuccess).not.toHaveBeenCalled()
   })
 })
@@ -1304,11 +1300,11 @@ describe('useNetworkPolicies — local agent path', () => {
 describe('useIngresses — agent skipped when no cluster', () => {
   it('skips agent path for ingresses when no cluster specified', async () => {
     mockIsAgentUnavailable.mockReturnValue(false)
-    mockApiGet.mockResolvedValue({ data: { ingresses: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: [] }), { status: 200 })))
 
     renderHook(() => useIngresses())
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
     expect(mockReportAgentDataSuccess).not.toHaveBeenCalled()
   })
 })
@@ -1329,12 +1325,12 @@ describe('useIngresses — isDemoFallback wiring (Issue 9357)', () => {
     // shows with actual content (not a fake "empty live" view).
     expect(result.current.ingresses.length).toBeGreaterThan(0)
     // Live API must NOT be called in demo mode.
-    expect(mockApiGet).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
   it('returns isDemoFallback: false when serving live API data', async () => {
     const liveIngresses = [{ name: 'live-ingress', namespace: 'prod', cluster: 'c1', hosts: ['x.example.com'] }]
-    mockApiGet.mockResolvedValue({ data: { ingresses: liveIngresses } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: liveIngresses }), { status: 200 })))
 
     const { result } = renderHook(() => useIngresses())
 
@@ -1344,7 +1340,7 @@ describe('useIngresses — isDemoFallback wiring (Issue 9357)', () => {
   })
 
   it('returns isDemoFallback: false when live API fails (empty, not demo)', async () => {
-    mockApiGet.mockRejectedValue(new Error('network error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => useIngresses())
 
@@ -1367,7 +1363,7 @@ describe('useIngresses — isDemoFallback wiring (Issue 9357)', () => {
 
     await waitFor(() => expect(result.current.isDemoFallback).toBe(true))
 
-    mockApiGet.mockResolvedValue({ data: { ingresses: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: [] }), { status: 200 })))
     rerender({ demo: false })
 
     await waitFor(() => expect(result.current.isDemoFallback).toBe(false))
