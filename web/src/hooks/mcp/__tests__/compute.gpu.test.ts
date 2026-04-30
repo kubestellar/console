@@ -278,7 +278,9 @@ describe('useGPUNodes', () => {
     // "fetch failed" and apply the empty result when the fetch succeeded.
     mockFetchSSE.mockResolvedValue([])
     // REST fallback also returns empty, in case SSE path isn't exercised
-    mockApiGet.mockResolvedValue({ data: { nodes: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ nodes: [] }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useGPUNodes())
 
@@ -992,7 +994,9 @@ describe('fetchGPUNodes — REST fallback', () => {
     const restNodes = [
       { name: 'rest-gpu', cluster: 'c1', gpuType: 'NVIDIA H100', gpuCount: 8, gpuAllocated: 5, acceleratorType: 'GPU' },
     ]
-    mockApiGet.mockResolvedValue({ data: { nodes: restNodes } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ nodes: restNodes }), { status: 200 }))
+    )
 
     gpuNodeCache.nodes = []
     gpuNodeCache.lastUpdated = null
@@ -1016,7 +1020,7 @@ describe('fetchGPUNodes — REST fallback', () => {
     })
 
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    mockApiGet.mockRejectedValue(new Error('REST failed'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('REST failed'))
 
     const { result } = renderHook(() => useGPUNodes())
 
@@ -1042,7 +1046,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
 
     // Both fetch paths fail
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    mockApiGet.mockRejectedValue(new Error('REST failed'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('REST failed'))
 
     const { result } = renderHook(() => useGPUNodes())
 
@@ -1074,7 +1078,7 @@ describe('fetchGPUNodes — error recovery from localStorage', () => {
     gpuNodeCache.consecutiveFailures = 0
 
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    mockApiGet.mockRejectedValue(new Error('REST failed'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('REST failed'))
 
     renderHook(() => useGPUNodes())
 

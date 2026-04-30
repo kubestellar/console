@@ -184,7 +184,9 @@ describe('useNamespaces', () => {
       { name: 'pod-1', namespace: 'default', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
       { name: 'pod-2', namespace: 'monitoring', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaces('my-cluster'))
 
@@ -204,7 +206,7 @@ describe('useNamespaces', () => {
 
   it('falls back to default namespaces when all methods fail', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
-    mockApiGet.mockRejectedValue(new Error('API error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useNamespaces('unreachable-cluster'))
 
@@ -217,7 +219,9 @@ describe('useNamespaces', () => {
   it('skips demo mode when forceLive is true', async () => {
     mockIsDemoMode.mockReturnValue(true)
     mockIsAgentUnavailable.mockReturnValue(true)
-    mockApiGet.mockResolvedValue({ data: { pods: [{ name: 'p', namespace: 'live-ns', status: 'Running', ready: '1/1', restarts: 0, age: '1d' }] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: [{ name: 'p', namespace: 'live-ns', status: 'Running', ready: '1/1', restarts: 0, age: '1d' }] }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaces('my-cluster', true))
 
@@ -358,7 +362,9 @@ describe('useNamespaces', () => {
       { name: 'pod-1', namespace: 'cached-ns-1', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
       { name: 'pod-2', namespace: 'new-ns-from-pods', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaces('my-cluster'))
 
@@ -376,7 +382,9 @@ describe('useNamespaces', () => {
       { name: 'pod-2', namespace: 'alpha', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
       { name: 'pod-3', namespace: 'middle', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaces('my-cluster'))
 
@@ -392,9 +400,14 @@ describe('useNamespaces', () => {
       { name: 'new-cluster', namespaces: ['cache-hit-ns'] },
     ]
     // Pod API returns data slowly (never resolves for this test)
-    mockApiGet
-      .mockResolvedValueOnce({ data: { pods: [{ name: 'p', namespace: 'old-ns', status: 'Running', ready: '1/1', restarts: 0, age: '1d' }] } })
-      .mockReturnValue(new Promise(() => {})) // second call never resolves
+    let callCount = 0
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      callCount++
+      if (callCount === 1) {
+        return Promise.resolve(new Response(JSON.stringify({ pods: [{ name: 'p', namespace: 'old-ns', status: 'Running', ready: '1/1', restarts: 0, age: '1d' }] }), { status: 200 }))
+      }
+      return new Promise(() => {}) // second call never resolves
+    })
 
     const { result, rerender } = renderHook(
       ({ cluster }: { cluster?: string }) => useNamespaces(cluster),
@@ -416,7 +429,9 @@ describe('useNamespaces', () => {
       { name: 'pod-2', namespace: 'default', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
       { name: 'pod-3', namespace: 'default', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaces('my-cluster'))
 
@@ -427,7 +442,9 @@ describe('useNamespaces', () => {
 
   it('handles pod API returning empty pods array', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
-    mockApiGet.mockResolvedValue({ data: { pods: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: [] }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaces('my-cluster'))
 
@@ -439,16 +456,18 @@ describe('useNamespaces', () => {
 
   it('refetch triggers a new fetch cycle', async () => {
     mockIsAgentUnavailable.mockReturnValue(true)
-    mockApiGet.mockResolvedValue({ data: { pods: [{ name: 'p', namespace: 'ns1', status: 'Running', ready: '1/1', restarts: 0, age: '1d' }] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: [{ name: 'p', namespace: 'ns1', status: 'Running', ready: '1/1', restarts: 0, age: '1d' }] }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaces('my-cluster'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { await result.current.refetch() })
 
-    expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore)
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore)
   })
 
   it('encodes cluster name in agent URL', async () => {
@@ -472,7 +491,7 @@ describe('useNamespaces', () => {
       { name: 'my-cluster', namespaces: ['cached-only'] },
     ]
     // Pod API fails
-    mockApiGet.mockRejectedValue(new Error('Pod API down'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Pod API down'))
 
     const { result } = renderHook(() => useNamespaces('my-cluster'))
 
@@ -502,7 +521,9 @@ describe('useNamespaceStats', () => {
       { name: 'pod-4', namespace: 'monitoring', status: 'Running', ready: '1/1', restarts: 0, age: '7d' },
       { name: 'pod-5', namespace: 'monitoring', status: 'Failed', ready: '0/1', restarts: 5, age: '1d' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -528,7 +549,9 @@ describe('useNamespaceStats', () => {
       { name: 'pod-3', namespace: 'large', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
       { name: 'pod-4', namespace: 'large', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -538,7 +561,7 @@ describe('useNamespaceStats', () => {
   })
 
   it('falls back to demo stats on API failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('API error'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -548,7 +571,9 @@ describe('useNamespaceStats', () => {
   })
 
   it('provides refetch function', async () => {
-    mockApiGet.mockResolvedValue({ data: { pods: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: [] }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -562,7 +587,9 @@ describe('useNamespaceStats', () => {
     const fakePods = [
       { name: 'crash-pod', namespace: 'ns1', status: 'CrashLoopBackOff', ready: '0/1', restarts: 42, age: '1d' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -578,7 +605,9 @@ describe('useNamespaceStats', () => {
     const fakePods = [
       { name: 'err-pod', namespace: 'ns1', status: 'Error', ready: '0/1', restarts: 0, age: '1h' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -592,7 +621,9 @@ describe('useNamespaceStats', () => {
     const fakePods = [
       { name: 'orphan-pod', status: 'Running', ready: '1/1', restarts: 0, age: '1d' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -607,7 +638,9 @@ describe('useNamespaceStats', () => {
       { name: 'term-pod', namespace: 'ns1', status: 'Terminating', ready: '0/1', restarts: 0, age: '1m' },
       { name: 'succ-pod', namespace: 'ns1', status: 'Succeeded', ready: '0/1', restarts: 0, age: '2h' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -622,7 +655,9 @@ describe('useNamespaceStats', () => {
   })
 
   it('handles empty pods array without error', async () => {
-    mockApiGet.mockResolvedValue({ data: { pods: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: [] }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -632,7 +667,9 @@ describe('useNamespaceStats', () => {
   })
 
   it('handles null pods field gracefully', async () => {
-    mockApiGet.mockResolvedValue({ data: { pods: null } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: null }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -642,7 +679,7 @@ describe('useNamespaceStats', () => {
   })
 
   it('demo fallback stats have consistent structure', async () => {
-    mockApiGet.mockRejectedValue(new Error('timeout'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('timeout'))
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -661,7 +698,7 @@ describe('useNamespaceStats', () => {
   })
 
   it('demo fallback stats are sorted by pod count descending', async () => {
-    mockApiGet.mockRejectedValue(new Error('timeout'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('timeout'))
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
@@ -674,35 +711,41 @@ describe('useNamespaceStats', () => {
   })
 
   it('refetch triggers a new API call', async () => {
-    mockApiGet.mockResolvedValue({ data: { pods: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: [] }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    const callsBefore = mockApiGet.mock.calls.length
+    const callsBefore = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
     await act(async () => { await result.current.refetch() })
 
-    expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsBefore)
+    expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore)
   })
 
   it('encodes cluster name in API URL', async () => {
-    mockApiGet.mockResolvedValue({ data: { pods: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: [] }), { status: 200 }))
+    )
 
     renderHook(() => useNamespaceStats('cluster/with-special'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const urlArg = mockApiGet.mock.calls[0][0] as string
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const urlArg = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
     expect(urlArg).toContain('cluster%2Fwith-special')
   })
 
   it('fetches with limit=1000 query parameter', async () => {
-    mockApiGet.mockResolvedValue({ data: { pods: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: [] }), { status: 200 }))
+    )
 
     renderHook(() => useNamespaceStats('my-cluster'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const urlArg = mockApiGet.mock.calls[0][0] as string
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const urlArg = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
     expect(urlArg).toContain('limit=1000')
   })
 
@@ -715,7 +758,9 @@ describe('useNamespaceStats', () => {
       { name: 'p5', namespace: 'beta', status: 'CrashLoopBackOff', ready: '0/1', restarts: 99, age: '3h' },
       { name: 'p6', namespace: 'gamma', status: 'Error', ready: '0/1', restarts: 0, age: '30m' },
     ]
-    mockApiGet.mockResolvedValue({ data: { pods: fakePods } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ pods: fakePods }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNamespaceStats('my-cluster'))
 

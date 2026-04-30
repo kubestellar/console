@@ -168,7 +168,9 @@ describe('useNVIDIAOperators', () => {
   it('falls back to REST when SSE fails', async () => {
     const fakeOps = [{ cluster: 'c1', installed: true, version: '23.9.0', components: [] }]
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    mockApiGet.mockResolvedValue({ data: { operators: fakeOps } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ operators: fakeOps }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNVIDIAOperators())
 
@@ -201,7 +203,7 @@ describe('useNVIDIAOperators', () => {
 
   it('returns empty list with error: null when both SSE and REST fail', async () => {
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    mockApiGet.mockRejectedValue(new Error('REST failed'))
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('REST failed'))
 
     const { result } = renderHook(() => useNVIDIAOperators())
 
@@ -213,7 +215,9 @@ describe('useNVIDIAOperators', () => {
   it('handles REST response with singular "operator" key', async () => {
     const singleOp = { cluster: 'c1', installed: true, version: '24.1.0', components: [] }
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    mockApiGet.mockResolvedValue({ data: { operator: singleOp } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ operator: singleOp }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNVIDIAOperators())
 
@@ -223,7 +227,9 @@ describe('useNVIDIAOperators', () => {
 
   it('handles REST response with neither operators nor operator key', async () => {
     mockFetchSSE.mockRejectedValue(new Error('SSE failed'))
-    mockApiGet.mockResolvedValue({ data: {} })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNVIDIAOperators())
 
@@ -235,7 +241,9 @@ describe('useNVIDIAOperators', () => {
   it('skips SSE when token is "demo-token"', async () => {
     localStorage.setItem('token', 'demo-token')
     const fakeOps = [{ cluster: 'c1', installed: true, version: '23.9.0', components: [] }]
-    mockApiGet.mockResolvedValue({ data: { operators: fakeOps } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ operators: fakeOps }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNVIDIAOperators())
 
@@ -266,12 +274,14 @@ describe('useNVIDIAOperators — additional branches', () => {
 
   it('passes cluster via REST URL params', async () => {
     localStorage.setItem('token', 'demo-token') // forces SSE skip
-    mockApiGet.mockResolvedValue({ data: { operators: [] } })
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ operators: [] }), { status: 200 }))
+    )
 
     renderHook(() => useNVIDIAOperators('specific-cluster'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url: string = mockApiGet.mock.calls[0][0]
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled())
+    const url: string = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(url).toContain('cluster=specific-cluster')
   })
 })
