@@ -65,8 +65,11 @@ export interface DeployRequest {
 
 export interface DeployResult {
   success: boolean
-  cluster: string
-  message: string
+  message?: string
+  deployedTo?: string[]
+  failedClusters?: string[]
+  dependencies?: { kind: string; name: string; action: string }[]
+  warnings?: string[]
 }
 
 export function authHeaders(): Record<string, string> {
@@ -340,7 +343,7 @@ export function useDeployWorkload() {
   const mutate = async (
     request: DeployRequest,
     options?: {
-      onSuccess?: (data: DeployResult[]) => void
+      onSuccess?: (data: DeployResult) => void
       onError?: (error: Error) => void
     }
   ) => {
@@ -393,7 +396,7 @@ export function useScaleWorkload() {
       replicas: number
     },
     options?: {
-      onSuccess?: (data: DeployResult[]) => void
+      onSuccess?: (data: DeployResult) => void
       onError?: (error: Error) => void
     }
   ) => {
