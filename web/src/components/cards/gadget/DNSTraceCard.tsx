@@ -14,7 +14,8 @@ export function DNSTraceCard({ config }: DNSTraceCardProps) {
 
   const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedDNSTraces(cluster, namespace)
 
-  const hasData = data.length > 0
+  const safeData = Array.isArray(data) ? data : []
+  const hasData = safeData.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing: isDemoMode ? false : isRefreshing && hasData,
@@ -23,8 +24,8 @@ export function DNSTraceCard({ config }: DNSTraceCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const queries = (Array.isArray(data) ? data : []).slice(0, 20)
-  const failures = data.filter(d => d.responseCode !== 'NOERROR')
+  const queries = safeData.slice(0, 20)
+  const failures = safeData.filter(d => d.responseCode !== 'NOERROR')
 
   if (showSkeleton) {
     return (

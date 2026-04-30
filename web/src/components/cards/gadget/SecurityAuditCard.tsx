@@ -14,7 +14,8 @@ export function SecurityAuditCard({ config }: SecurityAuditCardProps) {
 
   const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedSecurityAudit(cluster, namespace)
 
-  const hasData = data.length > 0
+  const safeData = Array.isArray(data) ? data : []
+  const hasData = safeData.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing: isDemoMode ? false : isRefreshing && hasData,
@@ -23,7 +24,7 @@ export function SecurityAuditCard({ config }: SecurityAuditCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const audits = (Array.isArray(data) ? data : []).slice(0, 20)
+  const audits = safeData.slice(0, 20)
 
   if (showSkeleton) {
     return (

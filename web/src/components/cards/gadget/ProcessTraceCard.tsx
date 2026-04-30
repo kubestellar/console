@@ -14,7 +14,8 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
 
   const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedProcessTraces(cluster, namespace)
 
-  const hasData = data.length > 0
+  const safeData = Array.isArray(data) ? data : []
+  const hasData = safeData.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing: isDemoMode ? false : isRefreshing && hasData,
@@ -23,7 +24,7 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const processes = (Array.isArray(data) ? data : []).slice(0, 20)
+  const processes = safeData.slice(0, 20)
 
   if (showSkeleton) {
     return (

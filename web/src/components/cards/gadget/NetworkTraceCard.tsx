@@ -15,7 +15,8 @@ export function NetworkTraceCard({ config }: NetworkTraceCardProps) {
 
   const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedNetworkTraces(cluster, namespace)
 
-  const hasData = data.length > 0
+  const safeData = Array.isArray(data) ? data : []
+  const hasData = safeData.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing: isDemoMode ? false : isRefreshing && hasData,
@@ -24,7 +25,7 @@ export function NetworkTraceCard({ config }: NetworkTraceCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const connections = (Array.isArray(data) ? data : []).slice(0, 20)
+  const connections = safeData.slice(0, 20)
 
   if (showSkeleton) {
     return (
