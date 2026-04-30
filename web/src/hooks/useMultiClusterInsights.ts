@@ -851,3 +851,24 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
     insightsByCategory,
     topInsights }
 }
+
+// ── Exported testables — private functions for unit testing ──────────
+export const __testables = {
+  workloadPrefix,
+  isCausallyRelated,
+  getDemoInsights,
+  REASON_FAMILIES,
+  REASON_TO_FAMILY,
+  SEVERITY_RANK,
+  MAX_TOP_INSIGHTS,
+  RESOURCE_IMBALANCE_THRESHOLD_PCT,
+  DELTA_SIGNIFICANCE_HIGH_PCT,
+  DELTA_SIGNIFICANCE_MEDIUM_PCT,
+  INFRA_ISSUE_MIN_WORKLOADS,
+  APP_BUG_MIN_CLUSTERS,
+  ROLLOUT_STATUS_IN_PROGRESS,
+  ROLLOUT_STATUS_COMPLETE,
+  ROLLOUT_STATUS_FAILED,
+  FULL_PROGRESS,
+  PARTIAL_PROGRESS,
+}
