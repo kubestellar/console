@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
@@ -88,6 +88,7 @@ export function OperatorDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToCRD } = useDrillDownActions()
+  const { close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -279,6 +280,7 @@ Please:
    - "Should I check other operators on this cluster?"
    - "All done"`
 
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Diagnose Operator: ${operatorName}`,
       description: `Analyze OLM operator health and configuration`,

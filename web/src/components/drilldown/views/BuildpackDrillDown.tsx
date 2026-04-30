@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import type { BuildpackStatus } from '../../cards/buildpacks-status/BuildpacksStatus'
@@ -106,6 +106,7 @@ export function BuildpackDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster } = useDrillDownActions()
+  const { close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
   const { showToast } = useToast()
 
@@ -333,6 +334,7 @@ export function BuildpackDrillDown({ data }: Props) {
   // 3. Including the fetch functions would cause infinite loops
   // 4. Including the data (imageYAML, logs) would trigger unwanted re-fetches
   const handleDiagnose = () => {
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Diagnose Buildpack: ${name}`,
       description: `Analyze buildpack health`,

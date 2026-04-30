@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { useArgoCDTriggerSync } from '../../../hooks/useArgoCD'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -112,6 +112,7 @@ export function ArgoAppDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod, drillToDeployment, drillToService } = useDrillDownActions()
+  const { close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
   const { triggerSync, isSyncing, lastResult: syncResult } = useArgoCDTriggerSync()
 
@@ -305,6 +306,7 @@ Please:
    - "Should I check other ArgoCD apps?"
    - "All done"`
 
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Diagnose ArgoApp: ${appName}`,
       description: `Analyze ArgoCD application health and sync status`,

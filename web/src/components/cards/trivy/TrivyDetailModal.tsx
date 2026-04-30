@@ -70,6 +70,7 @@ export function TrivyDetailModal({
 
   const handleFixImage = (img: { image: string; tag: string; namespace: string; critical: number; high: number; medium: number; low: number }) => {
     emitActionClicked('fix_vulns', 'trivy_scan', 'compliance')
+    onClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Fix vulns: ${img.image}:${img.tag}`,
       description: `${img.critical}C/${img.high}H vulnerabilities in ${img.image}:${img.tag} (ns: ${img.namespace}) on ${clusterName}`,
@@ -109,6 +110,7 @@ Please proceed step by step.`,
       .map(img => `- ${img.image}:${img.tag} (ns: ${img.namespace}) — ${img.critical} critical`)
       .join('\n')
 
+    onClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Triage: ${critical} critical vulns on ${clusterName}`,
       description: `${criticalImages.length} images with critical vulnerabilities on ${clusterName}`,

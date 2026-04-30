@@ -177,6 +177,7 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
       ...clusterDeploymentIssues.map(d => `Deployment ${d.name} in ${d.namespace}: ${d.readyReplicas}/${d.replicas} ready`)
     ].slice(0, 10).join('\n')
 
+    onClose() // Close modal so mission sidebar is visible
     startMission({
       title: t('cluster.diagnoseMissionTitle', { cluster: clusterName.split('/').pop() }),
       description: t('cluster.diagnoseMissionDescription'),
@@ -205,7 +206,6 @@ Please analyze this cluster and provide:
         podIssuesCount: podIssues.length,
         deploymentIssuesCount: clusterDeploymentIssues.length }
     })
-    onClose()
   }
 
   const handleRepair = () => {
@@ -215,6 +215,7 @@ Please analyze this cluster and provide:
       ...clusterDeploymentIssues.slice(0, 5).map(d => `- Deployment "${d.name}" in namespace "${d.namespace}": ${d.readyReplicas}/${d.replicas} ready - ${d.reason || 'Unknown reason'}`)
     ].join('\n')
 
+    onClose() // Close modal so mission sidebar is visible
     startMission({
       title: t('cluster.repairMissionTitle', { cluster: clusterName.split('/').pop() }),
       description: t('cluster.repairMissionDescription'),
@@ -237,7 +238,6 @@ After I approve, help me execute the repairs step by step.`,
         podIssues: podIssues.slice(0, 10),
         deploymentIssues: clusterDeploymentIssues.slice(0, 10) }
     })
-    onClose()
   }
 
   // Determine cluster status using the SAME shared helpers as the list view
@@ -442,6 +442,7 @@ After I approve, help me execute the repairs step by step.`,
               size="sm"
               onClick={() => {
                 emitClusterAction('ask', clusterName)
+                onClose() // Close modal so mission sidebar is visible
                 startMission({
                   title: `Ask about ${clusterName.split('/').pop()}`,
                   description: 'Custom question about the cluster',
@@ -450,7 +451,6 @@ After I approve, help me execute the repairs step by step.`,
                   initialPrompt: `I have a question about Kubernetes cluster "${clusterName}". The cluster currently has ${health?.nodeCount || 0} nodes, ${health?.podCount || 0} pods, ${health?.cpuCores || 0} CPU cores, and ${health?.memoryGB || 0} GB memory. How can I help you?`,
                   context: { clusterName, health }
                 })
-                onClose()
               }}
               disabled={isUnreachable}
               icon={<Wand2 className="w-3.5 h-3.5" />}

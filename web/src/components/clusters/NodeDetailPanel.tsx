@@ -36,6 +36,7 @@ export function NodeDetailPanel({ node, clusterName, onClose }: NodeDetailPanelP
     }
     const issueConditions = getConditionIssuesSummary(node.conditions)
 
+    onClose?.() // Close panel so mission sidebar is visible
     startMission({
       title: `Repair Node ${node.name}`,
       description: `Diagnose and repair node issues: ${issueConditions}`,

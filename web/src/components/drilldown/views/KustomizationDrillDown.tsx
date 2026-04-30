@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Condition } from '../../../types/mcs'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
@@ -74,6 +74,7 @@ export function KustomizationDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
+  const { close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -245,6 +246,7 @@ Please:
    - "Should I check related Flux resources?"
    - "All done"`
 
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Diagnose Kustomization: ${kustomizationName}`,
       description: `Analyze Flux Kustomization health and sync status`,

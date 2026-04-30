@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
@@ -87,6 +87,7 @@ export function HelmReleaseDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToDeployment, drillToService } = useDrillDownActions()
+  const { close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -321,6 +322,7 @@ Please:
    - "Should I check other Helm releases?"
    - "All done"`
 
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Diagnose Helm: ${releaseName}`,
       description: `Analyze Helm release health and configuration`,

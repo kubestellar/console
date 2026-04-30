@@ -748,6 +748,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
   }, [cluster, namespace, podName, describeOutput, logsOutput, eventsOutput, yamlOutput, podStatusOutput, aiAnalysis, labels, annotations, configMaps, secrets, pvcs, serviceAccount, ownerChain])
 
   const handleRepairPod = () => {
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Repair Pod ${podName}`,
       description: `Diagnose and fix issues with pod ${podName}`,
