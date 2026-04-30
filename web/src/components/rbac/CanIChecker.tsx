@@ -165,7 +165,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
 
 export function CanIChecker() {
   const { t } = useTranslation('common')
-  const { clusters: rawClusters } = useClusters()
+  const { deduplicatedClusters: rawClusters } = useClusters()
   const clusters = rawClusters.map(c => c.name)
   const { checkPermission, checking, result, error, reset } = useCanI()
 

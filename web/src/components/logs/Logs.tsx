@@ -24,7 +24,7 @@ const DEFAULT_LOGS_CARDS = [
 ]
 
 export function Logs() {
-  const { clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters } = useClusters()
   const { events, isLoading: eventsLoading, isRefreshing: eventsRefreshing, lastRefresh, refetch: refetchEvents } = useCachedEvents()
   const warningEvents = events.filter(e => e.type === 'Warning')
   const lastUpdated = lastRefresh ? new Date(lastRefresh) : null

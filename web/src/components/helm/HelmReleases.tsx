@@ -13,7 +13,7 @@ const HELM_CARDS_KEY = 'kubestellar-helm-cards'
 const DEFAULT_HELM_CARDS = getDefaultCards('helm')
 
 export function HelmReleases() {
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { drillToAllHelm, drillToAllClusters } = useDrillDownActions()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 

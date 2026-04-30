@@ -14,7 +14,7 @@ const KARMADA_OPS_CARDS_KEY = 'kubestellar-karmada-ops-cards'
 const DEFAULT_KARMADA_OPS_CARDS = getDefaultCards('karmada-ops')
 
 export function KarmadaOps() {
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
 
   const reachableClusters = clusters.filter(c => c.reachable !== false)
   const hasRealData = reachableClusters.length > 0

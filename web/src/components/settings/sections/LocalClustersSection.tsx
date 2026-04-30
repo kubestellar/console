@@ -146,7 +146,7 @@ export function LocalClustersSection() {
   const [deleteClusterConfirm, setDeleteClusterConfirm] = useState<{ tool: string; name: string } | null>(null)
   const [deleteVClusterConfirm, setDeleteVClusterConfirm] = useState<{ name: string; namespace: string } | null>(null)
 
-  const { clusters: connectedClusters } = useClusters()
+  const { deduplicatedClusters: connectedClusters } = useClusters()
   const healthyClusters = (connectedClusters || []).filter(c => c.healthy !== false)
 
   const hasVClusterTool = installedTools.some(t => t.name === 'vcluster')

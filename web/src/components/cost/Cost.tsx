@@ -22,7 +22,7 @@ const STORAGE_COST_PER_GB_MONTH = 0.10
 const DEFAULT_COST_CARDS = getDefaultCards('cost')
 
 export function Cost() {
-  const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { nodes: gpuNodes } = useGPUNodes()
   const { drillToCost } = useDrillDownActions()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()

@@ -17,7 +17,7 @@ const DEFAULT_SERVICES_CARDS = getDefaultCards('services')
 
 export function Services() {
   const navigate = useNavigate()
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { services, error: servicesError } = useServices()
   const { ingresses } = useIngresses()
   const error = clustersError || servicesError

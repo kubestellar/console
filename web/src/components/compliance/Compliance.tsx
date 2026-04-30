@@ -28,7 +28,7 @@ const MOCK_GATEKEEPER_PER_CLUSTER = 3.2
 const MOCK_FALCO_PER_CLUSTER = 1.5
 
 export function Compliance() {
-  const { clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   const { drillToAllSecurity, drillToCompliance } = useDrillDownActions()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 

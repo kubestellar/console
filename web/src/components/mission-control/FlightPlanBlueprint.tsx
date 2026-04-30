@@ -138,7 +138,7 @@ export function FlightPlanBlueprint({
   onMoveProject,
   installedProjects = new Set() }: FlightPlanBlueprintProps) {
   const svgId = useId().replace(/:/g, '')
-  const { clusters, error: clustersError } = useClusters()
+  const { deduplicatedClusters: clusters, error: clustersError } = useClusters()
 
   // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones.
   // Also scope to state.targetClusters when set — without this, assignments from

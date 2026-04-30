@@ -522,7 +522,7 @@ export function useMissionControl() {
   )
   const { startMission, sendMessage, missions, dismissMission } = useMissions()
   const { releases: helmReleases } = useHelmReleases()
-  const { clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated } = useClusters()
   const lastParsedContentRef = useRef('')
   // #9496 — Track whether the AI suggestion request timed out. When the
   // AI_SUGGEST_TIMEOUT_MS safety net fires, we set this ref so the parse

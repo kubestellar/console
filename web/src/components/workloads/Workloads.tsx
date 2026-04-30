@@ -57,7 +57,7 @@ export function Workloads() {
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
   const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch: refetchDeployments } = useDeployments()
-  const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
   const isModeSwitching = useIsModeSwitching()

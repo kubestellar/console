@@ -10,7 +10,7 @@ const INSIGHTS_CARDS_KEY = 'kubestellar-insights-cards'
 const DEFAULT_INSIGHTS_CARDS = getDefaultCards('insights')
 
 export function Insights() {
-  const { clusters, isLoading: clustersLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error } = useClusters()
   const { insights, isLoading: insightsLoading, isDemoData } = useMultiClusterInsights()
 
   const reachableClusters = clusters.filter(c => c.reachable !== false)

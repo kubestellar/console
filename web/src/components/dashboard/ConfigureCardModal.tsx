@@ -522,7 +522,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   const [activeTab, setActiveTab] = useState<'settings' | 'behaviors' | 'ai'>('settings')
   const [aiChanges, setAiChanges] = useState<string[]>([])
   const [aiError, setAiError] = useState<string | null>(null)
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { addTokens } = useTokenUsage()
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)

@@ -22,7 +22,7 @@ interface ClusterSelectionDialogProps {
 }
 
 export function ClusterSelectionDialog({ open, missionTitle, onSelect, onCancel }: ClusterSelectionDialogProps) {
-  const { clusters, isLoading } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading } = useClusters()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [search, setSearch] = useState('')
 

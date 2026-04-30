@@ -39,7 +39,7 @@ function saveWindows(windows: MaintenanceWindow[]) {
 
 export function MaintenanceWindows() {
   const { t } = useTranslation(['common', 'cards'])
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const [windows, setWindows] = useState<MaintenanceWindow[]>(loadWindows)
   const [showForm, setShowForm] = useState(false)
   const [timeError, setTimeError] = useState('')

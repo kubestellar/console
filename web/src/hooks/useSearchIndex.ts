@@ -372,7 +372,7 @@ function matchesQuery(item: SearchItem, query: string): boolean {
 // --- Hook ---
 
 export function useSearchIndex(query: string) {
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { deployments } = useDeployments()
   // Search should index all available pods, not just a small subset (#7217).
   const SEARCH_POD_LIMIT = 500

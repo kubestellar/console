@@ -17,7 +17,7 @@ const ClusterFilterContext = createContext<ClusterFilterContextType | null>(null
 const STORAGE_KEY = 'clusterFilter'
 
 export function ClusterFilterProvider({ children }: { children: ReactNode }) {
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const availableClusters = clusters.map(c => c.name)
 
   // Initialize from localStorage or default to all clusters (empty array means all)
