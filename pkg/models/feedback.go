@@ -106,6 +106,14 @@ const (
 	TargetRepoDocs TargetRepo = "docs"
 )
 
+// ConsoleError represents a browser console error captured by the ring buffer.
+type ConsoleError struct {
+	Timestamp string `json:"timestamp"`
+	Level     string `json:"level"`
+	Message   string `json:"message"`
+	Source    string `json:"source,omitempty"`
+}
+
 // CreateFeatureRequestInput is the input for creating a feature request
 type CreateFeatureRequestInput struct {
 	Title       string      `json:"title" validate:"required,min=10,max=200"`
@@ -115,6 +123,9 @@ type CreateFeatureRequestInput struct {
 	// Screenshots contains base64-encoded data URIs (e.g. "data:image/png;base64,...")
 	// that will be uploaded to GitHub and embedded in the issue body.
 	Screenshots []string `json:"screenshots,omitempty"`
+	// ConsoleErrors contains recent browser console errors captured automatically.
+	// Only populated for bug reports. Rendered as a collapsible section in the issue body.
+	ConsoleErrors []ConsoleError `json:"console_errors,omitempty"`
 }
 
 // SubmitFeedbackInput is the input for submitting PR feedback

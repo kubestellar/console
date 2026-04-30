@@ -83,6 +83,13 @@ export interface Notification {
 /** Target repository for issue creation */
 export type TargetRepo = 'console' | 'docs'
 
+export interface ConsoleError {
+  timestamp: string
+  level: 'error' | 'warn'
+  message: string
+  source?: string
+}
+
 export interface CreateFeatureRequestInput {
   title: string
   description: string
@@ -90,6 +97,8 @@ export interface CreateFeatureRequestInput {
   target_repo?: TargetRepo
   /** Base64 data-URI screenshots to upload and embed in the GitHub issue */
   screenshots?: string[]
+  /** Recent browser console errors captured automatically for bug reports */
+  console_errors?: ConsoleError[]
 }
 
 export interface SubmitFeedbackInput {

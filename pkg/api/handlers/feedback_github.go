@@ -491,7 +491,7 @@ type screenshotUploadResult struct {
 // upload, synchronous result counts, error). #9898: screenshot uploads are
 // decoupled from this path — callers launch uploadScreenshotCommentsAsync
 // on the returned slice from a background goroutine.
-func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
+func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, consoleErrors []models.ConsoleError, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
 	// Determine labels based on request type and target repo
 	var labels []string
 	isDocs := request.TargetRepo == models.TargetRepoDocs
@@ -549,6 +549,27 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		shaLine = fmt.Sprintf("\nSHA: [`%s`](https://github.com/%s/%s/commit/%s)\n", shortSHA, repoOwner, repoName, fullSHA)
 	}
 
+	consoleErrorBlock := ""
+	if len(consoleErrors) > 0 {
+		var errLines strings.Builder
+		const maxConsoleErrors = 20
+		shown := len(consoleErrors)
+		if shown > maxConsoleErrors {
+			shown = maxConsoleErrors
+		}
+		for _, ce := range consoleErrors[:shown] {
+			src := ""
+			if ce.Source != "" {
+				src = fmt.Sprintf(" (%s)", ce.Source)
+			}
+			errLines.WriteString(fmt.Sprintf("- `[%s]` **%s**%s: %s\n", ce.Timestamp, ce.Level, src, ce.Message))
+		}
+		if len(consoleErrors) > maxConsoleErrors {
+			errLines.WriteString(fmt.Sprintf("\n_...and %d more errors omitted_\n", len(consoleErrors)-maxConsoleErrors))
+		}
+		consoleErrorBlock = fmt.Sprintf("\n<details>\n<summary>Browser Console Errors (%d captured)</summary>\n\n%s\n</details>\n", len(consoleErrors), errLines.String())
+	}
+
 	issueBody := fmt.Sprintf(`## User Request
 
 **Type:** %s
@@ -559,10 +580,10 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 ## Description
 
 %s
-%s
+%s%s
 ---
 *This issue was automatically created from the KubeStellar Console.*
-`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description, shaLine)
+`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description, shaLine, consoleErrorBlock)
 
 	// First attempt: create issue with labels
 	number, htmlURL, err := h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, labels, clientAuth)

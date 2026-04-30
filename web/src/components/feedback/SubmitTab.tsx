@@ -281,6 +281,8 @@ export function SubmitForm({
 
     try {
       const hasScreenshots = screenshotDataURIs.length > 0
+      const { getRecentBrowserErrors } = await import('../../lib/analytics-core')
+      const browserErrors = requestType === 'bug' ? getRecentBrowserErrors() : []
       const result = await onSubmit(
         {
           title: extractedTitle,
@@ -288,6 +290,7 @@ export function SubmitForm({
           request_type: requestType,
           target_repo: targetRepo,
           ...(hasScreenshots && { screenshots: screenshotDataURIs }),
+          ...(browserErrors.length > 0 && { console_errors: browserErrors }),
         },
         hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined,
       )

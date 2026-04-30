@@ -788,6 +788,43 @@ function isBrowserExtensionNoise(msg: string, reason: unknown): boolean {
   return false
 }
 
+// ── Browser error ring buffer (for feedback modal) ────────────────────
+// Stores recent console errors so the feedback modal can attach them to
+// GitHub issues automatically. Keeps the last N entries; oldest evicted.
+const ERROR_RING_BUFFER_SIZE = 30
+
+interface CapturedError {
+  timestamp: string
+  level: 'error' | 'warn'
+  message: string
+  source?: string
+}
+
+const capturedErrors: CapturedError[] = []
+
+function pushCapturedError(level: 'error' | 'warn', message: string, source?: string) {
+  const entry: CapturedError = {
+    timestamp: new Date().toISOString(),
+    level,
+    message: message.slice(0, 500),
+    ...(source && { source }),
+  }
+  capturedErrors.push(entry)
+  if (capturedErrors.length > ERROR_RING_BUFFER_SIZE) {
+    capturedErrors.shift()
+  }
+}
+
+/** Returns recent browser errors for inclusion in feedback reports. */
+export function getRecentBrowserErrors(): CapturedError[] {
+  return [...capturedErrors]
+}
+
+/** @internal — exported for test isolation only */
+export function _resetCapturedErrors() {
+  capturedErrors.length = 0
+}
+
 // ── Per-card / per-page error throttling (#10092) ──────────────────────
 // CI/CD cards poll every 30-120s. Without throttling, a single broken card
 // generates dozens of ksc_error events per session. We cap emissions to at
@@ -827,6 +864,7 @@ export function _resetAnalyticsState() {
   pendingRecoveryEvent = null
   recentErrorEmissions.clear()
   pageErrorCounts.clear()
+  capturedErrors.length = 0
 }
 
 function isErrorThrottled(category: string, page: string, cardId?: string): boolean {
@@ -1064,12 +1102,23 @@ export function startGlobalErrorTracking() {
       // Skip auth-flow errors — UnauthenticatedError is thrown by api.get() when
       // no token is available (expected for unauthenticated visitors). Emitting
       // these as ksc_error creates false-positive alert spikes (#9994).
-      if (errorName === 'UnauthenticatedError' || errorName === 'UnauthorizedError') return
-      if (msg.includes('No authentication token') || msg.includes('Token is invalid or expired')) return
-      // Skip upstream proxy errors — these are transient backend/GitHub hiccups
-      // already handled by retry logic in the fetch layer. Emitting them as
-      // ksc_error creates false-positive alert spikes (#10957).
-      if (/\b50[234]\b/.test(msg) && (msg.includes('fetch') || msg.includes('Fetch') || msg.includes('upstream'))) return
+      if (errorName === 'UnauthenticatedError' || errorName === 'UnauthorizedError') {
+        pushCapturedError('error', msg, 'auth_error')
+        send('ksc_http_error', { http_status: 'auth', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        return
+      }
+      if (msg.includes('No authentication token') || msg.includes('Token is invalid or expired')) {
+        pushCapturedError('error', msg, 'auth_error')
+        send('ksc_http_error', { http_status: 'auth', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        return
+      }
+      if (/\b50[234]\b/.test(msg) && (msg.includes('fetch') || msg.includes('Fetch') || msg.includes('upstream'))) {
+        const statusMatch = msg.match(/\b(50[234])\b/)
+        pushCapturedError('error', msg, `http_${statusMatch?.[1] ?? '5xx'}`)
+        send('ksc_http_error', { http_status: statusMatch?.[1] ?? '5xx', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        return
+      }
+      pushCapturedError('error', msg, 'unhandled_rejection')
       emitError('unhandled_rejection', msg, undefined, { error: event.reason })
     } finally {
       isEmitting = false
@@ -1123,14 +1172,38 @@ export function startGlobalErrorTracking() {
       if (event.message.includes('Non-Error')) return
       // Stale chunks can surface as runtime errors (Safari: "Importing a module script failed")
       if (tryChunkReloadRecovery(event.message)) return
-      // Skip auth-flow errors that surface as synchronous error events (#9994).
-      if (event.error?.name === 'UnauthenticatedError' || event.error?.name === 'UnauthorizedError') return
-      if (event.message.includes('No authentication token') || event.message.includes('Token is invalid or expired')) return
+      if (event.error?.name === 'UnauthenticatedError' || event.error?.name === 'UnauthorizedError') {
+        pushCapturedError('error', event.message, 'auth_error')
+        send('ksc_http_error', { http_status: 'auth', error_detail: event.message.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        return
+      }
+      if (event.message.includes('No authentication token') || event.message.includes('Token is invalid or expired')) {
+        pushCapturedError('error', event.message, 'auth_error')
+        send('ksc_http_error', { http_status: 'auth', error_detail: event.message.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        return
+      }
+      pushCapturedError('error', event.message, 'runtime')
       emitError('runtime', event.message, undefined, { error: event.error })
     } finally {
       isEmitting = false
     }
   })
+
+  // Intercept console.error and console.warn to capture them in the ring buffer
+  const originalConsoleError = console.error
+  const originalConsoleWarn = console.warn
+  console.error = (...args: unknown[]) => {
+    const msg = args.map(a => (typeof a === 'string' ? a : String(a))).join(' ')
+    if (!isBrowserExtensionNoise(msg, null)) {
+      pushCapturedError('error', msg, 'console.error')
+    }
+    originalConsoleError.apply(console, args)
+  }
+  console.warn = (...args: unknown[]) => {
+    const msg = args.map(a => (typeof a === 'string' ? a : String(a))).join(' ')
+    pushCapturedError('warn', msg, 'console.warn')
+    originalConsoleWarn.apply(console, args)
+  }
 }
 
 export const __testables = {
