@@ -137,7 +137,27 @@ export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): 
   }
   // Use caller-provided signal, or fall back to a default timeout
   const signal = init?.signal ?? AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS)
-  return fetch(input, { ...init, headers, signal })
+  const response = await fetch(input, { ...init, headers, signal })
+
+  // kc-agent generates a new token on each restart. If we get 401 with a
+  // cached token, clear it and retry once with a fresh token from the backend.
+  if (response.status === 401 && token) {
+    localStorage.removeItem(AGENT_TOKEN_STORAGE_KEY)
+    agentTokenPromise = null
+    agentTokenNegativeCacheUntil = 0
+    const freshToken = await getAgentToken()
+    if (freshToken && freshToken !== token) {
+      const retryHeaders = new Headers(init?.headers)
+      retryHeaders.set('Authorization', `Bearer ${freshToken}`)
+      if (!retryHeaders.has('X-Requested-With')) {
+        retryHeaders.set('X-Requested-With', 'XMLHttpRequest')
+      }
+      const retrySignal = init?.signal ?? AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS)
+      return fetch(input, { ...init, headers: retryHeaders, signal: retrySignal })
+    }
+  }
+
+  return response
 }
 
 // ============================================================================

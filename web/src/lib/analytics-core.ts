@@ -791,7 +791,7 @@ function isBrowserExtensionNoise(msg: string, reason: unknown): boolean {
 // ── Browser error ring buffer (for feedback modal) ────────────────────
 // Stores recent console errors so the feedback modal can attach them to
 // GitHub issues automatically. Keeps the last N entries; oldest evicted.
-const ERROR_RING_BUFFER_SIZE = 30
+const ERROR_RING_BUFFER_SIZE = 50
 
 interface CapturedError {
   timestamp: string

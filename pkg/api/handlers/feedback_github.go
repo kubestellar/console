@@ -552,7 +552,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 	consoleErrorBlock := ""
 	if len(consoleErrors) > 0 {
 		var errLines strings.Builder
-		const maxConsoleErrors = 20
+		const maxConsoleErrors = 50
 		shown := len(consoleErrors)
 		if shown > maxConsoleErrors {
 			shown = maxConsoleErrors
