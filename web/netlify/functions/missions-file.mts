@@ -25,8 +25,8 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
 
-/** Number of retry attempts for transient upstream errors (#10966) */
-const MAX_RETRIES = 2;
+/** Number of retry attempts for transient upstream errors (#10966, #11033) */
+const MAX_RETRIES = 3;
 /** Base delay between retries in milliseconds */
 const RETRY_BASE_DELAY_MS = 500;
 

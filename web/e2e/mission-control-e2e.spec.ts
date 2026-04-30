@@ -247,6 +247,28 @@ spec:
 // Setup helpers
 // ---------------------------------------------------------------------------
 
+async function setupMissionsFileMock(page: Page) {
+  // Mock /api/missions/file to prevent 502 errors in CI where neither
+  // the Go backend nor Netlify Functions are running (#11033).
+  await page.route('**/api/missions/file**', (route) => {
+    const url = route.request().url()
+    const pathParam = new URL(url).searchParams.get('path') || ''
+    if (pathParam.includes('index.json')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ missions: [] }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'text/plain',
+        body: '# No content in test environment',
+      })
+    }
+  })
+}
+
 async function setupClusterMocks(page: Page) {
   await page.route('**/api/mcp/clusters', (route) =>
     route.fulfill({
@@ -372,6 +394,7 @@ async function navigateToConsole(page: Page) {
   await setupClusterMocks(page)
   await setupGitHubMocks(page)
   await setupAIMocks(page)
+  await setupMissionsFileMock(page)
 
   // Seed localStorage BEFORE any page script runs
   await page.addInitScript(() => {
@@ -402,8 +425,8 @@ async function openMissionControl(page: Page) {
   })
 
   if (toggled) {
-    // Wait for sidebar animation
-    await page.waitForTimeout(500)
+    // Wait for sidebar animation to complete
+    await expect(page.locator('[data-testid="mission-sidebar-toggle"], [data-tour="ai-missions-toggle"]').first()).toBeVisible({ timeout: 3000 }).catch(() => {})
   }
 
   const mcButton = page.getByText('Mission Control', { exact: false }).first()
@@ -466,37 +489,14 @@ async function expandSampleRunbooks(page: Page) {
   await expect(repoNode).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await repoNode.click()
 
-  // Wait for the fetch to complete
-  await page.waitForTimeout(3000)
-
-  // Collect diagnostic info
-  const diagnostics = await page.evaluate(() => {
-    const token = localStorage.getItem('token')
-    const hasSession = localStorage.getItem('kc-has-session')
-    const backendStatus = localStorage.getItem('kc-backend-status')
-    const demoMode = localStorage.getItem('kc-demo-mode')
-    const watchedRepos = localStorage.getItem('kc_mission_watched_repos')
-    const treeText = document.querySelector('[class*="mission"]')?.textContent?.substring(0, 500) || 'NO_MISSION_ELEMENT'
-    const bodySnippet = document.body.innerText.substring(0, 1000)
-    return { token, hasSession, backendStatus, demoMode, watchedRepos, treeText, bodySnippet }
-  })
+  // Wait for file listing to render (replaces brittle waitForTimeout)
+  const argocdFile = page.getByText('argocd-application', { exact: false })
+  const fileVisibleAfterFirstClick = await argocdFile.isVisible({ timeout: 10_000 }).catch(() => false)
 
   // If files aren't visible yet, click again (first click may have only toggled expand)
-  const fileVisible = await page.getByText('argocd-application', { exact: false }).isVisible().catch(() => false)
-  if (!fileVisible) {
+  if (!fileVisibleAfterFirstClick) {
     await repoNode.click()
-    await page.waitForTimeout(3000)
-  }
-
-  // Final check with full diagnostic dump on failure
-  const isVisible = await page.getByText('argocd-application', { exact: false }).isVisible().catch(() => false)
-  if (!isVisible) {
-    const debugDump = [
-      `DIAGNOSTICS: ${JSON.stringify(diagnostics)}`,
-      `API_REQUESTS: ${JSON.stringify(allRequests)}`,
-      `BROWSER_ERRORS: ${JSON.stringify(browserErrors)}`,
-    ].join('\n')
-    throw new Error(`argocd-application not visible after expanding sample-runbooks.\n${debugDump}`)
+    await expect(argocdFile).toBeVisible({ timeout: 10_000 })
   }
 }
 

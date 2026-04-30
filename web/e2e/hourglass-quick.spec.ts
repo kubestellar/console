@@ -26,6 +26,16 @@ test.describe('Hourglass Visibility', () => {
     await page.route('**/api/dashboards/**', (route) =>
       route.fulfill({ status: 200, json: {} })
     )
+    // Mock missions file to prevent 502 in CI (#11033)
+    await page.route('**/api/missions/file**', (route) => {
+      const url = route.request().url()
+      const pathParam = new URL(url).searchParams.get('path') || ''
+      if (pathParam.includes('index.json')) {
+        route.fulfill({ status: 200, json: { missions: [] } })
+      } else {
+        route.fulfill({ status: 200, contentType: 'text/plain', body: '' })
+      }
+    })
     // Set localStorage
     await page.goto('/login')
     await page.evaluate(() => {
@@ -39,14 +49,17 @@ test.describe('Hourglass Visibility', () => {
   for (const pg of PAGES) {
     test(`${pg.name} has refresh button and clicking it does not crash`, async ({ page }) => {
       await page.goto(pg.route)
-      await page.waitForLoadState('networkidle').catch(() => {})
+      // Use domcontentloaded instead of networkidle — networkidle can race
+      // with background fetches and cause "target page closed" errors (#11032)
+      await page.waitForLoadState('domcontentloaded')
 
       // Verify we're NOT on login page
       const url = page.url()
       console.log(`[${pg.name}] URL: ${url}`)
 
-      // Find refresh button
+      // Find refresh button — wait for it to be visible instead of counting immediately
       const refreshBtn = page.locator('button[title*="Refresh"]')
+      await expect(refreshBtn.first()).toBeVisible({ timeout: 10_000 })
       const count = await refreshBtn.count()
       console.log(`[${pg.name}] Refresh buttons: ${count}`)
       expect(count, `${pg.name} must have a refresh button`).toBeGreaterThan(0)
@@ -59,7 +72,7 @@ test.describe('Hourglass Visibility', () => {
       await expect(page.locator('body')).toBeVisible()
 
       // The refresh button should still be present after the refresh cycle completes
-      await expect(refreshBtn.first()).toBeVisible({ timeout: 5000 })
+      await expect(refreshBtn.first()).toBeVisible({ timeout: 10_000 })
       console.log(`[${pg.name}] Page still functional after refresh`)
     })
   }
