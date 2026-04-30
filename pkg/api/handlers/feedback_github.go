@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"strings"
 
+	"runtime/debug"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
@@ -536,6 +538,16 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		validScreenshots = append(validScreenshots, dataURI)
 	}
 
+	shaLine := ""
+	if fullSHA := vcsRevision(); fullSHA != "" {
+		shortSHA := fullSHA
+		const shortSHALen = 7
+		if len(shortSHA) > shortSHALen {
+			shortSHA = shortSHA[:shortSHALen]
+		}
+		shaLine = fmt.Sprintf("\nSHA: [`%s`](https://github.com/%s/%s/commit/%s)\n", shortSHA, repoOwner, repoName, fullSHA)
+	}
+
 	issueBody := fmt.Sprintf(`## User Request
 
 **Type:** %s
@@ -546,10 +558,10 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 ## Description
 
 %s
-
+%s
 ---
 *This issue was automatically created from the KubeStellar Console.*
-`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description)
+`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description, shaLine)
 
 	// First attempt: create issue with labels
 	number, htmlURL, err := h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, labels, clientAuth)
@@ -934,6 +946,19 @@ func (h *FeedbackHandler) createNotification(ctx context.Context, userID uuid.UU
 	if err := h.store.CreateNotification(ctx, notification); err != nil {
 		slog.Error("[Feedback] failed to create notification", "error", err)
 	}
+}
+
+func vcsRevision() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	for _, s := range info.Settings {
+		if s.Key == "vcs.revision" {
+			return s.Value
+		}
+	}
+	return ""
 }
 
 // extractFeatureRequestID extracts the feature request ID from a PR body
