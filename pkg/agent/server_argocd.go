@@ -55,7 +55,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if !s.validateToken(r) {

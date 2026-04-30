@@ -880,8 +880,8 @@ func TestServer_HandleClustersHTTP_OPTIONS(t *testing.T) {
 
 	server.handleClustersHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 	if w.Header().Get("Access-Control-Allow-Origin") != "http://allowed.com" {
 		t.Error("CORS origin header not set for OPTIONS")
@@ -938,8 +938,8 @@ func TestServer_HandleGPUNodesHTTP_OPTIONS(t *testing.T) {
 
 	server.handleGPUNodesHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1034,8 +1034,8 @@ func TestServer_HandleEventsHTTP_OPTIONS(t *testing.T) {
 
 	server.handleEventsHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1160,8 +1160,8 @@ func TestServer_HandleRestartBackend_OPTIONS(t *testing.T) {
 
 	server.handleRestartBackend(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1380,8 +1380,8 @@ func TestServer_HandleRenameContextHTTP_OPTIONS(t *testing.T) {
 
 	server.handleRenameContextHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1396,8 +1396,8 @@ func TestServer_HandleSettingsKeyByProvider_OPTIONS(t *testing.T) {
 
 	server.handleSettingsKeyByProvider(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1457,8 +1457,8 @@ func TestServer_HandleSettingsAll_OPTIONS(t *testing.T) {
 
 	server.handleSettingsAll(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1512,8 +1512,8 @@ func TestServer_HandleSettingsKeys_OPTIONS(t *testing.T) {
 
 	server.handleSettingsKeys(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1528,8 +1528,8 @@ func TestServer_HandleProvidersHealth_OPTIONS(t *testing.T) {
 
 	server.handleProvidersHealth(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1559,8 +1559,8 @@ func TestServer_HandleMetricsHistory_OPTIONS(t *testing.T) {
 
 	server.handleMetricsHistory(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1612,8 +1612,8 @@ func TestServer_HandleDeviceAlerts_OPTIONS(t *testing.T) {
 
 	server.handleDeviceAlerts(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1665,8 +1665,8 @@ func TestServer_HandleDeviceAlertsClear_OPTIONS(t *testing.T) {
 
 	server.handleDeviceAlertsClear(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1744,8 +1744,8 @@ func TestServer_HandleDeviceInventory_OPTIONS(t *testing.T) {
 
 	server.handleDeviceInventory(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1797,8 +1797,8 @@ func TestServer_HandlePredictionsAI_OPTIONS(t *testing.T) {
 
 	server.handlePredictionsAI(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1844,8 +1844,8 @@ func TestServer_HandlePredictionsStats_OPTIONS(t *testing.T) {
 
 	server.handlePredictionsStats(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -1982,8 +1982,8 @@ func TestServer_HandleHealth_OPTIONS(t *testing.T) {
 
 	server.handleHealth(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 	if w.Header().Get("Access-Control-Allow-Methods") != "GET, OPTIONS" {
 		t.Error("Missing Allow-Methods header for OPTIONS")
@@ -2001,8 +2001,8 @@ func TestServer_HandleSettingsExport_OPTIONS(t *testing.T) {
 
 	server.handleSettingsExport(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -2032,8 +2032,8 @@ func TestServer_HandleSettingsImport_OPTIONS(t *testing.T) {
 
 	server.handleSettingsImport(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -2063,8 +2063,8 @@ func TestServer_HandlePredictionsAnalyze_OPTIONS(t *testing.T) {
 
 	server.handlePredictionsAnalyze(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -2094,8 +2094,8 @@ func TestServer_HandlePredictionsFeedback_OPTIONS(t *testing.T) {
 
 	server.handlePredictionsFeedback(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -2298,8 +2298,8 @@ func TestServer_HandleWebSocket_OPTIONS(t *testing.T) {
 
 	server.handleWebSocket(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 	if w.Header().Get("Access-Control-Allow-Private-Network") != "true" {
 		t.Error("Missing Private-Network header")
@@ -2337,8 +2337,8 @@ func TestServer_HandleLocalClusterTools_OPTIONS(t *testing.T) {
 
 	server.handleLocalClusterTools(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -2353,8 +2353,8 @@ func TestServer_HandleLocalClusters_OPTIONS(t *testing.T) {
 
 	server.handleLocalClusters(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS, got %d", w.Code)
 	}
 }
 
@@ -2376,8 +2376,8 @@ func TestHandleLocalClusters_CORSAdvertisesDELETE(t *testing.T) {
 
 	server.handleLocalClusters(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 for OPTIONS preflight, got %d", w.Code)
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected 204 for OPTIONS preflight, got %d", w.Code)
 	}
 
 	methods := w.Header().Get("Access-Control-Allow-Methods")

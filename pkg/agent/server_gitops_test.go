@@ -25,8 +25,8 @@ func TestGitopsHandlers(t *testing.T) {
 		req := httptest.NewRequest(http.MethodOptions, "/api/gitops/detect-drift", nil)
 		w := httptest.NewRecorder()
 		server.handleDetectDrift(w, req)
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status 200 for OPTIONS, got %d", w.Code)
+		if w.Code != http.StatusNoContent {
+			t.Errorf("Expected status 204 for OPTIONS, got %d", w.Code)
 		}
 	})
 

@@ -1097,8 +1097,8 @@ func TestHandleExec_OPTIONSPreflight(t *testing.T) {
 	s.handleExec(w, req)
 
 	resp := w.Result()
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("status = %d; want %d", resp.StatusCode, http.StatusOK)
+	if resp.StatusCode != http.StatusNoContent {
+		t.Errorf("status = %d; want %d", resp.StatusCode, http.StatusNoContent)
 	}
 
 	acao := resp.Header.Get("Access-Control-Allow-Origin")
