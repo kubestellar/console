@@ -58,8 +58,8 @@ describe('VOLCANO_DEMO_DATA', () => {
   })
 
   it('has summary with schedulerVersion', () => {
-    expect(typeof VOLCANO_DEMO_DATA.summary.schedulerVersion).toBe('string')
-    expect(typeof VOLCANO_DEMO_DATA.summary.totalScheduledJobs).toBe('number')
+    expect(typeof VOLCANO_DEMO_DATA.stats.schedulerVersion).toBe('string')
+    expect(typeof VOLCANO_DEMO_DATA.stats.totalJobs).toBe('number')
   })
 
   it('stats counts are non-negative', () => {

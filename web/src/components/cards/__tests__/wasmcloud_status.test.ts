@@ -24,7 +24,7 @@ describe('WASMCLOUD_DEMO_DATA', () => {
 
   it('each host has required fields', () => {
     for (const host of WASMCLOUD_DEMO_DATA.hosts) {
-      expect(typeof host.id).toBe('string')
+      expect(typeof host.hostId).toBe('string')
       expect(typeof host.cluster).toBe('string')
       const validStatuses: WasmcloudHostStatus[] = ['ready', 'starting', 'unreachable']
       expect(validStatuses).toContain(host.status)
@@ -37,9 +37,9 @@ describe('WASMCLOUD_DEMO_DATA', () => {
 
   it('each actor has required fields', () => {
     for (const actor of WASMCLOUD_DEMO_DATA.actors) {
-      expect(typeof actor.id).toBe('string')
+      expect(typeof actor.actorId).toBe('string')
       expect(typeof actor.name).toBe('string')
-      expect(typeof actor.instances).toBe('number')
+      expect(typeof actor.instanceCount).toBe('number')
     }
   })
 
@@ -66,14 +66,13 @@ describe('WASMCLOUD_DEMO_DATA', () => {
   })
 
   it('has stats with required numeric fields', () => {
-    expect(typeof WASMCLOUD_DEMO_DATA.stats.totalHosts).toBe('number')
-    expect(typeof WASMCLOUD_DEMO_DATA.stats.readyHosts).toBe('number')
-    expect(typeof WASMCLOUD_DEMO_DATA.stats.totalActors).toBe('number')
-    expect(typeof WASMCLOUD_DEMO_DATA.stats.totalProviders).toBe('number')
-    expect(typeof WASMCLOUD_DEMO_DATA.stats.totalLinks).toBe('number')
+    expect(typeof WASMCLOUD_DEMO_DATA.stats.hostCount).toBe('number')
+    expect(typeof WASMCLOUD_DEMO_DATA.stats.actorCount).toBe('number')
+    expect(typeof WASMCLOUD_DEMO_DATA.stats.providerCount).toBe('number')
+    expect(typeof WASMCLOUD_DEMO_DATA.stats.linkCount).toBe('number')
   })
 
-  it('has summary with latticeVersion', () => {
-    expect(typeof WASMCLOUD_DEMO_DATA.summary.latticeVersion).toBe('string')
+  it('has stats with latticeVersion', () => {
+    expect(typeof WASMCLOUD_DEMO_DATA.stats.latticeVersion).toBe('string')
   })
 })
