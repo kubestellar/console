@@ -21,10 +21,9 @@ async function setupAndNavigate(page: Page, path = '/ci-cd') {
   await setupDemoMode(page)
   await page.goto(path)
   await page.waitForLoadState('domcontentloaded')
-  await page
-    .getByTestId('sidebar')
-    .waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
-    .catch(() => {})
+  await expect(page.getByTestId('sidebar')).toBeVisible({
+    timeout: ROOT_VISIBLE_TIMEOUT_MS,
+  })
 }
 
 // ── Desktop (1440×900) ─────────────────────────────────────────────────────
@@ -35,10 +34,9 @@ test.describe('CI/CD page — desktop (1440×900)', () => {
   test('CI/CD dashboard initial load', async ({ page }) => {
     await setupAndNavigate(page)
 
-    await page
-      .getByTestId('dashboard-header')
-      .waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS })
-      .catch(() => {})
+    await expect(page.getByTestId('dashboard-header')).toBeVisible({
+      timeout: DASHBOARD_SETTLE_TIMEOUT_MS,
+    })
 
     await expect(page).toHaveScreenshot('app-cicd-desktop-1440.png', {
       fullPage: false,
@@ -49,9 +47,7 @@ test.describe('CI/CD page — desktop (1440×900)', () => {
     await setupAndNavigate(page)
 
     const grid = page.getByTestId('dashboard-cards-grid')
-    await grid
-      .waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS })
-      .catch(() => {})
+    await expect(grid).toBeVisible({ timeout: DASHBOARD_SETTLE_TIMEOUT_MS })
 
     await expect(page).toHaveScreenshot('app-cicd-cards-desktop-1440.png', {
       fullPage: false,
@@ -62,9 +58,7 @@ test.describe('CI/CD page — desktop (1440×900)', () => {
     await setupAndNavigate(page)
 
     const grid = page.getByTestId('dashboard-cards-grid')
-    await grid
-      .waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS })
-      .catch(() => {})
+    await expect(grid).toBeVisible({ timeout: DASHBOARD_SETTLE_TIMEOUT_MS })
 
     await expect(page).toHaveScreenshot('app-cicd-fullpage-1440.png', {
       fullPage: true,
@@ -80,10 +74,9 @@ test.describe('CI/CD page — tablet (768×1024)', () => {
   test('CI/CD dashboard at tablet resolution', async ({ page }) => {
     await setupAndNavigate(page)
 
-    await page
-      .getByTestId('dashboard-header')
-      .waitFor({ state: 'visible', timeout: DASHBOARD_SETTLE_TIMEOUT_MS })
-      .catch(() => {})
+    await expect(page.getByTestId('dashboard-header')).toBeVisible({
+      timeout: DASHBOARD_SETTLE_TIMEOUT_MS,
+    })
 
     await expect(page).toHaveScreenshot('app-cicd-tablet-768.png', {
       fullPage: false,

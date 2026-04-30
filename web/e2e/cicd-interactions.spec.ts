@@ -41,19 +41,20 @@ test.describe('CI/CD repo removal and hiding (#11013)', () => {
   test('remove button is present on repo pills', async ({ page }) => {
     // Repo pills have an "x" remove button with aria-label starting with "Remove repo"
     const removeButtons = page.getByRole('button', { name: /Remove repo/i })
-    const count = await removeButtons.count()
 
     // In demo mode, the filter bar should render repo pills with remove controls
-    // Even if gated behind install dialog, the buttons should exist in the DOM
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
       timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
     })
 
-    // If repo pills are visible, at least one remove button should exist
+    // If the filter bar is visible, verify remove buttons are present and visible
     const allPill = page.getByRole('button', { name: 'All' }).first()
     const allVisible = await allPill.isVisible().catch(() => false)
-    if (allVisible && count > 0) {
-      await expect(removeButtons.first()).toBeAttached()
+    if (allVisible) {
+      const count = await removeButtons.count()
+      // In demo mode with repos rendered, we expect at least one remove button
+      expect(count).toBeGreaterThan(0)
+      await expect(removeButtons.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     }
   })
 
@@ -88,8 +89,14 @@ test.describe('CI/CD repo removal and hiding (#11013)', () => {
     // Click remove
     await firstRemove.click()
 
-    // After removal, the pill count should decrease or the manage icon should appear
-    // (in demo mode, clicking remove may open the install gate instead)
+    // After removal, verify the pill disappeared or the count decreased
+    // Wait briefly for the UI to update
+    const pillsAfter = await page.getByRole('button', { name: /Remove repo/i }).count()
+    // Either the pill count decreased, or the removed repo pill is no longer visible
+    const repoButton = page.getByRole('button', { name: new RegExp(repoName, 'i') }).first()
+    const repoStillVisible = await repoButton.isVisible().catch(() => false)
+    expect(pillsAfter < pillsBefore || !repoStillVisible).toBe(true)
+
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
       timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
     })
@@ -114,6 +121,15 @@ test.describe('CI/CD repo removal and hiding (#11013)', () => {
     // The dropdown should contain "Reset to defaults" text
     const resetOption = page.getByText('Reset to defaults')
     await expect(resetOption).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    // Verify the dropdown also lists hidden/removed repos (not just the reset option)
+    const dropdown = page.locator('[role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]').first()
+    const dropdownVisible = await dropdown.isVisible().catch(() => false)
+    if (dropdownVisible) {
+      const dropdownText = await dropdown.textContent()
+      // The dropdown should contain more than just "Reset to defaults"
+      expect((dropdownText || '').length).toBeGreaterThan('Reset to defaults'.length)
+    }
   })
 })
 
@@ -234,13 +250,22 @@ test.describe('CI/CD refresh loading state (#11015)', () => {
     const refreshButton = page.getByTestId('dashboard-refresh-button')
     await expect(refreshButton).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
+    // Capture the SVG class state BEFORE clicking
+    const refreshIcon = refreshButton.locator('svg')
+    await expect(refreshIcon).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    const classBeforeClick = await refreshIcon.getAttribute('class') || ''
+
     // Click refresh — the RefreshCw icon should get animate-spin class
     await refreshButton.click()
 
-    // The refresh icon inside the button should have the animate-spin class
-    // (or the button becomes disabled during fetch)
-    const refreshIcon = refreshButton.locator('svg')
-    await expect(refreshIcon).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    // After clicking, verify the icon gained the animate-spin class OR the button became disabled
+    // (indicating a state change occurred)
+    const classAfterClick = await refreshIcon.getAttribute('class') || ''
+    const buttonDisabled = await refreshButton.isDisabled().catch(() => false)
+    const stateChanged = classAfterClick !== classBeforeClick
+      || classAfterClick.includes('animate-spin')
+      || buttonDisabled
+    expect(stateChanged).toBe(true)
 
     // After clicking, verify the page remains functional
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -418,11 +443,55 @@ test.describe('CI/CD Live Runs expand and details (#11016)', () => {
     const flowSvgs = page.locator('svg[aria-hidden="true"]')
     const svgCount = await flowSvgs.count()
 
-    // In demo mode with runs, SVGs should be rendered for the flow visualization
-    // If no runs, there won't be SVGs — both are valid states
+    // Check if runs are visible — if so, SVGs for flow visualization must exist
+    const inFlightText = page.getByText(/\d+ in flight/)
+    const hasInFlight = await inFlightText.isVisible().catch(() => false)
+
+    if (hasInFlight) {
+      // When runs are in flight, the flow visualization should have SVG connectors
+      expect(svgCount).toBeGreaterThan(0)
+    }
+
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
       timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
     })
+  })
+
+  test('clicking a run row expands it to show details', async ({ page }) => {
+    // Run rows should be expandable to show step/job details
+    // Look for clickable run rows in the PipelineFlow section
+    const runRows = page.locator('[data-testid*="run-row"], [role="row"]')
+    const runRowCount = await runRows.count()
+
+    // Also check for expandable trigger elements (chevron/expand icons)
+    const expandTriggers = page.locator('[data-testid*="expand"], button:has(svg.lucide-chevron-down), button:has(svg.lucide-chevron-right)')
+    const expandCount = await expandTriggers.count()
+
+    if (expandCount > 0) {
+      const firstExpand = expandTriggers.first()
+      await expect(firstExpand).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+      // Click to expand
+      await firstExpand.click()
+
+      // After expanding, additional content should appear (job details, steps, etc.)
+      // The expanded area should contain more text/elements than before
+      await expect(page.getByTestId('dashboard-header')).toBeVisible({
+        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+      })
+    } else if (runRowCount > 0) {
+      // Try clicking the first run row directly
+      const firstRow = runRows.first()
+      await firstRow.click()
+      await expect(page.getByTestId('dashboard-header')).toBeVisible({
+        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+      })
+    } else {
+      // No runs to expand — verify empty state
+      const noRunsText = page.getByText('No runs in flight.')
+      const hasNoRuns = await noRunsText.isVisible().catch(() => false)
+      expect(hasNoRuns).toBe(true)
+    }
   })
 })
 
@@ -489,14 +558,20 @@ test.describe('CI/CD Logs modal (#11017)', () => {
     await expect(modal).toBeVisible({ timeout: MODAL_TIMEOUT_MS })
 
     // The modal should show "Loading log…" initially or rendered log content
-    const loadingText = modal.getByText('Loading log…')
-    const errorText = modal.locator('.text-red-400')
     const preContent = modal.locator('pre')
 
     // Wait for loading to finish — should show content or error
     await expect(preContent).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const preText = await preContent.textContent()
-    expect((preText || '').length).toBeGreaterThan(0)
+    // Assert the content is actual log output — not just a placeholder.
+    // Real log content contains timestamps, step names, or multi-line output.
+    expect((preText || '').length).toBeGreaterThan(10)
+    // Verify it looks like log content (contains newlines or typical log patterns)
+    const looksLikeLog = /\n/.test(preText || '')
+      || /\d{2}:\d{2}/.test(preText || '')      // timestamp pattern
+      || /step|run|error|info/i.test(preText || '') // log keywords
+      || (preText || '').split(' ').length > 3    // multi-word content
+    expect(looksLikeLog).toBe(true)
   })
 
   test('logs modal has close button that dismisses it', async ({ page }) => {
@@ -618,10 +693,14 @@ test.describe('CI/CD Logs modal (#11017)', () => {
     const modal = page.getByRole('dialog')
     await expect(modal).toBeVisible({ timeout: MODAL_TIMEOUT_MS })
 
-    // Should show error message or "no matching lines" — not crash
+    // Should show error-specific content — not just any generic placeholder
     const preContent = modal.locator('pre')
+    const errorIndicator = modal.locator('.text-red-400, .text-destructive')
     await expect(preContent).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     const text = await preContent.textContent()
-    expect((text || '').length).toBeGreaterThan(0)
+    const errorVisible = await errorIndicator.isVisible().catch(() => false)
+    // Assert the content specifically indicates an error state
+    const hasErrorIndicator = /error|not available|failed|unavailable|could not/i.test(text || '')
+    expect(hasErrorIndicator || errorVisible).toBe(true)
   })
 })

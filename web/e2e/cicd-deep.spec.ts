@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
   setupDemoAndNavigate,
-  setupDemoMode,
   setupErrorCollector,
   waitForSubRoute,
   ELEMENT_VISIBLE_TIMEOUT_MS,
@@ -44,9 +43,6 @@ const STAT_TESTID_FAILED_24H = 'stat-block-cicd_failed_24h'
 const STAT_TESTID_RUNS_TODAY = 'stat-block-cicd_runs_today'
 const STAT_TESTID_NIGHTLY_STREAK = 'stat-block-cicd_streak'
 const STAT_TESTID_TOTAL_WORKFLOWS = 'stat-block-cicd_total_workflows'
-
-/** Minimum repo name length for "Add repo" validation */
-const MIN_REPO_LENGTH = 3
 
 /** Placeholder shown in the add-repo input */
 const ADD_REPO_PLACEHOLDER = 'owner/repo'
@@ -101,6 +97,9 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
       const isVisible = await el.isVisible().catch(() => false)
       if (isVisible) visibleCount++
     }
+
+    // Assert that at least one stat name is visible in the stats bar
+    expect(visibleCount).toBeGreaterThan(0)
 
     // The stats bar may be collapsed — as a baseline assert the header exists
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -230,8 +229,12 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
       return
     }
 
-    // Find the first repo pill (not "All", not "+")
-    const repoPills = page.locator('button').filter({ hasNotText: /^All$|^Add repo$/ })
+    // Find the first repo pill (not "All", not "Add repo", not navigation/system buttons)
+    // Scope to the filter bar area to avoid clicking unrelated buttons
+    const filterBar = page.locator('[data-testid="repo-filter-bar"], [role="toolbar"]').first()
+    const filterBarVisible = await filterBar.isVisible().catch(() => false)
+    const pillContainer = filterBarVisible ? filterBar : page.locator('nav').first()
+    const repoPills = pillContainer.locator('button').filter({ hasNotText: /^All$|^Add repo$|^Refresh$/ })
     const pillCount = await repoPills.count()
 
     if (pillCount > 0) {
@@ -259,10 +262,14 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     const addVisible = await addButton.isVisible().catch(() => false)
 
     if (!addVisible) {
-      // Filter bar may not render "Add repo" in demo gated mode — verify page is fine
+      // Filter bar may not render "Add repo" in demo gated mode —
+      // verify the page still renders the CI/CD dashboard correctly
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
         timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
       })
+      // Confirm we're on the CI/CD page with expected content (not a blank page)
+      const title = page.getByTestId('dashboard-title')
+      await expect(title).toContainText(PAGE_TITLE)
       return
     }
 
