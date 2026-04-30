@@ -116,6 +116,7 @@ func newTestServer(t *testing.T, kubeconfigPath, agentToken string) *Server {
 	return &Server{
 		k8sClient:      k8sClient,
 		agentToken:     agentToken,
+		tokenExplicit:  agentToken != "", // treat non-empty test token as explicitly set
 		allowedOrigins: []string{"http://localhost"},
 	}
 }

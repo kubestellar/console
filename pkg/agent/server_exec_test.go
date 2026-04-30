@@ -1135,6 +1135,7 @@ func TestHandleExec_OPTIONSPreflight_UnknownOrigin(t *testing.T) {
 func TestHandleExec_Unauthorized(t *testing.T) {
 	s := &Server{
 		agentToken:     "test-secret-token",
+		tokenExplicit:  true, // treat test token as explicitly set so origin bypass doesn't fire
 		allowedOrigins: []string{"http://localhost:5174"},
 	}
 

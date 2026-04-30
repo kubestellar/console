@@ -236,6 +236,7 @@ func newAuthTestServerWithToken() *Server {
 		kubectl:        &KubectlProxy{config: config},
 		allowedOrigins: []string{testAllowedOrigin},
 		agentToken:     testTokenValue,
+		tokenExplicit:  true, // treat test token as explicitly set so origin bypass doesn't fire
 		registry:       &Registry{providers: make(map[string]AIProvider)},
 	}
 }
