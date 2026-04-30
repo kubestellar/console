@@ -95,9 +95,13 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
         authFetch('/api/v1/compliance/sbom/summary'),
       ])
       if (!pRes.ok || !vRes.ok || !sRes.ok) throw new Error('Failed to fetch SBOM data')
-      setPackages(await pRes.json())
-      setVulnerabilities(await vRes.json())
-      setSummary(await sRes.json())
+      const pData = await pRes.json()
+      setPackages(Array.isArray(pData) ? pData : [])
+      const vData = await vRes.json()
+      setVulnerabilities(Array.isArray(vData) ? vData : [])
+      const sData = await sRes.json()
+      // Guard against non-object responses (e.g. catch-all mock returning [])
+      setSummary(sData && typeof sData === 'object' && !Array.isArray(sData) && 'scan_status' in sData ? sData : null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
@@ -162,7 +166,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
               {summary.scan_status === 'completed' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
               {summary.scan_status === 'in_progress' && <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />}
               {summary.scan_status === 'failed' && <XCircle className="w-5 h-5 text-red-400" />}
-              <span className="text-lg font-semibold text-white capitalize">{summary.scan_status.replace('_', ' ')}</span>
+              <span className="text-lg font-semibold text-white capitalize">{(summary.scan_status ?? '').replace('_', ' ')}</span>
             </div>
           </div>
         </div>

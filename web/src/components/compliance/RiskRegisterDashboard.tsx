@@ -99,9 +99,13 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
         authFetch('/api/v1/compliance/erm/risk-register/summary'),
       ])
       if (!rRes.ok || !cRes.ok || !sRes.ok) throw new Error('Failed to fetch risk register data')
-      setRisks(await rRes.json())
-      setCategories(await cRes.json())
-      setSummary(await sRes.json())
+      const rData = await rRes.json()
+      setRisks(Array.isArray(rData) ? rData : [])
+      const cData = await cRes.json()
+      setCategories(Array.isArray(cData) ? cData : [])
+      const sData = await sRes.json()
+      // Guard against non-object responses (e.g. catch-all mock returning [])
+      setSummary(sData && typeof sData === 'object' && !Array.isArray(sData) && 'total_risks' in sData ? sData : null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
@@ -170,7 +174,7 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
           </div>
           <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
             <p className="text-sm text-gray-400">Avg Risk Score</p>
-            <p className="text-2xl font-bold text-orange-400">{summary.avg_risk_score.toFixed(1)}</p>
+            <p className="text-2xl font-bold text-orange-400">{(summary.avg_risk_score ?? 0).toFixed(1)}</p>
           </div>
         </div>
       )}
@@ -188,7 +192,7 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
             >
               <p className="text-xs text-gray-400 truncate">{cat.category}</p>
               <p className="text-lg font-bold text-white">{cat.count}</p>
-              <p className="text-xs text-gray-500">{cat.open} open · avg {cat.avg_score.toFixed(1)}</p>
+              <p className="text-xs text-gray-500">{cat.open} open · avg {(cat.avg_score ?? 0).toFixed(1)}</p>
             </button>
           ))}
         </div>

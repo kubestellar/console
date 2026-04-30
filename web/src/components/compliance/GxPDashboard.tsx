@@ -64,10 +64,15 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
         authFetch('/api/compliance/gxp/chain/verify'),
       ])
       if (!smRes.ok || !recRes.ok || !sigRes.ok || !chainRes.ok) throw new Error('Failed to load GxP data')
-      setSummary(await smRes.json())
-      setRecords(await recRes.json())
-      setSignatures(await sigRes.json())
-      setChainStatus(await chainRes.json())
+      const smData = await smRes.json()
+      // Guard against non-object responses (e.g. catch-all mock returning [])
+      setSummary(smData && typeof smData === 'object' && !Array.isArray(smData) && 'config' in smData ? smData : null)
+      const recData = await recRes.json()
+      setRecords(Array.isArray(recData) ? recData : [])
+      const sigData = await sigRes.json()
+      setSignatures(Array.isArray(sigData) ? sigData : [])
+      const chainData = await chainRes.json()
+      setChainStatus(chainData && typeof chainData === 'object' && !Array.isArray(chainData) ? chainData : null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load GxP data')
     } finally {
@@ -120,11 +125,11 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
             <div className="text-sm text-gray-400 mb-1">GxP Mode</div>
-            <div className={`text-xl font-bold ${summary.config.enabled ? 'text-emerald-400' : 'text-gray-500'}`}>
-              {summary.config.enabled ? '● ENABLED' : '○ DISABLED'}
+            <div className={`text-xl font-bold ${summary.config?.enabled ? 'text-emerald-400' : 'text-gray-500'}`}>
+              {summary.config?.enabled ? '● ENABLED' : '○ DISABLED'}
             </div>
             <div className="text-xs text-gray-500 mt-1">
-              {summary.config.append_only ? 'Append-only' : 'Standard'} mode
+              {summary.config?.append_only ? 'Append-only' : 'Standard'} mode
             </div>
           </div>
           <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
@@ -163,7 +168,7 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
             </div>
             <div className="text-xs text-gray-500 mt-0.5">
               {chainStatus.verified_records}/{chainStatus.total_records} records verified
-              {' · '}Algorithm: {summary?.config.hash_algorithm || 'SHA-256'}
+              {' · '}Algorithm: {summary?.config?.hash_algorithm || 'SHA-256'}
               {' · '}Verified: {new Date(chainStatus.verified_at).toLocaleString()}
             </div>
           </div>
@@ -194,12 +199,12 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {[
-              { label: 'Mode', value: summary.config.enabled ? 'Enabled' : 'Disabled' },
-              { label: 'Enabled At', value: new Date(summary.config.enabled_at).toLocaleString() },
-              { label: 'Enabled By', value: summary.config.enabled_by },
-              { label: 'Append Only', value: summary.config.append_only ? 'Yes' : 'No' },
-              { label: 'Require Signature', value: summary.config.require_signature ? 'Yes' : 'No' },
-              { label: 'Hash Algorithm', value: summary.config.hash_algorithm },
+              { label: 'Mode', value: summary.config?.enabled ? 'Enabled' : 'Disabled' },
+              { label: 'Enabled At', value: summary.config?.enabled_at ? new Date(summary.config.enabled_at).toLocaleString() : '—' },
+              { label: 'Enabled By', value: summary.config?.enabled_by ?? '—' },
+              { label: 'Append Only', value: summary.config?.append_only ? 'Yes' : 'No' },
+              { label: 'Require Signature', value: summary.config?.require_signature ? 'Yes' : 'No' },
+              { label: 'Hash Algorithm', value: summary.config?.hash_algorithm ?? '—' },
             ].map(({ label, value }) => (
               <div key={label} className="p-3 bg-gray-900/50 rounded-lg">
                 <div className="text-xs text-gray-400">{label}</div>

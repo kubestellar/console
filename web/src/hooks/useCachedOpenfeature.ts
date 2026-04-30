@@ -72,7 +72,7 @@ function rollupFlagStats(flags: OpenFeatureFlag[]): OpenFeatureFlagStats {
   let enabled = 0
   let disabled = 0
   for (const flag of flags ?? []) {
-    if (flag.enabled) {
+    if (flag?.enabled) {
       enabled++
     } else {
       disabled++
@@ -89,7 +89,7 @@ function rollupFlagStats(flags: OpenFeatureFlag[]): OpenFeatureFlagStats {
 function sumProviderEvaluations(providers: OpenFeatureProvider[]): number {
   let total = 0
   for (const provider of providers ?? []) {
-    total += provider.evaluations
+    total += provider?.evaluations ?? 0
   }
   return total
 }
