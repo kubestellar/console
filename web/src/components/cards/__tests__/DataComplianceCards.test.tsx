@@ -21,7 +21,10 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 
 const mockClusters = vi.fn(() => [])
 vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => ({ clusters: mockClusters(), deduplicatedClusters: mockClusters() }),
+  useClusters: () => {
+    const clusters = mockClusters()
+    return { clusters, deduplicatedClusters: clusters }
+  },
 }))
 
 const mockKubectlExec = vi.fn()

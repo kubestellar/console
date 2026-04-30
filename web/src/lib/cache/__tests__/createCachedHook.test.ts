@@ -38,6 +38,7 @@ const defaultCacheResult = {
   consecutiveFailures: 0,
   lastRefresh: null,
   refetch: vi.fn(),
+  retryFetch: vi.fn(),
   clearAndRefetch: vi.fn(),
 }
 
@@ -208,5 +209,25 @@ describe('createCachedHook', () => {
         demoData: undefined,
       })
     )
+  })
+
+  it('exposes retryFetch from useCache result', () => {
+    const retryFn = vi.fn()
+    mockUseCache.mockReturnValue({
+      ...defaultCacheResult,
+      retryFetch: retryFn,
+    })
+
+    const hook = createCachedHook<TestData>({
+      key: 'retry-test',
+      initialData: INITIAL_DATA,
+      fetcher: vi.fn(),
+    })
+
+    const { result } = renderHook(() => hook())
+    expect(result.current.retryFetch).toBe(retryFn)
+
+    result.current.retryFetch()
+    expect(retryFn).toHaveBeenCalledTimes(1)
   })
 })
