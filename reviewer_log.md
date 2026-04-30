@@ -1,61 +1,58 @@
-## Pass 56 — 2026-04-30T02:00 UTC (KICK: RED — nightlyPlaywright + coverage 89% < 91%)
+## Pass 59 — 2026-04-30T03:01 UTC (KICK: RED — nightlyPlaywright + coverage 89% < 91%)
 
 **Mode:** EXECUTOR — full reviewer pass per supervisor KICK directive  
-**Focus:** GA4 error watch, fix REDs, merge green PRs, scan Copilot comments
+**Focus:** GA4 error watch, fix REDs (coverage), merge green PRs, scan Copilot comments
 
 ### Beads on startup
-- `reviewer-35v` (Full-Stack E2E Smoke): IN_PROGRESS — fix PR #10971 pushed, awaiting CI
 - `reviewer-m3s` (coverage < 91%): IN_PROGRESS
 - `reviewer-oxr`, `reviewer-1po`: BLOCKED (V8CoverageProvider TTY EIO)
 
 ### GA4 Error Watch (30min vs 7d baseline)
 | Event | 30-min count | 7d daily avg | Ratio | Severity | Action |
 |-------|-------------|-------------|-------|----------|--------|
-| `ksc_error` | 540 | 150.1 | **3.6×** | medium | Pre-existing issue #10957 (open) — no new spike |
+| `ksc_error` | 540 (at 00:31) | 150.1 | **3.6×** | medium | Issue #10957 filed + CLOSED (PR #10977 filters mission-index false-positives from ksc_error) |
 
-No new anomalies. Issue #10957 still open and being tracked.
+No new GA4 anomalies this pass. Issue #10957 closed.
 
 ### RED Indicators
-**1. Full-Stack E2E Smoke — FIXED** ✅  
-- PR #10971 (fix dev-mode auto-activation in CI) was all-green (17/17 checks)  
-- **MERGED** with `--admin`  
-- Bead `reviewer-35v` → **CLOSED**  
-- PRs #10960, #10961, #10972: branch-updated to re-trigger CI  
 
-**2. Playwright Nightly — PENDING** (not reviewer's fix, issue-only lane)  
-- Issues already filed: #10955 (cluster count), #10956 (filter tabs), #10958 (RCE scan)  
-- PR #10968 (filter tabs): already merged in Pass 55  
-- PR #10960 (cluster count fix): CI now 20/28 ✅, no failures — awaiting arm64 + Storybook  
-- PR #10961 (RCE scan fix): CI now 20/28 ✅, no failures — awaiting arm64 + Storybook  
-- Playwright E2E Tests workflow: currently in_progress on main  
+**1. Playwright Nightly RED — ISSUE-ONLY LANE (scanner owns fixes)**
+Previously filed issues — all CLOSED by scanner-merged PRs:
+- #10963 CLOSED ✅ — PR #10975 (Fix MSW mocks for workload endpoints)
+- #10964 CLOSED ✅ — PR #10979 (Fix Mission Control E2E)
+- #10965 CLOSED ✅ — PR #10976 (Fix NamespaceOverview persistence)
+- #10966 CLOSED ✅ — PR #10977 (Fix mission index 502 + retry resilience)
+- #10967 OPEN — Card cache compliance storage/retrieval (scanner lane, not touched)
 
-**3. Coverage 89% < 91% — IN PROGRESS**  
-- Coverage Suite completed on main: **88.8% lines** (reflects batch 11 only)  
-- PR #10972 (batch 12: helm, workloads, buildpacks, sseClient) — CI in progress, branch updated  
-- **PR #10973 created: batch 13 — 43 uncovered card config files, 172 new tests**  
-  - `card-configs-ecosystem.test.ts`: 35 files (140 tests) — ACMM, backstage, cloud-custodian, CNI, containerd, cortex, cubefs, dapr, dragonfly, envoy, flatcar, grpc, harbor, keda, keycloak, kserve, kubevela, kubevirt, linkerd, longhorn, openfeature, openfga, otel, rook, spiffe, spire, strimzi, tikv, tuf, vcluster, vitess, volcano, wasmcloud  
-  - `card-configs-analytics.test.ts`: 8 files (32 tests) — deployment-risk-score, drasi-reactive-graph, nightly-release-pulse, pipeline-flow, pod-logs, recent-failures, right-size-advisor, workflow-matrix  
+**2. Coverage 89% < 91% — SECOND ROOT CAUSE FOUND**
+Pass 58 action: PR #10981 merged at 02:54Z fixing 10 demoData test failures (kubevela/volcano/wasmcloud).  
+Coverage Suite (run 25145111684) on resulting main — **shard 7 FAILED**:  
+> `Found 257 raw hex colors (expected <= 256)` — ui-ux-standards ratchet violated
+
+Root cause: PR #10980 (one-click GitHub App manifest flow) added multi-line JSX comment  
+in `Login.tsx:557` with continuation line containing `(#10931)`. The `shouldSkipLine()`  
+function skips `{/*` openers but NOT continuation lines — same pattern fixed previously  
+in PR #8546 for `#6338`/`#3761` refs.
+
+**Fix applied**: Prefix continuation lines with ` * ` so `shouldSkipLine()` skips them.  
+**Branch**: `fix/coverage-hex-ratchet-login` — PR to follow.
+
+### Merge Activity
+- **PR #10975 MERGED** ✅ (Fix MSW mocks — scanner)
+- **PR #10976 MERGED** ✅ (Fix NamespaceOverview — scanner)
+- **PR #10977 MERGED** ✅ (Fix mission index 502 — scanner)
+- **PR #10979 MERGED** ✅ (Fix Mission Control E2E — scanner)
+- **PR #10980 MERGED** ✅ (One-click manifest flow — scanner, introduced ratchet regression)
+- **PR #10981 MERGED** ✅ (Fix 10 demoData test assertions — reviewer)
+- merge-eligible.json: 0 AI-authored PRs ready to merge
 
 ### Copilot Comments Scan
 - `copilot-comments.json`: 0 unaddressed comments ✅
 
-### Merge Activity
-- **PR #10971 MERGED** ✅ (Full-Stack E2E fix, 17/17 green)
-- PR #10969 already merged (batch 11) — confirmed in git log
-
-### Open PRs Pending Merge (blocked on CI)
-| PR | Title | Status |
-|----|-------|--------|
-| #10960 | Fix Dashboard cluster count race (firefox/webkit) | 20/28 ✅, no failures |
-| #10961 | Fix RCE vector scan execution context | 20/28 ✅, no failures |
-| #10972 | Coverage batch 12 (helm/workloads/buildpacks) | CI re-triggered after E2E fix |
-| #10973 | Coverage batch 13 (43 card configs, 172 tests) | CI in-progress |
-
 ### Next Steps
-- Monitor #10972, #10973 CI — merge when green
-- Monitor #10960, #10961 — merge when arm64+Storybook complete
-- Coverage Suite will re-run on main post-merge of batches 12+13
-- Target: 91% after both batches land
+- PR for Login.tsx hex ratchet fix in CI
+- Await Coverage Suite pass ≥ 91% after ratchet fix lands
+- #10967 (card cache compliance): open, scanner lane
 
 ---
 

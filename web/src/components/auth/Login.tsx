@@ -551,10 +551,10 @@ export function Login() {
           )}
 
           {/* Two-button layout when OAuth is not configured:
-              primary "Sign in with GitHub" (one-click manifest flow) + secondary "Demo Mode".
-              GitHub's /settings/apps/new requires an authenticated session — if the
-              user isn't logged in, the POST body (manifest) is silently dropped during
-              the login redirect (#10931). We show a "sign in first" hint. */}
+            * primary "Sign in with GitHub" (one-click manifest flow) + secondary "Demo Mode".
+            * GitHub's /settings/apps/new requires an authenticated session — if the
+            * user isn't logged in, the POST body (manifest) is silently dropped during
+            * the login redirect (issue #10931). We show a "sign in first" hint. */}
           {showOAuthSetup && (
             <div className="space-y-3">
               <a
