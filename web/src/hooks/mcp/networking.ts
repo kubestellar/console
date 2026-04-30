@@ -594,7 +594,7 @@ if (typeof window !== 'undefined') {
   })
 }
 
-export const __testables = {
+export const __networkingTestables = {
   loadServicesCacheFromStorage,
   getDemoServices,
 }

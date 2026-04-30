@@ -30,7 +30,7 @@ const {
   getDemoOperatorSubscriptions,
   OPERATORS_CACHE_KEY,
   SUBSCRIPTIONS_CACHE_KEY,
-} = mod.__testables
+} = mod.__operatorsTestables
 
 beforeEach(() => {
   localStorage.clear()

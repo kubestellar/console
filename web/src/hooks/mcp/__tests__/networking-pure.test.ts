@@ -43,7 +43,7 @@ vi.mock('../../useCachedData/demoData', () => ({
 }))
 
 const mod = await import('../networking')
-const { loadServicesCacheFromStorage, getDemoServices } = mod.__testables
+const { loadServicesCacheFromStorage, getDemoServices } = mod.__networkingTestables
 
 beforeEach(() => {
   localStorage.clear()
