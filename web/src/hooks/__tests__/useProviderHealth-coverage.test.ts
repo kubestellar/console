@@ -54,7 +54,7 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 })
 
 vi.mock('../mcp/clusters', () => ({
-  useClusters: () => ({ clusters: mockClusters }),
+  useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters }),
 }))
 
 vi.mock('../../lib/cache', () => ({

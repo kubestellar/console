@@ -65,7 +65,7 @@ beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
   mockIsDemoMode.mockReturnValue(false)
-  mockUseClusters.mockReturnValue({ clusters: [], isLoading: false })
+  mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false })
   mockRegisterRefetch.mockReturnValue(vi.fn())
 })
 
@@ -83,7 +83,7 @@ describe('useIntoto — demo mode', () => {
 
   it('populates 3 default demo clusters when no clusters are connected', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseClusters.mockReturnValue({ clusters: [], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false })
     const { result } = renderHook(() => useIntoto())
     await waitFor(() => !result.current.isLoading)
     expect(Object.keys(result.current.statuses)).toHaveLength(3)
@@ -94,7 +94,7 @@ describe('useIntoto — demo mode', () => {
 
   it('uses real cluster names as demo cluster names when clusters are connected', async () => {
     mockIsDemoMode.mockReturnValue(true)
-    mockUseClusters.mockReturnValue({ clusters: [{ name: 'prod-cluster', reachable: true }, { name: 'staging-cluster', reachable: true }], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [{ name: 'prod-cluster', reachable: true }, { name: 'staging-cluster', reachable: true }], deduplicatedClusters: [{ name: 'prod-cluster', reachable: true }, { name: 'staging-cluster', reachable: true }], isLoading: false })
     const { result } = renderHook(() => useIntoto())
     await waitFor(() => !result.current.isLoading)
     expect(result.current.statuses['prod-cluster']).toBeDefined()
@@ -146,7 +146,7 @@ describe('useIntoto — demo mode', () => {
 describe('useIntoto — no clusters', () => {
   it('sets isLoading=false when cluster list is empty and not loading', async () => {
     mockIsDemoMode.mockReturnValue(false)
-    mockUseClusters.mockReturnValue({ clusters: [], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false })
     const { result } = renderHook(() => useIntoto())
     await waitFor(() => !result.current.isLoading)
     expect(result.current.isLoading).toBe(false)
@@ -154,7 +154,7 @@ describe('useIntoto — no clusters', () => {
 
   it('returns empty statuses when no clusters', async () => {
     mockIsDemoMode.mockReturnValue(false)
-    mockUseClusters.mockReturnValue({ clusters: [], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false })
     const { result } = renderHook(() => useIntoto())
     await waitFor(() => !result.current.isLoading)
     expect(result.current.statuses).toEqual({})
@@ -186,7 +186,7 @@ describe('useIntoto — no clusters', () => {
 
 describe('useIntoto — cluster fetch: CRD not installed', () => {
   it('marks cluster as not installed when CRD check fails', async () => {
-    mockUseClusters.mockReturnValue({ clusters: [{ name: 'cluster-a', reachable: true }], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [{ name: 'cluster-a', reachable: true }], deduplicatedClusters: [{ name: 'cluster-a', reachable: true }], isLoading: false })
     mockKubectlExec.mockResolvedValue({ exitCode: 1, output: 'not found' })
     mockSettledWithConcurrency.mockImplementation(async (tasks: (() => Promise<unknown>)[]) =>
       Promise.all(tasks.map(t => t().then(v => ({ status: 'fulfilled' as const, value: v }))))
@@ -219,7 +219,7 @@ describe('useIntoto — cluster fetch: CRD installed', () => {
   const linkResponse = JSON.stringify({ items: [] })
 
   beforeEach(() => {
-    mockUseClusters.mockReturnValue({ clusters: [{ name: 'cluster-b', reachable: true }], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [{ name: 'cluster-b', reachable: true }], deduplicatedClusters: [{ name: 'cluster-b', reachable: true }], isLoading: false })
     mockKubectlExec
       .mockResolvedValueOnce({ exitCode: 0, output: 'layouts.in-toto.io' })
       .mockResolvedValueOnce({ exitCode: 0, output: layoutResponse })
@@ -305,7 +305,7 @@ describe('useIntoto — link verification', () => {
   })
 
   it('marks step as verified when link.status.verified=true', async () => {
-    mockUseClusters.mockReturnValue({ clusters: [{ name: 'c1', reachable: true }], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [{ name: 'c1', reachable: true }], deduplicatedClusters: [{ name: 'c1', reachable: true }], isLoading: false })
     mockKubectlExec
       .mockResolvedValueOnce({ exitCode: 0, output: 'layouts.in-toto.io' })
       .mockResolvedValueOnce({ exitCode: 0, output: layoutResponse })
@@ -327,7 +327,7 @@ describe('useIntoto — link verification', () => {
 
 describe('useIntoto — cluster fetch: errors', () => {
   it('returns error status when kubectlProxy throws', async () => {
-    mockUseClusters.mockReturnValue({ clusters: [{ name: 'bad-cluster', reachable: true }], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [{ name: 'bad-cluster', reachable: true }], deduplicatedClusters: [{ name: 'bad-cluster', reachable: true }], isLoading: false })
     mockKubectlExec.mockRejectedValue(new Error('connection refused'))
     mockSettledWithConcurrency.mockImplementation(async (tasks: (() => Promise<unknown>)[]) =>
       Promise.all(tasks.map(t => t()
@@ -342,7 +342,7 @@ describe('useIntoto — cluster fetch: errors', () => {
   })
 
   it('hasErrors is true when a cluster has an error', async () => {
-    mockUseClusters.mockReturnValue({ clusters: [{ name: 'err-cluster', reachable: true }], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [{ name: 'err-cluster', reachable: true }], deduplicatedClusters: [{ name: 'err-cluster', reachable: true }], isLoading: false })
     mockKubectlExec.mockRejectedValue(new Error('timeout'))
     mockSettledWithConcurrency.mockImplementation(async (tasks: (() => Promise<unknown>)[]) =>
       Promise.all(tasks.map(t => t()
@@ -357,7 +357,7 @@ describe('useIntoto — cluster fetch: errors', () => {
   })
 
   it('consecutiveFailures increments when all clusters error', async () => {
-    mockUseClusters.mockReturnValue({ clusters: [{ name: 'err-cluster', reachable: true }], isLoading: false })
+    mockUseClusters.mockReturnValue({ clusters: [{ name: 'err-cluster', reachable: true }], deduplicatedClusters: [{ name: 'err-cluster', reachable: true }], isLoading: false })
     mockKubectlExec.mockRejectedValue(new Error('timeout'))
     mockSettledWithConcurrency.mockImplementation(async (tasks: (() => Promise<unknown>)[]) =>
       Promise.all(tasks.map(t => t()
