@@ -1,7 +1,10 @@
 package agent
 
 import (
+	"os"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestCopilotCLIProvider_Basics(t *testing.T) {
@@ -54,4 +57,115 @@ func TestCopilotCLIProvider_DescriptionWithVersion(t *testing.T) {
 
 func TestCopilotCLIProvider_Interface(t *testing.T) {
 	var _ AIProvider = &CopilotCLIProvider{}
+}
+
+func TestIsAuthError(t *testing.T) {
+	cases := []struct {
+		text string
+		want bool
+	}{
+		{"copilot CLI requires authentication", true},
+		{"please login first", true},
+		{"token has expired", true},
+		{"HTTP 401 Unauthorized", true},
+		{"HTTP 403 Forbidden", true},
+		{"sign in to continue", true},
+		{"rate limit exceeded", false},
+		{"network timeout", false},
+		{"", false},
+	}
+	for _, tc := range cases {
+		if got := isAuthError(tc.text); got != tc.want {
+			t.Errorf("isAuthError(%q) = %v, want %v", tc.text, got, tc.want)
+		}
+	}
+}
+
+func TestFreshEnv_StripsStalTokens(t *testing.T) {
+	t.Setenv("GH_TOKEN", "stale-gh-token")
+	t.Setenv("GITHUB_TOKEN", "stale-github-token")
+
+	env := freshEnv()
+
+	for _, e := range env {
+		upper := strings.ToUpper(e)
+		if strings.HasPrefix(upper, "GH_TOKEN=") {
+			t.Error("freshEnv should strip GH_TOKEN")
+		}
+		if strings.HasPrefix(upper, "GITHUB_TOKEN=") {
+			t.Error("freshEnv should strip GITHUB_TOKEN")
+		}
+	}
+
+	found := false
+	for _, e := range env {
+		if e == "NO_COLOR=1" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("freshEnv should include NO_COLOR=1")
+	}
+}
+
+func TestFreshEnv_PreservesOtherVars(t *testing.T) {
+	t.Setenv("MY_CUSTOM_VAR", "keepme")
+
+	env := freshEnv()
+	found := false
+	for _, e := range env {
+		if e == "MY_CUSTOM_VAR=keepme" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("freshEnv should preserve non-token env vars")
+	}
+}
+
+func TestRefreshGitHubAuth_Cooldown(t *testing.T) {
+	p := &CopilotCLIProvider{}
+
+	// Force a recent refresh so the cooldown prevents another attempt.
+	p.authMu.Lock()
+	p.lastAuthRefresh = time.Now()
+	p.lastAuthRefreshOK = true
+	p.authMu.Unlock()
+
+	// Should return cached result without invoking gh.
+	got := p.refreshGitHubAuth()
+	if !got {
+		t.Error("Expected cached true from cooldown period")
+	}
+
+	// With lastAuthRefreshOK=false, cooldown should return false.
+	p.authMu.Lock()
+	p.lastAuthRefreshOK = false
+	p.lastAuthRefresh = time.Now()
+	p.authMu.Unlock()
+
+	got = p.refreshGitHubAuth()
+	if got {
+		t.Error("Expected cached false from cooldown period")
+	}
+}
+
+func TestRefreshGitHubAuth_GhNotInstalled(t *testing.T) {
+	p := &CopilotCLIProvider{}
+
+	// Ensure cooldown is expired so it actually runs gh.
+	p.authMu.Lock()
+	p.lastAuthRefresh = time.Time{}
+	p.authMu.Unlock()
+
+	origPath := os.Getenv("PATH")
+	t.Setenv("PATH", "/nonexistent")
+	defer os.Setenv("PATH", origPath)
+
+	got := p.refreshGitHubAuth()
+	if got {
+		t.Error("Expected false when gh is not on PATH")
+	}
 }

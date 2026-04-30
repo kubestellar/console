@@ -8,14 +8,23 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
+
+// authRefreshCooldown prevents hammering `gh auth token` on repeated failures.
+const authRefreshCooldown = 30 * time.Second
 
 // CopilotCLIProvider implements the AIProvider and StreamingProvider interfaces
 // for GitHub Copilot CLI, providing real-time streaming responses.
 type CopilotCLIProvider struct {
 	cliPath string
 	version string
+
+	// Token refresh state — guarded by authMu.
+	authMu            sync.Mutex
+	lastAuthRefresh   time.Time
+	lastAuthRefreshOK bool
 }
 
 func NewCopilotCLIProvider() *CopilotCLIProvider {
@@ -81,6 +90,73 @@ func (c *CopilotCLIProvider) Refresh() {
 	c.detectCLI()
 }
 
+// isAuthError returns true when the error text indicates an expired or invalid
+// GitHub / Copilot auth token.
+func isAuthError(text string) bool {
+	lower := strings.ToLower(text)
+	return strings.Contains(lower, "login") ||
+		strings.Contains(lower, "auth") ||
+		strings.Contains(lower, "sign in") ||
+		strings.Contains(lower, "token") ||
+		strings.Contains(lower, "authenticate") ||
+		strings.Contains(lower, "401") ||
+		strings.Contains(lower, "403")
+}
+
+// refreshGitHubAuth attempts to obtain a fresh GitHub token by invoking
+// `gh auth token`.  If the command succeeds the token file/keyring was
+// already refreshed by the user (e.g. `gh auth refresh`) and subsequent
+// copilot CLI invocations will pick it up automatically.
+//
+// The method is rate-limited by authRefreshCooldown so we don't spam the
+// gh CLI on repeated failures.  Returns true when the refresh looks healthy.
+func (c *CopilotCLIProvider) refreshGitHubAuth() bool {
+	c.authMu.Lock()
+	defer c.authMu.Unlock()
+
+	if time.Since(c.lastAuthRefresh) < authRefreshCooldown {
+		return c.lastAuthRefreshOK
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	out, err := exec.CommandContext(ctx, "gh", "auth", "token").Output()
+	c.lastAuthRefresh = time.Now()
+	if err != nil {
+		slog.Warn("[CopilotCLI] gh auth token failed — token may still be expired", "error", err)
+		c.lastAuthRefreshOK = false
+		return false
+	}
+	tok := strings.TrimSpace(string(out))
+	if tok == "" {
+		slog.Warn("[CopilotCLI] gh auth token returned empty output")
+		c.lastAuthRefreshOK = false
+		return false
+	}
+	slog.Info("[CopilotCLI] gh auth token succeeded — fresh token available")
+	c.lastAuthRefreshOK = true
+	return true
+}
+
+// freshEnv returns a copy of the current process environment with any stale
+// GH_TOKEN / GITHUB_TOKEN entries removed, plus NO_COLOR=1.  Removing these
+// vars forces the copilot CLI to read the freshly-refreshed token from gh's
+// config/keyring rather than using a stale value inherited from the kc-agent
+// process environment at startup.
+func freshEnv() []string {
+	env := os.Environ()
+	filtered := make([]string, 0, len(env)+1)
+	for _, e := range env {
+		upper := strings.ToUpper(e)
+		if strings.HasPrefix(upper, "GH_TOKEN=") || strings.HasPrefix(upper, "GITHUB_TOKEN=") {
+			continue
+		}
+		filtered = append(filtered, e)
+	}
+	return append(filtered, "NO_COLOR=1")
+}
+
 func (c *CopilotCLIProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
 	var result strings.Builder
 	resp, err := c.StreamChatWithProgress(ctx, req, func(chunk string) {
@@ -100,7 +176,21 @@ func (c *CopilotCLIProvider) StreamChat(ctx context.Context, req *ChatRequest, o
 }
 
 // StreamChatWithProgress implements StreamingProvider for real-time streaming.
+// On auth errors it attempts one automatic token refresh and retry (#11079).
 func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *ChatRequest, onChunk func(chunk string), onProgress func(event StreamEvent)) (*ChatResponse, error) {
+	resp, err := c.doStreamChat(ctx, req, onChunk, onProgress)
+	if err != nil && isAuthError(err.Error()) {
+		slog.Info("[CopilotCLI] auth error detected — attempting token refresh", "error", err)
+		if c.refreshGitHubAuth() {
+			slog.Info("[CopilotCLI] retrying after token refresh")
+			resp, err = c.doStreamChat(ctx, req, onChunk, onProgress)
+		}
+	}
+	return resp, err
+}
+
+// doStreamChat performs a single invocation of the copilot CLI.
+func (c *CopilotCLIProvider) doStreamChat(ctx context.Context, req *ChatRequest, onChunk func(chunk string), onProgress func(event StreamEvent)) (*ChatResponse, error) {
 	if c.cliPath == "" {
 		return nil, fmt.Errorf("copilot CLI not found")
 	}
@@ -120,7 +210,7 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	// --allow-all-tools: allow tool execution without confirmation (required for non-interactive mode)
 	// --allow-all-paths: allow access to any file path for kubectl/helm operations
 	cmd := exec.CommandContext(ctx, c.cliPath, "-p", prompt, "--silent", "--no-ask-user", "--no-color", "--allow-all-tools", "--allow-all-paths")
-	cmd.Env = append(os.Environ(), "NO_COLOR=1")
+	cmd.Env = freshEnv()
 	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
 	stdout, err := cmd.StdoutPipe()
