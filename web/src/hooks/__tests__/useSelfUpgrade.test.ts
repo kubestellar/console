@@ -437,7 +437,8 @@ describe('useSelfUpgrade', () => {
     expect(mod.__testables.getToken()).toBe('the-token')
   })
 
-  // --- pollForRestart: success path via triggerUpgrade ---
+  // --- pollForRestart: triggered via triggerUpgrade ---
+
   it('pollForRestart sets isRestarting=true after successful trigger', async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(new Response(JSON.stringify({ available: true, canPatch: true }), { status: 200 }))
@@ -457,7 +458,7 @@ describe('useSelfUpgrade', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
-      .mockResolvedValue(new Response('OK', { status: 200 })) // /health responses
+      .mockResolvedValue(new Response('OK', { status: 200 }))
 
     const reloadSpy = vi.spyOn(window.location, 'reload').mockImplementation(() => {})
 
@@ -467,7 +468,6 @@ describe('useSelfUpgrade', () => {
     await act(async () => { await result.current.triggerUpgrade('v2.0.0') })
     expect(result.current.isRestarting).toBe(true)
 
-    // Advance past poll interval (3s) to trigger health check
     await act(async () => { await vi.advanceTimersByTimeAsync(3_500) })
 
     await waitFor(() => {
@@ -482,7 +482,7 @@ describe('useSelfUpgrade', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
-      .mockRejectedValue(new Error('connection refused')) // /health always fails
+      .mockRejectedValue(new Error('connection refused'))
 
     const { result } = renderHook(() => useSelfUpgrade())
     await act(async () => { await vi.advanceTimersByTimeAsync(0) })
@@ -490,7 +490,6 @@ describe('useSelfUpgrade', () => {
     await act(async () => { await result.current.triggerUpgrade('v2.0.0') })
     expect(result.current.isRestarting).toBe(true)
 
-    // Advance past RESTART_POLL_MAX_MS (120s)
     await act(async () => { await vi.advanceTimersByTimeAsync(125_000) })
 
     await waitFor(() => {
@@ -527,7 +526,6 @@ describe('useSelfUpgrade', () => {
 
     await act(async () => { await result.current.triggerUpgrade('v2.0.0') })
 
-    // Advance 5 seconds (5 tick intervals of 1s)
     await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
 
     expect(result.current.restartElapsed).toBeGreaterThanOrEqual(4)

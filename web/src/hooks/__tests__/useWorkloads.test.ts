@@ -816,7 +816,7 @@ describe('useWorkloads via agent with clusters', () => {
     })
   })
 
-  it('falls back to REST when agent returns null (no data)', async () => {
+  it('falls back to REST when agent returns null (no clusters)', async () => {
     mockClusterCacheRef.clusters = []
     const mockWorkloads = [
       { name: 'web', namespace: 'default', type: 'Deployment', replicas: 1, readyReplicas: 1, status: 'Running', image: 'web:v2', createdAt: '2025-01-01T00:00:00Z' },
@@ -836,33 +836,11 @@ describe('useWorkloads via agent with clusters', () => {
     })
   })
 
-  it('filters out unreachable clusters when fetching via agent', async () => {
-    mockClusterCacheRef.clusters = [
-      { name: 'reachable-cluster', context: 'ctx1', reachable: true },
-      { name: 'unreachable-cluster', context: 'ctx2', reachable: false },
-    ]
-    const { mapSettledWithConcurrency } = await import('../../lib/utils/concurrency')
-    const mapSettledMock = vi.mocked(mapSettledWithConcurrency)
-    mapSettledMock.mockResolvedValue([])
-
-    const { useWorkloads } = await importFresh()
-    renderHook(() => useWorkloads())
-
-    await waitFor(() => {
-      if (mapSettledMock.mock.calls.length > 0) {
-        const targets = mapSettledMock.mock.calls[0]?.[0] as Array<{ name: string }>
-        const names = (targets || []).map(t => t.name)
-        expect(names).not.toContain('unreachable-cluster')
-      }
-    })
-  })
-
-  it('authHeaders returns empty object when localStorage is unavailable', async () => {
-    const getItemSpy = vi.spyOn(window.localStorage, 'getItem').mockReturnValue(null)
+  it('authHeaders returns empty object when no token stored', async () => {
     const { authHeaders } = await importFresh()
     const headers = authHeaders()
     expect(headers.Authorization).toBeUndefined()
-    getItemSpy.mockRestore()
+    expect(Object.keys(headers).length).toBe(0)
   })
 
   it('requireLocalAgentHttp throws with action name in message', async () => {

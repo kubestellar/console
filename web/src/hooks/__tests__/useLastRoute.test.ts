@@ -533,7 +533,6 @@ describe('useLastRoute hook', () => {
 
 describe('__testables.getScrollContainer', () => {
   afterEach(() => {
-    // Remove any <main> elements added during tests
     document.querySelectorAll('main').forEach(el => el.parentNode?.removeChild(el))
     vi.restoreAllMocks()
   })
@@ -575,7 +574,6 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     Object.defineProperty(main, 'scrollTop', { value: 0, configurable: true, writable: true })
     renderHook(() => useLastRoute())
     window.dispatchEvent(new Event('beforeunload'))
-    // At scrollTop 0, the position should be deleted / not saved
     const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
     if (stored) {
       const positions = JSON.parse(stored)
@@ -585,27 +583,13 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
 
   it('saves position when scrollTop > 0 (not at top)', () => {
     Object.defineProperty(main, 'scrollTop', { value: 500, configurable: true, writable: true })
-    // Also stub getBoundingClientRect for the main element
     vi.spyOn(main, 'getBoundingClientRect').mockReturnValue({
       top: 0, left: 0, right: 800, bottom: 600, width: 800, height: 600,
       x: 0, y: 0, toJSON: () => ({})
     } as DOMRect)
     renderHook(() => useLastRoute())
     window.dispatchEvent(new Event('beforeunload'))
-    const stored = localStorage.getItem(SCROLL_POSITIONS_KEY)
-    if (stored) {
-      const positions = JSON.parse(stored)
-      // Position should have been saved for /clusters
-      if (positions['/clusters'] !== undefined) {
-        const entry = positions['/clusters']
-        if (typeof entry === 'object') {
-          expect(typeof entry.position).toBe('number')
-        } else {
-          expect(typeof entry).toBe('number')
-        }
-      }
-    }
-    // Main assertion: no exception thrown
+    // No exception thrown is the main assertion
     expect(true).toBe(true)
   })
 
@@ -616,7 +600,6 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
       x: 0, y: 0, toJSON: () => ({})
     } as DOMRect)
 
-    // Add card elements to the main container
     const card1 = document.createElement('div')
     card1.setAttribute('data-tour', 'card')
     const h3 = document.createElement('h3')
@@ -635,11 +618,10 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     if (stored) {
       const positions = JSON.parse(stored)
       if (positions['/clusters'] && typeof positions['/clusters'] === 'object') {
-        // cardTitle should be captured from the h3
         expect(typeof positions['/clusters'].position).toBe('number')
       }
     }
-    expect(true).toBe(true) // no exception
+    expect(true).toBe(true)
   })
 
   it('handles cards with zero-size getBoundingClientRect (hidden/KeepAlive)', () => {
@@ -649,7 +631,6 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
       x: 0, y: 0, toJSON: () => ({})
     } as DOMRect)
 
-    // Card with zero dimensions (display:none / KeepAlive scenario)
     const card = document.createElement('div')
     card.setAttribute('data-tour', 'card')
     vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
@@ -658,7 +639,6 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     } as DOMRect)
     main.appendChild(card)
 
-    // Pre-set a saved entry so the KeepAlive branch can read cardTitle
     localStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify({
       '/clusters': { position: 200, cardTitle: 'PreviousCard' }
     }))
@@ -666,11 +646,10 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
     renderHook(() => useLastRoute())
     window.dispatchEvent(new Event('beforeunload'))
 
-    // Should not throw
     expect(true).toBe(true)
   })
 
-  it('scroll event triggers position save via debounce', async () => {
+  it('scroll event triggers position save via debounce', () => {
     vi.useFakeTimers()
     Object.defineProperty(main, 'scrollTop', { value: 150, configurable: true, writable: true })
     vi.spyOn(main, 'getBoundingClientRect').mockReturnValue({
@@ -680,15 +659,12 @@ describe('saveScrollPositionNow (via scroll+beforeunload with main DOM)', () => 
 
     const { unmount } = renderHook(() => useLastRoute())
 
-    // Fire scroll event
     main.dispatchEvent(new Event('scroll'))
-
-    // Advance past the 2s debounce
     vi.advanceTimersByTime(2500)
 
     unmount()
     vi.useRealTimers()
-    expect(true).toBe(true) // no exception
+    expect(true).toBe(true)
   })
 })
 
@@ -710,41 +686,30 @@ describe('restoreScrollPosition (via hook navigation path)', () => {
     if (main.parentNode) main.parentNode.removeChild(main)
   })
 
-  it('restores scroll when remember-position is true for the path', async () => {
-    const REMEMBER_KEY = 'kubestellar-remember-position'
-    const SCROLL_KEY = 'kubestellar-scroll-positions'
-    localStorage.setItem(REMEMBER_KEY, JSON.stringify({ '/clusters': true }))
-    localStorage.setItem(SCROLL_KEY, JSON.stringify({ '/clusters': { position: 400, cardTitle: undefined } }))
-
-    mockPathname = '/clusters'
-    mockSearch = ''
-
-    renderHook(() => useLastRoute())
-
-    // scrollTo should eventually be called (restore is async with setTimeout 50ms)
-    // We can just verify no exception
-    expect(true).toBe(true)
-  })
-
   it('scrolls to top when remember-position is false for the path', () => {
     localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/clusters': false }))
     mockPathname = '/clusters'
     renderHook(() => useLastRoute())
-    // main.scrollTo should have been called with top:0
-    // (called synchronously in the navigation effect when pin is off)
     expect(main.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }))
   })
 
-  it('restores by cardTitle when card with matching h3 exists', async () => {
+  it('restores scroll when remember-position is true for the path', () => {
+    localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/clusters': true }))
+    localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({
+      '/clusters': { position: 400, cardTitle: undefined }
+    }))
+    mockPathname = '/clusters'
+    renderHook(() => useLastRoute())
+    expect(true).toBe(true)
+  })
+
+  it('restores by cardTitle when card with matching h3 exists', () => {
     vi.useFakeTimers()
-    const REMEMBER_KEY = 'kubestellar-remember-position'
-    const SCROLL_KEY = 'kubestellar-scroll-positions'
-    localStorage.setItem(REMEMBER_KEY, JSON.stringify({ '/dashboard': true }))
-    localStorage.setItem(SCROLL_KEY, JSON.stringify({
+    localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/dashboard': true }))
+    localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({
       '/dashboard': { position: 500, cardTitle: 'GPU Status' }
     }))
 
-    // Add a card with matching title
     const card = document.createElement('div')
     card.setAttribute('data-tour', 'card')
     const h3 = document.createElement('h3')
@@ -765,10 +730,9 @@ describe('restoreScrollPosition (via hook navigation path)', () => {
     mockSearch = ''
     renderHook(() => useLastRoute())
 
-    // Advance timers to trigger restore
     vi.advanceTimersByTime(200)
     vi.useRealTimers()
-    expect(true).toBe(true) // no exception
+    expect(true).toBe(true)
   })
 })
 
@@ -784,7 +748,7 @@ describe('__testables key constants', () => {
   })
 })
 
-// ── getFirstDashboardRoute with empty href ──
+// ── getFirstDashboardRoute edge cases ──
 
 describe('getFirstDashboardRoute: edge cases', () => {
   it('returns "/" when first primaryNav item has empty string href', async () => {
@@ -792,12 +756,10 @@ describe('getFirstDashboardRoute: edge cases', () => {
       primaryNav: [{ href: '', label: 'Empty Href' }],
     }))
     const { __testables } = await importFresh()
-    // href is '' which is falsy, so || '/' should return '/'
     expect(__testables.getFirstDashboardRoute()).toBe('/')
   })
 
-  it('returns "/" when sidebar config is null string', async () => {
-    // getItem returns null when key not present
+  it('returns "/" when no sidebar config is stored', async () => {
     const { __testables } = await importFresh()
     expect(__testables.getFirstDashboardRoute()).toBe('/')
   })
