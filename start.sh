@@ -36,13 +36,30 @@ GITHUB_API="https://api.github.com"
 # --- Parse args ---
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --version|-v) VERSION="$2"; shift 2 ;;
-        --channel|-c) CHANNEL="$2"; shift 2 ;;
-        --dir|-d) INSTALL_DIR="$2"; shift 2 ;;
-        --port|-p) PORT="$2"; shift 2 ;;
+        --version|-v)
+            if [[ -z "${2:-}" ]]; then echo "Error: --version requires a value"; exit 1; fi
+            VERSION="$2"; shift 2 ;;
+        --channel|-c)
+            if [[ -z "${2:-}" ]]; then echo "Error: --channel requires a value"; exit 1; fi
+            CHANNEL="$2"; shift 2 ;;
+        --dir|-d)
+            if [[ -z "${2:-}" ]]; then echo "Error: --dir requires a value"; exit 1; fi
+            INSTALL_DIR="$2"; shift 2 ;;
+        --port|-p)
+            if [[ -z "${2:-}" ]]; then echo "Error: --port requires a value"; exit 1; fi
+            PORT="$2"; shift 2 ;;
         *) shift ;;
     esac
 done
+
+# --- Validate channel ---
+VALID_CHANNELS="stable unstable"
+if [ -n "$CHANNEL" ]; then
+    if ! echo "$VALID_CHANNELS" | grep -qw "$CHANNEL"; then
+        echo "Error: Invalid channel '$CHANNEL'. Allowed values: $VALID_CHANNELS"
+        exit 1
+    fi
+fi
 
 # --- Resolve update channel ---
 # Priority: CLI flag > persisted setting in ~/.kc/settings.json > default (stable)
@@ -146,7 +163,7 @@ resolve_version() {
         echo "  API unavailable (HTTP $http_code), trying git ls-remote..." >&2
         if [ "$CHANNEL" = "unstable" ]; then
             latest=$(git ls-remote --tags --sort=-v:refname "https://github.com/${REPO}.git" 'v*nightly*' 2>/dev/null \
-                | grep -o 'refs/tags/v[^ ]*' \
+                | grep -o 'refs/tags/v[^^{} ]*' \
                 | head -1 \
                 | sed 's|refs/tags/||')
         else
