@@ -36,8 +36,18 @@ func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, 
 
 	thinkingProvider, err := s.registry.Get(thinkingAgent)
 	if err != nil {
-		safeWrite(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Thinking agent %s not found", thinkingAgent)))
-		return
+		// Fall back to any available provider for thinking (#11107).
+		// The "claude" legacy message type forces agent="claude", but the
+		// API-only Claude provider may not be registered. Use the default
+		// (or any available) provider instead of failing outright.
+		slog.Info("[MixedMode] thinking agent not found, trying default", "requested", thinkingAgent)
+		thinkingProvider, err = s.registry.GetDefault()
+		if err != nil {
+			safeWrite(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Thinking agent %s not found and no default agent available", thinkingAgent)))
+			return
+		}
+		thinkingAgent = thinkingProvider.Name()
+		slog.Info("[MixedMode] using default as thinking agent", "agent", thinkingAgent)
 	}
 	execProvider, err := s.registry.Get(executionAgent)
 	if err != nil {
