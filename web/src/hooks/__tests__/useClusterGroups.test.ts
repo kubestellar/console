@@ -817,4 +817,91 @@ describe('useClusterGroups', () => {
     expect(typeof result.current.isLoading).toBe('boolean')
     unmount()
   })
+
+  // =========================================================================
+  // 14. Edge cases — uncovered branches
+  // =========================================================================
+
+  it('updateGroup in localStorage mode does nothing when group name is not found', async () => {
+    // No groups seeded — localGroups.find returns undefined → backend sync skipped
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true, json: () => Promise.resolve({}) })
+    const { result, unmount } = renderHook(() => useClusterGroups())
+
+    await act(async () => {
+      await result.current.updateGroup('ghost-group', { color: 'red' })
+    })
+
+    // No groups exist, still empty
+    expect(result.current.groups).toHaveLength(0)
+    // fetch should NOT have been called (no group to sync)
+    expect(global.fetch).not.toHaveBeenCalled()
+    unmount()
+  })
+
+  it('CR mode: createGroup with a dynamic group sends dynamicFilters in spec', async () => {
+    mockUsePersistence.mockReturnValue({ isEnabled: true, isActive: true })
+    const { result, unmount } = renderHook(() => useClusterGroups())
+
+    await act(async () => {
+      await result.current.createGroup({
+        name: 'dyn-cr',
+        kind: 'dynamic',
+        clusters: [],
+        query: { filters: [{ field: 'healthy', operator: 'eq', value: 'true' }] },
+      })
+    })
+
+    expect(mockCreateCRGroup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { name: 'dyn-cr' },
+        spec: expect.objectContaining({
+          dynamicFilters: [{ field: 'healthy', operator: 'eq', value: 'true' }],
+          staticMembers: undefined,
+        }),
+      })
+    )
+    unmount()
+  })
+
+  it('CR mode: updateGroup with a dynamic group sends dynamicFilters', async () => {
+    mockUsePersistence.mockReturnValue({ isEnabled: true, isActive: true })
+    mockCRGroups.push({
+      metadata: { name: 'existing-dyn' },
+      spec: {
+        dynamicFilters: [{ field: 'healthy', operator: 'eq', value: 'true' }],
+      },
+      status: { matchedClusters: ['c1'] },
+    })
+
+    const { result, unmount } = renderHook(() => useClusterGroups())
+
+    await act(async () => {
+      await result.current.updateGroup('existing-dyn', { color: 'purple' })
+    })
+
+    expect(mockUpdateCRGroup).toHaveBeenCalledWith(
+      'existing-dyn',
+      expect.objectContaining({
+        spec: expect.objectContaining({
+          dynamicFilters: expect.arrayContaining([{ field: 'healthy', operator: 'eq', value: 'true' }]),
+          color: 'purple',
+        }),
+      })
+    )
+    unmount()
+  })
+
+  it('evaluateGroup: dynamic group with no query returns existing clusters', async () => {
+    // group.kind === 'dynamic' but group.query is undefined → returns group.clusters
+    seedGroups([{ name: 'dyn-no-query', kind: 'dynamic', clusters: ['fallback-c1'] }])
+    const { result, unmount } = renderHook(() => useClusterGroups())
+
+    let evaluated: string[] = []
+    await act(async () => {
+      evaluated = await result.current.evaluateGroup('dyn-no-query')
+    })
+
+    expect(evaluated).toEqual(['fallback-c1'])
+    unmount()
+  })
 })
