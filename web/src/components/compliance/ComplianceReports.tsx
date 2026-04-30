@@ -21,7 +21,14 @@ type ReportFormat = 'pdf' | 'json'
 export const ComplianceReportsContent = memo(function ComplianceReportsContent() {
   const { frameworks, isLoading: fwLoading, refetch } = useComplianceFrameworks()
   const { deduplicatedClusters: clusters } = useClusters()
-  const clusterNames = useMemo(() => clusters?.map((c: { name: string }) => c.name) ?? [], [clusters])
+  // (#11145) Only show reachable clusters in the picker — generating a report
+  // against an unreachable context would silently fail or return incomplete data.
+  const clusterNames = useMemo(() =>
+    (clusters || [])
+      .filter((c: { name: string; reachable?: boolean }) => c.reachable !== false)
+      .map((c: { name: string }) => c.name),
+    [clusters]
+  )
 
   const [selectedFw, setSelectedFw] = useState<string>('')
   const [selectedCluster, setSelectedCluster] = useState<string>('')
