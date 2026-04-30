@@ -230,8 +230,16 @@ describe('GPU cache cleanup on init', () => {
 describe('cross-tab storage event sync', () => {
   const DEMO_MODE_KEY = 'kc-demo-mode'
 
+  let initialDemoMode: boolean
+
   beforeEach(() => {
     localStorage.clear()
+    initialDemoMode = isDemoMode()
+  })
+
+  afterEach(() => {
+    setDemoMode(initialDemoMode, true)
+    vi.restoreAllMocks()
   })
 
   it('updates globalDemoMode when storage event fires with new demo mode value', () => {
@@ -260,9 +268,8 @@ describe('cross-tab storage event sync', () => {
       key: DEMO_MODE_KEY,
       newValue: 'true',
     }))
+    expect(callCount).toBe(0)
     unsub()
-    // Restore
-    setDemoMode(false, true)
   })
 
   it('ignores storage events for unrelated keys', () => {

@@ -3,7 +3,7 @@
  *
  * Covers: useLastRoute hook, getLastRoute, clearLastRoute, getRememberPosition, setRememberPosition
  */
-import { describe, it, expect, vi, beforeEach, afterEach, act } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
 // ---------- Storage keys (must match source) ----------
@@ -79,7 +79,7 @@ describe('getLastRoute', () => {
 
   it('returns null gracefully when localStorage throws', async () => {
     const { getLastRoute } = await importFresh()
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
       throw new Error('quota exceeded')
     })
     expect(getLastRoute()).toBeNull()
@@ -132,7 +132,7 @@ describe('clearLastRoute', () => {
 
   it('does not throw when localStorage throws', async () => {
     const { clearLastRoute } = await importFresh()
-    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'removeItem').mockImplementation(() => {
       throw new Error('storage error')
     })
     expect(() => clearLastRoute()).not.toThrow()
@@ -191,7 +191,7 @@ describe('getRememberPosition', () => {
 
   it('returns false when localStorage throws', async () => {
     const { getRememberPosition } = await importFresh()
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
       throw new Error('access denied')
     })
     expect(getRememberPosition('/clusters')).toBe(false)
@@ -251,7 +251,7 @@ describe('setRememberPosition', () => {
 
   it('does not throw when localStorage throws on write', async () => {
     const { setRememberPosition } = await importFresh()
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded')
     })
     expect(() => setRememberPosition('/x', true)).not.toThrow()
@@ -259,7 +259,7 @@ describe('setRememberPosition', () => {
 
   it('does not throw when localStorage throws on read during set', async () => {
     const { setRememberPosition } = await importFresh()
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
       throw new Error('corrupt')
     })
     expect(() => setRememberPosition('/x', true)).not.toThrow()
@@ -489,7 +489,7 @@ describe('useLastRoute hook', () => {
   })
 
   it('does not throw when localStorage throws on save', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => {
       throw new Error('quota exceeded')
     })
     mockPathname = '/clusters'
@@ -497,7 +497,7 @@ describe('useLastRoute hook', () => {
   })
 
   it('does not throw when localStorage throws on redirect read', () => {
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    vi.spyOn(window.localStorage, 'getItem').mockImplementation(() => {
       throw new Error('corrupt')
     })
     mockPathname = '/'
