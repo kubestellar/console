@@ -1542,7 +1542,17 @@ export const handlers = [
   }),
 
   // StatefulSets (for workloads/operators pages)
+  // Both /api/mcp/ (legacy) and / (hooks with empty LOCAL_AGENT_HTTP_URL) paths
   http.get('/api/mcp/statefulsets', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      statefulsets: [
+        { name: 'postgres', namespace: 'data', cluster: 'kind-local', replicas: 3, readyReplicas: 3, currentReplicas: 3 },
+        { name: 'elasticsearch', namespace: 'logging', cluster: 'kind-local', replicas: 3, readyReplicas: 2, currentReplicas: 3 },
+      ],
+    })
+  }),
+  http.get('/statefulsets', async () => {
     await delay(100)
     return HttpResponse.json({
       statefulsets: [
@@ -1562,9 +1572,27 @@ export const handlers = [
       ],
     })
   }),
+  http.get('/daemonsets', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      daemonsets: [
+        { name: 'fluentd', namespace: 'logging', cluster: 'kind-local', desired: 3, current: 3, ready: 3 },
+        { name: 'node-exporter', namespace: 'monitoring', cluster: 'kind-local', desired: 3, current: 3, ready: 3 },
+      ],
+    })
+  }),
 
   // CronJobs (for workloads/operators pages)
   http.get('/api/mcp/cronjobs', async () => {
+    await delay(100)
+    return HttpResponse.json({
+      cronjobs: [
+        { name: 'backup-daily', namespace: 'data', cluster: 'kind-local', schedule: '0 2 * * *', lastSchedule: '2025-01-16T02:00:00Z', active: 0, suspended: false },
+        { name: 'cleanup-weekly', namespace: 'default', cluster: 'kind-local', schedule: '0 0 * * 0', lastSchedule: '2025-01-12T00:00:00Z', active: 0, suspended: false },
+      ],
+    })
+  }),
+  http.get('/cronjobs', async () => {
     await delay(100)
     return HttpResponse.json({
       cronjobs: [
