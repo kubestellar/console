@@ -581,9 +581,13 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	})
 
 	stepStart = time.Now()
+	// Ensure bin/ directory exists (matches Makefile mkdir -p bin)
+	if err := os.MkdirAll(filepath.Join(repoPath, "bin"), 0o755); err != nil {
+		slog.Error("[AutoUpdate] failed to create bin directory", "error", err)
+	}
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
-		consolePath = filepath.Join(repoPath, "console")
+		consolePath = filepath.Join(repoPath, "bin", "console")
 	}
 	// Build to a temp file first, then atomically rename to the final path.
 	// This prevents a half-written binary if the build is killed or times out.
@@ -638,7 +642,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	stepStart = time.Now()
 	agentPath, err := exec.LookPath("kc-agent")
 	if err != nil {
-		agentPath = filepath.Join(repoPath, "kc-agent")
+		agentPath = filepath.Join(repoPath, "bin", "kc-agent")
 	}
 	// Build to a temp file first, then atomically rename.
 	agentTmp := agentPath + ".update-tmp"
@@ -959,8 +963,8 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	// Find current binary location
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
-		// Try relative path
-		consolePath = "./console"
+		// Try relative path under bin/
+		consolePath = "./bin/console"
 	}
 
 	// Backup current binary. On Windows, os.Rename on a running executable
@@ -1536,10 +1540,15 @@ func rebuildGoBinaries(repoPath string) error {
 
 // rebuildGoBinariesCtx rebuilds Go binaries with context support for cancellation (#7442).
 func rebuildGoBinariesCtx(ctx context.Context, repoPath string) error {
+	// Ensure bin/ directory exists (matches Makefile mkdir -p bin)
+	if err := os.MkdirAll(filepath.Join(repoPath, "bin"), 0o755); err != nil {
+		return fmt.Errorf("mkdir bin: %w", err)
+	}
+
 	// Build console binary
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
-		consolePath = filepath.Join(repoPath, "console")
+		consolePath = filepath.Join(repoPath, "bin", "console")
 	}
 	consoleBuild := exec.CommandContext(ctx, "go", "build", "-o", consolePath, "./cmd/console")
 	consoleBuild.Dir = repoPath
@@ -1553,7 +1562,7 @@ func rebuildGoBinariesCtx(ctx context.Context, repoPath string) error {
 	// Build kc-agent binary
 	agentPath, err := exec.LookPath("kc-agent")
 	if err != nil {
-		agentPath = filepath.Join(repoPath, "kc-agent")
+		agentPath = filepath.Join(repoPath, "bin", "kc-agent")
 	}
 	agentBuild := exec.CommandContext(ctx, "go", "build", "-o", agentPath, "./cmd/kc-agent")
 	agentBuild.Dir = repoPath
