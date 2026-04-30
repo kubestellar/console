@@ -11,6 +11,7 @@ const mockConnectSharedWebSocket = vi.hoisted(() => vi.fn())
 const mockUseDemoMode = vi.hoisted(() => vi.fn().mockReturnValue({ isDemoMode: false }))
 const mockIsDemoMode = vi.hoisted(() => vi.fn(() => false))
 const mockApiGet = vi.hoisted(() => vi.fn())
+const mockAgentFetch = vi.hoisted(() => vi.fn())
 const mockTriggerAggressiveDetection = vi.hoisted(() =>
   vi.fn().mockResolvedValue(undefined),
 )
@@ -76,7 +77,7 @@ vi.mock('../shared', async () => {
     fetchSingleClusterHealth: mockFetchSingleClusterHealth,
     fullFetchClusters: mockFullFetchClusters,
     connectSharedWebSocket: mockConnectSharedWebSocket,
-    agentFetch: m.agentFetch,
+    agentFetch: mockAgentFetch,
   }
 })
 
@@ -207,12 +208,12 @@ describe('shouldMarkOffline / recordClusterFailure / clearClusterFailure', () =>
 
 describe('useMCPStatus', () => {
   beforeEach(() => {
-    mockApiGet.mockReset()
+    mockAgentFetch.mockReset()
   })
 
   it('returns { status: null, isLoading: true, error: null } on mount', () => {
     // Never-resolving promise simulates in-flight request
-    mockApiGet.mockReturnValue(new Promise(() => {}))
+    mockAgentFetch.mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(() => useMCPStatus())
     expect(result.current.isLoading).toBe(true)
     expect(result.current.status).toBeNull()
@@ -224,7 +225,7 @@ describe('useMCPStatus', () => {
       opsClient: { available: true, toolCount: 5 },
       deployClient: { available: false, toolCount: 0 },
     }
-    mockApiGet.mockResolvedValue({ data: mockStatus })
+    mockAgentFetch.mockResolvedValue(new Response(JSON.stringify(mockStatus), { status: 200 }))
     const { result } = renderHook(() => useMCPStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.status).toEqual(mockStatus)
@@ -232,7 +233,7 @@ describe('useMCPStatus', () => {
   })
 
   it('returns "MCP bridge not available" on fetch error', async () => {
-    mockApiGet.mockRejectedValue(new Error('Network error'))
+    mockAgentFetch.mockRejectedValue(new Error('Network error'))
     const { result } = renderHook(() => useMCPStatus())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.error).toBe('MCP bridge not available')
@@ -241,34 +242,34 @@ describe('useMCPStatus', () => {
 
   it('polls every REFRESH_INTERVAL_MS', async () => {
     vi.useFakeTimers()
-    mockApiGet.mockResolvedValue({
-      data: { opsClient: { available: true, toolCount: 1 }, deployClient: { available: true, toolCount: 1 } },
-    })
+    mockAgentFetch.mockImplementation(() => Promise.resolve(
+      new Response(JSON.stringify({ opsClient: { available: true, toolCount: 1 }, deployClient: { available: true, toolCount: 1 } }), { status: 200 })
+    ))
     renderHook(() => useMCPStatus())
     // Flush the initial fetch promise
     await act(() => Promise.resolve())
-    const callsAfterMount = mockApiGet.mock.calls.length
+    const callsAfterMount = mockAgentFetch.mock.calls.length
     expect(callsAfterMount).toBeGreaterThanOrEqual(1)
     // Advance exactly one poll interval then flush
     act(() => { vi.advanceTimersByTime(REFRESH_INTERVAL_MS) })
     await act(() => Promise.resolve())
-    expect(mockApiGet.mock.calls.length).toBeGreaterThan(callsAfterMount)
+    expect(mockAgentFetch.mock.calls.length).toBeGreaterThan(callsAfterMount)
     vi.useRealTimers()
   })
 
   it('clears the polling interval on unmount', async () => {
     vi.useFakeTimers()
-    mockApiGet.mockResolvedValue({
-      data: { opsClient: { available: true, toolCount: 1 }, deployClient: { available: true, toolCount: 1 } },
-    })
+    mockAgentFetch.mockImplementation(() => Promise.resolve(
+      new Response(JSON.stringify({ opsClient: { available: true, toolCount: 1 }, deployClient: { available: true, toolCount: 1 } }), { status: 200 })
+    ))
     const { unmount } = renderHook(() => useMCPStatus())
     await act(() => Promise.resolve())
     unmount()
-    const countAfterUnmount = mockApiGet.mock.calls.length
+    const countAfterUnmount = mockAgentFetch.mock.calls.length
     // Advance several intervals – no further calls should occur
     act(() => { vi.advanceTimersByTime(REFRESH_INTERVAL_MS * 3) })
     await act(() => Promise.resolve())
-    expect(mockApiGet.mock.calls.length).toBe(countAfterUnmount)
+    expect(mockAgentFetch.mock.calls.length).toBe(countAfterUnmount)
     vi.useRealTimers()
   })
 })
@@ -592,7 +593,7 @@ describe('useClusterHealth', () => {
 
 describe('useMCPStatus — additional branches', () => {
   beforeEach(() => {
-    mockApiGet.mockReset()
+    mockAgentFetch.mockReset()
   })
 
   it('sets status to null when fetch errors, even if previous status existed', async () => {
@@ -602,13 +603,13 @@ describe('useMCPStatus — additional branches', () => {
       opsClient: { available: true, toolCount: 5 },
       deployClient: { available: true, toolCount: 3 },
     }
-    mockApiGet.mockResolvedValueOnce({ data: initialStatus })
+    mockAgentFetch.mockResolvedValueOnce(new Response(JSON.stringify(initialStatus), { status: 200 }))
     const { result } = renderHook(() => useMCPStatus())
     await act(async () => { await Promise.resolve() })
     expect(result.current.status).toEqual(initialStatus)
 
     // Subsequent poll errors
-    mockApiGet.mockRejectedValue(new Error('Network error'))
+    mockAgentFetch.mockRejectedValue(new Error('Network error'))
     await act(async () => { vi.advanceTimersByTime(REFRESH_INTERVAL_MS) })
     await act(async () => { await Promise.resolve() })
     expect(result.current.error).toBe('MCP bridge not available')
@@ -619,7 +620,7 @@ describe('useMCPStatus — additional branches', () => {
   it('clears error when fetch succeeds after failure', async () => {
     // Use fake timers BEFORE rendering so subscribePolling creates fake intervals
     vi.useFakeTimers()
-    mockApiGet.mockRejectedValueOnce(new Error('err'))
+    mockAgentFetch.mockRejectedValueOnce(new Error('err'))
     const { result } = renderHook(() => useMCPStatus())
     await act(async () => { await Promise.resolve() })
     expect(result.current.error).toBe('MCP bridge not available')
@@ -629,7 +630,7 @@ describe('useMCPStatus — additional branches', () => {
       opsClient: { available: true, toolCount: 1 },
       deployClient: { available: false, toolCount: 0 },
     }
-    mockApiGet.mockResolvedValue({ data: good })
+    mockAgentFetch.mockImplementation(() => Promise.resolve(new Response(JSON.stringify(good), { status: 200 })))
     await act(async () => { vi.advanceTimersByTime(REFRESH_INTERVAL_MS) })
     await act(async () => { await Promise.resolve() })
     expect(result.current.error).toBeNull()

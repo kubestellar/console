@@ -8,6 +8,33 @@ import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../../l
 // Mocks
 // ---------------------------------------------------------------------------
 
+// Mock useCache to avoid shared CacheStore state between tests.
+// This provides a minimal implementation that calls the fetcher immediately.
+vi.mock('../../../lib/cache', () => {
+  const React = require('react')
+  return {
+    useCache: ({ fetcher, initialData, enabled = true }: { fetcher: () => Promise<unknown>; initialData: unknown; enabled?: boolean; [k: string]: unknown }) => {
+      const [data, setData] = React.useState(initialData)
+      const [isLoading, setIsLoading] = React.useState(enabled)
+      const [isFailed, setIsFailed] = React.useState(false)
+      const [error, setError] = React.useState<string | null>(null)
+      const fetcherRef = React.useRef(fetcher)
+      fetcherRef.current = fetcher
+      React.useEffect(() => {
+        if (!enabled) { setIsLoading(false); return }
+        let cancelled = false
+        fetcherRef.current().then((result: unknown) => {
+          if (!cancelled) { setData(result); setIsLoading(false) }
+        }).catch((err: Error) => {
+          if (!cancelled) { setIsFailed(true); setError(err.message); setIsLoading(false) }
+        })
+        return () => { cancelled = true }
+      }, [enabled])
+      return { data, isLoading, isFailed, isDemoFallback: false, error, consecutiveFailures: 0, refetch: async () => {} }
+    },
+  }
+})
+
 const mockGetDynamicCard = vi.fn()
 vi.mock('../../../hooks/mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),

@@ -55,7 +55,7 @@ vi.mock('../../../lib/modeTransition', () => ({
 vi.mock('../shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
   subscribeClusterCache: (...args: unknown[]) => mockSubscribeClusterCache(...args),
-  agentFetch: vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })),
+  agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
 }))
 
 vi.mock('../../../lib/constants', async (importOriginal) => {

@@ -43,7 +43,7 @@ vi.mock('../../../lib/modeTransition', () => ({
 vi.mock('../shared', () => ({
   MIN_REFRESH_INDICATOR_MS: 500,
   getEffectiveInterval: (ms: number) => ms,
-  agentFetch: vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })),
+  agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
 }))
 
 vi.mock('../../../lib/constants/network', async (importOriginal) => {

@@ -18,7 +18,7 @@ vi.mock('../../../lib/constants', () => ({
 vi.mock('../shared', () => ({
   clusterCacheRef: { current: new Map() },
   subscribeClusterCache: vi.fn(),
-  agentFetch: vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })),
+  agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
 }))
 
 const mod = await import('../operators')
