@@ -20,7 +20,8 @@ import {
   Check,
   RotateCcw,
   ExternalLink,
-  Info } from 'lucide-react'
+  Info,
+  Wrench } from 'lucide-react'
 import type { PreflightError, PreflightErrorCode, RemediationAction } from '../../lib/missions/preflightCheck'
 import { getRemediationActions } from '../../lib/missions/preflightCheck'
 import { cn } from '../../lib/cn'
@@ -56,6 +57,11 @@ const ERROR_DISPLAY: Record<PreflightErrorCode, { icon: typeof ShieldAlert; colo
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/10',
     title: 'Cluster Unreachable' },
+  MISSING_TOOLS: {
+    icon: Wrench,
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-500/10',
+    title: 'Missing Tools' },
   UNKNOWN_EXECUTION_FAILURE: {
     icon: AlertTriangle,
     color: 'text-gray-400',
