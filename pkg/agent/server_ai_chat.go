@@ -391,6 +391,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 			Agent:     resp.Agent,
 			SessionID: req.SessionID,
 			Done:      true,
+			IsError:   resp.ExitCode != 0,
 			Usage: &protocol.ChatTokenUsage{
 				InputTokens:  inputTokens,
 				OutputTokens: outputTokens,
@@ -712,6 +713,7 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 			Agent:     resp.Agent,
 			SessionID: req.SessionID,
 			Done:      true,
+			IsError:   resp.ExitCode != 0,
 			Usage: &protocol.ChatTokenUsage{
 				InputTokens:  inputTokens,
 				OutputTokens: outputTokens,
@@ -797,7 +799,7 @@ func (s *Server) errorResponse(id, code, message string) protocol.Message {
 
 // classifyProviderError inspects an AI provider error and returns a
 // specific error code + user-friendly message.  This lets the frontend
-// show targeted guidance (e.g. "run /login") instead of a raw JSON blob.
+// show targeted guidance (e.g. "restart kc-agent") instead of a raw JSON blob.
 func classifyProviderError(err error) (code, message string) {
 	errText := strings.ToLower(err.Error())
 

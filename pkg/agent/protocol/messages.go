@@ -206,6 +206,7 @@ type ChatStreamPayload struct {
 	Agent     string           `json:"agent"`
 	SessionID string           `json:"sessionId"`
 	Done      bool             `json:"done"`
+	IsError   bool             `json:"isError,omitempty"`
 	Usage     *ChatTokenUsage  `json:"usage,omitempty"`
 }
 

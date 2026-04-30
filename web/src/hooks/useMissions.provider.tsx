@@ -1761,9 +1761,12 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // is only used while streaming is in progress (stream done w/o result).
         // The UI shows a completion panel with feedback buttons when status is
         // 'completed', so reaching this state is the correct lifecycle end (#5479).
+        // #11070 — If the backend flagged this result as an error (e.g. non-zero
+        // exit code from a CLI provider), mark the mission 'failed' instead.
+        const resultIsError = !!(chatPayload as Record<string, unknown>).isError
         return {
           ...m,
-          status: 'completed' as MissionStatus,
+          status: (resultIsError ? 'failed' : 'completed') as MissionStatus,
           currentStep: undefined,
           updatedAt: new Date(),
           agent: chatPayload.agent || m.agent,
@@ -1793,7 +1796,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
           errorContent = `**Mission interrupted — agent not available**\n\nThe AI agent was disconnected or is not reachable. This often happens after a page refresh.\n\n**To fix:**\n1. Make sure your agent (e.g., Claude Code, bob) is running\n2. Select the agent from the top navbar\n3. Click **Retry Mission** below to rerun your request`
         } else if (payload.code === 'authentication_error') {
-          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Run `/login` in your Claude Code terminal to refresh your OAuth token, or update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
+          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Restart kc-agent to refresh authentication, or run `gh auth status` in your terminal to verify your credentials. You can also update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
         } else if (payload.code === 'mission_timeout') {
           errorContent = `**Mission Timed Out**\n\n${payload.message}\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
         }
@@ -1815,7 +1818,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           combinedErrorText.includes('failed to authenticate')
 
         if (isAuthError) {
-          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Run `/login` in your Claude Code terminal to refresh your OAuth token, or update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
+          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Restart kc-agent to refresh authentication, or run `gh auth status` in your terminal to verify your credentials. You can also update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
         }
 
         // Detect rate limit / quota errors from the AI provider (HTTP 429)
