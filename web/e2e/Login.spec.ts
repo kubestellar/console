@@ -119,11 +119,15 @@ test.describe('Login Page — frontend-only (mocked backend)', () => {
     })
 
     // Mock GitHub auth endpoint failure — redirect back to /login with error
-    // param, matching real OAuth error flow (backend redirects to /login?error=)
+    // param, matching real OAuth error flow (backend redirects to /login?error=).
+    // Use a 200 + client-side redirect instead of status 302 because
+    // Playwright's route.fulfill() does not support redirect status codes
+    // (3xx) on WebKit / mobile-safari. (#11019, #11028)
     await page.route('**/auth/github', (route) =>
       route.fulfill({
-        status: 302,
-        headers: { Location: '/login?error=server_error' },
+        status: 200,
+        contentType: 'text/html',
+        body: '<script>location.replace("/login?error=server_error")</script>',
       })
     )
 
