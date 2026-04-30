@@ -29,6 +29,10 @@ vi.mock('../../hooks/useMCP', () => ({
       { name: 'prod-cluster' },
       { name: 'staging-cluster' },
     ],
+    deduplicatedClusters: [
+      { name: 'prod-cluster' },
+      { name: 'staging-cluster' },
+    ],
   }),
 }))
 

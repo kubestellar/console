@@ -101,7 +101,7 @@ function resultCategories(results: Map<SearchCategory, SearchItem[]>): SearchCat
 describe('useSearchIndex', () => {
   beforeEach(() => {
     // Reset all hook mocks to empty data
-    mockClusters.mockReturnValue({ clusters: [] })
+    mockClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [] })
     mockDeployments.mockReturnValue({ deployments: [] })
     mockPods.mockReturnValue({ pods: [] })
     mockServices.mockReturnValue({ services: [] })
@@ -192,6 +192,10 @@ describe('useSearchIndex', () => {
   it('includes cluster items from the useClusters hook', () => {
     mockClusters.mockReturnValue({
       clusters: [
+        { name: 'prod-east', context: 'prod-east', server: 'https://k8s.prod.com', healthy: true },
+        { name: 'staging-west', context: 'staging-ctx', server: 'https://k8s.staging.com', healthy: false },
+      ],
+      deduplicatedClusters: [
         { name: 'prod-east', context: 'prod-east', server: 'https://k8s.prod.com', healthy: true },
         { name: 'staging-west', context: 'staging-ctx', server: 'https://k8s.staging.com', healthy: false },
       ],
@@ -332,6 +336,7 @@ describe('useSearchIndex', () => {
     // Provide data for multiple categories that all match 'prod'
     mockClusters.mockReturnValue({
       clusters: [{ name: 'prod-cluster', context: 'prod-cluster', healthy: true }],
+      deduplicatedClusters: [{ name: 'prod-cluster', context: 'prod-cluster', healthy: true }],
     })
     mockDeployments.mockReturnValue({
       deployments: [{ name: 'prod-api', cluster: 'prod', namespace: 'default', status: 'Running' }],
@@ -357,6 +362,7 @@ describe('useSearchIndex', () => {
   it('places page results before cluster results', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'my-cluster', context: 'my-cluster', healthy: true }],
+      deduplicatedClusters: [{ name: 'my-cluster', context: 'my-cluster', healthy: true }],
     })
 
     // 'cluster' matches both page items and the cluster itself
@@ -430,7 +436,7 @@ describe('useSearchIndex', () => {
     mockDeployments.mockReturnValue({ deployments: manyDeployments })
     mockPods.mockReturnValue({ pods: manyPods })
     mockServices.mockReturnValue({ services: manyServices })
-    mockClusters.mockReturnValue({ clusters: manyClusters })
+    mockClusters.mockReturnValue({ clusters: manyClusters, deduplicatedClusters: manyClusters })
     mockNodes.mockReturnValue({ nodes: manyNodes })
     mockHelmReleases.mockReturnValue({ releases: manyHelm })
 
@@ -524,6 +530,7 @@ describe('useSearchIndex', () => {
   it('matches items via the meta field', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'silent-cluster', context: 'silent-cluster', healthy: false }],
+      deduplicatedClusters: [{ name: 'silent-cluster', context: 'silent-cluster', healthy: false }],
     })
 
     // meta for unhealthy cluster is 'unhealthy'
@@ -565,6 +572,7 @@ describe('useSearchIndex', () => {
   it('matches partial substrings in item names', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'production-us-east', context: 'production-us-east', healthy: true }],
+      deduplicatedClusters: [{ name: 'production-us-east', context: 'production-us-east', healthy: true }],
     })
 
     const { result } = renderHook(() => useSearchIndex('prod'))
@@ -685,6 +693,7 @@ describe('useSearchIndex', () => {
   it('shows context in cluster description when different from name', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'prod', context: 'arn:aws:eks:us-east-1:123:cluster/prod', healthy: true }],
+      deduplicatedClusters: [{ name: 'prod', context: 'arn:aws:eks:us-east-1:123:cluster/prod', healthy: true }],
     })
     const { result } = renderHook(() => useSearchIndex('prod'))
     const flat = flattenResults(result.current.results)
@@ -697,6 +706,7 @@ describe('useSearchIndex', () => {
   it('omits context from cluster description when same as name', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'kind-local', context: 'kind-local', healthy: false }],
+      deduplicatedClusters: [{ name: 'kind-local', context: 'kind-local', healthy: false }],
     })
     const { result } = renderHook(() => useSearchIndex('kind-local'))
     const flat = flattenResults(result.current.results)
@@ -770,7 +780,7 @@ describe('useSearchIndex', () => {
   // ── 42. Empty null/undefined hook data doesn't crash ───────────────────
 
   it('handles null-ish hook data without crashing', () => {
-    mockClusters.mockReturnValue({ clusters: undefined })
+    mockClusters.mockReturnValue({ clusters: undefined, deduplicatedClusters: undefined })
     mockDeployments.mockReturnValue({ deployments: null })
     mockPods.mockReturnValue({ pods: undefined })
     mockServices.mockReturnValue({ services: null })
@@ -816,6 +826,7 @@ describe('useSearchIndex', () => {
   it('returns results for a single-character query', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'a-cluster', context: 'a-cluster', healthy: true }],
+      deduplicatedClusters: [{ name: 'a-cluster', context: 'a-cluster', healthy: true }],
     })
     const { result } = renderHook(() => useSearchIndex('a'))
     // 'a' appears in many page names/descriptions, and in 'a-cluster'
@@ -991,6 +1002,7 @@ describe('useSearchIndex', () => {
   it('matches clusters via server URL keyword', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'eks-prod', context: 'eks-prod', server: 'https://ABCDEF.gr7.us-east-1.eks.amazonaws.com', healthy: true }],
+      deduplicatedClusters: [{ name: 'eks-prod', context: 'eks-prod', server: 'https://ABCDEF.gr7.us-east-1.eks.amazonaws.com', healthy: true }],
     })
     const { result } = renderHook(() => useSearchIndex('ABCDEF'))
     const flat = flattenResults(result.current.results)

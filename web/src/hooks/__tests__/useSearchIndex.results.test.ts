@@ -101,7 +101,7 @@ function resultCategories(results: Map<SearchCategory, SearchItem[]>): SearchCat
 describe('useSearchIndex', () => {
   beforeEach(() => {
     // Reset all hook mocks to empty data
-    mockClusters.mockReturnValue({ clusters: [] })
+    mockClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [] })
     mockDeployments.mockReturnValue({ deployments: [] })
     mockPods.mockReturnValue({ pods: [] })
     mockServices.mockReturnValue({ services: [] })
@@ -128,6 +128,7 @@ describe('useSearchIndex', () => {
     // Only clusters and settings match — nothing in between
     mockClusters.mockReturnValue({
       clusters: [{ name: 'zzz-unique-cluster', context: 'zzz-unique-cluster', healthy: true }],
+      deduplicatedClusters: [{ name: 'zzz-unique-cluster', context: 'zzz-unique-cluster', healthy: true }],
     })
     const { result } = renderHook(() => useSearchIndex('zzz-unique'))
     const categories = resultCategories(result.current.results)
@@ -185,6 +186,7 @@ describe('useSearchIndex', () => {
   it('returns results across multiple categories for a broad query', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'test-cluster', context: 'test-cluster', healthy: true }],
+      deduplicatedClusters: [{ name: 'test-cluster', context: 'test-cluster', healthy: true }],
     })
     mockDeployments.mockReturnValue({
       deployments: [{ name: 'test-deploy', cluster: 'c', namespace: 'ns', status: 'Running' }],
@@ -393,6 +395,7 @@ describe('useSearchIndex', () => {
   it('cluster items have correctly encoded href', () => {
     mockClusters.mockReturnValue({
       clusters: [{ name: 'my cluster', context: 'my cluster', healthy: true }],
+      deduplicatedClusters: [{ name: 'my cluster', context: 'my cluster', healthy: true }],
     })
     const { result } = renderHook(() => useSearchIndex('my cluster'))
     const flat = flattenResults(result.current.results)

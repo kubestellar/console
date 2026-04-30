@@ -25,7 +25,7 @@ vi.mock('../../hooks/useAlerts', () => ({
 
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    isRefreshing: false, refetch: vi.fn(), error: null,
+    deduplicatedClusters: [], isRefreshing: false, refetch: vi.fn(), error: null,
   }),
 }))
 

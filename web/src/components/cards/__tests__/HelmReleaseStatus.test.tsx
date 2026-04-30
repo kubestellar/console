@@ -21,7 +21,7 @@ const mockDrillToHelm = vi.fn()
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => ({ isLoading: false }),
+  useClusters: () => ({ isLoading: false, deduplicatedClusters: [] }),
 }))
 
 vi.mock('../../../hooks/useCachedData', () => ({

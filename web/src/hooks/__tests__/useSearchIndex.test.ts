@@ -13,7 +13,7 @@ vi.mock('../../components/ui/StatsBlockDefinitions', () => ({
   getDefaultStatBlocks: vi.fn(() => []),
 }))
 
-vi.mock('../mcp/clusters', () => ({ useClusters: vi.fn(() => ({ clusters: [] })) }))
+vi.mock('../mcp/clusters', () => ({ useClusters: vi.fn(() => ({ clusters: [], deduplicatedClusters: [] })) }))
 vi.mock('../mcp/workloads', () => ({
   useDeployments: vi.fn(() => ({ deployments: [] })),
   usePods: vi.fn(() => ({ pods: [] })),

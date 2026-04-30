@@ -31,7 +31,7 @@ vi.mock('../../lib/dashboards/DashboardPage', () => ({
 
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    clusters: [], isLoading: false, isRefreshing: false, refetch: vi.fn(),
+    clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, refetch: vi.fn(),
   }),
 }))
 

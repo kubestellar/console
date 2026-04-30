@@ -59,7 +59,7 @@ const {
     mockUseCachedEvents: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseCachedDeployments: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseCachedDeploymentIssues: vi.fn().mockReturnValue({ issues: [], isLoading: false, error: null, refetch: vi.fn() }),
-    mockUseClusters: vi.fn().mockReturnValue({ clusters: [], isLoading: false, error: null, refetch: vi.fn() }),
+    mockUseClusters: vi.fn().mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUsePVCs: vi.fn().mockReturnValue({ pvcs: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseServices: vi.fn().mockReturnValue({ services: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseOperators: vi.fn().mockReturnValue({ operators: [], isLoading: false, error: null, refetch: vi.fn() }),
@@ -214,6 +214,7 @@ describe('useUnifiedClusters via renderHook', () => {
   it('maps clusters to data and wraps error', () => {
     mockUseClusters.mockReturnValue({
       clusters: [{ name: 'c1' }],
+      deduplicatedClusters: [{ name: 'c1' }],
       isLoading: true,
       error: 'cluster err',
       refetch: vi.fn(),

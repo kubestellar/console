@@ -32,7 +32,7 @@ describe('useMissionControl hook', () => {
       missions: [],
     } as any)
     vi.spyOn(useClustersModule, 'useClusters').mockReturnValue({
-      clusters: [],
+      clusters: [], deduplicatedClusters: [],
       isLoading: false,
       lastUpdated: new Date(),
     } as any)
@@ -201,6 +201,7 @@ describe('useMissionControl hook', () => {
     // Live clusters list doesn't have 'stale-cluster'
     vi.spyOn(useClustersModule, 'useClusters').mockReturnValue({
       clusters: [{ name: 'active-cluster', context: 'active-cluster' }],
+      deduplicatedClusters: [{ name: 'active-cluster', context: 'active-cluster' }],
       isLoading: false,
       lastUpdated: new Date(),
     } as any)

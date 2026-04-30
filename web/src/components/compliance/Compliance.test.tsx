@@ -99,6 +99,10 @@ function defaultClustersReturn() {
       { name: 'cluster-a', reachable: true },
       { name: 'cluster-b', reachable: true },
     ],
+    deduplicatedClusters: [
+      { name: 'cluster-a', reachable: true },
+      { name: 'cluster-b', reachable: true },
+    ],
     isLoading: false,
     refetch: vi.fn(),
     lastUpdated: Date.now(),
@@ -270,7 +274,7 @@ describe('Compliance dashboard component', () => {
 
   it('hasData reflects tool installation', () => {
     setupDefaults({
-      clusters: { ...defaultClustersReturn(), clusters: [] },
+      clusters: { ...defaultClustersReturn(), clusters: [], deduplicatedClusters: [] },
     })
     render(<Compliance />)
     const props = getLastDashboardProps()

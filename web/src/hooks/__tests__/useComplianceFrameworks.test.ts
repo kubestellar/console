@@ -23,6 +23,10 @@ vi.mock('../useMCP', () => ({
       { name: 'cluster-a', reachable: true },
       { name: 'cluster-b', reachable: true },
     ],
+    deduplicatedClusters: [
+      { name: 'cluster-a', reachable: true },
+      { name: 'cluster-b', reachable: true },
+    ],
     isLoading: false,
     refetch: vi.fn(),
     lastUpdated: null,

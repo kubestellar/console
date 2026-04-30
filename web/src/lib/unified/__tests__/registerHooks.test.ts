@@ -40,7 +40,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
 }))
 
 vi.mock('../../../hooks/mcp', () => ({
-  useClusters: vi.fn().mockReturnValue({ clusters: [], isLoading: false, error: null, refetch: vi.fn() }),
+  useClusters: vi.fn().mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, error: null, refetch: vi.fn() }),
   usePVCs: vi.fn().mockReturnValue({ pvcs: [], isLoading: false, error: null, refetch: vi.fn() }),
   useServices: vi.fn().mockReturnValue({ services: [], isLoading: false, error: null, refetch: vi.fn() }),
   useOperators: vi.fn().mockReturnValue({ operators: [], isLoading: false, error: null, refetch: vi.fn() }),

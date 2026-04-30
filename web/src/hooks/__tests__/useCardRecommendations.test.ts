@@ -48,7 +48,7 @@ function setDefaults(overrides: Record<string, unknown> = {}) {
   mockUseDeploymentIssues.mockReturnValue({ issues: overrides.deploymentIssues ?? [] })
   mockUseWarningEvents.mockReturnValue({ events: overrides.warningEvents ?? [] })
   mockUseGPUNodes.mockReturnValue({ nodes: overrides.gpuNodes ?? [] })
-  mockUseClusters.mockReturnValue({ clusters: overrides.clusters ?? [] })
+  mockUseClusters.mockReturnValue({ clusters: overrides.clusters ?? [], deduplicatedClusters: overrides.clusters ?? [] })
   mockUseSecurityIssues.mockReturnValue({ issues: overrides.securityIssues ?? [] })
   mockUseAIMode.mockReturnValue({ shouldProactivelySuggest: overrides.shouldProactivelySuggest ?? true })
 }
@@ -357,7 +357,7 @@ describe('useCardRecommendations', () => {
     mockUseDeploymentIssues.mockReturnValue({ issues: undefined })
     mockUseWarningEvents.mockReturnValue({ events: undefined })
     mockUseGPUNodes.mockReturnValue({ nodes: undefined })
-    mockUseClusters.mockReturnValue({ clusters: undefined })
+    mockUseClusters.mockReturnValue({ clusters: undefined, deduplicatedClusters: undefined })
     mockUseSecurityIssues.mockReturnValue({ issues: undefined })
 
     const { result } = renderHook(() => useCardRecommendations(NO_CARDS))

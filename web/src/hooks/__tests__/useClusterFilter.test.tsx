@@ -12,6 +12,11 @@ const mockUseClusters = vi.hoisted(() =>
       { name: 'cluster-b', context: 'cluster-b', server: 'https://b.example.com' },
       { name: 'cluster-c', context: 'cluster-c', server: 'https://c.example.com' },
     ],
+    deduplicatedClusters: [
+      { name: 'cluster-a', context: 'cluster-a', server: 'https://a.example.com' },
+      { name: 'cluster-b', context: 'cluster-b', server: 'https://b.example.com' },
+      { name: 'cluster-c', context: 'cluster-c', server: 'https://c.example.com' },
+    ],
     isLoading: false,
     error: null,
   }),
@@ -44,6 +49,11 @@ beforeEach(() => {
   localStorage.clear()
   mockUseClusters.mockReturnValue({
     clusters: DEFAULT_CLUSTERS.map((name) => ({
+      name,
+      context: name,
+      server: `https://${name}.example.com`,
+    })),
+    deduplicatedClusters: DEFAULT_CLUSTERS.map((name) => ({
       name,
       context: name,
       server: `https://${name}.example.com`,
@@ -260,6 +270,7 @@ describe('selectAll and clearAll', () => {
   it('clearAll is a no-op when no clusters are available', () => {
     mockUseClusters.mockReturnValue({
       clusters: [],
+      deduplicatedClusters: [],
       isLoading: false,
       error: null,
     })
@@ -360,6 +371,7 @@ describe('edge cases', () => {
   it('handles empty available clusters gracefully', () => {
     mockUseClusters.mockReturnValue({
       clusters: [],
+      deduplicatedClusters: [],
       isLoading: false,
       error: null,
     })
@@ -416,6 +428,9 @@ describe('edge cases', () => {
   it('handles single-cluster environment correctly', () => {
     mockUseClusters.mockReturnValue({
       clusters: [
+        { name: 'only-cluster', context: 'only-cluster', server: 'https://only.example.com' },
+      ],
+      deduplicatedClusters: [
         { name: 'only-cluster', context: 'only-cluster', server: 'https://only.example.com' },
       ],
       isLoading: false,

@@ -55,7 +55,7 @@ vi.mock('../../lib/dashboards/DashboardPage', () => ({
 
 vi.mock('../../hooks/useMCP', () => ({
   useClusters: () => ({
-    clusters: [], isLoading: false, isRefreshing: false,
+    clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false,
     lastUpdated: null, refetch: vi.fn(), error: null,
   }),
   useServices: () => ({ services: [], error: null }),
@@ -111,7 +111,7 @@ describe('Services Component', () => {
   // #6423 (Copilot review comment on Services.tsx:111) — when there are
   // no reachable clusters, the empty state must surface a "Connect a
   // cluster" secondary action so the user has a clear next step. The
-  // useClusters mock above returns `clusters: []`, which produces
+  // useClusters mock above returns `clusters: [], deduplicatedClusters: []`, which produces
   // `reachableClusters.length === 0` inside the component.
   it('renders the "Connect a cluster" CTA when no reachable clusters exist', () => {
     renderServices()

@@ -49,7 +49,7 @@ vi.mock('../../../lib/dashboards/DashboardPage', () => ({
 
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
-    clusters: [], isLoading: false, isRefreshing: false, refetch: vi.fn(), error: null,
+    clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, refetch: vi.fn(), error: null,
   }),
   useGPUNodes: vi.fn(() => ({ nodes: [], isLoading: false, refetch: vi.fn() })),
   useResourceQuotas: () => ({ resourceQuotas: [] }),
