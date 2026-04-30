@@ -265,7 +265,19 @@ test.describe('Clusters Page', () => {
         }
       })
 
-      await page.reload()
+      // Clear sessionStorage before reload so the SWR cache layer cannot
+      // sync-rehydrate stale cluster data from the beforeEach mock. The
+      // addInitScript also clears it, but on firefox/webkit the browser may
+      // restore sessionStorage from its page cache before addInitScript runs,
+      // causing a brief render with stale data that outraces the filter. (#10956)
+      await page.evaluate(() => sessionStorage.clear())
+
+      // Reload and wait for the test-specific mock API response to arrive so
+      // the component renders with the correct cluster set before we interact.
+      await Promise.all([
+        page.waitForResponse((resp) => resp.url().includes('/api/mcp/') && resp.url().includes('clusters')),
+        page.reload(),
+      ])
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
 
@@ -277,6 +289,10 @@ test.describe('Clusters Page', () => {
 
       // Click the Healthy filter
       await healthyTab.click()
+
+      // Wait for the filter to visually activate (button style change) before
+      // asserting hidden clusters — firefox/webkit may batch the DOM update. (#10956)
+      await expect(healthyTab).toHaveClass(/bg-green-500/, { timeout: 5000 })
 
       // Only healthy-cluster must be visible
       // Scope assertions to clusters-page to exclude sidebar cluster status
@@ -319,7 +335,16 @@ test.describe('Clusters Page', () => {
         }
       })
 
-      await page.reload()
+      // Clear sessionStorage before reload so the SWR cache layer cannot
+      // sync-rehydrate stale cluster data from the beforeEach mock. (#10956)
+      await page.evaluate(() => sessionStorage.clear())
+
+      // Reload and wait for the test-specific mock API response to arrive so
+      // the component renders with the correct cluster set before we interact.
+      await Promise.all([
+        page.waitForResponse((resp) => resp.url().includes('/api/mcp/') && resp.url().includes('clusters')),
+        page.reload(),
+      ])
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
 
@@ -330,6 +355,9 @@ test.describe('Clusters Page', () => {
 
       // Click the Unhealthy filter
       await unhealthyTab.click()
+
+      // Wait for the filter to visually activate before asserting hidden clusters. (#10956)
+      await expect(unhealthyTab).toHaveClass(/bg-orange-500/, { timeout: 5000 })
 
       // Only the truly unhealthy cluster should appear
       // Scope assertions to clusters-page to exclude sidebar cluster status

@@ -324,4 +324,119 @@ describe('useActiveUsers', () => {
       expect(result.current.activeUsers).toBe(0)
     })
   })
+
+  // ── __testables pure functions ──
+
+  describe('__testables', () => {
+    it('isJsonResponse accepts application/json', async () => {
+      const mod = await import('../useActiveUsers')
+      const resp = new Response('{}', { headers: { 'Content-Type': 'application/json' } })
+      expect(mod.__testables.isJsonResponse(resp)).toBe(true)
+    })
+
+    it('isJsonResponse rejects text/html', async () => {
+      const mod = await import('../useActiveUsers')
+      const resp = new Response('<html>', { headers: { 'Content-Type': 'text/html' } })
+      expect(mod.__testables.isJsonResponse(resp)).toBe(false)
+    })
+
+    it('isJsonResponse rejects missing content-type', async () => {
+      const mod = await import('../useActiveUsers')
+      const resp = new Response('data', { headers: {} })
+      expect(mod.__testables.isJsonResponse(resp)).toBe(false)
+    })
+
+    it('isJsonResponse accepts content-type with charset', async () => {
+      const mod = await import('../useActiveUsers')
+      const resp = new Response('{}', { headers: { 'Content-Type': 'application/json; charset=utf-8' } })
+      expect(mod.__testables.isJsonResponse(resp)).toBe(true)
+    })
+
+    it('getSessionId creates and caches session ID', async () => {
+      const mod = await import('../useActiveUsers')
+      sessionStorage.clear()
+      const id1 = mod.__testables.getSessionId()
+      expect(typeof id1).toBe('string')
+      expect(id1.length).toBeGreaterThan(0)
+      const id2 = mod.__testables.getSessionId()
+      expect(id2).toBe(id1)
+    })
+
+    it('getSessionId reuses stored ID', async () => {
+      const mod = await import('../useActiveUsers')
+      sessionStorage.setItem('kc-session-id', 'pre-existing-id')
+      expect(mod.__testables.getSessionId()).toBe('pre-existing-id')
+    })
+
+    it('POLL_INTERVAL is 10 seconds', async () => {
+      const mod = await import('../useActiveUsers')
+      expect(mod.__testables.POLL_INTERVAL).toBe(10_000)
+    })
+
+    it('HEARTBEAT_INTERVAL is 30 seconds', async () => {
+      const mod = await import('../useActiveUsers')
+      expect(mod.__testables.HEARTBEAT_INTERVAL).toBe(30_000)
+    })
+
+    it('MAX_FAILURES is positive', async () => {
+      const mod = await import('../useActiveUsers')
+      expect(mod.__testables.MAX_FAILURES).toBeGreaterThan(0)
+    })
+
+    it('SMOOTHING_WINDOW is positive', async () => {
+      const mod = await import('../useActiveUsers')
+      expect(mod.__testables.SMOOTHING_WINDOW).toBeGreaterThan(0)
+    })
+
+    it('disconnectPresence does not throw when no connection exists', async () => {
+      const mod = await import('../useActiveUsers')
+      expect(() => mod.__testables.disconnectPresence()).not.toThrow()
+    })
+  })
+
+  // ── Refetch after error recovery ──
+
+  describe('error recovery', () => {
+    it('refetch resets circuit breaker and re-fetches', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ activeUsers: 10, totalConnections: 12 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      const { result } = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      act(() => { result.current.refetch() })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      await waitFor(() => {
+        expect(result.current.activeUsers).toBe(10)
+      })
+    })
+
+    it('returns hasError false initially', () => {
+      const { result } = renderHook(() => useActiveUsers())
+      expect(result.current.hasError).toBe(false)
+    })
+
+    it('viewerCount uses activeUsers in non-demo mode', async () => {
+      mockGetDemoMode.mockReturnValue(false)
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ activeUsers: 7, totalConnections: 12 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      const { result } = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      await waitFor(() => {
+        expect(result.current.viewerCount).toBe(7)
+      })
+    })
+  })
 })
