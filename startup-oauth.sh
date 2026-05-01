@@ -274,26 +274,14 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM EXIT
 
-# Resolve kc-agent binary path
+# Resolve kc-agent binary path (build happens later, after the loading page is up)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KC_AGENT_BIN=""
+KC_AGENT_NEEDS_BUILD=false
 
-# Auto-build kc-agent from source when running from a dev checkout.
-# This ensures the binary always matches the checked-out code and embeds
-# the commit SHA + build time so /health and the feedback modal report it.
 if [ -f "$SCRIPT_DIR/cmd/kc-agent/main.go" ] && command -v go &>/dev/null; then
-    echo -e "${GREEN}Building kc-agent from source...${NC}"
-    AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-    AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    mkdir -p "$SCRIPT_DIR/bin"
-    if GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent; then
-        KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
-        echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
-    else
-        echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
-    fi
+    KC_AGENT_NEEDS_BUILD=true
 elif [ -f "$SCRIPT_DIR/bin/kc-agent" ]; then
-    # Local build binary found — validate it is non-empty and executable
     if [ -s "$SCRIPT_DIR/bin/kc-agent" ] && [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
         KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
     else
@@ -429,6 +417,22 @@ if [ "$USE_DEV_SERVER" = true ]; then
         "$WATCHER_BIN" $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
         sleep 1
+        echo -e "${CYAN}  Loading page: http://localhost:8080${NC}"
+    fi
+
+    # Build kc-agent from source if running from a dev checkout.
+    if [ "$KC_AGENT_NEEDS_BUILD" = true ]; then
+        write_stage "agent_build"
+        echo -e "${GREEN}Building kc-agent from source...${NC}"
+        AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+        AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        mkdir -p "$SCRIPT_DIR/bin"
+        if GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent; then
+            KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+            echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
+        else
+            echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
+        fi
     fi
 
     # Always run npm install to pick up new/changed dependencies (#4405).
@@ -484,6 +488,22 @@ else
         "$WATCHER_BIN" $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
         sleep 1
+        echo -e "${CYAN}  Loading page: http://localhost:8080${NC}"
+    fi
+
+    # Build kc-agent from source if running from a dev checkout.
+    if [ "$KC_AGENT_NEEDS_BUILD" = true ]; then
+        write_stage "agent_build"
+        echo -e "${GREEN}Building kc-agent from source...${NC}"
+        AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+        AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        mkdir -p "$SCRIPT_DIR/bin"
+        if GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent; then
+            KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+            echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
+        else
+            echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
+        fi
     fi
 
     # Always run npm install to pick up new/changed dependencies (#4405).
