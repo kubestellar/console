@@ -604,3 +604,29 @@ All 6 HIGH comments addressed. 0 remaining HIGH in source files.
   - Source fix committed: `playwright.config.ts` excludes unsupported nightly tests
 
 **Status: BLOCKED on PR creation (rate limit). Branch pushed, ready to merge once PR is open.**
+
+---
+
+## Pass 82 — 2026-05-01
+
+### RED Indicators
+- **nightlyRel=RED**: GoReleaser GitHub API secondary rate limit (run #134, 2026-04-27). Transient infrastructure issue — not a code fix.
+- **nightlyPlaywright=RED**: Ongoing; scanner owns E2E test fixes. Root cause (workloads infinite loading) addressed via source fix below.
+
+### Source File Fixes (PR #11210)
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `workloads.ts` | `LOCAL_AGENT_URL` const-snapshot not updated by `suppressLocalAgent()` (MEDIUM #11209 ×6) | Replace with `LOCAL_AGENT_HTTP_URL` directly; add guard before each agent fetch |
+| `workloads-coverage.test.ts` | Unused `LOCAL_AGENT_URL` in shared mock (MEDIUM #11184) | Remove it; add explicit `LOCAL_AGENT_HTTP_URL` to network mock |
+| `workloads.core.test.ts` | Same | Same |
+| `handlers.fixtures.ts` | `let savedCards/sharedDashboards` + reassignment-based reset (MEDIUM #11186) | `const` + deletion-based reset; preserves object identity |
+| `useMetricsHistory.ts` | Dead `!= null` checks after type predicate (MEDIUM #11176) | Remove redundant ternaries |
+| `card-loading-compliance.spec.ts` | `{}` empty destructure (lint) | `_fixtures` |
+| `card-cache-compliance.spec.ts` | `let totalCards` pre-declared then assigned (lint) | `const` at point of assignment |
+
+### PR Created
+- PR #11210 → `fix/11210-medium-comments` → main
+
+### HIGH Copilot Comments
+All 6 HIGH source-file comments remain addressed from passes 78–81. No new HIGH comments.
