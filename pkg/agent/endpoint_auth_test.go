@@ -463,6 +463,11 @@ func TestEndpointAuth_HealthDoesNotLeakSecrets(t *testing.T) {
 	allowedFields := map[string]bool{
 		"status":             true,
 		"version":            true,
+		"commitSHA":          true,
+		"buildTime":          true,
+		"goVersion":          true,
+		"os":                 true,
+		"arch":               true,
 		"clusters":           true,
 		"hasClaude":          true,
 		"claude":             true,
