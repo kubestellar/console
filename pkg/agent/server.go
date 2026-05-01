@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -106,6 +107,12 @@ var missionExecutionTimeout = defaultMissionExecutionTimeout
 
 // Version is set by ldflags during build
 var Version = "dev"
+
+// CommitSHA is set by ldflags during build (git commit hash)
+var CommitSHA = "unknown"
+
+// BuildTime is set by ldflags during build (ISO 8601 timestamp)
+var BuildTime = "unknown"
 
 // Config holds agent configuration
 type Config struct {
@@ -807,6 +814,11 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	payload := protocol.HealthPayload{
 		Status:             "ok",
 		Version:            Version,
+		CommitSHA:          CommitSHA,
+		BuildTime:          BuildTime,
+		GoVersion:          runtime.Version(),
+		OS:                 runtime.GOOS,
+		Arch:               runtime.GOARCH,
 		Clusters:           len(clusters),
 		HasClaude:          hasClaude,
 		Claude:             s.getClaudeInfo(),

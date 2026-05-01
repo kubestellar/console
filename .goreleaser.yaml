@@ -26,6 +26,8 @@ builds:
     ldflags:
       - -s -w
       - -X github.com/kubestellar/console/pkg/agent.Version={{.Version}}
+      - -X github.com/kubestellar/console/pkg/agent.CommitSHA={{.FullCommit}}
+      - -X github.com/kubestellar/console/pkg/agent.BuildTime={{.Date}}
 
   - id: console
     main: ./cmd/console

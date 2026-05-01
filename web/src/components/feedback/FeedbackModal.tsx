@@ -24,7 +24,8 @@ import { useBranding } from '../../hooks/useBranding'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { compressScreenshot } from '../../lib/imageCompression'
-import { useFeatureRequests } from '../../hooks/useFeatureRequests'
+import { useFeatureRequests, DiagnosticInfo } from '../../hooks/useFeatureRequests'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useAuth } from '../../lib/auth'
 
 type FeedbackType = 'bug' | 'feature'
@@ -49,6 +50,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const branding = useBranding()
   const { user } = useAuth()
   const { createRequest } = useFeatureRequests(user?.github_login || '')
+  const { health: agentHealth } = useLocalAgent()
   const [type, setType] = useState<FeedbackType>(initialType)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -200,6 +202,21 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         if (compressed) screenshotDataURIs.push(compressed)
       }
 
+      // Gather agent and browser diagnostics to help debug reported issues
+      const diagnostics: DiagnosticInfo = {
+        agent_version: agentHealth?.version,
+        commit_sha: agentHealth?.commitSHA,
+        build_time: agentHealth?.buildTime,
+        go_version: agentHealth?.goVersion,
+        agent_os: agentHealth?.os,
+        agent_arch: agentHealth?.arch,
+        install_method: agentHealth?.install_method,
+        clusters: agentHealth?.clusters,
+        browser_user_agent: navigator.userAgent,
+        browser_platform: navigator.platform,
+        browser_language: navigator.language,
+      }
+
       // Submit via backend API — creates GitHub issue directly using the
       // server-side token. No GitHub login required from the user.
       // Screenshots are uploaded server-side and embedded as images.
@@ -209,6 +226,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         description: description.trim(),
         request_type: type,
         target_repo: 'console',
+        diagnostics,
         ...(hasScreenshots && { screenshots: screenshotDataURIs }) }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
       if (hasScreenshots) emitScreenshotUploadSuccess(screenshotDataURIs.length)
 

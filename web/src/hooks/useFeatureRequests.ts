@@ -90,6 +90,20 @@ export interface ConsoleError {
   source?: string
 }
 
+export interface DiagnosticInfo {
+  agent_version?: string
+  commit_sha?: string
+  build_time?: string
+  go_version?: string
+  agent_os?: string
+  agent_arch?: string
+  install_method?: string
+  clusters?: number
+  browser_user_agent?: string
+  browser_platform?: string
+  browser_language?: string
+}
+
 export interface CreateFeatureRequestInput {
   title: string
   description: string
@@ -99,6 +113,8 @@ export interface CreateFeatureRequestInput {
   screenshots?: string[]
   /** Recent browser console errors captured automatically for bug reports */
   console_errors?: ConsoleError[]
+  /** Agent and browser diagnostics for debugging */
+  diagnostics?: DiagnosticInfo
 }
 
 export interface SubmitFeedbackInput {

@@ -31,7 +31,7 @@ pull:
 build:
 	cd web && npm install --prefer-offline && npm run build
 	mkdir -p bin
-	go build -o bin/kc-agent ./cmd/kc-agent
+	go build -ldflags "-X github.com/kubestellar/console/pkg/agent.CommitSHA=$$(git rev-parse HEAD) -X github.com/kubestellar/console/pkg/agent.BuildTime=$$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o bin/kc-agent ./cmd/kc-agent
 	go build -o bin/console ./cmd/console
 	go build -o bin/kc-watcher ./cmd/watcher
 	@# Update Homebrew kc-agent if installed

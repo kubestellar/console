@@ -41,6 +41,11 @@ type Message struct {
 type HealthPayload struct {
 	Status             string            `json:"status"`
 	Version            string            `json:"version"`
+	CommitSHA          string            `json:"commitSHA,omitempty"`
+	BuildTime          string            `json:"buildTime,omitempty"`
+	GoVersion          string            `json:"goVersion,omitempty"`
+	OS                 string            `json:"os"`
+	Arch               string            `json:"arch"`
 	Clusters           int               `json:"clusters"`
 	HasClaude          bool              `json:"hasClaude"`
 	Claude             *ClaudeInfo       `json:"claude,omitempty"`

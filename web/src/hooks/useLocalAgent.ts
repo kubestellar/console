@@ -15,6 +15,11 @@ export interface ProviderSummary {
 export interface AgentHealth {
   status: string
   version: string
+  commitSHA?: string
+  buildTime?: string
+  goVersion?: string
+  os?: string
+  arch?: string
   clusters: number
   hasClaude: boolean
   install_method?: string

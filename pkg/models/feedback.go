@@ -114,6 +114,22 @@ type ConsoleError struct {
 	Source    string `json:"source,omitempty"`
 }
 
+// DiagnosticInfo contains environment details collected from the agent and browser
+// to help debug issues (e.g. CORS mismatches from old agent builds).
+type DiagnosticInfo struct {
+	AgentVersion    string `json:"agent_version,omitempty"`
+	CommitSHA       string `json:"commit_sha,omitempty"`
+	BuildTime       string `json:"build_time,omitempty"`
+	GoVersion       string `json:"go_version,omitempty"`
+	AgentOS         string `json:"agent_os,omitempty"`
+	AgentArch       string `json:"agent_arch,omitempty"`
+	InstallMethod   string `json:"install_method,omitempty"`
+	Clusters        int    `json:"clusters,omitempty"`
+	BrowserUA       string `json:"browser_user_agent,omitempty"`
+	BrowserPlatform string `json:"browser_platform,omitempty"`
+	BrowserLanguage string `json:"browser_language,omitempty"`
+}
+
 // CreateFeatureRequestInput is the input for creating a feature request
 type CreateFeatureRequestInput struct {
 	Title       string      `json:"title" validate:"required,min=10,max=200"`
@@ -126,6 +142,8 @@ type CreateFeatureRequestInput struct {
 	// ConsoleErrors contains recent browser console errors captured automatically.
 	// Only populated for bug reports. Rendered as a collapsible section in the issue body.
 	ConsoleErrors []ConsoleError `json:"console_errors,omitempty"`
+	// Diagnostics contains agent and browser environment info for debugging.
+	Diagnostics *DiagnosticInfo `json:"diagnostics,omitempty"`
 }
 
 // SubmitFeedbackInput is the input for submitting PR feedback

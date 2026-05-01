@@ -491,7 +491,7 @@ type screenshotUploadResult struct {
 // upload, synchronous result counts, error). #9898: screenshot uploads are
 // decoupled from this path — callers launch uploadScreenshotCommentsAsync
 // on the returned slice from a background goroutine.
-func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, consoleErrors []models.ConsoleError, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
+func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, consoleErrors []models.ConsoleError, diagnostics *models.DiagnosticInfo, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
 	// Determine labels based on request type and target repo
 	var labels []string
 	isDocs := request.TargetRepo == models.TargetRepoDocs
@@ -570,6 +570,48 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		consoleErrorBlock = fmt.Sprintf("\n<details>\n<summary>Browser Console Errors (%d captured)</summary>\n\n%s\n</details>\n", len(consoleErrors), errLines.String())
 	}
 
+	diagnosticsBlock := ""
+	if diagnostics != nil {
+		var diag strings.Builder
+		diag.WriteString("\n<details>\n<summary>Diagnostics</summary>\n\n")
+		diag.WriteString("| Field | Value |\n|-------|-------|\n")
+		if diagnostics.AgentVersion != "" {
+			diag.WriteString(fmt.Sprintf("| Agent Version | %s |\n", diagnostics.AgentVersion))
+		}
+		if diagnostics.CommitSHA != "" {
+			diag.WriteString(fmt.Sprintf("| Commit SHA | `%s` |\n", diagnostics.CommitSHA))
+		}
+		if diagnostics.BuildTime != "" {
+			diag.WriteString(fmt.Sprintf("| Build Time | %s |\n", diagnostics.BuildTime))
+		}
+		if diagnostics.GoVersion != "" {
+			diag.WriteString(fmt.Sprintf("| Go Version | %s |\n", diagnostics.GoVersion))
+		}
+		if diagnostics.AgentOS != "" {
+			diag.WriteString(fmt.Sprintf("| Agent OS | %s |\n", diagnostics.AgentOS))
+		}
+		if diagnostics.AgentArch != "" {
+			diag.WriteString(fmt.Sprintf("| Agent Arch | %s |\n", diagnostics.AgentArch))
+		}
+		if diagnostics.InstallMethod != "" {
+			diag.WriteString(fmt.Sprintf("| Install Method | %s |\n", diagnostics.InstallMethod))
+		}
+		if diagnostics.Clusters > 0 {
+			diag.WriteString(fmt.Sprintf("| Clusters | %d |\n", diagnostics.Clusters))
+		}
+		if diagnostics.BrowserUA != "" {
+			diag.WriteString(fmt.Sprintf("| Browser UA | %s |\n", diagnostics.BrowserUA))
+		}
+		if diagnostics.BrowserPlatform != "" {
+			diag.WriteString(fmt.Sprintf("| Browser Platform | %s |\n", diagnostics.BrowserPlatform))
+		}
+		if diagnostics.BrowserLanguage != "" {
+			diag.WriteString(fmt.Sprintf("| Browser Language | %s |\n", diagnostics.BrowserLanguage))
+		}
+		diag.WriteString("\n</details>\n")
+		diagnosticsBlock = diag.String()
+	}
+
 	issueBody := fmt.Sprintf(`## User Request
 
 **Type:** %s
@@ -580,10 +622,10 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 ## Description
 
 %s
-%s%s
+%s%s%s
 ---
 *This issue was automatically created from the KubeStellar Console.*
-`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description, shaLine, consoleErrorBlock)
+`, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description, shaLine, consoleErrorBlock, diagnosticsBlock)
 
 	// First attempt: create issue with labels
 	number, htmlURL, err := h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, labels, clientAuth)
