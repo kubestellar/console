@@ -2188,7 +2188,7 @@ export const scenarios = {
     http.get('/api/auth/me', async () => {
       await delay(100)
       return HttpResponse.json({
-        user: { ...currentUser, onboarded: false },
+        user: { ...getDefaultUser(), onboarded: false },
       })
     }),
   ],
