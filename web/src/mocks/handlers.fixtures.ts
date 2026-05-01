@@ -344,8 +344,8 @@ export const currentUser = {
 // Capped to prevent unbounded memory growth in long-running sessions (#7418).
 /** Maximum number of entries in each in-memory share registry */
 export const MAX_SHARE_REGISTRY_ENTRIES = 500
-export const savedCards: Record<string, unknown> = {}
-export const sharedDashboards: Record<string, unknown> = {}
+export let savedCards: Record<string, unknown> = {}
+export let sharedDashboards: Record<string, unknown> = {}
 
 // ---------------------------------------------------------------------------
 // Demo time-offset constants — used in Date.now() ± N for realistic timestamps
@@ -394,5 +394,25 @@ export function pruneRegistry(registry: Record<string, unknown>) {
       delete registry[keys[i]]
     }
   }
+}
+
+/**
+ * Reset share registries to prevent cross-test pollution.
+ * Should be called in test beforeEach hooks to ensure each test starts
+ * with a clean registry state (#11035).
+ */
+export function resetShareRegistries() {
+  Object.keys(savedCards).forEach(key => delete savedCards[key])
+  Object.keys(sharedDashboards).forEach(key => delete sharedDashboards[key])
+}
+
+/** Get default state for savedCards (empty object) */
+export function getDefaultSavedCards(): Record<string, unknown> {
+  return {}
+}
+
+/** Get default state for sharedDashboards (empty object) */
+export function getDefaultSharedDashboards(): Record<string, unknown> {
+  return {}
 }
 

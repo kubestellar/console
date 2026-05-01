@@ -30,6 +30,7 @@ import {
   savedCards,
   sharedDashboards,
   pruneRegistry,
+  resetShareRegistries,
   DEMO_30_SEC_MS,
   DEMO_45_SEC_MS,
   DEMO_1_MIN_MS,
@@ -2084,6 +2085,18 @@ export const handlers = [
   // pattern like /^\/api\// never matches because the URL starts with the
   // protocol. Drop the `^` anchor so the regex matches '/api/' anywhere in
   // the URL.
+
+  // ── Test utilities ─────────────────────────────────────────────────
+  // Reset share registries to prevent cross-test pollution (#11035).
+  // Tests should call this in beforeEach:
+  //   test.beforeEach(async ({ page }) => {
+  //     await page.request.post('/__test/reset')
+  //   })
+  http.post('/__test/reset', () => {
+    resetShareRegistries()
+    return HttpResponse.json({ success: true })
+  }),
+
   http.all(/\/api\//, () => {
     return HttpResponse.json(
       { error: 'not available in demo mode' },
