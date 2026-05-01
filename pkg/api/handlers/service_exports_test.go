@@ -16,7 +16,7 @@ import (
 func TestServiceExportsHandlers_List(t *testing.T) {
 	env := setupTestEnv(t)
 	h := NewServiceExportHandlers(env.K8sClient)
-	env.App.Get("/api/k8s/serviceexports", h.ListServiceExports)
+	env.App.Get("/api/k8s/service-exports", h.ListServiceExports)
 
 	// Create a mock ServiceExport unstructured object
 	se1 := &unstructured.Unstructured{
@@ -66,7 +66,7 @@ func TestServiceExportsHandlers_List(t *testing.T) {
 	injectDynamicClusterWithObjects(env, "cluster-2", scheme, []runtime.Object{se2})
 
 	t.Run("list all", func(t *testing.T) {
-		req := httptest.NewRequest("GET", "/api/k8s/serviceexports", nil)
+		req := httptest.NewRequest("GET", "/api/k8s/service-exports", nil)
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -91,7 +91,7 @@ func TestServiceExportsHandlers_List(t *testing.T) {
 
 	t.Run("empty cluster", func(t *testing.T) {
 		injectDynamicClusterWithObjects(env, "cluster-empty", scheme, []runtime.Object{})
-		req := httptest.NewRequest("GET", "/api/k8s/serviceexports", nil)
+		req := httptest.NewRequest("GET", "/api/k8s/service-exports", nil)
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)

@@ -61,6 +61,7 @@ func TestProxyDrasi_Server_Post(t *testing.T) {
 
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
+		assert.Equal(t, "/api/v1/sources", r.URL.Path, "proxy must forward the correct upstream path")
 		body, _ := io.ReadAll(r.Body)
 		assert.Equal(t, `{"data":"test"}`, string(body))
 		w.WriteHeader(http.StatusCreated)

@@ -318,7 +318,7 @@ export function SubmitForm({
         browser_language: navigator.language,
         screen_resolution: `${screen.width}x${screen.height}`,
         window_size: `${window.innerWidth}x${window.innerHeight}`,
-        page_url: window.location.href,
+        page_url: `${window.location.origin}${window.location.pathname}`,
       }
 
       const result = await onSubmit(
