@@ -472,12 +472,21 @@ export function useDeployMissions() {
                       // Fall back to 0 for non-finite values.
                       const replicas = safeReplicaCount(match.replicas)
                       const readyReplicas = safeReplicaCount(match.readyReplicas)
+                      // #5955 — Mirror the REST path: require updatedReplicas >= replicas
+                      // so a partial rollout (old generation still serving) is not marked
+                      // "running" just because readyReplicas reached desired count.
+                      const agentUpdatedRaw = match.updatedReplicas
+                      const agentUpdated = agentUpdatedRaw === undefined
+                        ? replicas
+                        : safeReplicaCount(agentUpdatedRaw)
                       let status: DeployClusterStatus['status'] = 'applying'
                       // Zero-replica workloads are valid (e.g. scale-to-zero) — treat
                       // readyReplicas >= replicas as success even when both are zero.
-                      if (readyReplicas >= replicas) {
+                      if (String(match.status) === 'Running'
+                          && readyReplicas >= replicas
+                          && agentUpdated >= replicas) {
                         status = 'running'
-                      } else if (String(match.status) === 'failed') {
+                      } else if (String(match.status) === 'failed' || String(match.status) === 'Failed') {
                         status = 'failed'
                       }
                       // Fetch K8s events via kubectlProxy
