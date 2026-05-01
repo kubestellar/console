@@ -19,6 +19,8 @@ import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { REWARD_ACTIONS } from '../../types/rewards'
+import { useLocalAgent } from '../../hooks/useLocalAgent'
+import type { CreateFeatureRequestInput } from '../../hooks/useFeatureRequests'
 import type { RequestType, TargetRepo, ScreenshotItem, SuccessState, TabType } from './FeatureRequestTypes'
 import {
   MIN_DRAFT_LENGTH,
@@ -120,13 +122,7 @@ interface SubmitFormProps {
   isPreviewFullscreen: boolean
   setIsPreviewFullscreen: (v: boolean) => void
   setPreviewImageSrc: (v: string | null) => void
-  onSubmit: (payload: {
-    title: string
-    description: string
-    request_type: RequestType
-    target_repo: TargetRepo
-    screenshots?: string[]
-  }, options?: { timeout: number }) => Promise<{ github_issue_url?: string; screenshots_uploaded?: number; screenshots_failed?: number }>
+  onSubmit: (payload: CreateFeatureRequestInput, options?: { timeout: number }) => Promise<{ github_issue_url?: string; screenshots_uploaded?: number; screenshots_failed?: number }>
   onSuccess: (result: SuccessState) => void
   onShowSetupDialog: () => void
   onShowLoginPrompt: () => void
@@ -159,6 +155,7 @@ export function SubmitForm({
 }: SubmitFormProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
+  const { health: agentHealth, status: agentStatus, dataErrorCount: agentDataErrorCount, lastDataError: agentLastDataError } = useLocalAgent()
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
@@ -300,16 +297,40 @@ export function SubmitForm({
 
     try {
       const hasScreenshots = screenshotDataURIs.length > 0
-      const { getRecentBrowserErrors } = await import('../../lib/analytics-core')
+      const { getRecentBrowserErrors, getRecentFailedApiCalls } = await import('../../lib/analytics-core')
       const browserErrors = requestType === 'bug' ? getRecentBrowserErrors() : []
+      const failedApiCalls = getRecentFailedApiCalls()
+
+      const diagnostics = {
+        agent_version: agentHealth?.version,
+        commit_sha: agentHealth?.commitSHA,
+        build_time: agentHealth?.buildTime,
+        go_version: agentHealth?.goVersion,
+        agent_os: agentHealth?.os,
+        agent_arch: agentHealth?.arch,
+        install_method: agentHealth?.install_method,
+        clusters: agentHealth?.clusters,
+        agent_connection_status: agentStatus,
+        agent_connection_failures: agentDataErrorCount,
+        agent_last_error: agentLastDataError ?? undefined,
+        browser_user_agent: navigator.userAgent,
+        browser_platform: navigator.platform,
+        browser_language: navigator.language,
+        screen_resolution: `${screen.width}x${screen.height}`,
+        window_size: `${window.innerWidth}x${window.innerHeight}`,
+        page_url: window.location.href,
+      }
+
       const result = await onSubmit(
         {
           title: extractedTitle,
           description: extractedDesc,
           request_type: requestType,
           target_repo: targetRepo,
+          diagnostics,
           ...(hasScreenshots && { screenshots: screenshotDataURIs }),
           ...(browserErrors.length > 0 && { console_errors: browserErrors }),
+          ...(failedApiCalls.length > 0 && { failed_api_calls: failedApiCalls }),
         },
         hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined,
       )
