@@ -19,6 +19,7 @@ func TestSTIGHandlers(t *testing.T) {
 		req := httptest.NewRequest("GET", "/compliance/stig/benchmarks", nil)
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
+		t.Cleanup(func() { resp.Body.Close() })
 
 		assert.Equal(t, 200, resp.StatusCode)
 		var benchmarks []stig.Benchmark
@@ -31,6 +32,7 @@ func TestSTIGHandlers(t *testing.T) {
 		req := httptest.NewRequest("GET", "/compliance/stig/findings", nil)
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
+		t.Cleanup(func() { resp.Body.Close() })
 
 		assert.Equal(t, 200, resp.StatusCode)
 		var findings []stig.Finding
@@ -43,6 +45,7 @@ func TestSTIGHandlers(t *testing.T) {
 		req := httptest.NewRequest("GET", "/compliance/stig/summary", nil)
 		resp, err := env.App.Test(req)
 		require.NoError(t, err)
+		t.Cleanup(func() { resp.Body.Close() })
 
 		assert.Equal(t, 200, resp.StatusCode)
 		var summary stig.Summary
