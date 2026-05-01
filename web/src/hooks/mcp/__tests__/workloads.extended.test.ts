@@ -12,6 +12,7 @@ const {
   mockIsBackendUnavailable,
   mockReportAgentDataSuccess,
   mockApiGet,
+  mockAgentFetch,
   mockFetchSSE,
   mockRegisterRefetch,
   mockRegisterCacheReset,
@@ -24,6 +25,7 @@ const {
   mockIsBackendUnavailable: vi.fn(() => false),
   mockReportAgentDataSuccess: vi.fn(),
   mockApiGet: vi.fn(),
+  mockAgentFetch: vi.fn(),
   mockFetchSSE: vi.fn(),
   mockRegisterRefetch: vi.fn(() => vi.fn()),
   mockRegisterCacheReset: vi.fn(() => vi.fn()),
@@ -87,7 +89,7 @@ vi.mock('../shared', () => ({
   getEffectiveInterval: (ms: number) => ms,
   LOCAL_AGENT_URL: 'http://localhost:8585',
   clusterCacheRef: mockClusterCacheRef,
-  agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
+  agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
   fetchWithRetry: (url: string, opts: Record<string, unknown> = {}) => {
     const { timeoutMs, maxRetries, initialBackoffMs, ...rest } = opts
     void timeoutMs
@@ -144,6 +146,7 @@ beforeEach(() => {
   mockIsBackendUnavailable.mockReturnValue(false)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockFetchSSE.mockResolvedValue([])
+  mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({}) })
   mockClusterCacheRef.clusters = []
 })
 
@@ -417,17 +420,17 @@ describe('useDeploymentIssues (extended)', () => {
 
 describe('useReplicaSets (extended)', () => {
   it('forwards namespace param via API call', async () => {
-    mockApiGet.mockResolvedValue({ data: { replicasets: [] } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ replicasets: [] }) })
 
     renderHook(() => useReplicaSets('c1', 'kube-system'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url = mockApiGet.mock.calls[0][0] as string
+    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalled())
+    const url = mockAgentFetch.mock.calls[0][0] as string
     expect(url).toContain('namespace=kube-system')
   })
 
   it('sets isFailed after 3 consecutive API failures', async () => {
-    mockApiGet.mockRejectedValue(new Error('API error'))
+    mockAgentFetch.mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useReplicaSets())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -441,7 +444,7 @@ describe('useReplicaSets (extended)', () => {
   })
 
   it('clears replicasets array on API failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('API error'))
+    mockAgentFetch.mockRejectedValue(new Error('API error'))
 
     const { result } = renderHook(() => useReplicaSets())
 
@@ -468,17 +471,17 @@ describe('useReplicaSets (extended)', () => {
 
 describe('useStatefulSets (extended)', () => {
   it('forwards namespace param via API call', async () => {
-    mockApiGet.mockResolvedValue({ data: { statefulsets: [] } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ statefulsets: [] }) })
 
     renderHook(() => useStatefulSets('c1', 'databases'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url = mockApiGet.mock.calls[0][0] as string
+    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalled())
+    const url = mockAgentFetch.mock.calls[0][0] as string
     expect(url).toContain('namespace=databases')
   })
 
   it('sets isFailed after repeated failures', async () => {
-    mockApiGet.mockRejectedValue(new Error('timeout'))
+    mockAgentFetch.mockRejectedValue(new Error('timeout'))
 
     const { result } = renderHook(() => useStatefulSets())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -509,12 +512,12 @@ describe('useStatefulSets (extended)', () => {
 
 describe('useDaemonSets (extended)', () => {
   it('forwards cluster and namespace params via API', async () => {
-    mockApiGet.mockResolvedValue({ data: { daemonsets: [] } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ daemonsets: [] }) })
 
     renderHook(() => useDaemonSets('c1', 'monitoring'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url = mockApiGet.mock.calls[0][0] as string
+    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalled())
+    const url = mockAgentFetch.mock.calls[0][0] as string
     expect(url).toContain('cluster=c1')
     expect(url).toContain('namespace=monitoring')
   })
@@ -532,7 +535,7 @@ describe('useDaemonSets (extended)', () => {
   })
 
   it('sets isFailed after repeated failures', async () => {
-    mockApiGet.mockRejectedValue(new Error('fail'))
+    mockAgentFetch.mockRejectedValue(new Error('fail'))
 
     const { result } = renderHook(() => useDaemonSets())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -551,12 +554,12 @@ describe('useDaemonSets (extended)', () => {
 
 describe('useCronJobs (extended)', () => {
   it('forwards namespace param to API', async () => {
-    mockApiGet.mockResolvedValue({ data: { cronjobs: [] } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ cronjobs: [] }) })
 
     renderHook(() => useCronJobs('c1', 'ops'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url = mockApiGet.mock.calls[0][0] as string
+    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalled())
+    const url = mockAgentFetch.mock.calls[0][0] as string
     expect(url).toContain('namespace=ops')
   })
 
@@ -573,7 +576,7 @@ describe('useCronJobs (extended)', () => {
   })
 
   it('sets isFailed after 3 failures', async () => {
-    mockApiGet.mockRejectedValue(new Error('cj-fail'))
+    mockAgentFetch.mockRejectedValue(new Error('cj-fail'))
 
     const { result } = renderHook(() => useCronJobs())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -637,17 +640,17 @@ describe('useJobs (extended)', () => {
 
 describe('useHPAs (extended)', () => {
   it('forwards namespace param via API', async () => {
-    mockApiGet.mockResolvedValue({ data: { hpas: [] } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ hpas: [] }) })
 
     renderHook(() => useHPAs('c1', 'web'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url = mockApiGet.mock.calls[0][0] as string
+    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalled())
+    const url = mockAgentFetch.mock.calls[0][0] as string
     expect(url).toContain('namespace=web')
   })
 
   it('sets isFailed after 3 consecutive failures', async () => {
-    mockApiGet.mockRejectedValue(new Error('hpa-fail'))
+    mockAgentFetch.mockRejectedValue(new Error('hpa-fail'))
 
     const { result } = renderHook(() => useHPAs())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -781,28 +784,28 @@ describe('usePods (extended)', () => {
 
 describe('usePodLogs (extended)', () => {
   it('uses default tail of 100 when not specified', async () => {
-    mockApiGet.mockResolvedValue({ data: { logs: 'data' } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ logs: 'data' }) })
 
     renderHook(() => usePodLogs('c1', 'default', 'pod-1'))
 
-    await waitFor(() => expect(mockApiGet).toHaveBeenCalled())
-    const url = mockApiGet.mock.calls[0][0] as string
+    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalled())
+    const url = mockAgentFetch.mock.calls[0][0] as string
     expect(url).toContain('tail=100')
   })
 
   it('refetch replaces existing logs', async () => {
-    mockApiGet.mockResolvedValue({ data: { logs: 'initial logs' } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ logs: 'initial logs' }) })
 
     const { result } = renderHook(() => usePodLogs('c1', 'default', 'pod-1'))
     await waitFor(() => expect(result.current.logs).toBe('initial logs'))
 
-    mockApiGet.mockResolvedValue({ data: { logs: 'updated logs' } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ logs: 'updated logs' }) })
     await act(async () => { result.current.refetch() })
     await waitFor(() => expect(result.current.logs).toBe('updated logs'))
   })
 
   it('handles empty logs response', async () => {
-    mockApiGet.mockResolvedValue({ data: { logs: '' } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ logs: '' }) })
 
     const { result } = renderHook(() => usePodLogs('c1', 'default', 'pod-1'))
 
@@ -812,11 +815,11 @@ describe('usePodLogs (extended)', () => {
   })
 
   it('clears error on successful refetch after failure', async () => {
-    mockApiGet.mockRejectedValue(new Error('failed'))
+    mockAgentFetch.mockRejectedValue(new Error('failed'))
     const { result } = renderHook(() => usePodLogs('c1', 'default', 'pod-1'))
     await waitFor(() => expect(result.current.error).toBe('failed'))
 
-    mockApiGet.mockResolvedValue({ data: { logs: 'recovered' } })
+    mockAgentFetch.mockResolvedValue({ ok: true, json: async () => ({ logs: 'recovered' }) })
     await act(async () => { result.current.refetch() })
     await waitFor(() => expect(result.current.error).toBeNull())
     expect(result.current.logs).toBe('recovered')
