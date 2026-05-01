@@ -42,23 +42,30 @@ test.describe('Card Chat / AI Interaction on Dashboard', () => {
     await page.reload()
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-    // Snapshot of AI-related element count in low mode.
-    const lowModeSparkles = await page.locator('[data-tour="recommendations"]').count()
+    // In low mode, AI features should be minimal or hidden
+    const currentMode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
+    expect(currentMode).toBe('low')
 
     // Escalate to high mode.
     await page.evaluate(() => localStorage.setItem('kubestellar-ai-mode', 'high'))
     await page.reload()
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-    // High mode enables proactive recommendations; the recommendations panel
-    // (or its dashboard-level marker) should at least be considered for render.
-    // We assert the mode is applied and the dashboard did not crash.
-    const currentMode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
-    expect(currentMode).toBe('high')
+    // High mode enables proactive recommendations - verify UI actually reflects this
+    const highMode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
+    expect(highMode).toBe('high')
 
-    const highModeSparkles = await page.locator('[data-tour="recommendations"]').count()
-    // High mode should show AT LEAST as many AI surfaces as low mode.
-    expect(highModeSparkles).toBeGreaterThanOrEqual(lowModeSparkles)
+    // Verify that cards are rendered (basic dashboard functionality)
+    const cards = page.locator('[data-card-type]')
+    await expect(cards.first()).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+    // High mode should expose AI interaction affordances on cards
+    const firstCard = cards.first()
+    await firstCard.hover()
+    
+    // Verify refresh/AI buttons are accessible (key indicator of AI mode being active)
+    const refreshButton = firstCard.locator('button[aria-label*="efresh"], button[title*="efresh"]')
+    await expect(refreshButton.first()).toBeVisible({ timeout: CHAT_INPUT_FOCUS_TIMEOUT_MS })
   })
 
   test('dashboard cards expose aria-labeled AI/refresh affordances in high mode', async ({ page }) => {
@@ -67,9 +74,9 @@ test.describe('Card Chat / AI Interaction on Dashboard', () => {
     await page.reload()
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
+    // Wait for at least one card to render
     const firstCard = page.locator('[data-card-type]').first()
-    const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-    if (!hasCard) { test.skip(true, 'No cards rendered in demo mode'); return }
+    await expect(firstCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     await firstCard.hover()
 
     // Every card must expose a refresh button with an accessible label — this
@@ -82,29 +89,40 @@ test.describe('Card Chat / AI Interaction on Dashboard', () => {
     await setupDemoAndNavigate(page, '/')
     await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
+    // Wait for at least one card to render
     const firstCard = page.locator('[data-card-type]').first()
-    const hasCard = await firstCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-    if (!hasCard) { test.skip(true, 'No cards rendered'); return }
+    await expect(firstCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     await firstCard.hover()
 
     const refreshButton = firstCard.locator('button[aria-label*="efresh"], button[title*="efresh"]').first()
-    const hasRefresh = await refreshButton.isVisible({ timeout: CHAT_INPUT_FOCUS_TIMEOUT_MS }).catch(() => false)
-    if (!hasRefresh) { test.skip(true, 'Refresh button not exposed on first card'); return }
+    await expect(refreshButton).toBeVisible({ timeout: CHAT_INPUT_FOCUS_TIMEOUT_MS })
 
-    // Capture all requests triggered by the click — we expect at least one
-    // data-fetch (MCP, cache, or analyze) to fire.
+    // Get the card type to make request URL matching more specific
+    const cardType = await firstCard.getAttribute('data-card-type')
+    
+    // Capture specific API requests triggered by the refresh
+    // Use specific endpoint patterns based on card type rather than broad regex
     const requestPromise = page.waitForRequest(
-      (req) => /\/api\/(mcp|ai|cards|recommendations)/.test(req.url()),
+      (req) => {
+        const url = req.url()
+        // Match specific card data endpoints, not broad catch-all patterns
+        return url.includes('/api/mcp/') || 
+               url.includes('/api/cards/') || 
+               url.includes('/api/ai/analyze') ||
+               url.includes('/api/recommendations/')
+      },
       { timeout: AI_RESPONSE_TIMEOUT_MS }
     ).catch(() => null)
 
     await refreshButton.click()
     const req = await requestPromise
-    // In pure demo mode fetches may be short-circuited, so we only assert
-    // that the click did not break the page when no request fires.
+    
+    // Verify card is still visible after refresh (didn't crash)
     await expect(firstCard).toBeVisible()
+    
+    // In demo mode with live backend, at least one API call should fire
     if (req) {
-      expect(req.method()).toBeTruthy()
+      expect(req.method()).toMatch(/GET|POST/)
     }
   })
 
