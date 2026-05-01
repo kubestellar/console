@@ -1,5 +1,39 @@
 # Reviewer Log
 
+## Pass 84 — 2026-05-01T07:10 UTC
+
+### Trigger
+KICK — RED: nightlyPlaywright=RED, nightlyRel=RED. 62 unaddressed Copilot comments.
+
+### Pre-flight
+- `git pull /tmp/hive` — skipped (divergent branches, unrelated repo)
+- Branch: `fix/11210-medium-comments` (4 commits ahead of origin/main)
+- GA4: **NOMINAL, 0 anomalies** ✅
+
+### RED Analysis
+- **nightlyPlaywright=RED**: Scanner owns (issue #10433). No file action.
+- **nightlyRel=RED**: Release run #139 `in_progress` — Docker multi-arch build still building (started 06:05 UTC). Not a code failure; 0 failed jobs. Previous runs 135–138 all success. Monitoring.
+
+### Copilot Comments
+All 6 HIGH source-file comments verified addressed (passes 78–81). No regressions.
+
+| PR | Comment | Status |
+|----|---------|--------|
+| #11209 | workloads.ts:1543,1612,1681,1750 LOCAL_AGENT_URL stale const | ✅ Fixed in d6b9563e0 |
+| #11209 | workloads.ts:1262 useHPAs/useDeployments guard after fetch | ✅ Fixed in d6b9563e0 |
+
+Verified: workloads.ts now uses `LOCAL_AGENT_HTTP_URL` (live ref) with guard `&& LOCAL_AGENT_HTTP_URL` in every agent-fetch block. No `LOCAL_AGENT_URL` (stale const) in workloads.ts. Build ✅, lint clean in changed file ✅.
+
+### PR #11210 Status
+- All non-blocking checks passing (coverage-gate, ts-null-safety, pr-check, attribute, classify)
+- 9 checks still in_progress (build, visual, TTFI, smoke)
+- 0 failures
+
+### Status
+Monitoring PR #11210 CI. Will merge on green.
+
+---
+
 ## Pass 79 — 2026-05-01T05:10–05:25 UTC
 
 **Trigger:** KICK — RED: nightlyPlaywright=RED; 54 unaddressed Copilot comments
