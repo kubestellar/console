@@ -984,3 +984,47 @@ All 6 HIGH source-file comments remain addressed from passes 78–81:
 - nightlyPlaywright: waiting for next nightly run post-source-fixes
 
 **Status:** Source fixes committed; PR #11210 in CI. Monitoring nightlyRel completion.
+
+## Pass 93b — 2026-05-01T21:55 (Full reviewer pass)
+
+### CI Workflow Health
+
+| Workflow | Status | Notes |
+|---------|--------|-------|
+| Build and Deploy KC | ✅ in_progress (main) | Last completed: success (#25233763389) |
+| deploy-vllm-d | ✅ success | Via run #25233763389 |
+| deploy-pok-prod | ✅ success | Via run #25233763389 |
+| Coverage Gate | ✅ success | All recent runs passing |
+| Nightly Dashboard Health | ✅ success | 05:54 today |
+| Nightly Compliance & Perf | ✅ success | 06:02 today |
+| Playwright E2E Tests | ⚠️ in_progress (main) | Last completed: **failure** (20:41, chromium shards 1-4 + mobile) → **scanner** |
+| Nightly Test Suite | ⚠️ 06:49 = failure (regression #10354), 09:10 = success | **scanner** |
+| Helm Chart Release | ✅ last run: 2026-04-23 (success) | No new release needed |
+| Release (nightly) | ✅ success | Daily nightly running, latest: v0.3.24-nightly.20260501 |
+
+### Brew Formula
+ Fresh (`brewFresh: 1`)
+
+### Post-merge Review: #11355 (feedback diagnostics)
+- HIGH: page_url OAuth leak → **PR #11364** (opened last pass)
+- MEDIUM: status type mismatch, _resetAnalyticsState, SCRIPT_DIR → **PR #11364**
+- LOW: feedback_github.go call.Detail markdown injection → deferred
+
+### Post-merge Review: #11356 (MCP hook tests)
+- MEDIUM: `refetch()` not awaited inside `act()` — 12 occurrences in storage.test.ts, 12 in networking.test.ts → **PR #11365** opened
+- MEDIUM: `mockRejectedValueOnce` without default → all instances already have fallback mock; no fix needed
+- helm.test.ts: already correct (all refetch calls awaited)
+
+### Open PRs Status
+| PR | Status | Blocker |
+|----|--------|---------|
+| #11357 | needs-rebase label (stale — conflict-sweep shows 0 conflicts) | None apparent; CI might re-trigger |
+| #11361 | CONFLICTING | needs rebase |
+| #11362 | CI pending | ci=pending, opened by hive bot |
+| #11363 | CI pending | ci=pending |
+| #11364 | CI in_progress | Visual Regression in_progress |
+| #11365 | CI pending | Just opened |
+
+### New PRs Opened This Pass
+- **#11365**: fix(tests): await refetch() inside act() in MCP hook tests
+
