@@ -6,6 +6,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerRefetch, registerCacheReset } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
+import { deduplicateClustersByServer } from './dedup'
 import type { Operator, OperatorSubscription } from './types'
 
 // localStorage cache keys
@@ -116,7 +117,8 @@ export function useOperators(cluster?: string) {
 
     const doFetch = async () => {
       if (isDemoMode()) {
-        const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
+        const dedupClusters = deduplicateClustersByServer(clusterCacheRef.clusters)
+        const clusters = cluster ? [cluster] : dedupClusters.map(c => c.name)
         const allOperators = clusters.flatMap(c => getDemoOperators(c))
         setOperators(allOperators)
         setError(null)
@@ -295,7 +297,8 @@ export function useOperatorSubscriptions(cluster?: string) {
 
     const doFetch = async () => {
       if (isDemoMode()) {
-        const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
+        const dedupClusters = deduplicateClustersByServer(clusterCacheRef.clusters)
+        const clusters = cluster ? [cluster] : dedupClusters.map(c => c.name)
         const allSubscriptions = clusters.flatMap(c => getDemoOperatorSubscriptions(c))
         setSubscriptions(allSubscriptions)
         setError(null)

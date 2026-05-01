@@ -4,6 +4,7 @@ import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
+import { deduplicateClustersByServer } from './dedup'
 import { subscribePolling } from './pollingManager'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
@@ -143,9 +144,11 @@ export function usePVCs(cluster?: string, namespace?: string) {
       try {
         // If cluster is specified, fetch from that cluster only
         // If no cluster specified, aggregate from all clusters
+        const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false)
+        const dedupClusters = deduplicateClustersByServer(allClusters)
         const clustersToFetch = cluster
           ? [{ name: cluster, context: cluster }]
-          : clusterCacheRef.clusters.filter(c => c.reachable !== false)
+          : dedupClusters
 
         if (clustersToFetch.length > 0) {
           const allPVCs: PVC[] = []
@@ -207,9 +210,11 @@ export function usePVCs(cluster?: string, namespace?: string) {
     // Try kubectl proxy as fallback
     if (!isAgentUnavailable()) {
       try {
+        const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false)
+        const dedupClusters = deduplicateClustersByServer(allClusters)
         const clustersToFetch = cluster
           ? [{ name: cluster, context: clusterCacheRef.clusters.find(c => c.name === cluster)?.context || cluster }]
-          : clusterCacheRef.clusters.filter(c => c.reachable !== false)
+          : dedupClusters
 
         if (clustersToFetch.length > 0) {
           const allPVCs: PVC[] = []

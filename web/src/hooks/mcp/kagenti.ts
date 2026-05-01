@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { mapSettledWithConcurrency } from '../../lib/utils/concurrency'
 import { isAgentUnavailable, reportAgentDataSuccess } from '../useLocalAgent'
 import { clusterCacheRef, LOCAL_AGENT_URL, agentFetch as sharedAgentFetch } from './shared'
+import { deduplicateClustersByServer } from './dedup'
 import { useCache } from '../../lib/cache'
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -179,7 +180,8 @@ async function agentFetchAllClusters<T>(
 ): Promise<T[]> {
   if (isAgentUnavailable()) return []
 
-  const clusters = clusterCacheRef.clusters.filter(c => c.reachable !== false && !c.name.includes('/'))
+  const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false && !c.name.includes('/'))
+  const clusters = deduplicateClustersByServer(allClusters)
   if (clusters.length === 0) return []
 
   const targets = specificCluster

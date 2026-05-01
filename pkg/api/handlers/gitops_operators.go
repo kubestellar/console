@@ -191,6 +191,8 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 // fetches from the cluster using kubectl -o json (faster than jsonpath for
 // large result sets) and caches the result.
 func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster string) []Operator {
+	startOperatorCacheEvictor()
+
 	cacheKey := cluster
 	if cacheKey == "" {
 		cacheKey = "__default__"

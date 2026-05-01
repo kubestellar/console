@@ -515,16 +515,13 @@ const (
 	subscriptionPerClusterTimeout = 30 * time.Second
 	helmStreamPerClusterTimeout   = 30 * time.Second
 	operatorCacheTTL              = 5 * time.Minute
+	operatorCacheEmptyTTL         = 30 * time.Second
+	operatorCacheEvictionInterval = 5 * time.Minute
 	gitopsClusterTimeout          = 15 * time.Second
 	gitopsRetryDelay              = 2 * time.Second
 	gitopsLookupTimeout           = 10 * time.Second
 	gitopsDefaultTimeout          = 30 * time.Second
 )
-
-// operatorCacheEmptyTTL is a shorter cache TTL used for empty results from
-// permanent errors (e.g. "no OLM"). This ensures that after installing OLM
-// the operators appear within 30s instead of waiting the full 5-minute TTL (#7549).
-const operatorCacheEmptyTTL = 30 * time.Second
 
 // operatorCacheEntry holds cached operators for a single cluster.
 type operatorCacheEntry struct {
@@ -539,9 +536,37 @@ type operatorCacheEntry struct {
 // cluster into a single request, preventing the check-then-act race where
 // two goroutines both see an empty cache and fetch in parallel (#7783).
 var (
-	operatorCacheMu    sync.RWMutex
-	operatorCacheData  = make(map[string]*operatorCacheEntry)
-	operatorFetchGroup singleflight.Group
+	operatorCacheMu       sync.RWMutex
+	operatorCacheData     = make(map[string]*operatorCacheEntry)
+	operatorFetchGroup    singleflight.Group
+	operatorEvictOnce     sync.Once
 )
 
 // ListOperators returns OLM-managed operators (ClusterServiceVersions)
+
+// startOperatorCacheEvictor begins a background goroutine that evicts expired
+// operator cache entries every 5 minutes. Empty results use a 30s TTL, normal
+// results use a 5m TTL. Must be called exactly once from getOperatorsForCluster().
+func startOperatorCacheEvictor() {
+operatorEvictOnce.Do(func() {
+go func() {
+ticker := time.NewTicker(operatorCacheEvictionInterval)
+defer ticker.Stop()
+
+for range ticker.C {
+operatorCacheMu.Lock()
+now := time.Now()
+for cacheKey, entry := range operatorCacheData {
+ttl := operatorCacheTTL
+if len(entry.operators) == 0 {
+ttl = operatorCacheEmptyTTL
+}
+if now.Sub(entry.fetchedAt) > ttl {
+delete(operatorCacheData, cacheKey)
+}
+}
+operatorCacheMu.Unlock()
+}
+}()
+})
+}

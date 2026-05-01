@@ -51,31 +51,73 @@ var githubProxyAPIBase = getEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBa
 
 var githubProxyClient = &http.Client{Timeout: githubProxyTimeout}
 
+// githubProxyLimiterEntry wraps a rate.Limiter with usage tracking for idle eviction.
+type githubProxyLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastUsed time.Time
+}
+
 // githubProxyLimiters enforces a per-user rate limit on outbound GitHub API
 // calls so that one user cannot exhaust the shared PAT quota for everyone
 // (#7034). Each user (identified by JWT user ID) gets their own bucket.
 var githubProxyLimiters struct {
 	sync.Mutex
-	m map[string]*rate.Limiter
+	m            map[string]*githubProxyLimiterEntry
+	evictStarted bool
 }
 
 func init() {
-	githubProxyLimiters.m = make(map[string]*rate.Limiter)
+	githubProxyLimiters.m = make(map[string]*githubProxyLimiterEntry)
 }
+
+const (
+	githubProxyLimiterIdleTTL = 10 * time.Minute
+	githubProxyEvictionInterval = 5 * time.Minute
+)
 
 // getGitHubProxyLimiter returns or creates a per-user rate limiter.
 func getGitHubProxyLimiter(userID string) *rate.Limiter {
 	githubProxyLimiters.Lock()
 	defer githubProxyLimiters.Unlock()
-	if lim, ok := githubProxyLimiters.m[userID]; ok {
-		return lim
+
+	// Lazy-start the evictor on first limiter creation
+	if !githubProxyLimiters.evictStarted {
+		githubProxyLimiters.evictStarted = true
+		go startGitHubProxyLimiterEvictor()
 	}
+
+	if entry, ok := githubProxyLimiters.m[userID]; ok {
+		entry.lastUsed = time.Now()
+		return entry.limiter
+	}
+
 	lim := rate.NewLimiter(
 		rate.Every(time.Minute/githubProxyMaxRequestsPerMinute),
 		githubProxyBurstSize,
 	)
-	githubProxyLimiters.m[userID] = lim
+	githubProxyLimiters.m[userID] = &githubProxyLimiterEntry{
+		limiter:  lim,
+		lastUsed: time.Now(),
+	}
 	return lim
+}
+
+// startGitHubProxyLimiterEvictor periodically removes idle rate limiters
+// (no requests for >10 minutes) to prevent unbounded map growth.
+func startGitHubProxyLimiterEvictor() {
+	ticker := time.NewTicker(githubProxyEvictionInterval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		githubProxyLimiters.Lock()
+		now := time.Now()
+		for userID, entry := range githubProxyLimiters.m {
+			if now.Sub(entry.lastUsed) > githubProxyLimiterIdleTTL {
+				delete(githubProxyLimiters.m, userID)
+			}
+		}
+		githubProxyLimiters.Unlock()
+	}
 }
 
 // allowedGitHubPrefixes restricts which GitHub API paths can be proxied.

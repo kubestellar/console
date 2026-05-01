@@ -10,6 +10,7 @@
 
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { clusterCacheRef, agentFetch } from '../mcp/shared'
+import { deduplicateClustersByServer } from '../mcp/dedup'
 import { isAgentUnavailable } from '../useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
@@ -30,9 +31,10 @@ export function getAgentClusters(): Array<{ name: string; context?: string }> {
   // Include clusters with reachable === undefined (health check pending) to avoid
   // race condition where cards fetch before health checks complete and cache empty results.
   // This matches the backend's HealthyClusters() which treats unknown as healthy.
-  return clusterCacheRef.clusters
+  const clusters = clusterCacheRef.clusters
     .filter(c => c.reachable !== false && !c.name.includes('/'))
-    .map(c => ({ name: c.name, context: c.context }))
+  const dedupClusters = deduplicateClustersByServer(clusters)
+  return dedupClusters.map(c => ({ name: c.name, context: c.context }))
 }
 
 // ============================================================================
