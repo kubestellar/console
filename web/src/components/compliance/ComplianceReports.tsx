@@ -21,8 +21,9 @@ type ReportFormat = 'pdf' | 'json'
 export const ComplianceReportsContent = memo(function ComplianceReportsContent() {
   const { frameworks, isLoading: fwLoading, refetch } = useComplianceFrameworks()
   const { deduplicatedClusters: clusters } = useClusters()
-  // (#11145) Only show reachable clusters in the picker — generating a report
-  // against an unreachable context would silently fail or return incomplete data.
+  // (#11145) Exclude clusters confirmed unreachable from the picker — generating
+  // a report against an unreachable context would silently fail or return incomplete
+  // data. Clusters with reachable: undefined (not yet checked) are still included.
   const clusterNames = useMemo(() =>
     (clusters || [])
       .filter((c: { name: string; reachable?: boolean }) => c.reachable !== false)
@@ -46,7 +47,7 @@ export const ComplianceReportsContent = memo(function ComplianceReportsContent()
   }, [frameworks, selectedFw])
 
   useEffect(() => {
-    if (!selectedCluster && clusterNames.length > 0) {
+    if (clusterNames.length > 0 && (!selectedCluster || !clusterNames.includes(selectedCluster))) {
       setSelectedCluster(clusterNames[0])
     }
   }, [clusterNames, selectedCluster])

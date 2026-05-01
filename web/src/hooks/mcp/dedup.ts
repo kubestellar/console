@@ -16,7 +16,7 @@ const AUTO_GENERATED_NAME_LENGTH_THRESHOLD = 50
  * Handles cases where short-named aliases (e.g., "prow") point to the
  * same server as full-context clusters that have metric data.
  */
-export function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[]): ClusterInfo[] {
+export function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[] | null | undefined): ClusterInfo[] {
   // Build a map of server -> clusters with metrics
   const serverMetrics = new Map<string, ClusterInfo>()
 

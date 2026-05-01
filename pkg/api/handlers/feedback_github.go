@@ -546,7 +546,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		if len(shortSHA) > shortSHALen {
 			shortSHA = shortSHA[:shortSHALen]
 		}
-		shaLine = fmt.Sprintf("\nSHA: [`%s`](https://github.com/%s/%s/commit/%s)\n", shortSHA, h.repoOwner, h.repoName, fullSHA)
+		shaLine = fmt.Sprintf("\nSHA: [`%s`](%s/%s/%s/commit/%s)\n", shortSHA, resolveGitHubUIBase(), h.repoOwner, h.repoName, fullSHA)
 	}
 
 	consoleErrorBlock := ""

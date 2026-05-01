@@ -732,7 +732,7 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
     }
 
     // Multiple clusters point to same server - select primary and merge
-    // Priority: 1) User-friendly name, 2) Has metrics, 3) Has more namespaces, 4) Current context, 5) Shorter name
+    // Priority: 1) Reachable, 2) User-friendly name, 3) Has metrics, 4) Has more namespaces, 5) Current context, 6) Shorter name
 
     // Helper to detect OpenShift-generated long context names
     // These typically look like: "default/api-something.openshiftapps.com:6443/kube:admin"

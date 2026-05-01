@@ -134,6 +134,28 @@ func resolveGitHubAPIBase() string {
 	return trimmed + "/api/v3"
 }
 
+// resolveGitHubUIBase returns the web UI base URL for GitHub/GHE.
+// For public github.com (or unset GITHUB_URL) returns "https://github.com".
+// For GHE (e.g. GITHUB_URL=https://github.example.com) returns the base URL
+// without any API path suffix, suitable for constructing web links such as
+// commit URLs.
+func resolveGitHubUIBase() string {
+	raw := strings.TrimSpace(os.Getenv("GITHUB_URL"))
+	if raw == "" {
+		return "https://github.com"
+	}
+	if host, err := extractHost(raw); err == nil {
+		switch host {
+		case "github.com", "www.github.com", "api.github.com":
+			return "https://github.com"
+		}
+	}
+	trimmed := strings.TrimRight(raw, "/")
+	// Strip /api/v3 suffix if present — we want the web UI root, not the API path.
+	trimmed = strings.TrimSuffix(trimmed, "/api/v3")
+	return trimmed
+}
+
 // extractHost parses a GITHUB_URL value (which may be a bare host like
 // "github.com" or a full URL like "https://ghe.example.com/foo") and returns
 // the lowercased hostname. It is tolerant of missing schemes.
