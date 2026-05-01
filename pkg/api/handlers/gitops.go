@@ -536,10 +536,13 @@ type operatorCacheEntry struct {
 // cluster into a single request, preventing the check-then-act race where
 // two goroutines both see an empty cache and fetch in parallel (#7783).
 var (
-	operatorCacheMu       sync.RWMutex
-	operatorCacheData     = make(map[string]*operatorCacheEntry)
-	operatorFetchGroup    singleflight.Group
-	operatorEvictOnce     sync.Once
+	operatorCacheMu    sync.RWMutex
+	operatorCacheData  = make(map[string]*operatorCacheEntry)
+	operatorFetchGroup singleflight.Group
+	operatorEvictOnce  sync.Once
+	// operatorEvictDone is closed to stop the background evictor goroutine
+	// on server shutdown or in tests, preventing goroutine leaks.
+	operatorEvictDone = make(chan struct{})
 )
 
 // ListOperators returns OLM-managed operators (ClusterServiceVersions)
@@ -548,25 +551,41 @@ var (
 // operator cache entries every 5 minutes. Empty results use a 30s TTL, normal
 // results use a 5m TTL. Must be called exactly once from getOperatorsForCluster().
 func startOperatorCacheEvictor() {
-operatorEvictOnce.Do(func() {
-go func() {
-ticker := time.NewTicker(operatorCacheEvictionInterval)
-defer ticker.Stop()
+	operatorEvictOnce.Do(func() {
+		go func() {
+			ticker := time.NewTicker(operatorCacheEvictionInterval)
+			defer ticker.Stop()
 
-for range ticker.C {
-operatorCacheMu.Lock()
-now := time.Now()
-for cacheKey, entry := range operatorCacheData {
-ttl := operatorCacheTTL
-if len(entry.operators) == 0 {
-ttl = operatorCacheEmptyTTL
+			for {
+				select {
+				case <-operatorEvictDone:
+					return
+				case <-ticker.C:
+					operatorCacheMu.Lock()
+					now := time.Now()
+					for cacheKey, entry := range operatorCacheData {
+						ttl := operatorCacheTTL
+						if len(entry.operators) == 0 {
+							ttl = operatorCacheEmptyTTL
+						}
+						if now.Sub(entry.fetchedAt) > ttl {
+							delete(operatorCacheData, cacheKey)
+						}
+					}
+					operatorCacheMu.Unlock()
+				}
+			}
+		}()
+	})
 }
-if now.Sub(entry.fetchedAt) > ttl {
-delete(operatorCacheData, cacheKey)
-}
-}
-operatorCacheMu.Unlock()
-}
-}()
-})
+
+// StopOperatorCacheEvictor signals the background evictor goroutine to exit.
+// Safe to call multiple times. Intended for server shutdown and tests.
+func StopOperatorCacheEvictor() {
+	select {
+	case <-operatorEvictDone:
+		// Already closed
+	default:
+		close(operatorEvictDone)
+	}
 }

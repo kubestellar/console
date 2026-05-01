@@ -199,12 +199,13 @@ type Server struct {
 	k8sClient           *k8s.MultiClusterClient
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
-	loadingSrv          *http.Server // temporary loading screen server
+	loadingSrv          *http.Server          // temporary loading screen server
 	authHandler         *handlers.AuthHandler // guarded by oauthMu for hot-reload
 	oauthMu             sync.RWMutex          // protects authHandler during manifest flow hot-reload
-	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
+	shuttingDown        int32                 // atomic flag: 1 during graceful shutdown
 	gpuUtilWorker       *GPUUtilizationWorker
 	workloadHandlers    *handlers.WorkloadHandlers // for cache refresh shutdown (#10007)
+	rewardsHandler      *handlers.RewardsHandler   // for eviction goroutine shutdown
 	done                chan struct{}              // closed on Shutdown to stop background goroutines
 	shutdownOnce        sync.Once                  // ensures Shutdown is idempotent (#6478)
 }
@@ -860,7 +861,7 @@ func (s *Server) setupRoutes() {
 		"/api/feedback/requests": true, // feedback submission has its own feedbackLimiter
 		"/api/me":                true, // user identity — must survive for login to work
 		"/api/version":           true, // version check for update dialog
-		"/api/mcp/clusters":     true, // cluster discovery — must not be blocked by auth-retry cascades (#10925)
+		"/api/mcp/clusters":      true, // cluster discovery — must not be blocked by auth-retry cascades (#10925)
 	}
 	apiLimiterSkipPrefixes := []string{
 		"/api/github/", // GitHub proxy (updates dialog, contributions list) has its own per-user limiter
@@ -1137,17 +1138,17 @@ func (s *Server) setupRoutes() {
 	api.Get("/benchmarks/reports/stream", benchmarkHandlers.StreamReports)
 
 	// GitHub activity rewards (points for issues/PRs across configured orgs)
-	rewardsHandler := handlers.NewRewardsHandler(handlers.RewardsConfig{
+	s.rewardsHandler = handlers.NewRewardsHandler(handlers.RewardsConfig{
 		GitHubToken: s.config.GitHubToken,
 		Orgs:        s.config.RewardsGitHubOrgs,
 	})
-	api.Get("/rewards/github", rewardsHandler.GetGitHubRewards)
+	api.Get("/rewards/github", s.rewardsHandler.GetGitHubRewards)
 
 	// Public contributor-tier badge (RFC #8862 Phase 2). SVG response, no
 	// auth required, rate-limited via publicLimiter (60 req/min/IP). Mounted
 	// on s.app, not `api`, because the `api` group is gated by JWTAuth and
 	// this endpoint must be reachable from READMEs via Camo.
-	badgeHandler := handlers.NewBadgeHandler(rewardsHandler, s.store)
+	badgeHandler := handlers.NewBadgeHandler(s.rewardsHandler, s.store)
 	s.app.Get("/api/rewards/badge/:github_login", publicLimiter, badgeHandler.GetBadge)
 
 	// Persistent per-user reward balances (issue #6011). Every authenticated
@@ -1485,6 +1486,13 @@ func (s *Server) Shutdown() error {
 		if s.workloadHandlers != nil {
 			s.workloadHandlers.StopCacheRefresh()
 		}
+		// stop the rewards eviction goroutine (goroutine leak prevention).
+		if s.rewardsHandler != nil {
+			s.rewardsHandler.StopEviction()
+		}
+		// stop the operator cache and GitHub proxy limiter eviction goroutines.
+		handlers.StopOperatorCacheEvictor()
+		handlers.StopGitHubProxyLimiterEvictor()
 		// #7043 — stop the SSE cache evictor goroutine that was started
 		// lazily by sseCacheSet. Without this the goroutine leaks after
 		// server shutdown.

@@ -66,12 +66,16 @@ var githubProxyLimiters struct {
 	evictStarted bool
 }
 
+// githubProxyEvictDone is closed to stop the background evictor goroutine
+// on server shutdown or in tests, preventing goroutine leaks.
+var githubProxyEvictDone = make(chan struct{})
+
 func init() {
 	githubProxyLimiters.m = make(map[string]*githubProxyLimiterEntry)
 }
 
 const (
-	githubProxyLimiterIdleTTL = 10 * time.Minute
+	githubProxyLimiterIdleTTL   = 10 * time.Minute
 	githubProxyEvictionInterval = 5 * time.Minute
 )
 
@@ -104,19 +108,36 @@ func getGitHubProxyLimiter(userID string) *rate.Limiter {
 
 // startGitHubProxyLimiterEvictor periodically removes idle rate limiters
 // (no requests for >10 minutes) to prevent unbounded map growth.
+// Exits when githubProxyEvictDone is closed.
 func startGitHubProxyLimiterEvictor() {
 	ticker := time.NewTicker(githubProxyEvictionInterval)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		githubProxyLimiters.Lock()
-		now := time.Now()
-		for userID, entry := range githubProxyLimiters.m {
-			if now.Sub(entry.lastUsed) > githubProxyLimiterIdleTTL {
-				delete(githubProxyLimiters.m, userID)
+	for {
+		select {
+		case <-githubProxyEvictDone:
+			return
+		case <-ticker.C:
+			githubProxyLimiters.Lock()
+			now := time.Now()
+			for userID, entry := range githubProxyLimiters.m {
+				if now.Sub(entry.lastUsed) > githubProxyLimiterIdleTTL {
+					delete(githubProxyLimiters.m, userID)
+				}
 			}
+			githubProxyLimiters.Unlock()
 		}
-		githubProxyLimiters.Unlock()
+	}
+}
+
+// StopGitHubProxyLimiterEvictor signals the background evictor goroutine to exit.
+// Safe to call multiple times. Intended for server shutdown and tests.
+func StopGitHubProxyLimiterEvictor() {
+	select {
+	case <-githubProxyEvictDone:
+		// Already closed
+	default:
+		close(githubProxyEvictDone)
 	}
 }
 

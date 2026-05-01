@@ -20,11 +20,11 @@ import (
 
 // Point values for GitHub contributions
 const (
-	rewardsCacheTTL          = 10 * time.Minute
-	rewardsAPITimeout        = 30 * time.Second
-	rewardsPerPage           = 100 // GitHub max per page
-	rewardsMaxPages          = 100 // REST Issues API supports up to 10,000 per repo
-	maxRewardsResponseBytes  = 10 * 1024 * 1024 // 10 MiB cap on GitHub API responses
+	rewardsCacheTTL         = 10 * time.Minute
+	rewardsAPITimeout       = 30 * time.Second
+	rewardsPerPage          = 100              // GitHub max per page
+	rewardsMaxPages         = 100              // REST Issues API supports up to 10,000 per repo
+	maxRewardsResponseBytes = 10 * 1024 * 1024 // 10 MiB cap on GitHub API responses
 )
 
 // RewardsConfig holds configuration for the rewards handler.
@@ -76,9 +76,9 @@ type RewardsHandler struct {
 	mu    sync.RWMutex
 	cache map[string]*rewardsCacheEntry // keyed by github_login
 
-	evictMu sync.Mutex
+	evictMu  sync.Mutex
 	evictCtx context.Context
-	evictFn context.CancelFunc
+	evictFn  context.CancelFunc
 }
 
 // parseRepos extracts "owner/repo" pairs from the org filter string.
