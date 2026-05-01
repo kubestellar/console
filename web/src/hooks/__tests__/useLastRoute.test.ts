@@ -710,14 +710,18 @@ describe('restoreScrollPosition (via hook navigation path)', () => {
   })
 
   it('restores scroll when remember-position is true for the path', () => {
+    vi.useFakeTimers()
     localStorage.setItem('kubestellar-remember-position', JSON.stringify({ '/clusters': true }))
     localStorage.setItem('kubestellar-scroll-positions', JSON.stringify({
       '/clusters': { position: 400, cardTitle: undefined }
     }))
     mockPathname = '/clusters'
     renderHook(() => useLastRoute())
+    // restoreScrollPosition is called inside a setTimeout(…, 50) in the navigation effect
+    vi.advanceTimersByTime(100)
     // scrollTo should be called with the saved position
     expect(main.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 400 }))
+    vi.useRealTimers()
   })
 
   it('restores by cardTitle when card with matching h3 exists', () => {

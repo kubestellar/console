@@ -264,7 +264,8 @@ describe('fetcherUtils extended coverage', () => {
         }
         return []
       })
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      // Each fetch call needs its own Response (Response.text() can only be read once)
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
         new Response(JSON.stringify({ items: [{ id: 1 }] }), { status: 200 })
       )
 
@@ -375,15 +376,28 @@ describe('fetcherUtils extended coverage', () => {
     it('throws on partial SSE failure with throwIfPartialFailureEmpty', async () => {
       localStorage.setItem('kc-token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(false)
-      // SSE returns empty but has cluster errors
+      // SSE returns empty but has cluster errors — the throw inside the try
+      // block is caught by fetchViaSSE's catch, which falls back to
+      // fetchFromAllClusters. Set up clusters and settledWithConcurrency so
+      // the REST fallback also triggers the partial-failure error path.
+      ;(clusterCacheRef as { clusters: Array<{ name: string; reachable?: boolean }> }).clusters = [
+        { name: 'c1', reachable: true },
+        { name: 'c2', reachable: true },
+      ]
       mockFetchSSE.mockImplementation(async (opts: { onClusterError?: () => void }) => {
         opts.onClusterError?.()
+        return []
+      })
+      // REST fallback: 1 fulfilled (empty), 1 rejected — triggers throwIfPartialFailureEmpty
+      mockSettledWithConcurrency.mockImplementation(async (_tasks: unknown[], _c?: number, onSettled?: (r: PromiseSettledResult<unknown>) => void) => {
+        onSettled?.({ status: 'fulfilled', value: [] })
+        onSettled?.({ status: 'rejected', reason: new Error('fail') })
         return []
       })
 
       await expect(
         fetchViaSSE('gpu', 'nodes', undefined, undefined, { throwIfPartialFailureEmpty: true })
-      ).rejects.toThrow('Partial SSE failure yielded empty result')
+      ).rejects.toThrow('Partial cluster failure yielded empty result')
     })
   })
 
