@@ -437,15 +437,17 @@ describe('runPreflightCheck — catch branch coverage', () => {
 // ============================================================================
 
 describe('getRemediationActions — additional branches', () => {
-  it('uses cloud provider login commands for MISSING_CREDENTIALS when context is provided', () => {
+  it('shows cloud-provider snippets for MISSING_CREDENTIALS when any context is passed (context value not embedded in snippet)', () => {
     const error: PreflightError = {
       code: 'MISSING_CREDENTIALS',
       message: 'No kubeconfig',
     }
     const actions = getRemediationActions(error, 'prod-ctx')
     const copyActions = actions.filter(a => a.actionType === 'copy')
-    // The second copy action should include cloud provider commands
+    // Cloud-provider login commands appear when context is provided
     expect(copyActions.some(a => a.codeSnippet?.includes('GKE'))).toBe(true)
+    // Unlike EXPIRED_CREDENTIALS, the context value itself is NOT embedded in the snippet
+    expect(copyActions.every(a => !a.codeSnippet?.includes('prod-ctx'))).toBe(true)
   })
 
   it('uses generic snippet for MISSING_CREDENTIALS without context', () => {
@@ -466,6 +468,18 @@ describe('getRemediationActions — additional branches', () => {
     const actions = getRemediationActions(error)
     const copyAction = actions.find(a => a.actionType === 'copy')
     expect(copyAction?.codeSnippet).toContain('cloud provider login command')
+  })
+
+  it('embeds context value in EXPIRED_CREDENTIALS snippet when context is provided', () => {
+    const error: PreflightError = {
+      code: 'EXPIRED_CREDENTIALS',
+      message: 'credentials expired',
+    }
+    const actions = getRemediationActions(error, 'staging-ctx')
+    const copyAction = actions.find(a => a.actionType === 'copy')
+    // Unlike MISSING_CREDENTIALS, the context value IS embedded in EXPIRED_CREDENTIALS snippets
+    expect(copyAction?.codeSnippet).toContain('staging-ctx')
+    expect(copyAction?.codeSnippet).toContain('kubectl config use-context')
   })
 
   it('handles RBAC_DENIED without details', () => {
