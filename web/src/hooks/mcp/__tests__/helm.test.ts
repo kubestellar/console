@@ -50,7 +50,11 @@ vi.mock('../../../lib/modeTransition', () => ({
 
 vi.mock('../shared', () => ({
   MIN_REFRESH_INDICATOR_MS: 500,
-  getEffectiveInterval: (ms: number) => ms,
+  getEffectiveInterval: (ms: number, consecutiveFailures = 0) => {
+    if (consecutiveFailures <= 0) return ms
+    const multiplier = Math.pow(2, Math.min(consecutiveFailures, 5))
+    return Math.min(ms * multiplier, 600_000)
+  },
   agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
 }))
 
