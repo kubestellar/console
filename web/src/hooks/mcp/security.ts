@@ -268,7 +268,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
     // Poll for GitOps drifts (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `gitopsDrifts:${cluster || 'all'}:${namespace || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -281,7 +281,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster, namespace])
+  }, [refetch, cluster, namespace, consecutiveFailures])
 
   // Re-fetch when demo mode changes (not on initial mount)
   useEffect(() => {

@@ -280,7 +280,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
     // Poll for Crossplane managed resources (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `crossplaneManaged:${cluster || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -293,7 +293,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
       unsubscribePolling()
       unregister()
     }
-  }, [refetch, cluster])
+  }, [refetch, cluster, consecutiveFailures])
 
   useEffect(() => {
     if (initialMountRef.current) {

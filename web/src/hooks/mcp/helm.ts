@@ -293,7 +293,7 @@ export function useHelmReleases(cluster?: string) {
     // Poll for Helm releases (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `helmReleases:${cluster || 'all'}`,
-      getEffectiveInterval(HELM_REFRESH_INTERVAL_MS),
+      getEffectiveInterval(HELM_REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -304,7 +304,7 @@ export function useHelmReleases(cluster?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster])
+  }, [refetch, cluster, consecutiveFailures])
 
   // Re-fetch when demo mode changes (not on initial mount)
   useEffect(() => {

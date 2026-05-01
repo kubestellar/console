@@ -513,7 +513,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
     // Poll for pod updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `pods:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -527,7 +527,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       unregisterRefetch()
       sseAbortRef.current?.abort()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -580,6 +580,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   // Per-cluster errors from the SSE `cluster_error` event (Issue 9353). Lets
   // consumers (drill-downs) distinguish an RBAC denial on one or more
   // clusters from a globally-transient failure so the UI can show a
@@ -657,10 +658,12 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       setError(null)
       setClusterErrors(collectedErrors)
       setLastUpdated(now)
+      setConsecutiveFailures(0)
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') return
       const message = err instanceof Error ? err.message : 'Failed to fetch pods'
       console.warn('[useAllPods] Fetch failed:', message)
+      setConsecutiveFailures(prev => prev + 1)
       if (!silent && !podsCache) {
         setError(message)
       }
@@ -682,7 +685,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
     // Poll for pod updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `allPods:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -696,7 +699,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       unregisterRefetch()
       sseAbortRef.current?.abort()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -893,7 +896,7 @@ export function usePodIssues(cluster?: string, namespace?: string): UsePodIssues
     // Poll for pod issue updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `podIssues:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -907,7 +910,7 @@ export function usePodIssues(cluster?: string, namespace?: string): UsePodIssues
       unregisterRefetch()
       sseAbortRef.current?.abort()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -1053,7 +1056,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string): UseDe
     // Poll for deployment issues (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `deploymentIssues:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -1067,7 +1070,7 @@ export function useDeploymentIssues(cluster?: string, namespace?: string): UseDe
       unregisterRefetch()
       sseAbortRef.current?.abort()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -1309,7 +1312,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
     // Poll for deployment updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `deployments:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -1322,7 +1325,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {

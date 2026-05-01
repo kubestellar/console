@@ -320,7 +320,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
     // Poll for PVC updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `pvcs:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => { if (!cancelled) refetch(true) },
     )
 
@@ -334,7 +334,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -409,7 +409,7 @@ export function usePVs(cluster?: string) {
     // Poll for PV updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `pvs:${cluster || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(),
     )
 
@@ -422,7 +422,7 @@ export function usePVs(cluster?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster])
+  }, [refetch, cluster, consecutiveFailures])
 
   return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
@@ -437,6 +437,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDemoFallback, setIsDemoFallback] = useState(false)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data (unless forceLive overrides)
@@ -461,12 +462,14 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
       setResourceQuotas(data.resourceQuotas || [])
       setIsDemoFallback(false)
       setError(null)
+      setConsecutiveFailures(0)
     } catch {
       // Don't show error - ResourceQuotas are optional
       setError(null)
       // Don't fall back to demo data - show empty instead
       setResourceQuotas([])
       setIsDemoFallback(false)
+      setConsecutiveFailures(prev => prev + 1)
     } finally {
       setIsLoading(false)
     }
@@ -477,7 +480,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
     // Poll for resource quota updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `resourceQuotas:${cluster || 'all'}:${namespace || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(),
     )
 
@@ -490,7 +493,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster, namespace])
+  }, [refetch, cluster, namespace, consecutiveFailures])
 
   return { resourceQuotas, isLoading, error, refetch, isDemoFallback }
 }
@@ -500,6 +503,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
   const [limitRanges, setLimitRanges] = useState<LimitRange[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
@@ -522,11 +526,13 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       const data = await resp.json()
       setLimitRanges(data.limitRanges || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch {
       // Don't show error - LimitRanges are optional
       setError(null)
       // Don't fall back to demo data - show empty instead
       setLimitRanges([])
+      setConsecutiveFailures(prev => prev + 1)
     } finally {
       setIsLoading(false)
     }
@@ -537,7 +543,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
     // Poll for limit range updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `limitRanges:${cluster || 'all'}:${namespace || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(),
     )
 
@@ -550,7 +556,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster, namespace])
+  }, [refetch, cluster, namespace, consecutiveFailures])
 
   return { limitRanges, isLoading, error, refetch }
 }

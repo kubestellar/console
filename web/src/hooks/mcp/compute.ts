@@ -351,7 +351,7 @@ export function useGPUNodes(cluster?: string) {
     // Poll GPU node data periodically (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `gpuNodes:${cluster || 'all'}`,
-      getEffectiveInterval(GPU_POLL_INTERVAL_MS),
+      getEffectiveInterval(GPU_POLL_INTERVAL_MS, gpuNodeCache.consecutiveFailures),
       () => fetchGPUNodes(cluster, 'poll'),
     )
 
@@ -365,7 +365,7 @@ export function useGPUNodes(cluster?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [cluster])
+  }, [cluster, gpuNodeCache.consecutiveFailures])
 
   const refetch = useCallback(() => {
     fetchGPUNodes(cluster)

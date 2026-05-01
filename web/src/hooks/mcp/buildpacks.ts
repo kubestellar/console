@@ -273,7 +273,7 @@ export function useBuildpackImages(cluster?: string) {
     // Poll for buildpack images (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `buildpackImages:${cluster || 'all'}`,
-      getEffectiveInterval(BUILDPACK_REFRESH_INTERVAL_MS),
+      getEffectiveInterval(BUILDPACK_REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -286,7 +286,7 @@ export function useBuildpackImages(cluster?: string) {
       unsubscribePolling()
       unregister()
     }
-  }, [refetch, cluster])
+  }, [refetch, cluster, consecutiveFailures])
 
   useEffect(() => {
     if (initialMountRef.current) {

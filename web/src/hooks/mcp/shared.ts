@@ -30,8 +30,15 @@ export const GPU_POLL_INTERVAL_MS = 30000      // 30 seconds
 /** Cache TTL: matches cluster poll interval for freshness checks */
 export const CACHE_TTL_MS = CLUSTER_POLL_INTERVAL_MS
 
-export function getEffectiveInterval(baseInterval: number): number {
-  return baseInterval
+/** Backoff multiplier applied per consecutive failure (2x, 4x, 8x …) */
+const FAILURE_BACKOFF_MULTIPLIER = 2
+/** Maximum polling interval after repeated failures (10 minutes) */
+const MAX_BACKOFF_INTERVAL_MS = 600_000
+
+export function getEffectiveInterval(baseInterval: number, consecutiveFailures = 0): number {
+  if (consecutiveFailures <= 0) return baseInterval
+  const multiplier = Math.pow(FAILURE_BACKOFF_MULTIPLIER, Math.min(consecutiveFailures, 5))
+  return Math.min(baseInterval * multiplier, MAX_BACKOFF_INTERVAL_MS)
 }
 
 /** Name length above which a cluster context name is considered auto-generated */

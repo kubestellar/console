@@ -304,7 +304,7 @@ export function useServices(cluster?: string, namespace?: string) {
     // Poll for service updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `services:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -317,7 +317,7 @@ export function useServices(cluster?: string, namespace?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {

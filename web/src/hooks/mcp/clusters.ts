@@ -49,6 +49,7 @@ export function useMCPStatus() {
   const [status, setStatus] = useState<MCPStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -58,9 +59,11 @@ export function useMCPStatus() {
         const data = await resp.json()
         setStatus(data)
         setError(null)
+        setConsecutiveFailures(0)
       } catch {
         setError('MCP bridge not available')
         setStatus(null)
+        setConsecutiveFailures(prev => prev + 1)
       } finally {
         setIsLoading(false)
       }
@@ -70,11 +73,11 @@ export function useMCPStatus() {
     // Poll MCP status (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       'mcpStatus',
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       fetchStatus,
     )
     return () => unsubscribePolling()
-  }, [])
+  }, [consecutiveFailures])
 
   return { status, isLoading, error }
 }
@@ -185,14 +188,14 @@ export function useClusters() {
   useEffect(() => {
     const unsubscribePolling = subscribePolling(
       'clusters',
-      getEffectiveInterval(CLUSTER_POLL_INTERVAL_MS),
+      getEffectiveInterval(CLUSTER_POLL_INTERVAL_MS, dataState.consecutiveFailures),
       () => fullFetchClusters(),
     )
 
     return () => {
       unsubscribePolling()
     }
-  }, [])
+  }, [dataState.consecutiveFailures])
 
   // Refetch function that consumers can call
   const refetch = useCallback(() => {
