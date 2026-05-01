@@ -630,3 +630,46 @@ All 6 HIGH comments addressed. 0 remaining HIGH in source files.
 
 ### HIGH Copilot Comments
 All 6 HIGH source-file comments remain addressed from passes 78–81. No new HIGH comments.
+
+---
+
+## Pass 83 — 2026-05-01T06:23–07:05 UTC
+
+### Trigger
+KICK — RED indicators: nightlyPlaywright=RED, nightlyRel=RED. 62 unaddressed Copilot comments.
+
+### RED Indicator Analysis
+
+**nightlyRel=RED**: Release workflow run #25204538900 started at 06:05 UTC. Docker multi-platform build (linux/amd64 + linux/arm64) in progress — not a code failure. Previous nightlyRel RED (per pass 82) was GoReleaser GitHub API secondary rate limit — transient infrastructure issue. No code fix possible; monitoring.
+
+**nightlyPlaywright=RED**: Nightly cross-browser failures on webkit/firefox/mobile-safari. Source root causes addressed:
+- `workloads.ts` loading guards (merged in #11209)
+- `playwright.config.ts` nightly spec exclusions (merged in #11209)
+Scanner owns E2E test fixes for remaining webkit/firefox/mobile failures.
+
+### Source File Fixes (committed to `fix/11210-medium-comments`)
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `card-cache-compliance.spec.ts` lines 117,129,141,559 | `!!process.env.CI` redundant double negation (`no-extra-boolean-cast`) | Remove `!!` — ternary already coerces to boolean |
+
+These 4 errors were missed in pass 82 (which fixed `totalCards` and `_fixtures` in the same file).
+
+### Commit
+`ae47e1b75` — 🐛 fix: remove redundant double negation in card-cache-compliance
+
+### PR Status
+- PR #11210 (`fix/11210-medium-comments`) — open, CI running
+- No merge-eligible PRs (CI in_progress)
+
+### HIGH Copilot Comments
+All 6 HIGH source-file comments remain addressed from passes 78–81:
+- `shared.ts` 401 retry ✅ (PR #11203)
+- `preflightCheck-coverage.test.ts` misleading test name ✅ (PR #11205)
+- E2E HIGH comments (Login.spec.ts, mission-control-stress.spec.ts) → scanner-owned
+
+### Outstanding
+- nightlyRel: monitoring Docker build completion
+- nightlyPlaywright: waiting for next nightly run post-source-fixes
+
+**Status:** Source fixes committed; PR #11210 in CI. Monitoring nightlyRel completion.
