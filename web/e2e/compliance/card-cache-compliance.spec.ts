@@ -560,7 +560,6 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
 
   const allBatchResults: Array<{ batchIndex: number; cards: CardCacheResult[] }> = []
   const coldSnapshots: Map<string, ColdLoadSnapshot> = new Map()
-  let totalCards = 0
 
   page.on('console', (msg) => {
     if (msg.type() === 'error') console.log(`[Browser ERROR] ${msg.text()}`)
@@ -591,7 +590,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   // ── Phase 2: Warmup — prime Vite module cache ──────────────────────────
   console.log('[CacheTest] Phase 2: Warmup — priming module cache')
   const warmupManifest = await navigateToBatch(page, 0, 180_000)
-  totalCards = warmupManifest.totalCards
+  const totalCards = warmupManifest.totalCards
   const totalBatches = Math.ceil(totalCards / BATCH_SIZE)
   console.log(`[CacheTest] Total cards: ${totalCards}, batches: ${totalBatches}`)
   // Wait for warmup batch to fully load

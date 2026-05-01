@@ -81,7 +81,6 @@ vi.mock('../shared', () => ({
   REFRESH_INTERVAL_MS: 120_000,
   MIN_REFRESH_INDICATOR_MS: 500,
   getEffectiveInterval: (ms: number) => ms,
-  LOCAL_AGENT_URL: 'http://localhost:8585',
   clusterCacheRef: mockClusterCacheRef,
   agentFetch: vi.fn().mockImplementation(async (...args: unknown[]) => {
     const result = await mockApiGet(...args)
@@ -96,7 +95,7 @@ vi.mock('../shared', () => ({
 
 vi.mock('../../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
-  return { ...actual, MCP_HOOK_TIMEOUT_MS: 5_000 }
+  return { ...actual, MCP_HOOK_TIMEOUT_MS: 5_000, LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585' }
 })
 
 vi.mock('../../../lib/constants', async (importOriginal) => {

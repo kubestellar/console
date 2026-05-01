@@ -5,7 +5,7 @@ import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
-import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, LOCAL_AGENT_URL, clusterCacheRef, fetchWithRetry, agentFetch } from './shared'
+import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, clusterCacheRef, fetchWithRetry, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
@@ -1179,12 +1179,12 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
     }
 
     // Try local agent HTTP endpoint first (works without backend)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/deployments?${params}`, {
+        const response = await fetchWithRetry(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
           headers: { 'Accept': 'application/json' },
           timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
@@ -1362,12 +1362,12 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/jobs?${params}`, {
+        const response = await fetchWithRetry(`${LOCAL_AGENT_HTTP_URL}/jobs?${params}`, {
           headers: { 'Accept': 'application/json' },
           timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
@@ -1444,12 +1444,12 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/hpas?${params}`, {
+        const response = await fetchWithRetry(`${LOCAL_AGENT_HTTP_URL}/hpas?${params}`, {
           headers: { 'Accept': 'application/json' },
           timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
@@ -1515,12 +1515,12 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
   const refetch = useCallback(async () => {
     setIsLoading(true)
     // Try local agent first
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/replicasets?${params}`, {
+        const response = await fetchWithRetry(`${LOCAL_AGENT_HTTP_URL}/replicasets?${params}`, {
           headers: { 'Accept': 'application/json' },
           timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
@@ -1584,12 +1584,12 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/statefulsets?${params}`, {
+        const response = await fetchWithRetry(`${LOCAL_AGENT_HTTP_URL}/statefulsets?${params}`, {
           headers: { 'Accept': 'application/json' },
           timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
@@ -1653,12 +1653,12 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/daemonsets?${params}`, {
+        const response = await fetchWithRetry(`${LOCAL_AGENT_HTTP_URL}/daemonsets?${params}`, {
           headers: { 'Accept': 'application/json' },
           timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })
@@ -1722,12 +1722,12 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
         if (namespace) params.append('namespace', namespace)
-        const response = await fetchWithRetry(`${LOCAL_AGENT_URL}/cronjobs?${params}`, {
+        const response = await fetchWithRetry(`${LOCAL_AGENT_HTTP_URL}/cronjobs?${params}`, {
           headers: { 'Accept': 'application/json' },
           timeoutMs: MCP_HOOK_TIMEOUT_MS,
         })

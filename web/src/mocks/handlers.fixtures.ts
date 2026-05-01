@@ -346,8 +346,8 @@ export function getDefaultUser() {
 // Capped to prevent unbounded memory growth in long-running sessions (#7418).
 /** Maximum number of entries in each in-memory share registry */
 export const MAX_SHARE_REGISTRY_ENTRIES = 500
-export let savedCards: Record<string, unknown> = {}
-export let sharedDashboards: Record<string, unknown> = {}
+export const savedCards: Record<string, unknown> = {}
+export const sharedDashboards: Record<string, unknown> = {}
 
 // ---------------------------------------------------------------------------
 // Demo time-offset constants — used in Date.now() ± N for realistic timestamps
@@ -404,8 +404,8 @@ export function pruneRegistry(registry: Record<string, unknown>) {
  * with a clean registry state (#11035).
  */
 export function resetShareRegistries() {
-  savedCards = {}
-  sharedDashboards = {}
+  for (const k of Object.keys(savedCards)) delete savedCards[k]
+  for (const k of Object.keys(sharedDashboards)) delete sharedDashboards[k]
 }
 
 /** Get default state for savedCards (empty object) */
