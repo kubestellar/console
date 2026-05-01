@@ -426,7 +426,7 @@ Please:
       <CardSearchInput
         value={localSearch}
         onChange={setLocalSearch}
-        placeholder={t('common:searchMissions')}
+        placeholder={t('common:searchMissions', 'Search missions...')}
         className="mb-2 shrink-0"
       />
 
