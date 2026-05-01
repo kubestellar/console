@@ -423,26 +423,34 @@ if [ "$USE_DEV_SERVER" = true ]; then
         echo -e "${CYAN}  Loading page: http://localhost:8080${NC}"
     fi
 
-    # Build kc-agent from source if running from a dev checkout.
+    # Build kc-agent from source in the background while npm/frontend proceed.
+    AGENT_BUILD_PID=""
     if [ "$KC_AGENT_NEEDS_BUILD" = true ]; then
-        write_stage "agent_build"
-        echo -e "${GREEN}Building kc-agent from source...${NC}"
-        AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-        AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        mkdir -p "$SCRIPT_DIR/bin"
-        if (cd "$SCRIPT_DIR" && GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent); then
-            KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
-            echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
-        else
-            echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
-            KC_AGENT_BIN=""
-        fi
+        echo -e "${GREEN}Building kc-agent from source (background)...${NC}"
+        (
+            AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+            AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            mkdir -p "$SCRIPT_DIR/bin"
+            if (cd "$SCRIPT_DIR" && GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent); then
+                echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
+            else
+                echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
+            fi
+        ) &
+        AGENT_BUILD_PID=$!
     fi
 
-    # Always run npm install to pick up new/changed dependencies (#4405).
-    # safe_npm_install is fast when node_modules is already up-to-date.
+    # npm install and frontend work run in parallel with the agent build.
     write_stage "npm_install"
     safe_npm_install web
+
+    # Wait for agent build to finish before starting the backend (agent must be ready).
+    if [ -n "$AGENT_BUILD_PID" ]; then
+        wait "$AGENT_BUILD_PID"
+        if [ -s "$SCRIPT_DIR/bin/kc-agent" ] && [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
+            KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+        fi
+    fi
 
     write_stage "backend_compiling"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
@@ -495,24 +503,24 @@ else
         echo -e "${CYAN}  Loading page: http://localhost:8080${NC}"
     fi
 
-    # Build kc-agent from source if running from a dev checkout.
+    # Build kc-agent from source in the background while npm/frontend proceed.
+    AGENT_BUILD_PID=""
     if [ "$KC_AGENT_NEEDS_BUILD" = true ]; then
-        write_stage "agent_build"
-        echo -e "${GREEN}Building kc-agent from source...${NC}"
-        AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
-        AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        mkdir -p "$SCRIPT_DIR/bin"
-        if (cd "$SCRIPT_DIR" && GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent); then
-            KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
-            echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
-        else
-            echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
-            KC_AGENT_BIN=""
-        fi
+        echo -e "${GREEN}Building kc-agent from source (background)...${NC}"
+        (
+            AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+            AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            mkdir -p "$SCRIPT_DIR/bin"
+            if (cd "$SCRIPT_DIR" && GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent); then
+                echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
+            else
+                echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
+            fi
+        ) &
+        AGENT_BUILD_PID=$!
     fi
 
-    # Always run npm install to pick up new/changed dependencies (#4405).
-    # safe_npm_install is fast when node_modules is already up-to-date.
+    # npm install and frontend build run in parallel with the agent build.
     write_stage "npm_install"
     safe_npm_install web
 
@@ -535,6 +543,14 @@ else
         exit 1
     fi
     echo -e "${GREEN}Frontend built successfully${NC}"
+
+    # Wait for background agent build to finish before starting the backend.
+    if [ -n "$AGENT_BUILD_PID" ]; then
+        wait "$AGENT_BUILD_PID"
+        if [ -s "$SCRIPT_DIR/bin/kc-agent" ] && [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
+            KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+        fi
+    fi
 
     # Start backend on port 8081 — watchdog on 8080 proxies to it
     write_stage "backend_compiling"
