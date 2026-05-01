@@ -87,7 +87,10 @@ vi.mock('../shared', () => ({
   getEffectiveInterval: (ms: number) => ms,
   LOCAL_AGENT_URL: 'http://localhost:8585',
   clusterCacheRef: mockClusterCacheRef,
-  agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
+  agentFetch: vi.fn().mockImplementation(async (...args: unknown[]) => {
+    const result = await mockApiGet(...args)
+    return { ok: true, status: 200, json: async () => result?.data ?? result }
+  }),
   fetchWithRetry: (url: string, opts: Record<string, unknown> = {}) => {
     const { timeoutMs, maxRetries, initialBackoffMs, ...rest } = opts
     void timeoutMs

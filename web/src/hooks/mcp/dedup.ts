@@ -42,7 +42,7 @@ export function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[]): 
   }
 
   // Second pass: copy metrics to clusters missing them
-  return clusters.map(cluster => {
+  return (clusters || []).map(cluster => {
     if (!cluster.server) return cluster
 
     const source = serverMetrics.get(cluster.server)

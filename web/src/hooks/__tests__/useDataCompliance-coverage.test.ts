@@ -229,8 +229,9 @@ describe('useDataCompliance extended coverage', () => {
 
       const { result, unmount } = renderHook(() => useDataCompliance())
 
-      // Should fall back to demo posture and show loading
-      expect(result.current.isLoading).toBe(true)
+      // With empty clusters the hook completes immediately; corrupt cache
+      // is discarded so posture falls back to demo defaults.
+      expect(result.current.isLoading).toBe(false)
       unmount()
     })
 
