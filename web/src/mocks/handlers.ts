@@ -6,10 +6,21 @@
  * - handlers.fixtures.ts: Data fixtures and timing constants
  * - handlers.endpoints.ts: All MSW HTTP route handlers
  * 
- * Existing imports like `import { handlers } from 'mocks/handlers'` continue to work unchanged.
+ * IMPORTANT: For tests, use createHandlers() in beforeEach/setup to get fresh
+ * state and avoid test contamination (#11020). The static `handlers` export
+ * is for backward compatibility only.
+ * 
+ * Example test setup:
+ * ```ts
+ * import { createHandlers } from 'mocks/handlers'
+ * 
+ * beforeEach(() => {
+ *   server.resetHandlers(...createHandlers())
+ * })
+ * ```
  */
 
-export { handlers, scenarios } from './handlers.endpoints'
+export { handlers, scenarios, createHandlers } from './handlers.endpoints'
 export {
   kubaraCatalogFixture,
   demoClusters,
@@ -18,6 +29,10 @@ export {
   demoEvents,
   demoGPUNodes,
   demoSecurityIssues,
+  getDefaultUser,
+  getDefaultSavedCards,
+  getDefaultSharedDashboards,
+  // Legacy exports - DEPRECATED, use factory functions above
   currentUser,
   savedCards,
   sharedDashboards,

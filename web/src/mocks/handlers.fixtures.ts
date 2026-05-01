@@ -331,13 +331,15 @@ export const demoSecurityIssues = [
   },
 ]
 
-// Stored user data
-export const currentUser = {
-  id: 'test-user',
-  name: 'Test User',
-  email: 'test@example.com',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=test',
-  onboarded: true,
+// Stored user data - factory function returns fresh state per call
+export function getDefaultUser() {
+  return {
+    id: 'test-user',
+    name: 'Test User',
+    email: 'test@example.com',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=test',
+    onboarded: true,
+  }
 }
 
 // Stored card configurations for sharing tests.

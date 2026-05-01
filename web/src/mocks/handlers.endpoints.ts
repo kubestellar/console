@@ -26,9 +26,9 @@ import {
   demoEvents,
   demoGPUNodes,
   demoSecurityIssues,
-  currentUser,
-  savedCards,
-  sharedDashboards,
+  getDefaultUser,
+  getDefaultSavedCards,
+  getDefaultSharedDashboards,
   pruneRegistry,
   resetShareRegistries,
   DEMO_30_SEC_MS,
@@ -65,7 +65,26 @@ import {
   DEMO_1_WEEK_MS,
   DEMO_30_DAY_MS,
 } from "./handlers.fixtures"
-export const handlers = [
+
+/**
+ * Factory function that creates fresh MSW handlers with isolated state.
+ * 
+ * Each call returns a new set of handlers with fresh mutable state
+ * (currentUser, savedCards, sharedDashboards), preventing test contamination
+ * when tests mutate state via onboarding or card sharing endpoints.
+ * 
+ * This fixes #11020: Shared mutable state in MSW handlers was causing
+ * order-dependent test failures due to state persistence across test runs.
+ * 
+ * @returns Array of MSW request handlers with fresh isolated state
+ */
+export function createHandlers() {
+  // Fresh state per factory call - no shared mutable state across tests
+  const currentUser = getDefaultUser()
+  const savedCards = getDefaultSavedCards()
+  const sharedDashboards = getDefaultSharedDashboards()
+
+  return [
   // ── Analytics passthrough ─────────────────────────────────────────
   // Explicitly pass through GA4/analytics requests so the service worker
   // does not intercept them. Without this, cross-origin passthrough fails
@@ -2104,6 +2123,12 @@ export const handlers = [
     )
   }),
 ]
+}
+
+// Backward-compatible export - creates handlers on module load
+// DEPRECATED: Tests should call createHandlers() in beforeEach/setup
+// to get fresh state and avoid test contamination (#11020)
+export const handlers = createHandlers()
 
 // Scenario-based handlers for different test scenarios
 export const scenarios = {

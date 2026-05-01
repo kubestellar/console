@@ -1,5 +1,5 @@
 import { setupWorker } from 'msw/browser'
-import { handlers, scenarios } from './handlers'
+import { handlers, scenarios, createHandlers } from './handlers'
 
 /** Service worker URL — kept here (in the dynamically-imported MSW chunk)
  *  so the literal string never appears in the main index bundle. */
@@ -80,9 +80,12 @@ export function applyScenario(name: keyof typeof scenarios) {
   }
 }
 
-// Reset to default handlers
+// Reset to default handlers with fresh state
+// This prevents test contamination by creating new handler instances
+// with fresh mutable state (currentUser, savedCards, sharedDashboards).
+// Fixes #11020: Shared mutable state in MSW handlers causing test failures
 export function resetHandlers() {
-  worker.resetHandlers()
+  worker.resetHandlers(...createHandlers())
 }
 
 // Expose MSW controls on window for Playwright tests
