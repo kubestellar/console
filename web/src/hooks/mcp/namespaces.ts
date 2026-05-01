@@ -25,7 +25,7 @@ function mergeWithClusterCache(fetched: string[], cluster: string): string[] {
     if (ns) set.add(ns)
   }
   const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
-  if (cachedCluster?.namespaces) {
+  if (Array.isArray(cachedCluster?.namespaces)) {
     for (const ns of cachedCluster.namespaces) {
       if (ns) set.add(ns)
     }

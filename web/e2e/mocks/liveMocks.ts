@@ -27,9 +27,9 @@ export const mockUser = {
 export const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
   clusters: {
     clusters: [
-      { name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0', nodes: 3, pods: 12, namespaces: 4, cpuCores: 12, memoryGB: 24, nodeCount: 3, podCount: 12, storageGB: 100 },
-      { name: 'eks-prod', reachable: true, status: 'Ready', provider: 'aws', version: '1.28.0', nodes: 5, pods: 45, namespaces: 8, cpuCores: 20, memoryGB: 64, nodeCount: 5, podCount: 45, storageGB: 200 },
-      { name: 'gke-staging', reachable: true, status: 'Ready', provider: 'gcp', version: '1.28.0', nodes: 3, pods: 32, namespaces: 5, cpuCores: 12, memoryGB: 48, nodeCount: 3, podCount: 32, storageGB: 100 },
+      { name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0', nodes: 3, pods: 12, namespaces: ["default","kube-system","kube-public","argocd"], cpuCores: 12, memoryGB: 24, nodeCount: 3, podCount: 12, storageGB: 100 },
+      { name: 'eks-prod', reachable: true, status: 'Ready', provider: 'aws', version: '1.28.0', nodes: 5, pods: 45, namespaces: ["default","kube-system","kube-public","argocd","istio-system","monitoring","cert-manager","ingress-nginx"], cpuCores: 20, memoryGB: 64, nodeCount: 5, podCount: 45, storageGB: 200 },
+      { name: 'gke-staging', reachable: true, status: 'Ready', provider: 'gcp', version: '1.28.0', nodes: 3, pods: 32, namespaces: ["default","kube-system","kube-public","argocd","monitoring"], cpuCores: 12, memoryGB: 48, nodeCount: 3, podCount: 32, storageGB: 100 },
     ],
   },
   pods: {

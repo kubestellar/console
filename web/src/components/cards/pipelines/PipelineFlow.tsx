@@ -289,15 +289,17 @@ function RunRow({ run, onCancel, canMutate, mutating }: RunRowProps) {
       {/* Actions — inline at the end of the steps column so they don't
            get clipped by the card's overflow-auto scroll container. */}
       <div className="relative z-20 flex items-center gap-1 justify-end pt-1">
-        <a
-          href={run.run.htmlUrl}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-secondary/50"
-          title={TITLE_OPEN_RUN}
-        >
-          <ExternalLink className="w-3 h-3" />
-        </a>
+        {run.run.htmlUrl && run.run.htmlUrl !== '#' && (
+          <a
+            href={run.run.htmlUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-secondary/50"
+            title={TITLE_OPEN_RUN}
+          >
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
         {isActive(run.run.status) && (
           <button
             type="button"
