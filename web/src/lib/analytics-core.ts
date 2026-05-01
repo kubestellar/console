@@ -829,6 +829,43 @@ export function _resetCapturedErrors() {
   capturedErrors.length = 0
 }
 
+// ── Failed API calls ring buffer (for feedback modal) ────────────────
+// Tracks recent 4xx/5xx API responses so the feedback modal can include
+// them in bug reports. Separate from the console error buffer because
+// these carry structured status/endpoint info rather than free-text.
+const API_ERROR_RING_BUFFER_SIZE = 30
+
+interface FailedApiCall {
+  timestamp: string
+  status: number | string
+  endpoint: string
+  detail?: string
+}
+
+const failedApiCalls: FailedApiCall[] = []
+
+export function pushFailedApiCall(status: number | string, endpoint: string, detail?: string) {
+  const entry: FailedApiCall = {
+    timestamp: new Date().toISOString(),
+    status,
+    endpoint: endpoint.slice(0, HTTP_ENDPOINT_MAX_LEN),
+    ...(detail && { detail: detail.slice(0, ERROR_DETAIL_MAX_LEN) }),
+  }
+  failedApiCalls.push(entry)
+  if (failedApiCalls.length > API_ERROR_RING_BUFFER_SIZE) {
+    failedApiCalls.shift()
+  }
+}
+
+export function getRecentFailedApiCalls(): FailedApiCall[] {
+  return [...failedApiCalls]
+}
+
+/** @internal — exported for test isolation only */
+export function _resetFailedApiCalls() {
+  failedApiCalls.length = 0
+}
+
 // ── Per-card / per-page error throttling (#10092) ──────────────────────
 // CI/CD cards poll every 30-120s. Without throttling, a single broken card
 // generates dozens of ksc_error events per session. We cap emissions to at
@@ -930,6 +967,7 @@ export function emitHttpError(
   endpoint: string,
   detail?: string,
 ) {
+  pushFailedApiCall(status, endpoint, detail)
   // Strip query string to avoid GA4 cardinality explosion and PII leakage.
   const endpointPath = endpoint.split('?')[0]
   const page = window.location.pathname

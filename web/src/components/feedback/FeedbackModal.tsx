@@ -18,7 +18,7 @@ import { ConfirmDialog } from '../../lib/modals'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { useToast } from '../ui/Toast'
-import { emitFeedbackSubmitted, emitLinkedInShare, emitScreenshotAttached, emitScreenshotUploadFailed, emitScreenshotUploadSuccess } from '../../lib/analytics'
+import { emitFeedbackSubmitted, emitLinkedInShare, emitScreenshotAttached, emitScreenshotUploadFailed, emitScreenshotUploadSuccess, getRecentBrowserErrors, getRecentFailedApiCalls } from '../../lib/analytics'
 import { copyBlobToClipboard } from '../../lib/clipboard'
 import { useBranding } from '../../hooks/useBranding'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
@@ -51,7 +51,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
   const branding = useBranding()
   const { user } = useAuth()
   const { createRequest } = useFeatureRequests(user?.github_login || '')
-  const { health: agentHealth } = useLocalAgent()
+  const { health: agentHealth, status: agentStatus, dataErrorCount: agentDataErrorCount, lastDataError: agentLastDataError } = useLocalAgent()
   const [type, setType] = useState<FeedbackType>(initialType)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -223,10 +223,19 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         agent_arch: agentHealth?.arch,
         install_method: agentHealth?.install_method,
         clusters: agentHealth?.clusters,
+        agent_connection_status: agentStatus,
+        agent_connection_failures: agentDataErrorCount,
+        agent_last_error: agentLastDataError ?? undefined,
         browser_user_agent: navigator.userAgent,
         browser_platform: navigator.platform,
         browser_language: navigator.language,
+        screen_resolution: `${screen.width}x${screen.height}`,
+        window_size: `${window.innerWidth}x${window.innerHeight}`,
+        page_url: window.location.href,
       }
+
+      const consoleErrors = getRecentBrowserErrors()
+      const failedApiCalls = getRecentFailedApiCalls()
 
       // Submit via backend API — creates GitHub issue directly using the
       // server-side token. No GitHub login required from the user.
@@ -238,6 +247,8 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
         request_type: type,
         target_repo: 'console',
         diagnostics,
+        ...(consoleErrors.length > 0 && { console_errors: consoleErrors }),
+        ...(failedApiCalls.length > 0 && { failed_api_calls: failedApiCalls }),
         ...(hasScreenshots && { screenshots: screenshotDataURIs }) }, hasScreenshots ? { timeout: FEEDBACK_UPLOAD_TIMEOUT_MS } : undefined)
       if (hasScreenshots) emitScreenshotUploadSuccess(screenshotDataURIs.length)
 

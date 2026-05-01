@@ -27,6 +27,8 @@ export {
   emitChunkReloadRecoveryFailed,
   markErrorReported,
   captureUtmParams,
+  getRecentBrowserErrors,
+  getRecentFailedApiCalls,
 } from './analytics-core'
 export type { EmitErrorExtra } from './analytics-core'
 

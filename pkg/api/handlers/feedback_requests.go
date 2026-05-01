@@ -91,7 +91,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	// created synchronously so the client receives the issue number/URL in
 	// the response; screenshot comments are uploaded asynchronously below
 	// (#9898) so slow GitHub responses do not block Fiber workers.
-	issueNumber, _, validScreenshots, ssResult, err := h.createGitHubIssueInRepo(c.UserContext(), request, user, h.repoOwner, targetRepoName, input.Screenshots, input.ConsoleErrors, input.Diagnostics, clientAuth)
+	issueNumber, _, validScreenshots, ssResult, err := h.createGitHubIssueInRepo(c.UserContext(), request, user, h.repoOwner, targetRepoName, input.Screenshots, input.ConsoleErrors, input.FailedApiCalls, input.Diagnostics, clientAuth)
 	if err != nil {
 		slog.Error("[Feedback] failed to create GitHub issue", "error", err)
 		// Clean up the orphaned database record. Log but don't fail the
