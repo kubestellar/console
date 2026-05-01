@@ -346,8 +346,8 @@ export function getDefaultUser() {
 // Capped to prevent unbounded memory growth in long-running sessions (#7418).
 /** Maximum number of entries in each in-memory share registry */
 export const MAX_SHARE_REGISTRY_ENTRIES = 500
-export const savedCards: Record<string, unknown> = {}
-export const sharedDashboards: Record<string, unknown> = {}
+export let savedCards: Record<string, unknown> = {}
+export let sharedDashboards: Record<string, unknown> = {}
 
 // ---------------------------------------------------------------------------
 // Demo time-offset constants — used in Date.now() ± N for realistic timestamps
