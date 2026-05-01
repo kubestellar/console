@@ -6,6 +6,7 @@ on:
 
 permissions:
   checks: write
+  contents: read
   pull-requests: read
   packages: read
 
