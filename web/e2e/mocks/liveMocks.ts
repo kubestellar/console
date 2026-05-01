@@ -479,18 +479,106 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     })
   })
 
-  // 15. Local agent (port 8585) — health returns 200, data returns 503
-  await page.route('http://127.0.0.1:8585/**', (route) => {
+  // 15. Local agent (port 8585) — endpoint-aware mocking
+  //
+  // Many card hooks fetch data directly from the kc-agent URL
+  // (http://127.0.0.1:8585/...) via agentFetch(). A blanket 503 causes
+  // hooks to fall back to demo data, triggering "demo badge" violations
+  // in compliance tests. Instead, return proper mock data for known
+  // resource endpoints (REST + SSE streaming).
+  const AGENT_ENDPOINT_DATA: Record<string, Record<string, unknown>> = {
+    configmaps: { configmaps: [{ name: 'app-config', namespace: 'default', cluster: MOCK_CLUSTER, dataKeys: 3, creationTimestamp: '2026-01-15T10:00:00Z' }] },
+    secrets: { secrets: [{ name: 'app-secret', namespace: 'default', cluster: MOCK_CLUSTER, type: 'Opaque', dataKeys: 2, creationTimestamp: '2026-01-15T10:00:00Z' }] },
+    serviceaccounts: { serviceaccounts: [{ name: 'default', namespace: 'default', cluster: MOCK_CLUSTER, secrets: 1, creationTimestamp: '2026-01-15T10:00:00Z' }] },
+    pods: { pods: MOCK_DATA.pods.pods },
+    events: { events: MOCK_DATA.events.events },
+    nodes: { nodes: MOCK_DATA.nodes.nodes },
+    services: { services: MOCK_DATA.services.services },
+    ingresses: { ingresses: [{ name: 'main-ingress', namespace: 'default', cluster: MOCK_CLUSTER, hosts: ['app.example.com'], paths: ['/'], backend: 'nginx-svc:80' }] },
+    networkpolicies: { networkpolicies: [{ name: 'deny-all', namespace: 'default', cluster: MOCK_CLUSTER, podSelector: {}, policyTypes: ['Ingress'] }] },
+    pvcs: { pvcs: MOCK_DATA.pvcs.pvcs },
+    pvs: { pvs: [{ name: 'pv-data', cluster: MOCK_CLUSTER, capacity: '10Gi', status: 'Bound', storageClass: 'standard', accessModes: ['ReadWriteOnce'] }] },
+    resourcequotas: { quotas: [{ name: 'default-quota', namespace: 'default', cluster: MOCK_CLUSTER, hard: { cpu: '4', memory: '8Gi' }, used: { cpu: '1', memory: '2Gi' } }] },
+    limitranges: { limitranges: [{ name: 'default-limits', namespace: 'default', cluster: MOCK_CLUSTER, limits: [{ type: 'Container', default: { cpu: '500m', memory: '256Mi' } }] }] },
+    deployments: { deployments: MOCK_DATA.deployments.deployments },
+    jobs: { jobs: [{ name: 'backup-job', namespace: 'default', cluster: MOCK_CLUSTER, completions: 1, succeeded: 1, status: 'Complete', duration: '30s' }] },
+    hpas: { hpas: [{ name: 'nginx-hpa', namespace: 'default', cluster: MOCK_CLUSTER, minReplicas: 1, maxReplicas: 10, currentReplicas: 2, targetCPU: 80, currentCPU: 45 }] },
+    replicasets: { replicasets: [{ name: 'nginx-abc123', namespace: 'default', cluster: MOCK_CLUSTER, desired: 2, ready: 2, available: 2 }] },
+    statefulsets: { statefulsets: [{ name: 'postgres', namespace: 'default', cluster: MOCK_CLUSTER, replicas: 1, ready: 1, status: 'Running' }] },
+    daemonsets: { daemonsets: [{ name: 'fluentd', namespace: 'kube-system', cluster: MOCK_CLUSTER, desired: 3, ready: 3, available: 3 }] },
+    cronjobs: { cronjobs: [{ name: 'daily-backup', namespace: 'default', cluster: MOCK_CLUSTER, schedule: '0 2 * * *', lastSchedule: '2026-01-15T02:00:00Z', active: 0 }] },
+    'gpu-nodes': { nodes: [{ name: 'gpu-node-1', cluster: MOCK_CLUSTER, gpus: [{ model: 'A100', memory: '80Gi', index: 0 }], labels: {}, allocatable: {}, capacity: {} }] },
+    clusters: { clusters: [{ name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0' }] },
+    'cluster-health': { status: 'ok', healthy: true, cluster: MOCK_CLUSTER },
+    status: { status: 'ok', version: 'e2e-test', clusters: 1, hasClaude: false },
+    namespaces: { namespaces: MOCK_DATA.namespaces.namespaces },
+    'nvidia-operators': { operators: [] },
+    'pod-issues': { issues: MOCK_DATA['pod-issues'].issues },
+    'deployment-issues': { issues: [] },
+    'security-issues': { issues: MOCK_DATA['security-issues'].issues },
+    releases: { releases: MOCK_DATA.releases.releases },
+    'warning-events': { events: MOCK_DATA['warning-events'].events },
+    'helm-releases': { releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: '2026-01-15T10:00:00Z' }] },
+    operators: { operators: [{ name: 'test-operator', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, status: 'Succeeded', version: '1.0.0' }] },
+    'resource-limits': { limits: MOCK_DATA['resource-limits'].limits },
+  }
+
+  await page.route('http://127.0.0.1:8585/**', async (route) => {
     const url = route.request().url()
-    if (url.endsWith('/health') || url.includes('/health?')) {
-      route.fulfill({
+    const urlObj = new URL(url)
+    const pathParts = urlObj.pathname.split('/').filter(Boolean)
+
+    // Health endpoint — unchanged
+    if (pathParts[pathParts.length - 1] === 'health' || url.includes('/health?')) {
+      return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ status: 'ok', version: 'e2e-test', clusters: 1, hasClaude: false }),
       })
-    } else {
-      route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
     }
+
+    // SSE streaming endpoints (e.g., /configmaps/stream, /pods/stream)
+    if (pathParts[pathParts.length - 1] === 'stream' && pathParts.length >= 2) {
+      const endpoint = pathParts[pathParts.length - 2]
+      if (shouldError(endpoint)) { await fulfillError(route, endpoint); return }
+      const data = AGENT_ENDPOINT_DATA[endpoint]
+      if (data) {
+        await maybeDelay()
+        const itemsKey = Object.keys(data)[0] || 'items'
+        const items = (data as Record<string, unknown>)[itemsKey] as unknown[] || []
+        const sseBody = [
+          'event: cluster_data',
+          `data: ${JSON.stringify({ cluster: MOCK_CLUSTER, [itemsKey]: items })}`,
+          '',
+          'event: done',
+          `data: ${JSON.stringify({ totalClusters: 1, source: 'mock' })}`,
+          '',
+        ].join('\n')
+        return route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          headers: { 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+          body: sseBody,
+        })
+      }
+    }
+
+    // REST endpoints — match first path segment
+    const endpoint = pathParts[0]
+    if (shouldError(endpoint)) { await fulfillError(route, endpoint); return }
+    const data = AGENT_ENDPOINT_DATA[endpoint]
+    if (data) {
+      await maybeDelay()
+      await new Promise(r => setTimeout(r, 150))
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(data),
+      })
+    }
+
+    // Unknown endpoints — still 503
+    route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
   })
 
   // 16. WebSocket mock for kubectl proxy
