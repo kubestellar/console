@@ -574,19 +574,23 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     const clusterStatBlock = page.getByTestId('stat-block-clusters').first()
     const hasStatBlock = await clusterStatBlock.isVisible({ timeout: STAT_BLOCK_TIMEOUT_MS }).catch(() => false)
     if (hasStatBlock) {
-      // Word-boundary match: the StatBlock wraps the numeric value in a
+      // Digit-boundary match: the StatBlock wraps the numeric value in a
       // div with header text ("Clusters") and optional sublabel, so we
-      // can't use toHaveText (which would match the whole block). A
-      // word-bounded regex keeps this precise without requiring a deeper
-      // DOM drill-down into every display mode (numeric/gauge/ring/etc).
+      // can't use toHaveText (which would match the whole block).
+      // Firefox/WebKit concatenate innerText without whitespace between
+      // adjacent block-level elements (e.g. "Clusters3total clusters"),
+      // so \b fails — both letters and digits are \w. Use negative
+      // lookaround for digits instead: (?<!\d)N(?!\d) prevents matching
+      // inside larger numbers (e.g. "30") without requiring word
+      // boundaries at letter-digit transitions. (#11216)
       await expect(clusterStatBlock).toContainText(
-        new RegExp(`\\b${EXPECTED_CLUSTER_COUNT}\\b`)
+        new RegExp(`(?<!\\d)${EXPECTED_CLUSTER_COUNT}(?!\\d)`)
       )
     } else {
       // PR #6574 item B — Structural fallback. If the clusters StatBlock
       // isn't mounted (e.g. user hid it via StatsConfig), try an aria
       // role=status element that explicitly labels itself as a cluster
-      // count. Use a word-boundary regex, not toContainText(String(n)),
+      // count. Use digit-boundary lookaround, not toContainText(String(n)),
       // so "3" can't silently match "30 nodes in 3 clusters".
       const countByLabel = page
         .getByRole('status')
@@ -595,7 +599,7 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       const labelVisible = await countByLabel.isVisible({ timeout: STAT_BLOCK_TIMEOUT_MS }).catch(() => false)
       if (labelVisible) {
         await expect(countByLabel).toHaveText(
-          new RegExp(`\\b${EXPECTED_CLUSTER_COUNT}\\b`)
+          new RegExp(`(?<!\\d)${EXPECTED_CLUSTER_COUNT}(?!\\d)`)
         )
       } else {
         // Dashboard cluster-count stat block not reachable in this browser
