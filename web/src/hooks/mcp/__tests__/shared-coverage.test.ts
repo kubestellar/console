@@ -297,6 +297,54 @@ describe('agentFetch — 401 retry with stale token', () => {
     expect(mockFetch.mock.calls.length).toBeLessThanOrEqual(2)
   })
 
+  it('returns 401 without infinite retry loop when retry also fails', async () => {
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'stale-token')
+    const mockFetch = vi.fn()
+    // First call: 401 with stale token
+    mockFetch.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }))
+    // Token endpoint returns a fresh token
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ token: 'fresh-token' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    // Retry also returns 401
+    mockFetch.mockResolvedValueOnce(new Response('Still Unauthorized', { status: 401 }))
+    globalThis.fetch = mockFetch
+
+    const result = await agentFetch('http://localhost:8090/clusters')
+
+    // The retry 401 is returned as-is (no second retry / infinite loop)
+    expect(result.status).toBe(401)
+    // Exactly 3 calls: original request, token fetch, single retry
+    expect(mockFetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('retry reuses original signal instead of creating a fresh timeout', async () => {
+    localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'stale-token')
+    const callerSignal = AbortSignal.timeout(12345)
+    const mockFetch = vi.fn()
+    // First call: 401
+    mockFetch.mockResolvedValueOnce(new Response('Unauthorized', { status: 401 }))
+    // Token endpoint returns a fresh token
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ token: 'fresh-token' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    // Retry succeeds
+    mockFetch.mockResolvedValueOnce(new Response('ok', { status: 200 }))
+    globalThis.fetch = mockFetch
+
+    await agentFetch('http://localhost:8090/clusters', { signal: callerSignal })
+
+    // The retry (3rd fetch call) must reuse the caller-provided signal
+    const retryInit = mockFetch.mock.calls[2][1]
+    expect(retryInit.signal).toBe(callerSignal)
+  })
+
   it('returns the 401 when fresh token is the same as the stale one', async () => {
     localStorage.setItem(AGENT_TOKEN_STORAGE_KEY, 'same-token')
     const mockFetch = vi.fn()

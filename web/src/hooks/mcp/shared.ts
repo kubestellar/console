@@ -154,8 +154,7 @@ export async function agentFetch(input: RequestInfo | URL, init?: RequestInit): 
       if (!retryHeaders.has('X-Requested-With')) {
         retryHeaders.set('X-Requested-With', 'XMLHttpRequest')
       }
-      const retrySignal = init?.signal ?? AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS)
-      return fetch(input, { ...init, headers: retryHeaders, signal: retrySignal })
+      return fetch(input, { ...init, headers: retryHeaders, signal })
     }
   }
 
