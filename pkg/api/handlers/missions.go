@@ -521,7 +521,7 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 			// Monitor context cancellation to avoid orphaned goroutines on client disconnect
 			select {
 			case <-c.Context().Done():
-				return nil, c.Context().Err()
+				return &githubFetchResult{StatusCode: http.StatusServiceUnavailable}, c.Context().Err()
 			case <-time.After(delay):
 				// Continue to retry
 			}
@@ -608,14 +608,18 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(browse)", "path", path)
 	if err != nil {
-		if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests {
+		if res != nil && (res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests) {
 			return c.Status(res.StatusCode).JSON(fiber.Map{
 				"error":  err.Error(),
 				"status": res.StatusCode,
 				"code":   "rate_limited",
 			})
 		}
-		return c.Status(res.StatusCode).JSON(fiber.Map{"error": err.Error()})
+		status := http.StatusBadGateway
+		if res != nil && res.StatusCode > 0 {
+			status = res.StatusCode
+		}
+		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	if res.CacheStatus != cacheStatusMiss {
@@ -742,14 +746,18 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(file)", "ref", ref, "path", path)
 	if err != nil {
-		if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests {
+		if res != nil && (res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests) {
 			return c.Status(res.StatusCode).JSON(fiber.Map{
 				"error":  err.Error(),
 				"status": res.StatusCode,
 				"code":   "rate_limited",
 			})
 		}
-		return c.Status(res.StatusCode).JSON(fiber.Map{"error": err.Error()})
+		status := http.StatusBadGateway
+		if res != nil && res.StatusCode > 0 {
+			status = res.StatusCode
+		}
+		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	if res.CacheStatus != cacheStatusMiss {

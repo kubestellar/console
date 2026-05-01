@@ -116,6 +116,7 @@ func getGitHubProxyLimiter(userID string) *rate.Limiter {
 // startGitHubProxyLimiterEvictor periodically removes idle rate limiters
 // (no requests for >10 minutes) to prevent unbounded map growth.
 // Exits when ctx is cancelled.
+//nolint:nilaway // ctx is always non-nil (created by context.WithCancel)
 func startGitHubProxyLimiterEvictor(ctx context.Context) {
 	ticker := time.NewTicker(githubProxyEvictionInterval)
 	defer ticker.Stop()
