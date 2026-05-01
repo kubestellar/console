@@ -1,5 +1,55 @@
 # Reviewer Log
 
+## Pass 79 — 2026-05-01T05:10–05:25 UTC
+
+**Trigger:** KICK — RED: nightlyPlaywright=RED; 54 unaddressed Copilot comments
+
+### Pre-flight
+- `git pull /tmp/hive` — failed (divergent branches, hive unrelated repo)
+- Beads: `~/reviewer-beads` — empty
+- Branch: `fix/11204-v2` (4 commits ahead of main)
+- actionable.json: 0 issues, 0 PRs in queue
+- merge-eligible.json: 0 PRs
+
+### GA4 Watch
+- `ga4-anomalies.json` — **NOMINAL, 0 anomalies** ✅
+
+### nightlyPlaywright=RED
+- Scanner owns (issue #10433 already filed)
+- Not a file issue; no reviewer action needed this pass
+
+### Copilot Comments — All HIGH Issues Verified Fixed
+
+| Comment | File | Status |
+|---------|------|--------|
+| PR #11167:151 | shared.ts | ✅ `weInjectedToken` guard in codebase |
+| PR #11167:157 | shared.ts | ✅ Tests in shared-coverage.test.ts:225-320 |
+| PR #11192:443 | preflightCheck-coverage.test.ts | ✅ Test name corrected, assertions added |
+| PR #11181:435 | mission-control-stress.spec.ts | 🟡 Scanner owns (Playwright) |
+| PR #11173:158 | Login.spec.ts | 🟡 Scanner owns (Playwright) |
+| PR #11173:152 | Login.spec.ts | 🟡 Scanner owns (Playwright) |
+
+### MEDIUM Issues — Fix Branch Verified
+
+| File | Issue | Status |
+|------|-------|--------|
+| gitops.go:572 | goroutine leak + gofmt | ✅ `operatorEvictDone` channel, Stop called in server.go:1494 |
+| rewards.go:113 | StopEviction never called | ✅ Called in server.go:1491 |
+| github_proxy.go:121 | no shutdown hook | ✅ `githubProxyEvictDone` channel, Stop called in server.go:1495 |
+| liveMocks.ts:537 | health handler too broad | ✅ `pathParts.length === 1` guard |
+| liveMocks.ts:548 | non-array SSE items | ✅ `Array.isArray(rawItems)` guard |
+| liveMocks.ts:570 | first-segment REST match | ✅ compound key tried first |
+
+### PR Created
+- **PR #11208**: Fix goroutine leaks, address HIGH/MEDIUM Copilot comments (pass 78+79)
+  - Bundles 4 commits from fix/11204-v2
+  - Base: main
+
+### Merge-Eligible PRs
+- None (0 in merge-eligible.json)
+
+---
+
 ## Pass 78 — 2026-05-01T04:52–05:05 UTC
 
 **Trigger:** KICK — RED indicators: nightlyPlaywright=RED; 54 unaddressed Copilot comments (6 HIGH, 43 MEDIUM)
