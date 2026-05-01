@@ -257,8 +257,8 @@ describe('agentFetch — 401 retry with stale token', () => {
     // Fresh token should have been used in the retry request
     const retryHeaders = mockFetch.mock.calls[2][1]?.headers as Headers
     expect(retryHeaders.get('Authorization')).toBe('Bearer fresh-token')
-    // Old token should have been removed from localStorage
-    expect(localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBeNull()
+    // Fresh token should now be cached in localStorage
+    expect(localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)).toBe('fresh-token')
   })
 
   it('does NOT retry when caller supplied their own Authorization header', async () => {
