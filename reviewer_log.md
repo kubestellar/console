@@ -962,3 +962,45 @@ All 6 HIGH source-file comments remain addressed from passes 78–81:
 - nightlyPlaywright: waiting for next nightly run post-source-fixes
 
 **Status:** Source fixes committed; PR #11210 in CI. Monitoring nightlyRel completion.
+
+---
+
+## Pass 93 — 2026-05-01T22:04–22:20 UTC
+
+### Trigger
+KICK — nightlyPlaywright=RED. 70 unaddressed Copilot comments (3 HIGH). GA4 nominal.
+
+### RED Analysis
+
+**nightlyPlaywright=RED**: Issue #11348 already filed ("🐛 15 test failure(s) in Coverage Suite run #1922"). Scanner owns Playwright RED fixes. No code fix required by reviewer.
+
+### HIGH Copilot Comments — Disposition
+
+| PR | File | Issue | Status |
+|----|------|-------|--------|
+| #11318 | events.go:103 | `limit` echoed without clamping | ✅ Already fixed — PR #11362 merged `maxEventLimit` clamp |
+| #11326 | drasi_proxy_test.go:25 | Hop-by-hop header not asserted stripped | ✅ Already fixed — PR #11363 merged `assert.Empty(Proxy-Authenticate)` |
+| #11355 | FeedbackModal.tsx:234 | `page_url` leaks OAuth params | ✅ Fixed — **PR #11364 MERGED** this pass (squash merge) |
+| #11355 | analytics-core.ts:867 | `failedApiCalls` not reset in `_resetAnalyticsState` | ✅ Fixed in PR #11364 |
+| #11355 | feedback.go:144 | `Status` field type mismatch (string vs number) | ✅ Fixed in PR #11364 |
+
+### Merge Activity
+
+| PR | Action | Result |
+|----|--------|--------|
+| #11364 | MERGED (fix/copilot-batch-11355-11323) | ✅ All HIGH #11355 issues resolved |
+| #11365 | Rebased onto upstream/main, force-pushed | CI running (0 failures so far, 16 pending) |
+
+### PR #11365 (fix/post-merge-11356-mcp-tests)
+
+- Conflict: `reviewer_log.md` (stale local commit) — skipped  
+- Conflict: `storage.test.ts` and `networking.test.ts` — resolved by keeping upstream/main's simplified `waitFor` approach while ensuring `await result.current.refetch()` is used where explicit calls appear  
+- Fix preserved: remaining un-awaited `refetch()` at storage.test.ts:1104 corrected to `await result.current.refetch()`  
+- Pushed to upstream, CI triggered. Mergeable=true.
+
+### GA4
+Nominal — no anomalies.
+
+### Outstanding
+- PR #11365: CI running — merge when green (only Storybook Visual Regression may fail as known flaky)
+- nightlyPlaywright RED: scanner owns — Issue #11348 open
