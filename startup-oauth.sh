@@ -277,7 +277,22 @@ trap cleanup SIGINT SIGTERM EXIT
 # Resolve kc-agent binary path
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KC_AGENT_BIN=""
-if [ -f "$SCRIPT_DIR/bin/kc-agent" ]; then
+
+# Auto-build kc-agent from source when running from a dev checkout.
+# This ensures the binary always matches the checked-out code and embeds
+# the commit SHA + build time so /health and the feedback modal report it.
+if [ -f "$SCRIPT_DIR/cmd/kc-agent/main.go" ] && command -v go &>/dev/null; then
+    echo -e "${GREEN}Building kc-agent from source...${NC}"
+    AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+    AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    mkdir -p "$SCRIPT_DIR/bin"
+    if GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent; then
+        KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+        echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
+    else
+        echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
+    fi
+elif [ -f "$SCRIPT_DIR/bin/kc-agent" ]; then
     # Local build binary found — validate it is non-empty and executable
     if [ -s "$SCRIPT_DIR/bin/kc-agent" ] && [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
         KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
