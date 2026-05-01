@@ -129,7 +129,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
         <div className="bg-card border border-border rounded-lg p-4">
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <BookMarked className="w-4 h-4 text-purple-400" />
-            Resolution History
+            {t('common.resolutionHistory')}
           </h4>
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <AlertCircle className="w-8 h-8 text-muted-foreground/50 mb-2" />
@@ -346,7 +346,7 @@ function ResolutionCard({
             onToggleSelect()
           }}
           className="mt-1 w-4 h-4 rounded border-border bg-secondary text-primary focus:ring-2 focus:ring-primary/50 cursor-pointer"
-          aria-label={`Select ${resolution.title}`}
+          aria-label={t('actions.selectItem', { title: resolution.title })}
         />
         <button
           onClick={onToggle}

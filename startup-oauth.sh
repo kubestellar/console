@@ -269,6 +269,7 @@ cleanup() {
     kill $AGENT_LOOP_PID 2>/dev/null || true
     kill $AGENT_PID 2>/dev/null || true
     kill $WATCHDOG_PID 2>/dev/null || true
+    kill $AGENT_BUILD_PID 2>/dev/null || true
     rm -f "$SHUTDOWN_FLAG" "$STAGE_FILE" "${AGENT_PID_FILE:-}"
     exit 0
 }
@@ -346,18 +347,16 @@ if [ -z "$KC_AGENT_TOKEN" ]; then
 fi
 export KC_AGENT_TOKEN
 
-# Start kc-agent with auto-restart on crash
+# Launch kc-agent with auto-restart on crash. Idempotent: no-op if already running.
 AGENT_PID=""
 AGENT_LOOP_PID=""
-if [ -n "$KC_AGENT_BIN" ]; then
+AGENT_PID_FILE="/tmp/.kc-agent-pid-$$"
+launch_kc_agent() {
+    [ -z "$KC_AGENT_BIN" ] && { echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"; return; }
+    [ -n "$AGENT_LOOP_PID" ] && return  # already running
     echo -e "${GREEN}Starting kc-agent ($KC_AGENT_BIN)...${NC}"
-    # Pidfile written by the restart loop so the parent shell can target the
-    # exact kc-agent process instead of whoever happens to be on port 8585.
-    # Fixes #8127 — an unrelated process listening on :8585 was killed on Ctrl+C.
-    AGENT_PID_FILE="/tmp/.kc-agent-pid-$$"
     : > "$AGENT_PID_FILE"
     (
-        # Pass KUBECONFIG from .env / environment as --kubeconfig flag
         KC_AGENT_ARGS=()
         if [ -n "$KUBECONFIG" ]; then
             KC_AGENT_ARGS+=(--kubeconfig "$KUBECONFIG")
@@ -377,7 +376,6 @@ if [ -n "$KC_AGENT_BIN" ]; then
         done
     ) &
     AGENT_LOOP_PID=$!
-    # Give the loop a moment to spawn the child and write the pidfile.
     AGENT_PID_WAIT_ATTEMPTS=10
     AGENT_PID_WAIT_SLEEP_SECONDS=0.2
     for _ in $(seq 1 $AGENT_PID_WAIT_ATTEMPTS); do
@@ -385,9 +383,10 @@ if [ -n "$KC_AGENT_BIN" ]; then
         sleep "$AGENT_PID_WAIT_SLEEP_SECONDS"
     done
     AGENT_PID=$(cat "$AGENT_PID_FILE" 2>/dev/null || true)
-else
-    echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"
-fi
+}
+
+# Start kc-agent with auto-restart on crash
+launch_kc_agent
 
 if [ "$USE_DEV_SERVER" = true ]; then
     # Dev mode: Vite dev server with HMR (slower initial load, live reload on code changes)
@@ -451,6 +450,8 @@ if [ "$USE_DEV_SERVER" = true ]; then
             KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
         fi
     fi
+    # Start agent now if it was skipped earlier (no binary existed before the build).
+    launch_kc_agent
 
     write_stage "backend_compiling"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
@@ -551,6 +552,8 @@ else
             KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
         fi
     fi
+    # Start agent now if it was skipped earlier (no binary existed before the build).
+    launch_kc_agent
 
     # Start backend on port 8081 — watchdog on 8080 proxies to it
     write_stage "backend_compiling"
