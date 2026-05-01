@@ -1,5 +1,46 @@
 # Reviewer Log
 
+## Pass 93 — 2026-05-01T23:13–23:30 UTC
+
+### Trigger
+KICK — Continue standing reviewer duties: fix REDs, merge green PRs. GA4 nominal (no anomalies). Copilot comments down to 48 unaddressed (from 49).
+
+### Status
+- **ci**: 100 ✓ (all workflow runs passing)
+- **GA4**: Nominal, 0 anomalies ✓
+- **nightlyPlaywright**: RED=0 (false GREEN indicator; actual nightly runs still failing since 2026-04-28) — issue #11371 filed for scanner
+- **nightlyRel**: GREEN ✓ (release.yml #139 successful)
+- **deploy_vllm_d / deploy_pok_prod**: 0 (false negatives in health-check.sh due to gh auth; actual runs SUCCESS)
+- **Copilot comments**: 48 unaddressed (3 HIGH, 38 MEDIUM, 7 LOW)
+
+### Recent Merges (2026-05-01)
+- #11373: ci: upgrade docker/setup-buildx-action to v4 — merged 2026-05-01T23:12+Z (rebase of #11367)
+- #11372: Address Copilot review findings from #11326, #11355, #11366 — 3 HIGH comments fixed — merged 2026-05-01T23:11:59Z
+  - Fixed: drasi_proxy_test hop-by-hop header assertion, FeedbackModal + SubmitTab page_url OAuth stripping, service_exports_test route mismatch
+
+
+### Open PRs & Worktrees
+
+| PR | Branch | Title | Status | Issue |
+|----|--------|-------|--------|-------|
+| #11375 | (branch) | fix(e2e): stabilize Playwright tests | dirty (merge conflict) | |
+| #11374 | (branch) | fix(tests): update MCP hook tests for exponential backoff | dirty (merge conflict) | |
+| #11376 | fix/copilot-comments-p95 | fix(startup-oauth.sh): track agent build PID | NEW (CI pending) | #11334 |
+
+### Copilot Comments Addressed This Pass
+- startup-oauth.sh: PID tracking for AGENT_BUILD_PID in cleanup; launch_kc_agent() function refactored for idempotency
+- ResolutionHistoryPanel: i18n fixes (t('common.resolutionHistory'), translated aria-label)
+- common.json: added 'selectItem' key for dynamic label translations
+- Branch: fix/copilot-comments-p95, pushed, PR #11376 created
+
+### Next Steps
+1. Wait for CI on PR #11376, then merge (requires lgtm/approved)
+2. Investigate PR #11375 and #11374 merge conflicts — rebase if needed
+3. Re-run health-check to verify remaining RED indicators
+4. Check remaining 45 MEDIUM/LOW Copilot comments for sweep opportunities
+
+---
+
 ## Pass 92 — 2026-05-01T21:00–21:30 UTC
 
 ### Trigger
