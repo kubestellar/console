@@ -38,7 +38,5 @@ export {
   sharedDashboards,
   pruneRegistry,
   resetShareRegistries,
-  getDefaultSavedCards,
-  getDefaultSharedDashboards,
   MAX_SHARE_REGISTRY_ENTRIES,
 } from './handlers.fixtures'
