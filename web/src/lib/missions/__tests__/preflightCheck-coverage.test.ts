@@ -276,10 +276,10 @@ describe('resolveRequiredTools', () => {
     expect(kubectlCount).toBe(EXPECTED_SINGLE_OCCURRENCE)
   })
 
-  it('returns explicit tools even if empty array', () => {
-    // Empty explicit array is falsy length, so falls through
+  it('falls back to type-based lookup when explicit tools array is empty', () => {
+    // An empty array has length 0 (falsy), so resolveRequiredTools falls
+    // through to the mission-type default tool set rather than returning [].
     const result = resolveRequiredTools('deploy', [])
-    // Empty array has length 0, so it falls through to type-based lookup
     expect(result).toContain('helm')
   })
 })
@@ -392,7 +392,8 @@ describe('runPreflightCheck — catch branch coverage', () => {
 
     const result = await runPreflightCheck(exec)
     expect(result.ok).toBe(false)
-    // Falls through to String(err) path
+    // Falls through to String(err) path → '[object Object]' classified as UNKNOWN_EXECUTION_FAILURE
+    expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
   })
 
   it('handles non-Error thrown value (string)', async () => {
@@ -400,6 +401,8 @@ describe('runPreflightCheck — catch branch coverage', () => {
 
     const result = await runPreflightCheck(exec)
     expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
+    expect(result.error?.message).toBe('raw string error')
   })
 
   it('handles null thrown value', async () => {
@@ -407,6 +410,9 @@ describe('runPreflightCheck — catch branch coverage', () => {
 
     const result = await runPreflightCheck(exec)
     expect(result.ok).toBe(false)
+    // null is normalized to 'Unknown execution error' via String(null ?? 'Unknown execution error')
+    expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
+    expect(result.error?.message).toBe('Unknown execution error')
   })
 
   it('handles "unavailable" in exception message as CLUSTER_UNREACHABLE', async () => {
@@ -431,7 +437,7 @@ describe('runPreflightCheck — catch branch coverage', () => {
 // ============================================================================
 
 describe('getRemediationActions — additional branches', () => {
-  it('includes context in MISSING_CREDENTIALS code snippet when provided', () => {
+  it('uses cloud provider login commands for MISSING_CREDENTIALS when context is provided', () => {
     const error: PreflightError = {
       code: 'MISSING_CREDENTIALS',
       message: 'No kubeconfig',

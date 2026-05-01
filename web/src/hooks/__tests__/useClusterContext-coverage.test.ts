@@ -11,7 +11,7 @@
  * - Fallback to first healthy cluster when none is current
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 
 vi.mock('../mcp/clusters', () => ({
@@ -57,6 +57,14 @@ import { usePodIssues } from '../mcp/workloads'
 import { useSecurityIssues } from '../mcp/security'
 
 describe('useClusterContext — additional coverage', () => {
+  beforeEach(() => {
+    vi.mocked(useClusters).mockReturnValue({ deduplicatedClusters: [], isLoading: false } as never)
+    vi.mocked(useOperators).mockReturnValue({ operators: [], isLoading: false } as never)
+    vi.mocked(useHelmReleases).mockReturnValue({ releases: [], isLoading: false } as never)
+    vi.mocked(usePodIssues).mockReturnValue({ issues: [], isLoading: false } as never)
+    vi.mocked(useSecurityIssues).mockReturnValue({ issues: [], isLoading: false } as never)
+  })
+
   it('extracts base name from operators with -operator suffix', () => {
     vi.mocked(useClusters).mockReturnValue({
       deduplicatedClusters: [
