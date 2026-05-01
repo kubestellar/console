@@ -23,6 +23,7 @@ export {
   emitUserEngagement,
   startGlobalErrorTracking,
   emitError,
+  emitHttpError,
   emitChunkReloadRecoveryFailed,
   markErrorReported,
   captureUtmParams,

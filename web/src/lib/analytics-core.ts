@@ -635,6 +635,11 @@ const COMPONENT_NAME_MAX_LEN = 60
 // short (TypeError, RangeError, etc.), so 40 chars is plenty.
 const ERROR_TYPE_MAX_LEN = 40
 
+// Maximum length for the HTTP endpoint dimension. API paths are short
+// (/api/clusters, /api/mcp/pod-issues/stream, etc.) but query strings
+// can bloat them, so truncate at 120 chars.
+const HTTP_ENDPOINT_MAX_LEN = 120
+
 /** Fallback when no error type can be inferred from the message or Error.name */
 const ERROR_TYPE_UNKNOWN = 'Unknown'
 
@@ -916,6 +921,26 @@ export function emitError(
   })
 }
 
+/**
+ * Emit a structured HTTP error event with status code and endpoint path.
+ * Called from api.get()/api.post() so every non-2xx response is tracked
+ * with enough context to diagnose without digging through error_detail.
+ */
+export function emitHttpError(
+  status: number | string,
+  endpoint: string,
+  detail?: string,
+) {
+  const page = window.location.pathname
+  if (isErrorThrottled(`http_${status}`, page)) return
+  send('ksc_http_error', {
+    http_status: String(status),
+    http_endpoint: endpoint.slice(0, HTTP_ENDPOINT_MAX_LEN),
+    error_detail: (detail || `HTTP ${status}`).slice(0, ERROR_DETAIL_MAX_LEN),
+    error_page: page,
+  })
+}
+
 /** Emit when auto-reload failed to fix stale chunks (user sees manual reload UI) */
 export function emitChunkReloadRecoveryFailed(errorDetail: string) {
   send('ksc_chunk_reload_recovery', {
@@ -1112,18 +1137,18 @@ export function startGlobalErrorTracking() {
       // these as ksc_error creates false-positive alert spikes (#9994).
       if (errorName === 'UnauthenticatedError' || errorName === 'UnauthorizedError') {
         pushCapturedError('error', msg, 'auth_error')
-        send('ksc_http_error', { http_status: 'auth', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        send('ksc_http_error', { http_status: 'auth', http_endpoint: 'global', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
         return
       }
       if (msg.includes('No authentication token') || msg.includes('Token is invalid or expired')) {
         pushCapturedError('error', msg, 'auth_error')
-        send('ksc_http_error', { http_status: 'auth', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        send('ksc_http_error', { http_status: 'auth', http_endpoint: 'global', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
         return
       }
       if (/\b50[234]\b/.test(msg) && (msg.includes('fetch') || msg.includes('Fetch') || msg.includes('upstream'))) {
         const statusMatch = msg.match(/\b(50[234])\b/)
         pushCapturedError('error', msg, `http_${statusMatch?.[1] ?? '5xx'}`)
-        send('ksc_http_error', { http_status: statusMatch?.[1] ?? '5xx', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        send('ksc_http_error', { http_status: statusMatch?.[1] ?? '5xx', http_endpoint: 'global', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
         return
       }
       pushCapturedError('error', msg, 'unhandled_rejection')
@@ -1182,12 +1207,12 @@ export function startGlobalErrorTracking() {
       if (tryChunkReloadRecovery(event.message)) return
       if (event.error?.name === 'UnauthenticatedError' || event.error?.name === 'UnauthorizedError') {
         pushCapturedError('error', event.message, 'auth_error')
-        send('ksc_http_error', { http_status: 'auth', error_detail: event.message.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        send('ksc_http_error', { http_status: 'auth', http_endpoint: 'global', error_detail: event.message.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
         return
       }
       if (event.message.includes('No authentication token') || event.message.includes('Token is invalid or expired')) {
         pushCapturedError('error', event.message, 'auth_error')
-        send('ksc_http_error', { http_status: 'auth', error_detail: event.message.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
+        send('ksc_http_error', { http_status: 'auth', http_endpoint: 'global', error_detail: event.message.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
         return
       }
       pushCapturedError('error', event.message, 'runtime')
