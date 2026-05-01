@@ -311,10 +311,13 @@ jobs:
           ACTUAL_SLUG=$(echo "$ATTRIBUTION" | cut -f3)
 
           # 5. Clean up FIRST so a verify failure still closes the issue.
+          #    Use READ_TOKEN (GITHUB_TOKEN with issues:write) instead of the
+          #    App installation token — the App token lacks permission to
+          #    close/lock issues it created (HTTP 403, see issue #11212).
           #    Use || true so cleanup failures don't mask the attribution result.
           echo "Closing + locking test issue #$ISSUE_NUMBER..."
           CLOSE_HTTP=$(curl -sS -o /dev/null -w "%{http_code}" -X PATCH \
-            -H "Authorization: Bearer $TOKEN" \
+            -H "Authorization: Bearer $READ_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d '{"state":"closed","state_reason":"not_planned"}' \
             "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}") \
@@ -323,7 +326,7 @@ jobs:
             echo "::warning::Failed to close test issue #$ISSUE_NUMBER — HTTP $CLOSE_HTTP"
           fi
           LOCK_HTTP=$(curl -sS -o /dev/null -w "%{http_code}" -X PUT \
-            -H "Authorization: Bearer $TOKEN" \
+            -H "Authorization: Bearer $READ_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             -d '{"lock_reason":"resolved"}' \
             "https://api.github.com/repos/${TEST_REPO_OWNER}/${TEST_REPO_NAME}/issues/${ISSUE_NUMBER}/lock") \
