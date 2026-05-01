@@ -118,6 +118,9 @@ func getGitHubProxyLimiter(userID string) *rate.Limiter {
 // Exits when ctx is cancelled.
 //nolint:nilaway // ctx is always non-nil (created by context.WithCancel)
 func startGitHubProxyLimiterEvictor(ctx context.Context) {
+	if ctx == nil {
+		return
+	}
 	ticker := time.NewTicker(githubProxyEvictionInterval)
 	defer ticker.Stop()
 
