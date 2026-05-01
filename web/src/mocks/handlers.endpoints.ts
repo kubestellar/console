@@ -27,10 +27,10 @@ import {
   demoGPUNodes,
   demoSecurityIssues,
   getDefaultUser,
-  getDefaultSavedCards,
-  getDefaultSharedDashboards,
   pruneRegistry,
   resetShareRegistries,
+  savedCards,
+  sharedDashboards,
   DEMO_30_SEC_MS,
   DEMO_45_SEC_MS,
   DEMO_1_MIN_MS,
@@ -79,10 +79,10 @@ import {
  * @returns Array of MSW request handlers with fresh isolated state
  */
 export function createHandlers() {
-  // Fresh state per factory call - no shared mutable state across tests
+  // Use module-level savedCards/sharedDashboards from handlers.fixtures.ts
+  // so resetShareRegistries() can clear them via the __test/reset endpoint.
   const currentUser = getDefaultUser()
-  const savedCards = getDefaultSavedCards()
-  const sharedDashboards = getDefaultSharedDashboards()
+  resetShareRegistries()
 
   return [
   // ── Analytics passthrough ─────────────────────────────────────────

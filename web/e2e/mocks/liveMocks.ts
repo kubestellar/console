@@ -393,6 +393,32 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     })
   }
 
+  // 11b. Object endpoints (must return {} not [])
+  const objectEndpoints = [
+    { pattern: '**/api/github-pipelines**', data: { pipelines: [], lastUpdated: new Date().toISOString() } },
+    { pattern: '**/api/cluster-groups**', data: { groups: [] } },
+    { pattern: '**/api/openfeature/status**', data: { enabled: false, features: {} } },
+    { pattern: '**/api/benchmarks/**', data: { reports: [] } },
+    { pattern: '**/api/drasi/**', data: { instances: [] } },
+    { pattern: '**/api/rbac/**', data: { items: [] } },
+    { pattern: '**/api/self-upgrade/**', data: { status: 'idle', version: '1.0.0' } },
+    { pattern: '**/api/topology**', data: { nodes: [], edges: [] } },
+    { pattern: '**/api/admission-webhooks**', data: { webhooks: [] } },
+    { pattern: '**/api/crds**', data: { crds: [] } },
+    { pattern: '**/api/attestation/**', data: { score: 100, checks: [] } },
+    { pattern: '**/api/service-exports**', data: { exports: [] } },
+    { pattern: '**/api/mcs/**', data: { imports: [] } },
+    { pattern: '**/api/gateway/**', data: { gateways: [] } },
+    { pattern: '**/api/vitess/**', data: { status: 'ok', clusters: [] } },
+  ]
+  for (const ep of objectEndpoints) {
+    await page.route(ep.pattern, async (route) => {
+      await maybeDelay()
+      await new Promise(r => setTimeout(r, 150))
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ep.data) })
+    })
+  }
+
   // 12. GitHub rewards endpoint
   await page.route('**/api/rewards/**', async (route) => {
     await maybeDelay()
@@ -424,6 +450,11 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       '/api/permissions/', '/health', '/api/dashboards', '/api/gpu/',
       '/api/feedback/', '/api/persistence/', '/api/config/', '/api/gitops/',
       '/api/nightly-e2e/', '/api/public/nightly-e2e/', '/api/rewards/',
+      '/api/github-pipelines', '/api/cluster-groups', '/api/openfeature/',
+      '/api/benchmarks/', '/api/drasi/', '/api/rbac/', '/api/self-upgrade/',
+      '/api/topology', '/api/admission-webhooks', '/api/crds',
+      '/api/attestation/', '/api/service-exports', '/api/mcs/',
+      '/api/gateway/', '/api/vitess/',
     ]
     if (skipPatterns.some(p => url.includes(p))) {
       await route.fallback()
@@ -521,6 +552,49 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     'helm-releases': { releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: '2026-01-15T10:00:00Z' }] },
     operators: { operators: [{ name: 'test-operator', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, status: 'Succeeded', version: '1.0.0' }] },
     'resource-limits': { limits: MOCK_DATA['resource-limits'].limits },
+
+    // --- Compound path endpoints (kagent-crds, kagenti, prometheus, rbac, etc.) ---
+    'kagent-crds/agents': { agents: [{ name: 'weather-agent', namespace: 'kagent', cluster: MOCK_CLUSTER, kind: 'Agent', apiVersion: 'kagent.dev/v1alpha1', spec: { description: 'Weather lookup agent', model: { provider: 'openai' }, tools: [] }, status: { phase: 'Ready' } }] },
+    'kagent-crds/tools': { tools: [{ name: 'web-search', namespace: 'kagent', cluster: MOCK_CLUSTER, kind: 'ToolServer', apiVersion: 'kagent.dev/v1alpha1', spec: { description: 'Web search tool', endpoint: 'http://tool:8080' }, status: { phase: 'Ready' } }] },
+    'kagent-crds/models': { models: [{ name: 'gpt-4o', namespace: 'kagent', cluster: MOCK_CLUSTER, kind: 'ModelConfig', apiVersion: 'kagent.dev/v1alpha1', spec: { provider: 'openai', model: 'gpt-4o' }, status: { phase: 'Ready' } }] },
+    'kagent-crds/memories': { memories: [{ name: 'default-memory', namespace: 'kagent', cluster: MOCK_CLUSTER, kind: 'Memory', apiVersion: 'kagent.dev/v1alpha1', spec: { type: 'chromadb' }, status: { phase: 'Ready' } }] },
+
+    'kagenti/agents': { agents: [{ name: 'code-assistant', namespace: 'kagenti', cluster: MOCK_CLUSTER, status: 'Running', model: 'gpt-4o', tools: 2, lastActive: '2026-01-15T10:00:00Z' }] },
+    'kagenti/builds': { builds: [{ name: 'build-001', namespace: 'kagenti', cluster: MOCK_CLUSTER, status: 'Succeeded', startedAt: '2026-01-15T09:00:00Z', completedAt: '2026-01-15T09:05:00Z' }] },
+    'kagenti/cards': { cards: [{ name: 'summary-card', namespace: 'kagenti', cluster: MOCK_CLUSTER, type: 'summary', status: 'Active' }] },
+    'kagenti/tools': { tools: [{ name: 'kubectl-tool', namespace: 'kagenti', cluster: MOCK_CLUSTER, type: 'builtin', status: 'Available' }] },
+
+    'prometheus/query': { status: 'success', data: { resultType: 'vector', result: [] } },
+
+    'rbac/permissions': { permissions: { clusters: {}, namespaces: {} } },
+    'rbac/can-i': { allowed: true },
+    'permissions/summary': { summary: { clusters: 1, namespaces: 2, roles: 3 } },
+
+    'devices/alerts': { alerts: [] },
+    'devices/inventory': { devices: [] },
+
+    'pods/logs': { logs: '' },
+    'settings/export': { settings: {} },
+    'settings/keys': { keys: [] },
+    'shared': { dashboards: [] },
+
+    'vcluster/list': { vclusters: [] },
+    'vcluster/check': { installed: false },
+
+    'local-clusters': { clusters: [] },
+    'local-cluster-lifecycle': { status: 'ok' },
+    'local-cluster-tools': { tools: [] },
+
+    // --- Simple first-segment endpoints not yet covered ---
+    'argocd': { applications: [] },
+    'cilium-status': { status: 'ok', nodes: [] },
+    'federation': { federations: [] },
+    'gpu-health-cronjob': { cronjobs: [] },
+    'jaeger-status': { status: 'ok', services: [] },
+    'insights': { insights: [] },
+    'predictions': { predictions: [] },
+    'providers': { providers: [] },
+    rolebindings: { rolebindings: [{ name: 'admin-binding', namespace: 'default', cluster: MOCK_CLUSTER, roleRef: { kind: 'ClusterRole', name: 'admin' }, subjects: [{ kind: 'User', name: 'testuser' }] }] },
   }
 
   await page.route('http://127.0.0.1:8585/**', async (route) => {
@@ -537,11 +611,14 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       })
     }
 
-    // SSE streaming endpoints (e.g., /configmaps/stream, /pods/stream)
+    // SSE streaming endpoints (e.g., /configmaps/stream, /kagent-crds/agents/stream)
     if (pathParts[pathParts.length - 1] === 'stream' && pathParts.length >= 2) {
-      const endpoint = pathParts[pathParts.length - 2]
-      if (shouldError(endpoint)) { await fulfillError(route, endpoint); return }
-      const data = AGENT_ENDPOINT_DATA[endpoint]
+      const streamParts = pathParts.slice(0, -1)
+      const sseCompound = streamParts.slice(0, 2).join('/')
+      const sseSimple = streamParts[streamParts.length - 1]
+      const sseEndpoint = AGENT_ENDPOINT_DATA[sseCompound] ? sseCompound : sseSimple
+      if (shouldError(sseEndpoint)) { await fulfillError(route, sseEndpoint); return }
+      const data = AGENT_ENDPOINT_DATA[sseEndpoint]
       if (data) {
         await maybeDelay()
         const itemsKey = Object.keys(data)[0] || 'items'
@@ -563,8 +640,10 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       }
     }
 
-    // REST endpoints — match first path segment
-    const endpoint = pathParts[0]
+    // REST endpoints — try compound key (e.g. kagent-crds/agents) then first segment
+    const compoundKey = pathParts.slice(0, 2).join('/')
+    const simpleKey = pathParts[0]
+    const endpoint = AGENT_ENDPOINT_DATA[compoundKey] ? compoundKey : simpleKey
     if (shouldError(endpoint)) { await fulfillError(route, endpoint); return }
     const data = AGENT_ENDPOINT_DATA[endpoint]
     if (data) {
@@ -577,8 +656,9 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       })
     }
 
-    // Unknown endpoints — still 503
-    route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
+    // Unknown agent endpoints — return empty data instead of 503 to prevent
+    // hooks from falling back to demo data and showing demo badges.
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], source: 'mock' }) })
   })
 
   // 16. WebSocket mock for kubectl proxy
