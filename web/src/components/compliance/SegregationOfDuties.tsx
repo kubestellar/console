@@ -112,8 +112,8 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
 
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-4">
-            <div className="flex items-center gap-2 mb-2"><ShieldAlert className="w-5 h-5 text-indigo-400" /><span className="text-xs text-zinc-400">Compliance Score</span></div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-2"><ShieldAlert className="w-5 h-5 text-indigo-400" /><span className="text-xs text-muted-foreground">Compliance Score</span></div>
             <p className={`text-2xl font-bold ${scoreColor(summary.compliance_score)}`}>{summary.compliance_score}%</p>
           </div>
           <SummaryCard label="Rules" value={summary.total_rules} icon={<ShieldAlert className="w-5 h-5 text-blue-400" />} />
@@ -123,9 +123,9 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
         </div>
       )}
 
-      <div className="flex gap-1 border-b border-zinc-700/50 pb-0">
+      <div className="flex gap-1 border-b border-border pb-0">
         {(['violations', 'principals', 'rules'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-zinc-700/50 text-zinc-100 border-b-2 border-indigo-400' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-secondary text-foreground border-b-2 border-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
             {tab === 'violations' && `Violations (${violations.length})`}
             {tab === 'principals' && `Principals (${principals.length})`}
             {tab === 'rules' && `Rules (${rules.length})`}
@@ -136,7 +136,7 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
       {activeTab === 'violations' && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-zinc-400" />
+            <Filter className="w-4 h-4 text-muted-foreground" />
             <div className="w-40">
               <Select value={filterSeverity} onChange={e => setFilterSeverity(e.target.value)} selectSize="sm">
                 <option value="all">All severities</option>
@@ -147,19 +147,19 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
               </Select>
             </div>
           </div>
-          {filteredViolations.length === 0 ? <p className="text-zinc-500 text-sm text-center py-8">No violations found</p> : filteredViolations.map(v => (
-            <div key={v.id} className="rounded-lg border border-zinc-700/30 bg-zinc-800/50 p-4">
+          {filteredViolations.length === 0 ? <p className="text-muted-foreground text-sm text-center py-8">No violations found</p> : filteredViolations.map(v => (
+            <div key={v.id} className="rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${SEVERITY_STYLES[v.severity] ?? SEVERITY_STYLES.medium}`}>{v.severity}</span>
-                  <span className="text-sm font-medium text-zinc-200">{TYPE_ICONS[v.principal_type] ?? '👤'} {v.principal}</span>
+                  <span className="text-sm font-medium text-foreground">{TYPE_ICONS[v.principal_type] ?? '👤'} {v.principal}</span>
                 </div>
-                <code className="text-xs text-zinc-500">{v.rule_id}</code>
+                <code className="text-xs text-muted-foreground">{v.rule_id}</code>
               </div>
-              <p className="text-sm text-zinc-300 mb-2">{v.description}</p>
+              <p className="text-sm text-foreground/80 mb-2">{v.description}</p>
               <div className="flex gap-2 text-xs">
                 <span className="bg-red-500/10 text-red-300 px-2 py-0.5 rounded">{v.role_a}</span>
-                <span className="text-zinc-500">conflicts with</span>
+                <span className="text-muted-foreground">conflicts with</span>
                 <span className="bg-red-500/10 text-red-300 px-2 py-0.5 rounded">{v.role_b}</span>
               </div>
             </div>
@@ -172,19 +172,19 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
           {principals.map(p => {
             const hasViolation = violations.some(v => v.principal === p.name)
             return (
-              <div key={p.name} className={`rounded-lg border p-3 ${hasViolation ? 'border-red-500/30 bg-red-500/5' : 'border-zinc-700/30 bg-zinc-900/30'}`}>
+              <div key={p.name} className={`rounded-lg border p-3 ${hasViolation ? 'border-red-500/30 bg-red-500/5' : 'border-border bg-card'}`}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <span>{TYPE_ICONS[p.type] ?? '👤'}</span>
-                    <span className="text-sm font-medium text-zinc-200">{p.name}</span>
-                    <code className="text-xs text-zinc-500">{p.type}</code>
+                    <span className="text-sm font-medium text-foreground">{p.name}</span>
+                    <code className="text-xs text-muted-foreground">{p.type}</code>
                     {hasViolation ? <AlertTriangle className="w-4 h-4 text-red-400" /> : <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {(p.roles || []).map(r => <span key={r} className="text-xs bg-zinc-700/50 px-1.5 py-0.5 rounded text-zinc-300">{r}</span>)}
+                  {(p.roles || []).map(r => <span key={r} className="text-xs bg-secondary px-1.5 py-0.5 rounded text-foreground/80">{r}</span>)}
                 </div>
-                <div className="text-xs text-zinc-500 mt-1">Clusters: {(p.clusters || []).join(', ')}</div>
+                <div className="text-xs text-muted-foreground mt-1">Clusters: {(p.clusters || []).join(', ')}</div>
               </div>
             )
           })}
@@ -194,19 +194,19 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
       {activeTab === 'rules' && (
         <div className="space-y-2">
           {rules.map(r => (
-            <div key={r.id} className="rounded-lg border border-zinc-700/30 bg-zinc-900/30 p-4">
+            <div key={r.id} className="rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${SEVERITY_STYLES[r.severity] ?? SEVERITY_STYLES.medium}`}>{r.severity}</span>
-                  <span className="text-sm font-medium text-zinc-200">{r.name}</span>
+                  <span className="text-sm font-medium text-foreground">{r.name}</span>
                 </div>
-                <code className="text-xs bg-zinc-700/50 px-1.5 py-0.5 rounded text-zinc-400">{r.regulation}</code>
+                <code className="text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground">{r.regulation}</code>
               </div>
-              <p className="text-sm text-zinc-400 mb-2">{r.description}</p>
+              <p className="text-sm text-muted-foreground mb-2">{r.description}</p>
               <div className="flex gap-2 text-xs">
-                <span className="bg-zinc-700/50 px-2 py-0.5 rounded text-zinc-300">{r.role_a}</span>
+                <span className="bg-secondary px-2 py-0.5 rounded text-foreground/80">{r.role_a}</span>
                 <XCircle className="w-4 h-4 text-red-400" />
-                <span className="bg-zinc-700/50 px-2 py-0.5 rounded text-zinc-300">{r.role_b}</span>
+                <span className="bg-secondary px-2 py-0.5 rounded text-foreground/80">{r.role_b}</span>
               </div>
             </div>
           ))}
@@ -218,9 +218,9 @@ export const SegregationOfDutiesContent = memo(function SegregationOfDutiesConte
 
 function SummaryCard({ label, value, icon, accent }: { label: string; value: number; icon: React.ReactNode; accent?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-4">
-      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-xs text-zinc-400">{label}</span></div>
-      <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : 'text-zinc-100'}`}>{value}</p>
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-xs text-muted-foreground">{label}</span></div>
+      <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : 'text-foreground'}`}>{value}</p>
     </div>
   )
 }

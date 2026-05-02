@@ -46,10 +46,10 @@ function StatusBadge({ status }: { status: string }) {
 
 function SeverityBadge({ severity }: { severity: string }) {
   const colors: Record<string, string> = {
-    critical: 'bg-red-500/20 text-red-300 border-red-500/30',
-    high:     'bg-orange-500/20 text-orange-300 border-orange-500/30',
-    medium:   'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    low:      'bg-zinc-500/20 text-zinc-300 border-zinc-500/30',
+    critical: 'bg-red-500/20 text-red-400 border-red-500/30',
+    high:     'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    medium:   'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    low:      'bg-zinc-500/20 text-muted-foreground border-zinc-500/30',
   }
   return (
     <span className={`px-1.5 py-0.5 text-[10px] font-medium rounded border ${colors[severity] ?? colors.low}`}>
@@ -70,7 +70,7 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <div className="relative inline-flex items-center justify-center w-28 h-28">
       <svg className="transform -rotate-90" width={80} height={80}>
-        <circle cx={40} cy={40} r={r} className="stroke-zinc-800" strokeWidth={6} fill="none" />
+        <circle cx={40} cy={40} r={r} className="stroke-secondary" strokeWidth={6} fill="none" />
         <circle
           cx={40} cy={40} r={r}
           stroke="currentColor"
@@ -82,7 +82,7 @@ function ScoreRing({ score }: { score: number }) {
           className={`transition-all duration-700 ${ringColor}`}
         />
       </svg>
-      <span className="absolute text-lg font-bold text-white">{pct.toFixed(0)}%</span>
+      <span className="absolute text-lg font-bold text-foreground">{pct.toFixed(0)}%</span>
     </div>
   )
 }
@@ -91,11 +91,11 @@ function ScoreRing({ score }: { score: number }) {
 
 function CheckRow({ check }: { check: ComplianceCheck }) {
   return (
-    <div className="flex items-start gap-3 py-2 px-3 rounded-md bg-zinc-900/50 hover:bg-zinc-800/50 transition-colors">
+    <div className="flex items-start gap-3 py-2 px-3 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
       <StatusBadge status={check.status} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-zinc-200 truncate">{check.name}</span>
+          <span className="text-xs font-medium text-foreground truncate">{check.name}</span>
           <SeverityBadge severity={check.severity} />
         </div>
         {check.message && <p className="text-[11px] text-muted-foreground mt-0.5">{check.message}</p>}
@@ -114,19 +114,19 @@ function ControlAccordion({ control }: { control: ControlResult }) {
   const Icon = open ? ChevronDown : ChevronRight
 
   return (
-    <div className="border border-zinc-800 rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-hidden">
       <button
-        className="w-full flex items-center gap-3 px-4 py-3 bg-zinc-900/70 hover:bg-zinc-800/50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-3 bg-card hover:bg-secondary/50 transition-colors text-left"
         onClick={() => setOpen(v => !v)}
         type="button"
       >
         <Icon className="w-4 h-4 text-muted-foreground shrink-0" />
         <StatusBadge status={control.status} />
-        <span className="text-sm font-medium text-zinc-200 flex-1 truncate">{control.id}: {control.name}</span>
-        <span className="text-xs text-zinc-500">{control.checks.length} checks</span>
+        <span className="text-sm font-medium text-foreground flex-1 truncate">{control.id}: {control.name}</span>
+        <span className="text-xs text-muted-foreground">{control.checks.length} checks</span>
       </button>
       {open && (
-        <div className="px-4 py-2 space-y-1.5 bg-zinc-950/50">
+        <div className="px-4 py-2 space-y-1.5 bg-background/50">
           {control.checks.map(ch => <CheckRow key={ch.id} check={ch} />)}
         </div>
       )}
@@ -142,17 +142,17 @@ function FrameworkCard({ fw, selected, onSelect }: { fw: Framework; selected: bo
       className={`text-left p-4 rounded-lg border transition-all ${
         selected
           ? 'border-blue-500/60 bg-blue-500/10 shadow-lg shadow-blue-500/5'
-          : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-700'
+          : 'border-border bg-card hover:border-border/80'
       }`}
       onClick={onSelect}
       type="button"
     >
       <div className="flex items-center gap-2 mb-1">
         <Shield className="w-4 h-4 text-blue-400" />
-        <span className="text-sm font-semibold text-zinc-100">{fw.name}</span>
+        <span className="text-sm font-semibold text-foreground">{fw.name}</span>
       </div>
       <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{fw.description}</p>
-      <div className="flex gap-3 text-[11px] text-zinc-500">
+      <div className="flex gap-3 text-[11px] text-muted-foreground">
         <span>{fw.controls} controls</span>
         <span>{fw.checks} checks</span>
         <span className="capitalize">{fw.category}</span>
@@ -287,14 +287,14 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
 
       {/* Evaluate bar */}
       {selectedFw && (
-        <div className="flex items-center gap-4 p-4 rounded-lg border border-zinc-800 bg-zinc-900/60">
-          <span className="text-sm text-zinc-300 font-medium whitespace-nowrap">
+        <div className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card">
+          <span className="text-sm text-foreground font-medium whitespace-nowrap">
             Evaluate <span className="text-blue-400">{selectedFw.name}</span> on:
           </span>
           <select
             value={selectedCluster}
             onChange={e => setSelectedCluster(e.target.value)}
-            className="flex-1 max-w-xs bg-zinc-800 text-zinc-200 text-sm rounded-md border border-zinc-700 px-3 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+            className="flex-1 max-w-xs bg-secondary text-foreground text-sm rounded-md border border-border px-3 py-1.5 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
           >
             {clusterNames.length === 0 && <option value="">No clusters available</option>}
             {clusterNames.map(name => (
@@ -304,7 +304,7 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
           <button
             onClick={handleEvaluate}
             disabled={isEvaluating || !selectedCluster}
-            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2"
+            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-secondary disabled:text-muted-foreground text-white text-sm font-medium rounded-md transition-colors flex items-center gap-2"
             type="button"
           >
             {isEvaluating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
@@ -324,12 +324,12 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
       {result && (
         <div className="space-y-6">
           {/* Score summary */}
-          <div className="flex items-center gap-8 p-6 rounded-lg border border-zinc-800 bg-zinc-900/60">
+          <div className="flex items-center gap-8 p-6 rounded-lg border border-border bg-card">
             <ScoreRing score={result.score} />
             <div className="space-y-2">
-              <h2 className="text-lg font-bold text-white">{result.framework_name}</h2>
+              <h2 className="text-lg font-bold text-foreground">{result.framework_name}</h2>
               <p className="text-sm text-muted-foreground">
-                Cluster: <span className="text-zinc-200">{result.cluster}</span>
+                Cluster: <span className="text-foreground">{result.cluster}</span>
               </p>
               <div className="flex gap-4 text-sm">
                 <span className="text-emerald-400">✓ {result.passed} passed</span>
@@ -337,7 +337,7 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
                 <span className="text-yellow-400">◐ {result.partial} partial</span>
                 {result.skipped > 0 && <span className="text-zinc-500">— {result.skipped} skipped</span>}
               </div>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-muted-foreground">
                 Evaluated at {new Date(result.evaluated_at).toLocaleString()}
               </p>
             </div>
@@ -345,7 +345,7 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
 
           {/* Control-by-control results */}
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Controls ({result.controls.length})
             </h3>
             {result.controls.map(ctrl => (
@@ -357,7 +357,7 @@ export const ComplianceFrameworksContent = memo(function ComplianceFrameworksCon
 
       {/* Empty state */}
       {!result && !isEvaluating && selectedFw && (
-        <div className="text-center py-12 text-zinc-500">
+        <div className="text-center py-12 text-muted-foreground">
           <Shield className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="text-sm">Select a framework and cluster, then click <strong>Run Evaluation</strong></p>
         </div>

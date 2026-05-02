@@ -134,8 +134,8 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
           <SummaryCard label="Approved" value={summary.approved_changes} icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} />
           <SummaryCard label="Unapproved" value={summary.unapproved_changes} icon={<XCircle className="w-5 h-5 text-red-400" />} accent={summary.unapproved_changes > 0 ? 'red' : undefined} />
           <SummaryCard label="Violations" value={summary.policy_violations} icon={<ShieldAlert className="w-5 h-5 text-orange-400" />} accent={summary.policy_violations > 0 ? 'orange' : undefined} />
-          <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-4">
-            <div className="flex items-center gap-2 mb-2"><AlertTriangle className={`w-5 h-5 ${riskColor(summary.risk_score)}`} /><span className="text-xs text-zinc-400">Risk Score</span></div>
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-2"><AlertTriangle className={`w-5 h-5 ${riskColor(summary.risk_score)}`} /><span className="text-xs text-muted-foreground">Risk Score</span></div>
             <div className="flex items-baseline gap-2">
               <p className={`text-2xl font-bold ${riskColor(summary.risk_score)}`}>{summary.risk_score}</p>
               <span className={`text-xs px-1.5 py-0.5 rounded ${riskBg(summary.risk_score)} ${riskColor(summary.risk_score)}`}>
@@ -146,9 +146,9 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
         </div>
       )}
 
-      <div className="flex gap-1 border-b border-zinc-700/50 pb-0">
+      <div className="flex gap-1 border-b border-border pb-0">
         {(['changes', 'violations', 'policies'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-zinc-700/50 text-zinc-100 border-b-2 border-indigo-400' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'}`}>
+          <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${activeTab === tab ? 'bg-secondary text-foreground border-b-2 border-indigo-400' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
             {tab === 'changes' && `Changes (${changes.length})`}
             {tab === 'violations' && `Violations (${violations.length})`}
             {tab === 'policies' && `Policies (${policies.length})`}
@@ -159,7 +159,7 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
       {activeTab === 'changes' && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-zinc-400" />
+            <Filter className="w-4 h-4 text-muted-foreground" />
             <div className="w-44">
               <Select value={filterApproval} onChange={e => setFilterApproval(e.target.value)} selectSize="sm">
                 <option value="all">All statuses</option>
@@ -173,25 +173,25 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
           {(filteredChanges || []).map(change => {
             const approval = APPROVAL_STYLES[change.approval_status] ?? APPROVAL_STYLES.pending
             return (
-              <div key={change.id} className="rounded-lg border border-zinc-700/30 bg-zinc-800/50 p-4">
+              <div key={change.id} className="rounded-lg border border-border bg-card p-4">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${approval.bg}`}>{approval.label}</span>
-                    <span className="text-sm font-medium text-zinc-200">{change.resource_kind}/{change.resource_name}</span>
-                    <code className="text-xs bg-zinc-700/50 px-1.5 py-0.5 rounded text-zinc-400">{change.change_type}</code>
+                    <span className="text-sm font-medium text-foreground">{change.resource_kind}/{change.resource_name}</span>
+                    <code className="text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground">{change.change_type}</code>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-sm font-mono font-bold ${riskColor(change.risk_score)}`}>{change.risk_score}</span>
-                    <span className="text-xs text-zinc-500">{change.cluster}</span>
+                    <span className="text-xs text-muted-foreground">{change.cluster}</span>
                   </div>
                 </div>
-                <p className="text-sm text-zinc-300 mb-2">{change.description}</p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+                <p className="text-sm text-foreground/80 mb-2">{change.description}</p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1"><User className="w-3 h-3" />{change.actor}</span>
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(change.timestamp).toLocaleString()}</span>
                   {change.ticket_ref && <span className="flex items-center gap-1"><FileText className="w-3 h-3" />{change.ticket_ref}</span>}
                   {change.approved_by && <span>Approved by: {change.approved_by}</span>}
-                  {change.diff_summary && <code className="bg-zinc-700/30 px-1 rounded">{change.diff_summary}</code>}
+                  {change.diff_summary && <code className="bg-secondary px-1 rounded">{change.diff_summary}</code>}
                 </div>
               </div>
             )
@@ -201,16 +201,16 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
 
       {activeTab === 'violations' && (
         <div className="space-y-2">
-          {(violations || []).length === 0 ? <p className="text-zinc-500 text-sm text-center py-8">No policy violations detected</p> : (violations || []).map(v => (
-            <div key={v.id} className="rounded-lg border border-zinc-700/30 bg-zinc-900/30 p-3">
+          {(violations || []).length === 0 ? <p className="text-muted-foreground text-sm text-center py-8">No policy violations detected</p> : (violations || []).map(v => (
+            <div key={v.id} className="rounded-lg border border-border bg-card p-3">
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${SEVERITY_STYLES[v.severity] ?? SEVERITY_STYLES.low}`}>{v.severity}</span>
-                  <code className="text-xs text-zinc-400">{v.policy}</code>
+                  <code className="text-xs text-muted-foreground">{v.policy}</code>
                 </div>
-                <code className="text-xs text-zinc-500">{v.change_id}</code>
+                <code className="text-xs text-muted-foreground">{v.change_id}</code>
               </div>
-              <p className="text-sm text-zinc-300">{v.description}</p>
+              <p className="text-sm text-foreground/80">{v.description}</p>
             </div>
           ))}
         </div>
@@ -219,16 +219,16 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
       {activeTab === 'policies' && (
         <div className="space-y-2">
           {(policies || []).map(p => (
-            <div key={p.id} className="rounded-lg border border-zinc-700/30 bg-zinc-900/30 p-4">
+            <div key={p.id} className="rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-medium ${SEVERITY_STYLES[p.severity] ?? SEVERITY_STYLES.low}`}>{p.severity}</span>
-                  <span className="text-sm font-medium text-zinc-200">{p.name}</span>
+                  <span className="text-sm font-medium text-foreground">{p.name}</span>
                 </div>
-                <code className="text-xs bg-zinc-700/50 px-1.5 py-0.5 rounded text-zinc-400">{p.scope}</code>
+                <code className="text-xs bg-secondary px-1.5 py-0.5 rounded text-muted-foreground">{p.scope}</code>
               </div>
-              <p className="text-sm text-zinc-400 mb-2">{p.description}</p>
-              <div className="flex gap-3 text-xs text-zinc-500">
+              <p className="text-sm text-muted-foreground mb-2">{p.description}</p>
+              <div className="flex gap-3 text-xs text-muted-foreground">
                 {p.requires_approval && <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-400" />Requires approval</span>}
                 {p.requires_ticket && <span className="flex items-center gap-1"><FileText className="w-3 h-3 text-blue-400" />Requires ticket</span>}
               </div>
@@ -242,9 +242,9 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
 
 function SummaryCard({ label, value, icon, accent }: { label: string; value: number; icon: React.ReactNode; accent?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-700/50 bg-zinc-800/50 p-4">
-      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-xs text-zinc-400">{label}</span></div>
-      <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : accent === 'orange' ? 'text-orange-400' : 'text-zinc-100'}`}>{value}</p>
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center gap-2 mb-2">{icon}<span className="text-xs text-muted-foreground">{label}</span></div>
+      <p className={`text-2xl font-bold ${accent === 'red' ? 'text-red-400' : accent === 'orange' ? 'text-orange-400' : 'text-foreground'}`}>{value}</p>
     </div>
   )
 }
