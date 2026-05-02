@@ -208,7 +208,7 @@ export default function EnterpriseLayout() {
               marginLeft: isMobile ? 0 : sidebarWidthPx + SIDEBAR_CONTROLS_OFFSET_PX,
               marginRight: isMobile ? 0 : `calc(var(--mission-sidebar-width, 0px) + ${SIDEBAR_CONTROLS_OFFSET_PX}px)`,
             }}
-            className="relative flex-1 p-4 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-28 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
+            className="relative flex-1 p-4 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-28 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-[600px]"
           >
             <div key={location.pathname} className="contents">
               <Outlet />

@@ -628,7 +628,7 @@ export function Layout({ children: _children }: LayoutProps) {
           // still get valid bottom padding; the calc(...env()) variants
           // extend it by the safe-area inset when supported. If the whole
           // calc() value were invalid it would drop padding entirely (#6548).
-          className="relative flex-1 p-4 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-28 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
+          className="relative flex-1 p-4 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-28 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-[600px]"
         >
           <NavigationProgress />
           {/*

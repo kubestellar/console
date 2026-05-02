@@ -1085,7 +1085,7 @@ export function Dashboard() {
             data-tour="dashboard"
             role="grid"
             aria-label="Dashboard cards"
-            className={`grid grid-cols-1 md:grid-cols-12 gap-2 auto-rows-min grid-flow-dense ${showDragHint ? 'animate-shimmy' : ''}`}
+            className={`grid grid-cols-1 md:grid-cols-12 gap-2 auto-rows-min grid-flow-dense min-w-[600px] ${showDragHint ? 'animate-shimmy' : ''}`}
           >
             {localCards.map((card, index) => (
               <SortableCard
