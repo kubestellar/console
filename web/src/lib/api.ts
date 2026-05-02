@@ -529,7 +529,7 @@ class ApiClient {
           handle429(response)
         }
         const errorText = await response.text().catch(() => '')
-        emitHttpError(response.status, path, errorText || undefined)
+        emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -540,12 +540,12 @@ class ApiClient {
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
-        emitHttpError('timeout', path, `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
-        emitHttpError('network', path, err.message)
+        emitHttpError('network', err.message)
       }
       throw err
     }
@@ -585,7 +585,7 @@ class ApiClient {
           handle429(response)
         }
         const errorText = await response.text().catch(() => '')
-        emitHttpError(response.status, path, errorText || undefined)
+        emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -596,12 +596,12 @@ class ApiClient {
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
-        emitHttpError('timeout', path, `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
-        emitHttpError('network', path, err.message)
+        emitHttpError('network', err.message)
       }
       throw err
     }
@@ -641,7 +641,7 @@ class ApiClient {
           handle429(response)
         }
         const errorText = await response.text().catch(() => '')
-        emitHttpError(response.status, path, errorText || undefined)
+        emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -652,12 +652,12 @@ class ApiClient {
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
-        emitHttpError('timeout', path, `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
-        emitHttpError('network', path, err.message)
+        emitHttpError('network', err.message)
       }
       throw err
     }
@@ -696,7 +696,7 @@ class ApiClient {
           handle429(response)
         }
         const errorText = await response.text().catch(() => '')
-        emitHttpError(response.status, path, errorText || undefined)
+        emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -704,12 +704,12 @@ class ApiClient {
     } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
-        emitHttpError('timeout', path, `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
-        emitHttpError('network', path, err.message)
+        emitHttpError('network', err.message)
       }
       throw err
     }
