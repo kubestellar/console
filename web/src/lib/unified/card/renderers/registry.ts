@@ -340,7 +340,7 @@ function renderClusterBadge(
   return createElement(
     'span',
     {
-      className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400',
+      className: 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground',
     },
     cluster
   )
@@ -363,7 +363,7 @@ function renderNamespaceBadge(
   return createElement(
     'span',
     {
-      className: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400',
+      className: 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-secondary text-secondary-foreground',
     },
     namespace
   )
