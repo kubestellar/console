@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useReducer } from 'react'
 import { RotateCcw, Flag, Skull, Trophy, Timer, Bomb } from 'lucide-react'
 import { CardComponentProps } from './cardRegistry'
 import { useCardExpanded } from './CardWrapper'
@@ -145,6 +145,60 @@ const NUMBER_COLORS = [
   'text-white',
 ]
 
+// Game state managed via useReducer to batch updates and prevent UI flicker
+interface GameState {
+  difficulty: Difficulty
+  grid: CellState[][]
+  gameStarted: boolean
+  gameOver: boolean
+  won: boolean
+  startTime: number | null
+  elapsed: number
+}
+
+type GameAction =
+  | { type: 'NEW_GAME'; difficulty: Difficulty }
+  | { type: 'FIRST_CLICK'; grid: CellState[][]; startTime: number }
+  | { type: 'REVEAL'; grid: CellState[][] }
+  | { type: 'MINE_HIT'; grid: CellState[][] }
+  | { type: 'WIN'; grid: CellState[][] }
+  | { type: 'FLAG'; grid: CellState[][] }
+  | { type: 'TICK'; elapsed: number }
+
+function createInitialState(difficulty: Difficulty): GameState {
+  const cfg = CONFIGS[difficulty]
+  return {
+    difficulty,
+    grid: createEmptyGrid(cfg.rows, cfg.cols),
+    gameStarted: false,
+    gameOver: false,
+    won: false,
+    startTime: null,
+    elapsed: 0,
+  }
+}
+
+function gameReducer(state: GameState, action: GameAction): GameState {
+  switch (action.type) {
+    case 'NEW_GAME':
+      return createInitialState(action.difficulty)
+    case 'FIRST_CLICK':
+      return { ...state, grid: action.grid, gameStarted: true, startTime: action.startTime }
+    case 'REVEAL':
+      return { ...state, grid: action.grid }
+    case 'MINE_HIT':
+      return { ...state, grid: action.grid, gameOver: true, won: false }
+    case 'WIN':
+      return { ...state, grid: action.grid, gameOver: true, won: true }
+    case 'FLAG':
+      return { ...state, grid: action.grid }
+    case 'TICK':
+      return { ...state, elapsed: action.elapsed }
+    default:
+      return state
+  }
+}
+
 // #6216: wrapped in DynamicCardErrorBoundary so a runtime error in the
 // 350-line game loop doesn't crash the whole dashboard.
 function PodSweeperInternal(_props: CardComponentProps) {
@@ -152,15 +206,8 @@ function PodSweeperInternal(_props: CardComponentProps) {
   useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: false })
   const { isExpanded } = useCardExpanded()
 
-  const [difficulty, setDifficulty] = useState<Difficulty>('easy')
-  const [grid, setGrid] = useState<CellState[][]>(() =>
-    createEmptyGrid(CONFIGS.easy.rows, CONFIGS.easy.cols)
-  )
-  const [gameStarted, setGameStarted] = useState(false)
-  const [gameOver, setGameOver] = useState(false)
-  const [won, setWon] = useState(false)
-  const [startTime, setStartTime] = useState<number | null>(null)
-  const [elapsed, setElapsed] = useState(0)
+  const [state, dispatch] = useReducer(gameReducer, 'easy', createInitialState)
+  const { difficulty, grid, gameStarted, gameOver, won, startTime, elapsed } = state
 
   const config = CONFIGS[difficulty]
 
@@ -170,7 +217,7 @@ function PodSweeperInternal(_props: CardComponentProps) {
 
     const timer = setInterval(() => {
       if (startTime) {
-        setElapsed(Math.floor((Date.now() - startTime) / 1000))
+        dispatch({ type: 'TICK', elapsed: Math.floor((Date.now() - startTime) / 1000) })
       }
     }, 1000)
 
@@ -179,14 +226,7 @@ function PodSweeperInternal(_props: CardComponentProps) {
 
   // Start a new game
   const newGame = (diff: Difficulty = difficulty) => {
-    const cfg = CONFIGS[diff]
-    setDifficulty(diff)
-    setGrid(createEmptyGrid(cfg.rows, cfg.cols))
-    setGameStarted(false)
-    setGameOver(false)
-    setWon(false)
-    setStartTime(null)
-    setElapsed(0)
+    dispatch({ type: 'NEW_GAME', difficulty: diff })
   }
 
   // Handle cell click
@@ -200,8 +240,6 @@ function PodSweeperInternal(_props: CardComponentProps) {
     if (!gameStarted) {
       // First click - initialize grid
       newGrid = initializeGrid(config.rows, config.cols, config.mines, row, col)
-      setGameStarted(true)
-      setStartTime(Date.now())
       emitGameStarted('pod_sweeper')
     } else {
       newGrid = cloneGrid(grid)
@@ -217,21 +255,33 @@ function PodSweeperInternal(_props: CardComponentProps) {
           if (c.isMine) c.isRevealed = true
         }
       }
-      setGrid(newGrid)
-      setGameOver(true)
-      setWon(false)
+      dispatch({ type: 'MINE_HIT', grid: newGrid })
       emitGameEnded('pod_sweeper', 'loss', elapsed)
       return
     }
 
+    if (!gameStarted) {
+      // Batch first-click initialization with reveal
+      newGrid = revealCell(newGrid, row, col)
+      const isWin = checkWin(newGrid)
+      if (isWin) {
+        dispatch({ type: 'FIRST_CLICK', grid: newGrid, startTime: Date.now() })
+        dispatch({ type: 'WIN', grid: newGrid })
+        emitGameEnded('pod_sweeper', 'win', elapsed)
+      } else {
+        dispatch({ type: 'FIRST_CLICK', grid: newGrid, startTime: Date.now() })
+      }
+      return
+    }
+
     newGrid = revealCell(newGrid, row, col)
-    setGrid(newGrid)
 
     // Check for win
     if (checkWin(newGrid)) {
-      setGameOver(true)
-      setWon(true)
+      dispatch({ type: 'WIN', grid: newGrid })
       emitGameEnded('pod_sweeper', 'win', elapsed)
+    } else {
+      dispatch({ type: 'REVEAL', grid: newGrid })
     }
   }
 
@@ -243,7 +293,7 @@ function PodSweeperInternal(_props: CardComponentProps) {
 
     const newGrid = cloneGrid(grid)
     newGrid[row][col].isFlagged = !newGrid[row][col].isFlagged
-    setGrid(newGrid)
+    dispatch({ type: 'FLAG', grid: newGrid })
   }
 
   // Timer effect
