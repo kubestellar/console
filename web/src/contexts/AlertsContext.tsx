@@ -36,10 +36,7 @@ import {
   sendNotifications,
   sendBatchedNotifications,
 } from './notifications'
-import {
-  findAndExecuteRunbook,
-  buildDiagnosisPrompt,
-} from './alertRunbooks'
+
 
 // Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of
 // the main chunk.  The provider renders immediately with empty data; once
@@ -268,21 +265,10 @@ const ALERTS_KEY = 'kc_alerts'
 /** Maximum number of alerts to retain in memory and storage at any time. */
 const MAX_ALERTS = 500
 
-/** Maximum number of resolved alerts to keep after a quota-exceeded prune. */
-const MAX_RESOLVED_ALERTS_AFTER_PRUNE = 50
-
 /** Default temperature threshold for extreme-heat weather alerts (°F). */
 const DEFAULT_TEMPERATURE_THRESHOLD_F = 100
 /** Default wind-speed threshold for high-wind weather alerts (mph). */
 const DEFAULT_WIND_SPEED_THRESHOLD_MPH = 40
-
-/** Minimum time (ms) between repeat notifications for the same alert,
- *  tiered by severity so critical alerts re-notify quickly while
- *  lower-severity alerts don't spam the desktop. */
-const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
-  critical: 5 * MS_PER_MINUTE,    // 5 min — urgent, re-notify quickly
-  warning: 30 * MS_PER_MINUTE,    // 30 min — important but not urgent
-}
 
 interface AlertsContextValue {
   alerts: Alert[]
