@@ -578,6 +578,120 @@ func (s *Server) handlePodsStreamSSE(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 }
 
+// jobsStreamPerClusterTimeout is the per-cluster fetch deadline used by the
+// jobs SSE stream handler.
+const jobsStreamPerClusterTimeout = 15 * time.Second
+const jobsStreamSSETimeout = 2 * time.Minute
+
+// handleJobsStreamSSE streams job data per cluster via Server-Sent Events.
+// The frontend subscribes to this endpoint for progressive multi-cluster job
+// updates (#11543). Each cluster's jobs are sent as an SSE "cluster_data"
+// event; failures are sent as "cluster_error" events; a final "done" event
+// signals completion.
+func (s *Server) handleJobsStreamSSE(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if s.k8sClient == nil {
+		http.Error(w, "k8s client not initialized", http.StatusServiceUnavailable)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	clusterFilter := r.URL.Query().Get("cluster")
+	namespace := r.URL.Query().Get("namespace")
+
+	// SSE headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	// Override the server-level WriteTimeout for this SSE stream.
+	rc := http.NewResponseController(w)
+	rc.SetWriteDeadline(time.Now().Add(jobsStreamSSETimeout))
+
+	bw := bufio.NewWriter(w)
+
+	// Determine which clusters to stream
+	clusters, _ := s.kubectl.ListContexts()
+	if clusterFilter != "" {
+		filtered := make([]protocol.ClusterInfo, 0, 1)
+		for _, cl := range clusters {
+			if cl.Name == clusterFilter {
+				filtered = append(filtered, cl)
+				break
+			}
+		}
+		clusters = filtered
+	}
+
+	// Stream jobs from each cluster concurrently, writing SSE events as
+	// results arrive.
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	totalJobs := 0
+
+	for _, cl := range clusters {
+		wg.Add(1)
+		go func(clusterName string) {
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(r.Context(), jobsStreamPerClusterTimeout)
+			defer cancel()
+
+			jobs, err := s.k8sClient.GetJobs(ctx, clusterName, namespace)
+			mu.Lock()
+			defer mu.Unlock()
+
+			if err != nil {
+				slog.Warn("[SSE] cluster job fetch failed", "cluster", clusterName, "error", err)
+				payload := map[string]string{"cluster": clusterName, "error": err.Error()}
+				data, _ := json.Marshal(payload)
+				fmt.Fprintf(bw, "event: cluster_error\ndata: %s\n\n", data)
+				bw.Flush()
+				flusher.Flush()
+				return
+			}
+
+			totalJobs += len(jobs)
+			payload := map[string]interface{}{"cluster": clusterName, "jobs": jobs}
+			data, marshalErr := json.Marshal(payload)
+			if marshalErr != nil {
+				slog.Error("[SSE] failed to marshal jobs", "cluster", clusterName, "error", marshalErr)
+				return
+			}
+			fmt.Fprintf(bw, "event: cluster_data\ndata: %s\n\n", data)
+			bw.Flush()
+			flusher.Flush()
+		}(cl.Name)
+	}
+
+	wg.Wait()
+
+	// Terminal event
+	summary := map[string]interface{}{"total": totalJobs, "clusters": len(clusters)}
+	data, _ := json.Marshal(summary)
+	fmt.Fprintf(bw, "event: done\ndata: %s\n\n", data)
+	bw.Flush()
+	flusher.Flush()
+}
+
 // handleClusterHealthHTTP returns health info for a cluster
 func (s *Server) handleClusterHealthHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)

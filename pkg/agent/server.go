@@ -486,6 +486,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/secrets", s.handleSecretsHTTP)
 	mux.HandleFunc("/serviceaccounts", s.handleServiceAccountsHTTP)
 	mux.HandleFunc("/jobs", s.handleJobsHTTP)
+	mux.HandleFunc("/jobs/stream", s.handleJobsStreamSSE)
 	mux.HandleFunc("/hpas", s.handleHPAsHTTP)
 	mux.HandleFunc("/pvcs", s.handlePVCsHTTP)
 	mux.HandleFunc("/pvs", s.handlePVsHTTP)
