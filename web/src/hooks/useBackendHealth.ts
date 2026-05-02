@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { triggerAllRefetches } from '../lib/modeTransition'
 
 export type BackendStatus = 'connected' | 'disconnected' | 'connecting'
 
@@ -87,6 +88,11 @@ class BackendHealthManager {
     this.state = { ...this.state, ...updates }
     if (prevStatus !== this.state.status || prevVersionChanged !== this.state.versionChanged || prevInCluster !== this.state.inCluster) {
       this.notify()
+    }
+    // When inCluster transitions false→true (first /health response on fresh session),
+    // trigger an immediate refetch so cards don't wait for the next 60s cycle.
+    if (!prevInCluster && this.state.inCluster) {
+      triggerAllRefetches()
     }
   }
 
