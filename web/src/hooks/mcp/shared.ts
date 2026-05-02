@@ -19,7 +19,7 @@ import {
 import { STORAGE_KEY_TOKEN } from '../../lib/constants/storage'
 import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS, KUBECTL_MAX_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ClusterInfo, ClusterHealth } from './types'
-import { LOCAL_AGENT_URL, agentFetch, _resetAgentTokenState, AGENT_TOKEN_STORAGE_KEY } from './agentFetch'
+import { LOCAL_AGENT_URL, agentFetch, AGENT_TOKEN_STORAGE_KEY } from './agentFetch'
 
 // Re-export canonical constant under the name used by MCP hooks
 export const REFRESH_INTERVAL_MS = DEFAULT_REFRESH_INTERVAL_MS
