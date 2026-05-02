@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Layout, RotateCcw, Download, Undo2, Redo2, Palette } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
 import { useMissions } from '../../hooks/useMissions'
-import { useMobile } from '../../hooks/useMobile'
+import { useMobile, useIsTablet } from '../../hooks/useMobile'
 import { useFeatureHints } from '../../hooks/useFeatureHints'
 import { ResetMode } from '../../hooks/useDashboardReset'
 import { ResetDialog } from './ResetDialog'
@@ -69,6 +69,7 @@ export function FloatingDashboardActions({
   const { t } = useTranslation()
   const { isSidebarOpen, isSidebarMinimized, isFullScreen: isMissionFullScreen } = useMissions()
   const { isMobile } = useMobile()
+  const isTablet = useIsTablet()
   const fabHint = useFeatureHints('fab-add')
   const menu = useModalState()
   const resetDialog = useModalState()
@@ -112,6 +113,9 @@ export function FloatingDashboardActions({
 
   const getPositionClasses = () => {
     if (isMobile) return 'left-4 bottom-4'
+    // On tablet (768-1023px) the sidebar renders as an overlay and does not
+    // push content, so always use default right positioning (#11505).
+    if (isTablet) return 'right-16 bottom-20'
     // right-16 (64px) keeps the 40px FAB fully visible regardless of
     // macOS "always-show scrollbars" preference, browser zoom, or any
     // future scrollbar-gutter changes (#8551 follow-up).
