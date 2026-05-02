@@ -41,10 +41,10 @@ const CATEGORIES = ['all', 'registry', 'dns', 'ntp', 'updates', 'telemetry'] as 
 
 const statusIcon = (status: string) => {
   switch (status) {
-    case 'ready': return <CheckCircle2 className="w-4 h-4 text-green-400" />
-    case 'not_ready': return <XCircle className="w-4 h-4 text-red-400" />
-    case 'partial': return <AlertTriangle className="w-4 h-4 text-yellow-400" />
-    default: return <AlertTriangle className="w-4 h-4 text-gray-400" />
+    case 'ready': return <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+    case 'not_ready': return <XCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+    case 'partial': return <AlertTriangle className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+    default: return <AlertTriangle className="w-4 h-4 text-muted-foreground" />
   }
 }
 
@@ -59,10 +59,10 @@ const statusLabel = (status: string) => {
 
 const statusColor = (status: string) => {
   switch (status) {
-    case 'ready': return 'text-green-400'
-    case 'not_ready': return 'text-red-400'
-    case 'partial': return 'text-yellow-400'
-    default: return 'text-gray-400'
+    case 'ready': return 'text-green-700 dark:text-green-400 font-medium'
+    case 'not_ready': return 'text-red-700 dark:text-red-400 font-medium'
+    case 'partial': return 'text-yellow-700 dark:text-yellow-400 font-medium'
+    default: return 'text-muted-foreground'
   }
 }
 
@@ -105,14 +105,14 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+      <Loader2 className="w-8 h-8 animate-spin text-primary" />
       <span className="ml-3 text-muted-foreground">Loading air-gap readiness…</span>
     </div>
   )
 
   if (error) return (
     <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg">
-      <p className="text-red-400">{error}</p>
+      <p className="text-red-600 dark:text-red-400">{error}</p>
     </div>
   )
 
@@ -132,23 +132,23 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
       {/* Summary cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-card/50 rounded-lg p-4 border border-border">
+          <div className="bg-card rounded-lg p-4 border border-border shadow-sm">
             <p className="text-sm text-muted-foreground">Overall Readiness</p>
-            <p className="text-2xl font-bold text-foreground">{summary.overall_readiness}%</p>
+            <p className="text-2xl font-bold text-foreground">{summary.overall_readiness ?? 0}%</p>
           </div>
-          <div className="bg-card/50 rounded-lg p-4 border border-border">
+          <div className="bg-card rounded-lg p-4 border border-border shadow-sm">
             <p className="text-sm text-muted-foreground">Total Requirements</p>
             <p className="text-2xl font-bold text-foreground">{summary.total_requirements}</p>
           </div>
-          <div className="bg-card/50 rounded-lg p-4 border border-green-500/30">
+          <div className="bg-card rounded-lg p-4 border border-green-500/30 shadow-sm">
             <p className="text-sm text-muted-foreground">Ready</p>
-            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{summary.ready}</p>
+            <p className="text-2xl font-bold text-green-700 dark:text-green-400">{summary.ready}</p>
           </div>
-          <div className="bg-card/50 rounded-lg p-4 border border-red-500/30">
+          <div className="bg-card rounded-lg p-4 border border-red-500/30 shadow-sm">
             <p className="text-sm text-muted-foreground">Not Ready</p>
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400">{summary.not_ready}</p>
+            <p className="text-2xl font-bold text-red-700 dark:text-red-400">{summary.not_ready}</p>
           </div>
-          <div className="bg-card/50 rounded-lg p-4 border border-yellow-500/30">
+          <div className="bg-card rounded-lg p-4 border border-yellow-500/30 shadow-sm">
             <p className="text-sm text-muted-foreground">Partial</p>
             <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{summary.partial}</p>
           </div>
@@ -162,7 +162,7 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+              activeTab === tab ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {tab === 'requirements' ? 'Requirements' : tab === 'clusters' ? 'Clusters' : 'Summary'}
@@ -178,28 +178,28 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
               <button
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
-                className={`px-3 py-1 rounded text-xs capitalize ${categoryFilter === cat ? 'bg-blue-500 text-white' : 'bg-muted text-muted-foreground'}`}
+                className={`px-3 py-1 rounded text-xs capitalize font-medium ${categoryFilter === cat ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
               >{cat === 'all' ? 'All Categories' : cat}</button>
             ))}
           </div>
 
-          <div className="bg-card/50 rounded-lg border border-border overflow-hidden">
+          <div className="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-muted-foreground border-b border-border">
-                  <th className="text-left p-3">ID</th>
-                  <th className="text-left p-3">Name</th>
-                  <th className="text-left p-3">Category</th>
-                  <th className="text-left p-3">Status</th>
-                  <th className="text-left p-3">Details</th>
+                <tr className="text-muted-foreground border-b border-border bg-muted/50">
+                  <th className="text-left p-3 font-medium">ID</th>
+                  <th className="text-left p-3 font-medium">Name</th>
+                  <th className="text-left p-3 font-medium">Category</th>
+                  <th className="text-left p-3 font-medium">Status</th>
+                  <th className="text-left p-3 font-medium">Details</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRequirements.map(r => (
                   <tr key={r.id} className="border-b border-border/50 hover:bg-muted/30">
-                    <td className="p-3 font-mono text-blue-600 dark:text-blue-300">{r.id}</td>
+                    <td className="p-3 font-mono text-primary">{r.id}</td>
                     <td className="p-3 text-foreground">{r.name}</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded bg-muted text-muted-foreground text-xs capitalize">{r.category}</span></td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded bg-secondary text-secondary-foreground text-xs capitalize">{r.category}</span></td>
                     <td className="p-3">
                       <span className="flex items-center gap-1.5">
                         {statusIcon(r.status)}
@@ -219,7 +219,7 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
       {activeTab === 'clusters' && (
         <div className="space-y-4">
           {clusters.map(cluster => (
-            <div key={cluster.id} className="bg-card/50 rounded-lg border border-border p-4">
+            <div key={cluster.id} className="bg-card rounded-lg border border-border p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   {statusIcon(cluster.status)}
@@ -253,7 +253,7 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
       {/* Summary tab */}
       {activeTab === 'summary' && summary && (
         <div className="space-y-4">
-          <div className="bg-card/50 rounded-lg border border-border p-6">
+          <div className="bg-card rounded-lg border border-border p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground mb-4">Air-Gap Assessment Overview</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -262,7 +262,7 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Not Ready</p>
-                <p className="text-xl font-bold text-red-600 dark:text-red-400">{summary.not_ready}</p>
+                <p className="text-xl font-bold text-red-700 dark:text-red-400">{summary.not_ready}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Overall Readiness</p>
@@ -278,13 +278,13 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Last Evaluated</p>
-                <p className="text-sm text-muted-foreground">{new Date(summary.evaluated_at).toLocaleString()}</p>
+                <p className="text-sm text-foreground">{new Date(summary.evaluated_at).toLocaleString()}</p>
               </div>
             </div>
           </div>
 
           {/* Cluster readiness breakdown */}
-          <div className="bg-card/50 rounded-lg border border-border p-6">
+          <div className="bg-card rounded-lg border border-border p-6 shadow-sm">
             <h3 className="text-lg font-semibold text-foreground mb-4">Cluster Readiness</h3>
             <div className="space-y-3">
               {clusters.map(c => (
