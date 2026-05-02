@@ -60,17 +60,24 @@ function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
     const { category = defaultCategory } = options || {}
     const key = `${cacheKeyPrefix}:${cluster || 'all'}`
 
+    const restFetcher = async () => {
+      const data = await fetchGitOpsAPI<Record<string, T[]>>(apiEndpoint, cluster ? { cluster } : undefined)
+      return (data[responseKey] as T[]) || []
+    }
+
     const result = useCache({
       key,
       category,
       initialData: [] as T[],
       demoData: getDemoData(),
-      fetcher: async () => {
-        const data = await fetchGitOpsAPI<Record<string, T[]>>(apiEndpoint, cluster ? { cluster } : undefined)
-        return (data[responseKey] as T[]) || []
-      },
+      fetcher: restFetcher,
       progressiveFetcher: cluster ? undefined : async (onProgress) => {
-        return await fetchViaGitOpsSSE<T>(apiEndpoint, responseKey, {}, onProgress)
+        try {
+          return await fetchViaGitOpsSSE<T>(apiEndpoint, responseKey, {}, onProgress)
+        } catch {
+          // SSE stream failed — fall back to REST endpoint
+          return await restFetcher()
+        }
       },
     })
 
