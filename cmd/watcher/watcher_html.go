@@ -126,10 +126,11 @@ var reloading=false;
 var elapsedEl=document.getElementById('elapsed');
 
 // Stage ordering
-var STAGES=['watchdog','npm_install','frontend_build','vite_starting','backend_compiling','backend_starting','ready'];
+var STAGES=['watchdog','npm_install','parallel_build','frontend_build','vite_starting','backend_compiling','backend_starting','ready'];
 
 function normalizeStage(s){
   if(s==='vite_starting') return 'frontend_build';
+  if(s==='parallel_build') return 'parallel_build';
   return s;
 }
 
@@ -146,23 +147,37 @@ function updateSteps(stage){
   var displayStages=[];
   steps.forEach(function(el){displayStages.push(el.getAttribute('data-stage'))});
 
-  var activeIdx=displayStages.indexOf(displayStage);
+  // parallel_build: both frontend and backend build concurrently
+  var isParallel=stage==='parallel_build';
 
-  steps.forEach(function(el,i){
-    el.classList.remove('done','active','waiting');
-    if(activeIdx>=0){
-      if(i<activeIdx) el.classList.add('done');
-      else if(i===activeIdx) el.classList.add(displayStage==='ready'?'done':'active');
+  if(isParallel){
+    var fbIdx=displayStages.indexOf('frontend_build');
+    var bcIdx=displayStages.indexOf('backend_compiling');
+    steps.forEach(function(el,i){
+      el.classList.remove('done','active','waiting');
+      if(i<fbIdx) el.classList.add('done');
+      else if(i===fbIdx||i===bcIdx) el.classList.add('active');
       else el.classList.add('waiting');
-    } else {
-      el.classList.add('waiting');
-    }
-  });
+    });
+  } else {
+    var activeIdx=displayStages.indexOf(displayStage);
+    steps.forEach(function(el,i){
+      el.classList.remove('done','active','waiting');
+      if(activeIdx>=0){
+        if(i<activeIdx) el.classList.add('done');
+        else if(i===activeIdx) el.classList.add(displayStage==='ready'?'done':'active');
+        else el.classList.add('waiting');
+      } else {
+        el.classList.add('waiting');
+      }
+    });
+  }
 
   var subtitle=document.querySelector('.subtitle');
   var labels={
     'watchdog':'Preparing environment\u2026',
     'npm_install':'Installing dependencies\u2026',
+    'parallel_build':'Building frontend & backend\u2026',
     'frontend_build':'Building frontend\u2026',
     'vite_starting':'Starting dev server\u2026',
     'backend_compiling':'Compiling backend\u2026',

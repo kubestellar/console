@@ -473,6 +473,9 @@ if [ "$USE_DEV_SERVER" = true ]; then
     # Use "|| true" before capturing $? so set -e doesn't fire before we can
     # handle the error and print a friendly message.
     if [ -n "$BACKEND_BUILD_PID" ]; then
+        if kill -0 "$BACKEND_BUILD_PID" 2>/dev/null; then
+            write_stage "backend_compiling"
+        fi
         wait "$BACKEND_BUILD_PID" || true
         BACKEND_BUILD_EXIT=$?
         if [ "$BACKEND_BUILD_EXIT" -ne 0 ] || [ ! -x "$BACKEND_BIN" ]; then
@@ -567,7 +570,7 @@ else
     ) &
     BACKEND_BUILD_PID=$!
 
-    write_stage "frontend_build"
+    write_stage "parallel_build"
     echo -e "${GREEN}Building frontend...${NC}"
     if ! (cd web && npm run build); then
         echo ""
@@ -598,9 +601,14 @@ else
     launch_kc_agent
 
     # Wait for backend build to finish, then start the pre-built binary.
+    # If the backend build is still running (frontend finished first), show
+    # the "Compiling backend" stage so the user sees progress.
     # Use "|| true" before capturing $? so set -e doesn't fire before we can
     # handle the error and print a friendly message.
     if [ -n "$BACKEND_BUILD_PID" ]; then
+        if kill -0 "$BACKEND_BUILD_PID" 2>/dev/null; then
+            write_stage "backend_compiling"
+        fi
         wait "$BACKEND_BUILD_PID" || true
         BACKEND_BUILD_EXIT=$?
         if [ "$BACKEND_BUILD_EXIT" -ne 0 ] || [ ! -x "$BACKEND_BIN" ]; then
