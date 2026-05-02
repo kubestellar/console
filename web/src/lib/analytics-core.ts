@@ -825,6 +825,43 @@ export function _resetCapturedErrors() {
   capturedErrors.length = 0
 }
 
+// ── Failed API call ring buffer (for feedback modal) ──────────────────
+// Stores recent HTTP API failures so the feedback modal can attach them
+// to GitHub issues automatically. Keeps the last N entries; oldest evicted.
+const API_ERROR_RING_BUFFER_SIZE = 20
+
+interface CapturedApiCall {
+  timestamp: string
+  status: number | string
+  endpoint: string
+  detail?: string
+}
+
+const capturedApiCalls: CapturedApiCall[] = []
+
+function pushCapturedApiCall(status: number | string, endpoint: string, detail?: string) {
+  const entry: CapturedApiCall = {
+    timestamp: new Date().toISOString(),
+    status,
+    endpoint,
+    ...(detail && { detail: detail.slice(0, 500) }),
+  }
+  capturedApiCalls.push(entry)
+  if (capturedApiCalls.length > API_ERROR_RING_BUFFER_SIZE) {
+    capturedApiCalls.shift()
+  }
+}
+
+/** Returns recent failed API calls for inclusion in feedback reports. */
+export function getRecentFailedApiCalls(): CapturedApiCall[] {
+  return [...capturedApiCalls]
+}
+
+/** @internal — exported for test isolation only */
+export function _resetCapturedApiCalls() {
+  capturedApiCalls.length = 0
+}
+
 // ── Per-card / per-page error throttling (#10092) ──────────────────────
 // CI/CD cards poll every 30-120s. Without throttling, a single broken card
 // generates dozens of ksc_error events per session. We cap emissions to at
@@ -891,6 +928,24 @@ export function _resetAnalyticsState() {
   pageErrorCounts.clear()
   recentHttpErrorEmissions.clear()
   capturedErrors.length = 0
+  capturedApiCalls.length = 0
+}
+
+/**
+ * Emit a `ksc_http_error` GA4 event for a failed API call.
+ * Throttled to at most one emission per status+page per HTTP_ERROR_THROTTLE_MS window.
+ * Also records the failure in the failed-API-call ring buffer (for feedback modal).
+ */
+export function emitHttpError(httpStatus: string, errorDetail: string) {
+  const page = window.location.pathname
+  pushCapturedApiCall(httpStatus, page, errorDetail)
+  if (!isHttpErrorThrottled(httpStatus, page)) {
+    send('ksc_http_error', {
+      http_status: httpStatus,
+      error_detail: errorDetail.slice(0, ERROR_DETAIL_MAX_LEN),
+      error_page: page,
+    })
+  }
 }
 
 function isErrorThrottled(category: string, page: string, cardId?: string): boolean {
@@ -1138,25 +1193,19 @@ export function startGlobalErrorTracking() {
       // these as ksc_error creates false-positive alert spikes (#9994).
       if (errorName === 'UnauthenticatedError' || errorName === 'UnauthorizedError') {
         pushCapturedError('error', msg, 'auth_error')
-        if (!isHttpErrorThrottled('auth', window.location.pathname)) {
-          send('ksc_http_error', { http_status: 'auth', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
-        }
+        emitHttpError('auth', msg)
         return
       }
       if (msg.includes('No authentication token') || msg.includes('Token is invalid or expired')) {
         pushCapturedError('error', msg, 'auth_error')
-        if (!isHttpErrorThrottled('auth', window.location.pathname)) {
-          send('ksc_http_error', { http_status: 'auth', error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
-        }
+        emitHttpError('auth', msg)
         return
       }
       if (/\b50[234]\b/.test(msg) && (msg.includes('fetch') || msg.includes('Fetch') || msg.includes('upstream'))) {
         const statusMatch = msg.match(/\b(50[234])\b/)
         const httpStatus = statusMatch?.[1] ?? '5xx'
         pushCapturedError('error', msg, `http_${httpStatus}`)
-        if (!isHttpErrorThrottled(httpStatus, window.location.pathname)) {
-          send('ksc_http_error', { http_status: httpStatus, error_detail: msg.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
-        }
+        emitHttpError(httpStatus, msg)
         return
       }
       pushCapturedError('error', msg, 'unhandled_rejection')
@@ -1215,16 +1264,12 @@ export function startGlobalErrorTracking() {
       if (tryChunkReloadRecovery(event.message)) return
       if (event.error?.name === 'UnauthenticatedError' || event.error?.name === 'UnauthorizedError') {
         pushCapturedError('error', event.message, 'auth_error')
-        if (!isHttpErrorThrottled('auth', window.location.pathname)) {
-          send('ksc_http_error', { http_status: 'auth', error_detail: event.message.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
-        }
+        emitHttpError('auth', event.message)
         return
       }
       if (event.message.includes('No authentication token') || event.message.includes('Token is invalid or expired')) {
         pushCapturedError('error', event.message, 'auth_error')
-        if (!isHttpErrorThrottled('auth', window.location.pathname)) {
-          send('ksc_http_error', { http_status: 'auth', error_detail: event.message.slice(0, ERROR_DETAIL_MAX_LEN), error_page: window.location.pathname })
-        }
+        emitHttpError('auth', event.message)
         return
       }
       pushCapturedError('error', event.message, 'runtime')
