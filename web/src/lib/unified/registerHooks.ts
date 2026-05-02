@@ -257,7 +257,7 @@ function useUnifiedCronJobs(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useCronJobs(cluster, namespace)
   return {
-    data: result.cronjobs,
+    data: result.cronJobs,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch }
@@ -268,7 +268,7 @@ function useUnifiedStatefulSets(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useStatefulSets(cluster, namespace)
   return {
-    data: result.statefulsets,
+    data: result.statefulSets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch }
@@ -279,7 +279,7 @@ function useUnifiedDaemonSets(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useDaemonSets(cluster, namespace)
   return {
-    data: result.daemonsets,
+    data: result.daemonSets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch }
@@ -301,7 +301,7 @@ function useUnifiedReplicaSets(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useReplicaSets(cluster, namespace)
   return {
-    data: result.replicasets,
+    data: result.replicaSets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch }

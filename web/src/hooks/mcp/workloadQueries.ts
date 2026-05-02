@@ -1482,7 +1482,7 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
 // ---------------------------------------------------------------------------
 
 export function useReplicaSets(cluster?: string, namespace?: string): UseReplicaSetsResult {
-  const [replicasets, setReplicaSets] = useState<ReplicaSet[]>([])
+  const [replicaSets, setReplicaSets] = useState<ReplicaSet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
@@ -1501,7 +1501,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
         })
         if (response.ok) {
           const data = await response.json()
-          setReplicaSets(data.replicasets || [])
+          setReplicaSets(data.replicaSets || [])
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -1524,7 +1524,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/replicasets?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
-      setReplicaSets(data.replicasets || [])
+      setReplicaSets(data.replicaSets || [])
       setError(null)
       setConsecutiveFailures(0)
     } catch (err: unknown) {
@@ -1544,7 +1544,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
     replicaSetsInitRef.current = true
     refetch()
   }, [refetch])
-  return { replicasets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { replicaSets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1552,7 +1552,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
 // ---------------------------------------------------------------------------
 
 export function useStatefulSets(cluster?: string, namespace?: string): UseStatefulSetsResult {
-  const [statefulsets, setStatefulSets] = useState<StatefulSet[]>([])
+  const [statefulSets, setStatefulSets] = useState<StatefulSet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
@@ -1613,7 +1613,7 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
     statefulSetsInitRef.current = true
     refetch()
   }, [refetch])
-  return { statefulsets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { statefulSets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1621,7 +1621,7 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
 // ---------------------------------------------------------------------------
 
 export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSetsResult {
-  const [daemonsets, setDaemonSets] = useState<DaemonSet[]>([])
+  const [daemonSets, setDaemonSets] = useState<DaemonSet[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
@@ -1682,7 +1682,7 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
     daemonSetsInitRef.current = true
     refetch()
   }, [refetch])
-  return { daemonsets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { daemonSets, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
@@ -1690,7 +1690,7 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
 // ---------------------------------------------------------------------------
 
 export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsResult {
-  const [cronjobs, setCronJobs] = useState<CronJob[]>([])
+  const [cronJobs, setCronJobs] = useState<CronJob[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
@@ -1751,7 +1751,7 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
     cronJobsInitRef.current = true
     refetch()
   }, [refetch])
-  return { cronjobs, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
+  return { cronJobs, isLoading, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
 
 // ---------------------------------------------------------------------------
