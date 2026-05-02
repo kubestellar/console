@@ -150,12 +150,14 @@ for script in "${ALL_SCRIPTS[@]}"; do
 
   echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
 
-  # Run the script and capture output + exit code + duration
-  # Use timeout to prevent any script from running longer than 10 minutes
+  # Run the script and capture output + exit code + duration.
+  # Cap at 1200s (20 min): unit-test routinely takes ~800s; other non-Playwright
+  # suites are well under 5 minutes. This guard prevents a truly hung suite from
+  # blocking the entire run while still allowing healthy suites to complete.
   SUITE_START=$(date +%s)
   SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
   SUITE_EXIT=0
-  timeout 600s bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
+  timeout 1200s bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
   SUITE_END=$(date +%s)
   SUITE_DURATION=$((SUITE_END - SUITE_START))
 
@@ -165,11 +167,11 @@ for script in "${ALL_SCRIPTS[@]}"; do
     SUITE_STATUS["$SUITE_NAME"]="pass"
     RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
   elif [ "$SUITE_EXIT" -eq 124 ]; then
-    echo -e "    ${YELLOW}⏰ TIMEOUT${NC}  (${SUITE_DURATION}s) — 10 minute limit exceeded"
+    echo -e "    ${YELLOW}⏰ TIMEOUT${NC}  (${SUITE_DURATION}s) — 20 minute limit exceeded"
     FAILED_SUITES=$((FAILED_SUITES + 1))
     FAILED_NAMES+=("$SUITE_NAME")
     SUITE_STATUS["$SUITE_NAME"]="fail"
-    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION},\"failure_reason\":\"Test timed out after 10 minutes\"},"
+    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION},\"failure_reason\":\"Test timed out after 20 minutes\"},"
   else
     echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
     # Show last few lines of output for failed suites
@@ -330,14 +332,13 @@ if [ -z "$FAST_MODE" ]; then
           ["ui-compliance-test"]=600
           ["cache-test"]=600
           ["benchmark-test"]=600
-          ["deploy-test"]=600
+          # deploy-test: npm run build (~2m) + vite preview start (up to 3m) + 11 tests
+          #   running serially with 6-minute per-test timeout. Default 300s cap kills
+          #   the suite mid-run. 900s matches the Playwright per-test ceiling (#11461, #11464).
+          ["deploy-test"]=900
           ["ai-ml-test"]=900
           ["nav-test"]=900
           ["perf-test"]=1200
-          # deploy-test: npm run build (~2m) + vite preview start (up to 3m) + 11 tests.
-          # The default 300s cap kills the suite mid-run after server startup.
-          # 900s matches the Playwright-level per-test timeout (300_000ms × slowest path).
-          ["deploy-test"]=900
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do

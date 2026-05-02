@@ -41,10 +41,12 @@ fi
 rm -rf e2e/test-results/deploy-results.json e2e/deploy-report/ 2>/dev/null || true
 mkdir -p e2e/test-results e2e/deploy-report
 
-# Run tests with increased stability settings
+# Run tests with increased stability settings.
+# Do NOT pass --timeout here: deploy.config.ts sets 360_000ms per-test which
+# is needed for polling tests. A CLI --timeout would override the config value
+# and kill tests after 90s (see #11464 code review).
 env "${EXTRA_ENV[@]}" npx playwright test \
   --config e2e/deploy/deploy.config.ts \
-  --timeout=90000 \
   --retries=2 \
   --workers=1 \
   e2e/deploy/deploy-dashboard.spec.ts

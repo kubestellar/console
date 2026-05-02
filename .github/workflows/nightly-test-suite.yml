@@ -127,7 +127,7 @@ jobs:
 
       - name: Run full test suite
         id: tests
-        timeout-minutes: 135
+        timeout-minutes: 120
         run: |
           bash scripts/run-all-tests.sh || true
 
