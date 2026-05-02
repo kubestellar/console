@@ -443,6 +443,21 @@ if [ "$USE_DEV_SERVER" = true ]; then
     write_stage "npm_install"
     safe_npm_install web
 
+    # Build backend binary in the background while Vite starts.
+    BACKEND_BIN="$SCRIPT_DIR/bin/console"
+    BACKEND_BUILD_PID=""
+    echo -e "${GREEN}Building backend (background)...${NC}"
+    (
+        mkdir -p "$SCRIPT_DIR/bin"
+        if (cd "$SCRIPT_DIR" && GOWORK=off go build -o "$BACKEND_BIN" ./cmd/console); then
+            echo -e "${GREEN}Backend built successfully${NC}"
+        else
+            echo -e "${RED}Backend build failed${NC}"
+            exit 1
+        fi
+    ) &
+    BACKEND_BUILD_PID=$!
+
     # Wait for agent build to finish before starting the backend (agent must be ready).
     if [ -n "$AGENT_BUILD_PID" ]; then
         wait "$AGENT_BUILD_PID"
@@ -453,9 +468,18 @@ if [ "$USE_DEV_SERVER" = true ]; then
     # Start agent now if it was skipped earlier (no binary existed before the build).
     launch_kc_agent
 
-    write_stage "backend_compiling"
+    # Wait for backend build to finish, then start the pre-built binary.
+    if [ -n "$BACKEND_BUILD_PID" ]; then
+        wait "$BACKEND_BUILD_PID"
+        BACKEND_BUILD_EXIT=$?
+        if [ "$BACKEND_BUILD_EXIT" -ne 0 ] || [ ! -x "$BACKEND_BIN" ]; then
+            echo -e "${RED}Backend build failed — cannot start.${NC}"
+            exit 1
+        fi
+    fi
+    write_stage "backend_starting"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
-    BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
+    BACKEND_PORT=$BACKEND_LISTEN_PORT "$BACKEND_BIN" &
     BACKEND_PID=$!
     sleep 2
 
@@ -525,6 +549,21 @@ else
     write_stage "npm_install"
     safe_npm_install web
 
+    # Build backend binary in the background while the frontend builds.
+    BACKEND_BIN="$SCRIPT_DIR/bin/console"
+    BACKEND_BUILD_PID=""
+    echo -e "${GREEN}Building backend (background)...${NC}"
+    (
+        mkdir -p "$SCRIPT_DIR/bin"
+        if (cd "$SCRIPT_DIR" && GOWORK=off go build -o "$BACKEND_BIN" ./cmd/console); then
+            echo -e "${GREEN}Backend built successfully${NC}"
+        else
+            echo -e "${RED}Backend build failed${NC}"
+            exit 1
+        fi
+    ) &
+    BACKEND_BUILD_PID=$!
+
     write_stage "frontend_build"
     echo -e "${GREEN}Building frontend...${NC}"
     if ! (cd web && npm run build); then
@@ -555,10 +594,18 @@ else
     # Start agent now if it was skipped earlier (no binary existed before the build).
     launch_kc_agent
 
-    # Start backend on port 8081 — watchdog on 8080 proxies to it
-    write_stage "backend_compiling"
+    # Wait for backend build to finish, then start the pre-built binary.
+    if [ -n "$BACKEND_BUILD_PID" ]; then
+        wait "$BACKEND_BUILD_PID"
+        BACKEND_BUILD_EXIT=$?
+        if [ "$BACKEND_BUILD_EXIT" -ne 0 ] || [ ! -x "$BACKEND_BIN" ]; then
+            echo -e "${RED}Backend build failed — cannot start.${NC}"
+            exit 1
+        fi
+    fi
+    write_stage "backend_starting"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
-    BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
+    BACKEND_PORT=$BACKEND_LISTEN_PORT "$BACKEND_BIN" &
     BACKEND_PID=$!
     sleep 2
 
