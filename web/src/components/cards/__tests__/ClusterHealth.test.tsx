@@ -99,6 +99,18 @@ vi.mock('../../ui/CloudProviderIcon', () => ({
   getProviderLabel: () => 'Other',
 }))
 
+vi.mock('react-router-dom', () => ({
+  useLocation: () => ({ pathname: '/', search: '', hash: '', state: null, key: 'default' }),
+}))
+
+vi.mock('../../ui/Tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+vi.mock('../../../config/routes', () => ({
+  ROUTES: { CLUSTERS: '/clusters' },
+}))
+
 vi.mock('../../clusters/ClusterDetailModal', () => ({
   ClusterDetailModal: ({ clusterName, onClose }: { clusterName: string; onClose: () => void }) => (
     <div data-testid="cluster-detail-modal">

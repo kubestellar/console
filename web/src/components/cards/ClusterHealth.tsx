@@ -17,6 +17,8 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useFederationAwareness, getProviderLabel as getFederationProviderLabel, getStateLabel, getStateColorClasses, type FederatedCluster } from '../../hooks/useFederation'
+import { ROUTES } from '../../config/routes'
+import { Tooltip } from '../ui/Tooltip'
 
 // Console URL generation for cloud providers
 function getConsoleUrl(provider: CloudProvider, clusterName: string, apiServerUrl?: string): string | null {
@@ -98,7 +100,7 @@ export function ClusterHealth() {
 
   // Hide the inline stats grid when this card is rendered on the Clusters page,
   // which already has its own StatsOverview showing the same metrics (#11415).
-  const hideStatsGrid = location.pathname === '/clusters'
+  const hideStatsGrid = location.pathname === ROUTES.CLUSTERS
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -348,15 +350,15 @@ export function ClusterHealth() {
                   ? t('clusterHealth.offlineCheckNetwork')
                   : cluster.errorMessage || t('clusterHealth.clusterHasIssues')
           return (
+            <Tooltip key={cluster.name} content={t('clusterHealth.clickViewDetails', { name: cluster.name })}>
             <div
-              key={cluster.name}
               data-tour={idx === 0 ? 'drilldown' : undefined}
               className={`group ${isMobile ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center justify-between gap-y-2'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50 min-w-0 overflow-hidden`}
               role="button"
               tabIndex={0}
               onClick={() => setSelectedCluster(cluster.name)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCluster(cluster.name) } }}
-              title={t('clusterHealth.clickViewDetails', { name: cluster.name })}
+              aria-label={t('clusterHealth.clickViewDetails', { name: cluster.name })}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1" title={statusTooltip}>
                 {/* Status icon: green check for healthy, red key for auth error, yellow wifi-off for offline, red triangle for degraded */}
@@ -444,6 +446,7 @@ export function ClusterHealth() {
                 )}
               </div>
             </div>
+            </Tooltip>
           )
         })}
       </div>
