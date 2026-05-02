@@ -13,7 +13,8 @@ import {
   UTILIZATION_MEDIUM_THRESHOLD,
 } from './gpu-constants'
 import { useGPUTaintFilter, GPUTaintFilterControl } from '../cards/GPUTaintFilter'
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
+import { useModal } from '../../hooks/useModal'
 
 export interface GPUInventoryTabProps {
   gpuClusters: GPUClusterInfo[]
@@ -30,7 +31,7 @@ export function GPUInventoryTab({
 }: GPUInventoryTabProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { distinctTaints, toleratedKeys, toggle, clear, isVisible, hiddenGPUCount } = useGPUTaintFilter(nodes)
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const { isOpen: isFilterOpen, setIsOpen: setIsFilterOpen } = useModal()
   const filterRef = useRef<HTMLDivElement>(null)
 
   return (

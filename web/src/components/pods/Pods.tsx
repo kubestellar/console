@@ -6,6 +6,7 @@ import { useCachedPodIssues } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useIsModeSwitching } from '../../lib/unified/demo'
+import { useModal } from '../../hooks/useModal'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
@@ -44,7 +45,7 @@ export function Pods() {
   const { showToast } = useToast()
 
   // State for the custom delete-confirmation dialog
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const deleteConfirm = useModal()
   const [isDeleting, setIsDeleting] = useState(false)
   const pendingDeleteRef = useRef<PendingDeleteTarget | null>(null)
 
@@ -93,7 +94,7 @@ export function Pods() {
   const handleDeletePod = (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
     e.stopPropagation()
     pendingDeleteRef.current = { cluster, namespace, name }
-    setShowDeleteConfirm(true)
+    deleteConfirm.open()
   }
 
   /** Execute the deletion after the user confirms via ConfirmDialog */
@@ -111,7 +112,7 @@ export function Pods() {
       showToast(t('pods.deleteErrorDetail', 'Failed to delete pod: {{detail}}', { detail }), 'error')
     } finally {
       setIsDeleting(false)
-      setShowDeleteConfirm(false)
+      deleteConfirm.close()
       pendingDeleteRef.current = null
     }
   }, [showToast, t, refetchPodIssues])
@@ -359,8 +360,8 @@ export function Pods() {
       </div>
       {/* Delete-confirmation dialog (replaces window.confirm) */}
       <ConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => { setShowDeleteConfirm(false); pendingDeleteRef.current = null }}
+        isOpen={deleteConfirm.isOpen}
+        onClose={() => { deleteConfirm.close(); pendingDeleteRef.current = null }}
         onConfirm={executeDeletePod}
         title={t('pods.confirmDeleteTitle', 'Delete Pod')}
         message={t('pods.confirmDeleteMessage', 'Are you sure you want to delete pod {{name}}? This action cannot be undone.', { name: pendingDeleteRef.current?.name ?? '' })}

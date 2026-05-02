@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { AlertCircle, ShieldAlert } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -9,6 +9,7 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
+import { useModal } from '../../hooks/useModal'
 import { useGPUTaintFilter, GPUTaintFilterControl } from '../cards/GPUTaintFilter'
 
 const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
@@ -26,7 +27,7 @@ export function Nodes() {
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   const { isVisible, hiddenGPUCount, distinctTaints, toleratedKeys, toggle, clear } = useGPUTaintFilter(gpuNodes)
-  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const { isOpen: isFilterOpen, setIsOpen: setIsFilterOpen } = useModal()
   const filterRef = useRef<HTMLDivElement>(null)
 
   // Filter clusters based on global selection

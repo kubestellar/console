@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useModal } from '../../hooks/useModal'
 import {
   Download,
   RefreshCw,
@@ -143,11 +144,11 @@ export function UpdateSettings() {
     (o) => !o.devOnly || installMethod === 'dev'
   )
 
-  const [showReleaseNotes, setShowReleaseNotes] = useState(false)
-  const [showPrereqs, setShowPrereqs] = useState(false)
-  const [showScopeInfo, setShowScopeInfo] = useState(false)
+  const releaseNotes = useModal()
+  const prereqs = useModal()
+  const scopeInfo = useModal()
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
-  const [channelDropdownOpen, setChannelDropdownOpen] = useState(false)
+  const channelDropdown = useModal()
   const [triggerState, setTriggerState] = useState<'idle' | 'triggered' | 'error'>('idle')
   const [triggerError, setTriggerError] = useState<string | null>(null)
   // Tracks a user-requested cancellation so we can show a pending state on the
@@ -350,14 +351,14 @@ export function UpdateSettings() {
       {/* Scope info — explains what System Updates controls vs. other update types */}
       <div className="mb-4">
         <button
-          onClick={() => setShowScopeInfo(!showScopeInfo)}
+          onClick={scopeInfo.toggle}
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <Info className="w-4 h-4" />
           <span>{t('settings.updates.scopeInfoToggle')}</span>
-          {showScopeInfo ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          {scopeInfo.isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
-        {showScopeInfo && (
+        {scopeInfo.isOpen && (
           <div className="mt-3 rounded-lg bg-secondary/50 border border-border p-4 space-y-3 text-sm">
             <div>
               <span className="font-medium text-foreground">{t('settings.updates.scopeSystemTitle')}</span>
@@ -389,7 +390,7 @@ export function UpdateSettings() {
         </label>
         <div className="relative">
           <button
-            onClick={() => setChannelDropdownOpen(!channelDropdownOpen)}
+            onClick={channelDropdown.toggle}
             className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-secondary border border-border text-foreground hover:bg-secondary/80 transition-colors"
           >
             <span className="flex items-center gap-2">
@@ -397,17 +398,17 @@ export function UpdateSettings() {
               {visibleChannels.find((o) => o.value === channel)?.label}
             </span>
             <ChevronDown
-              className={`w-4 h-4 transition-transform ${channelDropdownOpen ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 transition-transform ${channelDropdown.isOpen ? 'rotate-180' : ''}`}
             />
           </button>
-          {channelDropdownOpen && (
+          {channelDropdown.isOpen && (
             <div className="absolute z-dropdown mt-2 w-full rounded-lg bg-card border border-border shadow-xl">
               {visibleChannels.map((option) => (
                 <button
                   key={option.value}
                   onClick={() => {
                     setChannel(option.value)
-                    setChannelDropdownOpen(false)
+                    channelDropdown.close()
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
                     channel === option.value ? 'bg-primary/10' : ''
@@ -446,7 +447,7 @@ export function UpdateSettings() {
         return (
           <div className="mb-4 rounded-lg bg-secondary/30 border border-border overflow-hidden">
             <button
-              onClick={() => setShowPrereqs(!showPrereqs)}
+              onClick={prereqs.toggle}
               className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-secondary/50 transition-colors"
             >
               <div className="flex items-center gap-2">
@@ -459,9 +460,9 @@ export function UpdateSettings() {
                     : t('settings.updates.prereqsMissing', { count: failCount })}
                 </span>
               </div>
-              {showPrereqs ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              {prereqs.isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
             </button>
-            {showPrereqs && (
+            {prereqs.isOpen && (
               <div className="px-4 pb-4 space-y-2 border-t border-border pt-3">
                 <PrereqRow
                   ok={agentConnected}
@@ -965,17 +966,17 @@ export function UpdateSettings() {
       {latestRelease && latestRelease.releaseNotes && (
         <div className="mb-4">
           <button
-            onClick={() => setShowReleaseNotes(!showReleaseNotes)}
+            onClick={releaseNotes.toggle}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
-            {showReleaseNotes ? (
+            {releaseNotes.isOpen ? (
               <ChevronUp className="w-4 h-4" />
             ) : (
               <ChevronDown className="w-4 h-4" />
             )}
             {t('settings.updates.releaseNotes')}
           </button>
-          {showReleaseNotes && (
+          {releaseNotes.isOpen && (
             <div className="mt-2 p-4 rounded-lg bg-secondary/30 border border-border">
               <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-sans">
                 {latestRelease.releaseNotes}

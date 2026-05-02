@@ -5,6 +5,8 @@ export interface UseModalResult {
   open: () => void
   close: () => void
   toggle: () => void
+  /** Escape hatch for components that accept a raw setter (e.g. `setIsOpen`). */
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 /**
@@ -22,5 +24,5 @@ export function useModal(initialOpen = false): UseModalResult {
   const open = useCallback(() => setIsOpen(true), [])
   const close = useCallback(() => setIsOpen(false), [])
   const toggle = useCallback(() => setIsOpen((v) => !v), [])
-  return { isOpen, open, close, toggle }
+  return { isOpen, open, close, toggle, setIsOpen }
 }
