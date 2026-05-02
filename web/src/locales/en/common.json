@@ -77,7 +77,8 @@
     "offline": "Offline",
     "warning": "Warning",
     "critical": "Critical",
-    "swappingTo": "Swapping to \"{{cardName}}\" in 30s"
+    "swappingTo": "Swapping to \"{{cardName}}\" in 30s",
+    "noClusters": "No clusters available"
   },
   "time": {
     "justNow": "just now",

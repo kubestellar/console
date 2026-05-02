@@ -13,6 +13,7 @@ import { useClusters, useGPUNodes, usePodIssues } from '../../hooks/useMCP'
 import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { ROUTES } from '../../config/routes'
 import { agentFetch } from '../../hooks/mcp/shared'
 import { POLL_INTERVAL_MS } from '../../lib/constants/network'
 import { emitWidgetLoaded, emitWidgetNavigation, emitWidgetInstalled } from '../../lib/analytics'
@@ -317,7 +318,7 @@ export function MiniDashboard() {
           value={totalClusters}
           color="text-purple-400"
           subValue={`${healthyClusters} healthy`}
-          onClick={() => openInBrowser('/clusters')}
+          onClick={() => openInBrowser(ROUTES.CLUSTERS)}
         />
         <StatCard
           label="GPUs"

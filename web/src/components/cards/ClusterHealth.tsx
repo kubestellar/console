@@ -352,7 +352,10 @@ export function ClusterHealth() {
               key={cluster.name}
               data-tour={idx === 0 ? 'drilldown' : undefined}
               className={`group ${isMobile ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center justify-between gap-y-2'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50 min-w-0 overflow-hidden`}
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedCluster(cluster.name)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCluster(cluster.name) } }}
               title={t('clusterHealth.clickViewDetails', { name: cluster.name })}
             >
               <div className="flex items-center gap-2 min-w-0 flex-1" title={statusTooltip}>

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { emitWelcomeViewed, emitWelcomeActioned } from '../lib/analytics'
 import { DEFAULT_PRIMARY_NAV, DISCOVERABLE_DASHBOARDS } from '../hooks/useSidebarConfig'
+import { ROUTES } from '../config/routes'
 
 /* ------------------------------------------------------------------ */
 /*  SEO / meta constants                                               */
@@ -71,7 +72,7 @@ const SCENARIOS: Scenario[] = [
     icon: <Layers className="w-6 h-6 text-purple-400" />,
     title: 'Multi-cluster at a glance',
     description: 'See cluster health, node status, and pod issues across every cluster in a single view.',
-    link: '/clusters',
+    link: ROUTES.CLUSTERS,
   },
   {
     icon: <Cpu className="w-6 h-6 text-purple-400" />,

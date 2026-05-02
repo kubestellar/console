@@ -77,6 +77,13 @@ export function useDiagnoseRepairLoop(options: UseDiagnoseRepairLoopOptions): Us
     if (mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') {
       setState(prev => {
         if (prev.phase !== 'diagnosing') return prev
+        // If the mission failed or was cancelled, transition to failed phase
+        if (mission.status === 'failed' || mission.status === 'cancelled') {
+          return {
+            ...prev,
+            phase: 'failed',
+            error: mission.status === 'cancelled' ? 'Diagnosis cancelled' : 'Diagnosis failed' }
+        }
         // Generate proposed repairs from issues
         const proposedRepairs: ProposedRepair[] = repairable
           ? prev.issuesFound.map((issue, idx) => ({
