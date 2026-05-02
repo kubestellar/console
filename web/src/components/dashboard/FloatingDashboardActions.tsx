@@ -121,6 +121,9 @@ export function FloatingDashboardActions({
   }
   const positionClasses = getPositionClasses()
 
+  // Use lower z-index when sidebar is open to prevent overlapping chat input (#11385, #11388)
+  const zIndexClass = isSidebarOpen ? 'z-dropdown' : 'z-sticky'
+
   const handleReset = (mode: ResetMode) => {
     resetDialog.close()
     if (onReset) {
@@ -144,7 +147,7 @@ export function FloatingDashboardActions({
   if (isUnifiedMode) {
     const showActions = canUndo || canRedo || showResetOption
     return (
-      <div className={`fixed ${positionClasses} z-sticky flex ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
+      <div className={`fixed ${positionClasses} ${zIndexClass} flex ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
         {showActions && (
           <div className="flex gap-1 p-1 bg-card border border-border rounded-lg shadow-md animate-in fade-in duration-150 mr-1">
             <button
@@ -196,7 +199,7 @@ export function FloatingDashboardActions({
   // =========================================================================
   return (
     <>
-      <div ref={menuRef} className={`fixed ${positionClasses} z-sticky flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
+      <div ref={menuRef} className={`fixed ${positionClasses} ${zIndexClass} flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`}>
         {menu.isOpen && (
           <div
             role="menu"
