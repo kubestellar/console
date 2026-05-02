@@ -448,7 +448,7 @@ describe('useReplicaSets (extended)', () => {
     const { result } = renderHook(() => useReplicaSets())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.replicasets).toEqual([])
+    expect(result.current.replicaSets).toEqual([])
   })
 
   it('reports agent data success when agent path works', async () => {

@@ -700,7 +700,7 @@ describe('useReplicaSets — uncovered branches', () => {
     const { result } = renderHook(() => useReplicaSets('c1'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.replicasets).toEqual(fakeRS)
+    expect(result.current.replicaSets).toEqual(fakeRS)
   })
 
   it('handles UnauthenticatedError from API', async () => {
@@ -729,7 +729,7 @@ describe('useStatefulSets — uncovered branches', () => {
     const { result } = renderHook(() => useStatefulSets('c1'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.statefulsets).toEqual(fakeSS)
+    expect(result.current.statefulSets).toEqual(fakeSS)
   })
 
   it('handles UnauthenticatedError from API', async () => {
@@ -758,7 +758,7 @@ describe('useDaemonSets — uncovered branches', () => {
     const { result } = renderHook(() => useDaemonSets('c1'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.daemonsets).toEqual(fakeDS)
+    expect(result.current.daemonSets).toEqual(fakeDS)
   })
 
   it('handles UnauthenticatedError from API', async () => {
@@ -787,7 +787,7 @@ describe('useCronJobs — uncovered branches', () => {
     const { result } = renderHook(() => useCronJobs('c1'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.cronjobs).toEqual(fakeCJ)
+    expect(result.current.cronJobs).toEqual(fakeCJ)
   })
 
   it('handles UnauthenticatedError from API', async () => {
