@@ -235,6 +235,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # || true: GITHUB_TOKEN may not have comment access on some PR origins
+          # (fork PRs, restricted integrations). The build verification succeeded —
+          # a missing success comment is acceptable; only build failures need action.
           gh pr comment "${{ github.event.pull_request.number }}" \
             --repo "${{ github.repository }}" \
             --body "$(cat <<EOF
@@ -242,7 +245,7 @@ jobs:
 
           Both Go and frontend builds compiled successfully against merge commit \`${{ github.event.pull_request.merge_commit_sha }}\`.
           EOF
-          )"
+          )" || true
 
       - name: Fail workflow if builds failed
         if: steps.go_build.outcome == 'failure' || steps.npm_install.outcome == 'failure' || steps.frontend_build.outcome == 'failure'

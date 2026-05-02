@@ -326,6 +326,10 @@ if [ -z "$FAST_MODE" ]; then
           ["ai-ml-test"]=900
           ["nav-test"]=900
           ["perf-test"]=1200
+          # deploy-test: npm run build (~2m) + vite preview start (up to 3m) + 11 tests.
+          # The default 300s cap kills the suite mid-run after server startup.
+          # 900s matches the Playwright-level per-test timeout (300_000ms × slowest path).
+          ["deploy-test"]=900
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
