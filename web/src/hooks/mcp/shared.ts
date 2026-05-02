@@ -1847,7 +1847,8 @@ export function getHealthCheckFailures(): number {
 }
 
 // fetchWithRetry — extracted to ./fetchWithRetry
-export { FetchWithRetryOptions, fetchWithRetry } from './fetchWithRetry'
+export type { FetchWithRetryOptions } from './fetchWithRetry'
+export { fetchWithRetry } from './fetchWithRetry'
 
 /** Shorten a cluster name for display — strips context prefix, truncates long names */
 export function clusterDisplayName(name: string): string {
