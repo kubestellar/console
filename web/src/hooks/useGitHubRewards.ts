@@ -28,7 +28,7 @@ const REFRESH_INTERVAL_MS = 10 * MS_PER_MINUTE
 /** Max recent contributions to fetch from the GitHub Search API */
 const CONTRIBUTIONS_PER_PAGE = 20
 /** GitHub orgs to search for contributions */
-const CONTRIBUTIONS_SEARCH_ORGS = ['kubestellar', 'llm-d']
+const CONTRIBUTIONS_SEARCH_ORGS = ['kubestellar', 'llm-d', 'clubanderson']
 
 /** Returns a per-user localStorage cache key */
 export function userCacheKey(login: string): string {

@@ -886,7 +886,7 @@ function GitHubContributionsSection({
       {githubRewards && currentGitHubLogin && (
         <div className="p-2.5 border-t border-border/50 text-center">
           <a
-            href={`https://github.com/search?q=author:${encodeURIComponent(currentGitHubLogin)}+org:kubestellar+org:llm-d&type=issues&s=updated&o=desc`}
+            href={`https://github.com/search?q=author:${encodeURIComponent(currentGitHubLogin)}+org:kubestellar+org:llm-d+org:clubanderson&type=issues&s=updated&o=desc`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors"
