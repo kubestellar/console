@@ -667,7 +667,7 @@ describe('useReplicaSets', () => {
     mockApiGet.mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(() => useReplicaSets())
     expect(result.current.isLoading).toBe(true)
-    expect(result.current.replicasets).toEqual([])
+    expect(result.current.replicaSets).toEqual([])
   })
 
   it('returns replicasets from API after fetch resolves', async () => {
@@ -679,7 +679,7 @@ describe('useReplicaSets', () => {
     const { result } = renderHook(() => useReplicaSets())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.replicasets).toEqual(fakeRS)
+    expect(result.current.replicaSets).toEqual(fakeRS)
     expect(result.current.error).toBeNull()
   })
 
@@ -696,7 +696,7 @@ describe('useReplicaSets', () => {
     const { result } = renderHook(() => useReplicaSets('my-cluster'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.replicasets).toEqual(fakeRS)
+    expect(result.current.replicaSets).toEqual(fakeRS)
     expect(result.current.error).toBeNull()
   })
 
@@ -719,7 +719,7 @@ describe('useStatefulSets', () => {
     mockApiGet.mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(() => useStatefulSets())
     expect(result.current.isLoading).toBe(true)
-    expect(result.current.statefulsets).toEqual([])
+    expect(result.current.statefulSets).toEqual([])
   })
 
   it('returns statefulsets from API after fetch resolves', async () => {
@@ -731,7 +731,7 @@ describe('useStatefulSets', () => {
     const { result } = renderHook(() => useStatefulSets())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.statefulsets).toEqual(fakeSS)
+    expect(result.current.statefulSets).toEqual(fakeSS)
     expect(result.current.error).toBeNull()
   })
 
@@ -748,7 +748,7 @@ describe('useStatefulSets', () => {
     const { result } = renderHook(() => useStatefulSets('my-cluster'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.statefulsets).toEqual(fakeSS)
+    expect(result.current.statefulSets).toEqual(fakeSS)
   })
 
   it('handles API failure with error message', async () => {
@@ -770,7 +770,7 @@ describe('useDaemonSets', () => {
     mockApiGet.mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(() => useDaemonSets())
     expect(result.current.isLoading).toBe(true)
-    expect(result.current.daemonsets).toEqual([])
+    expect(result.current.daemonSets).toEqual([])
   })
 
   it('returns daemonsets from API after fetch resolves', async () => {
@@ -782,7 +782,7 @@ describe('useDaemonSets', () => {
     const { result } = renderHook(() => useDaemonSets())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.daemonsets).toEqual(fakeDS)
+    expect(result.current.daemonSets).toEqual(fakeDS)
     expect(result.current.error).toBeNull()
   })
 
@@ -799,7 +799,7 @@ describe('useDaemonSets', () => {
     const { result } = renderHook(() => useDaemonSets('my-cluster'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.daemonsets).toEqual(fakeDS)
+    expect(result.current.daemonSets).toEqual(fakeDS)
   })
 
   it('handles API failure with error message', async () => {
@@ -821,7 +821,7 @@ describe('useCronJobs', () => {
     mockApiGet.mockReturnValue(new Promise(() => {}))
     const { result } = renderHook(() => useCronJobs())
     expect(result.current.isLoading).toBe(true)
-    expect(result.current.cronjobs).toEqual([])
+    expect(result.current.cronJobs).toEqual([])
   })
 
   it('returns cronjobs from API after fetch resolves', async () => {
@@ -833,7 +833,7 @@ describe('useCronJobs', () => {
     const { result } = renderHook(() => useCronJobs())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.cronjobs).toEqual(fakeCJ)
+    expect(result.current.cronJobs).toEqual(fakeCJ)
     expect(result.current.error).toBeNull()
   })
 
@@ -850,7 +850,7 @@ describe('useCronJobs', () => {
     const { result } = renderHook(() => useCronJobs('my-cluster'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.cronjobs).toEqual(fakeCJ)
+    expect(result.current.cronJobs).toEqual(fakeCJ)
   })
 
   it('handles API failure with error message', async () => {

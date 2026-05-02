@@ -9,44 +9,47 @@ beforeEach(() => {
 
 describe('emitHttpError', () => {
   it('does not throw for a normal HTTP error', () => {
-    expect(() => emitHttpError(404, '/api/clusters')).not.toThrow()
+    expect(() => emitHttpError('404', '/api/clusters')).not.toThrow()
   })
 
   it('does not throw when called with a detail string', () => {
-    expect(() => emitHttpError(500, '/api/pods', 'Internal Server Error')).not.toThrow()
+    expect(() => emitHttpError('500', '/api/pods')).not.toThrow()
   })
 
   it('does not throw when status is a string', () => {
     expect(() => emitHttpError('401', '/api/auth')).not.toThrow()
   })
 
-  it('strips query string before recording throttle key', () => {
+  it('isErrorThrottled uses full category string as key', () => {
     const page = window.location.pathname
-    emitHttpError(404, '/api/foo?count_only=true&page=1')
-    // The throttle key should use the path-only form, not the raw endpoint
+    // First call records; second call with same key is throttled
+    expect(isErrorThrottled('http_404_/api/foo', page)).toBe(false)
     expect(isErrorThrottled('http_404_/api/foo', page)).toBe(true)
-    expect(isErrorThrottled('http_404_/api/foo?count_only=true&page=1', page)).toBe(false)
+    // A different category string is not throttled
+    expect(isErrorThrottled('http_404_/api/foo?query=1', page)).toBe(false)
   })
 
-  it('records separate throttle keys for different endpoints with same status', () => {
+  it('records separate throttle keys for different categories', () => {
     const page = window.location.pathname
-    emitHttpError(404, '/api/pods')
-    // /api/pods is now throttled for 404 but /api/namespaces is not
-    expect(isErrorThrottled('http_404_/api/pods', page)).toBe(true)
+    // Record for /api/pods
+    expect(isErrorThrottled('http_404_/api/pods', page)).toBe(false)
+    // Different category — not throttled
     expect(isErrorThrottled('http_404_/api/namespaces', page)).toBe(false)
+    // Same category as first — throttled
+    expect(isErrorThrottled('http_404_/api/pods', page)).toBe(true)
   })
 
-  it('throttles repeated calls for the same endpoint and status', () => {
+  it('throttles repeated calls for the same category and page', () => {
     const page = window.location.pathname
-    // First call registers the emission
-    emitHttpError(503, '/api/health')
-    // Second call should be throttled (isErrorThrottled returns true → emitHttpError skips send)
+    // First call registers the emission (returns false = not throttled)
+    expect(isErrorThrottled('http_503_/api/health', page)).toBe(false)
+    // Second call with same key is throttled
     expect(isErrorThrottled('http_503_/api/health', page)).toBe(true)
   })
 
-  it('allows same endpoint with a different status code through independently', () => {
+  it('allows same category with a different status code through independently', () => {
     const page = window.location.pathname
-    emitHttpError(404, '/api/users')
+    expect(isErrorThrottled('http_404_/api/users', page)).toBe(false)
     // Same path but different status — should not be throttled
     expect(isErrorThrottled('http_500_/api/users', page)).toBe(false)
   })
