@@ -327,10 +327,14 @@ if [ -z "$FAST_MODE" ]; then
         #     Playwright-level timeout (900_000ms) and fits within the 120m
         #     workflow backstop. perf-test bumped to 1200s — 29 dashboard
         #     variants all pass but exceed 900s wall-clock (#nightly-fix).
+        #   deploy-test: 11 serial tests (workers=1) with build/preview startup.
+        #     Suite killed after 300s wall-clock timeout — default cap too tight
+        #     for the combined vite build + 11-test run. 600s gives headroom.
         declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
           ["cache-test"]=600
+          ["deploy-test"]=600
           ["benchmark-test"]=600
           # deploy-test: npm run build (~2m) + vite preview start (up to 3m) + 11 tests
           #   running serially with 6-minute per-test timeout. Default 300s cap kills
