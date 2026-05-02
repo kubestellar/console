@@ -220,7 +220,7 @@ export const NISTDashboardContent = memo(function NISTDashboardContent() {
                 <tbody>
                   {(family.controls || []).map(ctrl => (
                     <tr key={ctrl.id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="p-3 font-mono text-blue-300">{ctrl.id}</td>
+                      <td className="p-3 font-mono text-blue-600 dark:text-blue-300">{ctrl.id}</td>
                       <td className="p-3 text-foreground">{ctrl.name}</td>
                       <td className="p-3"><span className="px-2 py-0.5 rounded bg-muted text-muted-foreground">{ctrl.priority}</span></td>
                       <td className="p-3 capitalize text-muted-foreground">{ctrl.baseline}</td>
@@ -255,7 +255,7 @@ export const NISTDashboardContent = memo(function NISTDashboardContent() {
             <tbody>
               {mappings.map(m => (
                 <tr key={m.control_id} className="border-b border-border/50 hover:bg-muted/30">
-                  <td className="p-3 font-mono text-blue-300">{m.control_id}</td>
+                  <td className="p-3 font-mono text-blue-600 dark:text-blue-300">{m.control_id}</td>
                   <td className="p-3">
                     <div className="flex gap-1 flex-wrap">
                       {(m.resources || []).map(r => (
@@ -317,7 +317,7 @@ export const NISTDashboardContent = memo(function NISTDashboardContent() {
             <div className="space-y-3">
               {families.map(f => (
                 <div key={f.id} className="flex items-center gap-3">
-                  <span className="w-8 text-sm font-mono text-blue-300">{f.id}</span>
+                  <span className="w-8 text-sm font-mono text-blue-600 dark:text-blue-300">{f.id}</span>
                   <span className="w-48 text-sm text-muted-foreground truncate">{f.name}</span>
                   <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                     <div

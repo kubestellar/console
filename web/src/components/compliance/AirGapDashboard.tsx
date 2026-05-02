@@ -106,7 +106,7 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-300">Loading air-gap readiness…</span>
+      <span className="ml-3 text-muted-foreground">Loading air-gap readiness…</span>
     </div>
   )
 
@@ -132,37 +132,37 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
       {/* Summary cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <p className="text-sm text-gray-400">Overall Readiness</p>
-            <p className="text-2xl font-bold text-white">{summary.overall_readiness}%</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-border">
+            <p className="text-sm text-muted-foreground">Overall Readiness</p>
+            <p className="text-2xl font-bold text-foreground">{summary.overall_readiness}%</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <p className="text-sm text-gray-400">Total Requirements</p>
-            <p className="text-2xl font-bold text-white">{summary.total_requirements}</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-border">
+            <p className="text-sm text-muted-foreground">Total Requirements</p>
+            <p className="text-2xl font-bold text-foreground">{summary.total_requirements}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-green-500/30">
-            <p className="text-sm text-gray-400">Ready</p>
-            <p className="text-2xl font-bold text-green-400">{summary.ready}</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-green-500/30">
+            <p className="text-sm text-muted-foreground">Ready</p>
+            <p className="text-2xl font-bold text-green-600 dark:text-green-400">{summary.ready}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-red-500/30">
-            <p className="text-sm text-gray-400">Not Ready</p>
-            <p className="text-2xl font-bold text-red-400">{summary.not_ready}</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-red-500/30">
+            <p className="text-sm text-muted-foreground">Not Ready</p>
+            <p className="text-2xl font-bold text-red-600 dark:text-red-400">{summary.not_ready}</p>
           </div>
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-yellow-500/30">
-            <p className="text-sm text-gray-400">Partial</p>
-            <p className="text-2xl font-bold text-yellow-400">{summary.partial}</p>
+          <div className="bg-card/50 rounded-lg p-4 border border-yellow-500/30">
+            <p className="text-sm text-muted-foreground">Partial</p>
+            <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{summary.partial}</p>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-700 pb-2">
+      <div className="flex gap-2 border-b border-border pb-2">
         {(['requirements', 'clusters', 'summary'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+              activeTab === tab ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {tab === 'requirements' ? 'Requirements' : tab === 'clusters' ? 'Clusters' : 'Summary'}
@@ -178,15 +178,15 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
               <button
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
-                className={`px-3 py-1 rounded text-xs capitalize ${categoryFilter === cat ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-300'}`}
+                className={`px-3 py-1 rounded text-xs capitalize ${categoryFilter === cat ? 'bg-blue-500 text-white' : 'bg-muted text-muted-foreground'}`}
               >{cat === 'all' ? 'All Categories' : cat}</button>
             ))}
           </div>
 
-          <div className="bg-gray-800/50 rounded-lg border border-gray-700 overflow-hidden">
+          <div className="bg-card/50 rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-gray-400 border-b border-gray-700">
+                <tr className="text-muted-foreground border-b border-border">
                   <th className="text-left p-3">ID</th>
                   <th className="text-left p-3">Name</th>
                   <th className="text-left p-3">Category</th>
@@ -196,17 +196,17 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
               </thead>
               <tbody>
                 {filteredRequirements.map(r => (
-                  <tr key={r.id} className="border-b border-gray-700/50 hover:bg-gray-700/30">
-                    <td className="p-3 font-mono text-blue-300">{r.id}</td>
-                    <td className="p-3 text-white">{r.name}</td>
-                    <td className="p-3"><span className="px-2 py-0.5 rounded bg-gray-700 text-gray-300 text-xs capitalize">{r.category}</span></td>
+                  <tr key={r.id} className="border-b border-border/50 hover:bg-muted/30">
+                    <td className="p-3 font-mono text-blue-600 dark:text-blue-300">{r.id}</td>
+                    <td className="p-3 text-foreground">{r.name}</td>
+                    <td className="p-3"><span className="px-2 py-0.5 rounded bg-muted text-muted-foreground text-xs capitalize">{r.category}</span></td>
                     <td className="p-3">
                       <span className="flex items-center gap-1.5">
                         {statusIcon(r.status)}
                         <span className={statusColor(r.status)}>{statusLabel(r.status)}</span>
                       </span>
                     </td>
-                    <td className="p-3 text-gray-400 text-xs max-w-xs truncate">{r.details}</td>
+                    <td className="p-3 text-muted-foreground text-xs max-w-xs truncate">{r.details}</td>
                   </tr>
                 ))}
               </tbody>
@@ -219,22 +219,22 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
       {activeTab === 'clusters' && (
         <div className="space-y-4">
           {clusters.map(cluster => (
-            <div key={cluster.id} className="bg-gray-800/50 rounded-lg border border-gray-700 p-4">
+            <div key={cluster.id} className="bg-card/50 rounded-lg border border-border p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   {statusIcon(cluster.status)}
                   <div>
-                    <h3 className="text-lg font-semibold text-white">{cluster.name}</h3>
-                    <p className="text-sm text-gray-400">{cluster.requirements_met} of {cluster.requirements_total} requirements met</p>
+                    <h3 className="text-lg font-semibold text-foreground">{cluster.name}</h3>
+                    <p className="text-sm text-muted-foreground">{cluster.requirements_met} of {cluster.requirements_total} requirements met</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-2xl font-bold text-white">{cluster.readiness_score}%</span>
-                  <p className="text-xs text-gray-400">readiness</p>
+                  <span className="text-2xl font-bold text-foreground">{cluster.readiness_score}%</span>
+                  <p className="text-xs text-muted-foreground">readiness</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full ${
                       cluster.readiness_score >= 80 ? 'bg-green-500' :
@@ -243,7 +243,7 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
                     style={{ width: `${cluster.readiness_score}%` }}
                   />
                 </div>
-                <span className="text-xs text-gray-400">Last checked: {new Date(cluster.last_checked).toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">Last checked: {new Date(cluster.last_checked).toLocaleString()}</span>
               </div>
             </div>
           ))}
@@ -253,44 +253,44 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
       {/* Summary tab */}
       {activeTab === 'summary' && summary && (
         <div className="space-y-4">
-          <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Air-Gap Assessment Overview</h3>
+          <div className="bg-card/50 rounded-lg border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Air-Gap Assessment Overview</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-400">Total Requirements</p>
-                <p className="text-xl font-bold text-white">{summary.total_requirements}</p>
+                <p className="text-sm text-muted-foreground">Total Requirements</p>
+                <p className="text-xl font-bold text-foreground">{summary.total_requirements}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Not Ready</p>
-                <p className="text-xl font-bold text-red-400">{summary.not_ready}</p>
+                <p className="text-sm text-muted-foreground">Not Ready</p>
+                <p className="text-xl font-bold text-red-600 dark:text-red-400">{summary.not_ready}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Overall Readiness</p>
+                <p className="text-sm text-muted-foreground">Overall Readiness</p>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 h-3 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-linear-to-r from-blue-500 to-green-500 rounded-full"
                       style={{ width: `${summary.overall_readiness}%` }}
                     />
                   </div>
-                  <span className="text-white font-bold">{summary.overall_readiness}%</span>
+                  <span className="text-foreground font-bold">{summary.overall_readiness}%</span>
                 </div>
               </div>
               <div>
-                <p className="text-sm text-gray-400">Last Evaluated</p>
-                <p className="text-sm text-gray-300">{new Date(summary.evaluated_at).toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Last Evaluated</p>
+                <p className="text-sm text-muted-foreground">{new Date(summary.evaluated_at).toLocaleString()}</p>
               </div>
             </div>
           </div>
 
           {/* Cluster readiness breakdown */}
-          <div className="bg-gray-800/50 rounded-lg border border-gray-700 p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Cluster Readiness</h3>
+          <div className="bg-card/50 rounded-lg border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Cluster Readiness</h3>
             <div className="space-y-3">
               {clusters.map(c => (
                 <div key={c.id} className="flex items-center gap-3">
-                  <span className="w-40 text-sm text-gray-300 truncate">{c.name}</span>
-                  <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                  <span className="w-40 text-sm text-foreground truncate">{c.name}</span>
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${
                         c.readiness_score >= 80 ? 'bg-green-500' :
@@ -299,8 +299,8 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
                       style={{ width: `${c.readiness_score}%` }}
                     />
                   </div>
-                  <span className="text-sm text-white w-12 text-right">{c.readiness_score}%</span>
-                  <ArrowRight className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm text-foreground w-12 text-right">{c.readiness_score}%</span>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground" />
                 </div>
               ))}
             </div>
