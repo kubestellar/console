@@ -1,5 +1,49 @@
 # Reviewer Log
 
+## Pass 93 — 2026-05-02T18:30–19:45 UTC
+
+### Trigger
+KICK — RED indicators: nightly=RED, nightlyPlaywright=RED, hourly=RED, nightlyRel=RED. 72 unaddressed MEDIUM Copilot comments. 2 GA4 anomalies. Merge-ready: PR #11466 (already merged — stale KICK data). Verify/merge: #11553, #11555.
+
+### RED Indicator Analysis
+
+**nightlyPlaywright=RED**: Scanner-owned per standing instructions. Not fixed this pass.
+
+**nightly=RED / nightlyRel=RED**: Root causes addressed in prior pass (PR #11516, #11533 already merged to upstream/main at `f3b0f4909`). Monitoring next nightly run.
+
+**hourly=RED**: Root cause — Coverage Suite failure on push triggered by PR #11466 merge. Failing test: `useDiagnoseRepairLoop > executeRepairs sends message to mission and transitions to verifying` (shard 6, `src/hooks/__tests__/useDiagnoseRepairLoop.test.ts`).
+
+Root cause: `useEffect([missions, state.phase])` dep array in repair completion effect. When `executeRepairs()` set `phase='repairing'`, the effect fired because `state.phase` changed. The diagnosis mission was already `'completed'` → effect immediately transitioned to `'verifying'` without actually completing repairs. Fix: remove `state.phase` from deps (keep only `[missions]`). Secondary bug: failed/cancelled repairs were silently treated as successful → now transition to `'failed'` phase.
+
+### Merges
+- PR #11553 → merged to kubestellar/console (squash) ✅
+- PR #11555 → merged to kubestellar/console (squash) ✅
+
+### PRs Created
+
+| PR | Branch | Fix |
+|----|--------|-----|
+| #11562 | fix/repair-loop-immediate-verifying | Fix Coverage Suite: remove state.phase from repair useEffect deps |
+
+### GA4 Fix (PR #11527)
+
+**ksc_http_error at 10.5× baseline**: PR #11527 (branch `fix/11511`) added `isHttpErrorThrottled()` to global error handlers but removed `emitHttpError`, `pushFailedApiCall`, and `getRecentFailedApiCalls` exports without updating callers. TS build failed:
+- `analytics.ts:26` — `emitHttpError` not exported from analytics-core
+- `analytics.ts:31` — `getRecentFailedApiCalls` not exported
+- `SubmitTab.tsx:301` — `getRecentFailedApiCalls` dynamic import missing
+
+Fix: cherry-picked export restoration commit (`a97533974`) onto upstream/fix/11511. PR #11527 CI re-triggered with the fix.
+
+### MEDIUM Copilot Comments
+72 MEDIUM comments — no source-file fixes this pass (priority was RED indicators and GA4).
+
+### Outstanding
+- PR #11562: CI in progress → merge when green (resolves hourly=RED)
+- PR #11527: CI re-triggered with export fix → merge when green (resolves GA4 anomaly)
+- nightlyPlaywright=RED: scanner-owned
+
+---
+
 ## Pass 92 — 2026-05-01T21:00–21:30 UTC
 
 ### Trigger
