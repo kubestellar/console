@@ -8,16 +8,38 @@ import type {
   AlertStats,
   AlertChannel } from '../types/alerts'
 import type { GPUHealthCheckResult } from '../hooks/mcp/types'
-import { MS_PER_MINUTE, MS_PER_HOUR } from '../lib/constants/time'
 import type { NightlyGuideStatus } from '../lib/llmd/nightlyE2EDemoData'
 import type { AlertsMCPData } from './AlertsDataFetcher'
-import { STORAGE_KEY_AUTH_TOKEN, FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_NOTIFIED_ALERT_KEYS } from '../lib/constants'
-import { safeGet, safeSet, safeRemove, safeGetJSON } from '../lib/safeLocalStorage'
 import { INITIAL_FETCH_DELAY_MS, POLL_INTERVAL_SLOW_MS, SECONDARY_FETCH_DELAY_MS, NIGHTLY_E2E_POLL_INTERVAL_MS } from '../lib/constants/network'
 import { PRESET_ALERT_RULES } from '../types/alerts'
-import { sendNotificationWithDeepLink, type DeepLinkParams } from '../hooks/useDeepLink'
-import { findRunbookForCondition } from '../lib/runbooks/builtins'
-import { executeRunbook } from '../lib/runbooks/executor'
+import { safeGet } from '../lib/safeLocalStorage'
+
+// Extracted modules
+import {
+  ALERTS_KEY,
+  MAX_ALERTS,
+  loadNotifiedAlertKeys,
+  saveNotifiedAlertKeys,
+  loadFromStorage,
+  saveToStorage,
+  saveAlerts,
+  STORAGE_KEY_AUTH_TOKEN,
+  FETCH_DEFAULT_TIMEOUT_MS,
+  DEFAULT_TEMPERATURE_THRESHOLD_F,
+  DEFAULT_WIND_SPEED_THRESHOLD_MPH,
+} from './alertStorage'
+import {
+  shouldDispatchBrowserNotification,
+  isClusterUnreachable,
+  PERSISTENT_CLUSTER_CONDITIONS,
+  type BrowserNotificationParams,
+  sendNotifications,
+  sendBatchedNotifications,
+} from './notifications'
+import {
+  findAndExecuteRunbook,
+  buildDiagnosisPrompt,
+} from './alertRunbooks'
 
 // Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of
 // the main chunk.  The provider renders immediately with empty data; once
@@ -260,186 +282,6 @@ const DEFAULT_WIND_SPEED_THRESHOLD_MPH = 40
 const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
   critical: 5 * MS_PER_MINUTE,    // 5 min — urgent, re-notify quickly
   warning: 30 * MS_PER_MINUTE,    // 30 min — important but not urgent
-  info: 4 * MS_PER_HOUR,   // 4 hours — informational, minimal interruption
-}
-/** Fallback cooldown when severity is unknown */
-const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * MS_PER_MINUTE // 30 min
-
-/** Get the notification cooldown for a given severity level */
-function getNotificationCooldown(severity: string): number {
-  return NOTIFICATION_COOLDOWN_BY_SEVERITY[severity] ?? DEFAULT_NOTIFICATION_COOLDOWN_MS
-}
-
-/** Condition types that represent persistent cluster-level errors.
- *  These fire only once and suppress until the cluster recovers —
- *  no 5-minute cooldown repeat for ongoing connectivity failures. */
-const PERSISTENT_CLUSTER_CONDITIONS = new Set(['certificate_error', 'cluster_unreachable'])
-
-// ── Centralized Browser Notification Dispatcher (#8750, #8751, #8752) ───
-//
-// All evaluators previously had inline dedup-check + sendNotificationWithDeepLink
-// logic with subtle inconsistencies:
-//   - Some used cooldown-based repeat, others used one-shot "fire once"
-//   - Persistent condition detection was duplicated in each evaluator
-//   - The dedup key format varied per evaluator
-//
-// This centralized helper unifies the rules:
-//   1. Check if the rule has a `browser` channel enabled
-//   2. Compute the dedup key using the standard `alertDedupKey`
-//   3. For persistent conditions: notify once, suppress until recovery
-//   4. For transient conditions: notify once per cooldown window (severity-tiered)
-//   5. Record the dedup key + timestamp for future checks
-
-/** Parameters for the centralized browser notification dispatcher */
-interface BrowserNotificationParams {
-  /** The alert rule that triggered this notification */
-  rule: AlertRule
-  /** The notification dedup key (from alertDedupKey or custom) */
-  dedupKey: string
-  /** The notification title */
-  title: string
-  /** The notification body text */
-  body: string
-  /** Deep link parameters for click-through navigation */
-  deepLinkParams: DeepLinkParams
-}
-
-/**
- * Dispatch a browser notification with centralized dedup rules.
- *
- * This replaces the 6 inline dedup-check patterns that were scattered
- * across individual evaluators, each with slightly different logic.
- *
- * @returns true if the notification was sent, false if suppressed by dedup
- */
-function shouldDispatchBrowserNotification(
-  rule: AlertRule,
-  dedupKey: string,
-  notifiedKeys: Map<string, number>
-): boolean {
-  // Gate: rule must have an enabled browser channel
-  const hasBrowserChannel = (rule.channels || []).some(
-    ch => ch.type === 'browser' && ch.enabled
-  )
-  if (!hasBrowserChannel) return false
-
-  const isPersistent = PERSISTENT_CLUSTER_CONDITIONS.has(rule.condition.type)
-  const alreadyNotified = notifiedKeys.has(dedupKey)
-
-  if (isPersistent) {
-    // Persistent conditions: notify exactly once, suppress until recovery
-    // clears the dedup key (see evaluateCertificateError/evaluateClusterUnreachable)
-    return !alreadyNotified
-  }
-
-  // Transient conditions: use severity-tiered cooldown
-  if (!alreadyNotified) return true
-  const lastNotified = notifiedKeys.get(dedupKey) ?? 0
-  return (Date.now() - lastNotified) > getNotificationCooldown(rule.severity)
-}
-
-/**
- * When a cluster is unreachable we cannot observe its node / disk / memory
- * state — any cached values are stale, last-known-good at best. Firing
- * per-node alerts ("Node Not Ready", "Disk Pressure", "Memory Pressure")
- * for such clusters produces misleading noise on top of the single
- * authoritative "Cluster Unreachable" alert. This helper centralizes the
- * reachability check so every node / cluster-health evaluator can skip
- * unreachable clusters uniformly. See upstream bug report for the real-world
- * "20 unreachable clusters → 40 spurious alerts" scenario. */
-function isClusterUnreachable(cluster: { reachable?: boolean }): boolean {
-  return cluster.reachable === false
-}
-
-/** Maximum age (ms) for dedup entries — evict stale entries older than this */
-const NOTIFICATION_DEDUP_MAX_AGE_MS = 86_400_000 // 24 hours
-
-/** Load persisted notification dedup map from localStorage (key → timestamp) */
-function loadNotifiedAlertKeys(): Map<string, number> {
-  try {
-    const stored = safeGet(STORAGE_KEY_NOTIFIED_ALERT_KEYS)
-    if (stored) {
-      return new Map(JSON.parse(stored) as [string, number][])
-    }
-  } catch {
-    // Ignore corrupt data
-  }
-  return new Map()
-}
-
-/** Persist notification dedup map to localStorage, pruning entries older than NOTIFICATION_DEDUP_MAX_AGE_MS */
-function saveNotifiedAlertKeys(keys: Map<string, number>): void {
-  try {
-    const now = Date.now()
-    for (const [key, ts] of keys) {
-      if (now - ts > NOTIFICATION_DEDUP_MAX_AGE_MS) keys.delete(key)
-    }
-    safeSet(STORAGE_KEY_NOTIFIED_ALERT_KEYS, JSON.stringify([...keys.entries()]))
-  } catch {
-    // localStorage full or unavailable
-  }
-}
-
-// Load from localStorage
-function loadFromStorage<T>(key: string, defaultValue: T): T {
-  return safeGetJSON(key, defaultValue)
-}
-
-// Save to localStorage with error logging (#7576).
-// Uses localStorage directly instead of safeSetJSON so errors are
-// observable rather than silently swallowed.
-function saveToStorage<T>(key: string, value: T): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch (e: unknown) {
-    console.error(`Failed to save ${key} to localStorage:`, e)
-  }
-}
-
-// Save alerts to localStorage with a hard cap and quota-exceeded handling.
-// Keeps all firing alerts and trims resolved alerts by recency when the cap is hit.
-function saveAlerts(alerts: Alert[]): void {
-  // Enforce a global cap before every write: keep all firing alerts and trim resolved by recency.
-  let toSave = alerts
-  if (toSave.length > MAX_ALERTS) {
-    const firing = toSave.filter(a => a.status === 'firing')
-    const resolved = toSave
-      .filter(a => a.status === 'resolved')
-      .sort((a, b) => new Date(b.resolvedAt ?? b.firedAt).getTime() - new Date(a.resolvedAt ?? a.firedAt).getTime())
-      .slice(0, Math.max(0, MAX_ALERTS - firing.length))
-    toSave = [...firing, ...resolved]
-  }
-
-  // Use localStorage.setItem directly instead of safeSet so that
-  // QuotaExceededError propagates to our own catch block (#7576).
-  try {
-    localStorage.setItem(ALERTS_KEY, JSON.stringify(toSave))
-  } catch (e: unknown) {
-    // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
-    // browsers that use numeric code 22 instead of the named exception.
-    // Pattern matches useMissions/useMetricsHistory for consistency across the codebase.
-    const isQuotaError = e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)
-    if (isQuotaError) {
-      console.warn('[Alerts] localStorage quota exceeded, pruning resolved alerts')
-      // Keep all firing alerts + a small number of recent resolved ones
-      const firing = toSave.filter(a => a.status === 'firing')
-      const resolved = toSave
-        .filter(a => a.status === 'resolved')
-        .sort((a, b) => new Date(b.resolvedAt ?? b.firedAt).getTime() - new Date(a.resolvedAt ?? a.firedAt).getTime())
-        .slice(0, MAX_RESOLVED_ALERTS_AFTER_PRUNE)
-      const pruned = [...firing, ...resolved]
-      try {
-        localStorage.setItem(ALERTS_KEY, JSON.stringify(pruned))
-      } catch (retryError: unknown) {
-        console.error('[Alerts] localStorage still full after pruning, clearing alerts', retryError)
-        safeRemove(ALERTS_KEY)
-      }
-    } else {
-      console.error(`Failed to save ${ALERTS_KEY} to localStorage:`, e)
-    }
-  }
-}
-
 interface AlertsContextValue {
   alerts: Alert[]
   activeAlerts: Alert[]
@@ -817,7 +659,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
             // pre-update firing object. Without this, resolved notifications
             // are sent with status: "firing".
             const resolvedAlert: Alert = { ...alertToResolve, status: 'resolved', resolvedAt }
-            sendNotifications(resolvedAlert, enabledChannels).catch((err) => { console.warn('[AlertsContext] resolved notification send failed:', err) })
+            localSendNotifications(resolvedAlert, enabledChannels).catch((err) => { console.warn('[AlertsContext] resolved notification send failed:', err) })
           }
         }
       })
@@ -977,7 +819,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
           if (rule.channels && rule.channels.length > 0) {
             const enabledChannels = rule.channels.filter(ch => ch.enabled)
             if (enabledChannels.length > 0) {
-              sendNotifications(newAlertObj, enabledChannels).catch((err) => { console.warn('[AlertsContext] firing notification send failed:', err) })
+              localSendNotifications(newAlertObj, enabledChannels).catch((err) => { console.warn('[AlertsContext] firing notification send failed:', err) })
             }
           }
         })
@@ -1012,80 +854,18 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     }
 
   // Send notifications for an alert (best-effort, silent on auth failures)
-  const sendNotifications = async (alert: Alert, channels: AlertChannel[]) => {
-    try {
-      const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
-      // Skip notification if not authenticated - notifications require login
-      if (!token) return
-
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-
-      const response = await fetch(`${API_BASE}/api/notifications/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-          Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ alert, channels }),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-
-      // Silently ignore auth errors - user may not be logged in
-      if (response.status === 401 || response.status === 403) return
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.message || 'Failed to send notifications')
-      }
-    } catch (error: unknown) {
-      // Silent failure - notifications are best-effort
-      // Only log unexpected errors (not network issues)
-      if (error instanceof Error && !error.message.includes('fetch')) {
-        console.warn('Notification send failed:', error.message)
-      }
-    }
+  // ──Notification sending ──────────────────────────────────
+  // Delegates to notification module for consistent behavior
+  const localSendNotifications = async (alert: Alert, channels: AlertChannel[]) => {
+    const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+    return sendNotifications(alert, channels, token, API_BASE, FETCH_DEFAULT_TIMEOUT_MS)
   }
 
-  // Send batched notifications — aggregates multiple alert/channel pairs into a
-  // single HTTP request instead of N concurrent requests.
-  const sendBatchedNotifications = async (items: Array<{ alert: Alert; channels: AlertChannel[] }>) => {
-    if (items.length === 0) return
-    try {
-      const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
-      if (!token) return
-
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-
-      // Send all notifications in a single request with a batch payload.
-      // The backend /api/notifications/send already accepts { alert, channels };
-      // for batching we send items sequentially via settledWithConcurrency to
-      // avoid overwhelming the backend while still using a single React render cycle.
-      /** Maximum concurrent notification requests to avoid overwhelming the backend */
-      const MAX_NOTIFICATION_CONCURRENCY = 3
-      await settledWithConcurrency(
-        items.map(({ alert, channels }) => async () => {
-          try {
-            const response = await fetch(`${API_BASE}/api/notifications/send`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ alert, channels }),
-              signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-            if (response.status === 401 || response.status === 403) return
-            if (!response.ok) {
-              const data = await response.json().catch(() => ({}))
-              throw new Error(data.message || 'Failed to send notification')
-            }
-          } catch {
-            // Silent failure - notifications are best-effort
-          }
-        }),
-        MAX_NOTIFICATION_CONCURRENCY
-      )
-    } catch {
-      // Silent failure - notifications are best-effort
-    }
+  const localSendBatchedNotifications = async (items: Array<{ alert: Alert; channels: AlertChannel[] }>) => {
+    const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+    return sendBatchedNotifications(items, token, API_BASE, FETCH_DEFAULT_TIMEOUT_MS, settledWithConcurrency)
   }
 
   // ── Centralized browser notification dispatch (#8750, #8751, #8752) ──
