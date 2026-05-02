@@ -488,6 +488,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/jobs", s.handleJobsHTTP)
 	mux.HandleFunc("/hpas", s.handleHPAsHTTP)
 	mux.HandleFunc("/pvcs", s.handlePVCsHTTP)
+	mux.HandleFunc("/pvs", s.handlePVsHTTP)
 	mux.HandleFunc("/cluster-health", s.handleClusterHealthHTTP)
 	mux.HandleFunc("/roles", s.handleRolesHTTP)
 	mux.HandleFunc("/rolebindings", s.handleRoleBindingsHTTP)

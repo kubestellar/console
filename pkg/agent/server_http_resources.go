@@ -1062,6 +1062,39 @@ func (s *Server) handlePVCsHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]interface{}{"pvcs": pvcs, "source": "agent"})
 }
 
+// handlePVsHTTP returns PersistentVolumes for a cluster
+func (s *Server) handlePVsHTTP(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	// SECURITY: Validate token for PVs endpoint
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if s.k8sClient == nil {
+		writeJSON(w, map[string]interface{}{"pvs": []interface{}{}, "error": "k8s client not initialized"})
+		return
+	}
+	cluster := r.URL.Query().Get("cluster")
+	if cluster == "" {
+		writeJSON(w, map[string]interface{}{"pvs": []interface{}{}, "error": "cluster parameter required"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
+	defer cancel()
+	pvs, err := s.k8sClient.GetPVs(ctx, cluster)
+	if err != nil {
+		slog.Warn("error fetching pvs", "error", err)
+		writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
+		return
+	}
+	writeJSON(w, map[string]interface{}{"pvs": pvs, "source": "agent"})
+}
+
 // handleRolesHTTP returns Roles for a cluster/namespace
 func (s *Server) handleRolesHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)

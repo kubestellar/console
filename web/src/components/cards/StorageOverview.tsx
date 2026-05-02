@@ -121,6 +121,16 @@ export function StorageOverview() {
   }
 
   if (showEmptyState) {
+    // Distinguish between "no data exists" and "failed to fetch data"
+    if (isFailed || pvcsError) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+          <AlertTriangle className="w-8 h-8 mb-2 text-red-400 opacity-70" />
+          <p className="text-sm text-red-400">{t('storageOverview.fetchFailed', { defaultValue: 'Failed to load storage data' })}</p>
+          <p className="text-xs mt-1">{pvcsError || t('storageOverview.fetchFailedHint', { defaultValue: 'Check cluster connectivity and try again' })}</p>
+        </div>
+      )
+    }
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
         <p className="text-sm">{t('storageOverview.noData')}</p>

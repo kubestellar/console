@@ -378,18 +378,87 @@ export function usePVs(cluster?: string) {
 
   const refetch = useCallback(async () => {
     if (!isMountedRef.current) return
-    setIsLoading(true)
     setIsRefreshing(true)
-    try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pvs?${params}`)
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-      const data = await resp.json()
+
+    // If demo mode is enabled, use demo data
+    if (isDemoMode()) {
       if (!isMountedRef.current) return
-      setPVs(data.pvs || [])
+      setPVs([])
+      setIsLoading(false)
+      setIsRefreshing(false)
       setError(null)
-      setConsecutiveFailures(0)
+      return
+    }
+
+    if (isAgentUnavailable()) {
+      if (isMountedRef.current) {
+        setError('Agent unavailable')
+        setConsecutiveFailures(prev => prev + 1)
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
+      return
+    }
+
+    try {
+      const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false)
+      const dedupClusters = deduplicateClustersByServer(allClusters)
+      const clustersToFetch = cluster
+        ? [{ name: cluster, context: cluster }]
+        : dedupClusters
+
+      if (clustersToFetch.length === 0) {
+        if (isMountedRef.current) {
+          setPVs([])
+          setIsLoading(false)
+          setIsRefreshing(false)
+          setError(null)
+        }
+        return
+      }
+
+      const allPVs: PV[] = []
+      let anySuccess = false
+
+      const fetchTasks = clustersToFetch.map((c) => async () => {
+        try {
+          const params = new URLSearchParams()
+          params.append('cluster', c.context || c.name)
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+          const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pvs?${params}`, {
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' },
+          })
+          clearTimeout(timeoutId)
+          if (response.ok) {
+            const agentData = await response.json()
+            const mappedPVs: PV[] = (agentData.pvs || []).map((p: PV) => ({ ...p, cluster: c.name }))
+            return { success: true, pvs: mappedPVs }
+          }
+        } catch {
+          // Individual cluster failure - continue with others
+        }
+        return { success: false, pvs: [] }
+      })
+
+      const settled = await settledWithConcurrency(fetchTasks)
+      for (const entry of (settled || [])) {
+        if (entry.status === 'fulfilled' && entry.value.success) {
+          anySuccess = true
+          allPVs.push(...entry.value.pvs)
+        }
+      }
+
+      if (!isMountedRef.current) return
+      if (anySuccess) {
+        setPVs(allPVs)
+        setError(null)
+        setConsecutiveFailures(0)
+      } else {
+        setError('Failed to fetch PVs from any cluster')
+        setConsecutiveFailures(prev => prev + 1)
+      }
     } catch (err: unknown) {
       if (isMountedRef.current) {
         const message = err instanceof Error ? err.message : 'Failed to fetch PVs'
