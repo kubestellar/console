@@ -74,15 +74,15 @@ export function MatchGame(_props: CardComponentProps) {
 
   // Load high scores from localStorage
   useEffect(() => {
-    const stored = localStorage.getItem('matchGameHighScores')
-    if (stored) {
-      try {
+    try {
+      const stored = localStorage.getItem('matchGameHighScores')
+      if (stored) {
         setHighScores(JSON.parse(stored))
-      } catch {
-        // User-visible toast already communicates the failure; no console
-        // noise needed (#8816).
-        showToast(t('matchGame.errors.highScoresFailed', 'Could not load high scores.'), 'warning')
       }
+    } catch {
+      // User-visible toast already communicates the failure; no console
+      // noise needed (#8816).
+      showToast(t('matchGame.errors.highScoresFailed', 'Could not load high scores.'), 'warning')
     }
   }, [showToast, t])
 
