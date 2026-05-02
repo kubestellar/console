@@ -282,6 +282,8 @@ const DEFAULT_WIND_SPEED_THRESHOLD_MPH = 40
 const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
   critical: 5 * MS_PER_MINUTE,    // 5 min — urgent, re-notify quickly
   warning: 30 * MS_PER_MINUTE,    // 30 min — important but not urgent
+}
+
 interface AlertsContextValue {
   alerts: Alert[]
   activeAlerts: Alert[]
