@@ -45,10 +45,7 @@
     "coverage:clean": "rimraf .nyc_output coverage",
     "test:card-registry": "node ../scripts/card-registry-integrity-test.mjs",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "test:e2e:visual": "playwright test --config e2e/visual/visual.config.ts",
-    "test:visual": "playwright test --config e2e/visual/app-visual.config.ts",
-    "test:visual:update": "playwright test --config e2e/visual/app-visual.config.ts --update-snapshots"
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@codemirror/legacy-modes": "^6.5.2",

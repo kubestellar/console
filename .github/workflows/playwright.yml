@@ -347,8 +347,3 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:4173
         continue-on-error: true
-
-  # Visual regression testing moved to .github/workflows/visual-regression.yml
-  # The previous job here was non-functional (--update-snapshots always passed,
-  # continue-on-error swallowed failures). The new workflow uses committed
-  # baselines and blocks PRs on visual regressions.
