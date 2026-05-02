@@ -40,6 +40,7 @@ import {
 } from '../../lib/constants'
 import { hexToRgba } from '../../lib/theme/chartColors'
 import { MS_PER_DAY } from '../../lib/constants/time'
+import { TOOLTIP_INLINE_GAP_PX } from '../../lib/llmd/tooltipSpacing'
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -412,7 +413,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
           const dateLabel = `<span style="color:${CHART_TOOLTIP_LABEL_COLOR};font-weight:600">${dow}, ${fullDate}</span>`
           const lines = params.map(
             p =>
-              `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:6px;"></span>${p.seriesName}: <b>${p.value}</b>`
+              `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${p.color};margin-right:${TOOLTIP_INLINE_GAP_PX}px;"></span>${p.seriesName}: <b>${p.value}</b>`
           )
           return `${dateLabel}<br/>${lines.join('<br/>')}`
         },
