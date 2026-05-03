@@ -131,3 +131,26 @@ export function getStatusColors(status: string | undefined | null): StatusColorS
 export function getSeverityColors(severity: StatusSeverity): StatusColorSet {
   return STATUS_COLORS[severity]
 }
+
+// ---------------------------------------------------------------------------
+// Health Badge Constants
+//
+// Shared CSS class strings for the healthy/unhealthy badge used across
+// status cards (OTel, Rook, TiKV, CloudEvents, Containerd, Vitess, Dragonfly).
+// ---------------------------------------------------------------------------
+
+/** CSS classes for a "Healthy" badge (green background + text) */
+export const HEALTH_BADGE_HEALTHY = 'bg-green-500/15 text-green-400'
+
+/** CSS classes for an "Unhealthy / Warning" badge (yellow background + text) */
+export const HEALTH_BADGE_UNHEALTHY = 'bg-yellow-500/15 text-yellow-400'
+
+/**
+ * Return the appropriate health badge CSS classes based on a boolean health flag.
+ *
+ * @example
+ * <div className={cn('flex items-center gap-2', getHealthBadgeClasses(isHealthy))}>
+ */
+export function getHealthBadgeClasses(isHealthy: boolean): string {
+  return isHealthy ? HEALTH_BADGE_HEALTHY : HEALTH_BADGE_UNHEALTHY
+}

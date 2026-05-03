@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 import { STORAGE_KEY_SNOOZED_CARDS } from '../lib/constants/storage'
+import { MS_PER_HOUR, MS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../lib/constants/time'
 import { emitSnoozed, emitUnsnoozed } from '../lib/analytics'
 
 /** Default snooze duration: 1 hour */
-const DEFAULT_SNOOZE_DURATION_MS = 60 * 60 * 1000
+const DEFAULT_SNOOZE_DURATION_MS = MS_PER_HOUR
 
 export interface SnoozedSwap {
   id: string
@@ -148,13 +149,6 @@ export function formatTimeRemaining(until: Date | number): string {
   const diff = untilMs - now
 
   if (diff <= 0) return 'Expired'
-
-  /** Milliseconds per minute */
-  const MS_PER_MINUTE = 60_000
-  /** Minutes per hour */
-  const MINUTES_PER_HOUR = 60
-  /** Hours per day */
-  const HOURS_PER_DAY = 24
 
   const minutes = Math.floor(diff / MS_PER_MINUTE)
   const hours = Math.floor(minutes / MINUTES_PER_HOUR)

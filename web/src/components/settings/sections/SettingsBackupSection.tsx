@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { HardDrive, Check, Loader2, AlertCircle, WifiOff, Download, Upload, Shield } from 'lucide-react'
 import type { SyncStatus } from '../../../hooks/usePersistedSettings'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
+import { SECONDS_PER_MINUTE, MINUTES_PER_HOUR } from '../../../lib/constants/time'
 
 interface SettingsBackupSectionProps {
   syncStatus: SyncStatus
@@ -33,8 +34,6 @@ interface LastSavedLabels {
 const JUST_NOW_THRESHOLD_SEC = 5
 // Boundary for switching from seconds-ago to minutes-ago / minutes-ago to
 // absolute time. 60s in a minute, 60m in an hour.
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
 function formatLastSaved(date: Date | null, labels: LastSavedLabels): string {
   if (!date) return labels.never
   const now = new Date()

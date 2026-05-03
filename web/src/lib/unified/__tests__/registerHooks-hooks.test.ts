@@ -59,7 +59,7 @@ const {
     mockUseCachedEvents: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseCachedDeployments: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseCachedDeploymentIssues: vi.fn().mockReturnValue({ issues: [], isLoading: false, error: null, refetch: vi.fn() }),
-    mockUseClusters: vi.fn().mockReturnValue({ clusters: [], isLoading: false, error: null, refetch: vi.fn() }),
+    mockUseClusters: vi.fn().mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUsePVCs: vi.fn().mockReturnValue({ pvcs: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseServices: vi.fn().mockReturnValue({ services: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseOperators: vi.fn().mockReturnValue({ operators: [], isLoading: false, error: null, refetch: vi.fn() }),
@@ -69,11 +69,11 @@ const {
     mockUseIngresses: vi.fn().mockReturnValue({ ingresses: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseNodes: vi.fn().mockReturnValue({ nodes: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseJobs: vi.fn().mockReturnValue({ jobs: [], isLoading: false, error: null, refetch: vi.fn() }),
-    mockUseCronJobs: vi.fn().mockReturnValue({ cronjobs: [], isLoading: false, error: null, refetch: vi.fn() }),
-    mockUseStatefulSets: vi.fn().mockReturnValue({ statefulsets: [], isLoading: false, error: null, refetch: vi.fn() }),
-    mockUseDaemonSets: vi.fn().mockReturnValue({ daemonsets: [], isLoading: false, error: null, refetch: vi.fn() }),
+    mockUseCronJobs: vi.fn().mockReturnValue({ cronJobs: [], isLoading: false, error: null, refetch: vi.fn() }),
+    mockUseStatefulSets: vi.fn().mockReturnValue({ statefulSets: [], isLoading: false, error: null, refetch: vi.fn() }),
+    mockUseDaemonSets: vi.fn().mockReturnValue({ daemonSets: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseHPAs: vi.fn().mockReturnValue({ hpas: [], isLoading: false, error: null, refetch: vi.fn() }),
-    mockUseReplicaSets: vi.fn().mockReturnValue({ replicasets: [], isLoading: false, error: null, refetch: vi.fn() }),
+    mockUseReplicaSets: vi.fn().mockReturnValue({ replicaSets: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUsePVs: vi.fn().mockReturnValue({ pvs: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseResourceQuotas: vi.fn().mockReturnValue({ resourceQuotas: [], isLoading: false, error: null, refetch: vi.fn() }),
     mockUseLimitRanges: vi.fn().mockReturnValue({ limitRanges: [], isLoading: false, error: null, refetch: vi.fn() }),
@@ -214,6 +214,7 @@ describe('useUnifiedClusters via renderHook', () => {
   it('maps clusters to data and wraps error', () => {
     mockUseClusters.mockReturnValue({
       clusters: [{ name: 'c1' }],
+      deduplicatedClusters: [{ name: 'c1' }],
       isLoading: true,
       error: 'cluster err',
       refetch: vi.fn(),
@@ -636,9 +637,9 @@ describe('additional resource wrapper hooks', () => {
     expect(result.current.isDemoData).toBe(false)
   })
 
-  it('useUnifiedStatefulSets maps statefulsets to data', () => {
+  it('useUnifiedStatefulSets maps statefulSets to data', () => {
     mockUseStatefulSets.mockReturnValue({
-      statefulsets: [{ name: 'ss1' }],
+      statefulSets: [{ name: 'ss1' }],
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -648,9 +649,9 @@ describe('additional resource wrapper hooks', () => {
     expect(result.current.data).toEqual([{ name: 'ss1' }])
   })
 
-  it('useUnifiedDaemonSets maps daemonsets to data', () => {
+  it('useUnifiedDaemonSets maps daemonSets to data', () => {
     mockUseDaemonSets.mockReturnValue({
-      daemonsets: [{ name: 'ds1' }],
+      daemonSets: [{ name: 'ds1' }],
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -672,9 +673,9 @@ describe('additional resource wrapper hooks', () => {
     expect(result.current.data).toEqual([{ name: 'hpa1' }])
   })
 
-  it('useUnifiedReplicaSets maps replicasets to data', () => {
+  it('useUnifiedReplicaSets maps replicaSets to data', () => {
     mockUseReplicaSets.mockReturnValue({
-      replicasets: [{ name: 'rs1' }],
+      replicaSets: [{ name: 'rs1' }],
       isLoading: false,
       error: null,
       refetch: vi.fn(),

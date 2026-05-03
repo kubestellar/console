@@ -105,7 +105,7 @@ export function PodOutputTab({
               )}
             </button>
           </div>
-          <pre className="p-4 rounded-lg bg-black/50 border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
+          <pre className="p-4 rounded-lg bg-muted border border-border overflow-auto max-h-[60vh] text-xs text-foreground font-mono whitespace-pre-wrap">
             <code className="text-muted-foreground">{kubectlComment}</code>
             {'\n\n'}
             {output}

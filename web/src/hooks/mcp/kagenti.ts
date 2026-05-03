@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { mapSettledWithConcurrency } from '../../lib/utils/concurrency'
 import { isAgentUnavailable, reportAgentDataSuccess } from '../useLocalAgent'
 import { clusterCacheRef, LOCAL_AGENT_URL, agentFetch as sharedAgentFetch } from './shared'
+import { deduplicateClustersByServer } from './dedup'
 import { useCache } from '../../lib/cache'
 
 // ─── Types ─────────────────────────────────────────────────────────
@@ -116,6 +117,27 @@ function getDemoTools(): KagentiTool[] {
 
 const AGENT_TIMEOUT = 15000
 
+/** Classify a caught error into a user-friendly message. */
+function classifyFetchError(err: unknown, path: string, cluster: string, status?: number): string {
+  if (err instanceof DOMException && err.name === 'AbortError') {
+    return 'Kagenti request timed out'
+  }
+  if (err instanceof TypeError && /failed to fetch|networkerror|network request failed/i.test(err.message)) {
+    return 'Kagenti agent not connected'
+  }
+  if (status === 401 || status === 403) {
+    return `Authentication failed (${status}) for ${path}`
+  }
+  if (status === 404) {
+    return `Kagenti endpoints not found (${path})`
+  }
+  if (status) {
+    return `Agent returned HTTP ${status} for ${path} (cluster: ${cluster})`
+  }
+  const msg = err instanceof Error ? err.message : String(err)
+  return msg || 'Unknown kagenti error'
+}
+
 async function agentFetch<T>(path: string, cluster: string, namespace?: string): Promise<T | null> {
   if (isAgentUnavailable()) return null
 
@@ -130,14 +152,20 @@ async function agentFetch<T>(path: string, cluster: string, namespace?: string):
       signal: ctrl.signal,
       headers: { Accept: 'application/json' } })
     clearTimeout(tid)
-    if (!res.ok) throw new Error(`Agent returned ${res.status} for ${path} (cluster: ${cluster})`)
+    if (!res.ok) {
+      const classified = classifyFetchError(null, path, cluster, res.status)
+      throw new Error(classified)
+    }
     return await res.json()
-  } catch (err) {
+  } catch (err: unknown) {
     clearTimeout(tid)
-    // Log the error so it is visible in the console
     console.warn(`[kagenti] fetch failed for ${path} (cluster: ${cluster}):`, err)
-    // Re-throw so callers can surface the error to the UI
-    throw err
+    // If already classified (from !res.ok branch), re-throw as-is
+    if (err instanceof Error && !(/^TypeError/.test(err.constructor.name) || err.name === 'AbortError')) {
+      throw err
+    }
+    // Classify network/abort errors into friendly messages
+    throw new Error(classifyFetchError(err, path, cluster))
   }
 }
 
@@ -152,7 +180,8 @@ async function agentFetchAllClusters<T>(
 ): Promise<T[]> {
   if (isAgentUnavailable()) return []
 
-  const clusters = clusterCacheRef.clusters.filter(c => c.reachable !== false && !c.name.includes('/'))
+  const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false && !c.name.includes('/'))
+  const clusters = deduplicateClustersByServer(allClusters)
   if (clusters.length === 0) return []
 
   const targets = specificCluster
@@ -176,9 +205,12 @@ async function agentFetchAllClusters<T>(
     else errors.push(r.reason?.message || 'unknown error')
   }
 
-  // If every cluster failed, throw so the error reaches the UI
+  // If every cluster failed, deduplicate errors and throw a concise message
   if (items.length === 0 && errors.length > 0) {
-    throw new Error(`All kagenti fetches failed: ${errors.join('; ')}`)
+    const uniqueErrors = [...new Set(errors)]
+    const clusterCount = errors.length
+    const suffix = clusterCount > 1 ? ` (all ${clusterCount} clusters failed)` : ''
+    throw new Error(`${uniqueErrors.join('; ')}${suffix}`)
   }
 
   return items

@@ -24,8 +24,8 @@ import (
 	"github.com/kubestellar/console/pkg/models"
 )
 
-// maxConcurrentClusterRBACQueries bounds how many clusters GetAllPermissionsSummaries
-// fans out to at once. A plain unbounded errgroup would let 50+ clusters each
+// maxConcurrentClusterRBACQueries bounds how many clusters GetAllClusterPermissions
+// and GetAllPermissionsSummaries fan out to at once. A plain unbounded errgroup would let 50+ clusters each
 // hammer the kube-apiserver with five SelfSubjectAccessReview calls
 // concurrently, which can saturate a control plane. 5 is a deliberate
 // compromise — high enough that a typical 5-10 cluster setup sees near-zero
@@ -554,18 +554,29 @@ func (m *MultiClusterClient) GetAllClusterPermissions(ctx context.Context) ([]mo
 		return nil, err
 	}
 
-	var result []models.ClusterPermissions
-	for _, cluster := range clusters {
-		perms, err := m.GetClusterPermissions(ctx, cluster.Name)
-		if err != nil {
-			// Include error info in the result
-			result = append(result, models.ClusterPermissions{
-				Cluster: cluster.Name,
-			})
-			continue
-		}
-		result = append(result, *perms)
+	result := make([]models.ClusterPermissions, len(clusters))
+
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxConcurrentClusterRBACQueries)
+
+	for i, cluster := range clusters {
+		i, cluster := i, cluster // capture per-iteration
+		g.Go(func() error {
+			clusterCtx, cancel := context.WithTimeout(gctx, perClusterRBACTimeout)
+			defer cancel()
+
+			perms, err := m.GetClusterPermissions(clusterCtx, cluster.Name)
+			if err != nil {
+				// Partial info on error — same contract as the old code.
+				result[i] = models.ClusterPermissions{Cluster: cluster.Name}
+				return nil
+			}
+			result[i] = *perms
+			return nil
+		})
 	}
+
+	_ = g.Wait()
 
 	return result, nil
 }

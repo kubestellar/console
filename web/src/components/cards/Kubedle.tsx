@@ -69,6 +69,7 @@ const SHAKE_DURATION_MS = 500
 
 // Standard Wordle-style game: 6 guesses per puzzle.
 const MAX_GUESSES = 6
+const WORD_LENGTH = 5
 
 function loadStats(): GameStats {
   const defaults: GameStats = {
@@ -175,7 +176,7 @@ export function Kubedle(_props: CardComponentProps) {
     if (gameOver) return
 
     if (key === 'ENTER' || key === 'Enter') {
-      if (currentGuess.length !== 5) {
+      if (currentGuess.length !== WORD_LENGTH) {
         setShake(true)
         setMessage(tCards('kubedle.notEnoughLetters'))
         if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current)
@@ -243,7 +244,7 @@ export function Kubedle(_props: CardComponentProps) {
       }
     } else if (key === '⌫' || key === 'Backspace') {
       setCurrentGuess(prev => prev.slice(0, -1))
-    } else if (/^[A-Za-z]$/.test(key) && currentGuess.length < 5) {
+    } else if (/^[A-Za-z]$/.test(key) && currentGuess.length < WORD_LENGTH) {
       setCurrentGuess(prev => prev + key.toUpperCase())
     }
   }

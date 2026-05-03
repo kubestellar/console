@@ -108,7 +108,7 @@ export function CrossplaneManagedResources() {
 
   const hasData = rawResources.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     hasAnyData: hasData,
     isFailed,
     consecutiveFailures,

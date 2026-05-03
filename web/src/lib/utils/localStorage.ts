@@ -20,7 +20,7 @@ function sanitizeKeyForLog(key: string): string {
 export function safeGetItem(key: string): string | null {
   try {
     return localStorage.getItem(key)
-  } catch (error) {
+  } catch (error: unknown) {
     // localStorage may throw in private browsing mode or when disabled
     console.error('Failed to read from localStorage:', sanitizeKeyForLog(key), error)
     return null
@@ -37,7 +37,7 @@ export function safeSetItem(key: string, value: string): boolean {
   try {
     localStorage.setItem(key, value)
     return true
-  } catch (error) {
+  } catch (error: unknown) {
     // localStorage may throw in private browsing mode, when quota exceeded, or when disabled
     console.error('Failed to write to localStorage:', sanitizeKeyForLog(key), error)
     return false
@@ -53,7 +53,7 @@ export function safeRemoveItem(key: string): boolean {
   try {
     localStorage.removeItem(key)
     return true
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to remove from localStorage:', sanitizeKeyForLog(key), error)
     return false
   }
@@ -70,7 +70,7 @@ export function safeGetJSON<T = unknown>(key: string): T | null {
     if (item) {
       return JSON.parse(item) as T
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to read/parse JSON from localStorage:', sanitizeKeyForLog(key), error)
   }
   return null
@@ -86,7 +86,7 @@ export function safeSetJSON<T = unknown>(key: string, value: T): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(value))
     return true
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to write JSON to localStorage:', sanitizeKeyForLog(key), error)
     return false
   }

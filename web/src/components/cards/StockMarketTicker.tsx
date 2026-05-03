@@ -10,8 +10,11 @@ import { useCardLoadingState } from './CardDataContext'
 import { useCache } from '../../lib/cache'
 import { useTranslation } from 'react-i18next'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
+import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import { useToast } from '../ui/Toast'
 import type { TFunction } from 'i18next'
+
+const SEARCH_DEBOUNCE_MS = 300
 
 // Stock search result interface
 interface StockSearchResult {
@@ -389,7 +392,7 @@ function Sparkline({ data, isPositive }: { data: number[]; isPositive: boolean }
       <polyline
         points={points}
         fill="none"
-        stroke={isPositive ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)'}
+        stroke={isPositive ? GREEN_500_BRIGHT : RED_500}
         strokeWidth="2"
         vectorEffect="non-scaling-stroke"
       />
@@ -463,12 +466,12 @@ function StockRow({
         </div>
 
         {/* Sparkline */}
-        <div className="hidden @sm:block flex-shrink-0">
+        <div className="hidden @sm:block shrink-0">
           <Sparkline data={stock.sparklineData} isPositive={isPositive} />
         </div>
 
         {/* Price and change */}
-        <div className="text-right flex-shrink-0">
+        <div className="text-right shrink-0">
           <div className="font-semibold text-sm">${stock.price.toFixed(2)}</div>
           <div className={`text-xs flex items-center justify-end gap-1 ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
             {isPositive ? <TrendingUp className="w-3 h-3" aria-hidden="true" /> : <TrendingDown className="w-3 h-3" aria-hidden="true" />}
@@ -541,12 +544,17 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
 
   // Save stocks to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('stock-ticker-saved-stocks', JSON.stringify(savedStocks))
+    try {
+      localStorage.setItem('stock-ticker-saved-stocks', JSON.stringify(savedStocks))
+    } catch {
+      // Ignore storage errors (e.g. private browsing, quota exceeded)
+    }
   }, [savedStocks])
 
   // Stock data via useCache (persists across navigation)
   const symbolsKey = [...activeSymbols].sort().join(',')
-  const demoStockData = generateMockStockData(activeSymbols)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- symbolsKey is the stable string derived from activeSymbols
+  const demoStockData = useMemo(() => generateMockStockData(activeSymbols), [symbolsKey])
 
   const { data: stockData, isLoading: isLoadingData, isRefreshing: stockRefreshing } = useCache<StockData[]>({
     key: `stocks:${symbolsKey}:${useLiveData ? 'live' : 'demo'}`,
@@ -566,10 +574,18 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Update saved stocks when data changes
   useEffect(() => {
     if (stockData.length > 0) {
-      setSavedStocks(prev => prev.map(saved => {
-        const stock = stockData.find(s => s.symbol === saved.symbol)
-        return stock ? { ...saved, price: stock.price, changePercent: stock.changePercent } : saved
-      }))
+      setSavedStocks(prev => {
+        let changed = false
+        const next = prev.map(saved => {
+          const stock = stockData.find(s => s.symbol === saved.symbol)
+          if (stock && (saved.price !== stock.price || saved.changePercent !== stock.changePercent)) {
+            changed = true
+            return { ...saved, price: stock.price, changePercent: stock.changePercent }
+          }
+          return saved
+        })
+        return changed ? next : prev
+      })
     }
   }, [stockData])
 
@@ -628,7 +644,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
 
     searchTimeoutRef.current = setTimeout(() => {
       performStockSearch(stockSearchInput)
-    }, 300)
+    }, SEARCH_DEBOUNCE_MS)
 
     return () => {
       if (searchTimeoutRef.current) {
@@ -756,7 +772,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
                   addStock(stockSearchResults[0])
                 }
               }}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
             />
             {isSearching && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
             {stockSearchInput && (

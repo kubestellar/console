@@ -197,7 +197,7 @@ function loadResolutions(): Resolution[] {
     if (stored) {
       return JSON.parse(stored)
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Failed to load resolutions from localStorage:', e)
   }
   return []
@@ -209,7 +209,7 @@ function loadResolutions(): Resolution[] {
 function saveResolutions(resolutions: Resolution[]): void {
   try {
     localStorage.setItem(RESOLUTIONS_STORAGE_KEY, JSON.stringify(resolutions))
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Failed to save resolutions to localStorage:', e)
   }
 }
@@ -223,7 +223,7 @@ function loadSharedResolutions(): Resolution[] {
     if (stored) {
       return JSON.parse(stored)
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Failed to load shared resolutions from localStorage:', e)
   }
   return []
@@ -235,7 +235,7 @@ function loadSharedResolutions(): Resolution[] {
 function saveSharedResolutions(resolutions: Resolution[]): void {
   try {
     localStorage.setItem(SHARED_RESOLUTIONS_KEY, JSON.stringify(resolutions))
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Failed to save shared resolutions to localStorage:', e)
   }
 }

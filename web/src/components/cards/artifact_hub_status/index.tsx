@@ -7,30 +7,18 @@ import {
   RefreshCw,
   Users,
 } from 'lucide-react'
+import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useArtifactHubStatus } from './useArtifactHubStatus'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('artifactHub.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('artifactHub.syncedJustNow')
-    if (diff < hour) return t('artifactHub.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('artifactHub.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('artifactHub.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 export function ArtifactHubStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState } = useArtifactHubStatus()
+  const formatRelativeTime = createCardSyncFormatter(t, 'artifactHub')
+  const { data, error, isRefreshing, showSkeleton, showEmptyState } = useArtifactHubStatus()
 
   if (showSkeleton) {
     return (
@@ -63,7 +51,7 @@ export function ArtifactHubStatus() {
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
             isHealthy
@@ -80,7 +68,7 @@ export function ArtifactHubStatus() {
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className="w-3 h-3" />
+          <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>

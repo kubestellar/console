@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { BUILTIN_RUNBOOKS } from '../builtins'
+import { BUILTIN_RUNBOOKS, findRunbookForCondition } from '../builtins'
 
 describe('BUILTIN_RUNBOOKS', () => {
   it('is a non-empty array', () => {
@@ -45,5 +45,49 @@ describe('BUILTIN_RUNBOOKS', () => {
     for (const rb of BUILTIN_RUNBOOKS) {
       expect(rb.analysisPrompt).toContain('{{evidence}}')
     }
+  })
+})
+
+describe('findRunbookForCondition', () => {
+  it('finds a runbook by exact condition type', () => {
+    const rb = findRunbookForCondition('pod_crash')
+    expect(rb).toBeDefined()
+    expect(rb?.id).toBe('pod-crash-investigation')
+  })
+
+  it('finds node_not_ready runbook', () => {
+    const rb = findRunbookForCondition('node_not_ready')
+    expect(rb).toBeDefined()
+    expect(rb?.id).toBe('node-not-ready-investigation')
+  })
+
+  it('finds dns_failure runbook', () => {
+    const rb = findRunbookForCondition('dns_failure')
+    expect(rb).toBeDefined()
+    expect(rb?.id).toBe('dns-failure-investigation')
+  })
+
+  it('finds cluster_unreachable runbook', () => {
+    const rb = findRunbookForCondition('cluster_unreachable')
+    expect(rb).toBeDefined()
+    expect(rb?.id).toBe('cluster-unreachable-investigation')
+  })
+
+  it('finds memory_pressure runbook', () => {
+    const rb = findRunbookForCondition('memory_pressure')
+    expect(rb).toBeDefined()
+    expect(rb?.id).toBe('memory-pressure-investigation')
+  })
+
+  it('returns undefined for unknown condition type', () => {
+    expect(findRunbookForCondition('unknown_condition')).toBeUndefined()
+  })
+
+  it('returns undefined for empty string', () => {
+    expect(findRunbookForCondition('')).toBeUndefined()
+  })
+
+  it('is case-sensitive — does not match uppercase', () => {
+    expect(findRunbookForCondition('POD_CRASH')).toBeUndefined()
   })
 })

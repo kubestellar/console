@@ -245,10 +245,10 @@ Deploy to ALL clusters with Kyverno installed. Proceed step by step.` },
 
 function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   const { t } = useTranslation('cards')
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, installed: kyvernoInstalled, isDemoData: kyvernoDemoData, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
-  const { isLoading: kubescapeLoading, installed: kubescapeInstalled, isDemoData: kubescapeDemoData, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
-  const { isLoading: trivyLoading, installed: trivyInstalled, isDemoData: trivyDemoData, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
-  const { deduplicatedClusters } = useClusters()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, installed: kyvernoInstalled, isDemoData: kyvernoDemoData, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal } = useKyverno()
+  const { isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, installed: kubescapeInstalled, isDemoData: kubescapeDemoData, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
+  const { isLoading: trivyLoading, isRefreshing: trivyRefreshing, installed: trivyInstalled, isDemoData: trivyDemoData, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
+  const { deduplicatedClusters, isFailed, consecutiveFailures } = useClusters()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const { isDemoMode } = useDemoMode()
@@ -332,7 +332,7 @@ function RecommendedPoliciesInternal({ config: _config }: CardConfig) {
   })()
 
   const hasAnyData = kyvernoInstalled || kubescapeInstalled || trivyInstalled || isDemoData
-  useCardLoadingState({ isLoading: isLoading && !hasAnyData, hasAnyData, isDemoData })
+  useCardLoadingState({ isLoading: isLoading && !hasAnyData, isRefreshing: kyvernoRefreshing || kubescapeRefreshing || trivyRefreshing, hasAnyData, isDemoData, isFailed, consecutiveFailures })
 
   const handleDeployAll = () => {
     const gaps = recommendations.filter(r => r.coveredClusters.length < r.eligibleClusters.length)
@@ -416,7 +416,7 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
     <div className="space-y-3">
       {/* Fleet coverage summary */}
       <div className="flex items-center gap-3 p-2.5 rounded-lg bg-secondary/30 border border-border/50">
-        <div className="relative w-12 h-12 flex-shrink-0">
+        <div className="relative w-12 h-12 shrink-0">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
             <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-secondary" />
             <circle
@@ -507,9 +507,9 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
                         className="flex items-start gap-2 p-2 rounded-lg bg-secondary/20 hover:bg-secondary/30 transition-colors"
                       >
                         {isCovered ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                          <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
                         ) : (
-                          <AlertTriangle className={`w-4 h-4 flex-shrink-0 mt-0.5 ${SEVERITY_COLORS[rec.severity]}`} />
+                          <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${SEVERITY_COLORS[rec.severity]}`} />
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -537,7 +537,7 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
                         {!isCovered && missingCount > 0 && (
                           <button
                             onClick={() => handleDeployOne(rec)}
-                            className="flex items-center gap-1 px-2 py-1 rounded bg-purple-500/15 text-purple-400 text-2xs font-medium hover:bg-purple-500/25 transition-colors flex-shrink-0"
+                            className="flex items-center gap-1 px-2 py-1 rounded bg-purple-500/15 text-purple-400 text-2xs font-medium hover:bg-purple-500/25 transition-colors shrink-0"
                             title={`Deploy to ${missingCount} cluster${missingCount === 1 ? '' : 's'} with AI`}
                           >
                             <Zap className="w-3 h-3" />
@@ -556,7 +556,7 @@ Deploy each policy to every cluster where it's missing. Proceed cluster by clust
 
       {/* AI value prop footer */}
       <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-        <Sparkles className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+        <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
         <p className="text-2xs text-muted-foreground">
           <span className="text-purple-400 font-medium">AI-powered</span> — One click deploys policies across your entire fleet
         </p>

@@ -2,6 +2,7 @@ package federation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 	"sync/atomic"
@@ -253,5 +254,199 @@ func TestFanOut_OneProviderErrorDoesNotPoisonOthers(t *testing.T) {
 	}
 	if len(gotClusters) != 1 || gotClusters[0].Name != clusterB.Name {
 		t.Fatalf("provider B's result was poisoned: got %+v", gotClusters)
+	}
+}
+
+type fakeActionProvider struct {
+	*fakeProvider
+	actions []ActionDescriptor
+	result  ActionResult
+	err     error
+}
+
+func (f *fakeActionProvider) Actions() []ActionDescriptor {
+	return append([]ActionDescriptor(nil), f.actions...)
+}
+
+func (f *fakeActionProvider) Execute(context.Context, *rest.Config, ActionRequest) (ActionResult, error) {
+	return f.result, f.err
+}
+
+func TestProviderInterfaceConformance(t *testing.T) {
+	var _ Provider = (*fakeProvider)(nil)
+	var _ ActionProvider = (*fakeActionProvider)(nil)
+}
+
+func TestActionRequestAndResult_JSONRoundTrip(t *testing.T) {
+	req := ActionRequest{
+		ActionID:    "karmada.taintCluster",
+		Provider:    ProviderKarmada,
+		HubContext:  "hub-a",
+		ClusterName: "member-1",
+		Payload: map[string]interface{}{
+			"key":    "gpu",
+			"value":  "true",
+			"effect": "NoSchedule",
+		},
+	}
+
+	raw, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal ActionRequest: %v", err)
+	}
+	var gotReq ActionRequest
+	if err := json.Unmarshal(raw, &gotReq); err != nil {
+		t.Fatalf("unmarshal ActionRequest: %v", err)
+	}
+	if gotReq.ActionID != req.ActionID || gotReq.Provider != req.Provider || gotReq.HubContext != req.HubContext || gotReq.ClusterName != req.ClusterName {
+		t.Fatalf("ActionRequest round-trip mismatch: got %+v want %+v", gotReq, req)
+	}
+	if len(gotReq.Payload) != len(req.Payload) {
+		t.Fatalf("payload mismatch: got %d keys want %d", len(gotReq.Payload), len(req.Payload))
+	}
+
+	res := ActionResult{OK: true, Already: true, Message: "cluster already tainted"}
+	raw, err = json.Marshal(res)
+	if err != nil {
+		t.Fatalf("marshal ActionResult: %v", err)
+	}
+	var gotRes ActionResult
+	if err := json.Unmarshal(raw, &gotRes); err != nil {
+		t.Fatalf("unmarshal ActionResult: %v", err)
+	}
+	if gotRes != res {
+		t.Fatalf("ActionResult round-trip mismatch: got %+v want %+v", gotRes, res)
+	}
+}
+
+func TestTypes_StableConstantValues(t *testing.T) {
+	tests := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{name: "ProviderOCM", got: string(ProviderOCM), want: "ocm"},
+		{name: "ProviderKarmada", got: string(ProviderKarmada), want: "karmada"},
+		{name: "ProviderClusternet", got: string(ProviderClusternet), want: "clusternet"},
+		{name: "ProviderLiqo", got: string(ProviderLiqo), want: "liqo"},
+		{name: "ProviderKubeAdmiral", got: string(ProviderKubeAdmiral), want: "kubeadmiral"},
+		{name: "ProviderCAPI", got: string(ProviderCAPI), want: "capi"},
+		{name: "ClusterStateJoined", got: string(ClusterStateJoined), want: "joined"},
+		{name: "ClusterStatePending", got: string(ClusterStatePending), want: "pending"},
+		{name: "ClusterStateUnknown", got: string(ClusterStateUnknown), want: "unknown"},
+		{name: "ClusterStateNotMember", got: string(ClusterStateNotMember), want: "not-member"},
+		{name: "ClusterStateProvisioning", got: string(ClusterStateProvisioning), want: "provisioning"},
+		{name: "ClusterStateProvisioned", got: string(ClusterStateProvisioned), want: "provisioned"},
+		{name: "ClusterStateFailed", got: string(ClusterStateFailed), want: "failed"},
+		{name: "ClusterStateDeleting", got: string(ClusterStateDeleting), want: "deleting"},
+		{name: "ClusterErrorAuth", got: string(ClusterErrorAuth), want: "auth"},
+		{name: "ClusterErrorTimeout", got: string(ClusterErrorTimeout), want: "timeout"},
+		{name: "ClusterErrorNetwork", got: string(ClusterErrorNetwork), want: "network"},
+		{name: "ClusterErrorCertificate", got: string(ClusterErrorCertificate), want: "certificate"},
+		{name: "ClusterErrorNotInstalled", got: string(ClusterErrorNotInstalled), want: "not-installed"},
+		{name: "ClusterErrorUnknown", got: string(ClusterErrorUnknown), want: "unknown"},
+		{name: "FederatedGroupSet", got: string(FederatedGroupSet), want: "set"},
+		{name: "FederatedGroupSelector", got: string(FederatedGroupSelector), want: "selector"},
+		{name: "FederatedGroupPeer", got: string(FederatedGroupPeer), want: "peer"},
+		{name: "FederatedGroupInfra", got: string(FederatedGroupInfra), want: "infra"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.got != tt.want {
+				t.Fatalf("%s changed: got %q want %q", tt.name, tt.got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFederatedTypes_JSONRoundTrip(t *testing.T) {
+	cluster := FederatedCluster{
+		Provider:     ProviderOCM,
+		HubContext:   "hub-a",
+		Name:         "member-1",
+		State:        ClusterStateJoined,
+		Available:    "True",
+		ClusterSet:   "prod",
+		Labels:       map[string]string{"region": "ap-south-1"},
+		APIServerURL: "https://127.0.0.1:6443",
+		Taints:       []Taint{{Key: "dedicated", Value: "gpu", Effect: "NoSchedule"}},
+		Lifecycle: &Lifecycle{
+			Phase:               "Provisioned",
+			ControlPlaneReady:   true,
+			InfrastructureReady: true,
+			DesiredMachines:     3,
+			ReadyMachines:       3,
+		},
+		Raw: map[string]interface{}{"kind": "ManagedCluster"},
+	}
+	group := FederatedGroup{
+		Provider:   ProviderOCM,
+		HubContext: "hub-a",
+		Name:       "prod",
+		Members:    []string{"member-1"},
+		Kind:       FederatedGroupSet,
+	}
+	pending := PendingJoin{
+		Provider:    ProviderOCM,
+		HubContext:  "hub-a",
+		ClusterName: "member-2",
+		RequestedAt: time.Date(2026, 4, 30, 1, 0, 0, 0, time.UTC),
+		Detail:      "csr waiting approval",
+	}
+	status := ProviderHubStatus{
+		Provider:   ProviderOCM,
+		HubContext: "hub-a",
+		Detected:   true,
+		Version:    "v0.13.0",
+		Error: &FederationError{
+			Provider:   ProviderOCM,
+			HubContext: "hub-a",
+			Type:       ClusterErrorTimeout,
+			Message:    "request timed out",
+		},
+	}
+	detect := DetectResult{Detected: true, Version: "v0.13.0"}
+
+	roundTrip := func(name string, in interface{}, out interface{}) {
+		t.Helper()
+		raw, err := json.Marshal(in)
+		if err != nil {
+			t.Fatalf("%s marshal failed: %v", name, err)
+		}
+		if err := json.Unmarshal(raw, out); err != nil {
+			t.Fatalf("%s unmarshal failed: %v", name, err)
+		}
+	}
+
+	var gotCluster FederatedCluster
+	roundTrip("FederatedCluster", cluster, &gotCluster)
+	if gotCluster.Provider != cluster.Provider || gotCluster.Name != cluster.Name || gotCluster.State != cluster.State {
+		t.Fatalf("cluster round-trip mismatch: got %+v want %+v", gotCluster, cluster)
+	}
+
+	var gotGroup FederatedGroup
+	roundTrip("FederatedGroup", group, &gotGroup)
+	if gotGroup.Provider != group.Provider || gotGroup.HubContext != group.HubContext || gotGroup.Name != group.Name || gotGroup.Kind != group.Kind || len(gotGroup.Members) != len(group.Members) || gotGroup.Members[0] != group.Members[0] {
+		t.Fatalf("group round-trip mismatch: got %+v want %+v", gotGroup, group)
+	}
+
+	var gotPending PendingJoin
+	roundTrip("PendingJoin", pending, &gotPending)
+	if !gotPending.RequestedAt.Equal(pending.RequestedAt) || gotPending.ClusterName != pending.ClusterName {
+		t.Fatalf("pending round-trip mismatch: got %+v want %+v", gotPending, pending)
+	}
+
+	var gotStatus ProviderHubStatus
+	roundTrip("ProviderHubStatus", status, &gotStatus)
+	if gotStatus.Provider != status.Provider || gotStatus.Version != status.Version || gotStatus.Error == nil || gotStatus.Error.Type != status.Error.Type {
+		t.Fatalf("status round-trip mismatch: got %+v want %+v", gotStatus, status)
+	}
+
+	var gotDetect DetectResult
+	roundTrip("DetectResult", detect, &gotDetect)
+	if gotDetect != detect {
+		t.Fatalf("detect round-trip mismatch: got %+v want %+v", gotDetect, detect)
 	}
 }

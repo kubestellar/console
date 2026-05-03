@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { safeLazy } from '../../../lib/safeLazy'
 import { isAnyModalOpen } from '../../../lib/modals'
 import {
   X,
@@ -22,7 +23,8 @@ import {
   BookOpen,
   Rocket,
   Search,
-  Satellite } from 'lucide-react'
+  Satellite,
+  History } from 'lucide-react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useMissions, isActiveMission } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
@@ -30,9 +32,7 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { cn } from '../../../lib/cn'
 import { AgentSelector } from '../../agent/AgentSelector'
 import { LogoWithStar } from '../../ui/LogoWithStar'
-const MissionBrowser = lazy(() =>
-  import('../../missions/MissionBrowser').then(m => ({ default: m.MissionBrowser }))
-)
+const MissionBrowser = safeLazy(() => import('../../missions/MissionBrowser'), 'MissionBrowser')
 import { MissionControlDialog } from '../../mission-control/MissionControlDialog'
 import { MissionDetailView } from '../../missions/MissionDetailView'
 import type { MissionExport, OrbitResourceFilter } from '../../../lib/missions/types'
@@ -151,6 +151,11 @@ export function MissionSidebar() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
+  const resizeCleanupRef = useRef<(() => void) | null>(null)
+
+  // Clean up resize listeners on unmount to prevent leaks if mouseup never fires
+  useEffect(() => () => { resizeCleanupRef.current?.() }, [])
+
   const handleResizeStart = (e: React.MouseEvent) => {
     e.preventDefault()
     setIsResizing(true)
@@ -174,20 +179,27 @@ export function MissionSidebar() {
       document.removeEventListener('mouseup', onMouseUp)
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      resizeCleanupRef.current = null
       // Persist final width using ref to avoid state-updater side effects
       try { localStorage.setItem(SIDEBAR_WIDTH_KEY, String(latestWidthRef.current)) } catch { /* ignore */ }
+      // Notify child components (charts, resize observers) to recalculate
+      // their layout after the panel resize completes (#11458).
+      window.dispatchEvent(new Event('resize'))
     }
 
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)
+    resizeCleanupRef.current = onMouseUp
   }
   const [showNewMission, setShowNewMission] = useState(false)
   const [showBrowser, setShowBrowser] = useState(false)
   const [showMissionControl, setShowMissionControl] = useState(false)
   /** Kubara chart name to pre-populate in Mission Control Phase 1 (#8483) */
   const [pendingKubaraChart, setPendingKubaraChart] = useState<string | undefined>(undefined)
+  /** Base64-encoded plan from a deep link — opens Mission Control in review mode */
+  const [pendingReviewPlan, setPendingReviewPlan] = useState<string | undefined>(undefined)
   const [showOrbitDialog, setShowOrbitDialog] = useState(false)
   const [orbitDialogPrefill, setOrbitDialogPrefill] = useState<{ clusters?: string[]; resourceFilters?: Record<string, OrbitResourceFilter[]> } | undefined>(undefined)
   const [newMissionPrompt, setNewMissionPrompt] = useState('')
@@ -277,6 +289,16 @@ export function MissionSidebar() {
       setShowMissionControl(true)
       const newParams = new URLSearchParams(searchParams)
       newParams.delete('mission-control')
+      setSearchParams(newParams, { replace: true })
+    } else if (missionControlParam === 'review') {
+      const planParam = searchParams.get('plan')
+      if (planParam) {
+        setPendingReviewPlan(planParam)
+        setShowMissionControl(true)
+      }
+      const newParams = new URLSearchParams(searchParams)
+      newParams.delete('mission-control')
+      newParams.delete('plan')
       setSearchParams(newParams, { replace: true })
     }
   }, [missionControlParam, searchParams, setSearchParams])
@@ -376,6 +398,29 @@ export function MissionSidebar() {
 
   // Mission list search filter (#3944)
   const [missionSearchQuery, setMissionSearchQuery] = useState('')
+
+  // History panel toggle (#10522) — history is behind an icon button so
+  // the default view is the CTA dashboard for a cleaner chat-first UX.
+  const HISTORY_PANEL_KEY = 'ksc-mission-history-panel'
+  const [showHistoryPanel, setShowHistoryPanel] = useState(() => {
+    try {
+      return localStorage.getItem(HISTORY_PANEL_KEY) === 'true'
+    } catch { return false }
+  })
+  // Track which view the user came from so "Back to missions" returns them
+  // to the right panel (dashboard vs history) instead of always resetting.
+  const [lastPanelView, setLastPanelView] = useState<'dashboard' | 'history'>(
+    showHistoryPanel ? 'history' : 'dashboard'
+  )
+
+  const toggleHistoryPanel = () => {
+    setShowHistoryPanel(prev => {
+      const next = !prev
+      try { localStorage.setItem(HISTORY_PANEL_KEY, String(next)) } catch { /* ignore */ }
+      if (!next) setMissionSearchQuery('')
+      return next
+    })
+  }
 
   // Reset pagination when search query changes (#4778)
   useEffect(() => {
@@ -545,6 +590,14 @@ export function MissionSidebar() {
 
   const runningCount = missions.filter(m => m.status === 'running').length
 
+  // Auto-open history when missions need user action (#10522) so
+  // waiting_input / blocked missions are not hidden behind the toggle.
+  useEffect(() => {
+    if (needsAttention > 0 && !showHistoryPanel && !activeMission) {
+      setShowHistoryPanel(true)
+    }
+  }, [needsAttention]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleMissionCollapse = (missionId: string) => {
     setCollapsedMissions(prev => {
       const next = new Set(prev)
@@ -599,7 +652,7 @@ export function MissionSidebar() {
     return (
       <div
         className={cn(
-        "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-sm border-l border-border shadow-xl z-modal flex flex-col items-center py-4",
+        "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-xs border-l border-border shadow-xl z-sidebar flex flex-col items-center py-4",
         "transition-transform duration-300 ease-in-out",
         !isSidebarOpen && "translate-x-full pointer-events-none"
       )}>
@@ -636,7 +689,7 @@ export function MissionSidebar() {
           hides it from assistive tech. The sidebar itself handles close semantics. */}
       {isMobile && isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
           onClick={closeSidebar}
           tabIndex={-1}
           aria-hidden="true"
@@ -646,7 +699,7 @@ export function MissionSidebar() {
           content isn't squeezed. A tap-out backdrop mirrors mobile UX (issue 6388). */}
       {!isMobile && isTablet && isSidebarOpen && !isFullScreen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-overlay lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-overlay lg:hidden"
           onClick={closeSidebar}
           tabIndex={-1}
           aria-hidden="true"
@@ -655,8 +708,10 @@ export function MissionSidebar() {
 
       <div
         data-tour="ai-missions"
+        data-testid="mission-sidebar"
         className={cn(
-          "fixed bg-card border-border z-modal flex flex-col overflow-hidden shadow-2xl",
+          "fixed bg-card border-border flex flex-col overflow-hidden shadow-2xl",
+          isMobile ? "z-modal" : "z-sidebar",
           !isResizing && "transition-[width,top,border,transform] duration-300 ease-in-out",
           // Mobile: bottom sheet
           // vh fallback before dvh so browsers without dynamic-viewport-unit
@@ -694,7 +749,7 @@ export function MissionSidebar() {
 
       {/* Header */}
       <div className="flex items-center justify-between p-3 md:p-4 border-b border-border min-w-0">
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <LogoWithStar className="w-5 h-5" />
           <h2 className="font-semibold text-foreground text-sm md:text-base whitespace-nowrap">{t('missionSidebar.aiMissions')}</h2>
           {needsAttention > 0 && (
@@ -702,91 +757,132 @@ export function MissionSidebar() {
           )}
         </div>
         {/* Toolbar and window controls — split so close/minimize never overflow */}
-        <div className="flex items-center gap-1 min-w-0">
-          {/* Optional toolbar buttons — clipped when sidebar is narrow */}
-          <div className="flex items-center gap-1 overflow-hidden min-w-0 flex-shrink">
-            {/* + button with dropdown: New Mission / Browse / Mission Control */}
-            <div className="relative mr-2 flex-shrink-0" ref={addMenuRef}>
-              <button
-                onClick={() => setShowAddMenu(prev => !prev)}
-                className={cn(
-                  "p-1.5 rounded transition-colors ring-1",
-                  showAddMenu
-                    ? "bg-primary text-primary-foreground ring-primary"
-                    : "bg-purple-500/10 text-purple-400 ring-purple-500/30 hover:bg-purple-500/20 hover:text-purple-300"
-                )}
-                aria-label="Add"
-                title="Add"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              {showAddMenu && (
-                <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-lg border border-border bg-background shadow-lg py-1">
-                  <button
-                    onClick={() => {
-                      setShowAddMenu(false)
-                      setShowNewMission(true)
-                      setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
-                  >
-                    <Plus className="w-4 h-4 text-purple-400" />
-                    New Mission
-                  </button>
-                  <button
-                    onClick={() => { setShowAddMenu(false); setShowBrowser(true) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
-                  >
-                    <Globe className="w-4 h-4 text-muted-foreground" />
-                    Browse Community
-                  </button>
-                  <button
-                    onClick={() => { setShowAddMenu(false); setShowMissionControl(true) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 text-foreground"
-                  >
-                    <Rocket className="w-4 h-4 text-muted-foreground" />
-                    Mission Control
-                  </button>
-                </div>
+        <div className="flex items-center gap-1.5 min-w-0" role="toolbar" aria-label={t('missionSidebar.headerActions', { defaultValue: 'Mission panel actions' })}>
+          {/* + button with dropdown — outside overflow-hidden so the dropdown isn't clipped */}
+          <div className="relative mr-1 shrink-0" ref={addMenuRef}>
+            <button
+              onClick={() => setShowAddMenu(prev => !prev)}
+              className={cn(
+                "p-1.5 rounded transition-colors ring-1",
+                showAddMenu
+                  ? "bg-primary text-primary-foreground ring-primary"
+                  : "bg-purple-500/10 text-purple-400 ring-purple-500/30 hover:bg-purple-500/20 hover:text-purple-300"
               )}
-            </div>
+              aria-label="Add"
+              title="Add"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            {showAddMenu && (
+              <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-lg border border-border bg-background shadow-lg py-1">
+                <button
+                  onClick={() => {
+                    setShowAddMenu(false)
+                    setShowNewMission(true)
+                    setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
+                >
+                  <Plus className="w-4 h-4 text-purple-400" />
+                  New Mission
+                </button>
+                <button
+                  onClick={() => { setShowAddMenu(false); setShowBrowser(true) }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
+                >
+                  <Globe className="w-4 h-4 text-muted-foreground" />
+                  Browse Community
+                </button>
+                <button
+                  onClick={() => { setShowAddMenu(false); setShowMissionControl(true) }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
+                >
+                  <Rocket className="w-4 h-4 text-muted-foreground" />
+                  Mission Control
+                </button>
+                {/* History toggle on mobile — desktop uses a standalone icon button (#10522) */}
+                {isMobile && listTotalMissions > 0 && (
+                  <button
+                    onClick={() => { setShowAddMenu(false); toggleHistoryPanel() }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
+                  >
+                    <History className="w-4 h-4 text-muted-foreground" />
+                    {showHistoryPanel
+                      ? t('missionSidebar.hideHistory', { defaultValue: 'Hide History' })
+                      : t('missionSidebar.showHistory', { defaultValue: 'Show History' })}
+                    {!showHistoryPanel && listTotalMissions > 0 && (
+                      <span className="ml-auto text-2xs bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-full">{listTotalMissions}</span>
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {/* History toggle button (#10522) — shows/hides mission history list.
+              On mobile, the toggle is inside the + menu to avoid crowding the header. */}
+          {!isMobile && (
+            <button
+              onClick={toggleHistoryPanel}
+              className={cn(
+                "relative p-1.5 rounded transition-colors ring-1 mr-1 shrink-0",
+                showHistoryPanel
+                  ? "bg-primary text-primary-foreground ring-primary"
+                  : "bg-secondary/50 text-muted-foreground ring-border hover:bg-secondary hover:text-foreground"
+              )}
+              aria-label={t('missionSidebar.toggleHistory', { defaultValue: 'Toggle mission history' })}
+              title={t('missionSidebar.toggleHistory', { defaultValue: 'Toggle mission history' })}
+            >
+              <History className="w-4 h-4" />
+              {listTotalMissions > 0 && !showHistoryPanel && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-4 flex items-center justify-center text-[10px] font-medium bg-purple-500 text-white rounded-full px-1">
+                  {listTotalMissions}
+                </span>
+              )}
+            </button>
+          )}
+          {/* Optional toolbar buttons — clipped when sidebar is narrow */}
+          <div className="flex items-center gap-1 overflow-hidden min-w-0 shrink">
             <AgentSelector compact={!isFullScreen} />
           </div>
           {/* Window control buttons — always visible, never clipped */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {/* Fullscreen and minimize - desktop only */}
             {!isMobile && (isFullScreen ? (
               <button
                 onClick={() => setFullScreen(false)}
                 className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                aria-label={t('missionSidebar.exitFullScreen')}
                 title={t('missionSidebar.exitFullScreen')}
               >
-                <Minimize2 className="w-5 h-5 text-muted-foreground" />
+                <Minimize2 className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
               </button>
             ) : (
               <>
                 <button
                   onClick={() => setFullScreen(true)}
                   className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                  aria-label={t('missionSidebar.fullScreen')}
                   title={t('missionSidebar.fullScreen')}
                 >
-                  <Maximize2 className="w-5 h-5 text-muted-foreground" />
+                  <Maximize2 className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                 </button>
                 <button
                   onClick={minimizeSidebar}
                   className="p-1 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                  aria-label={t('missionSidebar.minimizeSidebar')}
                   title={t('missionSidebar.minimizeSidebar')}
                 >
-                  <PanelRightClose className="w-5 h-5 text-muted-foreground" />
+                  <PanelRightClose className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
                 </button>
               </>
             ))}
             <button
               onClick={closeSidebar}
               className="min-w-[44px] min-h-[44px] p-2 rounded transition-colors hover:bg-black/5 dark:hover:bg-white/10 flex items-center justify-center"
+              aria-label={t('missionSidebar.closeSidebar')}
               title={t('missionSidebar.closeSidebar')}
             >
-              <X className="w-5 h-5 text-muted-foreground" />
+              <X className="w-5 h-5 text-muted-foreground" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -801,7 +897,7 @@ export function MissionSidebar() {
               value={newMissionPrompt}
               onChange={(e) => setNewMissionPrompt(e.target.value)}
               placeholder={t('missionSidebar.newMissionPlaceholder')}
-              className="w-full min-h-[80px] p-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full min-h-[80px] p-2 text-sm bg-background border border-border rounded-lg resize-none focus:outline-hidden focus:ring-2 focus:ring-primary/50"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && newMissionPrompt.trim()) {
                   startMission({
@@ -857,7 +953,7 @@ export function MissionSidebar() {
       {/* AI paused banner — shown when user selected "None" agent */}
       {selectedAgent === 'none' && (
         <div className="mx-3 mt-2 p-2.5 bg-cyan-500/10 border border-cyan-500/30 rounded-lg flex items-center gap-2">
-          <ShieldOff className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+          <ShieldOff className="w-4 h-4 text-cyan-400 shrink-0" />
           <p className="text-xs text-cyan-400">{t('agent.aiPausedBanner')}</p>
         </div>
       )}
@@ -866,7 +962,7 @@ export function MissionSidebar() {
       {showSavedToast && (
         <div className="mx-3 mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
             <p className="text-sm font-medium text-green-400">{t('layout.missionSidebar.missionImported')}</p>
             {toastCountdown > 0 && (
               <span className="text-2xs text-green-400/70 ml-auto">{toastCountdown}s</span>
@@ -894,7 +990,7 @@ export function MissionSidebar() {
       {/* Direct import loading indicator */}
       {isDirectImporting && (
         <div className="mx-3 mt-2 p-2.5 bg-secondary/30 border border-border rounded-lg flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
+          <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
           <p className="text-xs text-muted-foreground">{t('missionSidebar.importingMission', 'Importing mission...')}</p>
         </div>
       )}
@@ -910,7 +1006,7 @@ export function MissionSidebar() {
        * `missionSearchQuery` is excluded so a failed search still surfaces the
        * "no search results" branch below instead of this full-panel empty state.
        */}
-      {listTotalMissions === 0 && !missionSearchQuery.trim() && !activeMission ? (
+      {listTotalMissions === 0 && !missionSearchQuery.trim() && !activeMission && !showHistoryPanel ? (
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <Sparkles className="w-10 h-10 text-purple-400/60 mb-4" />
           <p className="text-muted-foreground">{t('missionSidebar.noActiveMissions')}</p>
@@ -926,7 +1022,7 @@ export function MissionSidebar() {
                 }}
                 className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors h-[72px]"
               >
-                <Sparkles className="w-6 h-6 flex-shrink-0" />
+                <Sparkles className="w-6 h-6 shrink-0" />
                 <span className="text-center leading-tight text-xs truncate max-w-full">{t('missionSidebar.startCustomMission')}</span>
               </button>
             )}
@@ -934,14 +1030,14 @@ export function MissionSidebar() {
               onClick={() => setShowBrowser(true)}
               className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
             >
-              <Globe className="w-6 h-6 flex-shrink-0" />
+              <Globe className="w-6 h-6 shrink-0" />
               <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
-              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg hover:from-violet-500 hover:to-indigo-500 transition-colors shadow-lg shadow-violet-500/25 h-[72px]"
+              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-colors shadow-lg shadow-purple-500/25 h-[72px]"
             >
-              <Rocket className="w-6 h-6 flex-shrink-0" />
+              <Rocket className="w-6 h-6 shrink-0" />
               <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.missionControl')}</span>
             </button>
           </div>
@@ -953,7 +1049,7 @@ export function MissionSidebar() {
         )}>
           {/* Fullscreen: left sidebar with saved missions + related knowledge */}
           {isFullScreen && (
-            <div className="w-64 border-r border-border bg-secondary/20 flex flex-col overflow-hidden flex-shrink-0">
+            <div className="w-64 border-r border-border bg-secondary/20 flex flex-col overflow-hidden shrink-0">
               <div className="flex-1 overflow-y-auto scroll-enhanced">
                 {/* Saved Missions section */}
                 {savedMissions.length > 0 && (
@@ -971,7 +1067,7 @@ export function MissionSidebar() {
                           onClick={() => handleViewSavedMission(m)}
                         >
                           <div className="flex items-start gap-2">
-                            <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 flex-shrink-0" />
+                            <Bookmark className="w-3.5 h-3.5 text-purple-400 mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-xs font-medium text-foreground truncate">{m.title}</p>
                               {m.importedFrom?.cncfProject && (
@@ -1025,7 +1121,7 @@ export function MissionSidebar() {
                       className={cn(
                         "flex-1 px-2 py-1 text-2xs font-medium rounded-md transition-colors flex items-center justify-center gap-1",
                         resolutionPanelView === 'related'
-                          ? "bg-card text-foreground shadow-sm"
+                          ? "bg-card text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -1046,7 +1142,7 @@ export function MissionSidebar() {
                       className={cn(
                         "flex-1 px-2 py-1 text-2xs font-medium rounded-md transition-colors flex items-center justify-center gap-1",
                         resolutionPanelView === 'history'
-                          ? "bg-card text-foreground shadow-sm"
+                          ? "bg-card text-foreground shadow-xs"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -1088,17 +1184,26 @@ export function MissionSidebar() {
              * listTotalMissions > 1 (#6137), but that trapped users who
              * filtered via missionSearchQuery down to a single result with
              * no way to return to the full list (#6145). Safest fix: always
-             * show the button when activeMission != null. */}
+             * show the button when activeMission != null.
+             * #10522 — Return to whichever panel view the user came from
+             * (history list or CTA dashboard) rather than always resetting. */}
             {activeMission != null && (
               <button
-                onClick={() => setActiveMission(null)}
-                className="flex items-center gap-1 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border flex-shrink-0"
+                onClick={() => {
+                  setActiveMission(null)
+                  // Restore history panel state to match origin view
+                  if (lastPanelView === 'history') {
+                    setShowHistoryPanel(true)
+                  }
+                }}
+                className="flex items-center gap-1 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border shrink-0"
               >
                 <ChevronLeft className="w-3 h-3" />
                 {t('missionSidebar.backToMissions', { count: listTotalMissions })}
               </button>
             )}
             <MissionChat
+              key={activeMission?.id}
               mission={activeMission}
               isFullScreen={isFullScreen}
               onToggleFullScreen={() => setFullScreen(true)}
@@ -1108,6 +1213,58 @@ export function MissionSidebar() {
               }}
             />
           </div>
+        </div>
+      ) : !showHistoryPanel ? (
+        /* #10522 — Default dashboard view when history panel is hidden.
+         * Prioritizes chat interface with quick-action buttons. The History
+         * icon in the header toggles the full mission list. */
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+          <Sparkles className="w-10 h-10 text-purple-400/60 mb-4" />
+          <p className="text-foreground font-medium">{t('missionSidebar.readyToHelp', { defaultValue: 'Ready to help' })}</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            {t('missionSidebar.startMissionPrompt')}
+          </p>
+          <div className="grid grid-cols-3 gap-2 mt-4 w-full max-w-sm">
+            {!showNewMission && (
+              <button
+                onClick={() => {
+                  setLastPanelView('dashboard')
+                  setShowNewMission(true)
+                  setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
+                }}
+                className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors h-[72px]"
+              >
+                <Sparkles className="w-6 h-6 shrink-0" />
+                <span className="text-center leading-tight text-xs truncate max-w-full">{t('missionSidebar.startCustomMission')}</span>
+              </button>
+            )}
+            <button
+              onClick={() => setShowBrowser(true)}
+              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
+            >
+              <Globe className="w-6 h-6 shrink-0" />
+              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.browseCommunityMissions')}</span>
+            </button>
+            <button
+              onClick={() => setShowMissionControl(true)}
+              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-colors shadow-lg shadow-purple-500/25 h-[72px]"
+            >
+              <Rocket className="w-6 h-6 shrink-0" />
+              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.missionControl')}</span>
+            </button>
+          </div>
+          {/* Hint to open history when missions exist */}
+          {listTotalMissions > 0 && (
+            <button
+              onClick={toggleHistoryPanel}
+              className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground/70 hover:text-primary cursor-pointer hover:underline underline-offset-2 transition-colors rounded-md px-2 py-1 -mx-2 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
+            >
+              <History className="w-3.5 h-3.5" />
+              {t('missionSidebar.viewHistory', {
+                defaultValue: 'View {{count}} previous missions',
+                count: listTotalMissions })}
+            </button>
+          )}
         </div>
       ) : (
         <div className={cn(
@@ -1123,7 +1280,7 @@ export function MissionSidebar() {
                 value={missionSearchQuery}
                 onChange={(e) => setMissionSearchQuery(e.target.value)}
                 placeholder={t('missionSidebar.searchMissions', { defaultValue: 'Search missions...' })}
-                className="w-full pl-8 pr-8 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full pl-8 pr-8 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/50"
               />
               {missionSearchQuery && (
                 <button
@@ -1167,7 +1324,7 @@ export function MissionSidebar() {
                     className="group flex items-center gap-3 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors cursor-pointer"
                     onClick={() => handleViewSavedMission(m)}
                   >
-                    <Bookmark className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                    <Bookmark className="w-4 h-4 text-purple-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{m.title}</p>
                       <p className="text-xs text-muted-foreground truncate">{m.description}</p>
@@ -1179,7 +1336,7 @@ export function MissionSidebar() {
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleViewSavedMission(m) }}
                         className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-secondary transition-colors"
@@ -1232,6 +1389,7 @@ export function MissionSidebar() {
                   mission={mission}
                   isActive={false}
                   onClick={() => {
+                    setLastPanelView('history')
                     // Always show the mission's chat first (#4549)
                     setActiveMission(mission.id)
                     // Also open Mission Control dialog for planning missions
@@ -1243,6 +1401,7 @@ export function MissionSidebar() {
                   onTerminate={() => cancelMission(mission.id)}
                   onRollback={handleRollback}
                   onExpand={() => {
+                    setLastPanelView('history')
                     setActiveMission(mission.id)
                     setFullScreen(true)
                     if (mission.title === 'Mission Control Planning' || mission.context?.missionControl) {
@@ -1287,7 +1446,7 @@ export function MissionSidebar() {
       {/* Saved Mission Detail Modal */}
       {viewingMission && (
         <div
-          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
           onClick={(e) => { if (e.target === e.currentTarget) setViewingMission(null) }}
           onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setViewingMission(null) } }}
           tabIndex={-1}
@@ -1335,7 +1494,7 @@ export function MissionSidebar() {
           onClose={() => setShowBrowser(false)}
           onImport={handleImportMission}
           initialMission={deepLinkMission || undefined}
-          onUseInMissionControl={(chartName) => {
+          onUseInMissionControl={(chartName: string) => {
             setShowBrowser(false)
             setPendingKubaraChart(chartName)
             setShowMissionControl(true)
@@ -1349,8 +1508,10 @@ export function MissionSidebar() {
         onClose={() => {
           setShowMissionControl(false)
           setPendingKubaraChart(undefined)
+          setPendingReviewPlan(undefined)
         }}
         initialKubaraChart={pendingKubaraChart}
+        reviewPlanEncoded={pendingReviewPlan}
       />
 
       {/* Standalone Orbit Mission Dialog */}
@@ -1419,6 +1580,7 @@ export function MissionSidebarToggle() {
     <button
       onClick={openSidebar}
       data-tour="ai-missions-toggle"
+      data-testid="mission-sidebar-toggle"
       className={cn(
         'fixed flex items-center gap-2 rounded-full shadow-lg transition-all z-50',
         // Mobile: smaller padding, bottom right
@@ -1440,7 +1602,7 @@ export function MissionSidebarToggle() {
       ) : (
         <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.aiMissions')}</span>
       )}
-      <ChevronRight className={cn(isMobile ? 'w-3 h-3' : 'w-4 h-4', isMobile && 'rotate-[-90deg]')} />
+      <ChevronRight className={cn(isMobile ? 'w-3 h-3' : 'w-4 h-4', isMobile && '-rotate-90')} />
     </button>
   )
 }

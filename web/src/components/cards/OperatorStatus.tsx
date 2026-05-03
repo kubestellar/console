@@ -309,7 +309,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
                   tabIndex={0}
                   onClick={activate}
                   onKeyDown={handleKeyDown}
-                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                  className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-y-2">
                     <div className="flex items-center gap-2">

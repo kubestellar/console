@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 // Dashboards that should have refresh controls (hourglass, auto checkbox, refresh button)
 const DASHBOARDS_WITH_REFRESH = [
@@ -27,6 +28,9 @@ const DASHBOARDS_WITH_REFRESH = [
 
 test.describe('Hourglass & Refresh Controls Audit', () => {
   test.beforeEach(async ({ page }) => {
+    // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+    await mockApiFallback(page)
+
     // Mock authentication
     await page.route('**/api/me', (route) =>
       route.fulfill({
@@ -51,16 +55,21 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
 
     // Mock other APIs
     await page.route('**/api/dashboards/**', (route) =>
-      route.fulfill({ status: 200, json: { dashboards: [] } })
+      route.fulfill({ status: 200, json: [] })
     )
 
-    // Set auth token
-    await page.goto('/login')
-    await page.evaluate(() => {
-      localStorage.setItem('token', 'test-token')
+    // Seed localStorage BEFORE any page script runs
+    await page.addInitScript(() => {
+      localStorage.setItem('token', 'demo-token')
+      localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
     })
-    await page.waitForLoadState('domcontentloaded')
   })
 
   for (const dashboard of DASHBOARDS_WITH_REFRESH) {
@@ -68,34 +77,28 @@ test.describe('Hourglass & Refresh Controls Audit', () => {
       await page.goto(dashboard.route)
       await page.waitForLoadState('networkidle').catch(() => {})
 
-      // Check for refresh button — look for title="Refresh data" or title="Refresh"
-      const refreshButton = page.locator('button[title="Refresh data"], button[title="Refresh"]')
-      await expect(refreshButton.first()).toBeVisible({ timeout: 5000 })
+      const refreshButton = page.locator('button[data-testid="dashboard-refresh-button"]')
+      await expect(refreshButton.first()).toBeVisible({ timeout: 10000 })
     })
 
     test(`${dashboard.name} (${dashboard.route}) has auto-refresh checkbox`, async ({ page }) => {
       await page.goto(dashboard.route)
       await page.waitForLoadState('networkidle').catch(() => {})
 
-      // Check for auto-refresh checkbox
       const autoCheckbox = page.locator('label:has-text("Auto") input[type="checkbox"]')
-      await expect(autoCheckbox.first()).toBeVisible({ timeout: 5000 })
+      await expect(autoCheckbox.first()).toBeVisible({ timeout: 10000 })
     })
 
     test(`${dashboard.name} (${dashboard.route}) refresh button is functional`, async ({ page }) => {
       await page.goto(dashboard.route)
       await page.waitForLoadState('networkidle').catch(() => {})
 
-      // Find and click refresh button — verify it doesn't crash the page
-      const refreshButton = page.locator('button[title="Refresh data"], button[title="Refresh"]')
-      await expect(refreshButton.first()).toBeVisible({ timeout: 5000 })
+      const refreshButton = page.locator('button[data-testid="dashboard-refresh-button"]')
+      await expect(refreshButton.first()).toBeVisible({ timeout: 10000 })
       await refreshButton.first().click()
 
-      // Verify the page is still functional after clicking refresh
       await expect(page.locator('body')).toBeVisible()
-
-      // The refresh button should still be present after the refresh cycle
-      await expect(refreshButton.first()).toBeVisible({ timeout: 5000 })
+      await expect(refreshButton.first()).toBeVisible({ timeout: 10000 })
     })
   }
 })

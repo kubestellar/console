@@ -51,7 +51,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
   const SORT_OPTIONS = SORT_OPTIONS_KEYS
     .filter(opt => opt.value !== 'rules' || TABS_WITH_RULES_COUNT.includes(activeTab))
     .map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, error, isFailed, consecutiveFailures } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { drillToRBAC } = useDrillDownActions()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
@@ -108,7 +108,9 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
     isLoading: isInitialLoading || !!isFetchingRBAC,
     isRefreshing,
     hasAnyData: clusters.length > 0 || k8sRoles.length > 0 || k8sBindings.length > 0 || k8sServiceAccounts.length > 0,
-    isDemoData })
+    isDemoData,
+    isFailed,
+    consecutiveFailures })
 
   // Transform raw RBAC data into RBACItem arrays (no filtering/sorting — that's handled by useCardData)
   const rbacRoles: RBACItem[] = (() => {
@@ -277,7 +279,7 @@ function NamespaceRBACInternal({ config }: NamespaceRBACProps) {
       {/* Error Display */}
       {error && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 mb-3">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-red-400">{t('namespaceRBAC.errorLoading')}</p>
             <p className="text-2xs text-muted-foreground mt-0.5">{error}</p>

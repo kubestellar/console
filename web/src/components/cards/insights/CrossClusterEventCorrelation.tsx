@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Activity, ChevronRight } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { useMultiClusterInsights } from '../../../hooks/useMultiClusterInsights'
 import { useCachedWarningEvents } from '../../../hooks/useCachedData'
 import { useCardLoadingState } from '../CardDataContext'
@@ -9,13 +9,14 @@ import { InsightSourceBadge } from './InsightSourceBadge'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { CardControlsRow } from '../../../lib/cards/CardComponents'
 import { useInsightSort, INSIGHT_SORT_OPTIONS, type InsightSortField } from './insightSortUtils'
-import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR } from '../../../lib/constants/ui'
+import { CHART_GRID_STROKE, CHART_TOOLTIP_CONTENT_STYLE, CHART_TOOLTIP_FONT_SIZE_COMPACT, CHART_TICK_COLOR, CHART_HEIGHT_STANDARD, CHART_TOOLTIP_TEXT_COLOR, CHART_AXIS_FONT_SIZE_SM } from '../../../lib/constants/ui'
 import { CROSS_CLUSTER_EVENT_PALETTE } from '../../../lib/theme/chartColors'
 import { InsightDetailModal } from './InsightDetailModal'
 import type { MultiClusterInsight } from '../../../types/insights'
+import { MS_PER_MINUTE } from '../../../lib/constants/time'
 
 /** Time bucket size for the timeline chart (2 minutes) */
-const TIMELINE_BUCKET_MS = 2 * 60 * 1000
+const TIMELINE_BUCKET_MS = 2 * MS_PER_MINUTE
 /** Maximum number of buckets to show on the chart */
 const MAX_TIMELINE_BUCKETS = 30
 
@@ -23,7 +24,7 @@ const MAX_TIMELINE_BUCKETS = 30
 const CLUSTER_COLORS = CROSS_CLUSTER_EVENT_PALETTE
 
 export function CrossClusterEventCorrelation() {
-  const { insightsByCategory, isLoading, isDemoData } = useMultiClusterInsights()
+  const { insightsByCategory, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useMultiClusterInsights()
   const { events: warningEvents } = useCachedWarningEvents()
   const { selectedClusters } = useGlobalFilters()
   const [selectedInsight, setSelectedInsight] = useState<MultiClusterInsight | null>(null)
@@ -37,8 +38,11 @@ export function CrossClusterEventCorrelation() {
   const hasData = correlationInsightsRaw.length > 0 || (warningEvents || []).length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: hasData,
     isDemoData,
+    isFailed,
+    consecutiveFailures,
   })
 
   // Build timeline chart data from warning events
@@ -82,14 +86,14 @@ export function CrossClusterEventCorrelation() {
       xAxis: {
         type: 'category' as const,
         data: chartData.map(d => d.time),
-        axisLabel: { fontSize: 9, color: CHART_TICK_COLOR },
+        axisLabel: { fontSize: CHART_AXIS_FONT_SIZE_SM, color: CHART_TICK_COLOR },
         axisTick: { show: false },
         axisLine: { show: false },
       },
       yAxis: {
         type: 'value' as const,
         minInterval: 1,
-        axisLabel: { fontSize: 9, color: CHART_TICK_COLOR },
+        axisLabel: { fontSize: CHART_AXIS_FONT_SIZE_SM, color: CHART_TICK_COLOR },
         axisLine: { show: false },
         axisTick: { show: false },
         splitLine: { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } },
@@ -98,7 +102,7 @@ export function CrossClusterEventCorrelation() {
         trigger: 'axis' as const,
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: '#e0e0e0', fontSize: Number(CHART_TOOLTIP_FONT_SIZE_COMPACT.replace('px', '')) },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: Number(CHART_TOOLTIP_FONT_SIZE_COMPACT.replace('px', '')) },
       },
       series: (clusterNames || []).map((cluster, i) => ({
         name: cluster,
@@ -141,9 +145,9 @@ export function CrossClusterEventCorrelation() {
       {/* Timeline chart */}
       {chartData.length > 0 && (
         <div className="h-40">
-          <ReactECharts
+          <LazyEChart
             option={chartOption}
-            style={{ height: 160, width: '100%' }}
+            style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />

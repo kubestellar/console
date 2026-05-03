@@ -7,7 +7,6 @@
 package audit
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"strings"
@@ -41,6 +40,12 @@ const (
 	ActionUserLogin  = "user_login"
 	ActionUserLogout = "user_logout"
 	ActionAuthFailed = "auth_failed"
+
+	// Phase 3 (#9890): GPU reservation and mission mutations.
+	ActionCreateGPUReservation = "create_gpu_reservation"
+	ActionUpdateGPUReservation = "update_gpu_reservation"
+	ActionDeleteGPUReservation = "delete_gpu_reservation"
+	ActionShareMissionGitHub   = "share_mission_github"
 )
 
 // storeMu guards the package-level store reference.
@@ -103,7 +108,7 @@ func Log(c *fiber.Ctx, action, targetType, targetID string, details ...string) {
 			"method":      c.Method(),
 			"details":     detailText,
 		})
-		if err := s.InsertAuditLog(context.Background(), userID.String(), action, string(detail)); err != nil {
+		if err := s.InsertAuditLog(c.UserContext(), userID.String(), action, string(detail)); err != nil {
 			slog.Error("audit: failed to persist audit entry", "error", err, "action", action)
 		}
 	}

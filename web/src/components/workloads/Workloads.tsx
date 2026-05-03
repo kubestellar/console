@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, Plus, Rocket, RefreshCw, Trash2, Terminal } from 'lucide-react'
 import { useDeploymentIssues, usePodIssues, useClusters, useDeployments } from '../../hooks/useMCP'
@@ -8,7 +8,7 @@ import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
-import { StatusIndicator } from '../charts/StatusIndicator'
+import { StatusIndicator, type Status } from '../charts/StatusIndicator'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useToast } from '../ui/Toast'
 import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
+import { ConfirmDialog } from '../../lib/modals'
 
 const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 
@@ -56,13 +57,14 @@ export function Workloads() {
   const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
   const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
   const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch: refetchDeployments } = useDeployments()
-  const { clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
   const isModeSwitching = useIsModeSwitching()
 
   const { drillToNamespace, drillToAllNamespaces, drillToAllDeployments, drillToAllPods, drillToDeployment } = useDrillDownActions()
   const { showToast } = useToast()
+  const [pendingDelete, setPendingDelete] = useState<{ cluster: string; namespace: string; name: string } | null>(null)
 
   // Combined states
   const isLoading = podIssuesLoading || deploymentIssuesLoading || deploymentsLoading || clustersLoading
@@ -87,20 +89,26 @@ export function Workloads() {
       await kubectlProxy.exec(['rollout', 'restart', 'deployment', name, '-n', namespace], { context: cluster })
       showToast(t('workloads.restartSuccess', 'Restart triggered'), 'success')
       refetchDeployments()
-    } catch (err) {
+    } catch (err: unknown) {
       showToast(t('workloads.restartError', 'Failed to restart deployment'), 'error')
     }
   }
 
-  const handleDeleteDeployment = async (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
+  const handleDeleteDeployment = (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
     e.stopPropagation()
-    if (!window.confirm(t('workloads.confirmDelete', 'Are you sure you want to delete deployment {{name}}?', { name }))) return
+    setPendingDelete({ cluster, namespace, name })
+  }
+
+  const confirmDeleteDeployment = async () => {
+    if (!pendingDelete) return
+    const { cluster, namespace, name } = pendingDelete
+    setPendingDelete(null)
     try {
       showToast(t('workloads.deleting', 'Deleting deployment...'), 'info')
       await kubectlProxy.exec(['delete', 'deployment', name, '-n', namespace], { context: cluster })
       showToast(t('workloads.deleteSuccess', 'Deployment deleted'), 'success')
       refetchDeployments()
-    } catch (err) {
+    } catch (err: unknown) {
       showToast(t('workloads.deleteError', 'Failed to delete deployment'), 'error')
     }
   }
@@ -271,7 +279,7 @@ export function Workloads() {
     <DashboardPage
       title="Workloads"
       subtitle="View and manage deployed applications across clusters"
-      icon="Layers"
+      icon="Box"
       rightExtra={
         <div className="flex items-center gap-2">
           <button
@@ -355,7 +363,7 @@ export function Workloads() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <StatusIndicator status={status as any} size="lg" />
+                    <StatusIndicator status={status as Status} size="lg" />
                     <div>
                       <h3 className="font-semibold text-foreground">{isDeployment ? deploy.name : app.namespace}</h3>
                       <div className="flex items-center gap-2">
@@ -470,6 +478,16 @@ export function Workloads() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={pendingDelete !== null}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={confirmDeleteDeployment}
+        title={t('workloads.deleteDeployment', 'Delete Deployment')}
+        message={t('workloads.confirmDelete', 'Are you sure you want to delete deployment {{name}}? This action cannot be undone.', { name: pendingDelete?.name ?? '' })}
+        confirmLabel={t('common:actions.delete', 'Delete')}
+        variant="danger"
+      />
     </DashboardPage>
   )
 }

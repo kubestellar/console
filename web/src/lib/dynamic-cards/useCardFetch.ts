@@ -128,7 +128,7 @@ export function createCardFetchScope() {
           setData(json as T)
           setLoading(false)
         })
-        .catch(err => {
+        .catch((err: unknown) => {
           // Ignore abort errors — expected when URL changes or card unmounts
           if (err instanceof DOMException && err.name === 'AbortError') return
           if (!mountedRef.current || id !== fetchIdRef.current) return

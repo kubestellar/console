@@ -1,8 +1,8 @@
 import { test, expect, Page} from '@playwright/test'
-import { setupAuth } from './mocks/liveMocks'
+import { setupAuth } from './helpers/setup'
 
 // Mission Control requires an admin-role user to see all phases of the wizard.
-// The shared `setupAuth` (from ./mocks/liveMocks) accepts a custom user override.
+// The shared `setupAuth` (from ./helpers/setup) includes mockApiFallback catch-all.
 const MISSION_CONTROL_ADMIN_USER = {
   id: '1',
   github_id: '12345',
@@ -247,6 +247,28 @@ spec:
 // Setup helpers
 // ---------------------------------------------------------------------------
 
+async function setupMissionsFileMock(page: Page) {
+  // Mock /api/missions/file to prevent 502 errors in CI where neither
+  // the Go backend nor Netlify Functions are running (#11033).
+  await page.route('**/api/missions/file**', (route) => {
+    const url = route.request().url()
+    const pathParam = new URL(url).searchParams.get('path') || ''
+    if (pathParam.includes('index.json')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ missions: [] }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'text/plain',
+        body: '# No content in test environment',
+      })
+    }
+  })
+}
+
 async function setupClusterMocks(page: Page) {
   await page.route('**/api/mcp/clusters', (route) =>
     route.fulfill({
@@ -270,6 +292,24 @@ async function setupClusterMocks(page: Page) {
     })
   )
 
+  // checkBackendAvailability() fetches /health (without /api prefix)
+  await page.route('**/health', (route) => {
+    const url = route.request().url()
+    if (url.includes('/api/health')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'ok', oauth_configured: true, in_cluster: false, install_method: 'dev' }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'ok' }),
+      })
+    }
+  })
+
   await page.route('**/api/mcp/**', (route) => {
     const url = route.request().url()
     if (url.includes('/clusters')) return
@@ -279,6 +319,18 @@ async function setupClusterMocks(page: Page) {
       body: JSON.stringify({ issues: [], events: [], nodes: [], pods: [] }),
     })
   })
+
+  // Mock the local kc-agent HTTP endpoint. Even in demo mode, the cluster
+  // cache probes http://127.0.0.1:8585/clusters before falling back to demo
+  // data. Without this mock the probe hangs in CI (nobody on port 8585),
+  // keeping isLoading=true and blocking page render.
+  await page.route('http://127.0.0.1:8585/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [], pods: [] }),
+    })
+  )
 }
 
 async function setupGitHubMocks(page: Page) {
@@ -290,37 +342,35 @@ async function setupGitHubMocks(page: Page) {
     })
   )
 
-  if (MOCK_MODE) {
-    // Mock GitHub Contents API for repo file listing
-    await page.route(`**/api/github/repos/${SAMPLE_REPO}/contents**`, (route) =>
+  // Mock GitHub Contents API for repo file listing
+  await page.route(`**/api/github/repos/${SAMPLE_REPO}/contents**`, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(MOCK_GITHUB_REPO_CONTENTS),
+    })
+  )
+
+  // Mock individual file content fetches
+  await page.route('**/api/github/repos/clubanderson/sample-runbooks/contents/*', (route) => {
+    const url = route.request().url()
+    const fileName = url.split('/contents/').pop()?.split('?')[0] || ''
+    const content = MOCK_FILE_CONTENTS[fileName]
+    if (content) {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(MOCK_GITHUB_REPO_CONTENTS),
+        body: JSON.stringify({
+          content: Buffer.from(content).toString('base64'),
+          encoding: 'base64',
+          name: fileName,
+          path: fileName,
+        }),
       })
-    )
-
-    // Mock individual file content fetches
-    await page.route('**/api/github/repos/clubanderson/sample-runbooks/contents/*', (route) => {
-      const url = route.request().url()
-      const fileName = url.split('/contents/').pop()?.split('?')[0] || ''
-      const content = MOCK_FILE_CONTENTS[fileName]
-      if (content) {
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            content: Buffer.from(content).toString('base64'),
-            encoding: 'base64',
-            name: fileName,
-            path: fileName,
-          }),
-        })
-      } else {
-        route.fulfill({ status: 404, body: 'Not found' })
-      }
-    })
-  }
+    } else {
+      route.fulfill({ status: 404, body: 'Not found' })
+    }
+  })
 }
 
 async function setupAIMocks(page: Page) {
@@ -344,12 +394,19 @@ async function navigateToConsole(page: Page) {
   await setupClusterMocks(page)
   await setupGitHubMocks(page)
   await setupAIMocks(page)
+  await setupMissionsFileMock(page)
 
-  // Set demo auth token to bypass OAuth login screen
-  await page.goto('/login')
-  await page.waitForLoadState('domcontentloaded')
-  await page.evaluate(() => {
+  // Seed localStorage BEFORE any page script runs
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
+    localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded', { timeout: DIALOG_RENDER_TIMEOUT_MS })
@@ -359,6 +416,19 @@ async function navigateToConsole(page: Page) {
 }
 
 async function openMissionControl(page: Page) {
+  // First open the sidebar so the "Mission Control" button is accessible
+  const toggled = await page.evaluate(() => {
+    const toggle = document.querySelector('[data-testid="mission-sidebar-toggle"]') as HTMLElement
+      || document.querySelector('[data-tour="ai-missions-toggle"]') as HTMLElement
+    if (toggle) { toggle.click(); return true }
+    return false
+  })
+
+  if (toggled) {
+    // Wait for sidebar animation to complete
+    await expect(page.locator('[data-testid="mission-sidebar-toggle"], [data-tour="ai-missions-toggle"]').first()).toBeVisible({ timeout: 3000 }).catch(() => {})
+  }
+
   const mcButton = page.getByText('Mission Control', { exact: false }).first()
   if (await mcButton.isVisible({ timeout: 5000 }).catch(() => false)) {
     await mcButton.click()
@@ -382,10 +452,33 @@ async function expandSampleRunbooks(page: Page) {
   }, SAMPLE_REPO)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('networkidle', { timeout: DIALOG_RENDER_TIMEOUT_MS })
+
+  // Track all requests/responses for debugging CI failures
+  const allRequests: string[] = []
+  const browserErrors: string[] = []
+  page.on('request', (req) => {
+    if (req.url().includes('/api/')) {
+      allRequests.push(`[REQ] ${req.method()} ${req.url()}`)
+    }
+  })
+  page.on('response', (res) => {
+    if (res.url().includes('/api/')) {
+      allRequests.push(`[RES] ${res.status()} ${res.url()}`)
+    }
+  })
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      browserErrors.push(msg.text())
+    }
+  })
+  page.on('pageerror', (err) => {
+    browserErrors.push(`PAGE_ERROR: ${err.message}`)
+  })
+
   await openMissionBrowser(page)
 
-  // Expand My Repositories — click the button containing that text
-  const myReposButton = page.locator('button', { hasText: 'My Repositories' }).first()
+  // Expand GitHub Repositories — click the button containing that text
+  const myReposButton = page.locator('button', { hasText: 'GitHub Repositories' }).first()
   await expect(myReposButton).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await myReposButton.click()
   // Wait for tree expansion — look for the repo node to appear
@@ -396,15 +489,15 @@ async function expandSampleRunbooks(page: Page) {
   await expect(repoNode).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
   await repoNode.click()
 
-  // If files aren't visible yet, click again (first click may have only toggled expand)
-  const fileVisible = await page.getByText('argocd-application', { exact: false }).isVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS }).catch(() => false)
-  if (!fileVisible) {
-    // Click again to trigger selectNode (first click was toggleNode)
-    await repoNode.click()
-  }
+  // Wait for file listing to render (replaces brittle waitForTimeout)
+  const argocdFile = page.getByText('argocd-application', { exact: false })
+  const fileVisibleAfterFirstClick = await argocdFile.isVisible({ timeout: 10_000 }).catch(() => false)
 
-  // Wait for files to appear in either the tree or the directory listing
-  await expect(page.getByText('argocd-application', { exact: false })).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })
+  // If files aren't visible yet, click again (first click may have only toggled expand)
+  if (!fileVisibleAfterFirstClick) {
+    await repoNode.click()
+    await expect(argocdFile).toBeVisible({ timeout: 10_000 })
+  }
 }
 
 // ---------------------------------------------------------------------------

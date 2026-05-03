@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -51,31 +52,105 @@ var githubProxyAPIBase = getEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBa
 
 var githubProxyClient = &http.Client{Timeout: githubProxyTimeout}
 
+// githubProxyLimiterEntry wraps a rate.Limiter with usage tracking for idle eviction.
+type githubProxyLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastUsed time.Time
+}
+
 // githubProxyLimiters enforces a per-user rate limit on outbound GitHub API
 // calls so that one user cannot exhaust the shared PAT quota for everyone
 // (#7034). Each user (identified by JWT user ID) gets their own bucket.
 var githubProxyLimiters struct {
 	sync.Mutex
-	m map[string]*rate.Limiter
+	m            map[string]*githubProxyLimiterEntry
+	evictStarted bool
 }
 
+// githubProxyEvictCtx / githubProxyEvictCancel provide context-based
+// cancellation for the background evictor goroutine, replacing the
+// previous bare channel so the evictor participates in standard
+// context-based shutdown (#11259).
+var (
+	githubProxyEvictCtx    context.Context
+	githubProxyEvictCancel context.CancelFunc
+)
+
 func init() {
-	githubProxyLimiters.m = make(map[string]*rate.Limiter)
+	githubProxyLimiters.m = make(map[string]*githubProxyLimiterEntry)
+	githubProxyEvictCtx, githubProxyEvictCancel = context.WithCancel(context.Background())
 }
+
+const (
+	githubProxyLimiterIdleTTL   = 10 * time.Minute
+	githubProxyEvictionInterval = 5 * time.Minute
+)
 
 // getGitHubProxyLimiter returns or creates a per-user rate limiter.
 func getGitHubProxyLimiter(userID string) *rate.Limiter {
 	githubProxyLimiters.Lock()
 	defer githubProxyLimiters.Unlock()
-	if lim, ok := githubProxyLimiters.m[userID]; ok {
-		return lim
+
+	// Lazy-start the evictor on first limiter creation
+	if !githubProxyLimiters.evictStarted {
+		githubProxyLimiters.evictStarted = true
+		go startGitHubProxyLimiterEvictor(githubProxyEvictCtx)
 	}
+
+	if entry, ok := githubProxyLimiters.m[userID]; ok {
+		entry.lastUsed = time.Now()
+		return entry.limiter
+	}
+
 	lim := rate.NewLimiter(
 		rate.Every(time.Minute/githubProxyMaxRequestsPerMinute),
 		githubProxyBurstSize,
 	)
-	githubProxyLimiters.m[userID] = lim
+	githubProxyLimiters.m[userID] = &githubProxyLimiterEntry{
+		limiter:  lim,
+		lastUsed: time.Now(),
+	}
 	return lim
+}
+
+// startGitHubProxyLimiterEvictor periodically removes idle rate limiters
+// (no requests for >10 minutes) to prevent unbounded map growth.
+// Exits when ctx is cancelled.
+//nolint:nilaway // ctx is always non-nil (created by context.WithCancel)
+func startGitHubProxyLimiterEvictor(ctx context.Context) {
+	if ctx == nil {
+		return
+	}
+	ticker := time.NewTicker(githubProxyEvictionInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			now := time.Now()
+			// Collect stale keys under lock, then delete — avoids
+			// holding the lock for the entire iteration when map is large.
+			githubProxyLimiters.Lock()
+			stale := make([]string, 0)
+			for userID, entry := range githubProxyLimiters.m {
+				if now.Sub(entry.lastUsed) > githubProxyLimiterIdleTTL {
+					stale = append(stale, userID)
+				}
+			}
+			for _, id := range stale {
+				delete(githubProxyLimiters.m, id)
+			}
+			githubProxyLimiters.Unlock()
+		}
+	}
+}
+
+// StopGitHubProxyLimiterEvictor signals the background evictor goroutine to exit.
+// Safe to call multiple times. Intended for server shutdown and tests.
+func StopGitHubProxyLimiterEvictor() {
+	githubProxyEvictCancel()
 }
 
 // allowedGitHubPrefixes restricts which GitHub API paths can be proxied.
@@ -83,6 +158,7 @@ func getGitHubProxyLimiter(userID string) *rate.Limiter {
 // Any path not matching one of these prefixes is rejected with 403 Forbidden.
 var allowedGitHubPrefixes = []string{
 	"/repos/",        // repo info, PRs, issues, releases, contributors, actions, git refs, compare
+	"/search/",       // issue/PR search for contributions list
 	"/rate_limit",    // rate-limit check / token validation
 	"/user",          // token validation (GET /user returns the authenticated user)
 	"/notifications", // notification badge (if used by frontend)
@@ -275,7 +351,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != "admin" {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
@@ -298,7 +374,10 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 
 	all, err := sm.GetAll()
 	if err != nil {
-		all = &settings.AllSettings{}
+		slog.Error("[GitHubProxy] failed to read settings", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to read current settings",
+		})
 	}
 	all.FeedbackGitHubToken = body.Token
 	all.FeedbackGitHubTokenSource = settings.GitHubTokenSourceSettings
@@ -318,7 +397,7 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != "admin" {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}
@@ -332,7 +411,10 @@ func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 
 	all, err := sm.GetAll()
 	if err != nil {
-		return c.JSON(fiber.Map{"success": true}) // Nothing to delete
+		slog.Error("[GitHubProxy] failed to read settings", "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to read current settings",
+		})
 	}
 	all.FeedbackGitHubToken = ""
 	all.FeedbackGitHubTokenSource = ""

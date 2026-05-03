@@ -57,7 +57,7 @@ export function downloadBlob(filename: string, blob: Blob): DownloadResult {
     document.body.appendChild(anchor)
     anchor.click()
     return { ok: true }
-  } catch (err) {
+  } catch (err: unknown) {
     return {
       ok: false,
       error: err instanceof Error ? err : new Error(String(err)),
@@ -110,7 +110,7 @@ export function downloadDataUrl(filename: string, dataUrl: string): DownloadResu
     document.body.appendChild(anchor)
     anchor.click()
     return { ok: true }
-  } catch (err) {
+  } catch (err: unknown) {
     return {
       ok: false,
       error: err instanceof Error ? err : new Error(String(err)),

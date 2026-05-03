@@ -10,10 +10,12 @@ const { mockUseCache } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
 vi.mock('../../lib/cache/fetcherUtils', () => ({
+    createCachedHook: vi.fn(),
   fetchAPI: vi.fn(),
   fetchFromAllClusters: vi.fn(),
   fetchViaSSE: vi.fn(),
@@ -21,16 +23,18 @@ vi.mock('../../lib/cache/fetcherUtils', () => ({
   AGENT_HTTP_TIMEOUT_MS: 30000,
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/constants')>()
+  return { ...actual, LOCAL_AGENT_HTTP_URL: 'http://localhost:8585' }
+})
 
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 5000,
-  AI_PREDICTION_TIMEOUT_MS: 30000,
-}))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/constants/network')>()
+  return { ...actual, FETCH_DEFAULT_TIMEOUT_MS: 5000, AI_PREDICTION_TIMEOUT_MS: 30000 }
+})
 
 vi.mock('../useCachedData/demoData', () => ({
+    createCachedHook: vi.fn(),
   getDemoGPUNodes: () => [],
   getDemoCachedGPUNodeHealth: () => [],
   getDemoCachedWarningEvents: () => [],
@@ -39,11 +43,13 @@ vi.mock('../useCachedData/demoData', () => ({
 }))
 
 vi.mock('../../lib/schemas', () => ({
+    createCachedHook: vi.fn(),
   GPUNodesResponseSchema: {},
   GPUNodeHealthResponseSchema: {},
 }))
 
 vi.mock('../../lib/schemas/validate', () => ({
+    createCachedHook: vi.fn(),
   validateArrayResponse: vi.fn((_, raw: unknown) => raw),
 }))
 
@@ -69,6 +75,7 @@ function defaultCache(overrides = {}) {
     consecutiveFailures: 0,
     lastRefresh: null,
     refetch: vi.fn(),
+    retryFetch: vi.fn(),
     ...overrides,
   }
 }

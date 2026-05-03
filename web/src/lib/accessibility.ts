@@ -25,9 +25,9 @@ export type StatusLevel =
   | 'loading'
 
 export type PatternType = 'solid' | 'striped' | 'dotted' | 'dashed' | 'none'
-export type ShapeType = 'circle' | 'triangle' | 'square' | 'diamond' | 'none'
+type ShapeType = 'circle' | 'triangle' | 'square' | 'diamond' | 'none'
 
-export interface AccessibleStatusConfig {
+interface AccessibleStatusConfig {
   icon: LucideIcon
   pattern: PatternType
   shape: ShapeType
@@ -233,7 +233,7 @@ export function loadAccessibilitySettings(): AccessibilitySettings {
     if (stored) {
       return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to load accessibility settings:', error)
   }
   return DEFAULT_SETTINGS
@@ -246,7 +246,7 @@ export function saveAccessibilitySettings(settings: AccessibilitySettings): void
   try {
     localStorage.setItem(ACCESSIBILITY_STORAGE_KEY, JSON.stringify(settings))
     window.dispatchEvent(new CustomEvent('kubestellar-settings-changed'))
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to save accessibility settings:', error)
   }
 }

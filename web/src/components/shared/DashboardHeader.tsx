@@ -120,7 +120,7 @@ export function DashboardHeader({
 
       {/* Right side: controls + timestamp below */}
       <div className="flex flex-col items-end gap-0.5 shrink-0">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" role="toolbar" aria-label={t('shared.dashboardHeader.toolbarLabel', { defaultValue: 'Dashboard controls' })}>
           {rightExtra}
           {onAutoRefreshChange && (
             <label
@@ -143,10 +143,12 @@ export function DashboardHeader({
             onClick={onRefresh}
             disabled={isFetching}
             className="p-2 rounded-lg hover:bg-secondary transition-colors disabled:opacity-50"
+            aria-label={t('common.refreshClusterData')}
             title={t('common.refreshClusterData')}
           >
             <RefreshCw
               className={`w-4 h-4 ${(isFetching || spinning) ? 'animate-spin' : ''}`}
+              aria-hidden="true"
             />
           </button>
         </div>

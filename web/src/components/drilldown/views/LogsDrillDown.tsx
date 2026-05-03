@@ -10,7 +10,7 @@ interface Props {
 
 // Issue 9282: Logs drilldown controls (tail lines, Follow, Download, Refresh)
 // were wired to UI but did nothing. Logs are a static mock until a real API
-// lands (TODO in the pre-existing file). This implementation makes the controls
+// lands (see original issue). This implementation makes the controls
 // behave against the mock data so the UI is consistent with its labels.
 
 /** Simulated refresh spinner duration (ms). Matches the prior visual delay. */
@@ -53,7 +53,7 @@ export function LogsDrillDown({ data }: Props) {
   const clusterShort = cluster?.split('/').pop() || cluster
   const [tailLines, setTailLines] = useState<number>(DEFAULT_TAIL_LINES)
   const [isLoading, setIsLoading] = useState(false)
-  const [error] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [follow, setFollow] = useState(false)
   // Refresh bumps the generatedAt timestamp which regenerates the seed lines
   // so the user sees that the fetch actually took effect.
@@ -119,6 +119,7 @@ export function LogsDrillDown({ data }: Props) {
   }, [follow, followLines])
 
   const handleRefresh = () => {
+    setError(null)
     setIsLoading(true)
     if (refreshTimeoutRef.current !== null) clearTimeout(refreshTimeoutRef.current)
     refreshTimeoutRef.current = setTimeout(() => {
@@ -258,9 +259,9 @@ export function LogsDrillDown({ data }: Props) {
       {!isLoading && !error && (
         <div
           ref={logContainerRef}
-          className="rounded-lg bg-black/50 border border-border p-4 font-mono text-sm overflow-auto max-h-[60vh]"
+          className="rounded-lg bg-card border border-border p-4 font-mono text-sm overflow-auto max-h-[60vh]"
         >
-          <pre className="text-green-400 whitespace-pre-wrap">{visibleLog}</pre>
+          <pre className="text-foreground whitespace-pre-wrap">{visibleLog}</pre>
         </div>
       )}
 

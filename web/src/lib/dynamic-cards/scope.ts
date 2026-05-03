@@ -66,7 +66,7 @@ export function createTimerScope() {
       activeTimers.delete(id)
       try {
         ;(callback as (...a: unknown[]) => void)(...a)
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[DynamicCard] Uncaught error in setTimeout callback:', err)
       }
     }, sanitizeDelay(delay), ...args)
@@ -89,7 +89,7 @@ export function createTimerScope() {
     const wrappedCallback = (...a: unknown[]) => {
       try {
         ;(callback as (...a: unknown[]) => void)(...a)
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[DynamicCard] Uncaught error in setInterval callback:', err)
       }
     }

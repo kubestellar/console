@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Bell, AlertTriangle, CheckCircle, Clock, ChevronRight, X, Server, Search, ExternalLink, CheckSquare, Square, MinusSquare } from 'lucide-react'
 import { useAlerts } from '../../hooks/useAlerts'
+import { formatTimeAgo } from '../../lib/formatters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
-import { getSeverityIcon } from '../../types/alerts'
+import { getSeverityIcon, ALERT_SEVERITY_ORDER } from '../../types/alerts'
 import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
@@ -16,10 +17,6 @@ import { Button } from './Button'
 
 /** Maximum numeric value to display in the badge before switching to overflow text (e.g. "99+") */
 const BADGE_MAX_COUNT = 99
-/** Number of minutes in an hour, used for relative-time formatting */
-const MINS_PER_HOUR = 60
-/** Number of hours in a day, used for relative-time formatting */
-const HOURS_PER_DAY = 24
 /** Duration of the exit animation before swapping the counter value in milliseconds */
 const ANIMATION_EXIT_DELAY_MS = 150
 
@@ -76,19 +73,7 @@ export function AnimatedCounter({ value, className }: { value: number; className
   )
 }
 
-// Format relative time
-function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < MINS_PER_HOUR) return `${diffMins}m ago`
-  if (diffHours < HOURS_PER_DAY) return `${diffHours}h ago`
-  return new Date(dateString).toLocaleDateString()
-}
 
 export function AlertBadge() {
   const { t } = useTranslation()
@@ -166,8 +151,7 @@ export function AlertBadge() {
 
     // Sort by severity and time
     return result.sort((a, b) => {
-      const severityOrder: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
-      const severityDiff = severityOrder[a.severity] - severityOrder[b.severity]
+      const severityDiff = ALERT_SEVERITY_ORDER[a.severity] - ALERT_SEVERITY_ORDER[b.severity]
       if (severityDiff !== 0) return severityDiff
       return new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime()
     })
@@ -277,7 +261,7 @@ export function AlertBadge() {
           {/* Mobile backdrop */}
           {isMobile && (
             <div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay"
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay"
               aria-hidden="true"
               onClick={close}
             />
@@ -291,7 +275,7 @@ export function AlertBadge() {
               isMobile
                 ? 'fixed inset-x-0 bottom-0 rounded-t-2xl max-h-[70vh]'
                 : 'absolute right-0 top-full mt-2 w-96 rounded-lg'
-            } bg-background border border-border shadow-xl z-50`}
+            } bg-background border border-border shadow-xl z-toast`}
           >
             {/* Drag handle for mobile */}
             {isMobile && (
@@ -334,7 +318,7 @@ export function AlertBadge() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={t('common.searchAlerts')}
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                   />
                 </div>
               </div>
@@ -490,7 +474,7 @@ export function AlertBadge() {
                         )}
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {formatRelativeTime(alert.firedAt)}
+                          {formatTimeAgo(alert.firedAt)}
                         </span>
                       </div>
                     </div>

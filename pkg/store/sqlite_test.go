@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"path/filepath"
@@ -14,6 +15,9 @@ import (
 
 	"github.com/kubestellar/console/pkg/models"
 )
+
+// ctx is a background context used by all test store method calls.
+var ctx = context.Background() //nolint:gochecknoglobals // test-only convenience
 
 // newTestStore creates a fresh SQLiteStore backed by a temp file for each test.
 func newTestStore(t *testing.T) *SQLiteStore {
@@ -34,7 +38,7 @@ func createTestUser(t *testing.T, store *SQLiteStore, githubID, login string) *m
 		Email:       login + "@example.com",
 		Role:        models.UserRoleViewer,
 	}
-	require.NoError(t, store.CreateUser(user))
+	require.NoError(t, store.CreateUser(ctx, user))
 	require.NotEqual(t, uuid.Nil, user.ID, "CreateUser should assign an ID")
 	return user
 }
@@ -82,7 +86,7 @@ func TestUserCRUD(t *testing.T) {
 	t.Run("GetUserByGitHubID returns created user", func(t *testing.T) {
 		_ = createTestUser(t, store, "gh-200", "bob")
 
-		got, err := store.GetUserByGitHubID("gh-200")
+		got, err := store.GetUserByGitHubID(ctx, "gh-200")
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.Equal(t, "bob", got.GitHubLogin)
@@ -92,7 +96,7 @@ func TestUserCRUD(t *testing.T) {
 	t.Run("GetUser returns created user by ID", func(t *testing.T) {
 		user := createTestUser(t, store, "gh-300", "carol")
 
-		got, err := store.GetUser(user.ID)
+		got, err := store.GetUser(ctx, user.ID)
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.Equal(t, "carol", got.GitHubLogin)
@@ -101,19 +105,19 @@ func TestUserCRUD(t *testing.T) {
 	t.Run("GetUserByGitHubLogin returns created user (case-insensitive)", func(t *testing.T) {
 		_ = createTestUser(t, store, "gh-800", "Charlie")
 
-		got, err := store.GetUserByGitHubLogin("charlie")
+		got, err := store.GetUserByGitHubLogin(ctx, "charlie")
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.Equal(t, "Charlie", got.GitHubLogin)
 
-		got2, err := store.GetUserByGitHubLogin("CHARLIE")
+		got2, err := store.GetUserByGitHubLogin(ctx, "CHARLIE")
 		require.NoError(t, err)
 		require.NotNil(t, got2)
 		require.Equal(t, "Charlie", got2.GitHubLogin)
 	})
 
 	t.Run("GetUserByGitHubID returns nil for unknown ID", func(t *testing.T) {
-		got, err := store.GetUserByGitHubID("nonexistent")
+		got, err := store.GetUserByGitHubID(ctx, "nonexistent")
 		require.NoError(t, err)
 		require.Nil(t, got)
 	})
@@ -122,9 +126,9 @@ func TestUserCRUD(t *testing.T) {
 		user := createTestUser(t, store, "gh-400", "dave")
 		user.Email = "dave-updated@example.com"
 		user.Onboarded = true
-		require.NoError(t, store.UpdateUser(user))
+		require.NoError(t, store.UpdateUser(ctx, user))
 
-		got, err := store.GetUser(user.ID)
+		got, err := store.GetUser(ctx, user.ID)
 		require.NoError(t, err)
 		require.Equal(t, "dave-updated@example.com", got.Email)
 		require.True(t, got.Onboarded)
@@ -132,18 +136,18 @@ func TestUserCRUD(t *testing.T) {
 
 	t.Run("UpdateUserRole changes role only", func(t *testing.T) {
 		user := createTestUser(t, store, "gh-500", "eve")
-		require.NoError(t, store.UpdateUserRole(user.ID, "admin"))
+		require.NoError(t, store.UpdateUserRole(ctx, user.ID, "admin"))
 
-		got, err := store.GetUser(user.ID)
+		got, err := store.GetUser(ctx, user.ID)
 		require.NoError(t, err)
 		require.Equal(t, models.UserRoleAdmin, got.Role)
 	})
 
 	t.Run("DeleteUser removes user", func(t *testing.T) {
 		user := createTestUser(t, store, "gh-600", "frank")
-		require.NoError(t, store.DeleteUser(user.ID))
+		require.NoError(t, store.DeleteUser(ctx, user.ID))
 
-		got, err := store.GetUser(user.ID)
+		got, err := store.GetUser(ctx, user.ID)
 		require.NoError(t, err)
 		require.Nil(t, got)
 	})
@@ -155,7 +159,7 @@ func TestUserCRUD(t *testing.T) {
 		createTestUser(t, s, "gh-list-2", "u2")
 
 		// #6595: ListUsers now requires limit/offset; 0 means store default.
-		users, err := s.ListUsers(0, 0)
+		users, err := s.ListUsers(ctx, 0, 0)
 		require.NoError(t, err)
 		require.Len(t, users, 2)
 	})
@@ -163,11 +167,11 @@ func TestUserCRUD(t *testing.T) {
 	t.Run("CountUsersByRole returns correct counts", func(t *testing.T) {
 		s := newTestStore(t)
 		u1 := createTestUser(t, s, "gh-count-1", "admin1")
-		require.NoError(t, s.UpdateUserRole(u1.ID, "admin"))
+		require.NoError(t, s.UpdateUserRole(ctx, u1.ID, "admin"))
 		createTestUser(t, s, "gh-count-2", "viewer1")
 		createTestUser(t, s, "gh-count-3", "viewer2")
 
-		admins, editors, viewers, err := s.CountUsersByRole()
+		admins, editors, viewers, err := s.CountUsersByRole(ctx)
 		require.NoError(t, err)
 		require.Equal(t, 1, admins)
 		require.Equal(t, 0, editors)
@@ -176,9 +180,9 @@ func TestUserCRUD(t *testing.T) {
 
 	t.Run("UpdateLastLogin sets last_login", func(t *testing.T) {
 		user := createTestUser(t, store, "gh-700", "grace")
-		require.NoError(t, store.UpdateLastLogin(user.ID))
+		require.NoError(t, store.UpdateLastLogin(ctx, user.ID))
 
-		got, err := store.GetUser(user.ID)
+		got, err := store.GetUser(ctx, user.ID)
 		require.NoError(t, err)
 		require.NotNil(t, got.LastLogin)
 	})
@@ -191,15 +195,15 @@ func TestTokenRevocation(t *testing.T) {
 		jti := "token-abc-123"
 		futureExpiry := time.Now().Add(time.Hour)
 
-		require.NoError(t, store.RevokeToken(jti, futureExpiry))
+		require.NoError(t, store.RevokeToken(ctx, jti, futureExpiry))
 
-		revoked, err := store.IsTokenRevoked(jti)
+		revoked, err := store.IsTokenRevoked(ctx, jti)
 		require.NoError(t, err)
 		require.True(t, revoked)
 	})
 
 	t.Run("IsTokenRevoked returns false for unknown token", func(t *testing.T) {
-		revoked, err := store.IsTokenRevoked("unknown-jti")
+		revoked, err := store.IsTokenRevoked(ctx, "unknown-jti")
 		require.NoError(t, err)
 		require.False(t, revoked)
 	})
@@ -207,23 +211,23 @@ func TestTokenRevocation(t *testing.T) {
 	t.Run("CleanupExpiredTokens removes expired entries", func(t *testing.T) {
 		s := newTestStore(t)
 		pastExpiry := time.Now().Add(-time.Hour)
-		require.NoError(t, s.RevokeToken("expired-token", pastExpiry))
+		require.NoError(t, s.RevokeToken(ctx, "expired-token", pastExpiry))
 
 		// Also add a valid token
 		futureExpiry := time.Now().Add(time.Hour)
-		require.NoError(t, s.RevokeToken("valid-token", futureExpiry))
+		require.NoError(t, s.RevokeToken(ctx, "valid-token", futureExpiry))
 
-		removed, err := s.CleanupExpiredTokens()
+		removed, err := s.CleanupExpiredTokens(ctx)
 		require.NoError(t, err)
 		require.Equal(t, int64(1), removed)
 
 		// Expired one should be gone
-		revoked, err := s.IsTokenRevoked("expired-token")
+		revoked, err := s.IsTokenRevoked(ctx, "expired-token")
 		require.NoError(t, err)
 		require.False(t, revoked)
 
 		// Valid one should still be present
-		revoked, err = s.IsTokenRevoked("valid-token")
+		revoked, err = s.IsTokenRevoked(ctx, "valid-token")
 		require.NoError(t, err)
 		require.True(t, revoked)
 	})
@@ -241,10 +245,10 @@ func TestDashboardCRUD(t *testing.T) {
 			Layout:    layout,
 			IsDefault: true,
 		}
-		require.NoError(t, store.CreateDashboard(dash))
+		require.NoError(t, store.CreateDashboard(ctx, dash))
 		require.NotEqual(t, uuid.Nil, dash.ID)
 
-		got, err := store.GetDashboard(dash.ID)
+		got, err := store.GetDashboard(ctx, dash.ID)
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.Equal(t, "My Dashboard", got.Name)
@@ -257,14 +261,14 @@ func TestDashboardCRUD(t *testing.T) {
 		u := createTestUser(t, s, "gh-dashlist", "dashlistuser")
 
 		for i := 0; i < 3; i++ {
-			require.NoError(t, s.CreateDashboard(&models.Dashboard{
+			require.NoError(t, s.CreateDashboard(ctx, &models.Dashboard{
 				UserID: u.ID,
 				Name:   "Dashboard",
 			}))
 		}
 
 		// #6596: GetUserDashboards now requires limit/offset; 0 means default.
-		dashboards, err := s.GetUserDashboards(u.ID, 0, 0)
+		dashboards, err := s.GetUserDashboards(ctx, u.ID, 0, 0)
 		require.NoError(t, err)
 		require.Len(t, dashboards, 3)
 	})
@@ -273,18 +277,18 @@ func TestDashboardCRUD(t *testing.T) {
 		s := newTestStore(t)
 		u := createTestUser(t, s, "gh-default", "defuser")
 
-		require.NoError(t, s.CreateDashboard(&models.Dashboard{
+		require.NoError(t, s.CreateDashboard(ctx, &models.Dashboard{
 			UserID:    u.ID,
 			Name:      "Non-default",
 			IsDefault: false,
 		}))
-		require.NoError(t, s.CreateDashboard(&models.Dashboard{
+		require.NoError(t, s.CreateDashboard(ctx, &models.Dashboard{
 			UserID:    u.ID,
 			Name:      "Default",
 			IsDefault: true,
 		}))
 
-		got, err := s.GetDefaultDashboard(u.ID)
+		got, err := s.GetDefaultDashboard(ctx, u.ID)
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.Equal(t, "Default", got.Name)
@@ -295,12 +299,12 @@ func TestDashboardCRUD(t *testing.T) {
 		u := createTestUser(t, s, "gh-upd", "upduser")
 
 		dash := &models.Dashboard{UserID: u.ID, Name: "Original"}
-		require.NoError(t, s.CreateDashboard(dash))
+		require.NoError(t, s.CreateDashboard(ctx, dash))
 
 		dash.Name = "Updated"
-		require.NoError(t, s.UpdateDashboard(dash))
+		require.NoError(t, s.UpdateDashboard(ctx, dash))
 
-		got, err := s.GetDashboard(dash.ID)
+		got, err := s.GetDashboard(ctx, dash.ID)
 		require.NoError(t, err)
 		require.Equal(t, "Updated", got.Name)
 		require.NotNil(t, got.UpdatedAt)
@@ -311,10 +315,10 @@ func TestDashboardCRUD(t *testing.T) {
 		u := createTestUser(t, s, "gh-del", "deluser")
 
 		dash := &models.Dashboard{UserID: u.ID, Name: "ToDelete"}
-		require.NoError(t, s.CreateDashboard(dash))
-		require.NoError(t, s.DeleteDashboard(dash.ID))
+		require.NoError(t, s.CreateDashboard(ctx, dash))
+		require.NoError(t, s.DeleteDashboard(ctx, dash.ID))
 
-		got, err := s.GetDashboard(dash.ID)
+		got, err := s.GetDashboard(ctx, dash.ID)
 		require.NoError(t, err)
 		require.Nil(t, got)
 	})
@@ -324,7 +328,7 @@ func TestCardCRUD(t *testing.T) {
 	store := newTestStore(t)
 	user := createTestUser(t, store, "gh-card", "carduser")
 	dash := &models.Dashboard{UserID: user.ID, Name: "CardDash"}
-	require.NoError(t, store.CreateDashboard(dash))
+	require.NoError(t, store.CreateDashboard(ctx, dash))
 
 	t.Run("CreateCard and GetCard round-trip", func(t *testing.T) {
 		card := &models.Card{
@@ -332,10 +336,10 @@ func TestCardCRUD(t *testing.T) {
 			CardType:    models.CardTypeClusterHealth,
 			Position:    models.CardPosition{X: 0, Y: 0, W: 4, H: 3},
 		}
-		require.NoError(t, store.CreateCard(card))
+		require.NoError(t, store.CreateCard(ctx, card))
 		require.NotEqual(t, uuid.Nil, card.ID)
 
-		got, err := store.GetCard(card.ID)
+		got, err := store.GetCard(ctx, card.ID)
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.Equal(t, models.CardTypeClusterHealth, got.CardType)
@@ -343,13 +347,13 @@ func TestCardCRUD(t *testing.T) {
 	})
 
 	t.Run("GetDashboardCards returns cards for dashboard", func(t *testing.T) {
-		require.NoError(t, store.CreateCard(&models.Card{
+		require.NoError(t, store.CreateCard(ctx, &models.Card{
 			DashboardID: dash.ID,
 			CardType:    models.CardTypePodIssues,
 			Position:    models.CardPosition{X: 4, Y: 0, W: 4, H: 3},
 		}))
 
-		cards, err := store.GetDashboardCards(dash.ID)
+		cards, err := store.GetDashboardCards(ctx, dash.ID)
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, len(cards), 1)
 	})
@@ -360,10 +364,10 @@ func TestCardCRUD(t *testing.T) {
 			CardType:    models.CardTypeEventStream,
 			Position:    models.CardPosition{X: 0, Y: 3, W: 8, H: 3},
 		}
-		require.NoError(t, store.CreateCard(card))
-		require.NoError(t, store.UpdateCardFocus(card.ID, "All healthy"))
+		require.NoError(t, store.CreateCard(ctx, card))
+		require.NoError(t, store.UpdateCardFocus(ctx, card.ID, "All healthy"))
 
-		got, err := store.GetCard(card.ID)
+		got, err := store.GetCard(ctx, card.ID)
 		require.NoError(t, err)
 		require.Equal(t, "All healthy", got.LastSummary)
 		require.NotNil(t, got.LastFocus)
@@ -375,10 +379,10 @@ func TestCardCRUD(t *testing.T) {
 			CardType:    models.CardTypeTopPods,
 			Position:    models.CardPosition{X: 0, Y: 6, W: 4, H: 3},
 		}
-		require.NoError(t, store.CreateCard(card))
-		require.NoError(t, store.DeleteCard(card.ID))
+		require.NoError(t, store.CreateCard(ctx, card))
+		require.NoError(t, store.DeleteCard(ctx, card.ID))
 
-		got, err := store.GetCard(card.ID)
+		got, err := store.GetCard(ctx, card.ID)
 		require.NoError(t, err)
 		require.Nil(t, got)
 	})
@@ -398,10 +402,10 @@ func TestCreateCardWithLimit(t *testing.T) {
 		store := newTestStore(t)
 		user := createTestUser(t, store, "gh-limit-seq", "limitseq")
 		dash := &models.Dashboard{UserID: user.ID, Name: "LimitSeq"}
-		require.NoError(t, store.CreateDashboard(dash))
+		require.NoError(t, store.CreateDashboard(ctx, dash))
 
 		for i := 0; i < cardLimitTest; i++ {
-			err := store.CreateCardWithLimit(&models.Card{
+			err := store.CreateCardWithLimit(ctx, &models.Card{
 				DashboardID: dash.ID,
 				CardType:    models.CardTypeClusterHealth,
 				Position:    models.CardPosition{X: i, Y: 0, W: 4, H: 3},
@@ -409,14 +413,14 @@ func TestCreateCardWithLimit(t *testing.T) {
 			require.NoError(t, err, "insert %d should succeed under the limit", i)
 		}
 
-		err := store.CreateCardWithLimit(&models.Card{
+		err := store.CreateCardWithLimit(ctx, &models.Card{
 			DashboardID: dash.ID,
 			CardType:    models.CardTypeClusterHealth,
 			Position:    models.CardPosition{X: 0, Y: 1, W: 4, H: 3},
 		}, cardLimitTest)
 		require.ErrorIs(t, err, ErrDashboardCardLimitReached)
 
-		cards, err := store.GetDashboardCards(dash.ID)
+		cards, err := store.GetDashboardCards(ctx, dash.ID)
 		require.NoError(t, err)
 		require.Len(t, cards, cardLimitTest)
 	})
@@ -425,7 +429,7 @@ func TestCreateCardWithLimit(t *testing.T) {
 		store := newTestStore(t)
 		user := createTestUser(t, store, "gh-limit-conc", "limitconc")
 		dash := &models.Dashboard{UserID: user.ID, Name: "LimitConc"}
-		require.NoError(t, store.CreateDashboard(dash))
+		require.NoError(t, store.CreateDashboard(ctx, dash))
 
 		// concurrentInserters is the number of goroutines racing to insert
 		// cards. Significantly larger than cardLimitTest so that most must
@@ -449,7 +453,7 @@ func TestCreateCardWithLimit(t *testing.T) {
 			go func() {
 				defer wg.Done()
 				<-start
-				err := store.CreateCardWithLimit(&models.Card{
+				err := store.CreateCardWithLimit(ctx, &models.Card{
 					DashboardID: dash.ID,
 					CardType:    models.CardTypeClusterHealth,
 					Position:    models.CardPosition{X: i, Y: 0, W: 4, H: 3},
@@ -483,7 +487,7 @@ func TestCreateCardWithLimit(t *testing.T) {
 		require.Equal(t, int64(concurrentInserters-cardLimitTest), atomic.LoadInt64(&rejections),
 			"remaining inserts should be rejected with ErrDashboardCardLimitReached")
 
-		cards, err := store.GetDashboardCards(dash.ID)
+		cards, err := store.GetDashboardCards(ctx, dash.ID)
 		require.NoError(t, err)
 		require.Len(t, cards, cardLimitTest,
 			"dashboard must never exceed cardLimitTest rows under concurrent writers")
@@ -500,18 +504,18 @@ func TestOnboarding(t *testing.T) {
 			QuestionKey: "role",
 			Answer:      "SRE",
 		}
-		require.NoError(t, store.SaveOnboardingResponse(resp))
+		require.NoError(t, store.SaveOnboardingResponse(ctx, resp))
 
-		responses, err := store.GetOnboardingResponses(user.ID)
+		responses, err := store.GetOnboardingResponses(ctx, user.ID)
 		require.NoError(t, err)
 		require.Len(t, responses, 1)
 		require.Equal(t, "SRE", responses[0].Answer)
 	})
 
 	t.Run("SetUserOnboarded marks user as onboarded", func(t *testing.T) {
-		require.NoError(t, store.SetUserOnboarded(user.ID))
+		require.NoError(t, store.SetUserOnboarded(ctx, user.ID))
 
-		got, err := store.GetUser(user.ID)
+		got, err := store.GetUser(ctx, user.ID)
 		require.NoError(t, err)
 		require.True(t, got.Onboarded)
 	})

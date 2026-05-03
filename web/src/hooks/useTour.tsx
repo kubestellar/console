@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useMobile } from './useMobile'
 import { SETTINGS_CHANGED_EVENT, SETTINGS_RESTORED_EVENT } from '../lib/settingsSync'
 import { emitTourStarted, emitTourCompleted, emitTourSkipped } from '../lib/analytics'
@@ -117,15 +117,15 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
   const currentStep = isActive ? TOUR_STEPS[currentStepIndex] : null
 
-  const startTour = () => {
+  const startTour = useCallback(() => {
     // Don't start tour on mobile devices
     if (isMobile) return
     setCurrentStepIndex(0)
     setIsActive(true)
     emitTourStarted()
-  }
+  }, [isMobile])
 
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     if (currentStepIndex < TOUR_STEPS.length - 1) {
       setCurrentStepIndex(prev => prev + 1)
     } else {
@@ -136,50 +136,51 @@ export function TourProvider({ children }: { children: ReactNode }) {
       window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
       emitTourCompleted(TOUR_STEPS.length)
     }
-  }
+  }, [currentStepIndex])
 
-  const prevStep = () => {
+  const prevStep = useCallback(() => {
     if (currentStepIndex > 0) {
       setCurrentStepIndex(prev => prev - 1)
     }
-  }
+  }, [currentStepIndex])
 
-  const skipTour = () => {
+  const skipTour = useCallback(() => {
     emitTourSkipped(currentStepIndex)
     setIsActive(false)
     setHasCompletedTour(true)
     localStorage.setItem(STORAGE_KEY_TOUR_COMPLETED, 'true')
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
-  }
+  }, [currentStepIndex])
 
-  const resetTour = () => {
+  const resetTour = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY_TOUR_COMPLETED)
     setHasCompletedTour(false)
     window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT))
-  }
+  }, [])
 
-  const goToStep = (stepId: string) => {
+  const goToStep = useCallback((stepId: string) => {
     const index = TOUR_STEPS.findIndex(s => s.id === stepId)
     if (index >= 0) {
       setCurrentStepIndex(index)
     }
-  }
+  }, [])
+
+  const contextValue = useMemo(() => ({
+    isActive,
+    currentStep,
+    currentStepIndex,
+    totalSteps: TOUR_STEPS.length,
+    hasCompletedTour,
+    startTour,
+    nextStep,
+    prevStep,
+    skipTour,
+    resetTour,
+    goToStep,
+  }), [isActive, currentStep, currentStepIndex, hasCompletedTour, startTour, nextStep, prevStep, skipTour, resetTour, goToStep])
 
   return (
-    <TourContext.Provider
-      value={{
-        isActive,
-        currentStep,
-        currentStepIndex,
-        totalSteps: TOUR_STEPS.length,
-        hasCompletedTour,
-        startTour,
-        nextStep,
-        prevStep,
-        skipTour,
-        resetTour,
-        goToStep }}
-    >
+    <TourContext.Provider value={contextValue}>
       {children}
     </TourContext.Provider>
   )

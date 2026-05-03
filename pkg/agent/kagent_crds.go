@@ -57,15 +57,15 @@ var (
 	}
 )
 
-// kagentCRDAgent is the JSON response shape for a kagent.dev Agent CR
+// kagentCRDAgent is the JSON response shape for a kagent.dev Agent CR.
+// Field names match the TypeScript KagentCRDAgent interface.
 type kagentCRDAgent struct {
 	Name           string `json:"name"`
 	Namespace      string `json:"namespace"`
 	Cluster        string `json:"cluster"`
-	Type           string `json:"type"`
+	AgentType      string `json:"agentType"`
 	Runtime        string `json:"runtime"`
-	Ready          bool   `json:"ready"`
-	Accepted       bool   `json:"accepted"`
+	Status         string `json:"status"`
 	ModelConfigRef string `json:"modelConfigRef"`
 	ToolCount      int    `json:"toolCount"`
 }
@@ -115,7 +115,7 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -175,9 +175,10 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 			Name:      item.GetName(),
 			Namespace: item.GetNamespace(),
 			Cluster:   cluster,
+			Status:    "Unknown",
 		}
 		if specMap != nil {
-			a.Type = nestedString(specMap, "type")
+			a.AgentType = nestedString(specMap, "type")
 			a.Runtime = nestedString(specMap, "runtime")
 			a.ModelConfigRef = nestedString(specMap, "modelConfigRef")
 			// Count tools from spec.tools array
@@ -186,8 +187,16 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if statusMap != nil {
-			a.Ready = extractConditionStatus(statusMap, "Ready")
-			a.Accepted = extractConditionStatus(statusMap, "Accepted")
+			switch {
+			case extractConditionStatus(statusMap, "Ready"):
+				a.Status = "Ready"
+			case extractConditionStatus(statusMap, "Accepted"):
+				a.Status = "Accepted"
+			default:
+				if phase := nestedString(statusMap, "phase"); phase != "" {
+					a.Status = phase
+				}
+			}
 		}
 		agents = append(agents, a)
 	}
@@ -218,7 +227,7 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -351,7 +360,7 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -477,7 +486,7 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -549,7 +558,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -591,10 +600,14 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	var modelConfigCount, modelProviderConfigCount, memoryCount int
 	var mu sync.Mutex
 	byProvider := map[string]int{}
-	var warnings []string
+
+	// numCRDQueries must be declared before any use (including the warnings
+	// slice capacity hint below). Moving it after `warnings` causes a build
+	// failure — see issue #11692.
+	const numCRDQueries = 6
+	warnings := make([]string, 0, numCRDQueries)
 
 	var wg sync.WaitGroup
-	const numCRDQueries = 6
 	wg.Add(numCRDQueries)
 
 	// Count agents

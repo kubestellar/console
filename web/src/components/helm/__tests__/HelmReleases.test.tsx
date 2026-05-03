@@ -9,7 +9,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
-    clusters: [], isLoading: false, isRefreshing: false,
+    clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false,
     lastUpdated: null, refetch: vi.fn(), error: null,
   }),
 }))

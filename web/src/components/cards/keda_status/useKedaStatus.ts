@@ -257,7 +257,7 @@ export function useKedaStatus(): UseKedaStatusResult {
   const hasAnyData = (data.operatorPods?.total ?? 0) > 0 || (data.scaledObjects || []).length > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !isDemoMode,
+    isLoading: isLoading && !isDemoMode && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,

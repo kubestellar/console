@@ -1,0 +1,17 @@
+# AI agent boundaries — what agents can and cannot do
+boundaries:
+  deny_write:
+    - "deploy/"
+    - "migrations/"
+    - ".github/workflows/*.yml"  # requires human review
+    - ".env*"
+    - "credentials*"
+
+  require_review:
+    - "pkg/agent/server*.go"  # backend API surface
+    - "web/netlify/functions/*.mts"  # Netlify Functions
+
+  auto_merge_eligible:
+    authors: ["clubanderson", "copilot-swe-agent[bot]"]
+    max_files: 10
+    excluded_paths: ["ADOPTERS.md"]

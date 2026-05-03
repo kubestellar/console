@@ -10,9 +10,10 @@ import { useCallback, useMemo } from 'react'
 import type { StatBlockValue } from '../ui/StatsOverview'
 import { usePipelineData } from '../cards/pipelines/PipelineDataContext'
 import type { Conclusion } from '../../hooks/useGitHubPipelines'
+import { MS_PER_DAY } from '../../lib/constants/time'
 
 /** Milliseconds in 24 hours — used to filter recent failures */
-const MS_PER_24H = 24 * 60 * 60 * 1000
+const MS_PER_24H = MS_PER_DAY
 
 /** Percentage thresholds for pass-rate coloring */
 const PASS_RATE_GOOD_PCT = 90
@@ -180,7 +181,7 @@ export function useCICDStats(): CICDStatsResult {
             : sublabel,
           max: PASS_RATE_MAX,
           isDemo: computed.isDemo,
-          modeHints: ['ring', 'gauge', 'horseshoe', 'numeric'],
+          modeHints: ['ring-3', 'gauge', 'horseshoe', 'numeric'],
         }
       }
 

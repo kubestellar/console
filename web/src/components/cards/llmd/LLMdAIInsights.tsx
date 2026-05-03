@@ -16,6 +16,9 @@ import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
 import { PROGRESS_SIMULATION_MS } from '../../../lib/constants/network'
 
+/** Loose translation function type for helper functions that use dynamic keys */
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
+
 const INSIGHT_ICONS = {
   optimization: Lightbulb,
   anomaly: AlertTriangle,
@@ -111,7 +114,7 @@ function InsightCard({ insight, isExpanded, onToggle }: InsightCardProps) {
 /**
  * Generate real insights based on the selected stack's state
  */
-function generateStackInsights(stack: LLMdStack, t?: (key: string, options?: Record<string, unknown>) => string): AIInsight[] {
+function generateStackInsights(stack: LLMdStack, t?: TranslateFn): AIInsight[] {
   const insights: AIInsight[] = []
   const now = new Date()
 
@@ -318,7 +321,7 @@ export function LLMdAIInsights() {
     }
 
     if (stackContext?.selectedStack) {
-      return generateStackInsights(stackContext.selectedStack, t as unknown as (key: string, options?: Record<string, unknown>) => string)
+      return generateStackInsights(stackContext.selectedStack, t as unknown as TranslateFn)
     }
 
     return []
@@ -491,7 +494,7 @@ export function LLMdAIInsights() {
             value={chatInput}
             onChange={e => setChatInput(e.target.value)}
             placeholder={t('llmdAIInsights.scalePlaceholder')}
-            className="flex-1 bg-secondary border border-border rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-none focus:border-purple-500"
+            className="flex-1 bg-secondary border border-border rounded px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus:outline-hidden focus:border-purple-500"
             disabled={isGenerating}
           />
           <button

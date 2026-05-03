@@ -245,4 +245,83 @@ describe('scanForMaliciousContent', () => {
   it('hasMaliciousFindings returns false for empty findings', () => {
     expect(hasMaliciousFindings([])).toBe(false)
   })
+
+  it('scans resolution.summary for malicious content', () => {
+    const mission = makeMission({
+      resolution: {
+        summary: '<script>alert("pwned")</script>',
+      },
+    })
+    const findings = scanForMaliciousContent(mission)
+    const xss = findings.filter((f) => f.type === 'xss-script')
+    expect(xss.length).toBeGreaterThanOrEqual(1)
+    expect(xss[0].location).toBe('resolution.summary')
+  })
+
+  it('scans resolution.yaml for malicious content', () => {
+    const mission = makeMission({
+      resolution: {
+        yaml: 'privileged: true',
+      },
+    })
+    const findings = scanForMaliciousContent(mission)
+    const priv = findings.filter((f) => f.type === 'privileged-container')
+    expect(priv.length).toBeGreaterThanOrEqual(1)
+    expect(priv[0].location).toBe('resolution.yaml')
+  })
+
+  it('scans resolution.steps for malicious content', () => {
+    const mission = makeMission({
+      resolution: {
+        steps: ['Safe step', '<script>evil()</script>'],
+      },
+    })
+    const findings = scanForMaliciousContent(mission)
+    const xss = findings.filter((f) => f.type === 'xss-script')
+    expect(xss.length).toBeGreaterThanOrEqual(1)
+    expect(xss[0].location).toBe('resolution.steps[1]')
+  })
+
+  it('scans prerequisites for malicious content', () => {
+    const mission = makeMission({
+      prerequisites: ['Install kubectl', '<script>alert(1)</script>'],
+    })
+    const findings = scanForMaliciousContent(mission)
+    const xss = findings.filter((f) => f.type === 'xss-script')
+    expect(xss.length).toBeGreaterThanOrEqual(1)
+    expect(xss[0].location).toBe('prerequisites[1]')
+  })
+
+  it('scans step.validation field', () => {
+    const mission = makeMission({
+      steps: [
+        makeStep('Validate', { validation: '<script>check()</script>' }),
+      ],
+    })
+    const findings = scanForMaliciousContent(mission)
+    const xss = findings.filter((f) => f.type === 'xss-script')
+    expect(xss.length).toBeGreaterThanOrEqual(1)
+    expect(xss[0].location).toMatch(/steps\[0\]\.validation/)
+  })
+
+  it('hasMaliciousFindings returns false for medium/low only', () => {
+    expect(
+      hasMaliciousFindings([
+        {
+          type: 'test',
+          severity: 'medium',
+          match: 'x',
+          location: 'y',
+          message: 'z',
+        },
+        {
+          type: 'test2',
+          severity: 'low',
+          match: 'x',
+          location: 'y',
+          message: 'z',
+        },
+      ])
+    ).toBe(false)
+  })
 })

@@ -131,7 +131,7 @@ export function BrowserNotificationSettings() {
 
           {browserNotifState === 'verified' && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-              <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+              <Check className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
               <p className="text-sm text-green-400">
                 {t('settings.notifications.browser.verified')}
               </p>
@@ -141,7 +141,7 @@ export function BrowserNotificationSettings() {
           {browserNotifState === 'failed' && (
             <div className="space-y-2">
               <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                <X className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                <X className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-400">
                   {t(instructionKey as never)}
                 </p>
@@ -162,7 +162,7 @@ export function BrowserNotificationSettings() {
         <div className="space-y-2">
           {browserPermission === 'denied' ? (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-              <X className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <X className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <p className="text-sm text-red-400">
                 {t('settings.notifications.browser.blocked')}
               </p>

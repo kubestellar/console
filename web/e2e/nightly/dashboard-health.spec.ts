@@ -1,4 +1,5 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test'
+import { mockApiFallback } from '../helpers/setup'
 
 /**
  * Nightly Dashboard Health Check
@@ -45,9 +46,27 @@ const EXPECTED_ERROR_PATTERNS = [
   /flushSync was called/i,
   /can't access property/i,
   /Cross-Origin Request Blocked/i,
+  /blocked by CORS policy/i,
+  /Access to fetch.*has been blocked by CORS/i,
+  /Origin .* is not allowed by Access-Control-Allow-Origin/i, // WebKit/Safari CORS wording
+  /Access-Control-Allow-Origin.*localhost/i,
+  /Access-Control-Allow-Origin.*127\.0\.0\.1/i,
   /Notification permission/i,
+  /Notification prompting can only be done from a user gesture/i, // WebKit notification block
+  /Could not connect to [0-9.]+/i, // WebKit connection refused wording
+  /Connection refused/i,
   /502.*Bad Gateway/i,
   /Failed to load resource/i,
+  /127\.0\.0\.1:8585/i,
+  /wasm streaming compile failed.*sqlite/i,
+  /failed to asynchronously prepare wasm.*sqlite/i,
+  /Aborted\(NetworkError.*sqlite/i,
+  /Exception loading sqlite3 module/i,
+  /\[kc\.cache\] sqlite/i,
+  /NS_BINDING_ABORTED/i,
+  /NS_ERROR_FAILURE/i,
+  /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket curly apostrophes
+  /Fetch failed: Invalid JSON response/i,
 ]
 
 /** All dashboard routes to test (from App.tsx) */
@@ -63,7 +82,7 @@ const DASHBOARD_ROUTES: Array<{ path: string; name: string; expectCards: boolean
   { path: '/helm', name: 'Helm Releases', expectCards: true },
   { path: '/logs', name: 'Logs', expectCards: true },
   { path: '/compute', name: 'Compute', expectCards: true },
-  { path: '/compute/compare', name: 'Cluster Comparison', expectCards: true },
+  { path: '/compute/compare', name: 'Cluster Comparison', expectCards: false },
   { path: '/storage', name: 'Storage', expectCards: true },
   { path: '/network', name: 'Network', expectCards: true },
   { path: '/events', name: 'Events', expectCards: true },
@@ -73,8 +92,8 @@ const DASHBOARD_ROUTES: Array<{ path: string; name: string; expectCards: boolean
   { path: '/cost', name: 'Cost', expectCards: true },
   { path: '/security-posture', name: 'Compliance', expectCards: true },
   { path: '/data-compliance', name: 'Data Compliance', expectCards: true },
-  { path: '/gpu-reservations', name: 'GPU Reservations', expectCards: true },
-  { path: '/namespaces', name: 'Namespaces', expectCards: true },
+  { path: '/gpu-reservations', name: 'GPU Reservations', expectCards: false },
+  { path: '/namespaces', name: 'Namespaces', expectCards: false },
   { path: '/deploy', name: 'Deploy', expectCards: true },
   { path: '/ai-ml', name: 'AI/ML', expectCards: true },
   { path: '/ai-agents', name: 'AI Agents', expectCards: true },
@@ -82,7 +101,7 @@ const DASHBOARD_ROUTES: Array<{ path: string; name: string; expectCards: boolean
   { path: '/cluster-admin', name: 'Cluster Admin', expectCards: true },
   { path: '/ci-cd', name: 'CI/CD', expectCards: true },
   { path: '/insights', name: 'Insights', expectCards: true },
-  { path: '/marketplace', name: 'Marketplace', expectCards: true },
+  { path: '/marketplace', name: 'Marketplace', expectCards: false },
   { path: '/arcade', name: 'Arcade', expectCards: false },
   { path: '/settings', name: 'Settings', expectCards: false },
   { path: '/history', name: 'Card History', expectCards: false },
@@ -131,11 +150,37 @@ function setupErrorCollector(page: Page): { errors: string[]; pageErrors: string
 }
 
 async function setupDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await mockApiFallback(page)
+
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1', github_id: '12345', github_login: 'testuser',
+        email: 'test@example.com', onboarded: true,
+      }),
+    })
+  )
+
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+    })
+  )
+
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 }
 

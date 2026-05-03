@@ -1,4 +1,5 @@
 import type { CachedData } from './types'
+import { MS_PER_MINUTE } from '../../../../lib/constants/time'
 
 /**
  * Module-level pod data cache - persists when dialog is closed/reopened.
@@ -30,7 +31,7 @@ export function setPodCache(cluster: string, namespace: string, pod: string, dat
 }
 
 /** Remove cache entries older than 5 minutes */
-const POD_CACHE_MAX_AGE_MS = 5 * 60 * 1000
+const POD_CACHE_MAX_AGE_MS = 5 * MS_PER_MINUTE
 
 export function cleanupPodCache(): void {
   const now = Date.now()

@@ -69,8 +69,12 @@ const CI_WORKFLOWS: Record<string, string> = {
   nightly: "Nightly Compliance & Perf",
 };
 
-/** CORS origins: *.kubestellar.io and localhost */
-const ALLOWED_ORIGIN_RE = /^https?:\/\/(.*\.kubestellar\.io|localhost(:\d+)?)$/;
+/** Allowed CORS origins (exact match) */
+const ALLOWED_ORIGINS = [
+  "https://console.kubestellar.io",
+  "https://kubestellar.io",
+  "https://www.kubestellar.io",
+];
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,12 +126,22 @@ interface CacheEntry {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** Validate CORS origin via URL-parsed hostname check */
+function corsOrigin(origin: string | null): string {
+  if (!origin) return ALLOWED_ORIGINS[0];
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    if (host === "localhost") return origin;
+    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) return origin;
+  } catch { /* invalid URL */ }
+  return ALLOWED_ORIGINS[0];
+}
+
 /** Build CORS headers, reflecting the origin if it matches the allow list */
 function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed =
-    origin && ALLOWED_ORIGIN_RE.test(origin) ? origin : "https://console.kubestellar.io";
   return {
-    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Origin": corsOrigin(origin),
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Cache-Control": "public, max-age=3600",

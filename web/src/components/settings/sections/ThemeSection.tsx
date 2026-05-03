@@ -368,7 +368,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
             </StatusBadge>
           )}
           <span className="px-2 py-1 text-xs rounded bg-secondary text-muted-foreground">
-            Font: {currentTheme.font.family.split(',')[0].replace(/'/g, '')}
+            Font: {currentTheme.font?.family?.split(',')[0]?.replace(/'/g, '') ?? 'System'}
           </span>
         </div>
       </div>

@@ -20,8 +20,8 @@ export const GREEN_500 = '#10b981'
 export const AMBER_500 = '#f59e0b'
 /** Tailwind red-500 */
 export const RED_500 = '#ef4444'
-/** Tailwind violet-500 */
-export const VIOLET_500 = '#8b5cf6'
+/** Tailwind purple-500 */
+export const PURPLE_500 = '#8b5cf6'
 /** Tailwind cyan-500 */
 export const CYAN_500 = '#06b6d4'
 /** Tailwind lime-500 */
@@ -34,6 +34,8 @@ export const PINK_500 = '#ec4899'
 export const TEAL_500 = '#14b8a6'
 /** Tailwind indigo-500 */
 export const INDIGO_500 = '#6366f1'
+/** Tailwind yellow-500 */
+export const YELLOW_500 = '#eab308'
 /** Tailwind green-500 (brighter variant used for "free/available" areas) */
 export const GREEN_500_BRIGHT = '#22c55e'
 
@@ -42,12 +44,12 @@ export const GREEN_500_BRIGHT = '#22c55e'
 /** 10-color palette for multi-series cluster charts (ClusterMetrics, etc.) */
 export const CLUSTER_CHART_PALETTE: readonly string[] = [
   PURPLE_600, BLUE_500, GREEN_500, AMBER_500, RED_500,
-  VIOLET_500, CYAN_500, LIME_500, ORANGE_500, PINK_500,
+  PURPLE_500, CYAN_500, LIME_500, ORANGE_500, PINK_500,
 ] as const
 
 /** 10-color palette for cross-cluster event correlation timeline */
 export const CROSS_CLUSTER_EVENT_PALETTE: readonly string[] = [
-  BLUE_500, GREEN_500_BRIGHT, AMBER_500, RED_500, VIOLET_500,
+  BLUE_500, GREEN_500_BRIGHT, AMBER_500, RED_500, PURPLE_500,
   CYAN_500, PINK_500, TEAL_500, ORANGE_500, INDIGO_500,
 ] as const
 
@@ -60,7 +62,7 @@ export const GPU_TYPE_CHART_PALETTE: readonly string[] = [
   CYAN_500,     // cyan-500
   PINK_500,     // pink-500
   LIME_500,     // lime-500
-  VIOLET_500,   // violet-500
+  PURPLE_500,   // purple-500
 ] as const
 
 /** Color for the "free/available" GPU area series */
@@ -117,3 +119,28 @@ export const KAGENT_RUNTIME_BYO = '#9ca3af'
 export const KAGENT_EDGE_AGENT_TOOL = CYAN_500
 /** Agent-to-model edge color */
 export const KAGENT_EDGE_AGENT_MODEL = GREEN_500
+
+// ── Utility ─────────────────────────────────────────────────────────────────
+
+/** Number of hex digits per RGB channel */
+const HEX_CHANNEL_LEN = 2
+/** Start index of the red channel in a 7-char hex string (e.g. "#9333ea") */
+const HEX_RED_START = 1
+/** Start index of the green channel */
+const HEX_GREEN_START = 3
+/** Start index of the blue channel */
+const HEX_BLUE_START = 5
+/** Radix for parsing hex strings */
+const HEX_RADIX = 16
+
+/**
+ * Convert a hex color to an rgba() string with the given alpha.
+ * Accepts "#RRGGBB" format. Falls through to the raw hex if parsing fails.
+ */
+export function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(HEX_RED_START, HEX_RED_START + HEX_CHANNEL_LEN), HEX_RADIX)
+  const g = parseInt(hex.slice(HEX_GREEN_START, HEX_GREEN_START + HEX_CHANNEL_LEN), HEX_RADIX)
+  const b = parseInt(hex.slice(HEX_BLUE_START, HEX_BLUE_START + HEX_CHANNEL_LEN), HEX_RADIX)
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return hex
+  return `rgba(${r},${g},${b},${alpha})`
+}

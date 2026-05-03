@@ -86,27 +86,65 @@ export default async (req: Request) => {
   }
 
   try {
+    // Primary: Invidious API (reliable, no auth required)
+    const invidiousInstances = [
+      "https://inv.nadeko.net",
+      "https://invidious.fdn.fr",
+      "https://vid.puffyan.us",
+    ];
+
+    for (const instance of invidiousInstances) {
+      try {
+        const invResp = await fetch(
+          `${instance}/api/v1/playlists/${PLAYLIST_ID}`,
+          { signal: AbortSignal.timeout(8000) }
+        );
+        if (invResp.ok) {
+          const data = (await invResp.json()) as { videos?: Array<{ videoId: string; title: string }> };
+          if (data.videos && data.videos.length > 0) {
+            const videos: PlaylistVideo[] = data.videos.map((v) => ({
+              id: v.videoId,
+              title: v.title,
+            }));
+            return new Response(
+              JSON.stringify({
+                videos,
+                playlistId: PLAYLIST_ID,
+                playlistUrl: `https://www.youtube.com/playlist?list=${PLAYLIST_ID}`,
+              }),
+              { status: 200, headers }
+            );
+          }
+        }
+      } catch {
+        // try next instance
+      }
+    }
+
+    // Fallback: RSS feed
     const resp = await fetch(FEED_URL, {
       headers: { "User-Agent": "KubeStellar-Console/1.0" },
     });
 
-    if (!resp.ok) {
-      return new Response(
-        JSON.stringify({ error: "YouTube returned " + resp.status }),
-        { status: 502, headers }
-      );
+    if (resp.ok) {
+      const xml = await resp.text();
+      const videos = parseAtomFeed(xml);
+      if (videos.length > 0) {
+        return new Response(
+          JSON.stringify({
+            videos,
+            playlistId: PLAYLIST_ID,
+            playlistUrl: `https://www.youtube.com/playlist?list=${PLAYLIST_ID}`,
+          }),
+          { status: 200, headers }
+        );
+      }
     }
 
-    const xml = await resp.text();
-    const videos = parseAtomFeed(xml);
-
+    // All sources failed
     return new Response(
-      JSON.stringify({
-        videos,
-        playlistId: PLAYLIST_ID,
-        playlistUrl: `https://www.youtube.com/playlist?list=${PLAYLIST_ID}`,
-      }),
-      { status: 200, headers }
+      JSON.stringify({ error: "All video sources unavailable", videos: [] }),
+      { status: 502, headers }
     );
   } catch (err) {
     console.error("Failed to fetch YouTube playlist:", err);

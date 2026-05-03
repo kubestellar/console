@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
@@ -11,6 +11,7 @@ import {
 import { cn } from '../../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -73,6 +74,7 @@ export function AlertDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod, drillToDeployment, drillToAlertRule } = useDrillDownActions()
+  const { close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -113,7 +115,7 @@ export function AlertDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
@@ -215,6 +217,7 @@ Please:
    - "Should I silence this alert or set up a preventive rule?"
    - "All done"`
 
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Diagnose Alert: ${alertName}`,
       description: `Analyze ${alertSeverity} alert and provide remediation guidance`,
@@ -451,7 +454,7 @@ Please:
                   className="flex items-center justify-between p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <Tag className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <Tag className="w-4 h-4 text-muted-foreground shrink-0" />
                     <div className="min-w-0">
                       <span className="text-sm text-muted-foreground">{key}</span>
                       <span className="text-sm text-muted-foreground mx-2">=</span>
@@ -460,7 +463,7 @@ Please:
                   </div>
                   <button
                     onClick={() => handleCopy(key, `${key}=${value}`)}
-                    className="p-1.5 rounded hover:bg-secondary transition-colors flex-shrink-0"
+                    className="p-1.5 rounded hover:bg-secondary transition-colors shrink-0"
                     title="Copy label"
                   >
                     {copiedField === key ? (

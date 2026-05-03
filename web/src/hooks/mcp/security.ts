@@ -6,7 +6,7 @@ import { registerRefetch, registerCacheReset } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { MIN_REFRESH_INDICATOR_MS, REFRESH_INTERVAL_MS, getEffectiveInterval } from './shared'
 import { subscribePolling } from './pollingManager'
-import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import type { SecurityIssue, GitOpsDrift } from './types'
 
 // LocalStorage cache keys
@@ -97,8 +97,9 @@ export function useSecurityIssues(cluster?: string, namespace?: string) {
       if (cluster) sseParams.cluster = cluster
       if (namespace) sseParams.namespace = namespace
 
+      // security-issues is a backend-only endpoint (#9996) — route SSE via /api/mcp/
       const allIssues = await fetchSSE<SecurityIssue>({
-        url: `${LOCAL_AGENT_HTTP_URL}/security-issues/stream`,
+        url: `/api/mcp/security-issues/stream`,
         params: sseParams,
         itemsKey: 'issues',
         onClusterData: (_clusterName, items) => {
@@ -267,7 +268,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
     // Poll for GitOps drifts (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `gitopsDrifts:${cluster || 'all'}:${namespace || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -280,7 +281,7 @@ export function useGitOpsDrifts(cluster?: string, namespace?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster, namespace])
+  }, [refetch, cluster, namespace, consecutiveFailures])
 
   // Re-fetch when demo mode changes (not on initial mount)
   useEffect(() => {

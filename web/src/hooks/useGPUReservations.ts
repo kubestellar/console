@@ -192,7 +192,7 @@ export function useGPUReservations(onlyMine = false) {
         setReservations(safeData)
       }
       setError(null)
-    } catch (err) {
+    } catch (err: unknown) {
       // API unreachable — fall back to demo data when in demo mode
       if (effectiveDemo) {
         setReservations(DEMO_RESERVATIONS)

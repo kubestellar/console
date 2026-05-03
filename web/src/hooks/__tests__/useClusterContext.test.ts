@@ -36,8 +36,116 @@ vi.mock('../mcp/security', () => ({
   })),
 }))
 
-import { useClusterContext } from '../useClusterContext'
+import { useClusterContext, deriveProvider } from '../useClusterContext'
 import { useClusters } from '../mcp/clusters'
+
+// ---------------------------------------------------------------------------
+// Tests: deriveProvider (pure function)
+// ---------------------------------------------------------------------------
+
+describe('deriveProvider', () => {
+  it('returns "eks" when distribution contains "eks"', () => {
+    expect(deriveProvider('eks', 'my-cluster')).toBe('eks')
+  })
+
+  it('returns "eks" when name contains "eks" but distribution does not', () => {
+    expect(deriveProvider('vanilla-k8s', 'prod-eks-east')).toBe('eks')
+  })
+
+  it('returns "gke" when distribution contains "gke"', () => {
+    expect(deriveProvider('gke', '')).toBe('gke')
+  })
+
+  it('returns "gke" when name contains "gke"', () => {
+    expect(deriveProvider(undefined, 'gke-staging')).toBe('gke')
+  })
+
+  it('returns "aks" when distribution contains "aks"', () => {
+    expect(deriveProvider('aks', 'cluster-1')).toBe('aks')
+  })
+
+  it('returns "aks" when name contains "aks"', () => {
+    expect(deriveProvider('', 'my-aks-cluster')).toBe('aks')
+  })
+
+  it('returns "openshift" when distribution contains "openshift"', () => {
+    expect(deriveProvider('openshift', 'ocp-prod')).toBe('openshift')
+  })
+
+  it('returns "openshift" when distribution contains "ocp"', () => {
+    expect(deriveProvider('ocp-4.14', 'my-cluster')).toBe('openshift')
+  })
+
+  it('returns "k3s" when distribution contains "k3s"', () => {
+    expect(deriveProvider('k3s', '')).toBe('k3s')
+  })
+
+  it('returns "k3s" when name contains "k3s"', () => {
+    expect(deriveProvider(undefined, 'edge-k3s-node')).toBe('k3s')
+  })
+
+  it('returns "kind" when distribution contains "kind"', () => {
+    expect(deriveProvider('kind', '')).toBe('kind')
+  })
+
+  it('returns "kind" when name contains "kind"', () => {
+    expect(deriveProvider('', 'kind-local')).toBe('kind')
+  })
+
+  it('returns "minikube" when distribution contains "minikube"', () => {
+    expect(deriveProvider('minikube', '')).toBe('minikube')
+  })
+
+  it('returns "minikube" when name contains "minikube"', () => {
+    expect(deriveProvider(undefined, 'minikube-dev')).toBe('minikube')
+  })
+
+  it('returns "rke" when distribution contains "rke"', () => {
+    expect(deriveProvider('rke2', 'rancher-cluster')).toBe('rke')
+  })
+
+  it('returns "rke" when name contains "rke"', () => {
+    expect(deriveProvider('', 'prod-rke-01')).toBe('rke')
+  })
+
+  it('returns undefined when no provider matches', () => {
+    expect(deriveProvider('vanilla', 'my-cluster')).toBeUndefined()
+  })
+
+  it('returns undefined when both args are undefined', () => {
+    expect(deriveProvider(undefined, undefined)).toBeUndefined()
+  })
+
+  it('returns undefined when both args are empty strings', () => {
+    expect(deriveProvider('', '')).toBeUndefined()
+  })
+
+  it('is case-insensitive for distribution', () => {
+    expect(deriveProvider('EKS', '')).toBe('eks')
+    expect(deriveProvider('GKE', '')).toBe('gke')
+    expect(deriveProvider('AKS', '')).toBe('aks')
+    expect(deriveProvider('OpenShift', '')).toBe('openshift')
+  })
+
+  it('is case-insensitive for name', () => {
+    expect(deriveProvider('', 'MY-EKS-CLUSTER')).toBe('eks')
+    expect(deriveProvider('', 'GKE-Staging')).toBe('gke')
+  })
+
+  it('prioritizes eks over gke when both appear', () => {
+    // eks is checked first in the function
+    expect(deriveProvider('eks-gke', '')).toBe('eks')
+  })
+
+  it('matches distribution before name for openshift/ocp', () => {
+    // openshift only matches on distribution, not name
+    expect(deriveProvider('openshift-4.14', 'random-name')).toBe('openshift')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tests: useClusterContext hook (existing tests preserved)
+// ---------------------------------------------------------------------------
 
 describe('useClusterContext', () => {
   it('returns null context when no healthy clusters', () => {

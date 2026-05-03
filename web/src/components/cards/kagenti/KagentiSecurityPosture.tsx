@@ -53,7 +53,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
     cardsDemoFallback || agentsDemoFallback || toolsDemoFallback
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,

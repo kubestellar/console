@@ -28,8 +28,13 @@ const GPU_CACHE_KEY = 'kubestellar-gpu-cache'
 // ============================================================================
 
 /**
- * Whether running on a Netlify deployment (console.kubestellar.io, preview deploys).
- * These environments have no backend/agent access, so demo mode is forced.
+ * Whether running on a Netlify deployment (console.kubestellar.io, preview deploys)
+ * or VITE_DEMO_MODE is explicitly set. These environments have no backend access,
+ * so demo mode is forced.
+ *
+ * Note: VITE_NO_LOCAL_AGENT is NOT included here — it indicates no local kc-agent
+ * WebSocket, but in-cluster Helm deployments still have a live backend with a
+ * pod ServiceAccount and should serve real cluster data.
  */
 export const isNetlifyDeployment = typeof window !== 'undefined' && (
   import.meta.env.VITE_DEMO_MODE === 'true' ||

@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * NamespaceOverview Card E2E Tests
@@ -14,10 +15,23 @@ import { test, expect, Page } from '@playwright/test'
 // Helpers
 // ---------------------------------------------------------------------------
 
-const DEMO_CLUSTERS = ['prod-us-east', 'prod-eu-west', 'staging']
-const _DEMO_NAMESPACES = ['default', 'kube-system', 'monitoring']
+// Must match the first entries from getDemoClusters() in hooks/mcp/shared.ts
+const DEMO_CLUSTERS = [
+  'kind-local', 'minikube', 'k3s-edge', 'eks-prod-us-east-1', 'gke-staging',
+  'aks-dev-westeu', 'openshift-prod', 'oci-oke-phoenix', 'alibaba-ack-shanghai',
+  'do-nyc1-prod', 'rancher-mgmt', 'vllm-gpu-cluster',
+]
+// Must match getDemoNamespaces() in hooks/useCachedData/demoData.ts
+const _DEMO_NAMESPACES = [
+  'default', 'kube-system', 'kube-public', 'monitoring', 'production',
+  'staging', 'batch', 'data', 'ingress', 'security',
+]
 
 async function setupDemoMode(page: Page) {
+  // mockApiFallback returns 503 for the kc-agent probe so fullFetchClusters()
+  // falls through to the built-in getDemoClusters() demo data path.
+  await mockApiFallback(page)
+
   await page.route('**/api/me', route =>
     route.fulfill({
       status: 200,
@@ -29,25 +43,25 @@ async function setupDemoMode(page: Page) {
     })
   )
 
-  await page.route('**/api/mcp/**', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
-    })
-  )
-
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
-    // Remove any stale persisted selections
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true, timestamp: Date.now(),
+    }))
     localStorage.removeItem('kc-ns-overview-cluster')
     localStorage.removeItem('kc-ns-overview-namespace')
     localStorage.setItem(
-      'kubestellar-dashboard-cards',
-      JSON.stringify([{ id: 'namespace_overview', size: 'medium', order: 0 }])
+      'kubestellar-main-dashboard-cards',
+      JSON.stringify([{
+        id: 'namespace_overview',
+        card_type: 'namespace_overview',
+        config: {},
+        position: { x: 0, y: 0, w: 6, h: 3 },
+      }])
     )
   })
 }
@@ -57,6 +71,8 @@ async function setupLiveMode(page: Page) {
     { name: 'live-cluster-1', healthy: true, reachable: true, nodeCount: 3, podCount: 20 },
     { name: 'live-cluster-2', healthy: true, reachable: true, nodeCount: 2, podCount: 10 },
   ]
+
+  await mockApiFallback(page)
 
   await page.route('**/api/me', route =>
     route.fulfill({
@@ -77,24 +93,29 @@ async function setupLiveMode(page: Page) {
     })
   )
 
-  await page.route('**/127.0.0.1:8585/**', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ clusters: [], health: {} }),
-    })
-  )
+  // mockApiFallback already returns 503 for the kc-agent probe. Do NOT
+  // re-register a 200 mock here — a 200 with { clusters: [] } is truthy and
+  // short-circuits the backend-API fallback, leaving the cluster list empty.
 
-  await page.goto('/login')
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.removeItem('kc-demo-mode')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true, timestamp: Date.now(),
+    }))
     localStorage.removeItem('kc-ns-overview-cluster')
     localStorage.removeItem('kc-ns-overview-namespace')
     localStorage.setItem(
-      'kubestellar-dashboard-cards',
-      JSON.stringify([{ id: 'namespace_overview', size: 'medium', order: 0 }])
+      'kubestellar-main-dashboard-cards',
+      JSON.stringify([{
+        id: 'namespace_overview',
+        card_type: 'namespace_overview',
+        config: {},
+        position: { x: 0, y: 0, w: 6, h: 3 },
+      }])
     )
   })
 }

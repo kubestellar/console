@@ -100,7 +100,7 @@ describe('parseModalYAML', () => {
   it('error message suggests using registerModal()', () => {
     try {
       parseModalYAML('kind: Pod')
-    } catch (e) {
+    } catch (e: unknown) {
       expect((e as Error).message).toContain('registerModal()')
     }
   })

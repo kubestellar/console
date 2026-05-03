@@ -52,7 +52,7 @@ const {
   mockUseCachedEvents: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUseCachedDeployments: vi.fn().mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUseCachedDeploymentIssues: vi.fn().mockReturnValue({ issues: [], isLoading: false, error: null, refetch: vi.fn() }),
-  mockUseClusters: vi.fn().mockReturnValue({ clusters: [], isLoading: false, error: null, refetch: vi.fn() }),
+  mockUseClusters: vi.fn().mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUsePVCs: vi.fn().mockReturnValue({ pvcs: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUseServices: vi.fn().mockReturnValue({ services: [], isLoading: false, error: null, refetch: vi.fn() }),
   mockUseOperators: vi.fn().mockReturnValue({ operators: [], isLoading: false, error: null, refetch: vi.fn() }),
@@ -253,6 +253,7 @@ describe('Unified wrapper hooks — interface normalization', () => {
       const clusters = [{ name: 'prod', reachable: true }]
       mockUseClusters.mockReturnValue({
         clusters,
+        deduplicatedClusters: clusters,
         isLoading: false,
         error: null,
         refetch: vi.fn(),

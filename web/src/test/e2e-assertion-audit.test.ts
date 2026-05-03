@@ -17,14 +17,14 @@
  * Run:   npx vitest run src/test/e2e-assertion-audit.test.ts
  */
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
-const E2E_USER_FLOWS_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
+const E2E_USER_FLOWS_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
   '../../e2e/user-flows',
 )
 
@@ -49,22 +49,21 @@ const BARE_RETURN_AFTER_CATCH_RE =
  *   if (hasFoo) { await expect(foo).toBeVisible() }
  *   // but when hasFoo is false, nothing is checked
  */
-const POSITIVE_ONLY_ASSERTION_RE =
+const _POSITIVE_ONLY_ASSERTION_RE =
   /if\s*\(has\w+\)\s*\{[^}]*expect\([^)]*\)[^}]*\}\s*(?!\s*else)/
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 describe('user-flows/ assertion hygiene (#8508)', () => {
   /** All .spec.ts files in the user-flows directory */
-  const specFiles = fs.existsSync(E2E_USER_FLOWS_DIR)
-    ? fs
-        .readdirSync(E2E_USER_FLOWS_DIR)
+  const specFiles = existsSync(E2E_USER_FLOWS_DIR)
+    ? readdirSync(E2E_USER_FLOWS_DIR)
         .filter((f) => f.endsWith('.spec.ts'))
-        .map((f) => path.join(E2E_USER_FLOWS_DIR, f))
+        .map((f) => join(E2E_USER_FLOWS_DIR, f))
     : []
 
   it('user-flows directory exists and has spec files', () => {
-    expect(fs.existsSync(E2E_USER_FLOWS_DIR)).toBe(true)
+    expect(existsSync(E2E_USER_FLOWS_DIR)).toBe(true)
     expect(specFiles.length).toBeGreaterThan(0)
   })
 
@@ -72,9 +71,9 @@ describe('user-flows/ assertion hygiene (#8508)', () => {
     const violations: string[] = []
 
     for (const filePath of specFiles) {
-      const content = fs.readFileSync(filePath, 'utf-8')
+      const content = readFileSync(filePath, 'utf-8')
       const lines = content.split('\n')
-      const fileName = path.basename(filePath)
+      const fileName = basename(filePath)
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i]
@@ -107,9 +106,9 @@ describe('user-flows/ assertion hygiene (#8508)', () => {
     const violations: string[] = []
 
     for (const filePath of specFiles) {
-      const content = fs.readFileSync(filePath, 'utf-8')
+      const content = readFileSync(filePath, 'utf-8')
       const lines = content.split('\n')
-      const fileName = path.basename(filePath)
+      const fileName = basename(filePath)
 
       for (let i = 0; i < lines.length; i++) {
         if (/expect\.soft\s*\(/.test(lines[i])) {

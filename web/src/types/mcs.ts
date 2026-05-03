@@ -70,11 +70,23 @@ export interface ServiceImport {
 }
 
 /**
+ * MCSClusterError reports an error from a specific cluster during MCS queries.
+ */
+export interface MCSClusterError {
+  cluster: string
+  errorType?: string
+  message: string
+}
+
+/**
  * ServiceExportList is a paginated list of ServiceExports.
  */
 export interface ServiceExportList {
   items: ServiceExport[]
   totalCount: number
+  clusterErrors?: MCSClusterError[]
+  /** Present only on single-cluster queries (?cluster=X). */
+  cluster?: string
 }
 
 /**
@@ -83,6 +95,9 @@ export interface ServiceExportList {
 export interface ServiceImportList {
   items: ServiceImport[]
   totalCount: number
+  clusterErrors?: MCSClusterError[]
+  /** Present only on single-cluster queries (?cluster=X). */
+  cluster?: string
 }
 
 /**

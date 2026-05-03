@@ -1,3 +1,8 @@
+/** Status colors — Tailwind equivalents used in SVG strokes */
+const GAUGE_SUCCESS_COLOR = '#22c55e'   // green-500   // ai-quality-ignore
+const GAUGE_WARNING_COLOR = '#eab308'   // yellow-500  // ai-quality-ignore
+const GAUGE_CRITICAL_COLOR = '#ef4444'  // red-500     // ai-quality-ignore
+
 interface GaugeProps {
   value: number
   max?: number
@@ -31,14 +36,14 @@ export function Gauge({
     if (invertColors) {
       // Inverted: high is good (green), low is bad (red)
       // For health displays: 100% = green, 50% = yellow, 0% = red
-      if (percentage >= 100) return { stroke: '#22c55e', text: 'text-green-400' }
-      if (percentage >= 50) return { stroke: '#eab308', text: 'text-yellow-400' }
-      return { stroke: '#ef4444', text: 'text-red-400' }
+      if (percentage >= 100) return { stroke: GAUGE_SUCCESS_COLOR, text: 'text-green-400' }
+      if (percentage >= 50) return { stroke: GAUGE_WARNING_COLOR, text: 'text-yellow-400' }
+      return { stroke: GAUGE_CRITICAL_COLOR, text: 'text-red-400' }
     }
     // Normal: high is bad (red), low is good (green)
-    if (percentage >= thresholds.critical) return { stroke: '#ef4444', text: 'text-red-400' }
-    if (percentage >= thresholds.warning) return { stroke: '#eab308', text: 'text-yellow-400' }
-    return { stroke: '#22c55e', text: 'text-green-400' }
+    if (percentage >= thresholds.critical) return { stroke: GAUGE_CRITICAL_COLOR, text: 'text-red-400' }
+    if (percentage >= thresholds.warning) return { stroke: GAUGE_WARNING_COLOR, text: 'text-yellow-400' }
+    return { stroke: GAUGE_SUCCESS_COLOR, text: 'text-green-400' }
   }
 
   const color = getColor()

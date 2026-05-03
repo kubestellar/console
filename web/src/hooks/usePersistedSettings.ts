@@ -7,7 +7,8 @@ import {
   isLocalStorageEmpty,
   SETTINGS_CHANGED_EVENT } from '../lib/settingsSync'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { agentFetch } from './mcp/shared'
+import { FETCH_DEFAULT_TIMEOUT_MS, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { safeRevokeObjectURL } from '../lib/download'
 
@@ -20,12 +21,13 @@ export type SyncStatus = 'idle' | 'saving' | 'saved' | 'error' | 'offline'
  * Uses a generous timeout because the agent's HTTP/1.1 connection pool (6 per origin)
  * can be saturated by concurrent cluster health/data requests during page transitions. */
 async function settingsFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
+  const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest', // #10000 CSRF defence-in-depth
       ...options?.headers },
-    signal: options?.signal ?? AbortSignal.timeout(15000) })
+    signal: options?.signal ?? AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
   // before the caller's try/catch processes the rejection (microtask timing issue).
@@ -68,6 +70,7 @@ export function usePersistedSettings() {
         const current = collectFromLocalStorage()
         // Retry once after a delay — transient failures are common during page
         // transitions when the agent's connection pool is saturated.
+        let lastError: unknown
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
             await settingsFetch('/settings', {
@@ -78,14 +81,18 @@ export function usePersistedSettings() {
               setLastSaved(new Date())
             }
             return
-          } catch {
+          } catch (err) {
+            lastError = err
             if (attempt === 0) {
               await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
             }
           }
         }
         if (mountedRef.current) {
-          setSyncStatus('error')
+          // Network/connection errors mean the agent is offline — show 'offline'
+          // rather than 'error' to stay consistent with the initial load behaviour.
+          const isNetworkError = lastError instanceof TypeError
+          setSyncStatus(isNetworkError ? 'offline' : 'error')
         }
         console.debug('[settings] failed to persist to local agent')
       } catch {
@@ -100,7 +107,7 @@ export function usePersistedSettings() {
   // Export settings as encrypted backup file
   const exportSettings = async () => {
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/settings/export`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
@@ -114,7 +121,7 @@ export function usePersistedSettings() {
       a.click()
       document.body.removeChild(a)
       safeRevokeObjectURL(url)
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[settings] export failed:', err)
       throw err
     }
@@ -127,7 +134,7 @@ export function usePersistedSettings() {
       await settingsFetch('/settings/import', {
         method: 'PUT',
         body: text,
-        signal: AbortSignal.timeout(10000) })
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       // Reload settings from backend after import
       const data = await settingsFetch<AllSettings>('/settings')
       if (data) {
@@ -137,7 +144,7 @@ export function usePersistedSettings() {
         setSyncStatus('saved')
         setLastSaved(new Date())
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[settings] import failed:', err)
       throw err
     }

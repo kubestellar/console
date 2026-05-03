@@ -2,6 +2,7 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
@@ -689,7 +691,9 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 	var mu sync.Mutex
 	deployed := make([]string, 0, len(targetClusters))
 	failed := make([]string, 0)
-	var lastErr error
+	// Collect all per-cluster errors so partial failures report every cluster's
+	// error, not just the last one to finish (#10257).
+	errs := make([]error, 0)
 	allDepResults := make([]v1alpha1.DeployedDep, 0)
 
 	for _, target := range targetClusters {
@@ -701,7 +705,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 			if err != nil {
 				mu.Lock()
 				failed = append(failed, targetCluster)
-				lastErr = fmt.Errorf("cluster %s: %w", targetCluster, err)
+				errs = append(errs, fmt.Errorf("cluster %s: %w", targetCluster, err))
 				mu.Unlock()
 				return
 			}
@@ -719,7 +723,26 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 			depResults := applyDependencies(clusterCtx, targetClient, bundle.Dependencies)
 			mu.Lock()
 			allDepResults = append(allDepResults, depResults...)
+			
+			// Check if any dependency failed to deploy
+			hasFailedDep := false
+			for _, dr := range depResults {
+				if dr.Action == "failed" {
+					failed = append(failed, targetCluster)
+					if dr.Error != "" {
+						errs = append(errs, fmt.Errorf("cluster %s: dependency %s/%s failed: %s", targetCluster, dr.Kind, dr.Name, dr.Error))
+					} else {
+						errs = append(errs, fmt.Errorf("cluster %s: dependency %s/%s failed", targetCluster, dr.Kind, dr.Name))
+					}
+					hasFailedDep = true
+					break // Record one failure reason per cluster to avoid spam
+				}
+			}
 			mu.Unlock()
+			
+			if hasFailedDep {
+				return // Abort workload deployment for this cluster if deps failed
+			}
 
 			// 4c. Apply the workload itself
 			objCopy := cleanedObj.DeepCopy()
@@ -739,12 +762,12 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 					failed = append(failed, targetCluster)
 					if apierrors.IsNotFound(getErr) {
 						// Genuine "does not exist" — the Create error is authoritative.
-						lastErr = fmt.Errorf("cluster %s: create failed: %w", targetCluster, err)
+						errs = append(errs, fmt.Errorf("cluster %s: create failed: %w", targetCluster, err))
 					} else {
 						// Non-NotFound Get error (network, auth, server) — surface
 						// BOTH errors with %w so callers can errors.Is/As either
 						// one. Go 1.20+ supports multi-error %w. (#6547)
-						lastErr = fmt.Errorf("cluster %s: create failed: %w; also get failed: %w", targetCluster, err, getErr)
+						errs = append(errs, fmt.Errorf("cluster %s: create failed: %w; also get failed: %w", targetCluster, err, getErr))
 					}
 					mu.Unlock()
 					return
@@ -754,7 +777,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 				if err != nil {
 					mu.Lock()
 					failed = append(failed, targetCluster)
-					lastErr = fmt.Errorf("cluster %s: update failed: %w", targetCluster, err)
+					errs = append(errs, fmt.Errorf("cluster %s: update failed: %w", targetCluster, err))
 					mu.Unlock()
 					return
 				}
@@ -800,9 +823,9 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 	if len(failed) == 0 {
 		resp.Message = fmt.Sprintf("Deployed %s/%s to %d cluster(s)%s", namespace, name, len(deployed), depSummary)
 	} else if len(deployed) > 0 {
-		resp.Message = fmt.Sprintf("Partially deployed: %d succeeded, %d failed%s", len(deployed), len(failed), depSummary)
+		resp.Message = fmt.Sprintf("Partially deployed: %d succeeded, %d failed%s: %v", len(deployed), len(failed), depSummary, errors.Join(errs...))
 	} else {
-		resp.Message = fmt.Sprintf("Deployment failed on all clusters: %v", lastErr)
+		resp.Message = fmt.Sprintf("Deployment failed on all clusters: %v", errors.Join(errs...))
 	}
 
 	return resp, nil
@@ -884,6 +907,7 @@ func applyDependencies(
 			_, err = resource.Update(ctx, objCopy, metav1.UpdateOptions{})
 			if err != nil {
 				result.Action = "failed"
+				result.Error = err.Error()
 				slog.Error("[deploy] failed to update dependency", "kind", dep.Kind, "name", dep.Name, "error", err)
 			} else {
 				result.Action = "updated"
@@ -894,6 +918,7 @@ func applyDependencies(
 			_, err = resource.Create(ctx, objCopy, metav1.CreateOptions{})
 			if err != nil {
 				result.Action = "failed"
+				result.Error = err.Error()
 				slog.Error("[deploy] failed to create dependency", "kind", dep.Kind, "name", dep.Name, "error", err)
 			} else {
 				result.Action = "created"
@@ -902,6 +927,7 @@ func applyDependencies(
 		} else {
 			// Real error (network, RBAC, etc.) — do not assume resource is missing
 			result.Action = "failed"
+			result.Error = err.Error()
 			slog.Error("[deploy] failed to check dependency", "kind", dep.Kind, "name", dep.Name, "error", err)
 		}
 
@@ -1053,7 +1079,9 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 	var mu sync.Mutex
 	deployed := make([]string, 0, len(targetClusters))
 	failed := make([]string, 0)
-	var lastErr error
+	// Collect all per-cluster errors so partial failures report every cluster's
+	// error, not just the last one to finish (#10257).
+	scaleErrs := make([]error, 0)
 
 	for _, cluster := range targetClusters {
 		wg.Add(1)
@@ -1064,7 +1092,7 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 			if err != nil {
 				mu.Lock()
 				failed = append(failed, clusterName)
-				lastErr = fmt.Errorf("cluster %s: %w", clusterName, err)
+				scaleErrs = append(scaleErrs, fmt.Errorf("cluster %s: %w", clusterName, err))
 				mu.Unlock()
 				return
 			}
@@ -1080,7 +1108,7 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 					}
 					mu.Lock()
 					failed = append(failed, clusterName)
-					lastErr = fmt.Errorf("cluster %s: get %s: %w", clusterName, g.kind, getErr)
+					scaleErrs = append(scaleErrs, fmt.Errorf("cluster %s: get %s: %w", clusterName, g.kind, getErr))
 					mu.Unlock()
 					return
 				}
@@ -1090,7 +1118,7 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 				if !ok {
 					mu.Lock()
 					failed = append(failed, clusterName)
-					lastErr = fmt.Errorf("cluster %s: invalid spec in %s %s/%s", clusterName, g.kind, namespace, name)
+					scaleErrs = append(scaleErrs, fmt.Errorf("cluster %s: invalid spec in %s %s/%s", clusterName, g.kind, namespace, name))
 					mu.Unlock()
 					return
 				}
@@ -1100,7 +1128,7 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 				if updateErr != nil {
 					mu.Lock()
 					failed = append(failed, clusterName)
-					lastErr = fmt.Errorf("cluster %s: scale %s: %w", clusterName, g.kind, updateErr)
+					scaleErrs = append(scaleErrs, fmt.Errorf("cluster %s: scale %s: %w", clusterName, g.kind, updateErr))
 					mu.Unlock()
 					return
 				}
@@ -1114,7 +1142,7 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 				deployed = append(deployed, clusterName)
 			} else {
 				failed = append(failed, clusterName)
-				lastErr = fmt.Errorf("cluster %s: workload %s/%s not found as Deployment or StatefulSet", clusterName, namespace, name)
+				scaleErrs = append(scaleErrs, fmt.Errorf("cluster %s: workload %s/%s not found as Deployment or StatefulSet", clusterName, namespace, name))
 			}
 			mu.Unlock()
 		}(cluster)
@@ -1124,8 +1152,10 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 
 	success := len(deployed) > 0
 	msg := fmt.Sprintf("Scaled %s/%s to %d replicas on %d/%d clusters", namespace, name, replicas, len(deployed), len(targetClusters))
-	if lastErr != nil && !success {
-		msg = lastErr.Error()
+	if len(scaleErrs) > 0 && !success {
+		msg = fmt.Sprintf("Scale failed on all clusters: %v", errors.Join(scaleErrs...))
+	} else if len(scaleErrs) > 0 {
+		msg = fmt.Sprintf("%s (errors: %v)", msg, errors.Join(scaleErrs...))
 	}
 
 	return &v1alpha1.DeployResponse{
@@ -1250,7 +1280,10 @@ func (m *MultiClusterClient) GetClusterCapabilities(ctx context.Context) (*v1alp
 	}, nil
 }
 
-// LabelClusterNodes labels all nodes in a cluster with the given labels
+// LabelClusterNodes labels all nodes in a cluster with the given labels.
+// Each node update uses retry-on-conflict to handle transient ResourceVersion
+// mismatches. Errors are collected per-node so that one failure does not
+// prevent labeling the remaining nodes (#10256).
 func (m *MultiClusterClient) LabelClusterNodes(ctx context.Context, cluster string, labels map[string]string) error {
 	dynamicClient, err := m.GetDynamicClient(cluster)
 	if err != nil {
@@ -1262,24 +1295,39 @@ func (m *MultiClusterClient) LabelClusterNodes(ctx context.Context, cluster stri
 		return fmt.Errorf("failed to list nodes in %s: %w", cluster, err)
 	}
 
+	var errs []error
 	for _, node := range nodeList.Items {
-		existing := node.GetLabels()
-		if existing == nil {
-			existing = make(map[string]string)
-		}
-		for k, v := range labels {
-			existing[k] = v
-		}
-		node.SetLabels(existing)
-		_, err := dynamicClient.Resource(gvrNodes).Update(ctx, &node, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to label node %s in %s: %w", node.GetName(), cluster, err)
+		nodeName := node.GetName()
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			// Re-fetch the node to get the latest ResourceVersion.
+			fresh, getErr := dynamicClient.Resource(gvrNodes).Get(ctx, nodeName, metav1.GetOptions{})
+			if getErr != nil {
+				return fmt.Errorf("failed to get node %s in %s: %w", nodeName, cluster, getErr)
+			}
+			existing := fresh.GetLabels()
+			if existing == nil {
+				existing = make(map[string]string)
+			}
+			for k, v := range labels {
+				existing[k] = v
+			}
+			fresh.SetLabels(existing)
+			_, updateErr := dynamicClient.Resource(gvrNodes).Update(ctx, fresh, metav1.UpdateOptions{})
+			return updateErr
+		})
+		if retryErr != nil {
+			slog.Error("[LabelClusterNodes] failed to label node after retries",
+				"node", nodeName, "cluster", cluster, "error", retryErr)
+			errs = append(errs, fmt.Errorf("node %s: %w", nodeName, retryErr))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
-// RemoveClusterNodeLabels removes specified labels from all nodes in a cluster
+// RemoveClusterNodeLabels removes specified labels from all nodes in a cluster.
+// Each node update uses retry-on-conflict to handle transient ResourceVersion
+// mismatches. Errors are collected per-node so that one failure does not
+// prevent updating the remaining nodes (#10256).
 func (m *MultiClusterClient) RemoveClusterNodeLabels(ctx context.Context, cluster string, labelKeys []string) error {
 	dynamicClient, err := m.GetDynamicClient(cluster)
 	if err != nil {
@@ -1291,28 +1339,40 @@ func (m *MultiClusterClient) RemoveClusterNodeLabels(ctx context.Context, cluste
 		return fmt.Errorf("failed to list nodes in %s: %w", cluster, err)
 	}
 
+	var errs []error
 	for _, node := range nodeList.Items {
-		existing := node.GetLabels()
-		if existing == nil {
-			continue
-		}
-		changed := false
-		for _, k := range labelKeys {
-			if _, ok := existing[k]; ok {
-				delete(existing, k)
-				changed = true
+		nodeName := node.GetName()
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			// Re-fetch the node to get the latest ResourceVersion.
+			fresh, getErr := dynamicClient.Resource(gvrNodes).Get(ctx, nodeName, metav1.GetOptions{})
+			if getErr != nil {
+				return fmt.Errorf("failed to get node %s in %s: %w", nodeName, cluster, getErr)
 			}
-		}
-		if !changed {
-			continue
-		}
-		node.SetLabels(existing)
-		_, err := dynamicClient.Resource(gvrNodes).Update(ctx, &node, metav1.UpdateOptions{})
-		if err != nil {
-			return fmt.Errorf("failed to update node %s in %s: %w", node.GetName(), cluster, err)
+			existing := fresh.GetLabels()
+			if existing == nil {
+				return nil // no labels to remove
+			}
+			changed := false
+			for _, k := range labelKeys {
+				if _, ok := existing[k]; ok {
+					delete(existing, k)
+					changed = true
+				}
+			}
+			if !changed {
+				return nil // nothing to update
+			}
+			fresh.SetLabels(existing)
+			_, updateErr := dynamicClient.Resource(gvrNodes).Update(ctx, fresh, metav1.UpdateOptions{})
+			return updateErr
+		})
+		if retryErr != nil {
+			slog.Error("[RemoveClusterNodeLabels] failed to update node after retries",
+				"node", nodeName, "cluster", cluster, "error", retryErr)
+			errs = append(errs, fmt.Errorf("node %s: %w", nodeName, retryErr))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // ListBindingPolicies lists binding policies (placeholder)

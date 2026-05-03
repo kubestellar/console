@@ -54,7 +54,7 @@ const {
   mockEvents: vi.fn(() => ({ data: [], isLoading: false, error: null, refetch: vi.fn() })),
   mockDeployments: vi.fn(() => ({ data: [], isLoading: false, error: null, refetch: vi.fn() })),
   mockDeploymentIssues: vi.fn(() => ({ issues: [], isLoading: false, error: null, refetch: vi.fn() })),
-  mockClusters: vi.fn(() => ({ clusters: [], isLoading: false, error: null, refetch: vi.fn() })),
+  mockClusters: vi.fn(() => ({ clusters: [], deduplicatedClusters: [], isLoading: false, error: null, refetch: vi.fn() })),
   mockPVCs: vi.fn(() => ({ pvcs: [], isLoading: false, error: null, refetch: vi.fn() })),
   mockServices: vi.fn(() => ({ services: [], isLoading: false, error: null, refetch: vi.fn() })),
   mockOperators: vi.fn(() => ({ operators: [], isLoading: false, error: null, refetch: vi.fn() })),

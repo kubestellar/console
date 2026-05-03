@@ -16,6 +16,8 @@ const SUITS: Suit[] = ['pods', 'containers', 'clusters', 'nodes']
 const VALUES: CardValue[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']
 
 // Suit colors: red suits (pods, containers) and black suits (clusters, nodes)
+const TIMER_TICK_MS = 1000
+
 const SUIT_CONFIG: Record<Suit, { Icon: typeof Box; color: string; isRed: boolean }> = {
   pods: { Icon: Box, color: 'text-blue-400', isRed: true },
   containers: { Icon: Database, color: 'text-green-400', isRed: true },
@@ -152,18 +154,16 @@ function Card({
 
   const { Icon, color } = SUIT_CONFIG[card.suit]
 
-  // Issue 9071: card-back sits on a theme-independent blue-to-purple gradient,
-  // so the `bg-white/10` highlight and `text-white/50` glyph read correctly
-  // in both light and dark modes. No theme-switching needed.
+  // Card-back sits on a blue-to-purple gradient; use semantic muted/foreground.
   if (!card.faceUp) {
     return (
       <div
         onClick={onClick}
         style={{ width: w, height: h }}
-        className="rounded border border-border bg-gradient-to-br from-blue-600 to-purple-700 cursor-pointer hover:brightness-110 transition-all shadow-sm flex items-center justify-center"
+        className="rounded border border-border bg-linear-to-br from-blue-600 to-purple-700 cursor-pointer hover:brightness-110 transition-all shadow-xs flex items-center justify-center"
       >
-        <div className={`${size === 'small' ? 'w-4 h-4' : size === 'medium' ? 'w-6 h-6' : 'w-8 h-8'} rounded-full bg-white/10 flex items-center justify-center`}>
-          <span className={`text-white/50 font-bold ${size === 'small' ? 'text-[6px]' : size === 'medium' ? 'text-xs' : 'text-sm'}`}>K8s</span>
+        <div className={`${size === 'small' ? 'w-4 h-4' : size === 'medium' ? 'w-6 h-6' : 'w-8 h-8'} rounded-full bg-muted/20 flex items-center justify-center`}>
+          <span className={`text-foreground/50 font-bold ${size === 'small' ? 'text-[6px]' : size === 'medium' ? 'text-xs' : 'text-sm'}`}>K8s</span>
         </div>
       </div>
     )
@@ -174,7 +174,7 @@ function Card({
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       style={{ width: w, height: h }}
-      className={`${text} rounded border bg-card cursor-pointer hover:brightness-110 transition-all shadow-sm p-0.5 flex flex-col justify-between ${
+      className={`${text} rounded border bg-card cursor-pointer hover:brightness-110 transition-all shadow-xs p-0.5 flex flex-col justify-between ${
         isDragging ? 'opacity-50' : ''
       } ${
         isSelected ? 'ring-2 ring-yellow-400 ring-offset-1 ring-offset-background' : 'border-border'
@@ -257,7 +257,7 @@ export function Solitaire(_props: CardComponentProps) {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
     if (isPlaying && !hasWon) {
-      interval = setInterval(() => setTime(t => t + 1), 1000)
+      interval = setInterval(() => setTime(t => t + 1), TIMER_TICK_MS)
     }
     return () => clearInterval(interval)
   }, [isPlaying, hasWon])

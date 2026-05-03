@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, memo } from 'react'
 import { Gauge } from '../charts'
 import { Cpu, MemoryStick, Server } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
@@ -20,7 +20,7 @@ function ResourceUsageInternal() {
   // #6217: destructure lastRefresh so the card can render a freshness
   // indicator instead of leaving users guessing how stale the data is.
   // #6271: useClusters returns Date|null; normalize to numeric epoch.
-  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefreshDate } = useClusters()
+  const { isLoading: clustersLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefreshDate, isFailed, consecutiveFailures } = useClusters()
   const clustersLastRefresh: number | null = clustersLastRefreshDate instanceof Date
     ? clustersLastRefreshDate.getTime()
     : (typeof clustersLastRefreshDate === 'number' ? clustersLastRefreshDate : null)
@@ -98,7 +98,9 @@ function ResourceUsageInternal() {
     isLoading: clustersLoading && !hasData,
     isRefreshing: clustersRefreshing || gpuRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode || isDemoFallback })
+    isDemoData: isDemoMode || isDemoFallback,
+    isFailed,
+    consecutiveFailures })
 
   if (showSkeleton) {
     return (
@@ -207,8 +209,17 @@ function ResourceUsageInternal() {
       </div>
 
       <div
-        className="flex-1 flex items-center justify-around cursor-pointer hover:opacity-80 transition-opacity flex-wrap gap-2"
+        role="button"
+        tabIndex={0}
+        className="flex-1 flex items-center justify-around cursor-pointer hover:opacity-80 transition-opacity flex-wrap gap-2 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-400"
+        aria-label={t('cards:resourceUsage.viewDetailsAria')}
         onClick={handleDrillDown}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleDrillDown()
+          }
+        }}
       >
         <div className="flex flex-col items-center">
           <Gauge
@@ -281,10 +292,10 @@ function ResourceUsageInternal() {
   )
 }
 
-export function ResourceUsage() {
+export const ResourceUsage = memo(function ResourceUsage() {
   return (
     <DynamicCardErrorBoundary cardId="ResourceUsage">
       <ResourceUsageInternal />
     </DynamicCardErrorBoundary>
   )
-}
+})

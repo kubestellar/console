@@ -276,6 +276,11 @@ Row 3: [Search input]
 4. Check for errors, empty responses, or unexpected data
 5. Test WebSocket via `websocat ws://127.0.0.1:8585/ws`
 
+> **Windows PowerShell note:** `curl` in PowerShell is an alias for
+> `Invoke-WebRequest`. Use `curl.exe` instead, or use `Invoke-RestMethod`:
+> `curl.exe -s http://127.0.0.1:8585/health` or
+> `Invoke-RestMethod http://127.0.0.1:8585/health`
+
 ---
 
 ## Test Environment

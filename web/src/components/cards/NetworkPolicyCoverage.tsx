@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useCachedPods } from '../../hooks/useCachedData'
 import { useNetworkPolicies } from '../../hooks/mcp/networking'
 import { useCardLoadingState } from './CardDataContext'
+import { CardEmptyState } from '../../lib/cards/CardComponents'
+import { Shield } from 'lucide-react'
+
+/** Maximum number of namespaces to display before showing a truncation indicator */
+const MAX_DISPLAYED_NAMESPACES = 30
 
 interface NamespaceCoverage {
   namespace: string
@@ -23,17 +28,18 @@ export function NetworkPolicyCoverage() {
   // Policies fetch failed but pods succeeded — fall back to heuristic with warning
   const isEstimated = policiesFailed && !podsLoading && pods.length > 0
 
+  const hasData = pods.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: pods.length > 0,
+    hasAnyData: hasData,
     isDemoData: isDemoFallback,
     isFailed,
     consecutiveFailures: podsFailures,
-    errorMessage: isFailed ? 'Failed to load network policy data' : undefined })
+    errorMessage: isFailed ? t('networkPolicyCoverage.failedToLoad') : undefined })
 
   // Build a set of namespace keys that have real NetworkPolicy resources
-  const policyNamespaceKeys = (() => {
+  const policyNamespaceKeys = useMemo(() => {
     const keys = new Set<string>()
     for (const policy of networkpolicies) {
       const cluster = policy.cluster || 'unknown'
@@ -41,17 +47,17 @@ export function NetworkPolicyCoverage() {
       keys.add(`${cluster}/${ns}`)
     }
     return keys
-  })()
+  }, [networkpolicies])
 
   // Count policies per namespace key
-  const policyCountByNs = (() => {
+  const policyCountByNs = useMemo(() => {
     const counts = new Map<string, number>()
     for (const policy of networkpolicies) {
       const key = `${policy.cluster || 'unknown'}/${policy.namespace || 'default'}`
       counts.set(key, (counts.get(key) || 0) + 1)
     }
     return counts
-  })()
+  }, [networkpolicies])
 
   // Build namespace coverage from pod data + real policy data
   const coverage = useMemo((): NamespaceCoverage[] => {
@@ -99,6 +105,16 @@ export function NetworkPolicyCoverage() {
           <div key={i} className="h-8 rounded bg-muted/50 animate-pulse" />
         ))}
       </div>
+    )
+  }
+
+  if (!hasData && !podsLoading) {
+    return (
+      <CardEmptyState
+        icon={Shield}
+        title={t('networkPolicyCoverage.emptyTitle', 'No namespaces found')}
+        message={t('networkPolicyCoverage.emptyMessage', 'Network policy coverage will appear here once pods are running in your clusters.')}
+      />
     )
   }
 
@@ -153,7 +169,7 @@ export function NetworkPolicyCoverage() {
 
       {/* Namespace list */}
       <div className="space-y-1 max-h-[250px] overflow-y-auto">
-        {displayed.slice(0, 30).map(ns => (
+        {displayed.slice(0, MAX_DISPLAYED_NAMESPACES).map(ns => (
           <div key={`${ns.cluster}/${ns.namespace}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-2 h-2 rounded-full ${ns.hasPolicies ? 'bg-green-500' : 'bg-red-500'}`} />
@@ -170,6 +186,11 @@ export function NetworkPolicyCoverage() {
             </div>
           </div>
         ))}
+        {displayed.length > MAX_DISPLAYED_NAMESPACES && (
+          <div className="text-xs text-muted-foreground text-center py-1">
+            {t('networkPolicyCoverage.showingOf', { shown: MAX_DISPLAYED_NAMESPACES, total: displayed.length })}
+          </div>
+        )}
       </div>
     </div>
   )

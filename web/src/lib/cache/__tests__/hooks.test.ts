@@ -36,7 +36,7 @@ function makeRequest<T>(resultFn: () => T): IDBRequest<T> {
     try {
       req.result = resultFn()
       req.onsuccess?.({} as Event)
-    } catch (e) {
+    } catch (e: unknown) {
       req.error = e as DOMException
       req.onerror?.({} as Event)
     }

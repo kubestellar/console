@@ -46,6 +46,7 @@
  */
 
 import { createPrivateKey, createSign } from "node:crypto";
+import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const GITHUB_API = "https://api.github.com";
 /** Only issues on these repos may be created via the proxy. */
@@ -64,6 +65,12 @@ const GH_TIMEOUT_MS = 20_000;
 /** Non-obvious header name for the per-user client credential. */
 const CLIENT_AUTH_HEADER = "x-kc-client-auth";
 
+// See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
+const CORS_OPTS = {
+  methods: "POST, OPTIONS",
+  headers: `Content-Type, ${CLIENT_AUTH_HEADER}`,
+} as const;
+
 interface IssueRequest {
   repoOwner: string;
   repoName: string;
@@ -79,14 +86,16 @@ interface CachedInstallCred {
 
 let cachedInstallCred: CachedInstallCred | null = null;
 
-function jsonResponse(status: number, body: unknown): Response {
+function jsonResponse(
+  request: Request,
+  status: number,
+  body: unknown,
+): Response {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": `Content-Type, ${CLIENT_AUTH_HEADER}`,
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      ...buildCorsHeaders(request, CORS_OPTS),
     },
   });
 }
@@ -247,30 +256,30 @@ async function verifyClientAuth(
 
 export default async function handler(request: Request): Promise<Response> {
   if (request.method === "OPTIONS") {
-    return jsonResponse(204, {});
+    return handlePreflight(request, CORS_OPTS);
   }
   if (request.method !== "POST") {
-    return jsonResponse(405, { error: "Method not allowed" });
+    return jsonResponse(request, 405, { error: "Method not allowed" });
   }
 
   const clientAuth = request.headers.get(CLIENT_AUTH_HEADER);
   if (!clientAuth) {
-    return jsonResponse(401, { error: "Missing client credential" });
+    return jsonResponse(request, 401, { error: "Missing client credential" });
   }
 
   let payload: IssueRequest;
   try {
     payload = (await request.json()) as IssueRequest;
   } catch {
-    return jsonResponse(400, { error: "Invalid JSON body" });
+    return jsonResponse(request, 400, { error: "Invalid JSON body" });
   }
   if (!payload.repoOwner || !payload.repoName || !payload.title || !payload.body) {
-    return jsonResponse(400, { error: "repoOwner, repoName, title, body required" });
+    return jsonResponse(request, 400, { error: "repoOwner, repoName, title, body required" });
   }
 
   const repoSlug = `${payload.repoOwner}/${payload.repoName}`;
   if (!ALLOWED_REPOS.has(repoSlug)) {
-    return jsonResponse(403, { error: `Repo ${repoSlug} not allowed` });
+    return jsonResponse(request, 403, { error: `Repo ${repoSlug} not allowed` });
   }
 
   let user: { login: string; id: number };
@@ -278,7 +287,7 @@ export default async function handler(request: Request): Promise<Response> {
     user = await verifyClientAuth(clientAuth);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return jsonResponse(401, { error: `Client auth invalid: ${msg}` });
+    return jsonResponse(request, 401, { error: `Client auth invalid: ${msg}` });
   }
 
   let installCred: string;
@@ -286,7 +295,7 @@ export default async function handler(request: Request): Promise<Response> {
     installCred = await getInstallationCred();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return jsonResponse(502, { error: `App credential unavailable: ${msg}` });
+    return jsonResponse(request, 502, { error: `App credential unavailable: ${msg}` });
   }
 
   // Footer proves which GitHub user the proxy authenticated. Localhost
@@ -322,19 +331,19 @@ export default async function handler(request: Request): Promise<Response> {
     );
     if (!resp.ok) {
       const txt = await resp.text();
-      return jsonResponse(resp.status, {
+      return jsonResponse(request, resp.status, {
         error: `GitHub issue create failed: ${txt}`,
       });
     }
     const data = (await resp.json()) as { number: number; html_url: string };
-    return jsonResponse(200, {
+    return jsonResponse(request, 200, {
       number: data.number,
       html_url: data.html_url,
       submitter: user.login,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return jsonResponse(502, { error: `Issue creation failed: ${msg}` });
+    return jsonResponse(request, 502, { error: `Issue creation failed: ${msg}` });
   } finally {
     clearTimeout(timeout);
   }

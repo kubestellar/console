@@ -1,6 +1,14 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { CHART_TOOLTIP_CONTENT_STYLE, CHART_TICK_COLOR, CHART_TOOLTIP_TEXT_COLOR } from '../../lib/constants'
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TICK_COLOR,
+  CHART_TOOLTIP_TEXT_COLOR,
+  CHART_AXIS_FONT_SIZE,
+  CHART_AXIS_STROKE,
+  CHART_GRID_STROKE,
+  CHART_BODY_FONT_SIZE,
+} from '../../lib/constants'
 
 // MultiSeriesChart layout constants — keep the legend readable and consistent
 // with other multi-series charts (e.g. ResourceTrend, GPUUsageTrend). The
@@ -48,23 +56,23 @@ export function TimeSeriesChart({
       type: 'category' as const,
       data: data.map(d => d.time),
       show: showAxis,
-      axisLabel: { color: '#888', fontSize: 10 },
-      axisLine: { lineStyle: { color: '#333' } },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
+      axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value' as const,
       show: showAxis,
-      axisLabel: { color: '#888', fontSize: 10, formatter: (v: number) => `${v}${unit}` },
+      axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE, formatter: (v: number) => `${v}${unit}` },
       axisLine: { show: false },
       axisTick: { show: false },
-      splitLine: showGrid ? { lineStyle: { color: '#333', type: 'dashed' as const } } : { show: false },
+      splitLine: showGrid ? { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } } : { show: false },
     },
     tooltip: {
       trigger: 'axis' as const,
       backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
       borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-      textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: 12 },
+      textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
       formatter: (params: Array<{ name: string; value: number }>) => {
         const p = Array.isArray(params) ? params[0] : params
         return `<span style="color:${CHART_TICK_COLOR}">${p.name}</span><br/>${p.value}${unit}`
@@ -141,7 +149,7 @@ export function MultiSeriesChart({
         type: 'category' as const,
         data: data.map(d => d.time),
         axisLabel: { color: CHART_TICK_COLOR, fontSize: MULTI_SERIES_LEGEND_FONT_SIZE },
-        axisLine: { lineStyle: { color: '#333' } },
+        axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
         axisTick: { show: false },
       },
       yAxis: {
@@ -149,13 +157,13 @@ export function MultiSeriesChart({
         axisLabel: { color: CHART_TICK_COLOR, fontSize: MULTI_SERIES_LEGEND_FONT_SIZE },
         axisLine: { show: false },
         axisTick: { show: false },
-        splitLine: showGrid ? { lineStyle: { color: '#333', type: 'dashed' as const } } : { show: false },
+        splitLine: showGrid ? { lineStyle: { color: CHART_GRID_STROKE, type: 'dashed' as const } } : { show: false },
       },
       tooltip: {
         trigger: 'axis' as const,
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
       },
       // Legend identifies each line/series so multi-cluster comparisons
       // are readable (issue #8973). Matches the pattern used in

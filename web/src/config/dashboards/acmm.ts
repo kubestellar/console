@@ -6,8 +6,9 @@
  * engineering framework, claude-reflect).
  */
 import type { UnifiedDashboardConfig } from '../../lib/unified/types'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 
-const AUTO_REFRESH_INTERVAL_MS = 15 * 60 * 1000
+const AUTO_REFRESH_INTERVAL_MS = 15 * MS_PER_MINUTE
 
 export const acmmDashboardConfig: UnifiedDashboardConfig = {
   id: 'acmm',

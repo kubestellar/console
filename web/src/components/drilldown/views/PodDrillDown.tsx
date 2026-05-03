@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Terminal, Zap, Code, Info, Tag, Loader2, Box, Layers, Server, AlertTriangle, RefreshCw, TerminalSquare } from 'lucide-react'
-import { PodExecTerminal } from '../../terminal/PodExecTerminal'
+const PodExecTerminal = lazy(() => import('../../terminal/PodExecTerminal'))
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -116,6 +117,34 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const { checkPermission } = useCanI()
   const { close: closeDrillDown } = useDrillDown()
 
+  // Track all active WebSocket connections so they can be cleaned up on unmount.
+  // Without this, WS connections opened by async handlers leak if the component
+  // unmounts before the server responds.
+  const activeWsRef = useRef(new Set<WebSocket>())
+
+  /** Create a tracked WebSocket — automatically removed from the set when closed. */
+  const openTrackedWs = useCallback((): WebSocket => {
+    const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+    activeWsRef.current.add(ws)
+    const origClose = ws.close.bind(ws)
+    ws.close = (...args: Parameters<WebSocket['close']>) => {
+      activeWsRef.current.delete(ws)
+      origClose(...args)
+    }
+    return ws
+  }, [])
+
+  // Close all tracked WebSocket connections on unmount
+  useEffect(() => {
+    const wsSet = activeWsRef.current
+    return () => {
+      for (const ws of Array.from(wsSet)) {
+        try { ws.close() } catch { /* already closed */ }
+      }
+      wsSet.clear()
+    }
+  }, [])
+
   // Pod data from the issue
   const status = data.status as string
   const restarts = (data.restarts as number) || 0
@@ -171,8 +200,49 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       allIssues.push(reason)
     }
 
+    // Parse warning events from kubectl events output (#10444)
+    // Events with TYPE=Warning indicate active issues even if pod status is Running
+    if (eventsOutput && !eventsOutput.includes('No resources found')) {
+      const eventLines = eventsOutput.split('\n')
+      // Find header to locate TYPE and MESSAGE columns
+      const headerLine = eventLines[0] || ''
+      const typeIdx = headerLine.indexOf('TYPE')
+      const reasonIdx = headerLine.indexOf('REASON')
+      const messageIdx = headerLine.indexOf('MESSAGE')
+
+      /** Fallback column width for TYPE field when REASON column is absent */
+      const TYPE_COLUMN_FALLBACK_WIDTH = 10
+      if (typeIdx >= 0 && messageIdx >= 0) {
+        for (const line of eventLines.slice(1)) {
+          if (!line.trim()) continue
+          // Extract TYPE field — use REASON column start as the end boundary if available
+          const typeEnd = reasonIdx > typeIdx ? reasonIdx : typeIdx + TYPE_COLUMN_FALLBACK_WIDTH
+          const eventType = line.substring(typeIdx, typeEnd).trim()
+          if (eventType.toLowerCase() === 'warning') {
+            const message = messageIdx < line.length
+              ? line.substring(messageIdx).trim()
+              : ''
+            // Use a shortened version: "Warning: <reason>" or "Warning: <message snippet>"
+            /** Fallback column width for REASON field when MESSAGE column is absent */
+            const REASON_COLUMN_FALLBACK_WIDTH = 30
+            const eventReason = reasonIdx >= 0
+              ? line.substring(reasonIdx, messageIdx > reasonIdx ? messageIdx : reasonIdx + REASON_COLUMN_FALLBACK_WIDTH).trim()
+              : ''
+            const MAX_EVENT_MSG_LENGTH = 80
+            const issueText = eventReason
+              ? `Warning: ${eventReason}${message ? ' — ' + message.substring(0, MAX_EVENT_MSG_LENGTH) : ''}`
+              : `Warning: ${message.substring(0, MAX_EVENT_MSG_LENGTH)}`
+            // Avoid duplicate issues (case-insensitive)
+            if (!allIssues.some(i => i.toLowerCase() === issueText.toLowerCase())) {
+              allIssues.push(issueText)
+            }
+          }
+        }
+      }
+    }
+
     return allIssues
-  }, [passedIssues, status, reason, podStatusOutput, podName])
+  }, [passedIssues, status, reason, podStatusOutput, podName, eventsOutput])
 
   // Use passed labels/annotations if available
   useEffect(() => {
@@ -186,7 +256,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setDescribeLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = openTrackedWs()
       const requestId = `describe-${Date.now()}`
 
       ws.onopen = () => {
@@ -197,7 +267,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
         }))
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data)
           if (msg.id === requestId && msg.payload?.output) {
@@ -253,7 +323,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setLogsLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = openTrackedWs()
       const requestId = `logs-${Date.now()}`
 
       ws.onopen = () => {
@@ -264,7 +334,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
         }))
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data)
           if (msg.id === requestId && msg.payload?.output) {
@@ -292,7 +362,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setEventsLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = openTrackedWs()
       const requestId = `events-${Date.now()}`
 
       ws.onopen = () => {
@@ -303,7 +373,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
         }))
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data)
           if (msg.id === requestId && msg.payload?.output) {
@@ -337,7 +407,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       // Helper to run a kubectl command and get output
       const runKubectl = (args: string[]): Promise<string> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+          const ws = openTrackedWs()
           const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
 
@@ -353,7 +423,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
               payload: { context: cluster, args }
             }))
           }
-          ws.onmessage = (event) => {
+          ws.onmessage = (event: MessageEvent) => {
             try {
               const msg = JSON.parse(event.data)
               if (msg.id === requestId && msg.payload?.output) {
@@ -464,7 +534,7 @@ ${annotations ? Object.entries(annotations).map(([k, v]) => `${k}=${v}`).join('\
 `.trim()
 
       // Now request AI analysis via Claude
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = openTrackedWs()
       const requestId = `ai-analyze-${Date.now()}`
 
       ws.onopen = () => {
@@ -492,7 +562,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
         }))
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data)
           if (msg.id === requestId) {
@@ -534,7 +604,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
         setAiAnalysisLoading(false)
         ws.close()
       }
-    } catch (err) {
+    } catch (err: unknown) {
       // #5945 — Unexpected errors (kubectl failures, network issues, etc.)
       // must also be surfaced so the failure is not silent.
       const errMsg = `Failed to perform AI analysis: ${err instanceof Error ? err.message : String(err)}`
@@ -551,7 +621,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     setPodStatusLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = openTrackedWs()
       const requestId = `status-${Date.now()}`
 
       ws.onopen = () => {
@@ -562,7 +632,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
         }))
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data)
           if (msg.id === requestId && msg.payload?.output) {
@@ -590,7 +660,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     setYamlLoading(true)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = openTrackedWs()
       const requestId = `yaml-${Date.now()}`
 
       ws.onopen = () => {
@@ -601,7 +671,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
         }))
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data)
           if (msg.id === requestId && msg.payload?.output) {
@@ -678,6 +748,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
   }, [cluster, namespace, podName, describeOutput, logsOutput, eventsOutput, yamlOutput, podStatusOutput, aiAnalysis, labels, annotations, configMaps, secrets, pvcs, serviceAccount, ownerChain])
 
   const handleRepairPod = () => {
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Repair Pod ${podName}`,
       description: `Diagnose and fix issues with pod ${podName}`,
@@ -742,7 +813,7 @@ Please:
     setDeleteError(null)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = openTrackedWs()
       const requestId = `delete-pod-${Date.now()}`
 
       ws.onopen = () => {
@@ -753,7 +824,7 @@ Please:
         }))
       }
 
-      ws.onmessage = (event) => {
+      ws.onmessage = (event: MessageEvent) => {
         try {
           const msg = JSON.parse(event.data)
           if (msg.id === requestId) {
@@ -776,7 +847,7 @@ Please:
         setDeletingPod(false)
         ws.close()
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setDeleteError(err instanceof Error ? err.message : 'Unknown error')
       setDeletingPod(false)
     }
@@ -797,7 +868,7 @@ Please:
     try {
       const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+          const ws = openTrackedWs()
           const requestId = `label-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
           const timeout = setTimeout(() => {
@@ -812,7 +883,7 @@ Please:
               payload: { context: cluster, args }
             }))
           }
-          ws.onmessage = (event) => {
+          ws.onmessage = (event: MessageEvent) => {
             try {
               const msg = JSON.parse(event.data)
               if (msg.id === requestId) {
@@ -891,7 +962,7 @@ Please:
       setPendingLabelChanges({})
       setNewLabelKey('')
       setNewLabelValue('')
-    } catch (err) {
+    } catch (err: unknown) {
       setLabelError(`Failed to save: ${err}`)
     } finally {
       setLabelSaving(false)
@@ -934,7 +1005,7 @@ Please:
     try {
       const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+          const ws = openTrackedWs()
           const requestId = `annotate-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
           const timeout = setTimeout(() => {
@@ -949,7 +1020,7 @@ Please:
               payload: { context: cluster, args }
             }))
           }
-          ws.onmessage = (event) => {
+          ws.onmessage = (event: MessageEvent) => {
             try {
               const msg = JSON.parse(event.data)
               if (msg.id === requestId) {
@@ -1028,7 +1099,7 @@ Please:
       setPendingAnnotationChanges({})
       setNewAnnotationKey('')
       setNewAnnotationValue('')
-    } catch (err) {
+    } catch (err: unknown) {
       setAnnotationError(`Failed to save: ${err}`)
     } finally {
       setAnnotationSaving(false)
@@ -1070,7 +1141,7 @@ Please:
     try {
       const runKubectl = (args: string[]): Promise<string> => {
         return new Promise((resolve) => {
-          const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+          const ws = openTrackedWs()
           const requestId = `related-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
 
@@ -1086,7 +1157,7 @@ Please:
               payload: { context: cluster, args }
             }))
           }
-          ws.onmessage = (event) => {
+          ws.onmessage = (event: MessageEvent) => {
             try {
               const msg = JSON.parse(event.data)
               if (msg.id === requestId && msg.payload?.output) {
@@ -1327,7 +1398,7 @@ Please:
                     <span className="text-sm text-muted-foreground">{t('drilldown.status.fetchingPodStatus')}</span>
                   </div>
                 ) : podStatusOutput ? (
-                  <pre className="p-3 rounded-lg bg-black/50 border border-border overflow-x-auto text-xs text-foreground font-mono">
+                  <pre className="p-3 rounded-lg bg-muted border border-border overflow-x-auto text-xs text-foreground font-mono">
                     <code className="text-muted-foreground"># kubectl get pod {podName} -n {namespace} -o wide</code>
                     {'\n'}
                     {podStatusOutput}
@@ -1362,7 +1433,7 @@ Please:
                   )}
 
                 </div>
-              ) : (podStatusLoading || describeLoading) ? (
+              ) : (podStatusLoading || describeLoading || eventsLoading) ? (
                 <div className="p-4 rounded-lg bg-secondary/30 border border-border text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -1393,7 +1464,7 @@ Please:
                     View all
                   </button>
                 </div>
-                <pre className="p-3 rounded-lg bg-black/50 border border-border overflow-x-auto text-xs text-foreground font-mono max-h-32 overflow-y-auto">
+                <pre className="p-3 rounded-lg bg-muted border border-border overflow-x-auto text-xs text-foreground font-mono max-h-32 overflow-y-auto">
                   {eventsOutput.includes('No resources found')
                     ? `No events found for pod ${podName}`
                     : eventsOutput.split('\n').slice(0, 6).join('\n')}
@@ -1504,13 +1575,15 @@ Please:
 
         {activeTab === 'exec' && (
           <div className="h-[500px] rounded-lg overflow-hidden border border-border">
-            <PodExecTerminal
-              cluster={cluster}
-              namespace={namespace}
-              pod={podName}
-              containers={containerNames}
-              defaultContainer={containerNames[0]}
-            />
+            <Suspense fallback={<div className="flex items-center justify-center h-full text-muted-foreground"><Loader2 className="animate-spin mr-2 h-4 w-4" />Loading terminal…</div>}>
+              <PodExecTerminal
+                cluster={cluster}
+                namespace={namespace}
+                pod={podName}
+                containers={containerNames}
+                defaultContainer={containerNames[0]}
+              />
+            </Suspense>
           </div>
         )}
 
@@ -1553,7 +1626,7 @@ Please:
 
       {/* AI Actions Footer - Always visible */}
       {agentConnected && issues.length > 0 && (
-        <div className="border-t border-border bg-card/30">
+        <div className="border-t border-border bg-card">
           <PodAiAnalysis
             aiAnalysis={aiAnalysis}
             aiAnalysisLoading={aiAnalysisLoading}

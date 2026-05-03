@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { MS_PER_HOUR } from '../lib/constants/time'
 
 export interface BlogPost {
   title: string
@@ -15,7 +16,7 @@ interface BlogResponse {
 
 const CACHE_KEY = 'ks-medium-blog-cache'
 /** Cache TTL — 1 hour */
-const CACHE_TTL_MS = 60 * 60 * 1000
+const CACHE_TTL_MS = MS_PER_HOUR
 /** Fetch timeout for Medium blog API call (10 seconds) */
 const BLOG_FETCH_TIMEOUT_MS = 10_000
 /** Local relative endpoint — Go backend / Netlify Function */

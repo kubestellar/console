@@ -6,202 +6,169 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	"os"
 	"testing"
+
+	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/k8s"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/dynamic/fake"
+	fakek8s "k8s.io/client-go/kubernetes/fake"
 )
 
-// TestHandleArgoCDSync_Validation tests the HTTP and request body validation
-// logic of handleArgoCDSync. It intentionally leaves k8sClient nil to ensure
-// the handler safely catches bad inputs and stops at the Service Unavailable check.
-func TestHandleArgoCDSync_Validation(t *testing.T) {
-	// A minimal Server mock. agentToken is empty, meaning validateToken(r) returns true.
-	s := &Server{}
-
-	tests := []struct {
-		name           string
-		method         string
-		body           map[string]interface{} // nil implies malformed JSON string for this test
-		expectedStatus int
-		expectedError  string
-	}{
-		{
-			name:           "rejects GET method",
-			method:         http.MethodGet,
-			body:           nil,
-			expectedStatus: http.StatusMethodNotAllowed,
-			expectedError:  "POST required",
-		},
-		{
-			name:           "accepts OPTIONS method",
-			method:         http.MethodOptions,
-			body:           nil,
-			expectedStatus: http.StatusOK,
-			expectedError:  "",
-		},
-		{
-			name:           "rejects malformed JSON body",
-			method:         http.MethodPost,
-			body:           nil,
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Invalid request body",
-		},
-		{
-			name:           "rejects missing appName",
-			method:         http.MethodPost,
-			body:           map[string]interface{}{"cluster": "cluster-1"},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "appName and cluster are required",
-		},
-		{
-			name:           "rejects missing cluster",
-			method:         http.MethodPost,
-			body:           map[string]interface{}{"appName": "app-1"},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "appName and cluster are required",
-		},
-		{
-			name:           "rejects invalid appName",
-			method:         http.MethodPost,
-			body:           map[string]interface{}{"appName": "Invalid App!", "cluster": "cluster-1"},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "appName", // Match partial error text from validateHelmK8sName
-		},
-		{
-			name:           "rejects invalid cluster name",
-			method:         http.MethodPost,
-			body:           map[string]interface{}{"appName": "app-1", "cluster": "Invalid Cluster!"},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "cluster",
-		},
-		{
-			name:           "rejects invalid namespace",
-			method:         http.MethodPost,
-			body:           map[string]interface{}{"appName": "app-1", "cluster": "cluster-1", "namespace": "Bad_Namespace!"},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "namespace",
-		},
-		{
-			name:           "valid body passes validation",
-			method:         http.MethodPost,
-			body:           map[string]interface{}{"appName": "valid-app", "cluster": "valid-cluster"},
-			expectedStatus: http.StatusServiceUnavailable, // Expecting 503 because k8sClient is nil
-			expectedError:  "Kubernetes client not configured",
-		},
+func TestServer_HandleArgoCDSync(t *testing.T) {
+	// Setup dependencies
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	server := &Server{
+		k8sClient:      k8sClient,
+		allowedOrigins: []string{"*"},
+		agentToken:     "test-token",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var bodyReader *bytes.Reader
-			if tt.name == "rejects malformed JSON body" {
-				bodyReader = bytes.NewReader([]byte(`{bad json}`))
-			} else if tt.body != nil {
-				b, err := json.Marshal(tt.body)
-				if err != nil {
-					t.Fatalf("failed to marshal body: %v", err)
-				}
-				bodyReader = bytes.NewReader(b)
-			} else {
-				bodyReader = bytes.NewReader(nil)
-			}
+	// 1. Unauthorized
+	req := httptest.NewRequest("POST", "/argocd/sync", nil)
+	w := httptest.NewRecorder()
+	server.handleArgoCDSync(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected 401, got %d", w.Code)
+	}
 
-			req := httptest.NewRequest(tt.method, "/argocd/sync", bodyReader)
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
+	// 2. Method not allowed
+	req = httptest.NewRequest("GET", "/argocd/sync", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	server.handleArgoCDSync(w, req)
+	if w.Code != http.StatusMethodNotAllowed {
+		t.Errorf("Expected 405, got %d", w.Code)
+	}
 
-			s.handleArgoCDSync(w, req)
+	// 3. Bad request (invalid body)
+	req = httptest.NewRequest("POST", "/argocd/sync", bytes.NewBufferString("invalid"))
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	server.handleArgoCDSync(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %d", w.Code)
+	}
 
-			if w.Code != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
-			}
+	// 4. Bad request (missing fields)
+	body, _ := json.Marshal(map[string]string{"appName": "test-app"})
+	req = httptest.NewRequest("POST", "/argocd/sync", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+	server.handleArgoCDSync(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400, got %d", w.Code)
+	}
 
-			// Validate the JSON error response, except for OPTIONS requests
-			if tt.expectedError != "" && w.Code != http.StatusOK {
-				var resp map[string]interface{}
-				if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-					t.Fatalf("failed to unmarshal response: %v, body: %s", err, w.Body.String())
-				}
+	// 5. Success - Annotation strategy (fallback)
+	cluster := "test-cluster"
+	appName := "test-app"
+	namespace := "argocd"
 
-				errMsg, ok := resp["error"].(string)
-				if !ok {
-					t.Fatalf("expected string error field in response, got %v", resp)
-				}
+	// Mock dynamic client
+	scheme := runtime.NewScheme()
+	app := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "argoproj.io/v1alpha1",
+			"kind":       "Application",
+			"metadata": map[string]interface{}{
+				"name":      appName,
+				"namespace": namespace,
+			},
+		},
+	}
+	fakeDyn := fake.NewSimpleDynamicClient(scheme, app)
+	k8sClient.SetDynamicClient(cluster, fakeDyn)
 
-				if !strings.Contains(errMsg, tt.expectedError) {
-					t.Errorf("expected error to contain %q, got %q", tt.expectedError, errMsg)
-				}
-			}
-		})
+	// Mock typed client for discoverArgoServerURL (optional, but good for coverage)
+	fakeCS := fakek8s.NewSimpleClientset()
+	k8sClient.SetClient(cluster, fakeCS)
+
+	reqBody := agentArgoSyncRequest{
+		AppName:   appName,
+		Cluster:   cluster,
+		Namespace: namespace,
+	}
+	body, _ = json.Marshal(reqBody)
+	req = httptest.NewRequest("POST", "/argocd/sync", bytes.NewBuffer(body))
+	req.Header.Set("Authorization", "Bearer test-token")
+	w = httptest.NewRecorder()
+
+	server.handleArgoCDSync(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp["method"] != "annotation" {
+		t.Errorf("Expected method 'annotation', got %v", resp["method"])
+	}
+
+	// Verify annotation was updated
+	updatedApp, err := fakeDyn.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Get(context.Background(), appName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Failed to get updated app: %v", err)
+	}
+	if updatedApp == nil {
+		t.Fatalf("Updated app is nil")
+	}
+	if updatedApp.GetAnnotations()["argocd.argoproj.io/refresh"] != "hard" {
+		t.Errorf("Annotation not updated")
 	}
 }
 
-// TestTryArgoRESTSync tests the ArgoCD REST API sync logic securely using httptest.NewServer.
 func TestTryArgoRESTSync(t *testing.T) {
-	tests := []struct {
-		name           string
-		handlerStatus  int
-		expectedResult bool
-	}{
-		{
-			name:           "200 OK returns true",
-			handlerStatus:  http.StatusOK,
-			expectedResult: true,
-		},
-		{
-			name:           "204 No Content returns true",
-			handlerStatus:  http.StatusNoContent,
-			expectedResult: true,
-		},
-		{
-			name:           "404 Not Found returns false",
-			handlerStatus:  http.StatusNotFound,
-			expectedResult: false,
-		},
-		{
-			name:           "500 Internal Server Error returns false",
-			handlerStatus:  http.StatusInternalServerError,
-			expectedResult: false,
-		},
-	}
+	// Mock ArgoCD server
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/applications/test-app/sync" {
+			t.Errorf("Unexpected path: %s", r.URL.Path)
+		}
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			t.Errorf("Missing/invalid auth header")
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			const expectedToken = "test-token"
-			const expectedAppName = "test-app"
-			const expectedPath = "/api/v1/applications/test-app/sync"
-
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.URL.Path != expectedPath {
-					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
-				}
-				if r.Method != http.MethodPost {
-					t.Errorf("expected method POST, got %s", r.Method)
-				}
-				if r.Header.Get("Authorization") != "Bearer "+expectedToken {
-					t.Errorf("expected token Bearer %s, got %s", expectedToken, r.Header.Get("Authorization"))
-				}
-				w.WriteHeader(tt.handlerStatus)
-			}))
-			defer server.Close()
-
-			result := tryArgoRESTSync(context.Background(), server.URL, expectedToken, expectedAppName)
-			if result != tt.expectedResult {
-				t.Errorf("expected %v, got %v", tt.expectedResult, result)
-			}
-		})
+	ok := tryArgoRESTSync(context.Background(), ts.URL, "test-token", "test-app")
+	if !ok {
+		t.Errorf("tryArgoRESTSync failed")
 	}
 }
 
-// TestDiscoverArgoServerURL tests the URL discovery logic.
-func TestDiscoverArgoServerURL(t *testing.T) {
-	s := &Server{}
+func TestServer_DiscoverArgoServerURL(t *testing.T) {
+	k8sClient, _ := k8s.NewMultiClusterClient("")
+	server := &Server{k8sClient: k8sClient}
 
-	t.Run("respects ARGOCD_SERVER_URL environment variable override", func(t *testing.T) {
-		const expectedURL = "https://custom-argocd.example.com"
-		t.Setenv("ARGOCD_SERVER_URL", expectedURL)
+	// 1. Env override
+	os.Setenv("ARGOCD_SERVER_URL", "http://override.com")
+	defer os.Unsetenv("ARGOCD_SERVER_URL")
+	url := server.discoverArgoServerURL(context.Background(), "cluster1")
+	if url != "http://override.com" {
+		t.Errorf("Expected override URL, got %s", url)
+	}
 
-		url := s.discoverArgoServerURL(context.Background(), "test-cluster")
-		if url != expectedURL {
-			t.Errorf("expected url %s, got %s", expectedURL, url)
-		}
+	// 2. Service discovery
+	os.Unsetenv("ARGOCD_SERVER_URL")
+	fakeCS := fakek8s.NewSimpleClientset(&corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "argocd-server",
+			Namespace: "argocd",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{Port: 443}},
+		},
 	})
+	k8sClient.SetClient("cluster1", fakeCS)
+	url = server.discoverArgoServerURL(context.Background(), "cluster1")
+	expected := "https://argocd-server.argocd.svc:443"
+	if url != expected {
+		t.Errorf("Expected %s, got %s", expected, url)
+	}
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"bytes"
 	"encoding/json"
 	"net/http"
@@ -23,21 +24,21 @@ type rbacTestStore struct {
 	updatedRole   string
 }
 
-func (s *rbacTestStore) GetUser(id uuid.UUID) (*models.User, error) {
+func (s *rbacTestStore) GetUser(_ context.Context, id uuid.UUID) (*models.User, error) {
 	if s.users == nil {
 		return nil, nil
 	}
 	return s.users[id], nil
 }
 
-func (s *rbacTestStore) ListUsers(limit, offset int) ([]models.User, error) {
+func (s *rbacTestStore) ListUsers(_ context.Context, limit, offset int) ([]models.User, error) {
 	if s.listUsersErr != nil {
 		return nil, s.listUsersErr
 	}
 	return s.listUsers, nil
 }
 
-func (s *rbacTestStore) UpdateUserRole(userID uuid.UUID, role string) error {
+func (s *rbacTestStore) UpdateUserRole(_ context.Context, userID uuid.UUID, role string) error {
 	s.updatedUserID = userID
 	s.updatedRole = role
 	return s.updateRoleErr

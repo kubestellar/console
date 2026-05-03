@@ -68,6 +68,7 @@ export function GitOpsDriftDetailModal({ isOpen, onClose, drift }: GitOpsDriftDe
   const handleSyncWithAI = () => {
     if (!drift) return
     emitActionClicked('sync', 'gitops_drift', 'deploy')
+    handleClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Sync: ${drift.resource} drift`,
       description: `${drift.driftType} drift on ${drift.kind}/${drift.resource} in ${drift.namespace} on ${drift.cluster}`,
@@ -95,7 +96,6 @@ Please proceed step by step.`,
         driftType: drift.driftType,
         severity: drift.severity } })
     openSidebar()
-    handleClose()
   }
 
   if (!drift) return null

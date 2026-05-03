@@ -18,6 +18,10 @@ import (
 const (
 	predictionInitialDelay = 30 * time.Second
 	predictionTimeout      = 60 * time.Second
+
+	// perClusterDataTimeout bounds each goroutine's data-gathering work
+	// (pod issues + GPU nodes + offline nodes) for a single cluster.
+	perClusterDataTimeout = 15 * time.Second
 )
 
 // PredictionSettings holds configuration from the frontend
@@ -286,7 +290,12 @@ func (w *PredictionWorker) runLoop() {
 		}
 
 		// Wait for next interval or stop signal using the reused timer.
-		interval := time.Duration(settings.Interval) * time.Minute
+		// Guard against zero/negative interval to prevent busy-loop DoS (#9620).
+		intervalMinutes := settings.Interval
+		if intervalMinutes < 1 {
+			intervalMinutes = 10
+		}
+		interval := time.Duration(intervalMinutes) * time.Minute
 		intervalTimer.Reset(interval)
 		select {
 		case <-intervalTimer.C:
@@ -499,83 +508,110 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 		}
 	}
 
-	// Get pod issues from healthy clusters only
-	clusters, err := w.k8sClient.ListClusters(ctx)
+	// Gather pod issues, GPU nodes, and offline nodes in parallel across
+	// healthy clusters. Uses DeduplicatedClusters to avoid querying the same
+	// physical cluster twice when multiple kubeconfig contexts exist.
+	clusters, err := w.k8sClient.DeduplicatedClusters(ctx)
 	if err != nil {
 		slog.Error("[PredictionWorker] error listing clusters", "error", err)
 	} else {
+		podIssues := make([]PodIssueSummary, 0)
+		gpuNodes := make([]GPUNodeSummary, 0)
+		offlineNodes := make([]NodeSummary, 0)
+
+		var wg sync.WaitGroup
+		var mu sync.Mutex
+
 		for _, cluster := range clusters {
 			if !healthyClusterSet[cluster.Name] {
 				slog.Info("[PredictionWorker] skipping offline cluster", "cluster", cluster.Name)
 				continue
 			}
-			pods, err := w.k8sClient.FindPodIssues(ctx, cluster.Context, "")
-			if err != nil {
-				slog.Error("[PredictionWorker] error getting pod issues", "cluster", cluster.Name, "error", err)
-				continue
-			}
-			for _, p := range pods {
-				data.PodIssues = append(data.PodIssues, PodIssueSummary{
-					Name:      p.Name,
-					Namespace: p.Namespace,
-					Cluster:   cluster.Name,
-					Restarts:  p.Restarts,
-					Status:    p.Status,
-				})
-			}
-		}
-	}
+			wg.Add(1)
+			go func(cl k8s.ClusterInfo) {
+				defer wg.Done()
 
-	// Get GPU nodes from healthy clusters only
-	if clusters == nil {
-		var fallbackErr error
-		clusters, fallbackErr = w.k8sClient.ListClusters(ctx)
-		if fallbackErr != nil {
-			slog.Error("[PredictionWorker] fallback ListClusters for GPU nodes failed", "error", fallbackErr)
-		}
-	}
-	for _, cluster := range clusters {
-		if !healthyClusterSet[cluster.Name] {
-			continue
-		}
-		gpuNodes, err := w.k8sClient.GetGPUNodes(ctx, cluster.Context)
-		if err != nil {
-			slog.Error("[PredictionWorker] error getting GPU nodes", "cluster", cluster.Name, "error", err)
-			continue
-		}
-		for _, g := range gpuNodes {
-			data.GPUNodes = append(data.GPUNodes, GPUNodeSummary{
-				Name:      g.Name,
-				Cluster:   g.Cluster,
-				Allocated: g.GPUAllocated,
-				Total:     g.GPUCount,
-			})
-		}
-	}
-
-	// Get offline/unhealthy nodes from healthy clusters only
-	for _, cluster := range clusters {
-		if !healthyClusterSet[cluster.Name] {
-			continue
-		}
-		nodes, err := w.k8sClient.GetNodes(ctx, cluster.Context)
-		if err != nil {
-			slog.Error("[PredictionWorker] error getting nodes", "cluster", cluster.Name, "error", err)
-			continue
-		}
-		for _, n := range nodes {
-			if n.Status != "Ready" || n.Unschedulable {
-				status := n.Status
-				if n.Unschedulable {
-					status = "Cordoned"
+				// Check parent context before starting work
+				select {
+				case <-ctx.Done():
+					return
+				default:
 				}
-				data.OfflineNodes = append(data.OfflineNodes, NodeSummary{
-					Name:    n.Name,
-					Cluster: cluster.Name,
-					Status:  status,
-				})
-			}
+
+				clusterCtx, cancel := context.WithTimeout(ctx, perClusterDataTimeout)
+				defer cancel()
+
+				// --- Pod issues ---
+				pods, podErr := w.k8sClient.FindPodIssues(clusterCtx, cl.Context, "")
+				if podErr != nil {
+					slog.Error("[PredictionWorker] error getting pod issues", "cluster", cl.Name, "error", podErr)
+				} else {
+					localPods := make([]PodIssueSummary, 0, len(pods))
+					for _, p := range pods {
+						localPods = append(localPods, PodIssueSummary{
+							Name:      p.Name,
+							Namespace: p.Namespace,
+							Cluster:   cl.Name,
+							Restarts:  p.Restarts,
+							Status:    p.Status,
+						})
+					}
+					mu.Lock()
+					podIssues = append(podIssues, localPods...)
+					mu.Unlock()
+				}
+
+				// --- GPU nodes ---
+				gpus, gpuErr := w.k8sClient.GetGPUNodes(clusterCtx, cl.Context)
+				if gpuErr != nil {
+					slog.Error("[PredictionWorker] error getting GPU nodes", "cluster", cl.Name, "error", gpuErr)
+				} else {
+					localGPU := make([]GPUNodeSummary, 0, len(gpus))
+					for _, g := range gpus {
+						localGPU = append(localGPU, GPUNodeSummary{
+							Name:      g.Name,
+							Cluster:   g.Cluster,
+							Allocated: g.GPUAllocated,
+							Total:     g.GPUCount,
+						})
+					}
+					mu.Lock()
+					gpuNodes = append(gpuNodes, localGPU...)
+					mu.Unlock()
+				}
+
+				// --- Offline / unhealthy nodes ---
+				nodes, nodeErr := w.k8sClient.GetNodes(clusterCtx, cl.Context)
+				if nodeErr != nil {
+					slog.Error("[PredictionWorker] error getting nodes", "cluster", cl.Name, "error", nodeErr)
+				} else {
+					localOffline := make([]NodeSummary, 0)
+					for _, n := range nodes {
+						if n.Status != "Ready" || n.Unschedulable {
+							status := n.Status
+							if n.Unschedulable {
+								status = "Cordoned"
+							}
+							localOffline = append(localOffline, NodeSummary{
+								Name:    n.Name,
+								Cluster: cl.Name,
+								Status:  status,
+							})
+						}
+					}
+					if len(localOffline) > 0 {
+						mu.Lock()
+						offlineNodes = append(offlineNodes, localOffline...)
+						mu.Unlock()
+					}
+				}
+			}(cluster)
 		}
+		wg.Wait()
+
+		data.PodIssues = podIssues
+		data.GPUNodes = gpuNodes
+		data.OfflineNodes = offlineNodes
 	}
 
 	return data, nil
@@ -669,13 +705,10 @@ func (w *PredictionWorker) analyzeWithProvider(ctx context.Context, provider AIP
 }
 
 func (w *PredictionWorker) parseAIPredictions(response string, providerName string) ([]AIPrediction, error) {
-	// Extract JSON from response (might have markdown wrapper)
-	jsonStr := response
-	if idx := strings.Index(response, "{"); idx != -1 {
-		jsonStr = response[idx:]
-	}
-	if idx := strings.LastIndex(jsonStr, "}"); idx != -1 {
-		jsonStr = jsonStr[:idx+1]
+	// Find the start of the JSON object, skipping any markdown fences or preamble.
+	jsonStart := strings.Index(response, "{")
+	if jsonStart == -1 {
+		return nil, fmt.Errorf("failed to parse AI response: no JSON object found")
 	}
 
 	var result struct {
@@ -691,7 +724,9 @@ func (w *PredictionWorker) parseAIPredictions(response string, providerName stri
 		} `json:"predictions"`
 	}
 
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+	// Use json.Decoder which naturally ignores trailing non-JSON text.
+	dec := json.NewDecoder(strings.NewReader(response[jsonStart:]))
+	if err := dec.Decode(&result); err != nil {
 		return nil, fmt.Errorf("failed to parse AI response: %w", err)
 	}
 

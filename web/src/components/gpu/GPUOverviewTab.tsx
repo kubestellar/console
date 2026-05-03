@@ -56,7 +56,7 @@ export function GPUOverviewTab({
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-purple-500/20">
@@ -104,7 +104,7 @@ export function GPUOverviewTab({
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Utilization */}
         <div className={cn('glass p-4 rounded-lg', effectiveDemoMode && 'border-2 border-yellow-500/50')}>
           <h3 className="text-sm font-medium text-muted-foreground mb-4">{t('gpuReservations.charts.gpuUtilization')}</h3>
@@ -175,19 +175,19 @@ export function GPUOverviewTab({
             <div key={r.id}
               className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-lg bg-purple-500/20">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="p-2 rounded-lg bg-purple-500/20 shrink-0">
                     <Zap className="w-4 h-4 text-purple-400" />
                   </div>
-                  <div>
-                    <div className="font-medium text-foreground">{r.title}</div>
-                    <div className="text-sm text-muted-foreground">
+                  <div className="min-w-0">
+                    <div className="font-medium text-foreground truncate">{r.title}</div>
+                    <div className="text-sm text-muted-foreground truncate">
                       {r.namespace} · {r.user_name}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                   <div className="text-right">
                     <div className="font-medium text-foreground">{r.gpu_count} <TechnicalAcronym term="GPU">{t('common:common.gpus')}</TechnicalAcronym></div>
                     <div className="text-sm text-muted-foreground">{t('gpuReservations.overview.durationHours', { hours: r.duration_hours })}</div>

@@ -293,7 +293,7 @@ async function fetchSingleCluster(cluster: string): Promise<ClusterFetchResult> 
           binding: `RoleBinding/${rb.metadata.name}` })
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     const isDemoErr = err instanceof Error && err.message.includes('demo mode')
     if (!isDemoErr) {
       console.error(`[useRBACFindings] Error fetching from ${cluster}:`, err)
@@ -322,7 +322,7 @@ const DEMO_FINDINGS: RBACFinding[] = [
 
 export function useRBACFindings() {
   const { isDemoMode } = useDemoMode()
-  const { clusters: allClusters, isLoading: clustersLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading: clustersLoading } = useClusters()
 
   // Snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())
@@ -394,12 +394,12 @@ export function useRBACFindings() {
       // collected, surface the aggregate error so the card shows the retry
       // state instead of a misleading empty/"no findings" state.
       if (allFindings.length === 0 && clusterErrors.length > 0 && clusterErrors.length === clusters.length) {
-        setError(clusterErrors.join('; '))
+        setError((clusterErrors || []).join('; '))
         setConsecutiveFailures(prev => prev + 1)
       } else {
         setConsecutiveFailures(0)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to fetch RBAC data')
       setIsLoading(false)
       setIsRefreshing(false)

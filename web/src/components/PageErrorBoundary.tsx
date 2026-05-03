@@ -46,7 +46,12 @@ export class PageErrorBoundary extends Component<Props, State> {
 
     console.error('[PageErrorBoundary] Render error:', error, errorInfo)
     markErrorReported(error.message)
-    emitError('page_render', error.message)
+    // Pass the Error + componentStack so emitError can derive error_type and
+    // component_name for the GA4 custom dimensions added in #9861.
+    emitError('page_render', error.message, undefined, {
+      error,
+      componentStack: errorInfo.componentStack ?? undefined,
+    })
   }
 
   handleRecover = () => {
@@ -76,10 +81,10 @@ export class PageErrorBoundary extends Component<Props, State> {
             )}
           </div>
           {this.state.error && (
-            // `break-words` avoids splitting words like "undefined" mid-letter
+            // `wrap-break-word` avoids splitting words like "undefined" mid-letter
             // (see issue #5902). `break-all` was the previous class and caused
             // single-character lines when error messages contained long tokens.
-            <div className="text-xs text-muted-foreground/70 font-mono mb-6 break-words whitespace-pre-wrap max-w-lg">
+            <div className="text-xs text-muted-foreground/70 font-mono mb-6 wrap-break-word whitespace-pre-wrap max-w-lg">
               {this.state.error.message}
             </div>
           )}

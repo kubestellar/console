@@ -61,7 +61,7 @@ export function useMissionSuggestions() {
   const { issues: podIssues } = usePodIssues()
   const { issues: deploymentIssues } = useDeploymentIssues()
   const { issues: securityIssues } = useSecurityIssues()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { nodes } = useNodes()
   const { pods } = usePods()
 

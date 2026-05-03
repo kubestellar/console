@@ -140,7 +140,7 @@ export async function generateDemoData<T = unknown>(
     }
     dataCache.set(id, state as DemoDataState)
     return state
-  } catch (error) {
+  } catch (error: unknown) {
     const state: DemoDataState<T> = {
       data: undefined,
       isLoading: false,
@@ -180,7 +180,7 @@ export function generateDemoDataSync<T = unknown>(id: string): DemoDataState<T> 
     }
     dataCache.set(id, state as DemoDataState)
     return state
-  } catch (error) {
+  } catch (error: unknown) {
     return {
       data: undefined,
       isLoading: false,

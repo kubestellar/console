@@ -1,9 +1,10 @@
 # KubeStellar Console
 
 ![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/clubanderson/b9a9ae8469f1897a22d5a40629bc1e82/raw/coverage-badge.json)
-[![ACMM](https://img.shields.io/endpoint?url=https%3A%2F%2Fconsole.kubestellar.io%2Fapi%2Facmm%2Fbadge%3Frepo%3Dkubestellar%252Fconsole%26v%3D3&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjkiIGN5PSIxMSIgcj0iOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8%2BPGVsbGlwc2UgY3g9IjkiIGN5PSIxMSIgcng9IjgiIHJ5PSIzLjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMS42Ii8%2BPGxpbmUgeDE9IjEiIHkxPSIxMSIgeDI9IjE3IiB5Mj0iMTEiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMS42Ii8%2BPGxpbmUgeDE9IjkiIHkxPSIzIiB4Mj0iOSIgeTI9IjE5IiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjEuNiIvPjxwb2x5Z29uIHBvaW50cz0iMTYsMSAxNy40LDQuMyAyMSw0LjMgMTguMSw2LjUgMTkuMiw5LjggMTYsNy43IDEyLjgsOS44IDEzLjksNi41IDExLDQuMyAxNC42LDQuMyIvPjwvc3ZnPg%3D%3D)](https://console.kubestellar.io/acmm?repo=kubestellar%2Fconsole)
+[![ACMM](https://img.shields.io/endpoint?url=https%3A%2F%2Fconsole.kubestellar.io%2Fapi%2Facmm%2Fbadge%3Frepo%3Dkubestellar%252Fconsole%26v%3D3)](https://console.kubestellar.io/acmm?repo=kubestellar%2Fconsole)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/kubestellar/console/badge)](https://securityscorecards.dev/viewer/?uri=github.com/kubestellar/console)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12343/badge?v=2)](https://www.bestpractices.dev/projects/12343)
+[![MTTR](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fclubanderson%2F4ae525a9797e8f83231ac344fcb47226%2Fraw%2Fmedian-fix.json "Mean Time to Resolution — median time from issue filed to PR merged, updated every 5 minutes")](https://github.com/kubestellar/console/issues)
 
 AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 
@@ -79,6 +80,19 @@ sudo apt-get update && sudo apt-get install -y curl
 # Same install command as macOS / Linux
 curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 ```
+
+> **⚠️ Windows PowerShell `curl` gotcha:** In PowerShell, `curl` is an alias
+> for `Invoke-WebRequest`, which behaves completely differently from the real
+> curl. If you need to test endpoints from PowerShell (outside WSL), always
+> use **`curl.exe`** instead of `curl`, or use the native PowerShell cmdlet:
+>
+> ```powershell
+> # Option 1 — use curl.exe (the real curl shipped with Windows 10+)
+> curl.exe -s http://localhost:8080/api/health
+>
+> # Option 2 — use PowerShell native cmdlet
+> Invoke-RestMethod http://localhost:8080/api/health
+> ```
 
 **Building `kc-agent` from source is a separate path** — only needed if you want a development build of the agent rather than the prebuilt binary that `start.sh` already installs. It requires Go **1.25+** (the version pinned in `go.mod`) and `git`. Ubuntu's `golang-go` package usually lags the current release; use the [official Go install](https://go.dev/doc/install) or the `longsleep/golang-backports` PPA to get a recent version:
 

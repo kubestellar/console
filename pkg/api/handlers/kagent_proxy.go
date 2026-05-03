@@ -80,14 +80,14 @@ func (h *KagentProxyHandler) Chat(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
 	}
-	defer stream.Close()
-
 	// Set SSE headers
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
 
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+
+		defer stream.Close()
 		scanner := bufio.NewScanner(stream)
 		// Use a 64KB buffer for potentially large chunks
 		buf := make([]byte, 64*1024)

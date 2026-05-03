@@ -175,24 +175,14 @@ if [ -f .env ]; then
     done < .env
 fi
 
-# Check required OAuth credentials
-if [ -z "$GITHUB_CLIENT_ID" ]; then
-    echo -e "${RED}Error: GITHUB_CLIENT_ID is not set${NC}"
+# Check OAuth credentials — optional when using the one-click manifest flow.
+# The console will check SQLite for credentials saved by a previous manifest
+# setup, or show the one-click setup button on the login page.
+if [ -z "$GITHUB_CLIENT_ID" ] || [ -z "$GITHUB_CLIENT_SECRET" ]; then
+    echo -e "${YELLOW}⚠ GitHub OAuth not configured via .env${NC}"
+    echo "  You can set it up from the login page (one-click GitHub App setup)"
+    echo "  Or add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to .env"
     echo ""
-    echo "Create a .env file with:"
-    echo "  GITHUB_CLIENT_ID=<your-client-id>"
-    echo "  GITHUB_CLIENT_SECRET=<your-client-secret>"
-    echo ""
-    echo "Or create a GitHub OAuth App at:"
-    echo "  https://github.com/settings/developers"
-    echo "  Homepage URL: http://localhost:8080"
-    echo "  Callback URL: http://localhost:8080/auth/github/callback"
-    exit 1
-fi
-
-if [ -z "$GITHUB_CLIENT_SECRET" ]; then
-    echo -e "${RED}Error: GITHUB_CLIENT_SECRET is not set${NC}"
-    exit 1
 fi
 
 # Generate JWT_SECRET if not set (production mode requires it)
@@ -279,17 +269,25 @@ cleanup() {
     kill $AGENT_LOOP_PID 2>/dev/null || true
     kill $AGENT_PID 2>/dev/null || true
     kill $WATCHDOG_PID 2>/dev/null || true
+    kill $AGENT_BUILD_PID 2>/dev/null || true
+    kill $BACKEND_BUILD_PID 2>/dev/null || true
     rm -f "$SHUTDOWN_FLAG" "$STAGE_FILE" "${AGENT_PID_FILE:-}"
     exit 0
 }
 trap cleanup SIGINT SIGTERM EXIT
 
-# Resolve kc-agent binary path
+# Resolve kc-agent binary path (build happens later, after the loading page is up)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KC_AGENT_BIN=""
+KC_AGENT_NEEDS_BUILD=false
+
+if [ -f "$SCRIPT_DIR/cmd/kc-agent/main.go" ] && command -v go &>/dev/null; then
+    KC_AGENT_NEEDS_BUILD=true
+fi
+# Always check for an existing local binary — used as fallback if build fails or go is unavailable.
 if [ -f "$SCRIPT_DIR/bin/kc-agent" ]; then
-    # Local build binary found — validate it is non-empty and executable
     if [ -s "$SCRIPT_DIR/bin/kc-agent" ] && [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
+        # Will be overwritten by a fresh build below; kept here as fallback.
         KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
     else
         echo -e "${YELLOW}Warning: $SCRIPT_DIR/bin/kc-agent is invalid (empty or not executable). Run 'make build' to rebuild.${NC}"
@@ -341,18 +339,28 @@ if [ -z "$KC_AGENT_BIN" ]; then
     fi
 fi
 
-# Start kc-agent with auto-restart on crash
+# Generate KC_AGENT_TOKEN if not already set — both kc-agent and the Go
+# backend read this env var so the frontend can authenticate to the agent
+# via a backend-proxied token endpoint.
+if [ -z "$KC_AGENT_TOKEN" ]; then
+    KC_AGENT_TOKEN="$(openssl rand -hex 32)"
+    echo "Auto-generated KC_AGENT_TOKEN."
+fi
+export KC_AGENT_TOKEN
+
+# Launch kc-agent with auto-restart on crash. Idempotent: no-op if already running.
 AGENT_PID=""
 AGENT_LOOP_PID=""
-if [ -n "$KC_AGENT_BIN" ]; then
+AGENT_PID_FILE="/tmp/.kc-agent-pid-$$"
+launch_kc_agent() {
+    [ -z "$KC_AGENT_BIN" ] && { echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"; return; }
+    [ -n "$AGENT_LOOP_PID" ] && return  # already running
     echo -e "${GREEN}Starting kc-agent ($KC_AGENT_BIN)...${NC}"
     # Pidfile written by the restart loop so the parent shell can target the
     # exact kc-agent process instead of whoever happens to be on port 8585.
     # Fixes #8127 — an unrelated process listening on :8585 was killed on Ctrl+C.
-    AGENT_PID_FILE="/tmp/.kc-agent-pid-$$"
     : > "$AGENT_PID_FILE"
     (
-        # Pass KUBECONFIG from .env / environment as --kubeconfig flag
         KC_AGENT_ARGS=()
         if [ -n "$KUBECONFIG" ]; then
             KC_AGENT_ARGS+=(--kubeconfig "$KUBECONFIG")
@@ -372,7 +380,6 @@ if [ -n "$KC_AGENT_BIN" ]; then
         done
     ) &
     AGENT_LOOP_PID=$!
-    # Give the loop a moment to spawn the child and write the pidfile.
     AGENT_PID_WAIT_ATTEMPTS=10
     AGENT_PID_WAIT_SLEEP_SECONDS=0.2
     for _ in $(seq 1 $AGENT_PID_WAIT_ATTEMPTS); do
@@ -380,8 +387,31 @@ if [ -n "$KC_AGENT_BIN" ]; then
         sleep "$AGENT_PID_WAIT_SLEEP_SECONDS"
     done
     AGENT_PID=$(cat "$AGENT_PID_FILE" 2>/dev/null || true)
-else
-    echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"
+}
+
+# Start kc-agent with auto-restart on crash
+launch_kc_agent
+
+# If the watcher source has changed since the binary was built, kill the old
+# watchdog so it gets rebuilt below — even if WATCHDOG_RUNNING=true.
+# This prevents a stale watchdog (missing new stage strings like parallel_build)
+# from serving the loading page after a git pull.
+WATCHER_BIN="$SCRIPT_DIR/bin/kc-watcher"
+if [ "$WATCHDOG_RUNNING" = true ]; then
+    WATCHER_NEEDS_REBUILD=false
+    if [ ! -f "$WATCHER_BIN" ]; then
+        WATCHER_NEEDS_REBUILD=true
+    elif [ -n "$(find "$SCRIPT_DIR/cmd/watcher" -name '*.go' -newer "$WATCHER_BIN" 2>/dev/null)" ]; then
+        WATCHER_NEEDS_REBUILD=true
+    fi
+    if [ "$WATCHER_NEEDS_REBUILD" = true ]; then
+        echo -e "${YELLOW}Watcher source changed — killing stale watchdog (pid $WD_PID) and rebuilding...${NC}"
+        kill "$WD_PID" 2>/dev/null || true
+        rm -f "$WATCHDOG_PID_FILE"
+        WATCHDOG_RUNNING=false
+        # Free port 8080 for the new watcher
+        kill_project_port "8080" "TCP:LISTEN"
+    fi
 fi
 
 if [ "$USE_DEV_SERVER" = true ]; then
@@ -394,17 +424,16 @@ if [ "$USE_DEV_SERVER" = true ]; then
     if [ "$WATCHDOG_RUNNING" = false ]; then
         write_stage "watchdog"
         # Rebuild watcher if binary is missing or source changed
-        WATCHER_BIN="./bin/kc-watcher"
         WATCHER_NEEDS_BUILD=false
         if [ ! -f "$WATCHER_BIN" ]; then
             WATCHER_NEEDS_BUILD=true
-        elif [ -n "$(find cmd/watcher -name '*.go' -newer "$WATCHER_BIN" 2>/dev/null)" ]; then
+        elif [ -n "$(find "$SCRIPT_DIR/cmd/watcher" -name '*.go' -newer "$WATCHER_BIN" 2>/dev/null)" ]; then
             WATCHER_NEEDS_BUILD=true
         fi
         if [ "$WATCHER_NEEDS_BUILD" = true ]; then
             echo -e "${GREEN}Building kc-watcher...${NC}"
-            mkdir -p ./bin
-            GOWORK=off go build -ldflags "-X main.version=${VERSION:-dev}" -o "$WATCHER_BIN" ./cmd/watcher
+            mkdir -p "$SCRIPT_DIR/bin"
+            (cd "$SCRIPT_DIR" && GOWORK=off go build -ldflags "-X main.version=${VERSION:-dev}" -o "$WATCHER_BIN" ./cmd/watcher)
         fi
         echo -e "${GREEN}Starting watcher on port 8080...${NC}"
         TLS_FLAG=""
@@ -415,16 +444,72 @@ if [ "$USE_DEV_SERVER" = true ]; then
         "$WATCHER_BIN" $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
         sleep 1
+        echo -e "${CYAN}  Loading page: http://localhost:8080${NC}"
     fi
 
-    # Always run npm install to pick up new/changed dependencies (#4405).
-    # safe_npm_install is fast when node_modules is already up-to-date.
+    # Build kc-agent from source in the background while npm/frontend proceed.
+    AGENT_BUILD_PID=""
+    if [ "$KC_AGENT_NEEDS_BUILD" = true ]; then
+        echo -e "${GREEN}Building kc-agent from source (background)...${NC}"
+        (
+            AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+            AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            mkdir -p "$SCRIPT_DIR/bin"
+            if (cd "$SCRIPT_DIR" && GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent); then
+                echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
+            else
+                echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
+            fi
+        ) &
+        AGENT_BUILD_PID=$!
+    fi
+
+    # npm install and frontend work run in parallel with the agent build.
     write_stage "npm_install"
     safe_npm_install web
 
-    write_stage "backend_compiling"
+    # Build backend binary in the background while Vite starts.
+    BACKEND_BIN="$SCRIPT_DIR/bin/console"
+    BACKEND_BUILD_PID=""
+    echo -e "${GREEN}Building backend (background)...${NC}"
+    (
+        mkdir -p "$SCRIPT_DIR/bin"
+        if (cd "$SCRIPT_DIR" && GOWORK=off go build -o "$BACKEND_BIN" ./cmd/console); then
+            echo -e "${GREEN}Backend built successfully${NC}"
+        else
+            echo -e "${RED}Backend build failed${NC}"
+            exit 1
+        fi
+    ) &
+    BACKEND_BUILD_PID=$!
+
+    # Wait for agent build to finish before starting the backend (agent must be ready).
+    if [ -n "$AGENT_BUILD_PID" ]; then
+        wait "$AGENT_BUILD_PID"
+        if [ -s "$SCRIPT_DIR/bin/kc-agent" ] && [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
+            KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+        fi
+    fi
+    # Start agent now if it was skipped earlier (no binary existed before the build).
+    launch_kc_agent
+
+    # Wait for backend build to finish, then start the pre-built binary.
+    # Use "|| true" before capturing $? so set -e doesn't fire before we can
+    # handle the error and print a friendly message.
+    if [ -n "$BACKEND_BUILD_PID" ]; then
+        if kill -0 "$BACKEND_BUILD_PID" 2>/dev/null; then
+            write_stage "backend_compiling"
+        fi
+        wait "$BACKEND_BUILD_PID" || true
+        BACKEND_BUILD_EXIT=$?
+        if [ "$BACKEND_BUILD_EXIT" -ne 0 ] || [ ! -x "$BACKEND_BIN" ]; then
+            echo -e "${RED}Backend build failed — cannot start.${NC}"
+            exit 1
+        fi
+    fi
+    write_stage "backend_starting"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
-    BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
+    BACKEND_PORT=$BACKEND_LISTEN_PORT "$BACKEND_BIN" &
     BACKEND_PID=$!
     sleep 2
 
@@ -449,17 +534,16 @@ else
     if [ "$WATCHDOG_RUNNING" = false ]; then
         write_stage "watchdog"
         # Rebuild watcher if binary is missing or source changed
-        WATCHER_BIN="./bin/kc-watcher"
         WATCHER_NEEDS_BUILD=false
         if [ ! -f "$WATCHER_BIN" ]; then
             WATCHER_NEEDS_BUILD=true
-        elif [ -n "$(find cmd/watcher -name '*.go' -newer "$WATCHER_BIN" 2>/dev/null)" ]; then
+        elif [ -n "$(find "$SCRIPT_DIR/cmd/watcher" -name '*.go' -newer "$WATCHER_BIN" 2>/dev/null)" ]; then
             WATCHER_NEEDS_BUILD=true
         fi
         if [ "$WATCHER_NEEDS_BUILD" = true ]; then
             echo -e "${GREEN}Building kc-watcher...${NC}"
-            mkdir -p ./bin
-            GOWORK=off go build -ldflags "-X main.version=${VERSION:-dev}" -o "$WATCHER_BIN" ./cmd/watcher
+            mkdir -p "$SCRIPT_DIR/bin"
+            (cd "$SCRIPT_DIR" && GOWORK=off go build -ldflags "-X main.version=${VERSION:-dev}" -o "$WATCHER_BIN" ./cmd/watcher)
         fi
         echo -e "${GREEN}Starting watcher on port 8080...${NC}"
         TLS_FLAG=""
@@ -470,22 +554,94 @@ else
         "$WATCHER_BIN" $TLS_FLAG --backend-port "$BACKEND_LISTEN_PORT" &
         WATCHDOG_PID=$!
         sleep 1
+        echo -e "${CYAN}  Loading page: http://localhost:8080${NC}"
     fi
 
-    # Always run npm install to pick up new/changed dependencies (#4405).
-    # safe_npm_install is fast when node_modules is already up-to-date.
+    # Build kc-agent from source in the background while npm/frontend proceed.
+    AGENT_BUILD_PID=""
+    if [ "$KC_AGENT_NEEDS_BUILD" = true ]; then
+        echo -e "${GREEN}Building kc-agent from source (background)...${NC}"
+        (
+            AGENT_LDFLAGS="-X github.com/kubestellar/console/pkg/agent.CommitSHA=$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+            AGENT_LDFLAGS="$AGENT_LDFLAGS -X github.com/kubestellar/console/pkg/agent.BuildTime=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            mkdir -p "$SCRIPT_DIR/bin"
+            if (cd "$SCRIPT_DIR" && GOWORK=off go build -ldflags "$AGENT_LDFLAGS" -o "$SCRIPT_DIR/bin/kc-agent" ./cmd/kc-agent); then
+                echo -e "${GREEN}kc-agent built ($(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo dev))${NC}"
+            else
+                echo -e "${YELLOW}Warning: kc-agent build failed. Falling back to existing binary or brew.${NC}"
+            fi
+        ) &
+        AGENT_BUILD_PID=$!
+    fi
+
+    # npm install and frontend build run in parallel with the agent build.
     write_stage "npm_install"
     safe_npm_install web
 
-    write_stage "frontend_build"
+    # Build backend binary in the background while the frontend builds.
+    BACKEND_BIN="$SCRIPT_DIR/bin/console"
+    BACKEND_BUILD_PID=""
+    echo -e "${GREEN}Building backend (background)...${NC}"
+    (
+        mkdir -p "$SCRIPT_DIR/bin"
+        if (cd "$SCRIPT_DIR" && GOWORK=off go build -o "$BACKEND_BIN" ./cmd/console); then
+            echo -e "${GREEN}Backend built successfully${NC}"
+        else
+            echo -e "${RED}Backend build failed${NC}"
+            exit 1
+        fi
+    ) &
+    BACKEND_BUILD_PID=$!
+
+    write_stage "parallel_build"
     echo -e "${GREEN}Building frontend...${NC}"
-    (cd web && npm run build)
+    if ! (cd web && npm run build); then
+        echo ""
+        echo -e "${RED}========================================${NC}"
+        echo -e "${RED}  Frontend build failed.${NC}"
+        echo -e "${RED}========================================${NC}"
+        echo ""
+        echo "  This often happens after pulling new changes."
+        echo "  Try:"
+        echo "    1. git pull origin main"
+        echo "    2. cd web && npm install"
+        echo "    3. Re-run ./startup-oauth.sh"
+        echo ""
+        echo "  If the error persists, check the build output above for details."
+        echo ""
+        exit 1
+    fi
     echo -e "${GREEN}Frontend built successfully${NC}"
 
-    # Start backend on port 8081 — watchdog on 8080 proxies to it
-    write_stage "backend_compiling"
+    # Wait for background agent build to finish before starting the backend.
+    if [ -n "$AGENT_BUILD_PID" ]; then
+        wait "$AGENT_BUILD_PID"
+        if [ -s "$SCRIPT_DIR/bin/kc-agent" ] && [ -x "$SCRIPT_DIR/bin/kc-agent" ]; then
+            KC_AGENT_BIN="$SCRIPT_DIR/bin/kc-agent"
+        fi
+    fi
+    # Start agent now if it was skipped earlier (no binary existed before the build).
+    launch_kc_agent
+
+    # Wait for backend build to finish, then start the pre-built binary.
+    # If the backend build is still running (frontend finished first), show
+    # the "Compiling backend" stage so the user sees progress.
+    # Use "|| true" before capturing $? so set -e doesn't fire before we can
+    # handle the error and print a friendly message.
+    if [ -n "$BACKEND_BUILD_PID" ]; then
+        if kill -0 "$BACKEND_BUILD_PID" 2>/dev/null; then
+            write_stage "backend_compiling"
+        fi
+        wait "$BACKEND_BUILD_PID" || true
+        BACKEND_BUILD_EXIT=$?
+        if [ "$BACKEND_BUILD_EXIT" -ne 0 ] || [ ! -x "$BACKEND_BIN" ]; then
+            echo -e "${RED}Backend build failed — cannot start.${NC}"
+            exit 1
+        fi
+    fi
+    write_stage "backend_starting"
     echo -e "${GREEN}Starting backend on port $BACKEND_LISTEN_PORT (OAuth mode)...${NC}"
-    BACKEND_PORT=$BACKEND_LISTEN_PORT GOWORK=off go run ./cmd/console &
+    BACKEND_PORT=$BACKEND_LISTEN_PORT "$BACKEND_BIN" &
     BACKEND_PID=$!
     sleep 2
 

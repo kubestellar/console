@@ -15,7 +15,7 @@ import { HorseshoeGauge } from '../llmd/shared/HorseshoeGauge'
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { t } = useTranslation()
   const { startMission, missions } = useMissions()
-  const { deduplicatedClusters: allClusters, isLoading } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
   const { issues: allPodIssues, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
   const { issues: allDeploymentIssues, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
@@ -23,8 +23,10 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allClusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: allClusters.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,
@@ -121,10 +123,17 @@ Please provide:
 
   const handleStartHealthCheck = () => checkKeyAndRun(doStartHealthCheck)
 
-  // Calculate health score (0-100)
-  const healthScore = clusters.length > 0
-    ? Math.round((healthyClusters / clusters.length) * 100)
+  // Calculate health score (0-100).
+  // The score factors in both cluster-level health and workload issues so that
+  // 100% only appears when there are zero issues — preventing the contradictory
+  // display of "100% health" alongside "N issues detected" (#11514).
+  const ISSUE_PENALTY_PER_ISSUE = 5
+  const MAX_ISSUE_PENALTY = 30
+  const clusterScore = clusters.length > 0
+    ? (healthyClusters / clusters.length) * 100
     : 0
+  const issuePenalty = Math.min(totalIssues * ISSUE_PENALTY_PER_ISSUE, MAX_ISSUE_PENALTY)
+  const healthScore = Math.max(0, Math.round(clusterScore - issuePenalty))
 
   // Gauge size tuned so the card + stats + issues + button all fit the
   // standard card height (see #6461). Previously size=120 plus mb-4 spacing

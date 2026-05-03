@@ -150,6 +150,7 @@ export function useSelfUpgrade() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ imageTag }),
         signal: AbortSignal.timeout(SELF_UPGRADE_TIMEOUT_MS) })
@@ -165,7 +166,7 @@ export function useSelfUpgrade() {
       setIsTriggering(false)
       setUpgradeState({ phase: 'error', errorMessage: errorMsg })
       return { success: false, error: errorMsg }
-    } catch (err) {
+    } catch (err: unknown) {
       // If the trigger request itself fails (connection lost mid-request),
       // the patch likely succeeded and the pod is already restarting
       const msg = err instanceof Error ? err.message : 'Failed to reach backend'
@@ -228,4 +229,13 @@ export function useSelfUpgrade() {
     triggerUpgrade,
     /** Cancel restart polling */
     cancelRestartPoll }
+}
+
+export const __testables = {
+  getToken,
+  SELF_UPGRADE_TIMEOUT_MS,
+  RESTART_POLL_INTERVAL_MS,
+  RESTART_POLL_MAX_MS,
+  RESTART_HEALTH_TIMEOUT_MS,
+  RELOAD_DELAY_MS,
 }

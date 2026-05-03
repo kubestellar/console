@@ -1000,6 +1000,110 @@ describe('saveMeta localStorage fallback', () => {
 })
 
 // ============================================================================
+// Worker-active IndexedDB mirror write (#10985)
+// ============================================================================
+
+describe('worker-active IndexedDB mirror write', () => {
+  let originalWorker: typeof Worker
+
+  afterEach(() => {
+    // Always restore Worker and reset modules to prevent mock leakage into subsequent tests.
+    // This is critical because globalThis.Worker is a global singleton — if not restored,
+    // subsequent tests will get the mocked version. See #11039.
+    if (originalWorker) {
+      globalThis.Worker = originalWorker
+    }
+    vi.resetModules()
+    vi.doUnmock('../workerRpc')
+  })
+
+  it('mirrors data to _idbStorage.set when workerRpc is active', async () => {
+    // Mock the Worker constructor so initCacheWorker() doesn't try to spawn a real worker
+    originalWorker = globalThis.Worker
+    try {
+      globalThis.Worker = vi.fn() as unknown as typeof Worker
+
+      const mockRpc = {
+        waitForReady: vi.fn().mockResolvedValue(undefined),
+        set: vi.fn(),
+        get: vi.fn().mockResolvedValue(null),
+        getStats: vi.fn().mockResolvedValue({ keys: [], count: 0 }),
+        deleteKey: vi.fn(),
+        clear: vi.fn().mockResolvedValue(undefined),
+        setMeta: vi.fn(),
+        getMeta: vi.fn().mockResolvedValue(null),
+        migrate: vi.fn().mockResolvedValue(undefined),
+      }
+
+      // resetModules first, THEN register doMock so the fresh import picks it up.
+      // (vi.resetModules clears pending doMock registrations, so ordering matters.)
+      vi.resetModules()
+      vi.doMock('../workerRpc', () => ({
+        CacheWorkerRpc: vi.fn().mockImplementation(function () { return mockRpc }),
+      }))
+
+      const mod = await import('../index')
+      const { useCache, initCacheWorker, isSQLiteWorkerActive, __testables: testables } = mod
+
+      // Activate the SQLite worker path
+      await initCacheWorker()
+      expect(isSQLiteWorkerActive()).toBe(true)
+
+      // Spy on the IndexedDB storage mirror target
+      const idbSetSpy = vi.spyOn(testables._idbStorage, 'set').mockResolvedValue(undefined)
+
+      const testData = [1, 2, 3]
+      const { result } = renderHook(() => useCache({
+        key: 'idb-mirror-test',
+        fetcher: () => Promise.resolve(testData),
+        initialData: [] as number[],
+        autoRefresh: false,
+      }))
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      // The mirror write should have been called with the correct key and data
+      expect(idbSetSpy).toHaveBeenCalledWith('idb-mirror-test', testData)
+
+      idbSetSpy.mockRestore()
+    } finally {
+      globalThis.Worker = originalWorker
+    }
+  })
+
+  it('does not mirror to IDB when workerRpc is null (fallback mode)', async () => {
+    // Without calling initCacheWorker, workerRpc stays null
+    const mod = await importFresh()
+    const { useCache, isSQLiteWorkerActive, __testables: testables } = mod
+
+    expect(isSQLiteWorkerActive()).toBe(false)
+
+    const idbSetSpy = vi.spyOn(testables._idbStorage, 'set').mockResolvedValue(undefined)
+
+    const { result } = renderHook(() => useCache({
+      key: 'idb-no-mirror-test',
+      fetcher: () => Promise.resolve(['a', 'b']),
+      initialData: [] as string[],
+      autoRefresh: false,
+    }))
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    // _idbStorage.set IS called because it's the active cacheStorage backend (not mirror)
+    // but only once — no additional mirror call since workerRpc is null.
+    // The cacheStorage.set call goes through _idbStorage directly.
+    const callCount = idbSetSpy.mock.calls.filter(c => c[0] === 'idb-no-mirror-test').length
+    expect(callCount).toBe(1) // exactly one call from cacheStorage.set, no mirror duplicate
+
+    idbSetSpy.mockRestore()
+  })
+})
+
+// ============================================================================
 // clearSessionSnapshots edge cases
 // ============================================================================
 

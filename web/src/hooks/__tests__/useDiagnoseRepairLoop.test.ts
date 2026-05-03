@@ -280,6 +280,10 @@ describe('useDiagnoseRepairLoop', () => {
     act(() => { hook.result.current.approveAllRepairs() })
     act(() => { hook.result.current.executeRepairs() })
 
+    // Regression guard (#11560/#11562): the stale *diagnosis* mission is
+    // already 'completed' at this point. The repair-completion useEffect
+    // must NOT immediately transition past 'repairing' due to that stale
+    // status — it should only fire when the *repair* mission changes.
     expect(hook.result.current.state.phase).toBe('repairing')
     expect(mockSendMessage).toHaveBeenCalledWith('mission-123', expect.stringContaining('Execute'))
 

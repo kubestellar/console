@@ -359,8 +359,14 @@ export function useLastRoute() {
     }
   }, [location.pathname, restoreScrollPosition])
 
+  let lastRouteValue: string | null = null
+  try {
+    lastRouteValue = localStorage.getItem(LAST_ROUTE_KEY)
+  } catch {
+    // Ignore localStorage errors
+  }
   return {
-    lastRoute: localStorage.getItem(LAST_ROUTE_KEY),
+    lastRoute: lastRouteValue,
     scrollPositions: getScrollPositions(),
   }
 }
@@ -420,4 +426,13 @@ export function setRememberPosition(path: string, enabled: boolean): void {
   } catch {
     // Ignore localStorage errors
   }
+}
+
+export const __testables = {
+  getFirstDashboardRoute,
+  getScrollContainer,
+  LAST_ROUTE_KEY,
+  SCROLL_POSITIONS_KEY,
+  REMEMBER_POSITION_KEY,
+  SIDEBAR_CONFIG_KEY,
 }

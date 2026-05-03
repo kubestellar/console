@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -15,6 +16,16 @@ import { copyToClipboard } from '../../../lib/clipboard'
 /** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
  *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
 const MAX_SCALE_REPLICAS = 100
+
+/** Pod status styling configuration */
+const POD_STATUS_CONFIG: Record<string, { bg: string; text: string }> = {
+  Running: { bg: 'bg-green-500/20', text: 'text-green-400' },
+  Pending: { bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
+  Failed: { bg: 'bg-red-500/20', text: 'text-red-400' },
+  CrashLoopBackOff: { bg: 'bg-red-500/20', text: 'text-red-400' },
+  ImagePullBackOff: { bg: 'bg-red-500/20', text: 'text-red-400' },
+  Unknown: { bg: 'bg-red-500/20', text: 'text-red-400' },
+}
 
 /**
  * Classify a raw kubectl scale error into a stable i18n key. The caller
@@ -167,7 +178,7 @@ export function DeploymentDrillDown({ data }: Props) {
     return new Promise((resolve) => {
       let ws: WebSocket
       try {
-        ws = new WebSocket(LOCAL_AGENT_WS_URL)
+        ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       } catch {
         resolve('')
         return
@@ -365,7 +376,7 @@ export function DeploymentDrillDown({ data }: Props) {
         // Issue 9284: don't leak raw kubectl stderr — map to a friendly message.
         setScaleError(t(classifyScaleError(output)))
       }
-    } catch (err) {
+    } catch (err: unknown) {
       // Issue 9284: don't leak raw stack traces; map through the same helper.
       setScaleError(t(classifyScaleError(err instanceof Error ? err.message : '')))
     } finally {
@@ -440,11 +451,11 @@ export function DeploymentDrillDown({ data }: Props) {
   const isHealthy = readyReplicas === replicas && replicas > 0
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'pods', label: `Pods (${pods.length})`, icon: Box },
-    { id: 'events', label: 'Events', icon: Zap },
-    { id: 'describe', label: 'Describe', icon: FileText },
-    { id: 'yaml', label: 'YAML', icon: Code },
+    { id: 'overview', label: t('drilldown.tabs.overview', 'Overview'), icon: Info },
+    { id: 'pods', label: `${t('drilldown.tabs.pods', 'Pods')} (${pods.length})`, icon: Box },
+    { id: 'events', label: t('drilldown.tabs.events', 'Events'), icon: Zap },
+    { id: 'describe', label: t('drilldown.tabs.describe', 'Describe'), icon: FileText },
+    { id: 'yaml', label: t('drilldown.tabs.yaml', 'YAML'), icon: Code },
   ]
 
   return (
@@ -694,14 +705,15 @@ export function DeploymentDrillDown({ data }: Props) {
                     <span className="font-mono text-foreground">{pod.name}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={cn(
-                      'text-xs px-2 py-1 rounded',
-                      pod.status === 'Running' ? 'bg-green-500/20 text-green-400' :
-                        pod.status === 'Pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-red-500/20 text-red-400'
-                    )}>
-                      {pod.status}
-                    </span>
+                     <span className={cn(
+                       'text-xs px-2 py-1 rounded',
+                       (() => {
+                         const config = POD_STATUS_CONFIG[pod.status] || POD_STATUS_CONFIG.Unknown
+                         return `${config.bg} ${config.text}`
+                       })()
+                     )}>
+                       {pod.status}
+                     </span>
                     {pod.restarts > 0 && (
                       <span className="text-xs text-yellow-400">{pod.restarts} restarts</span>
                     )}

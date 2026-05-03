@@ -81,6 +81,11 @@ const PRE_GAME_TAUNTS = [
 ]
 
 const PRE_GAME_TAUNT_DELAY_MS = 2_000
+const TAUNT_DISPLAY_MS = 3_000
+const INITIAL_TAUNT_DELAY_MS = 3_000
+const TAUNT_CYCLE_INTERVAL_MS = 8_000
+const AI_MOVE_DELAY_MS = 1_000
+const COMBAT_ANIMATION_MS = 500
 
 // Initialize board with starting positions
 function createInitialBoard(): Board {
@@ -497,12 +502,12 @@ export function Checkers(_props: CardComponentProps) {
     // Show initial taunt after a short delay
     const initialTimeout = setTimeout(() => {
       setPirateTaunt(PIRATE_TAUNTS[Math.floor(Math.random() * PIRATE_TAUNTS.length)])
-    }, 3000)
+    }, INITIAL_TAUNT_DELAY_MS)
 
     // Change taunt every 8 seconds
     tauntIntervalRef.current = setInterval(() => {
       setPirateTaunt(PIRATE_TAUNTS[Math.floor(Math.random() * PIRATE_TAUNTS.length)])
-    }, 8000)
+    }, TAUNT_CYCLE_INTERVAL_MS)
 
     return () => {
       clearTimeout(initialTimeout)
@@ -551,7 +556,7 @@ export function Checkers(_props: CardComponentProps) {
           setTimeout(() => {
             setShowCombat(false)
             setCombatCell(null)
-          }, 500)
+          }, COMBAT_ANIMATION_MS)
         }
 
         // Handle chain jumps
@@ -571,14 +576,14 @@ export function Checkers(_props: CardComponentProps) {
         // Show capture taunt
         if (capturedAny) {
           setPirateTaunt(CAPTURE_TAUNTS[Math.floor(Math.random() * CAPTURE_TAUNTS.length)])
-          setTimeout(() => setPirateTaunt(''), 3000)
+          setTimeout(() => setPirateTaunt(''), TAUNT_DISPLAY_MS)
         }
       }
 
       setCurrentPlayer('pods')
       setIsThinking(false)
       thinkingTimeoutRef.current = null
-    }, 1000) // 1 second delay before AI moves
+    }, AI_MOVE_DELAY_MS)
 
     return () => {
       if (thinkingTimeoutRef.current) {
@@ -586,7 +591,7 @@ export function Checkers(_props: CardComponentProps) {
         thinkingTimeoutRef.current = null
       }
     }
-  }, [currentPlayer, gameOver]) // Only trigger on player change or game over
+  }, [board, currentPlayer, gameOver, difficulty]) // Trigger on board/player change
 
   // Handle cell click
   const handleCellClick = (row: number, col: number) => {
@@ -754,7 +759,7 @@ export function Checkers(_props: CardComponentProps) {
       <div className="flex-1 flex items-center justify-center min-h-0">
         <div className="inline-block border border-border rounded overflow-hidden">
           {board.map((row, rowIdx) => (
-            <div key={rowIdx} className="flex">
+            <div key={rowIdx} className="flex shrink-0">
               {row.map((piece, colIdx) => {
                 const isDark = (rowIdx + colIdx) % 2 === 1
                 const isSelected = selectedPos?.row === rowIdx && selectedPos?.col === colIdx
@@ -769,7 +774,7 @@ export function Checkers(_props: CardComponentProps) {
                     key={colIdx}
                     onClick={() => handleCellClick(rowIdx, colIdx)}
                     className={`
-                      ${cellSize} flex items-center justify-center cursor-pointer transition-colors relative
+                      ${cellSize} shrink-0 flex items-center justify-center cursor-pointer transition-colors relative
                       ${isDark ? 'bg-green-800' : 'bg-green-200'}
                       ${isValidMove && !isCapture ? 'ring-2 ring-inset ring-green-400' : ''}
                       ${isCapture ? 'ring-2 ring-inset ring-red-400 bg-red-500/30' : ''}
@@ -802,10 +807,10 @@ export function Checkers(_props: CardComponentProps) {
 
       {/* Pirate Taunt — below board, no overlap */}
       {pirateTaunt && (
-        <div className="flex-shrink-0 p-1 animate-fade-in">
+        <div className="shrink-0 p-1 animate-fade-in">
           <div className="flex items-start gap-2 px-2">
-            <div className="text-lg flex-shrink-0">🏴‍☠️</div>
-            <div className="bg-background/80 backdrop-blur-sm border border-orange-400/50 rounded-lg px-2 py-1.5 flex-1">
+            <div className="text-lg shrink-0">🏴‍☠️</div>
+            <div className="bg-background/80 backdrop-blur-xs border border-orange-400/50 rounded-lg px-2 py-1.5 flex-1">
               <span className="text-orange-300 italic text-xs font-medium leading-tight block">
                 &quot;{pirateTaunt}&quot;
               </span>

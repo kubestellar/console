@@ -1,5 +1,6 @@
 import { useDroppable } from '@dnd-kit/core'
 import { Server, Check, Cpu, HardDrive, Layers, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useClusterCapabilities, ClusterCapability } from '../../hooks/useWorkloads'
@@ -63,8 +64,9 @@ export function ClusterDropZone({
   const { data: realClusters, isLoading } = useClusterCapabilities(!demoMode)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = (realClusters?.length ?? 0) > 0 || DEMO_CLUSTERS.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     hasAnyData: (realClusters?.length ?? 0) > 0 || DEMO_CLUSTERS.length > 0,
     isDemoData: demoMode,
   })
@@ -83,7 +85,7 @@ export function ClusterDropZone({
   return (
     <div className="fixed right-6 top-24 z-dropdown animate-fade-in-up">
       <div className={cn(
-        'glass rounded-xl border p-4 w-72 shadow-2xl backdrop-blur-sm',
+        'glass rounded-xl border p-4 w-72 shadow-2xl backdrop-blur-xs',
         isDemo
           ? 'border-yellow-500/50 bg-yellow-50/95 dark:bg-yellow-900/20'
           : 'border-border/50 bg-white/95 dark:bg-gray-900/95'
@@ -142,6 +144,7 @@ interface DroppableClusterProps {
 }
 
 function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps) {
+  const { t } = useTranslation('cards')
   const { isOver, setNodeRef } = useDroppable({
     id: `cluster-drop-${cluster.cluster}`,
     data: {
@@ -178,8 +181,12 @@ function DroppableCluster({ cluster, workload, onDeploy }: DroppableClusterProps
       }}
       role="button"
       tabIndex={0}
+      aria-label={t('clusterDropZone.deployToClusterAria', { 
+        workload: workload.name,
+        cluster: cluster.cluster 
+      })}
     >
-      <div className="flex-shrink-0 mt-0.5">
+      <div className="shrink-0 mt-0.5">
         <Server className={cn('w-5 h-5', isOver ? 'text-blue-500' : 'text-blue-400')} />
       </div>
 

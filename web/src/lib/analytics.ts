@@ -23,10 +23,14 @@ export {
   emitUserEngagement,
   startGlobalErrorTracking,
   emitError,
+  emitHttpError,
   emitChunkReloadRecoveryFailed,
   markErrorReported,
   captureUtmParams,
+  getRecentBrowserErrors,
+  getRecentFailedApiCalls,
 } from './analytics-core'
+export type { EmitErrorExtra } from './analytics-core'
 
 // ── UTM params accessor ───────────────────────────────────────────
 export { getUtmParams } from './analytics-session'
@@ -95,6 +99,10 @@ export {
 
   // Errors (domain-level, separate from core error tracking)
   emitSessionExpired,
+  emitAgentTokenFailure,
+  emitWsAuthMissing,
+  emitSseAuthFailure,
+  emitSessionRefreshFailure,
 
   // Tour
   emitTourStarted,

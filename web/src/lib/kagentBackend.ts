@@ -106,7 +106,7 @@ export async function kagentChat(
 
     // Stream ended without [DONE]
     options.onDone()
-  } catch (err) {
+  } catch (err: unknown) {
     if (err instanceof DOMException && err.name === 'AbortError') return
     options.onError(err instanceof Error ? err.message : 'Unknown error')
   }

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { isAgentUnavailable } from './useLocalAgent'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
+import { isInClusterMode } from './useBackendHealth'
+import { api } from '../lib/api'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 
@@ -15,6 +17,7 @@ export interface Workload {
   targetClusters?: string[]
   replicas: number
   readyReplicas: number
+  updatedReplicas?: number
   status: 'Running' | 'Degraded' | 'Failed' | 'Pending'
   image: string
   labels?: Record<string, string>
@@ -25,7 +28,22 @@ export interface Workload {
     readyReplicas: number
     lastUpdated: string
   }>
+  reason?: string
+  message?: string
   createdAt: string
+  updatedAt?: string
+}
+
+export interface WorkloadClusterError {
+  cluster: string
+  errorType: string
+  message: string
+}
+
+export interface WorkloadList {
+  items: Workload[]
+  totalCount: number
+  clusterErrors?: WorkloadClusterError[]
 }
 
 export interface ClusterCapability {
@@ -49,11 +67,14 @@ export interface DeployRequest {
 
 export interface DeployResult {
   success: boolean
-  cluster: string
-  message: string
+  message?: string
+  deployedTo?: string[]
+  failedClusters?: string[]
+  dependencies?: { kind: string; name: string; action: string }[]
+  warnings?: string[]
 }
 
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers: Record<string, string> = {}
   if (token) headers['Authorization'] = `Bearer ${token}`
@@ -66,7 +87,7 @@ function authHeaders(): Record<string, string> {
 // relative path and 404 (plus a confusing non-JSON response). Throw early with
 // a clear message so the UI can surface "local agent required" instead of a
 // cryptic 404 (#8021).
-function requireLocalAgentHttp(action: string): string {
+export function requireLocalAgentHttp(action: string): string {
   if (!LOCAL_AGENT_HTTP_URL) {
     throw new Error(`${action} requires the local kc-agent; this browser is not connected to one.`)
   }
@@ -74,7 +95,7 @@ function requireLocalAgentHttp(action: string): string {
 }
 
 
-function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
+export function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
   const workloads: Workload[] = [
     { name: 'api-server', namespace: 'production', type: 'Deployment', cluster: 'eks-prod-us-east-1', replicas: 3, readyReplicas: 3, status: 'Running', image: 'api-server:v2.1.0', createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
     { name: 'web-frontend', namespace: 'production', type: 'Deployment', cluster: 'eks-prod-us-east-1', replicas: 2, readyReplicas: 2, status: 'Running', image: 'web-frontend:v1.8.3', createdAt: new Date(Date.now() - 14 * 86400000).toISOString() },
@@ -96,6 +117,40 @@ async function fetchWorkloadsViaAgent(opts?: {
   namespace?: string
   signal?: AbortSignal
 }): Promise<Workload[] | null> {
+  // In-cluster mode: route to backend API instead of local agent (#11686)
+  if (isInClusterMode()) {
+    try {
+      const params = new URLSearchParams()
+      if (opts?.cluster) params.append('cluster', opts.cluster)
+      if (opts?.namespace) params.append('namespace', opts.namespace)
+      const { data } = await api.get<{ deployments: Array<Record<string, unknown>> }>(
+        `/api/mcp/deployments?${params}`
+      )
+      const deployments = (data?.deployments || [])
+      return deployments.map(d => {
+        const st = String(d.status || 'running')
+        let ws: Workload['status'] = 'Running'
+        if (st === 'failed') ws = 'Failed'
+        else if (st === 'deploying') ws = 'Pending'
+        else if (Number(d.readyReplicas || 0) < Number(d.replicas || 1)) ws = 'Degraded'
+        return {
+          name: String(d.name || ''),
+          namespace: String(d.namespace || 'default'),
+          type: 'Deployment' as const,
+          cluster: String(d.cluster || opts?.cluster || ''),
+          targetClusters: [String(d.cluster || opts?.cluster || '')],
+          replicas: Number(d.replicas || 1),
+          readyReplicas: Number(d.readyReplicas || 0),
+          status: ws,
+          image: String(d.image || ''),
+          createdAt: new Date().toISOString(),
+        }
+      })
+    } catch {
+      return null
+    }
+  }
+
   // Skip agent requests when agent is unavailable (e.g. Netlify with no local agent)
   if (isAgentUnavailable()) return null
 
@@ -119,7 +174,7 @@ async function fetchWorkloadsViaAgent(opts?: {
       // Abort the per-request controller if the parent signal fires
       const onParentAbort = () => ctrl.abort()
       opts?.signal?.addEventListener('abort', onParentAbort)
-      const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
         signal: ctrl.signal,
         headers: { Accept: 'application/json' } })
       clearTimeout(tid)
@@ -295,7 +350,7 @@ export function useClusterCapabilities(enabled = true) {
       }
       const capabilities = await res.json()
       setData(capabilities)
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err : new Error('Unknown error'))
     } finally {
       setIsLoading(false)
@@ -324,7 +379,7 @@ export function useDeployWorkload() {
   const mutate = async (
     request: DeployRequest,
     options?: {
-      onSuccess?: (data: DeployResult[]) => void
+      onSuccess?: (data: DeployResult) => void
       onError?: (error: Error) => void
     }
   ) => {
@@ -338,7 +393,7 @@ export function useDeployWorkload() {
       const agentBase = requireLocalAgentHttp('Deploying workloads')
       const res = await fetch(`${agentBase}/workloads/deploy`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -346,9 +401,12 @@ export function useDeployWorkload() {
         throw new Error(errorData.error || 'Failed to deploy workload')
       }
       const result = await res.json()
+      if (result.success === false) {
+        throw new Error(result.error || result.message || 'Failed to deploy workload')
+      }
       options?.onSuccess?.(result)
       return result
-    } catch (err) {
+    } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unknown error')
       setError(error)
       options?.onError?.(error)
@@ -374,7 +432,7 @@ export function useScaleWorkload() {
       replicas: number
     },
     options?: {
-      onSuccess?: (data: DeployResult[]) => void
+      onSuccess?: (data: DeployResult) => void
       onError?: (error: Error) => void
     }
   ) => {
@@ -388,7 +446,7 @@ export function useScaleWorkload() {
       const agentBase = requireLocalAgentHttp('Scaling workloads')
       const res = await fetch(`${agentBase}/scale`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify(request),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!res.ok) {
@@ -396,9 +454,12 @@ export function useScaleWorkload() {
         throw new Error(errorData.error || 'Failed to scale workload')
       }
       const result = await res.json()
+      if (result.success === false) {
+        throw new Error(result.error || result.message || 'Failed to scale workload')
+      }
       options?.onSuccess?.(result)
       return result
-    } catch (err) {
+    } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unknown error')
       setError(error)
       options?.onError?.(error)
@@ -439,7 +500,7 @@ export function useDeleteWorkload() {
       const agentBase = requireLocalAgentHttp('Deleting workloads')
       const res = await fetch(`${agentBase}/workloads/delete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest', ...authHeaders() },
         body: JSON.stringify({
           cluster: params.cluster,
           namespace: params.namespace,
@@ -450,8 +511,12 @@ export function useDeleteWorkload() {
         const errorData = await res.json()
         throw new Error(errorData.error || 'Failed to delete workload')
       }
+      const result = await res.json()
+      if (result.success === false) {
+        throw new Error(result.error || result.message || 'Failed to delete workload')
+      }
       options?.onSuccess?.()
-    } catch (err) {
+    } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error('Unknown error')
       setError(error)
       options?.onError?.(error)

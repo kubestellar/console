@@ -188,7 +188,7 @@ export function useDashboardCards(
         if (backendCards !== null) {
           setCards(backendCards)
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[useDashboardCards] Backend sync failed:', err)
       } finally {
         setIsSyncing(false)
@@ -317,7 +317,7 @@ export function useDashboardCards(
       if (backendCards !== null) {
         setCards(backendCards)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[useDashboardCards] Backend sync failed:', err)
     } finally {
       setIsSyncing(false)

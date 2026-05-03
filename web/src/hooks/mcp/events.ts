@@ -28,7 +28,7 @@ type EventsSubscriber = (state: EventsSharedState) => void
 const eventsSubscribers = new Set<EventsSubscriber>()
 
 function notifyEventsSubscribers() {
-  eventsSubscribers.forEach(subscriber => subscriber(eventsSharedState))
+  Array.from(eventsSubscribers).forEach(subscriber => subscriber(eventsSharedState))
 }
 
 export function subscribeEventsCache(callback: EventsSubscriber): () => void {
@@ -141,7 +141,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
           reportAgentDataSuccess()
           return
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(`[useEvents] Local agent failed for ${cluster}:`, err)
       }
     }
@@ -172,7 +172,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-    } catch (err) {
+    } catch (err: unknown) {
       // Use name check instead of instanceof to handle both Error and DOMException
       // across all browser versions (DOMException may not extend Error in older Safari).
       if ((err as { name?: string })?.name === 'AbortError') return
@@ -212,7 +212,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     // Poll for events (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `events:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -223,7 +223,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -289,6 +289,7 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(cached?.timestamp || null)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async (silent = false) => {
     // For silent (background) refreshes, don't update loading states - prevents UI flashing
@@ -334,8 +335,9 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       if (namespace) sseParams.namespace = namespace
       sseParams.limit = limit.toString()
 
+      // events/warnings is a backend-only endpoint (#9996) — route SSE via /api/mcp/
       const allEvents = await fetchSSE<ClusterEvent>({
-        url: `${LOCAL_AGENT_HTTP_URL}/events/warnings/stream`,
+        url: `/api/mcp/events/warnings/stream`,
         params: sseParams,
         itemsKey: 'events',
         signal,
@@ -352,11 +354,13 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       setEvents(allEvents.slice(0, limit))
       setError(null)
       setLastUpdated(now)
-    } catch (err) {
+      setConsecutiveFailures(0)
+    } catch (err: unknown) {
       // Use name check instead of instanceof to handle both Error and DOMException
       // across all browser versions (DOMException may not extend Error in older Safari).
       if ((err as { name?: string })?.name === 'AbortError') return
       if (!isMountedRef.current) return
+      setConsecutiveFailures(prev => prev + 1)
       if (!silent && !warningEventsCache) {
         setError('Failed to fetch warning events')
       }
@@ -390,7 +394,7 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
     // Poll for warning events (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `warningEvents:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -401,7 +405,7 @@ export function useWarningEvents(cluster?: string, namespace?: string, limit = 2
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {

@@ -277,6 +277,13 @@ extraEnv: []
 # Direct agent mode (optional, overrides controller discovery):
 #   - set directAgentUrl to a service URL
 #   - optionally set directAgentName/directAgentNamespace for UI metadata
+#
+# Cluster scope:
+#   The in-cluster ServiceAccount (see rbac section above) grants read-only
+#   access to the LOCAL cluster only by default.  Dashboard cards show data
+#   from that single cluster.  To surface remote clusters, either:
+#     1. Configure additional kubeconfigs via extraEnv / mounted secrets, or
+#     2. Use the kc-agent in local-agent mode to bridge browser kubeconfigs.
 kagenti:
   enabled: false
 

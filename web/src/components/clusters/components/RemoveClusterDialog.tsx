@@ -38,7 +38,7 @@ export function RemoveClusterDialog({
     try {
       await onConfirm(contextName)
       onClose()
-    } catch (err) {
+    } catch (err: unknown) {
       setStatus({
         removing: false,
         error: err instanceof Error ? err.message : t('cluster.removeClusterError') })
@@ -56,7 +56,7 @@ export function RemoveClusterDialog({
 
       <BaseModal.Content>
         <div className="flex items-start gap-3 mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-          <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
+          <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" aria-hidden="true" />
           <p className="text-sm text-yellow-200">
             {t('cluster.removeClusterWarning')}
           </p>

@@ -59,7 +59,7 @@ export function RepoInput({ value, onChange, placeholder, className }: RepoInput
             onKeyDown={(e) => e.key === 'Enter' && submit()}
             onBlur={submit}
             placeholder={placeholder || 'owner/repo or github.com URL'}
-            className="w-full text-xs font-mono bg-background/60 border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-primary/50"
+            className="w-full text-xs font-mono bg-background/60 border border-border/50 rounded px-2 py-1 focus:outline-hidden focus:border-primary/50"
           />
           {input && input !== value && (
             <button

@@ -14,6 +14,7 @@
  */
 
 import { STORAGE_KEY_TOKEN } from './constants'
+import { emitSseAuthFailure } from './analytics'
 
 export interface SSEFetchOptions<T> {
   /** SSE endpoint URL path (e.g. `${LOCAL_AGENT_HTTP_URL}/pods/stream`) */
@@ -290,7 +291,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
                 for (const sub of subs) {
                   try { sub.onClusterData(clusterName, tagged) } catch { /* subscriber error */ }
                 }
-              } catch (e) {
+              } catch (e: unknown) {
                 console.error('[SSE] Failed to parse cluster_data:', e)
               }
             } else if (eventType === 'cluster_error') {
@@ -309,7 +310,7 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
                 for (const sub of subs) {
                   try { sub.onClusterError?.(clusterName, errorMessage) } catch { /* subscriber error */ }
                 }
-              } catch (e) {
+              } catch (e: unknown) {
                 console.error('[SSE] Failed to parse cluster_error:', e)
               }
             } else if (eventType === 'done') {
@@ -369,7 +370,11 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
           }
 
           // Don't retry on auth (401) or service unavailable (503) — expected in demo mode
-          const isNonRetryable = err.message?.includes('401') || err.message?.includes('503')
+          const is401 = err.message?.includes('401')
+          const isNonRetryable = is401 || err.message?.includes('503')
+          if (is401 && currentToken) {
+            emitSseAuthFailure(fullUrl)
+          }
           if (isNonRetryable) {
             console.debug('[SSE] Non-retryable error — skipping retries (demo mode)')
             // Clear the in-flight entry and timers so future requests for the
@@ -429,4 +434,14 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
 
   inflightRequests.set(cacheKey, promise as Promise<unknown[]>)
   return promise
+}
+
+export const __testables = {
+  parseSSEChunk,
+  SSE_TIMEOUT_MS,
+  SSE_RECONNECT_BASE_MS,
+  SSE_RECONNECT_MAX_MS,
+  SSE_RECONNECT_BACKOFF_FACTOR,
+  SSE_MAX_RECONNECT_ATTEMPTS,
+  RESULT_CACHE_TTL_MS,
 }

@@ -121,10 +121,32 @@ export function StorageOverview() {
   }
 
   if (showEmptyState) {
+    // Distinguish between "no data exists" and "failed to fetch data"
+    if (isFailed || pvcsError) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+          <AlertTriangle className="w-8 h-8 mb-2 text-red-400 opacity-70" />
+          <p className="text-sm text-red-400">{t('storageOverview.fetchFailed', { defaultValue: 'Failed to load storage data' })}</p>
+          <p className="text-xs mt-1">{pvcsError || t('storageOverview.fetchFailedHint', { defaultValue: 'Check cluster connectivity and try again' })}</p>
+        </div>
+      )
+    }
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
         <p className="text-sm">{t('storageOverview.noData')}</p>
         <p className="text-xs mt-1">{t('storageOverview.noDataHint')}</p>
+      </div>
+    )
+  }
+
+  // When all cluster fetches have failed, show unified error state instead of
+  // rendering misleading partial/empty data from stale cache (#11539).
+  if (consecutiveFailures > 0 && !(clustersRefreshing || pvcsRefreshing) && !isDemoFallback && !isDemoMode) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+        <AlertTriangle className="w-8 h-8 mb-2 text-red-400 opacity-70" />
+        <p className="text-sm text-red-400">{t('storageOverview.allFetchesFailed')}</p>
+        <p className="text-xs mt-1 text-center px-4">{t('storageOverview.allFetchesFailedHint')}</p>
       </div>
     )
   }
@@ -161,7 +183,7 @@ export function StorageOverview() {
       {/* Error banner */}
       {pvcsError && (
         <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
           <span>{t('storageOverview.fetchError', { defaultValue: 'Failed to load PVC data: {{error}}', error: pvcsError })}</span>
         </div>
       )}

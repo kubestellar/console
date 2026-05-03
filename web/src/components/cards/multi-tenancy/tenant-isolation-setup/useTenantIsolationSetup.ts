@@ -4,6 +4,7 @@
  *
  * No caching needed — purely derived from the individual status hooks.
  */
+import type { IsolationStatus } from '../shared'
 import { useOvnStatus } from '../ovn-status/useOvnStatus'
 import { useKubeFlexStatus } from '../kubeflex-status/useKubeflexStatus'
 import { useK3sStatus } from '../k3s-status/useK3sStatus'
@@ -19,7 +20,7 @@ export interface ComponentReadiness {
   health: string
 }
 
-export type IsolationStatus = 'ready' | 'missing' | 'degraded'
+export type { IsolationStatus }
 
 export interface IsolationLevel {
   type: string

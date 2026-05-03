@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
   AlertTriangle,
@@ -20,6 +21,7 @@ import {
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { useKeycloakStatus } from './useKeycloakStatus'
 import type { KeycloakRealm, KeycloakRealmStatus } from './demoData'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
 // Default page size for the paginated realm list. Named constant per
 // CLAUDE.md "No magic numbers" rule.
@@ -63,48 +65,10 @@ const STATUS_SORT_ORDER: Record<KeycloakRealmStatus, number> = {
   ready: 3,
 }
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('keycloak.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('keycloak.syncedJustNow')
-    if (diff < hour) return t('keycloak.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('keycloak.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('keycloak.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function StatTile({
-  icon,
-  label,
-  value,
-  colorClass,
-  borderClass,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number
-  colorClass: string
-  borderClass: string
-}) {
-  return (
-    <div className={`p-3 rounded-lg bg-secondary/30 border ${borderClass}`}>
-      <div className="flex items-center gap-2 mb-1">
-        {icon}
-        <span className={`text-xs ${colorClass}`}>{label}</span>
-      </div>
-      <span className="text-2xl font-bold text-foreground">{value.toLocaleString()}</span>
-    </div>
-  )
-}
 
 function RealmRow({ realm }: { realm: KeycloakRealm }) {
   const { t } = useTranslation('cards')
@@ -156,7 +120,7 @@ function RealmRow({ realm }: { realm: KeycloakRealm }) {
 
 export function KeycloakStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'keycloak')
   const { data, isRefreshing, isFailed, showSkeleton, showEmptyState } =
     useKeycloakStatus()
 
@@ -228,7 +192,7 @@ export function KeycloakStatus() {
           <Skeleton variant="rounded" width={120} height={28} />
           <Skeleton variant="rounded" width={80} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <Skeleton variant="rounded" height={32} />
         <SkeletonList items={3} className="flex-1" />
       </div>
@@ -302,28 +266,28 @@ export function KeycloakStatus() {
           <StatTile
             icon={<Globe className="w-4 h-4 text-blue-400" />}
             label={t('keycloak.realms')}
-            value={realms.length}
+            value={realms.length.toLocaleString()}
             colorClass="text-blue-400"
             borderClass="border-blue-500/20"
           />
           <StatTile
             icon={<CheckCircle className="w-4 h-4 text-green-400" />}
             label={t('keycloak.ready')}
-            value={stats.ready}
+            value={stats.ready.toLocaleString()}
             colorClass="text-green-400"
             borderClass="border-green-500/20"
           />
           <StatTile
             icon={<Users className="w-4 h-4 text-cyan-400" />}
             label={t('keycloak.sessions')}
-            value={data.totalActiveSessions}
+            value={data.totalActiveSessions.toLocaleString()}
             colorClass="text-cyan-400"
             borderClass="border-cyan-500/20"
           />
           <StatTile
             icon={<AlertTriangle className="w-4 h-4 text-red-400" />}
             label={t('keycloak.issues')}
-            value={stats.issues}
+            value={stats.issues.toLocaleString()}
             colorClass="text-red-400"
             borderClass="border-red-500/20"
           />

@@ -93,6 +93,8 @@ export const CARD_TITLES: Record<string, string> = {
   helm_history: 'Helm History',
   helm_values_diff: 'Helm Values Diff',
   kustomization_status: 'Kustomization Status',
+  flux_status: 'Flux CD',
+  chaos_mesh_status: 'Chaos Mesh',
   buildpacks_status: 'Buildpacks Status',
   overlay_comparison: 'Overlay Comparison',
   chart_versions: 'Helm Chart Versions',
@@ -128,6 +130,7 @@ export const CARD_TITLES: Record<string, string> = {
   kubescape_scan: 'Kubescape Scan',
   iso27001_audit: 'ISO 27001 Security Audit',
   compliance_score: 'Compliance Score',
+  runtime_attestation: 'Runtime Attestation Score',
   vault_secrets: 'Vault Secrets',
   external_secrets: 'External Secrets',
   cert_manager: 'Cert Manager',
@@ -163,6 +166,7 @@ export const CARD_TITLES: Record<string, string> = {
   rbac_explorer: 'RBAC Explorer',
   maintenance_windows: 'Maintenance Windows',
   cluster_changelog: 'Cluster Changelog',
+  change_timeline: 'Change Timeline',
   quota_heatmap: 'Quota Heatmap',
 
   // Kagenti AI Agent Platform
@@ -263,8 +267,52 @@ export const CARD_TITLES: Record<string, string> = {
   provider_health: 'Provider Health',
   // CoreDNS
   coredns_status: 'CoreDNS',
+  // Backstage developer portal (CNCF incubating)
+  backstage_status: 'Backstage',
+  // Contour ingress proxy
+  contour_status: 'Contour',
+  // Dapr distributed application runtime
+  dapr_status: 'Dapr',
+  // Envoy proxy (service mesh / edge)
+  envoy_status: 'Envoy Proxy',
+  // gRPC services (network / service communication)
+  grpc_status: 'gRPC Services',
+  // Linkerd service mesh
+  linkerd_status: 'Linkerd',
+  // Longhorn distributed block storage (CNCF Incubating)
+  longhorn_status: 'Longhorn',
+  // OpenFGA fine-grained authorization (CNCF Sandbox)
+  openfga_status: 'OpenFGA',
+  // OpenTelemetry collector (CNCF)
+  otel_status: 'OpenTelemetry',
+  // Rook cloud-native storage orchestrator
+  rook_status: 'Rook',
+  // SPIFFE workload identity (CNCF graduated)
+  spiffe_status: 'SPIFFE',
+  // CNI (Container Network Interface) plugin status
+  cni_status: 'CNI',
+  // SPIRE (SPIFFE Runtime Environment) — workload identity
+  spire_status: 'SPIRE',
+  // TiKV distributed key-value store
+  tikv_status: 'TiKV',
+  // TUF (The Update Framework) repository metadata
+  tuf_status: 'TUF',
+  // Vitess distributed MySQL
+  vitess_status: 'Vitess',
+  // wasmCloud WebAssembly lattice (CNCF incubating)
+  wasmcloud_status: 'wasmCloud',
+  // Volcano batch/HPC scheduler (CNCF Incubating)
+  volcano_status: 'Volcano',
   // CRI-O container runtime
   crio_status: 'CRI-O',
+  // Cloud Custodian rules engine (CNCF incubating)
+  cloud_custodian_status: 'Cloud Custodian',
+  // Containerd container runtime
+  containerd_status: 'Containerd',
+  // Cortex horizontally scalable Prometheus (CNCF incubating — marketplace#35)
+  cortex_status: 'Cortex',
+  // Dragonfly P2P image/file distribution
+  dragonfly_status: 'Dragonfly',
   // Strimzi Kafka operator
   strimzi_status: 'Strimzi',
   // Flatcar Container Linux
@@ -292,20 +340,28 @@ export const CARD_TITLES: Record<string, string> = {
   cascade_impact_map: 'Cascade Impact Map',
   config_drift_heatmap: 'Config Drift Heatmap',
   resource_imbalance_detector: 'Resource Imbalance Detector',
+  right_size_advisor: 'Right-Size Advisor',
   restart_correlation_matrix: 'Restart Correlation Matrix',
   deployment_rollout_tracker: 'Deployment Rollout Tracker',
   // KEDA
   keda_status: 'KEDA',
   // OpenYurt edge computing
   openyurt_status: 'OpenYurt',
+  // KServe model serving
+  kserve_status: 'KServe',
   // Knative serverless
   knative_status: 'Knative',
   // Karmada multi-cluster orchestration
   karmada_status: 'Karmada',
+  cubefs_status: 'CubeFS',
+  harbor_status: 'Harbor Registry',
+  deployment_risk_score: 'Deployment Risk Score',
   kuberay_fleet: 'KubeRay Fleet',
   slo_compliance: 'SLO Compliance',
   failover_timeline: 'Failover Timeline',
   trino_gateway: 'Trino Gateway',
+  // Fluid dataset caching
+  fluid_status: 'Fluid',
 
   // Inspektor Gadget
   network_trace: 'Network Traces',
@@ -326,7 +382,7 @@ export const CARD_TITLES: Record<string, string> = {
 
 // Short descriptions shown via info icon tooltip in the card header
 export const CARD_DESCRIPTIONS: Record<string, string> = {
-  acmm_level: "The repo's current level on the AI Codebase Maturity Model (L1–L5).",
+  acmm_level: "The repo's current level on the AI Codebase Maturity Model (L1–L6).",
   acmm_feedback_loops: 'Inventory of criteria from ACMM, Fullsend, AEF, and Claude-Reflect.',
   acmm_recommendations: 'Your current role and prioritized missing criteria for the next level.',
   cluster_health: 'Overall health status of all connected Kubernetes clusters.',
@@ -399,6 +455,8 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   helm_history: 'Revision history and rollback options for Helm releases.',
   helm_values_diff: 'Diff of Helm values between revisions.',
   kustomization_status: 'Status of Kustomize overlays and their resources.',
+  flux_status: 'Flux Git repositories, kustomizations, and Helm release reconciliation status across clusters.',
+  chaos_mesh_status: 'Chaos Mesh experiment status and workflow progress.',
   overlay_comparison: 'Compare Kustomize overlays across environments.',
   chart_versions: 'Available Helm chart versions and update status.',
   argocd_applications: 'ArgoCD application inventory and sync status.',
@@ -427,6 +485,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kubescape_scan: 'Kubescape scans your Kubernetes clusters against security frameworks like NSA/CISA and MITRE ATT&CK. This card shows your security posture score and highlights areas that need hardening.',
   iso27001_audit: 'Interactive ISO 27001 compliance checklist with 70 security controls for Kubernetes clusters. Walk through each control to assess your organization\'s information security management practices.',
   compliance_score: 'Overall compliance score across security frameworks. Aggregates results from tools like OPA, Kyverno, Trivy, and Kubescape to give you a single score showing how well your clusters meet security and compliance standards.',
+  runtime_attestation: 'Composite 0-100 trust score per cluster derived from four CNCF signals: image provenance (TUF), workload identity (SPIFFE/SPIRE), policy compliance (Kyverno), and runtime privilege posture. Click a cluster to see the per-signal breakdown and non-compliant workloads.',
   vault_secrets: 'HashiCorp Vault is an external secrets manager that securely stores API keys, passwords, and certificates. This card shows which Vault secrets are synced into Kubernetes and whether any are failing to sync.',
   external_secrets: 'External Secrets Operator syncs secrets from external providers (AWS Secrets Manager, Azure Key Vault, GCP Secret Manager) into Kubernetes Secrets. This card shows sync status and any errors.',
   cert_manager: 'cert-manager automates TLS certificate provisioning and renewal using providers like Let\'s Encrypt. This card shows certificate status, expiry dates, and whether renewals are succeeding.',
@@ -455,6 +514,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   rbac_explorer: 'Interactive RBAC role and binding explorer.',
   maintenance_windows: 'Scheduled maintenance windows and their status.',
   cluster_changelog: 'Recent changes to cluster resources and configurations.',
+  change_timeline: 'Cross-cluster change events visualized as a scatter plot over time.',
   quota_heatmap: 'Resource quota utilization heatmap across namespaces.',
 
   // Kagenti AI Agent Platform
@@ -521,7 +581,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   // Lima VM
   lima_status: 'Lima VM instance status, resource usage, and configuration.',
   // OpenFeature feature-flag management
-  openfeature_status: 'OpenFeature feature flag provider status and flag evaluation metrics.',
+  openfeature_status: 'OpenFeature feature flags: provider status (flagd, LaunchDarkly, ...), flag definitions by type (boolean/string/number/json), and evaluation metrics.',
   // OpenKruise advanced workloads
   openkruise_status: 'OpenKruise advanced workload status (CloneSet, Advanced StatefulSet/DaemonSet) and SidecarSet injection.',
 
@@ -561,11 +621,55 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   kube_bert: 'Q*bert style platformer navigating Kubernetes pyramids.',
   // CoreDNS
   coredns_status: 'CoreDNS pod health, restart counts, and cluster status across clusters.',
+  // Backstage developer portal (CNCF incubating)
+  backstage_status: 'Backstage developer portal — app replicas, catalog entity inventory (Components/APIs/Systems/Domains/Resources/Users/Groups), plugin status, scaffolder templates, and last catalog sync.',
+  // Contour ingress proxy
+  contour_status: 'Contour ingress proxy status, HTTPProxy resources, and Envoy fleet health.',
+  // Dapr distributed application runtime
+  dapr_status: 'Dapr control plane health, Dapr-enabled application count, and configured components (state store / pub-sub / binding).',
+  // Envoy proxy (service mesh / edge)
+  envoy_status: 'Envoy Proxy listener health, upstream cluster health, and request/connection stats.',
+  // gRPC services (network / service communication)
+  grpc_status: 'gRPC service serving status, per-service RPS, p99 latency, and error rates.',
+  // Linkerd service mesh
+  linkerd_status: 'Linkerd service mesh meshed pods, success rate, RPS, and p99 latency per deployment.',
+  // Longhorn distributed block storage (CNCF Incubating)
+  longhorn_status: 'Longhorn distributed block storage: volumes (state/robustness), node status, replica health, and capacity utilization.',
+  // OpenFGA fine-grained authorization (CNCF Sandbox)
+  openfga_status: 'OpenFGA fine-grained authorization: stores, authorization models, relationship tuples, API throughput (Check/Expand/ListObjects), and latency percentiles.',
+  // OpenTelemetry collector
+  otel_status: 'OpenTelemetry Collectors: pipeline health, receivers and exporters, dropped telemetry, and export errors across connected clusters.',
+  // Rook cloud-native storage orchestrator (Ceph)
+  rook_status: 'Rook-managed CephClusters: Ceph health, OSD/MON/MGR counts, capacity usage, and PG state summary.',
+  // SPIFFE workload identity (CNCF graduated)
+  spiffe_status: 'SPIFFE/SPIRE workload identity: trust domain, SVID counts (x509/JWT), federated trust domains, and registration entries.',
+  // CNI (Container Network Interface) plugin status
+  cni_status: 'Container Network Interface plugin status: active plugin, per-node CNI readiness, pod network CIDR, and NetworkPolicy coverage across services.',
+  // SPIRE (SPIFFE Runtime Environment) — workload identity
+  spire_status: 'SPIRE workload identity — server pod health, agent DaemonSet coverage, attested agents, registration entries, and trust bundle age.',
+  // TiKV distributed key-value store
+  tikv_status: 'TiKV distributed key-value store: store nodes, region counts, leader counts, and capacity utilization across the cluster.',
+  // TUF (The Update Framework) repository metadata
+  tuf_status: 'TUF repository role metadata — root, targets, snapshot, timestamp — versions, expirations, thresholds, and signing status.',
+  // Vitess distributed MySQL
+  vitess_status: 'Vitess distributed MySQL: keyspaces, shards, tablets (PRIMARY/REPLICA/RDONLY), and replication lag.',
+  // wasmCloud WebAssembly lattice (CNCF incubating)
+  wasmcloud_status: 'wasmCloud lattice status: hosts, actors, capability providers, and link definitions across connected clusters.',
+  // Volcano batch/HPC scheduler (CNCF Incubating)
+  volcano_status: 'Volcano batch/HPC scheduler: queues, jobs (pending/running/completed/failed), pod groups, and GPU allocation.',
   // CRI-O container runtime
   crio_status: 'CRI-O container runtime metrics, image pulls, and pod sandbox status.',
+  // Cloud Custodian rules engine (CNCF incubating)
+  cloud_custodian_status: 'Cloud Custodian policy runs — success / fail / dry-run counts, last run per policy, top resources acted on, and violations by severity.',
+  // Containerd container runtime
+  containerd_status: 'Containerd runtime — running containers, image, namespace, state, and uptime.',
+  // Cortex horizontally scalable Prometheus (CNCF incubating — marketplace#35)
+  cortex_status: 'Cortex (CNCF incubating) — horizontally scalable Prometheus: microservice health, active series, ingestion rate, query rate, and tenant count.',
+  // Dragonfly P2P image/file distribution
+  dragonfly_status: 'Dragonfly P2P image/file distribution — manager, scheduler, seed-peers, and per-node dfdaemon agents with active tasks and cache hit rate.',
 
-  // KubeVela application delivery
-  kubevela_status: 'KubeVela application delivery, component status, and workflow progress.',
+  // KubeVela application delivery (CNCF Incubating)
+  kubevela_status: 'KubeVela Application CRs: workflow step progress, component + trait counts, and vela-core controller health.',
   // CloudEvents monitoring
   cloudevents_status: 'CloudEvents message flow, event source tracking, and delivery status.',
 
@@ -575,6 +679,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   cascade_impact_map: 'Visualizes how issues cascade across clusters over time.',
   config_drift_heatmap: 'Cluster-pair matrix showing degree of configuration drift.',
   resource_imbalance_detector: 'Detects CPU/memory utilization skew across the fleet.',
+  right_size_advisor: 'Per-cluster sizing verdicts — under-provisioned, right-sized, or over-provisioned — with actionable recommendations and a headroom buffer slider.',
   restart_correlation_matrix: 'Detects horizontal (app bug) vs vertical (infra issue) restart patterns.',
   deployment_rollout_tracker: 'Tracks deployment rollout progress across clusters.',
   // KEDA
@@ -583,14 +688,21 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   keycloak_status: 'Keycloak is a CNCF-incubating open-source Identity and Access Management solution. This card monitors the Keycloak Operator health, realm status, active user sessions, and registered clients across your clusters.',
   // OpenYurt edge computing
   openyurt_status: 'OpenYurt extends Kubernetes to edge computing scenarios. This card monitors edge node pools, node autonomy status, and Raven gateway connectivity between edge and cloud clusters.',
+  // KServe model serving (kubestellar/console-marketplace#38)
+  kserve_status: 'KServe is a CNCF incubating model-serving platform on Kubernetes. This card monitors InferenceService readiness, predictor replica status, canary traffic split, and serving throughput / latency across clusters.',
   // Knative serverless
   knative_status: 'Knative is a CNCF graduated platform for serverless workloads on Kubernetes. This card monitors Knative Serving services, revision status, traffic routing, and Eventing broker health across your clusters.',
   // Karmada multi-cluster orchestration
   karmada_status: 'Karmada is a multi-cluster orchestration tool that propagates resources (Deployments, Services, etc.) across multiple clusters using placement policies. This card shows propagation status, member cluster health, and policy compliance.',
-  kuberay_fleet: 'Discovers RayCluster, RayService, and RayJob CRDs across all connected clusters. Shows fleet-level Ray workload status including GPU allocations, serving endpoints, and job progress.',
+  cubefs_status: 'CubeFS distributed file system health, volume status, and node topology',
+  harbor_status: 'Harbor registry projects, repositories, and vulnerability scan results',
+  deployment_risk_score: 'Correlates Argo CD sync status, Kyverno violations, and pod restart rates into a single 0-100 risk score per namespace so one glance replaces five dashboards.',
+  kuberay_fleet: 'KubeRay fleet monitoring — RayCluster, RayService, and RayJob status across all clusters',
   slo_compliance: 'Tracks SLO compliance with configurable targets for latency, error rate, and availability. Shows error budget burn rate and per-cluster compliance indicators.',
   failover_timeline: 'Forensic timeline of cross-region failover events detected from Karmada ResourceBinding status transitions. Shows cluster outages, binding rescheduling, and recovery events.',
   trino_gateway: 'Discovers Trino coordinator, worker, and Trino Gateway pods across clusters. Shows per-cluster query health, gateway routing status, and worker distribution.',
+  // Fluid dataset caching
+  fluid_status: 'Fluid is a CNCF incubating cloud-native dataset orchestrator that accelerates data access for AI/Big Data workloads. This card monitors dataset caching status, runtime engine health, and data load progress across your clusters.',
 
   // Inspektor Gadget
   network_trace: 'Live network connection tracing via Inspektor Gadget eBPF.',

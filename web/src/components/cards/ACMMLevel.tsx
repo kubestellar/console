@@ -48,7 +48,7 @@ export function ACMMLevel() {
   const { repo, scan } = useACMM()
   const { level, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
 
-  const hasData = scan.data.detectedIds.length > 0
+  const hasData = (scan.data.detectedIds ?? []).length > 0
   const { showSkeleton } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
@@ -84,7 +84,7 @@ export function ACMMLevel() {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative flex-shrink-0">
+        <div className="relative shrink-0">
           <LevelRing level={level.level} />
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="text-2xl font-bold leading-none">L{level.level}</div>

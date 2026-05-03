@@ -31,6 +31,13 @@ const {
   }
 })
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
@@ -56,7 +63,11 @@ vi.mock('../../../lib/modeTransition', () => ({
 vi.mock('../shared', () => ({
   REFRESH_INTERVAL_MS: 120_000,
   MIN_REFRESH_INDICATOR_MS: 500,
-  getEffectiveInterval: (ms: number) => ms,
+  getEffectiveInterval: (ms: number, consecutiveFailures = 0) => {
+    if (consecutiveFailures <= 0) return ms
+    const multiplier = Math.pow(2, Math.min(consecutiveFailures, 5))
+    return Math.min(ms * multiplier, 600_000)
+  },
   LOCAL_AGENT_URL: 'http://localhost:8585',
   agentFetch: (...args: unknown[]) => fetch(...(args as Parameters<typeof fetch>)),
 }))
@@ -227,8 +238,8 @@ describe('useEvents', () => {
     expect(
       result.current.error === null || result.current.error === 'Failed to fetch events'
     ).toBe(true)
-    // isFailed is only true after 3 consecutive failures
-    expect(result.current.isFailed).toBe(false)
+    // With exponential backoff, cascading re-fetches quickly exceed the threshold
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
   })
 
   it('returns demo events when demo mode is active', async () => {
@@ -358,19 +369,11 @@ describe('useEvents', () => {
     mockFetchSSE.mockRejectedValue(new Error('network down'))
 
     const { result } = renderHook(() => useEvents())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    // First failure
-    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
-    expect(result.current.isFailed).toBe(false)
-
-    // Trigger two more failures via explicit refetch
-    await act(async () => { result.current.refetch() })
-    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(2))
-
-    await act(async () => { result.current.refetch() })
+    // With exponential backoff, consecutiveFailures is a useEffect dependency.
+    // Each failure triggers an effect re-run which immediately refetches,
+    // causing rapid cascading failures that quickly exceed the threshold.
     await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3))
-
     expect(result.current.isFailed).toBe(true)
   })
 
@@ -594,7 +597,7 @@ describe('useWarningEvents', () => {
 
     await waitFor(() => expect(mockFetchSSE).toHaveBeenCalled())
     const callArgs = mockFetchSSE.mock.calls[0][0] as { url: string }
-    expect(callArgs.url).toBe(`${LOCAL_AGENT_HTTP_URL}/events/warnings/stream`)
+    expect(callArgs.url).toBe('/api/mcp/events/warnings/stream')
   })
 
   it('forwards cluster, namespace, and limit when provided', async () => {

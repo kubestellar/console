@@ -233,7 +233,17 @@ func startSSECacheEvictor() {
 	})
 }
 
+// ClearSSECache removes all entries from the SSE response cache.
+// Intended for testing environments where data changes more frequently
+// than the cache TTL (#6956).
+func ClearSSECache() {
+	sseCacheMu.Lock()
+	defer sseCacheMu.Unlock()
+	sseCache = make(map[string]*sseCacheEntry)
+}
+
 // StopSSECacheEvictor signals the background evictor goroutine to exit.
+
 // Safe to call multiple times. Intended for server shutdown and tests (#6956).
 func StopSSECacheEvictor() {
 	select {
@@ -408,15 +418,21 @@ func streamClusters(
 			return true
 		}
 
-		// Instantly emit skipped events for offline clusters
+		// Instantly emit skipped events for offline clusters.
+		// Must hold mu — background goroutines for healthy clusters also
+		// call emitEvent (writes to a non-thread-safe bufio.Writer) and
+		// increment completedClusters under the same lock (#10254).
 		for _, cl := range offline {
-			if !emitEvent(sseEventClusterSkipped, fiber.Map{
+			mu.Lock()
+			ok := emitEvent(sseEventClusterSkipped, fiber.Map{
 				"cluster": cl.Name,
 				"reason":  "offline",
-			}) {
+			})
+			completedClusters++
+			mu.Unlock()
+			if !ok {
 				return
 			}
-			completedClusters++
 		}
 
 		// Spawn goroutines only for healthy/unknown clusters
@@ -584,14 +600,16 @@ func (h *MCPHandlers) GetPodsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "pods", getDemoPods())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "pods",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		pods, err := h.k8sClient.GetPods(ctx, cluster, namespace)
 		if err != nil {
@@ -607,14 +625,16 @@ func (h *MCPHandlers) FindPodIssuesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "issues", getDemoPodIssues())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.FindPodIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -630,14 +650,16 @@ func (h *MCPHandlers) GetDeploymentsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "deployments", getDemoDeployments())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "deployments",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		deps, err := h.k8sClient.GetDeployments(ctx, cluster, namespace)
 		if err != nil {
@@ -653,7 +675,7 @@ func (h *MCPHandlers) GetEventsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "events", getDemoEvents())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -685,7 +707,7 @@ func (h *MCPHandlers) GetServicesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "services", getDemoServices())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -708,14 +730,16 @@ func (h *MCPHandlers) CheckSecurityIssuesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "issues", getDemoSecurityIssues())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.CheckSecurityIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -731,14 +755,16 @@ func (h *MCPHandlers) FindDeploymentIssuesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "issues", getDemoDeploymentIssues())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "issues",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		issues, err := h.k8sClient.FindDeploymentIssues(ctx, cluster, namespace)
 		if err != nil {
@@ -754,12 +780,14 @@ func (h *MCPHandlers) GetNodesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "nodes", getDemoNodes())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "nodes",
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetNodes(ctx, cluster)
 	})
@@ -771,12 +799,14 @@ func (h *MCPHandlers) GetGPUNodesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "nodes", getDemoGPUNodes())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "nodes",
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetGPUNodes(ctx, cluster)
 	})
@@ -788,12 +818,14 @@ func (h *MCPHandlers) GetGPUNodeHealthStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "nodes", getDemoGPUNodeHealth())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "nodes",
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetGPUNodeHealth(ctx, cluster)
 	})
@@ -813,7 +845,7 @@ func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "events", getDemoWarningEvents())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -853,14 +885,16 @@ func (h *MCPHandlers) GetJobsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "jobs", getDemoJobs())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "jobs",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetJobs(ctx, cluster, namespace)
 	})
@@ -872,14 +906,16 @@ func (h *MCPHandlers) GetConfigMapsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "configmaps", getDemoConfigMaps())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "configmaps",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetConfigMaps(ctx, cluster, namespace)
 	})
@@ -897,14 +933,16 @@ func (h *MCPHandlers) GetSecretsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "secrets", getDemoSecrets())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "secrets",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		return h.k8sClient.GetSecrets(ctx, cluster, namespace)
 	})
@@ -916,15 +954,17 @@ func (h *MCPHandlers) GetWorkloadsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "workloads", getDemoWorkloads())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
 	namespace := c.Query("namespace")
 	workloadType := c.Query("type")
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "workloads",
 		namespace:      namespace,
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		workloads, err := h.k8sClient.ListWorkloadsForCluster(ctx, cluster, namespace, workloadType)
 		if err != nil {
@@ -940,12 +980,14 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatusStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "operators", getDemoNVIDIAOperatorStatus())
 	}
 	if h.k8sClient == nil {
-		return c.Status(503).JSON(fiber.Map{"error": "No cluster access"})
+		return errNoClusterAccess(c)
 	}
 
+	clusterFilter := c.Query("cluster")
 	return streamClusters(c, h, sseClusterStreamConfig{
 		demoKey:        "operators",
 		clusterTimeout: ssePerClusterTimeout,
+		clusterFilter:  clusterFilter,
 	}, func(ctx context.Context, cluster string) (interface{}, error) {
 		status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, cluster)
 		if err != nil {

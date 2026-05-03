@@ -163,7 +163,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
   const { statuses: trivyStatuses, isLoading: trivyLoading, isRefreshing: trivyRefreshing, isDemoData: trivyDemoData, installed: trivyInstalled, refetch: trivyRefetch, clustersChecked: trivyChecked, totalClusters: trivyTotal } = useTrivy()
   const { statuses: kubescapeStatuses, isLoading: kubescapeLoading, isRefreshing: kubescapeRefreshing, isDemoData: kubescapeDemoData, installed: kubescapeInstalled, refetch: kubescapeRefetch, clustersChecked: kubescapeChecked, totalClusters: kubescapeTotal } = useKubescape()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
-  const { deduplicatedClusters } = useClusters()
+  const { deduplicatedClusters, consecutiveFailures: clusterFailures } = useClusters()
   const { isDemoMode } = useDemoMode()
   const { startMission } = useMissions()
 
@@ -223,7 +223,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
   // error render path when all 3 underlying hooks (kyverno, trivy,
   // kubescape) finished but found no clusters to scan / no installations.
   // hasError is computed above from `clustersChecked` totals.
-  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData, isFailed: hasError })
+  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData, isFailed: hasError, consecutiveFailures: clusterFailures })
 
   const rows = useMemo((): HeatmapRow[] => {
     // Collect all cluster names from compliance hooks + useClusters fallback
@@ -351,7 +351,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
     <div className="space-y-2 p-1">
       {/* Context description */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5">
-        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{t('fleetCompliance.contextDescription')}</span>
       </div>
 
@@ -369,7 +369,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
       </div>
 
       {/* Header row */}
-      <div className="grid grid-cols-4 gap-1 text-xs font-medium text-muted-foreground">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-1 text-xs font-medium text-muted-foreground">
         <div className="px-2 py-1">Cluster</div>
         {tools.map((tool, i) => {
           const key = toolKeys[i]
@@ -394,7 +394,7 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
 
       {/* Data rows */}
       {rows.map(row => (
-        <div key={row.cluster} className="grid grid-cols-4 gap-1">
+        <div key={row.cluster} className="grid grid-cols-2 @md:grid-cols-4 gap-1">
           <div className="px-2 py-1.5 text-xs font-mono truncate" title={row.cluster}>
             {row.cluster}
           </div>

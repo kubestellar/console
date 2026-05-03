@@ -13,6 +13,9 @@ import (
 	"time"
 )
 
+// maxKAgentResponseBytes caps io.ReadAll on kagent API responses.
+const maxKAgentResponseBytes = 10 * 1024 * 1024 // 10 MiB
+
 // AgentInfo describes a kagent agent discovered via the platform.
 type AgentInfo struct {
 	Name        string   `json:"name"`
@@ -81,7 +84,7 @@ func (c *KagentClient) ListAgents() ([]AgentInfo, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
 		return nil, fmt.Errorf("list agents returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -103,7 +106,7 @@ func (c *KagentClient) Discover(namespace, agentName string) (*AgentCard, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
 		return nil, fmt.Errorf("discover agent %s/%s returned %d: %s", namespace, agentName, resp.StatusCode, string(body))
 	}
 
@@ -164,7 +167,7 @@ func (c *KagentClient) Invoke(ctx context.Context, namespace, agentName, message
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		errBody, _ := io.ReadAll(resp.Body)
+		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
 		resp.Body.Close()
 		return nil, fmt.Errorf("A2A invoke returned %d: %s", resp.StatusCode, string(errBody))
 	}

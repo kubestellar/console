@@ -26,7 +26,14 @@ export function ControlPlaneHealth() {
   // Fetch from all namespaces so we catch control-plane pods in both
   // kube-system (vanilla K8s) and openshift-* namespaces (OpenShift)
   const { pods: allPods, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedPods()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
+  // (#11145) Exclude clusters confirmed unreachable — unreachable primary
+  // contexts should not influence health determination. Clusters with
+  // reachable: undefined (not yet checked) are still included.
+  const clusters = useMemo(() =>
+    (allClusters || []).filter(c => c.reachable !== false),
+    [allClusters]
+  )
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
 
   // Pre-filter to control-plane namespaces for efficiency

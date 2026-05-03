@@ -76,7 +76,7 @@ export async function getUserRewards(): Promise<UserRewardsRecord> {
   try {
     const { data } = await api.get<UserRewardsRecord>('/api/rewards/me')
     return data
-  } catch (err) {
+  } catch (err: unknown) {
     throw toRewardsError(err)
   }
 }
@@ -91,7 +91,7 @@ export async function putUserRewards(payload: {
   try {
     const { data } = await api.put<UserRewardsRecord>('/api/rewards/me', payload)
     return data
-  } catch (err) {
+  } catch (err: unknown) {
     throw toRewardsError(err)
   }
 }
@@ -104,7 +104,7 @@ export async function incrementCoins(delta: number): Promise<UserRewardsRecord> 
   try {
     const { data } = await api.post<UserRewardsRecord>('/api/rewards/coins', { delta })
     return data
-  } catch (err) {
+  } catch (err: unknown) {
     throw toRewardsError(err)
   }
 }
@@ -118,7 +118,7 @@ export async function claimDailyBonus(): Promise<DailyBonusResponse> {
   try {
     const { data } = await api.post<DailyBonusResponse>('/api/rewards/daily-bonus', {})
     return data
-  } catch (err) {
+  } catch (err: unknown) {
     // api.post throws a plain Error for non-401 failures. We try to parse
     // a 429 body off the message if the backend's JSON leaked through.
     if (err instanceof UnauthenticatedError || err instanceof UnauthorizedError) {

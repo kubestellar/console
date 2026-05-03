@@ -48,15 +48,8 @@ export function extractCrioVersion(containerRuntime?: string): string {
   return versionMatch?.[1] ?? UNKNOWN_CRIO_VERSION
 }
 
-export function parseReadyCount(ready?: string): { ready: number; total: number } {
-  const [readyPart, totalPart] = String(ready ?? '').split('/')
-  const readyCount = Number.parseInt(readyPart, 10)
-  const totalCount = Number.parseInt(totalPart, 10)
-  return {
-    ready: Number.isFinite(readyCount) ? readyCount : 0,
-    total: Number.isFinite(totalCount) ? totalCount : 0,
-  }
-}
+import { parseReadyCount } from '../../../lib/k8s'
+export { parseReadyCount } from '../../../lib/k8s'
 
 function extractImageFromMessage(message?: string): string | undefined {
   const match = String(message ?? '').match(IMAGE_IN_MESSAGE_REGEX)

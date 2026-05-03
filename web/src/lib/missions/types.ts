@@ -66,6 +66,8 @@ export interface OrbitConfig {
 
 export interface MissionExport {
   version: string
+  /** Stable unique identifier from console-kb (e.g. "install-open-policy-agent-opa"). Used as the canonical deep-link slug when present. */
+  name?: string
   title: string
   description: string
   type: MissionType

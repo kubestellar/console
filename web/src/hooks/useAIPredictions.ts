@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type {
   AIPrediction,
   AIPredictionsResponse,
@@ -11,16 +11,17 @@ import { setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsag
 import { fullFetchClusters, clusterCache } from './mcp/shared'
 
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, RETRY_DELAY_MS } from '../lib/constants/network'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 
-// WebSocket reconnection with exponential backoff
-const WS_RECONNECT_BASE_DELAY_MS = 2_000  // Base delay for reconnection attempts
-const WS_RECONNECT_MAX_DELAY_MS = 30_000   // Maximum delay between reconnection attempts
-const MAX_WS_RECONNECT_ATTEMPTS = 5        // Maximum reconnection attempts before giving up
-const BACKOFF_JITTER_MAX_MS = 1_000        // Random jitter to avoid thundering herd
+const DEGRADED_RECONNECT_INTERVAL_MS = 60_000
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds as fallback
+
+// Polling constants for analysis completion detection
+const ANALYSIS_POLL_INTERVAL_MS = 4_000  // Poll for results every 4 seconds after triggering analysis
+const ANALYSIS_MAX_TIMEOUT_MS = 60_000   // Give up waiting after 60 seconds
 
 // Demo mode predictions
 const DEMO_AI_PREDICTIONS: AIPrediction[] = [
@@ -60,25 +61,66 @@ let wsConnected = false
 let ws: WebSocket | null = null
 let singletonPollInterval: ReturnType<typeof setInterval> | null = null
 let wsReconnectTimeout: ReturnType<typeof setTimeout> | null = null
+let degradedRetryInterval: ReturnType<typeof setInterval> | null = null
 let wsReconnectAttempts = 0  // Track current reconnect attempt number
+let inDegradedMode = false   // True when initial reconnect attempts exhausted
 const subscribers = new Set<() => void>()
-
-/**
- * Calculate exponential backoff delay with jitter.
- * Delay = min(base * 2^attempt, max) + random jitter
- */
-function getBackoffDelay(attempt: number): number {
-  const delay = Math.min(
-    WS_RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt),
-    WS_RECONNECT_MAX_DELAY_MS,
-  )
-  const jitter = Math.random() * BACKOFF_JITTER_MAX_MS
-  return delay + jitter
-}
 
 // Notify all subscribers
 function notifySubscribers() {
   subscribers.forEach(fn => fn())
+}
+
+/**
+ * Reset WebSocket reconnect state so the next attempt uses fast exponential backoff.
+ * Called when evidence suggests the backend is reachable again (e.g. successful HTTP fetch).
+ */
+function resetWsReconnect(): void {
+  wsReconnectAttempts = 0
+  inDegradedMode = false
+  if (degradedRetryInterval) {
+    clearInterval(degradedRetryInterval)
+    degradedRetryInterval = null
+  }
+}
+
+/**
+ * Start degraded-mode reconnection: slow periodic retry after initial attempts are exhausted.
+ */
+function startDegradedReconnect(): void {
+  if (degradedRetryInterval) return
+  inDegradedMode = true
+  console.warn('[AIPredictions] Entering degraded reconnect mode — retrying every 60s')
+  degradedRetryInterval = setInterval(() => {
+    if (subscribers.size === 0) {
+      // No active subscribers — stop degraded retry
+      resetWsReconnect()
+      return
+    }
+    if (!ws && !wsReconnectTimeout) {
+      console.debug('[AIPredictions] Degraded-mode reconnect attempt')
+      connectWebSocket()
+    }
+  }, DEGRADED_RECONNECT_INTERVAL_MS)
+}
+
+/**
+ * Manually trigger a WebSocket reconnection attempt.
+ * Resets the backoff counter so fast reconnection is tried immediately.
+ */
+function reconnectWebSocket(): void {
+  resetWsReconnect()
+  if (wsReconnectTimeout) {
+    clearTimeout(wsReconnectTimeout)
+    wsReconnectTimeout = null
+  }
+  if (ws) {
+    ws.onclose = null
+    ws.close()
+    ws = null
+    wsConnected = false
+  }
+  connectWebSocket()
 }
 
 /**
@@ -142,6 +184,13 @@ async function fetchAIPredictions(): Promise<void> {
       reportAgentDataSuccess()
       const data: AIPredictionsResponse = await response.json()
 
+      // Successful HTTP fetch means backend is reachable — reset WS reconnect
+      // so it retries with fast backoff if currently in degraded mode.
+      if (inDegradedMode && !wsConnected) {
+        resetWsReconnect()
+        connectWebSocket()
+      }
+
       // Filter by confidence threshold
       const settings = getPredictionSettings()
       aiPredictions = data.predictions.filter(p => p.confidence >= settings.minConfidence)
@@ -161,7 +210,7 @@ async function fetchAIPredictions(): Promise<void> {
       isStale = true
       notifySubscribers()
     }
-  } catch (error) {
+  } catch (error: unknown) {
     // Network error, timeout, or AbortError — backend is unreachable. Mark
     // predictions stale and notify subscribers so the UI updates immediately
     // rather than continuing to show data as if it were fresh (#5937, #5938).
@@ -180,12 +229,12 @@ function connectWebSocket(): void {
   if (getDemoMode() || ws) return
 
   try {
-    ws = new WebSocket(LOCAL_AGENT_WS_URL)
+    ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
     ws.onopen = () => {
       wsConnected = true
-      // Reset reconnect attempts on successful connection
-      wsReconnectAttempts = 0
+      // Reset reconnect attempts and degraded mode on successful connection
+      resetWsReconnect()
       // Send current settings to backend
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
@@ -226,11 +275,12 @@ function connectWebSocket(): void {
       if (subscribers.size > 0) {
         // Check if we've exceeded max reconnect attempts
         if (wsReconnectAttempts >= MAX_WS_RECONNECT_ATTEMPTS) {
-          console.warn('[AIPredictions] Max reconnect attempts exceeded, giving up')
+          // Switch to degraded mode instead of permanently giving up
+          startDegradedReconnect()
           return
         }
 
-        const delay = getBackoffDelay(wsReconnectAttempts)
+        const delay = getWsBackoffDelay(wsReconnectAttempts)
         console.debug(`[AIPredictions] Connection lost, reconnecting in ${Math.round(delay)}ms (attempt ${wsReconnectAttempts + 1}/${MAX_WS_RECONNECT_ATTEMPTS})`)
 
         wsReconnectTimeout = setTimeout(() => {
@@ -271,7 +321,7 @@ async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
   try {
     const response = await fetch(`${AGENT_HTTP_URL}/predictions/analyze`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ providers: specificProviders }),
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
     })
@@ -303,6 +353,11 @@ function stopSingleton() {
     clearTimeout(wsReconnectTimeout)
     wsReconnectTimeout = null
   }
+  if (degradedRetryInterval) {
+    clearInterval(degradedRetryInterval)
+    degradedRetryInterval = null
+  }
+  inDegradedMode = false
   if (ws) {
     ws.onclose = null // Prevent reconnect from onclose handler
     ws.close()
@@ -367,7 +422,25 @@ export function useAIPredictions() {
     }
   }, [])
 
-  // Trigger analysis
+  // Ref to track active polling so cleanup on unmount can cancel it
+  const analysisPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (analysisPollRef.current) {
+        clearInterval(analysisPollRef.current)
+        analysisPollRef.current = null
+      }
+      if (analysisTimeoutRef.current) {
+        clearTimeout(analysisTimeoutRef.current)
+        analysisTimeoutRef.current = null
+      }
+    }
+  }, [])
+
+  // Trigger analysis with polling for completion
   const analyze = async (specificProviders?: string[]) => {
     // Generate a stable opId for the lifetime of this analyze call so
     // concurrent analyze() invocations (e.g. from different providers)
@@ -380,15 +453,50 @@ export function useAIPredictions() {
         : `predictions-${Date.now()}-${Math.random().toString(36).slice(2)}`
     setIsAnalyzing(true)
     setActiveTokenCategory(opId, 'predictions')
-    try {
-      await triggerAnalysis(specificProviders)
-      // Wait a bit then fetch results
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
-      await fetchAIPredictions()
-    } finally {
+
+    const timestampBeforeTrigger = lastAnalyzed ? lastAnalyzed.getTime() : 0
+    const triggered = await triggerAnalysis(specificProviders)
+
+    if (!triggered) {
       setIsAnalyzing(false)
       clearActiveTokenCategory(opId)
+      return
     }
+
+    // Poll until we detect newer predictions or hit the timeout.
+    // A WebSocket `ai_predictions_updated` message will also update
+    // `lastAnalyzed` via the singleton subscriber, so the poll check
+    // will pick that up on its next tick.
+    return new Promise<void>(resolve => {
+      const cleanup = () => {
+        if (analysisPollRef.current) {
+          clearInterval(analysisPollRef.current)
+          analysisPollRef.current = null
+        }
+        if (analysisTimeoutRef.current) {
+          clearTimeout(analysisTimeoutRef.current)
+          analysisTimeoutRef.current = null
+        }
+        setIsAnalyzing(false)
+        clearActiveTokenCategory(opId)
+        resolve()
+      }
+
+      // Max timeout — stop waiting regardless
+      analysisTimeoutRef.current = setTimeout(() => {
+        // One final fetch attempt before giving up
+        fetchAIPredictions().finally(cleanup)
+      }, ANALYSIS_MAX_TIMEOUT_MS)
+
+      // Poll at a regular interval for updated predictions
+      analysisPollRef.current = setInterval(async () => {
+        await fetchAIPredictions()
+        const currentTimestamp = lastAnalyzed ? lastAnalyzed.getTime() : 0
+        if (currentTimestamp > timestampBeforeTrigger) {
+          cleanup()
+        }
+      }, ANALYSIS_POLL_INTERVAL_MS)
+    })
   }
 
   // Check if AI predictions are enabled
@@ -402,7 +510,8 @@ export function useAIPredictions() {
     isEnabled,
     providers: activeProviders,
     analyze,
-    refresh: fetchAIPredictions
+    refresh: fetchAIPredictions,
+    reconnect: reconnectWebSocket
   }
 }
 
@@ -430,4 +539,13 @@ export function syncSettingsToBackend(): void {
       payload: getSettingsForBackend()
     }))
   }
+}
+
+export const __testables = {
+  aiPredictionToRisk,
+  DEMO_AI_PREDICTIONS,
+  DEGRADED_RECONNECT_INTERVAL_MS,
+  POLL_INTERVAL_MS,
+  ANALYSIS_POLL_INTERVAL_MS,
+  ANALYSIS_MAX_TIMEOUT_MS,
 }

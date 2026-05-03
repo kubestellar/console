@@ -13,6 +13,7 @@ import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useTranslation } from 'react-i18next'
+import { hasGPUResourceRequest, normalizeClusterName } from '../../lib/gpu'
 
 interface GPUNamespaceAllocationsProps {
   config?: Record<string, unknown>
@@ -31,19 +32,6 @@ interface NamespaceGPUAllocation {
   gpuRequested: number
   podCount: number
   clusters: string[]
-}
-
-// Check if any container in the pod requests GPUs
-function hasGPUResourceRequest(containers?: { gpuRequested?: number }[]): boolean {
-  if (!containers) return false
-  return containers.some(c => (c.gpuRequested ?? 0) > 0)
-}
-
-// Normalize cluster name for matching
-function normalizeClusterName(cluster: string): string {
-  if (!cluster) return ''
-  const parts = cluster.split('/')
-  return parts[parts.length - 1] || cluster
 }
 
 const NAMESPACE_SORT_COMPARATORS: Record<SortByOption, (a: NamespaceGPUAllocation, b: NamespaceGPUAllocation) => number> = {
@@ -241,11 +229,23 @@ function GPUNamespaceAllocationsInternal({ config: _config }: GPUNamespaceAlloca
         {displayItems.map((ns) => (
           <div
             key={ns.namespace}
+            role="button"
+            tabIndex={0}
             onClick={() => drillToGPUNamespace(ns.namespace, {
               gpuRequested: ns.gpuRequested,
               podCount: ns.podCount,
               clusters: ns.clusters })}
-            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                drillToGPUNamespace(ns.namespace, {
+                  gpuRequested: ns.gpuRequested,
+                  podCount: ns.podCount,
+                  clusters: ns.clusters })
+              }
+            }}
+            className="p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-purple-400"
+            aria-label={t('cards:gpuNamespaceAllocations.viewNamespaceAria', { namespace: ns.namespace })}
           >
             <div className="flex items-center gap-2 mb-2 min-w-0">
               <Box className="w-4 h-4 text-purple-400 shrink-0" />

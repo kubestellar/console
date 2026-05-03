@@ -31,7 +31,7 @@ export function getCachedFeed(url: string, ignoreExpiry = false): { items: FeedI
     // Return cache if not expired, or if we want stale data
     if (!isStale || ignoreExpiry) {
       return {
-        items: data.items.map((item: FeedItem) => ({
+        items: (data.items || []).map((item: FeedItem) => ({
           ...item,
           pubDate: item.pubDate ? new Date(item.pubDate) : undefined,
         })),

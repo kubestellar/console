@@ -15,16 +15,19 @@ interface ClusterNetworkProps {
 
 export function ClusterNetwork({ config }: ClusterNetworkProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const { isDemoMode } = useDemoMode()
 
   // Report state to CardWrapper for refresh animation
+  const hasData = allClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: allClusters.length > 0,
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -49,6 +52,11 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
 
     return result
   })()
+
+  // Detect when the selected cluster is hidden by global filters
+  const isSelectedClusterFiltered = selectedCluster !== '' &&
+    !clusters.some(c => c.name === selectedCluster) &&
+    allClusters.some(c => c.name === selectedCluster)
 
   const cluster = clusters.find(c => c.name === selectedCluster)
 
@@ -88,12 +96,12 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
     )
   }
 
-  if (!selectedCluster) {
+  if (!selectedCluster || isSelectedClusterFiltered) {
     return (
       <div className="h-full flex flex-col min-h-card">
         <div className="flex items-center justify-end mb-4">
           <select
-            value={selectedCluster}
+            value={isSelectedClusterFiltered ? '' : selectedCluster}
             onChange={(e) => setSelectedCluster(e.target.value)}
             className="px-3 py-1.5 rounded-lg bg-secondary border border-border text-sm text-foreground"
           >
@@ -103,8 +111,10 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
             ))}
           </select>
         </div>
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          {t('cards:clusterNetwork.selectClusterToView')}
+        <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm text-center px-4">
+          {isSelectedClusterFiltered
+            ? t('cards:clusterNetwork.clusterHiddenByFilter')
+            : t('cards:clusterNetwork.selectClusterToView')}
         </div>
       </div>
     )
@@ -177,7 +187,9 @@ export function ClusterNetwork({ config }: ClusterNetworkProps) {
               <Shield className="w-4 h-4 text-purple-400" />
               <span className="text-sm text-muted-foreground">TLS</span>
             </div>
-            <span className="text-sm font-medium text-green-400">{t('common:common.enabled')}</span>
+            <span className={`text-sm font-medium ${serverInfo?.protocol === 'https' ? 'text-green-400' : 'text-red-400'}`}>
+              {serverInfo?.protocol === 'https' ? t('common:common.enabled') : t('common:common.disabled')}
+            </span>
           </div>
         </div>
 

@@ -1,8 +1,11 @@
 import { execSync } from 'child_process'
 
 /**
- * Global teardown for Playwright tests.
- * Generates coverage reports if coverage collection is enabled.
+ * Playwright global teardown — generates coverage reports when VITE_COVERAGE=true.
+ *
+ * This runs automatically after all Playwright tests complete.
+ * For standalone coverage report generation, see: scripts/coverage-report.mjs
+ * (invoked by scripts/run-e2e-coverage.sh)
  */
 async function globalTeardown() {
   if (process.env.VITE_COVERAGE === 'true') {

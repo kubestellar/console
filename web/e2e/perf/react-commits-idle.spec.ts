@@ -97,6 +97,7 @@ test('react idle commit rate stays under budget', async ({ page }) => {
       try {
         window.localStorage.setItem(demoKey, demoValue)
         window.localStorage.setItem(tokenKey, tokenValue)
+        window.localStorage.setItem('kc-agent-setup-dismissed', 'true')
       } catch {
         // Ignore — same as the navigation spec.
       }

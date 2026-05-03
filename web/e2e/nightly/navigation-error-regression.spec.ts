@@ -1,4 +1,5 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test'
+import { mockApiFallback } from '../helpers/setup'
 
 /**
  * Navigation Error Toast Regression Test
@@ -81,13 +82,28 @@ const EXPECTED_CONSOLE_ERROR_PATTERNS: ReadonlyArray<RegExp> = [
   /localhost:8585/i,
   /127\.0\.0\.1:8585/i,
   /Cross-Origin Request Blocked/i,
+  /blocked by CORS policy/i,
+  /Access to fetch.*has been blocked by CORS/i,
+  /Origin .* is not allowed by Access-Control-Allow-Origin/i, // WebKit/Safari CORS wording
+  /Access-Control-Allow-Origin.*localhost/i,
+  /Access-Control-Allow-Origin.*127\.0\.0\.1/i,
   /ERR_CONNECTION_REFUSED/i,
   /net::ERR_/i,
   /AbortError/i,
   /signal is aborted/i,
   /Notification permission/i,
+  /Notification prompting can only be done from a user gesture/i, // WebKit notification block
+  /Could not connect to [0-9.]+/i, // WebKit connection refused wording
+  /Connection refused/i,
   /502.*Bad Gateway/i,
   /Failed to load resource/i,
+  /wasm streaming compile failed.*sqlite/i,
+  /failed to asynchronously prepare wasm.*sqlite/i,
+  /Aborted\(NetworkError.*sqlite/i,
+  /Exception loading sqlite3 module/i,
+  /\[kc\.cache\] sqlite/i,
+  /NS_BINDING_ABORTED/i,
+  /NS_ERROR_FAILURE/i,
 ]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -98,12 +114,45 @@ function isExpectedError(message: string): boolean {
 
 /** Set up demo mode via localStorage so the app loads without a real backend */
 async function setupDemoMode(page: Page): Promise<void> {
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
+
+  // Mock authentication
+  await page.route('**/api/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: '1',
+        github_id: '12345',
+        github_login: 'testuser',
+        email: 'test@example.com',
+        onboarded: true,
+      }),
+    })
+  )
+
+  // Mock MCP endpoints
+  await page.route('**/api/mcp/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+    })
+  )
+
+  // Seed localStorage BEFORE any page script runs
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 }
 

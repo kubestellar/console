@@ -40,6 +40,10 @@ func TestProtectedRoutes_UnauthenticatedReturn401(t *testing.T) {
 		path   string
 	}{
 		// Cluster health / MCP read surfaces
+		// NOTE: /api/mcp/clusters and /api/mcp/clusters/health are registered
+		// as standalone routes with JWTAuth in production mode (#10925). In dev
+		// mode they are public to prevent 401→429 cascades before auto-login.
+		// This test validates the production (non-dev-mode) behavior.
 		{"GET", "/api/mcp/clusters"},
 		{"GET", "/api/mcp/clusters/health"},
 		{"GET", "/api/mcp/pods"},

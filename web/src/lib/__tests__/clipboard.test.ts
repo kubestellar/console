@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { copyToClipboard } from '../clipboard'
+import { copyToClipboard, copyBlobToClipboard } from '../clipboard'
 
 describe('copyToClipboard', () => {
   beforeEach(() => {
@@ -190,5 +190,71 @@ describe('copyToClipboard', () => {
     const result = await copyToClipboard(longText)
     expect(result).toBe(true)
     expect(writeText).toHaveBeenCalledWith(longText)
+  })
+})
+
+// ── copyBlobToClipboard ──
+
+describe('copyBlobToClipboard', () => {
+  beforeEach(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    })
+    // Reset ClipboardItem
+    ;(globalThis as Record<string, unknown>).ClipboardItem = undefined
+  })
+
+  it('returns false when clipboard.write is not available', async () => {
+    const result = await copyBlobToClipboard(new Blob(['data'], { type: 'text/plain' }))
+    expect(result).toBe(false)
+  })
+
+  it('returns false when ClipboardItem is not a function', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { write: vi.fn().mockResolvedValue(undefined) },
+      writable: true,
+      configurable: true,
+    })
+    ;(globalThis as Record<string, unknown>).ClipboardItem = 'not-a-function'
+    const result = await copyBlobToClipboard(new Blob(['data'], { type: 'image/png' }))
+    expect(result).toBe(false)
+  })
+
+  it('returns true when clipboard.write and ClipboardItem both work', async () => {
+    const writeMock = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { write: writeMock },
+      writable: true,
+      configurable: true,
+    })
+    ;(globalThis as Record<string, unknown>).ClipboardItem = class {
+      constructor(public data: Record<string, Blob>) {}
+    }
+    const blob = new Blob(['img'], { type: 'image/png' })
+    const result = await copyBlobToClipboard(blob)
+    expect(result).toBe(true)
+    expect(writeMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns false when clipboard.write throws', async () => {
+    const writeMock = vi.fn().mockRejectedValue(new Error('denied'))
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { write: writeMock },
+      writable: true,
+      configurable: true,
+    })
+    ;(globalThis as Record<string, unknown>).ClipboardItem = class {
+      constructor(public data: Record<string, Blob>) {}
+    }
+    const blob = new Blob(['img'], { type: 'image/png' })
+    const result = await copyBlobToClipboard(blob)
+    expect(result).toBe(false)
+  })
+
+  it('handles null navigator gracefully', async () => {
+    const result = await copyBlobToClipboard(new Blob(['data']))
+    expect(result).toBe(false)
   })
 })

@@ -32,11 +32,11 @@ func main() {
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("kc-agent version %s\n", agent.Version)
+		fmt.Printf("kc-agent version %s (commit: %s, built: %s)\n", agent.Version, agent.CommitSHA, agent.BuildTime)
 		os.Exit(0)
 	}
 
-	slog.Info("KubeStellar Console - Local Agent starting", "version", agent.Version)
+	slog.Info("KubeStellar Console - Local Agent starting", "version", agent.Version, "commit", agent.CommitSHA, "built", agent.BuildTime)
 
 	// Parse comma-separated allowed origins from flag
 	var origins []string
@@ -62,7 +62,8 @@ func main() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		slog.Info("Shutting down")
+		slog.Info("Shutting down — waiting for in-flight cluster operations")
+		server.GracefulShutdown()
 		os.Exit(0)
 	}()
 

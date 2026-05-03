@@ -41,6 +41,6 @@ const IMPORT_TIMEOUT_MS = 30000
 describe('PodExecTerminal', () => {
   it('exports PodExecTerminal component', async () => {
     const mod = await import('../PodExecTerminal')
-    expect(mod.PodExecTerminal).toBeDefined()
+    expect(mod.default).toBeDefined()
   }, IMPORT_TIMEOUT_MS)
 })

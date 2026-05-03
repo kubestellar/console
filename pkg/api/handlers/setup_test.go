@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"net/http"
 	"path/filepath"
 	"testing"
 
@@ -22,6 +23,13 @@ import (
 // testAdminUserID is the fixed user ID injected by setupTestEnv for RBAC-protected
 // endpoints. The MockStore is configured to return an admin user for this ID.
 var testAdminUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
+// RoundTripFunc is a helper for mocking http.Client Transport
+type RoundTripFunc func(req *http.Request) *http.Response
+
+func (f RoundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req), nil
+}
 
 type testEnv struct {
 	App       *fiber.App
@@ -49,8 +57,9 @@ func setupTestEnv(t *testing.T) *testEnv {
 	// Ensure we start with a clean state for this test run relative to the file.
 	_ = manager.Load()
 
-	// Initialize K8s Client with a fake cluster
-	k8sClient, _ := k8s.NewMultiClusterClient("")
+	// Initialize K8s Client with a non-existent kubeconfig path to ensure
+	// predictable error handling and avoid interference from local ~/.kube/config.
+	k8sClient, _ := k8s.NewMultiClusterClient("/tmp/kubestellar-test-kubeconfig")
 	// Inject a fake client for a "test-cluster" context
 	fakeClient := k8sfake.NewSimpleClientset()
 	k8sClient.InjectClient("test-cluster", fakeClient)
@@ -108,6 +117,18 @@ func setupTestEnv(t *testing.T) *testEnv {
 		Hub:       hub,
 		Store:     mockStore,
 	}
+}
+
+// gvrKindsToGVR is a helper to find the GVR for a given list kind
+func gvrKindsToGVR(t testing.TB, gvrKinds map[schema.GroupVersionResource]string, listKind string) schema.GroupVersionResource {
+	t.Helper()
+	for gvr, kind := range gvrKinds {
+		if kind == listKind {
+			return gvr
+		}
+	}
+	t.Fatalf("gvrKindsToGVR: no GVR registered for listKind %q — did you forget to add it to the gvrKinds map?", listKind)
+	return schema.GroupVersionResource{}
 }
 
 // injectDynamicCluster creates a fake dynamic client with custom list kinds (for CRD resources

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState, useRef } from 'react'
-import { AlertTriangle, ExternalLink, Settings, Copy, Check, ChevronDown, ChevronRight, KeyRound, Monitor } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ExternalLink, Settings, Copy, Check, ChevronDown, ChevronRight, KeyRound, Monitor } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
@@ -12,8 +12,20 @@ import { useBranding } from '../../hooks/useBranding'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
 
-// Lazy load the heavy Three.js globe animation
-const GlobeAnimation = lazy(() => import('../animations/globe').then(m => ({ default: m.GlobeAnimation })))
+// Lazy load the heavy Three.js globe animation.
+// Swallow import failures so a missing/stale chunk doesn't crash the login
+// page — the globe is cosmetic and the Suspense fallback (spinner) is fine.
+// The empty fallback component renders nothing — the globe area stays blank
+// rather than crashing the login page with a chunk error.
+const GlobeFallback = () => null
+const GlobeAnimation = lazy(async () => {
+  try {
+    const m = await import('../animations/globe')
+    return { default: m.GlobeAnimation }
+  } catch {
+    return { default: GlobeFallback as unknown as typeof import('../animations/globe')['GlobeAnimation'] }
+  }
+})
 
 // Apache 2.0 license is the project's effective terms; link opens in a new tab (#8376).
 const TERMS_OF_SERVICE_URL = 'https://github.com/kubestellar/console/blob/main/LICENSE'
@@ -117,6 +129,28 @@ const OAUTH_ERROR_INFO: Record<string, OAuthErrorEntry> = {
       'Verify your GitHub OAuth app is not suspended or deleted',
       'Check https://www.githubstatus.com for service status',
     ] },
+  manifest_missing_code: {
+    title: 'GitHub App Setup Incomplete',
+    message: 'GitHub did not return a setup code. The app creation may have been cancelled.',
+    steps: [
+      'Click "Set up GitHub Sign-In" to try again',
+      'Make sure to click "Create GitHub App" on the GitHub confirmation page',
+    ] },
+  manifest_conversion_failed: {
+    title: 'GitHub App Setup Failed',
+    message: 'The console was unable to complete the GitHub App setup. The temporary code may have expired.',
+    steps: [
+      'Click "Set up GitHub Sign-In" to try again',
+      'Check your internet connection',
+      'If the problem persists, use the manual setup option instead',
+    ] },
+  manifest_already_configured: {
+    title: 'GitHub Sign-In Already Configured',
+    message: 'OAuth credentials are already set up. You can sign in directly.',
+    steps: [
+      'Click "Continue with GitHub" to sign in',
+      'If you need to reconfigure, remove existing credentials first',
+    ] },
   user_fetch_failed: {
     title: 'Could Not Retrieve GitHub Profile',
     message: 'Login succeeded but the console was unable to fetch your GitHub profile.',
@@ -164,6 +198,7 @@ export function Login() {
   const { login, isAuthenticated, isLoading } = useAuth()
   const [searchParams] = useSearchParams()
   const sessionExpired = searchParams.get('reason') === 'session_expired'
+  const manifestSuccess = searchParams.get('manifest') === 'success'
   const oauthError = useMemo(() => searchParams.get('error'), [searchParams])
   const errorDetail = searchParams.get('error_detail')
   const errorInfo = (() => {
@@ -220,7 +255,7 @@ export function Login() {
   // (addresses kubestellar/kubestellar#3761).
   // Skip auto-login when there's an OAuth error so the user can see the troubleshooting info.
   useEffect(() => {
-    if (isLoading || isAuthenticated || oauthError) return
+    if (isLoading || isAuthenticated || oauthError || manifestSuccess) return
 
     const isNetlifyPreview = window.location.hostname.includes('deploy-preview-') ||
       window.location.hostname.includes('netlify.app')
@@ -245,7 +280,7 @@ export function Login() {
         setShowOAuthSetup(true)
       }
     }).catch(() => { /* checkOAuthConfiguredWithRetry always resolves — defensive catch */ })
-  }, [isLoading, isAuthenticated, login, oauthError, branding.hostedDomain])
+  }, [isLoading, isAuthenticated, login, oauthError, manifestSuccess, branding.hostedDomain])
 
   // Show loading while checking auth status
   if (isLoading) {
@@ -300,6 +335,17 @@ export function Login() {
             </div>
           )}
 
+          {/* Manifest setup success banner */}
+          {manifestSuccess && (
+            <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg border border-green-500/50 bg-green-500/10 text-green-300 text-sm">
+              <CheckCircle2 className="w-5 h-5 shrink-0 text-green-400" />
+              <div>
+                <div className="font-medium">{t('login.manifestSuccess')}</div>
+                <div className="text-xs text-green-400/80 mt-0.5">{t('login.manifestSuccessDetail')}</div>
+              </div>
+            </div>
+          )}
+
           {/* OAuth error banner */}
           {errorInfo && (
             <div data-testid="oauth-error-banner" className="mb-6 rounded-lg border border-red-500/50 bg-red-500/10 overflow-hidden">
@@ -313,7 +359,7 @@ export function Login() {
               {/* Server-provided detail (e.g., specific GitHub error description) */}
               {errorDetail && (
                 <div className="px-4 pb-2">
-                  <div className="text-xs text-red-400/60 bg-red-500/5 rounded px-3 py-2 font-mono break-words">
+                  <div className="text-xs text-red-400/60 bg-red-500/5 rounded px-3 py-2 font-mono wrap-break-word">
                     {errorDetail}
                   </div>
                 </div>
@@ -352,7 +398,7 @@ export function Login() {
           {/* Welcome text */}
           <div className="text-center mb-8">
             <h2 data-testid="login-welcome-heading" className="text-xl font-semibold text-foreground mb-2">
-              {oauthError ? 'Login Failed' : sessionExpired ? t('login.sessionExpired') : t('login.welcomeBack')}
+              {oauthError ? 'Login Failed' : manifestSuccess ? t('login.manifestSuccess') : sessionExpired ? t('login.sessionExpired') : t('login.welcomeBack')}
             </h2>
             <p className="text-muted-foreground">
               {oauthError ? 'Fix the issue above and try again' : t('login.signInDescription')}
@@ -505,16 +551,34 @@ export function Login() {
           )}
 
           {/* Two-button layout when OAuth is not configured:
-              primary "Sign in with GitHub" (links to setup) + secondary "Demo Mode" */}
+            * primary "Sign in with GitHub" (one-click manifest flow) + secondary "Demo Mode".
+            * GitHub's /settings/apps/new requires an authenticated session — if the
+            * user isn't logged in, the POST body (manifest) is silently dropped during
+            * the login redirect (issue #10931). We show a "sign in first" hint. */}
           {showOAuthSetup && (
             <div className="space-y-3">
+              <a
+                href="https://github.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-center text-xs text-muted-foreground hover:text-blue-400 transition-colors mb-1"
+              >
+                {t('login.signInToGitHubFirst')}
+                <ExternalLink className="w-3 h-3 inline ml-1 -mt-0.5" />
+              </a>
               <button
                 data-testid="github-setup-button"
-                onClick={() => setOauthSetupExpanded(true)}
+                onClick={() => { window.location.href = '/auth/manifest/setup' }}
                 className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-medium py-3 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 hover:shadow-lg"
               >
                 <Github className="w-5 h-5" />
                 {t('login.setupGitHubSignIn')}
+              </button>
+              <button
+                onClick={() => setOauthSetupExpanded(!oauthSetupExpanded)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto block"
+              >
+                {oauthSetupExpanded ? t('login.hideManualSetup') : t('login.showManualSetup')}
               </button>
               <button
                 data-testid="demo-mode-button"
@@ -545,7 +609,7 @@ export function Login() {
       {/* Right side - Globe animation */}
       <div className="hidden lg:block flex-1 h-full relative overflow-hidden">
         {/* Subtle gradient background for the globe side */}
-        <div className="absolute inset-0 bg-gradient-to-l from-background to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-l from-background to-transparent" />
         {/* Wrapper div ensures the globe is absolutely positioned (GlobeAnimation
             internally prepends "relative" to className which overrides "absolute"
             in Tailwind's CSS ordering, causing layout breakage). */}

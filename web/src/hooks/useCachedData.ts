@@ -132,18 +132,164 @@ export * from './useCachedLLMd'
 export * from './useCachedISO27001'
 
 // ============================================================================
+// Cilium Monitoring — useCachedCiliumStatus.ts
+// ============================================================================
+
+export * from './useCachedCiliumStatus'
+
+// ============================================================================
+// Jaeger Tracing — useCachedJaegerStatus.ts
+// ============================================================================
+
+export * from './useCachedJaegerStatus'
+
+// ============================================================================
+// Rook Cloud-Native Storage (Ceph) — useCachedRook.ts
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedRook } from './useCachedRook'
+
+// ============================================================================
+// SPIFFE Workload Identity — useCachedSpiffe.ts (CNCF graduated)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedSpiffe } from './useCachedSpiffe'
+
+// ============================================================================
+// CNI (Container Network Interface) — useCachedCni.ts
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision).
+
+export { useCachedCni } from './useCachedCni'
+
+// ============================================================================
+// OpenFeature Feature Flags — useCachedOpenfeature.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedOpenfeature } from './useCachedOpenfeature'
+// SPIRE (SPIFFE Runtime Environment) — useCachedSpire.ts
+// =====================================================================// Named re-export (avoids `__testables` export-name collision with other hooks).
+
+export { useCachedSpire } from './useCachedSpire'
+
+// ============================================================================
+// Longhorn Distributed Block Storage — useCachedLonghorn.ts (CNCF Incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedLonghorn } from './useCachedLonghorn'
+// Volcano Batch/HPC Scheduler — useCachedVolcano.ts (CNCF Incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedVolcano } from './useCachedVolcano'
+
+// ============================================================================
+// Strimzi Kafka Operator — useCachedStrimzi.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedStrimzi } from './useCachedStrimzi'
+// OpenFGA Fine-Grained Authorization — useCachedOpenfga.ts (CNCF Sandbox)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedOpenfga } from './useCachedOpenfga'
+
+// ============================================================================
+// Flatcar Container Linux — useCachedFlatcar.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with others).
+
+export { useCachedFlatcar } from './useCachedFlatcar'
+
+// ============================================================================
+// TiKV Distributed Key-Value Store — useCachedTikv.ts
+// ============================================================================
+
+export * from './useCachedTikv'
+
+// ============================================================================
+// Dapr Distributed Application Runtime — useCachedDapr.ts
+// ============================================================================
+
+export { useCachedDapr } from './useCachedDapr'
+
+// ============================================================================
+// OpenTelemetry Collector — useCachedOtel.ts
+// ============================================================================
+
+export { useCachedOtel } from './useCachedOtel'
+
+// ============================================================================
+// TUF (The Update Framework) — useCachedTuf.ts
+// ============================================================================
+
+export { useCachedTuf } from './useCachedTuf'
+
+// ============================================================================
+// Cortex (CNCF incubating — horizontally scalable Prometheus) — useCachedCortex.ts
+// ============================================================================
+
+export { useCachedCortex } from './useCachedCortex'
+
+// ============================================================================
+// KServe Model Serving — useCachedKserve.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with other hooks).
+// Source: kubestellar/console-marketplace#38
+
+export { useCachedKserve } from './useCachedKserve'
+
+// ============================================================================
+// Dragonfly P2P Image/File Distribution — useCachedDragonfly.ts
+// ============================================================================
+
+// Named re-export to avoid `__testables` collision with useCachedTikv.
+export { useCachedDragonfly } from './useCachedDragonfly'
+
+// ============================================================================
+// Backstage developer portal (CNCF incubating) — useCachedBackstage.ts
+// ============================================================================
+
+export { useCachedBackstage } from './useCachedBackstage'
+
+// ============================================================================
+// Cloud Custodian (CNCF incubating rules engine) — useCachedCloudCustodian.ts
+// ============================================================================
+
+export { useCachedCloudCustodian } from './useCachedCloudCustodian'
+
+// wasmCloud WebAssembly Lattice — useCachedWasmcloud.ts (CNCF incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedWasmcloud } from './useCachedWasmcloud'
+
+// ============================================================================
+// KubeVela OAM Application Delivery — useCachedKubevela.ts (CNCF Incubating)
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export { useCachedKubevela } from './useCachedKubevela'
+
+// ============================================================================
 // Standalone fetchers for prefetch (no React hooks, plain async)
 // ============================================================================
 
-import { isBackendUnavailable, authFetch } from '../lib/api'
+import { isBackendUnavailable } from '../lib/api'
 import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
-import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import {
-  fetchAPI,
+  fetchBackendAPI,
   fetchFromAllClusters,
+  fetchFromAllClustersViaBackend,
   getToken,
+  getClusterFetcher,
   MAX_PREFETCH_PODS,
 } from '../lib/cache/fetcherUtils'
 import {
@@ -154,8 +300,6 @@ import {
 } from './useCachedCoreWorkloads'
 import { fetchProwJobs } from './useCachedProw'
 import { fetchLLMdServers, fetchLLMdModels } from './useCachedLLMd'
-import { validateResponse } from '../lib/schemas/validate'
-import { SecurityIssuesResponseSchema } from '../lib/schemas'
 import type {
   PodInfo,
   PodIssue,
@@ -181,13 +325,14 @@ export const coreFetchers = {
     }
     const token = getToken()
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {
-      const issues = await fetchFromAllClusters<PodIssue>('pod-issues', 'issues', {})
+      // pod-issues is a backend-only endpoint (#9996)
+      const issues = await fetchFromAllClustersViaBackend<PodIssue>('pod-issues', 'issues', {})
       return issues.sort((a, b) => (b.restarts || 0) - (a.restarts || 0))
     }
     return []
   },
   events: async (): Promise<ClusterEvent[]> => {
-    const data = await fetchAPI<{ events: ClusterEvent[] }>('events', { limit: 20 })
+    const data = await getClusterFetcher()<{ events: ClusterEvent[] }>('events', { limit: 20 })
     return data.events || []
   },
   deploymentIssues: async (): Promise<DeploymentIssue[]> => {
@@ -201,11 +346,13 @@ export const coreFetchers = {
           cluster: d.cluster,
           replicas: d.replicas ?? 1,
           readyReplicas: d.readyReplicas ?? 0,
-          reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure' }))
+          reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure'
+        }))
     }
     const token = getToken()
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {
-      const data = await fetchAPI<{ issues: DeploymentIssue[] }>('deployment-issues', {})
+      // deployment-issues is a backend-only endpoint (#9996)
+      const data = await fetchBackendAPI<{ issues: DeploymentIssue[] }>('deployment-issues', {})
       return data.issues || []
     }
     return []
@@ -221,7 +368,7 @@ export const coreFetchers = {
     return []
   },
   services: async (): Promise<Service[]> => {
-    const data = await fetchAPI<{ services: Service[] }>('services', {})
+    const data = await getClusterFetcher()<{ services: Service[] }>('services', {})
     return data.services || []
   },
   securityIssues: async (): Promise<SecurityIssue[]> => {
@@ -233,17 +380,11 @@ export const coreFetchers = {
     }
     const token = getToken()
     if (token && token !== 'demo-token' && !isBackendUnavailable()) {
-      const response = await authFetch(`${LOCAL_AGENT_HTTP_URL}/security-issues`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-      if (response.ok) {
-        const rawSecurity = await response.json().catch(() => null)
-        const data = validateResponse(SecurityIssuesResponseSchema, rawSecurity, '/security-issues (fallback)')
-        if (data && data.issues && data.issues.length > 0) return data.issues
-      }
+      // security-issues is a backend-only endpoint (#9996)
+      try {
+        const data = await fetchBackendAPI<{ issues: SecurityIssue[] }>('security-issues', {})
+        if (data?.issues && data.issues.length > 0) return data.issues
+      } catch { /* fall through */ }
     }
     return []
   },
@@ -251,7 +392,8 @@ export const coreFetchers = {
     return fetchFromAllClusters<NodeInfo>('nodes', 'nodes', {})
   },
   warningEvents: async (): Promise<ClusterEvent[]> => {
-    return fetchFromAllClusters<ClusterEvent>('events/warnings', 'events', { limit: 50 })
+    // events/warnings is a backend-only endpoint (#9996)
+    return fetchFromAllClustersViaBackend<ClusterEvent>('events/warnings', 'events', { limit: 50 })
   },
   workloads: async (): Promise<Workload[]> => {
     const agentData = await fetchWorkloadsFromAgent()
@@ -261,8 +403,10 @@ export const coreFetchers = {
       const res = await fetch('/api/workloads', {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+          Authorization: `Bearer ${token}`
+        },
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
+      })
       if (res.ok) {
         const data = await res.json().catch(() => null)
         if (!data) return []
@@ -278,14 +422,17 @@ export const coreFetchers = {
           status: (String(d.status || 'Running')) as Workload['status'],
           image: String(d.image || ''),
           labels: (d.labels as Record<string, string>) || {},
-          createdAt: String(d.createdAt || new Date().toISOString()) }))
+          createdAt: String(d.createdAt || new Date().toISOString())
+        }))
       }
     }
     return []
-  } }
+  }
+}
 
 /** Specialty data fetchers — lower priority, prefetched after core data */
 export const specialtyFetchers = {
   prowJobs: () => fetchProwJobs('prow', 'prow'),
   llmdServers: () => fetchLLMdServers(['vllm-d', 'platform-eval']),
-  llmdModels: () => fetchLLMdModels(['vllm-d', 'platform-eval']) }
+  llmdModels: () => fetchLLMdModels(['vllm-d', 'platform-eval'])
+}

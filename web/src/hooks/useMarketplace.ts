@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { addCustomTheme, removeCustomTheme } from '../lib/themes'
 import { emitMarketplaceInstall, emitMarketplaceRemove, emitMarketplaceInstallFailed } from '../lib/analytics'
 import { FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_HOUR, MS_PER_DAY } from '../lib/constants/time'
 import { isCardTypeRegistered } from '../components/cards/cardRegistry'
 import { getDefaultCardSize } from '../components/dashboard/dashboardUtils'
 
@@ -17,7 +18,7 @@ interface DashboardSummary {
 
 const REGISTRY_URL = 'https://raw.githubusercontent.com/kubestellar/console-marketplace/main/registry.json'
 const CACHE_KEY = 'kc-marketplace-registry'
-const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+const CACHE_TTL_MS = MS_PER_HOUR // 1 hour
 const INSTALLED_KEY = 'kc-marketplace-installed'
 
 export type MarketplaceItemType = 'dashboard' | 'card-preset' | 'theme'
@@ -85,15 +86,42 @@ const MARKETPLACE_TO_CARD_TYPE: Record<string, string> = {
   'cncf-etcd': 'etcd_status',
   'cncf-fluentd': 'fluentd_status',
   'cncf-crio': 'crio_status',
+  'cncf-backstage': 'backstage_status',
+  'cncf-cloud-custodian': 'cloud_custodian_status',
+  'cncf-containerd': 'containerd_status',
+  'cncf-cortex': 'cortex_status',
+  'cncf-dragonfly': 'dragonfly_status',
   'cncf-cloudevents': 'cloudevents_status',
   'cncf-crossplane': 'crossplane_managed_resources',
   'cncf-buildpacks': 'buildpacks_status',
   'cncf-kubevirt': 'kubevirt_status',
   'cncf-kubevela': 'kubevela_status',
   'cncf-lima': 'lima_status',
+  'cncf-flux': 'flux_status',
+  'cncf-contour': 'contour_status',
+  'cncf-dapr': 'dapr_status',
+  'cncf-envoy': 'envoy_status',
+  'cncf-flatcar': 'flatcar_status',
+  'cncf-grpc': 'grpc_status',
+  'cncf-kserve': 'kserve_status',
+  'cncf-linkerd': 'linkerd_status',
+  'cncf-longhorn': 'longhorn_status',
   'cncf-openfeature': 'openfeature_status',
+  'cncf-openfga': 'openfga_status',
+  'cncf-rook': 'rook_status',
+  'cncf-spiffe': 'spiffe_status',
+  'cncf-cni': 'cni_status',
+  'cncf-spire': 'spire_status',
   'cncf-strimzi': 'strimzi_status',
-  'cncf-thanos': 'thanos_status' }
+  'cncf-thanos': 'thanos_status',
+  'cncf-opentelemetry': 'otel_status',
+  'cncf-tikv': 'tikv_status',
+  'cncf-tuf': 'tuf_status',
+  'cncf-vitess': 'vitess_status',
+  'cncf-chaos-mesh': 'chaos_mesh_status',
+  'cncf-wasmcloud': 'wasmcloud_status',
+  'cncf-volcano': 'volcano_status',
+}
 
 /**
  * Reconcile marketplace items against the local card registry.
@@ -225,7 +253,7 @@ export function useMarketplace() {
       } catch {
         // Cache write failed — non-critical
       }
-    } catch (err) {
+    } catch (err: unknown) {
       // #7543: On fetch failure, keep cached/current items with a stale indicator
       // instead of clearing to empty which falsely implies no items exist.
       const staleMsg = err instanceof Error ? err.message : 'Failed to load marketplace'
@@ -300,7 +328,7 @@ export function useMarketplace() {
     try {
       response = await fetch(item.downloadUrl, {
         signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
-    } catch (e) {
+    } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'network error'
       emitMarketplaceInstallFailed(item.type, item.name, msg)
       throw e
@@ -349,7 +377,7 @@ export function useMarketplace() {
           throw new Error('no dashboard available to install card-preset into')
         }
         await api.post(`/api/dashboards/${target.id}/cards`, newCard)
-      } catch (e) {
+      } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'backend persist failed'
         emitMarketplaceInstallFailed(item.type, item.name, msg)
         throw e
@@ -476,7 +504,7 @@ export function useMarketplace() {
 // --- Author Profile Hook ---
 
 const AUTHOR_CACHE_PREFIX = 'kc-author-'
-const AUTHOR_CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+const AUTHOR_CACHE_TTL_MS = MS_PER_DAY // 24 hours
 
 interface AuthorProfile {
   consolePRs: number

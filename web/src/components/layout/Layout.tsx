@@ -1,4 +1,5 @@
-import { ReactNode, Suspense, lazy, useState, useEffect, useRef } from 'react'
+import { ReactNode, Suspense, useState, useEffect, useRef } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 import {
@@ -15,6 +16,7 @@ import {
   Plug,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { useToast } from '../ui/Toast'
 import { Navbar } from './navbar/index'
 import { Sidebar } from './Sidebar'
 import {
@@ -32,7 +34,7 @@ import {
 } from '../../hooks/useDemoMode'
 import { setDemoMode } from '../../lib/demoMode'
 import { hasApprovedAgents } from '../agent/AgentApprovalDialog'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { useClusters } from '../../hooks/mcp/clusters'
 import { emitClusterInventory } from '../../lib/analytics'
 import { useNetworkStatus } from '../../hooks/useNetworkStatus'
@@ -41,6 +43,7 @@ import { useKagentBackend } from '../../hooks/useKagentBackend'
 import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
 import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX, SIDEBAR_CONTROLS_OFFSET_PX } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
@@ -57,14 +60,8 @@ import { copyToClipboard } from '../../lib/clipboard'
 
 // Lazy-load the AI mission sidebar so react-markdown and remark plugins are
 // not part of the initial bundle — they only load when the sidebar is first rendered.
-const MissionSidebar = lazy(() =>
-  import('./mission-sidebar').then((m) => ({ default: m.MissionSidebar })),
-)
-const MissionSidebarToggle = lazy(() =>
-  import('./mission-sidebar').then((m) => ({
-    default: m.MissionSidebarToggle,
-  })),
-)
+const MissionSidebar = safeLazy(() => import('./mission-sidebar'), 'MissionSidebar')
+const MissionSidebarToggle = safeLazy(() => import('./mission-sidebar'), 'MissionSidebarToggle')
 
 // Module-level constant — computed once, never changes on re-render.
 // Prevents star field from flickering when Layout re-renders due to hooks.
@@ -127,6 +124,7 @@ export function Layout({ children: _children }: LayoutProps) {
   // Mission sidebar width is communicated via CSS custom property --mission-sidebar-width
   // set by MissionSidebar.tsx — no need to read sidebar state from the hook here.
   const { isDemoMode, toggleDemoMode } = useDemoMode()
+  const { showToast } = useToast()
   const { status: agentStatus } = useLocalAgent()
   const { deduplicatedClusters } = useClusters()
   const { progress: updateProgress, dismiss: dismissUpdateProgress } =
@@ -152,6 +150,13 @@ export function Layout({ children: _children }: LayoutProps) {
     return () => window.removeEventListener('open-install', handler)
   }, [])
 
+  // Surface cache-reset failures from modeTransition.ts as user-facing toasts
+  useEffect(() => {
+    const handler = () => showToast(t('errors.cacheResetFailed'), 'warning')
+    window.addEventListener('cache-reset-error', handler)
+    return () => window.removeEventListener('cache-reset-error', handler)
+  }, [showToast, t])
+
   const [restartState, setRestartState] = useState<
     'idle' | 'restarting' | 'waiting' | 'copied'
   >('idle')
@@ -170,9 +175,9 @@ export function Layout({ children: _children }: LayoutProps) {
   const handleRestartBackend = async () => {
     setRestartState('restarting')
     try {
-      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/restart-backend`, {
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/restart-backend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (resp.ok) {
@@ -235,8 +240,12 @@ export function Layout({ children: _children }: LayoutProps) {
           demoAutoEnabledRef.current = true
           setDemoMode(true)
         }, AGENT_CONNECT_GRACE_MS)
+      } else if (wasAgentEverConnected()) {
+        // Agent was previously connected and went offline — preserve cached data.
+        // Do NOT auto-enable demo mode; cards keep showing stale cached data
+        // with their normal refresh/failure indicators (#10470).
       } else {
-        // Initial load or agent went offline — enable demo immediately
+        // Initial load with no agent — enable demo immediately so user sees content
         demoAutoEnabledRef.current = true
         setDemoMode(true)
       }
@@ -321,8 +330,9 @@ export function Layout({ children: _children }: LayoutProps) {
 
   // Banner stacking: each banner's top offset depends on how many banners above it are visible.
   // Dev bar (20px) → Navbar (64px) → Banners (36px each).
-  // Z-index hierarchy: Sidebar/Modals (z-modal=400) > Navbar + dropdowns (z-50) > Network banner (z-40) > Demo banner (z-30) > In-cluster / Offline banner (z-20)
-  // Sidebar/MissionSidebar/Mobile menus escalated to z-modal so they sit above their overlays/banners (issues #6486/#6488/#6489/#6490/#6493).
+  // Z-index hierarchy: Navbar (z-sticky=200) > Sidebars (z-sidebar=150) > Network banner (z-40) > Demo banner (z-30) > In-cluster / Offline banner (z-20)
+  // Desktop sidebars use z-sidebar so navbar dropdowns (z-toast=500 within z-sticky=200 context) paint above them.
+  // Mobile mission sidebar stays at z-modal (bottom sheet needs full overlay). MissionBrowser modal stays at z-modal.
   // Stack order: Network (top) → Demo → In-cluster agent / Agent Offline (bottom)
   const networkBannerTop = NAVBAR_HEIGHT_PX
   const showDemoBanner = isDemoMode && !demoBannerDismissed
@@ -609,7 +619,7 @@ export function Layout({ children: _children }: LayoutProps) {
           id="main-content"
           style={{
             marginLeft: isMobile ? 0 : sidebarWidthPx + SIDEBAR_CONTROLS_OFFSET_PX,
-            marginRight: 'var(--mission-sidebar-width, 0px)' }}
+            marginRight: isMobile ? 0 : `calc(var(--mission-sidebar-width, 0px) + ${SIDEBAR_CONTROLS_OFFSET_PX}px)` }}
           // overflow-x-hidden prevents stray wide children from pushing the
           // entire main column past the viewport at narrow breakpoints
           // (issues 6385, 6387, 6394). Individual scrollable children
@@ -618,7 +628,8 @@ export function Layout({ children: _children }: LayoutProps) {
           // still get valid bottom padding; the calc(...env()) variants
           // extend it by the safe-area inset when supported. If the whole
           // calc() value were invalid it would drop padding entirely (#6548).
-          className="relative flex-1 p-4 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-28 md:pb-[calc(7rem+env(safe-area-inset-bottom))] transition-[margin] duration-300 overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
+          className="relative flex-1 p-4 pb-24 pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 md:pb-28 md:pb-[calc(7rem+env(safe-area-inset-bottom))] overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
+          data-transition-margin="true"
         >
           <NavigationProgress />
           {/*
@@ -675,7 +686,7 @@ export function Layout({ children: _children }: LayoutProps) {
                   <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
                   <span>{t('layout.connectionLost')}</span>
                   {restartState === 'restarting' ? (
-                    <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted text-muted-foreground rounded text-xs cursor-wait">
+                    <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-2 min-h-11 bg-muted text-muted-foreground rounded text-xs cursor-wait">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       {t('layout.restarting')}
                     </button>

@@ -81,6 +81,7 @@ export function InsightDetailModal({ isOpen, onClose, insight }: InsightDetailMo
   const handleCreateMission = () => {
     if (!insight) return
     emitActionClicked('create_mission', insight.category, 'insights')
+    handleClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Fix: ${insight.title}`,
       description: insight.description,
@@ -96,7 +97,6 @@ Help me investigate and resolve this.`,
         severity: insight.severity,
         affectedClusters: insight.affectedClusters } })
     openSidebar()
-    handleClose()
   }
 
   if (!insight) return null
@@ -256,7 +256,7 @@ function EvidenceTab({ insight }: { insight: MultiClusterInsight }) {
           <div className="space-y-2">
             {(insight.chain || []).map((link: CascadeLink, i: number) => (
               <div key={`${link.cluster}-${i}`} className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                <div className={`w-2 h-2 rounded-full shrink-0 ${
                   link.severity === 'critical' ? 'bg-red-500' :
                   link.severity === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
                 }`} />
@@ -270,7 +270,7 @@ function EvidenceTab({ insight }: { insight: MultiClusterInsight }) {
                   </span>
                 </div>
                 {i < (insight.chain || []).length - 1 && (
-                  <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0" />
                 )}
               </div>
             ))}

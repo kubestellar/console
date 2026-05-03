@@ -106,6 +106,44 @@ const (
 	TargetRepoDocs TargetRepo = "docs"
 )
 
+// ConsoleError represents a browser console error captured by the ring buffer.
+type ConsoleError struct {
+	Timestamp string `json:"timestamp"`
+	Level     string `json:"level"`
+	Message   string `json:"message"`
+	Source    string `json:"source,omitempty"`
+}
+
+// DiagnosticInfo contains environment details collected from the agent and browser
+// to help debug issues (e.g. CORS mismatches from old agent builds).
+type DiagnosticInfo struct {
+	AgentVersion            string `json:"agent_version,omitempty"`
+	CommitSHA               string `json:"commit_sha,omitempty"`
+	BuildTime               string `json:"build_time,omitempty"`
+	GoVersion               string `json:"go_version,omitempty"`
+	AgentOS                 string `json:"agent_os,omitempty"`
+	AgentArch               string `json:"agent_arch,omitempty"`
+	InstallMethod           string `json:"install_method,omitempty"`
+	Clusters                int    `json:"clusters,omitempty"`
+	AgentConnectionStatus   string `json:"agent_connection_status,omitempty"`
+	AgentConnectionFailures int    `json:"agent_connection_failures,omitempty"`
+	AgentLastError          string `json:"agent_last_error,omitempty"`
+	BrowserUA               string `json:"browser_user_agent,omitempty"`
+	BrowserPlatform         string `json:"browser_platform,omitempty"`
+	BrowserLanguage         string `json:"browser_language,omitempty"`
+	ScreenResolution        string `json:"screen_resolution,omitempty"`
+	WindowSize              string `json:"window_size,omitempty"`
+	PageURL                 string `json:"page_url,omitempty"`
+}
+
+// FailedApiCall represents a recent failed API call captured by the ring buffer.
+type FailedApiCall struct {
+	Timestamp string `json:"timestamp"`
+	Status    string `json:"status"`
+	Endpoint  string `json:"endpoint"`
+	Detail    string `json:"detail,omitempty"`
+}
+
 // CreateFeatureRequestInput is the input for creating a feature request
 type CreateFeatureRequestInput struct {
 	Title       string      `json:"title" validate:"required,min=10,max=200"`
@@ -115,6 +153,13 @@ type CreateFeatureRequestInput struct {
 	// Screenshots contains base64-encoded data URIs (e.g. "data:image/png;base64,...")
 	// that will be uploaded to GitHub and embedded in the issue body.
 	Screenshots []string `json:"screenshots,omitempty"`
+	// ConsoleErrors contains recent browser console errors captured automatically.
+	// Only populated for bug reports. Rendered as a collapsible section in the issue body.
+	ConsoleErrors []ConsoleError `json:"console_errors,omitempty"`
+	// FailedApiCalls contains recent 4xx/5xx API responses captured automatically.
+	FailedApiCalls []FailedApiCall `json:"failed_api_calls,omitempty"`
+	// Diagnostics contains agent and browser environment info for debugging.
+	Diagnostics *DiagnosticInfo `json:"diagnostics,omitempty"`
 }
 
 // SubmitFeedbackInput is the input for submitting PR feedback

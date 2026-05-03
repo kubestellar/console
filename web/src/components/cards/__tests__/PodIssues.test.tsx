@@ -97,7 +97,7 @@ vi.mock('../../../lib/cards/CardComponents', () => ({
     children: React.ReactNode
     onClick: () => void
   }) => (
-    <div data-testid="card-list-item" onClick={onClick}>
+    <div role="button" tabIndex={0} data-testid="card-list-item" onClick={onClick}>
       {children}
     </div>
   ),

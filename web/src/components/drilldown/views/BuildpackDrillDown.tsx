@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import type { BuildpackStatus } from '../../cards/buildpacks-status/BuildpacksStatus'
@@ -8,6 +8,7 @@ import { Package, Layers, Server, Clock, FileText, History, Loader2, Stethoscope
 import { cn } from '../../../lib/cn'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -105,6 +106,7 @@ export function BuildpackDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster } = useDrillDownActions()
+  const { close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
   const { showToast } = useToast()
 
@@ -144,7 +146,7 @@ export function BuildpackDrillDown({ data }: Props) {
 
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
@@ -196,7 +198,7 @@ export function BuildpackDrillDown({ data }: Props) {
         const parsed = JSON.parse(output)
         setImageInfo(parsed)
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch image info:', error)
       showToast('Failed to fetch image info', 'error')
     }
@@ -241,7 +243,7 @@ export function BuildpackDrillDown({ data }: Props) {
         const parsed = JSON.parse(output)
         setBuilds(parsed.items || [])
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch builds:', error)
       showToast('Failed to fetch builds', 'error')
       setBuilds([])
@@ -296,7 +298,7 @@ export function BuildpackDrillDown({ data }: Props) {
       } else {
         setLogs('No builds found for this image')
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch logs:', error)
       showToast('Failed to fetch logs', 'error')
       setLogs('Error fetching logs')
@@ -332,6 +334,7 @@ export function BuildpackDrillDown({ data }: Props) {
   // 3. Including the fetch functions would cause infinite loops
   // 4. Including the data (imageYAML, logs) would trigger unwanted re-fetches
   const handleDiagnose = () => {
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Diagnose Buildpack: ${name}`,
       description: `Analyze buildpack health`,

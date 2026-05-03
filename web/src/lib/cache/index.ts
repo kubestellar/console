@@ -150,6 +150,12 @@ export const REFRESH_RATES = {
   // Cost data - very infrequent
   costs: 600_000,        // 10 minutes
 
+  // AI / ML serving workloads (InferenceServices, model registries, etc.) —
+  // moderate refresh, same cadence as clusters/services. Added for
+  // kserve_status (kubestellar/console-marketplace#38) and reusable by
+  // future AI/ML cards.
+  'ai-ml': 60_000,       // 1 minute
+
   // Default
   default: 120_000,      // 2 minutes
 } as const
@@ -324,7 +330,7 @@ class IndexedDBStorage implements CacheStorage {
             store.createIndex('timestamp', 'timestamp', { unique: false })
           }
         }
-      } catch (e) { this.isSupported = false; reject(e) }
+      } catch (e: unknown) { this.isSupported = false; reject(e) }
     })
     return this.dbPromise
   }
@@ -401,7 +407,7 @@ class IndexedDBStorage implements CacheStorage {
         req.onsuccess = () => resolve()
         req.onerror = () => reject(req.error)
       })
-    } catch { /* ignore */ }
+    } catch (e: unknown) { console.warn('[Cache] IndexedDB put failed:', e) }
   }
 
   async delete(key: string): Promise<void> {
@@ -414,7 +420,7 @@ class IndexedDBStorage implements CacheStorage {
         req.onsuccess = () => resolve()
         req.onerror = () => resolve()
       })
-    } catch { /* ignore */ }
+    } catch (e: unknown) { console.warn('[Cache] IndexedDB delete failed:', e) }
   }
 
   async clear(): Promise<void> {
@@ -427,7 +433,7 @@ class IndexedDBStorage implements CacheStorage {
         req.onsuccess = () => resolve()
         req.onerror = () => resolve()
       })
-    } catch { /* ignore */ }
+    } catch (e: unknown) { console.warn('[Cache] IndexedDB clear failed:', e) }
   }
 
   async getStats(): Promise<{ keys: string[]; count: number }> {
@@ -492,7 +498,7 @@ export async function initCacheWorker(): Promise<CacheWorkerRpc> {
     workerRpc = rpc
     cacheStorage = new WorkerStorage(rpc)
     return rpc
-  } catch (e) {
+  } catch (e: unknown) {
     console.warn('[Cache] SQLite Worker unavailable, using IndexedDB fallback:', e)
     // Reuse the existing _idbStorage instance so that the snapshot hydrated by
     // preloadAll() remains consistent with the active storage backend.
@@ -681,7 +687,18 @@ class CacheStore<T> {
     ssWrite(this.key, data, Date.now())
     try {
       await cacheStorage.set(this.key, data)
-    } catch (e) {
+      // When the SQLite worker is the active backend, also mirror data to the
+      // IndexedDB fallback.  This keeps the IDB in-memory snapshot current so
+      // that after a full page navigation (page.goto / F5) the CacheStore
+      // constructor can hydrate via getFromSnapshot() *before* the worker
+      // re-initialises.  Without this, cards that relied solely on worker
+      // storage would show a skeleton flash after navigation because the IDB
+      // snapshot had stale/missing data.  Fire-and-forget — IDB write failures
+      // are non-fatal since sessionStorage is the primary sync fallback.
+      if (workerRpc) {
+        _idbStorage.set(this.key, data).catch(() => { /* best-effort IDB mirror */ })
+      }
+    } catch (e: unknown) {
       console.error(`[Cache] Failed to save ${this.key}:`, e)
     }
   }
@@ -941,7 +958,7 @@ class CacheStore<T> {
         isFailed: false,
         consecutiveFailures: 0,
         lastRefresh: Date.now() })
-    } catch (e) {
+    } catch (e: unknown) {
       // If a reset happened during fetch, discard stale error
       if (this.resetVersion !== fetchVersion) {
         this.fetchingRef = false
@@ -1069,6 +1086,10 @@ export interface UseCacheOptions<T> {
   /** When true and demoData is provided, fall back to demoData if live fetch returns empty data.
    *  Use this for "demo until X is installed" cards that are in DEMO_DATA_CARDS. (default: false) */
   demoWhenEmpty?: boolean
+  /** Custom predicate to check whether data is "empty" for demoWhenEmpty logic.
+   *  Default checks Array.isArray(data) && length === 0.  Override for object-shaped
+   *  data (e.g. { guides: [] }) where the top-level value is truthy but semantically empty. */
+  isEmpty?: (data: T) => boolean
   /** When true, the fetcher runs even in demo mode. Use for cards that serve live data
    *  on Netlify (e.g. nightly E2E status backed by a Netlify Function). (default: false) */
   liveInDemoMode?: boolean
@@ -1098,11 +1119,16 @@ export interface UseCacheResult<T> {
   lastRefresh: number | null
   /** Manually trigger a refresh */
   refetch: () => Promise<void>
+  /** Reset failure counters and refetch — for explicit user retries */
+  retryFetch: () => Promise<void>
   /** Clear cache and refetch */
   clearAndRefetch: () => Promise<void>
   /** Whether demoWhenEmpty fallback is active (live data returned empty, showing demo data) */
   isDemoFallback: boolean
 }
+
+/** Hook return shape without clearAndRefetch — used by useCached* wrapper hooks */
+export type CachedHookResult<T> = Omit<UseCacheResult<T>, 'clearAndRefetch'>
 
 export function useCache<T>({
   key,
@@ -1115,6 +1141,7 @@ export function useCache<T>({
   autoRefresh = true,
   enabled = true,
   demoWhenEmpty = false,
+  isEmpty: isEmptyFn,
   liveInDemoMode = false,
   merge,
   shared = true,
@@ -1190,6 +1217,14 @@ export function useCache<T>({
   progressiveFetcherRef.current = progressiveFetcher
 
   const refetch = useCallback(async () => {
+    if (!effectiveEnabled || !keepAliveActive) return
+    await store.fetch(() => fetcherRef.current(), mergeRef.current, progressiveFetcherRef.current)
+  }, [effectiveEnabled, keepAliveActive, store])
+
+  /** Reset failure counters then refetch — use for explicit user-triggered retries
+   *  so backoff is cleared and the fetch runs immediately. */
+  const retryFetch = useCallback(async () => {
+    store.resetFailures()
     if (!effectiveEnabled || !keepAliveActive) return
     await store.fetch(() => fetcherRef.current(), mergeRef.current, progressiveFetcherRef.current)
   }, [effectiveEnabled, keepAliveActive, store])
@@ -1335,8 +1370,11 @@ export function useCache<T>({
   // demoWhenEmpty: fall back to demoData when live fetch returned empty results.
   // This handles "demo until X is installed" cards (e.g., Kagenti) that are in DEMO_DATA_CARDS
   // but fetch live data that returns empty when the feature isn't installed.
+  const dataIsEmpty = isEmptyFn
+    ? isEmptyFn(state.data)
+    : Array.isArray(state.data) && (state.data as unknown[]).length === 0
   const shouldFallbackToDemo = effectiveEnabled && demoWhenEmpty && stableDemoData !== undefined
-    && !state.isLoading && Array.isArray(state.data) && (state.data as unknown[]).length === 0
+    && !state.isLoading && dataIsEmpty
 
   // Optimistic demo: for demoWhenEmpty hooks, show demoData immediately while
   // the live fetch runs in the background.  This avoids skeleton flicker for
@@ -1345,9 +1383,8 @@ export function useCache<T>({
   // IMPORTANT: Only apply when current data is empty — if the store already has
   // real cached data (e.g. from initialData populated via localStorage), showing
   // demo data would discard that warm cache (#3397).
-  const hasNonEmptyData = Array.isArray(state.data) ? (state.data as unknown[]).length > 0 : !!state.data
   const showOptimisticDemo = effectiveEnabled && demoWhenEmpty && stableDemoData !== undefined
-    && state.isLoading && !hasNonEmptyData
+    && state.isLoading && dataIsEmpty
 
   return {
     data: !effectiveEnabled ? demoDisplayData
@@ -1362,6 +1399,7 @@ export function useCache<T>({
     lastRefresh: state.lastRefresh,
     isDemoFallback: shouldFallbackToDemo || !effectiveEnabled || showOptimisticDemo,
     refetch,
+    retryFetch,
     clearAndRefetch }
 }
 
@@ -1621,7 +1659,7 @@ export async function migrateIDBToSQLite(): Promise<void> {
     try {
       indexedDB.deleteDatabase(DB_NAME)
     } catch { /* ignore */ }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('[Cache] IDB→SQLite migration failed:', e)
   }
 }
@@ -1659,3 +1697,23 @@ export {
   useIndexedData,
   getStorageStats,
   clearAllStorage } from './hooks'
+
+// Re-export hook factory
+export { createCachedHook } from './createCachedHook'
+export type { CreateCachedHookConfig } from './createCachedHook'
+
+export const __testables = {
+  ssWrite,
+  ssRead,
+  clearSessionSnapshots,
+  isEquivalentToInitial,
+  getEffectiveInterval,
+  CACHE_VERSION,
+  SS_PREFIX,
+  META_PREFIX,
+  MAX_FAILURES,
+  FAILURE_BACKOFF_MULTIPLIER,
+  MAX_BACKOFF_INTERVAL,
+  /** Exposed for testing the worker→IDB mirror write path. */
+  _idbStorage,
+}

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react'
+import { memo, useState, useEffect, useRef } from 'react'
 import { RefreshCw, Clock, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { formatLastSeen } from '../../lib/errorClassifier'
 import { Button } from './Button'
 
@@ -9,12 +10,6 @@ import { Button } from './Button'
 // Must match animation duration (1s) defined in index.css for animate-spin-min
 const MIN_SPIN_DURATION = 1000
 
-/** Milliseconds per minute, used for relative-time formatting */
-const MS_PER_MINUTE = 60_000
-/** Milliseconds per hour, used for relative-time formatting */
-const MS_PER_HOUR = 3_600_000
-/** Milliseconds per day, used for relative-time formatting */
-const MS_PER_DAY = 86_400_000
 
 interface RefreshIndicatorProps {
   isRefreshing: boolean
@@ -32,8 +27,11 @@ interface RefreshIndicatorProps {
  * - Idle: Shows clock icon with "Updated Xs ago"
  * - Refreshing: Shows spinning refresh icon with "Updating" label
  * - Stale: Shows amber clock icon with warning styling
+ *
+ * Wrapped in memo — all props are primitives / Date, so shallow compare is
+ * safe and avoids re-rendering this leaf on every parent re-render tick.
  */
-export function RefreshIndicator({
+export const RefreshIndicator = memo(function RefreshIndicator({
   isRefreshing,
   lastUpdated,
   className,
@@ -115,7 +113,7 @@ export function RefreshIndicator({
       )}
     </span>
   )
-}
+})
 
 // Button variant for manual refresh with failure state
 interface RefreshButtonProps {
@@ -232,8 +230,9 @@ export function RefreshButton({
   )
 }
 
-// Simple spinning indicator without button (for inline use)
-export function RefreshSpinner({
+// Simple spinning indicator without button (for inline use).
+// Wrapped in memo — all props are primitives so shallow compare is safe.
+export const RefreshSpinner = memo(function RefreshSpinner({
   isRefreshing,
   size = 'md',
   className = '',
@@ -274,4 +273,4 @@ export function RefreshSpinner({
   return (
     <RefreshCw className={`${sizeClasses} text-blue-400 animate-spin-min ${className}`} />
   )
-}
+})

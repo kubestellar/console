@@ -46,7 +46,7 @@ export function useCardRecommendations(currentCardTypes: string[]) {
   const { issues: deploymentIssues } = useDeploymentIssues()
   const { events: warningEvents } = useWarningEvents()
   const { nodes: gpuNodes } = useGPUNodes()
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { issues: securityIssues } = useSecurityIssues()
 
   // Analyze cluster state and generate recommendations

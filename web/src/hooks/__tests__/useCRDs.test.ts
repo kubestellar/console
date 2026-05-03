@@ -22,13 +22,24 @@ let mockClustersReturn = {
   isLoading: false,
 }
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../useMCP', () => ({
   useClusters: () => mockClustersReturn,
 }))
 
-vi.mock('../../lib/constants', () => ({
-  STORAGE_KEY_TOKEN: 'token',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    STORAGE_KEY_TOKEN: 'token',
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,

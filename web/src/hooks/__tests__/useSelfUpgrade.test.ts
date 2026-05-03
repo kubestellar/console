@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
+import { renderHook, act, waitFor } from '@testing-library/react'
 
 vi.mock('../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
@@ -29,6 +29,9 @@ describe('useSelfUpgrade', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    // Ensure stubGlobal('location', ...) from pollForRestart tests is always cleaned up,
+    // even if the test fails before reaching vi.unstubAllGlobals() inline.
+    vi.unstubAllGlobals()
   })
 
   it('starts with null status and not loading', () => {
@@ -294,5 +297,240 @@ describe('useSelfUpgrade', () => {
       releaseName: 'console',
       reason: 'Update available',
     })
+  })
+
+  // --- triggerUpgrade NetworkError treated as success ---
+  it('triggerUpgrade treats NetworkError as success (pod restarting)', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockRejectedValueOnce(new Error('NetworkError when attempting to fetch resource'))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    let upgradeResult: { success: boolean; error?: string } | undefined
+    await act(async () => {
+      upgradeResult = await result.current.triggerUpgrade('1.1.0')
+    })
+    expect(upgradeResult?.success).toBe(true)
+    expect(result.current.isRestarting).toBe(true)
+  })
+
+  // --- triggerUpgrade AbortError treated as success ---
+  it('triggerUpgrade treats AbortError as success', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockRejectedValueOnce(new Error('AbortError: The operation was aborted'))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    let upgradeResult: { success: boolean; error?: string } | undefined
+    await act(async () => {
+      upgradeResult = await result.current.triggerUpgrade('1.1.0')
+    })
+    expect(upgradeResult?.success).toBe(true)
+  })
+
+  // --- triggerUpgrade timeout treated as success ---
+  it('triggerUpgrade treats timeout error as success', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockRejectedValueOnce(new Error('The operation was aborted due to timeout'))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    let upgradeResult: { success: boolean; error?: string } | undefined
+    await act(async () => {
+      upgradeResult = await result.current.triggerUpgrade('1.1.0')
+    })
+    expect(upgradeResult?.success).toBe(true)
+  })
+
+  // --- triggerUpgrade server success=false without error field ---
+  it('triggerUpgrade handles missing error field in failure response', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: false }), { status: 500 }))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    let upgradeResult: { success: boolean; error?: string } | undefined
+    await act(async () => {
+      upgradeResult = await result.current.triggerUpgrade('1.1.0')
+    })
+    expect(upgradeResult?.success).toBe(false)
+    expect(upgradeResult?.error).toBe('Server returned 500')
+  })
+
+  // --- triggerUpgrade non-Error thrown object ---
+  it('triggerUpgrade handles non-Error throw', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockRejectedValueOnce('string error')
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    let upgradeResult: { success: boolean; error?: string } | undefined
+    await act(async () => {
+      upgradeResult = await result.current.triggerUpgrade('1.1.0')
+    })
+    expect(upgradeResult?.success).toBe(false)
+    expect(upgradeResult?.error).toBe('Failed to reach backend')
+  })
+
+  // --- triggerUpgrade includes auth and content-type headers ---
+  it('triggerUpgrade sends correct headers', async () => {
+    localStorage.setItem('kc-auth-token', 'my-jwt')
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    await act(async () => { await result.current.triggerUpgrade('2.0.0') })
+
+    const triggerCall = vi.mocked(fetch).mock.calls.find(
+      c => (c[0] as string).includes('/api/self-upgrade/trigger')
+    )
+    expect(triggerCall).toBeDefined()
+    const headers = triggerCall![1]?.headers as Record<string, string>
+    expect(headers['Content-Type']).toBe('application/json')
+    expect(headers['X-Requested-With']).toBe('XMLHttpRequest')
+    expect(headers.Authorization).toBe('Bearer my-jwt')
+  })
+
+  // --- triggerUpgrade sends imageTag in body ---
+  it('triggerUpgrade sends imageTag in request body', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    await act(async () => { await result.current.triggerUpgrade('v3.0.0') })
+
+    const triggerCall = vi.mocked(fetch).mock.calls.find(
+      c => (c[0] as string).includes('/api/self-upgrade/trigger')
+    )
+    const body = JSON.parse(triggerCall![1]?.body as string)
+    expect(body.imageTag).toBe('v3.0.0')
+  })
+
+  // --- __testables constants ---
+  it('exports expected constants via __testables', async () => {
+    const mod = await import('../useSelfUpgrade')
+    expect(mod.__testables.SELF_UPGRADE_TIMEOUT_MS).toBeGreaterThan(0)
+    expect(mod.__testables.RESTART_POLL_INTERVAL_MS).toBeGreaterThan(0)
+    expect(mod.__testables.RESTART_POLL_MAX_MS).toBeGreaterThan(0)
+    expect(mod.__testables.RESTART_HEALTH_TIMEOUT_MS).toBeGreaterThan(0)
+    expect(mod.__testables.RELOAD_DELAY_MS).toBeGreaterThan(0)
+  })
+
+  // --- __testables getToken ---
+  it('getToken reads from localStorage', async () => {
+    const mod = await import('../useSelfUpgrade')
+    expect(mod.__testables.getToken()).toBeNull()
+    localStorage.setItem('kc-auth-token', 'the-token')
+    expect(mod.__testables.getToken()).toBe('the-token')
+  })
+
+  // --- pollForRestart: triggered via triggerUpgrade ---
+
+  it('pollForRestart sets isRestarting=true after successful trigger', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true, canPatch: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    await act(async () => { await result.current.triggerUpgrade('v2.0.0') })
+
+    expect(result.current.isRestarting).toBe(true)
+    expect(result.current.restartComplete).toBe(false)
+    expect(result.current.restartError).toBeNull()
+  })
+
+  it('pollForRestart completes when /health returns 200', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
+      .mockResolvedValue(new Response('OK', { status: 200 }))
+
+    const reloadMock = vi.fn()
+    vi.stubGlobal('location', { ...window.location, reload: reloadMock })
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    await act(async () => { await result.current.triggerUpgrade('v2.0.0') })
+    expect(result.current.isRestarting).toBe(true)
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(3_500) })
+
+    await waitFor(() => {
+      expect(result.current.restartComplete).toBe(true)
+      expect(result.current.isRestarting).toBe(false)
+    })
+  })
+
+  it('pollForRestart sets restartError after max poll time exceeded', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
+      .mockRejectedValue(new Error('connection refused'))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    await act(async () => { await result.current.triggerUpgrade('v2.0.0') })
+    expect(result.current.isRestarting).toBe(true)
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(125_000) })
+
+    await waitFor(() => {
+      expect(result.current.restartError).not.toBeNull()
+      expect(result.current.isRestarting).toBe(false)
+    })
+  })
+
+  it('cancelRestartPoll cancels active polling', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
+      .mockRejectedValue(new Error('connection refused'))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    await act(async () => { await result.current.triggerUpgrade('v2.0.0') })
+    expect(result.current.isRestarting).toBe(true)
+
+    act(() => { result.current.cancelRestartPoll() })
+
+    expect(result.current.isRestarting).toBe(false)
+  })
+
+  it('restartElapsed increments while restarting', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ available: true }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true }), { status: 200 }))
+      .mockRejectedValue(new Error('still down'))
+
+    const { result } = renderHook(() => useSelfUpgrade())
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+
+    await act(async () => { await result.current.triggerUpgrade('v2.0.0') })
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+
+    expect(result.current.restartElapsed).toBeGreaterThanOrEqual(4)
+    act(() => { result.current.cancelRestartPoll() })
   })
 })

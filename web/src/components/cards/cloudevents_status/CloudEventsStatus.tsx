@@ -5,6 +5,8 @@ import { CardSearchInput, MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCloudEventsStatus } from './useCloudEventsStatus'
 import type { CloudEventResourceState } from './demoData'
+import { createCardSyncFormatter } from '../../../lib/formatters'
+import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
 
 const STATUS_STYLE: Record<CloudEventResourceState, { badge: string; icon: React.ReactNode }> = {
   ready: {
@@ -22,26 +24,10 @@ const STATUS_LABEL_KEY: Record<CloudEventResourceState, 'cloudevents.status_read
   degraded: 'cloudevents.status_degraded',
   error: 'cloudevents.status_error' }
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('cloudevents.syncedJustNow')
-
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-
-    if (diff < minute) return t('cloudevents.syncedJustNow')
-    if (diff < hour) return t('cloudevents.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('cloudevents.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('cloudevents.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 export function CloudEventsStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'cloudevents')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
   const [search, setSearch] = useState('')
 
@@ -67,7 +53,7 @@ export function CloudEventsStatus() {
           <Skeleton variant="rounded" width={140} height={28} />
           <Skeleton variant="rounded" width={90} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <Skeleton variant="rounded" height={32} />
         <SkeletonList items={4} className="flex-1" />
       </div>
@@ -97,9 +83,7 @@ export function CloudEventsStatus() {
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
-            isHealthy ? 'bg-green-500/15 text-green-400' : 'bg-yellow-500/15 text-yellow-400'
-          }`}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${getHealthBadgeClasses(isHealthy)}`}
         >
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
           {isHealthy ? t('cloudevents.healthy') : t('cloudevents.degraded')}

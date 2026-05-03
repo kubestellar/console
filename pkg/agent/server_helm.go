@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -145,7 +144,7 @@ func (s *Server) handleHelmRollback(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if !s.validateToken(r) {
@@ -190,7 +189,7 @@ func (s *Server) handleHelmRollback(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := detachedHelmCtx()
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "helm", args...)
+	cmd := execCommandContext(ctx, "helm", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -223,7 +222,7 @@ func (s *Server) handleHelmUninstall(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if !s.validateToken(r) {
@@ -263,7 +262,7 @@ func (s *Server) handleHelmUninstall(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := detachedHelmCtx()
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "helm", args...)
+	cmd := execCommandContext(ctx, "helm", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -296,7 +295,7 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if !s.validateToken(r) {
@@ -352,7 +351,7 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := detachedHelmCtx()
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "helm", args...)
+	cmd := execCommandContext(ctx, "helm", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -378,7 +377,7 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 		tmpFile.Close()
 
 		args = append(args, "-f", tmpFile.Name())
-		cmd = exec.CommandContext(ctx, "helm", args...)
+		cmd = execCommandContext(ctx, "helm", args...)
 		stdout.Reset()
 		stderr.Reset()
 		cmd.Stdout = &stdout

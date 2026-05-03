@@ -1,4 +1,5 @@
-import { useState, memo } from 'react'
+import { useState, memo, Suspense } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import {
@@ -12,7 +13,10 @@ import { StatusBadge } from './StatusBadge'
 import { StatBlockConfig, DashboardStatsType, StatDisplayMode } from './StatsBlockDefinitions'
 import { StatsConfigModal, useStatsConfig } from './StatsConfig'
 import { StatBlockModePicker } from './StatBlockModePicker'
-import { Sparkline } from '../charts/Sparkline'
+// Lazy-load Sparkline to defer the echarts vendor chunk from the critical path.
+// The Gauge and CircularProgress components are smaller and less common, but they
+// share the same echarts import chain, so lazy-loading them too is low-cost.
+const LazySparkline = safeLazy(() => import('../charts/Sparkline'), 'Sparkline')
 import { Gauge } from '../charts/Gauge'
 import { CircularProgress } from '../charts/ProgressBar'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
@@ -84,7 +88,7 @@ function getAvailableModes(blockId: string, data: StatBlockValue): StatDisplayMo
   if (!isNaN(numericValue)) {
     modes.push('sparkline', 'mini-bar', 'trend', 'heatmap')
     if (data.max !== undefined || PERCENTAGE_STAT_IDS.has(blockId) || String(data.value).includes('%')) {
-      modes.push('gauge', 'horseshoe', 'ring')
+      modes.push('gauge', 'horseshoe', 'ring-3')
     }
   }
   // Stacked bar available for all numeric stats (renders as single segment if no breakdown)
@@ -233,6 +237,11 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
       data-testid={`stat-block-${block.id}`}
       className={`group relative glass p-4 rounded-lg min-h-[100px] ${isLoading ? 'animate-pulse' : ''} ${isClickable ? 'cursor-pointer hover:bg-secondary/50' : ''} ${isDemo ? 'border border-yellow-500/30 bg-yellow-500/5 shadow-[0_0_12px_rgba(234,179,8,0.15)]' : ''} transition-colors`}
       onClick={() => isClickable && data.onClick?.()}
+      {...(isClickable ? {
+        role: 'button' as const,
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); data.onClick?.() } },
+      } : {})}
     >
       {/* Demo badge */}
       {isDemo && (
@@ -250,22 +259,24 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
         />
       )}
 
-      {/* Header: icon + name. Label uses break-words + leading-tight so long labels
-          (e.g. "Unhealthy", "Storage") wrap to a second line at narrow widths
-          instead of being clipped with an ellipsis */}
+      {/* Header: icon + name. Label uses truncate so short stat labels
+          ("Clusters", "Healthy") never break mid-word at narrow card widths
+          (#11456). The full name is available via title tooltip. */}
       <div className="flex items-start gap-2 mb-2 min-w-0">
         <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
-        <span className="text-sm text-muted-foreground break-words leading-tight min-w-0" title={block.name}>{wrapAbbreviations(block.name)}</span>
+        <span className="text-sm text-muted-foreground truncate leading-tight min-w-0" title={block.name}>{wrapAbbreviations(block.name)}</span>
       </div>
 
       {/* Mode-specific content */}
       {effectiveMode === 'sparkline' && hasEnoughHistory && !isNaN(numericValue) ? (
         <>
           <div className="flex items-end justify-between gap-2">
-            <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+            <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
               {displayValue}
             </div>
-            <Sparkline data={history!} color={hexColor} height={28} width={64} fill />
+            <Suspense fallback={<div style={{ height: 28, width: 64 }} className="bg-secondary/30 rounded" />}>
+              <LazySparkline data={history!} color={hexColor} height={28} width={64} fill />
+            </Suspense>
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
@@ -282,7 +293,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
-      ) : effectiveMode === 'ring' && !isNaN(numericValue) ? (
+      ) : effectiveMode === 'ring-3' && !isNaN(numericValue) ? (
         <>
           <div className="flex justify-center">
             <CircularProgress
@@ -291,13 +302,14 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
               size={RING_SIZE_PX}
               strokeWidth={RING_STROKE_PX}
               color={hexColor}
+              formatValue={data.format && typeof rawValue === 'number' ? () => data.format!(rawValue as number) : undefined}
             />
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
       ) : effectiveMode === 'mini-bar' && !isNaN(numericValue) ? (
         <>
-          <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+          <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
             {displayValue}
           </div>
           <div className="mt-1.5 w-full bg-secondary rounded-full overflow-hidden" style={{ height: MINI_BAR_HEIGHT_PX }}>
@@ -333,7 +345,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           return (
             <>
               <div className="flex items-baseline gap-2">
-                <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+                <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
                   {displayValue}
                 </div>
                 {delta !== undefined && (
@@ -352,7 +364,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
         })()
       ) : effectiveMode === 'stacked-bar' && !isNaN(numericValue) ? (
         <>
-          <div className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
+          <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
             {displayValue}
           </div>
           <div className="mt-1.5 w-full bg-secondary rounded-full overflow-hidden flex" style={{ height: MINI_BAR_HEIGHT_PX }}>
@@ -372,15 +384,19 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
             style={{ backgroundColor: hexColor, opacity: getHeatmapOpacity(numericValue) }}
           />
           <div className="relative">
-            <div className={`text-3xl font-bold ${numericValue > 0 ? 'text-white drop-shadow-sm' : valueColor}`}>{displayValue}</div>
+            <div data-testid={`stat-block-${block.id}-count`} className={`text-3xl font-bold ${numericValue > 0 ? 'text-white drop-shadow-xs' : valueColor}`}>{displayValue}</div>
             {data.sublabel && <div className={`text-xs ${numericValue > 0 ? 'text-white/70' : 'text-muted-foreground'}`}>{wrapAbbreviations(data.sublabel)}</div>}
           </div>
         </>
       ) : (
         /* Default numeric mode */
         <>
-          <div className={`text-3xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>{displayValue}</div>
-          {mode === 'sparkline' && !hasEnoughHistory && !isLoading && hasData && (
+          <div data-testid={`stat-block-${block.id}-count`} className={`text-3xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>{displayValue}</div>
+          {/* #9708 — Only show "Building trend…" when there is no sublabel.
+              Both elements appearing together overflows the card height and
+              creates visual inconsistency across stat cards. The sublabel
+              (e.g. "healthy pods") is more informative and takes priority. */}
+          {mode === 'sparkline' && !hasEnoughHistory && !isLoading && hasData && !data.sublabel && (
             <div className="text-2xs text-muted-foreground/50 mt-0.5">Building trend…</div>
           )}
           {data.sublabel && <div className="text-xs text-muted-foreground">{wrapAbbreviations(data.sublabel)}</div>}
@@ -487,14 +503,15 @@ export function StatsOverview({
 
   // Dynamic grid columns based on visible blocks.
   // Mobile: max 2 columns, tablet+: responsive based on count.
-  // For 7+ blocks we keep two rows on lg (1024px) and only collapse to a single
-  // row at xl (1280px+) where each card is wide enough to show its full label
-  // without ellipsis truncation
+  // - ≤4 blocks: 4 columns at md+ (each card is wide enough for any label).
+  // - 5 blocks: 5 columns at lg+ (still readable at typical widths).
+  // - 6+ blocks (e.g. /deployments has 7: Namespaces, Critical, Warning,
+  //   Healthy, Deployments, Pod Issues, Deploy Issues): cap at 4 columns
+  //   at lg, expand to 5 only at xl (1280px+) so labels like "Namespaces"
+  //   and "Deploy Issues" keep enough horizontal room. See #9858.
   const gridCols = visibleBlocks.length <= 4 ? 'grid-cols-2 md:grid-cols-4' :
-    visibleBlocks.length <= 5 ? 'grid-cols-2 md:grid-cols-5' :
-    visibleBlocks.length <= 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6' :
-    visibleBlocks.length <= 8 ? 'grid-cols-2 md:grid-cols-4 xl:grid-cols-8' :
-    'grid-cols-2 md:grid-cols-5 xl:grid-cols-10'
+    visibleBlocks.length <= 5 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5' :
+    'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
 
   return (
     <div className={`mb-6 ${className}`}>
@@ -583,63 +600,4 @@ export function StatsOverview({
   )
 }
 
-/**
- * Helper to format large numbers (1000 -> 1K, 1000000 -> 1M)
- */
-const STAT_MILLION_THRESHOLD = 1_000_000
-const STAT_KILO_THRESHOLD = 10_000
-const STAT_KILO_DIVISOR = 1_000
 
-export function formatStatNumber(value: number): string {
-  if (value >= STAT_MILLION_THRESHOLD) {
-    return `${(value / STAT_MILLION_THRESHOLD).toFixed(1)}M`
-  }
-  if (value >= STAT_KILO_THRESHOLD) {
-    return `${(value / STAT_KILO_DIVISOR).toFixed(1)}K`
-  }
-  return value.toLocaleString()
-}
-
-/**
- * Helper to format memory/storage values
- */
-/** GiB per TiB (1024) — used for memory/storage unit conversions */
-const GB_PER_TB = 1_024
-/** GiB per PiB (1024²) — used for memory/storage unit conversions */
-const GB_PER_PB = 1_024 * 1_024
-
-export function formatMemoryValue(gb: number): string {
-  if (gb >= GB_PER_PB) {
-    return `${(gb / GB_PER_PB).toFixed(1)} PB`
-  }
-  if (gb >= GB_PER_TB) {
-    return `${(gb / GB_PER_TB).toFixed(1)} TB`
-  }
-  if (gb >= 1) {
-    return `${Math.round(gb)} GB`
-  }
-  if (gb >= 0.001) {
-    return `${Math.round(gb * GB_PER_TB)} MB`
-  }
-  return '0 GB'
-}
-
-/**
- * Helper to format percentage values
- */
-export function formatPercentage(value: number): string {
-  return `${Math.round(value)}%`
-}
-
-/** Threshold above which currency values are abbreviated to K (e.g. $1.5K) */
-const CURRENCY_KILO_THRESHOLD = 1_000
-
-/**
- * Helper to format currency values
- */
-export function formatCurrency(value: number): string {
-  if (value >= CURRENCY_KILO_THRESHOLD) {
-    return `$${(value / CURRENCY_KILO_THRESHOLD).toFixed(1)}K`
-  }
-  return `$${value.toFixed(2)}`
-}

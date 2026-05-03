@@ -398,7 +398,7 @@ export function ReservationFormModal({
 
       onSaved()
       onClose()
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t('gpuReservations.form.errors.saveFailed')
       setError(msg)
       onError(msg)

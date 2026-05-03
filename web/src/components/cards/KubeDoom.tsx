@@ -29,6 +29,10 @@ const ROTATE_SPEED = 0.04
 const WALL_COLORS = ['#8b0000', '#006400', '#00008b', '#8b8b00']
 const CEILING_COLOR = '#1a1a2e'
 const FLOOR_COLOR = '#2d2d2d'
+const CROSSHAIR_COLOR = '#00ff00'
+const FLASH_SHOOT_COLOR = [255, 200, 50]
+const FLASH_DAMAGE_COLOR = [255, 0, 0]
+const ENEMY_EYE_RGB = [255, 50, 50]
 
 // Map: 1-4 = walls of different colors, 0 = empty
 const MAP_DATA = [
@@ -398,7 +402,7 @@ export function KubeDoom() {
 
       // Eyes (red glow)
       const eyeR = Math.max(2, spriteWidth * 0.08)
-      ctx.fillStyle = `rgb(${Math.floor(255 * shade)},${Math.floor(50 * shade)},${Math.floor(50 * shade)})`
+      ctx.fillStyle = `rgb(${Math.floor(ENEMY_EYE_RGB[0] * shade)},${Math.floor(ENEMY_EYE_RGB[1] * shade)},${Math.floor(ENEMY_EYE_RGB[2] * shade)})`
       ctx.beginPath()
       ctx.arc(screenX - spriteWidth * 0.12, screenY + spriteHeight * 0.15, eyeR, 0, Math.PI * 2)
       ctx.arc(screenX + spriteWidth * 0.12, screenY + spriteHeight * 0.15, eyeR, 0, Math.PI * 2)
@@ -424,18 +428,18 @@ export function KubeDoom() {
 
     // Shoot flash
     if (shootFlashRef.current > 0) {
-      ctx.fillStyle = `rgba(255, 200, 50, ${shootFlashRef.current / 8 * 0.3})`
+      ctx.fillStyle = `rgba(${FLASH_SHOOT_COLOR[0]}, ${FLASH_SHOOT_COLOR[1]}, ${FLASH_SHOOT_COLOR[2]}, ${shootFlashRef.current / 8 * 0.3})`
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
     }
 
     // Damage flash
     if (damageFlashRef.current > 0) {
-      ctx.fillStyle = `rgba(255, 0, 0, ${damageFlashRef.current / 8 * 0.4})`
+      ctx.fillStyle = `rgba(${FLASH_DAMAGE_COLOR[0]}, ${FLASH_DAMAGE_COLOR[1]}, ${FLASH_DAMAGE_COLOR[2]}, ${damageFlashRef.current / 8 * 0.4})`
       ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT)
     }
 
     // Crosshair
-    ctx.strokeStyle = '#00ff00'
+    ctx.strokeStyle = CROSSHAIR_COLOR
     ctx.lineWidth = 2
     const cx = CANVAS_WIDTH / 2
     const cy = CANVAS_HEIGHT / 2

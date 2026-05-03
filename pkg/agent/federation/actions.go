@@ -21,7 +21,7 @@ type ActionDescriptor struct {
 	// Provider identifies which provider owns this action.
 	Provider FederationProviderName `json:"provider"`
 	// Destructive flags actions that warrant a confirmation dialog in the UI
-	// (e.g. detaching a cluster). The UI MUST show a ConfirmDialog before
+	// (e.g. deleting a cluster). The UI MUST show a ConfirmDialog before
 	// executing any action with Destructive=true.
 	Destructive bool `json:"destructive"`
 }

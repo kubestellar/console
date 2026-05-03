@@ -46,7 +46,7 @@ jobs:
       has_changes: ${{ steps.changes.outputs.has_changes }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -160,16 +160,16 @@ jobs:
     if: needs.determine-version.outputs.has_changes == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: '22'
           cache: 'npm'
@@ -193,6 +193,7 @@ jobs:
   release:
     needs: [determine-version, test]
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     if: ${{ github.event.inputs.dry_run != 'true' && needs.determine-version.outputs.has_changes == 'true' }}
     permissions:
       contents: write
@@ -202,28 +203,22 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: '1.25'
+          go-version: '1.26'
           cache: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: '22'
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
@@ -259,30 +254,6 @@ jobs:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           RELEASE_NAME: ${{ needs.determine-version.outputs.release_name }}
 
-      - name: Build and push Docker image
-        id: docker-push
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-version.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.determine-version.outputs.release_type }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          build-args: |
-            APP_VERSION=${{ needs.determine-version.outputs.version }}
-            COMMIT_HASH=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Attest container image provenance
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          subject-digest: ${{ steps.docker-push.outputs.digest }}
-          push-to-registry: true
-
       - name: Attest GoReleaser binary artifacts
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
@@ -298,35 +269,175 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.determine-version.outputs.version }}
         run: |
-          # Sign checksums file with keyless cosign (Sigstore OIDC)
-          # The scorecard Signed-Releases check looks for .sig files
-          # attached to GitHub release assets
-          #
-          # --new-bundle-format=false: cosign v3.x defaults this to true and
-          # then requires --bundle to be specified; with the flag enabled the
-          # legacy --output-signature / --output-certificate flags are silently
-          # ignored and cosign fails with
+          # Sign checksums file with keyless cosign (Sigstore OIDC).
+          # Use --bundle (new cosign v3 default) since the legacy
+          # --output-signature / --output-certificate flags are ignored
+          # when the new bundle format is active, causing:
           #   "create bundle file: open : no such file or directory"
-          # because no --bundle path is set. Disabling the new bundle format
-          # restores the legacy .sig/.pem output that the scorecard
-          # Signed-Releases check and prior releases rely on. See
-          # https://github.com/sigstore/cosign/releases/tag/v3.0.1 for the
-          # v3 --bundle-required change.
+          # The OpenSSF Scorecard Signed-Releases check accepts .bundle
+          # files as valid signing evidence.
           cosign sign-blob --yes \
-            --new-bundle-format=false \
-            --output-signature dist/checksums.txt.sig \
-            --output-certificate dist/checksums.txt.pem \
+            --bundle dist/checksums.txt.bundle \
             dist/checksums.txt
 
-          # Upload signatures to the release
+          # Upload signing bundle to the release
           gh release upload "${VERSION}" \
-            dist/checksums.txt.sig \
-            dist/checksums.txt.pem \
+            dist/checksums.txt.bundle \
             --repo "${{ github.repository }}" \
             --clobber
 
+  # Build Docker images per-platform in parallel to avoid QEMU cross-compilation
+  # timeout. Each platform builds natively-emulated in its own job, then the
+  # manifest job merges them into a single multi-arch manifest list.
+  docker-build:
+    needs: [determine-version, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: needs.release.result == 'success'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare platform pair
+        id: prep
+        run: |
+          platform=${{ matrix.platform }}
+          echo "pair=${platform//\//-}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push per-platform image
+        id: build
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        continue-on-error: true
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            APP_VERSION=${{ needs.determine-version.outputs.version }}
+            COMMIT_HASH=${{ github.sha }}
+          cache-from: type=gha,scope=docker-${{ steps.prep.outputs.pair }}
+          cache-to: type=gha,scope=docker-${{ steps.prep.outputs.pair }},mode=max
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Wait before retry
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "::warning::Build failed for ${{ matrix.platform }}, retrying in 30s..."
+          sleep 30
+
+      - name: Build and push per-platform image (retry)
+        id: build-retry
+        if: steps.build.outcome == 'failure'
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            APP_VERSION=${{ needs.determine-version.outputs.version }}
+            COMMIT_HASH=${{ github.sha }}
+          cache-from: type=gha,scope=docker-${{ steps.prep.outputs.pair }}
+          cache-to: type=gha,scope=docker-${{ steps.prep.outputs.pair }},mode=max
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        run: |
+          mkdir -p /home/runner/digests
+          digest="${{ steps.build-retry.outputs.digest || steps.build.outputs.digest }}"
+          touch "/home/runner/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: digests-${{ steps.prep.outputs.pair }}
+          path: /home/runner/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Merge per-platform images into a single multi-arch manifest list
+  docker-manifest:
+    needs: [determine-version, docker-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: /home/runner/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        id: manifest
+        working-directory: /home/runner/digests
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          VERSION="${{ needs.determine-version.outputs.version }}"
+          RELEASE_TYPE="${{ needs.determine-version.outputs.release_type }}"
+
+          # Build the list of per-platform image references
+          SOURCES=()
+          for dgst in *; do
+            SOURCES+=("${IMAGE}@sha256:${dgst}")
+          done
+
+          # Create and push the manifest list with all tags
+          docker buildx imagetools create \
+            --tag "${IMAGE}:${VERSION}" \
+            --tag "${IMAGE}:${RELEASE_TYPE}" \
+            --tag "${IMAGE}:latest" \
+            "${SOURCES[@]}"
+
+          # Capture the manifest list digest for attestation
+          DIGEST=$(docker buildx imagetools inspect "${IMAGE}:${VERSION}" --format '{{.Manifest.Digest}}')
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest container image provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.manifest.outputs.digest }}
+          push-to-registry: true
+
   helm-release:
-    needs: [determine-version, release, helm-test]
+    needs: [determine-version, release, docker-manifest, helm-test]
     runs-on: ubuntu-latest
     if: needs.release.result == 'success'
     permissions:
@@ -335,7 +446,7 @@ jobs:
       packages: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 

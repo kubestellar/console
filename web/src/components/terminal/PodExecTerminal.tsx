@@ -79,7 +79,8 @@ export interface PodExecTerminalProps {
 // Component
 // ============================================================================
 
-export function PodExecTerminal({
+// Default export enables React.lazy() in consumers
+export default function PodExecTerminal({
   cluster,
   namespace,
   pod,

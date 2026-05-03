@@ -55,6 +55,7 @@ import {
   fetchTreeChildren,
   fetchDirectoryEntries,
   fetchNodeFileContent,
+  getKubaraConfig,
 } from './browser'
 import type { TreeNode, ViewMode, BrowserTab } from './browser'
 import { copyToClipboard } from '../../lib/clipboard'
@@ -244,8 +245,29 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
         loaded: false,
         description: isDemoMode() ? 'Demo catalog — install console locally for live data' : 'Production-tested Helm values from kubara-io/kubara',
         repoOwner: 'kubara-io',
-        repoName: 'kubara' },
+        repoName: 'kubara',
+        infoTooltip: 'Catalog: kubara-io/kubara · Set KUBARA_CATALOG_REPO (and optionally KUBARA_CATALOG_PATH) to use your own public or private catalog' },
     ]
+
+    // Resolve active catalog config and update the kubara node description + repo
+    // so the tree reflects whatever KUBARA_CATALOG_REPO is set to server-side.
+    getKubaraConfig().then((cfg) => {
+      const repo = `${cfg.repoOwner}/${cfg.repoName}`
+      const isCustom = repo !== 'kubara-io/kubara'
+      setTreeNodes((prev) =>
+        updateNodeInTree(prev, 'kubara', {
+          path: cfg.catalogPath,
+          repoOwner: cfg.repoOwner,
+          repoName: cfg.repoName,
+          description: isDemoMode()
+            ? 'Demo catalog — install console locally for live data'
+            : isCustom
+              ? `Custom catalog: ${repo}`
+              : 'Production-tested Helm values from kubara-io/kubara',
+          infoTooltip: `Catalog: ${repo} · Set KUBARA_CATALOG_REPO (and optionally KUBARA_CATALOG_PATH) to use your own public or private catalog`,
+        })
+      )
+    }).catch(() => { /* keep defaults on error */ })
 
     if (isAuthenticated && user) {
       rootNodes.push({
@@ -951,8 +973,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     // panel to start *below* the navbar (via top: MODAL_TOP_INSET_PX) rather
     // than centering it on the viewport — otherwise the navbar visually
     // overlaps the modal header (issue #9150).
-    <div className="fixed inset-0 z-modal bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-modal bg-black/60 backdrop-blur-xs">
     <div
+      role="dialog"
+      aria-label="Mission browser"
       data-testid="mission-browser"
       className="fixed bg-background rounded-xl shadow-2xl border border-border flex flex-col overflow-hidden"
       style={{

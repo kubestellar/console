@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS, RETRY_DELAY_MS, UI_FEEDBACK_TIMEOUT_MS } from '../lib/constants/network'
 import { useDemoMode } from './useDemoMode'
 import { useClusterProgress } from './useClusterProgress'
@@ -93,6 +94,9 @@ export function useLocalClusterTools() {
   // Real-time progress from kc-agent WebSocket
   const { progress: clusterProgress, dismiss: dismissProgress } = useClusterProgress()
 
+  // Track pending setTimeout IDs for cleanup on unmount
+  const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([])
+
   // Fetch detected tools
   const fetchTools = async () => {
     // In demo mode (without agent connected), show demo tools
@@ -108,14 +112,14 @@ export function useLocalClusterTools() {
     }
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-tools`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-tools`, {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setTools(data.tools || [])
         setError(null)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to fetch local cluster tools:', err)
       setError('Failed to fetch cluster tools')
     }
@@ -137,14 +141,14 @@ export function useLocalClusterTools() {
 
     setIsLoading(true)
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`, {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
         setClusters(data.clusters || [])
         setError(null)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to fetch local clusters:', err)
       setError('Failed to fetch clusters')
     } finally {
@@ -177,9 +181,9 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ tool, name }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
@@ -190,7 +194,7 @@ export function useLocalClusterTools() {
         const text = await response.text()
         return { status: 'error', message: text }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create cluster'
       setError(message)
       return { status: 'error', message }
@@ -215,22 +219,23 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-lifecycle`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/local-cluster-lifecycle`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ tool, name, action }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh clusters list after action starts
-        setTimeout(() => fetchClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        const timeoutId = setTimeout(() => fetchClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        pendingTimeoutsRef.current.push(timeoutId)
         return true
       } else {
         const text = await response.text()
         setError(text)
         return false
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : `Failed to ${action} cluster`
       setError(message)
       return false
@@ -261,20 +266,22 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters?tool=${tool}&name=${name}`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/local-clusters?tool=${tool}&name=${name}`, {
         method: 'DELETE',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh clusters list after deletion starts
-        setTimeout(() => fetchClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        const timeoutId = setTimeout(() => fetchClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        pendingTimeoutsRef.current.push(timeoutId)
         return true
       } else {
         const text = await response.text()
         setError(text)
         return false
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to delete cluster'
       setError(message)
       return false
@@ -301,7 +308,7 @@ export function useLocalClusterTools() {
 
     setIsVClustersLoading(true)
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/list`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/list`, {
         signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
@@ -320,7 +327,7 @@ export function useLocalClusterTools() {
         setVclusterInstances([])
         setVClustersError(message)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to fetch vCluster instances'
       console.error('Failed to fetch vCluster instances:', err)
       setVclusterInstances([])
@@ -336,7 +343,7 @@ export function useLocalClusterTools() {
     if (!isConnected || !context) return
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/check?context=${encodeURIComponent(context)}`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/check?context=${encodeURIComponent(context)}`, {
         signal: AbortSignal.timeout(VCLUSTER_LIST_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
@@ -346,7 +353,7 @@ export function useLocalClusterTools() {
           return [...filtered, data]
         })
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`Failed to check vCluster on ${context}:`, err)
     }
   }
@@ -381,22 +388,23 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/create`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/create`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CREATE_TIMEOUT_MS) })
 
       if (response.ok) {
         const data = await response.json()
         // Refresh vcluster list after creation starts
-        setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        const timeoutId = setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        pendingTimeoutsRef.current.push(timeoutId)
         return { status: 'creating', message: data.message }
       } else {
         const text = await response.text()
         return { status: 'error', message: text }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create vCluster'
       setError(message)
       return { status: 'error', message }
@@ -426,22 +434,23 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/connect`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/connect`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh vcluster list to update connected status
-        setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        const timeoutId = setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        pendingTimeoutsRef.current.push(timeoutId)
         return true
       } else {
         const text = await response.text()
         setError(text)
         return false
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to connect to vCluster'
       setError(message)
       return false
@@ -471,22 +480,23 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/disconnect`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/disconnect`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh vcluster list to update connected status
-        setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        const timeoutId = setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        pendingTimeoutsRef.current.push(timeoutId)
         return true
       } else {
         const text = await response.text()
         setError(text)
         return false
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to disconnect from vCluster'
       setError(message)
       return false
@@ -516,22 +526,23 @@ export function useLocalClusterTools() {
     setError(null)
 
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/delete`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/delete`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })
 
       if (response.ok) {
         // Refresh vcluster list after deletion
-        setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        const timeoutId = setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
+        pendingTimeoutsRef.current.push(timeoutId)
         return true
       } else {
         const text = await response.text()
         setError(text)
         return false
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to delete vCluster'
       setError(message)
       return false
@@ -547,6 +558,14 @@ export function useLocalClusterTools() {
     fetchVClusters()
     fetchVClusterClusterStatus()
   }
+
+  // Cleanup pending timeouts on unmount
+  useEffect(() => {
+    return () => {
+      pendingTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId))
+      pendingTimeoutsRef.current = []
+    }
+  }, [])
 
   // Initial fetch when connected or in demo mode — ref guard prevents infinite loop
   // from unstable function deps (fetchTools is not wrapped in useCallback)

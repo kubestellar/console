@@ -116,7 +116,7 @@ export function TableVisualization({
       <div ref={containerRef} className="flex-1 overflow-auto" style={containerStyle}>
         <table className="w-full text-sm">
           {/* Header */}
-          <thead className="sticky top-0 bg-background/95 backdrop-blur-sm">
+          <thead className="sticky top-0 bg-background/95 backdrop-blur-xs">
             <tr className="border-b border-border">
               {visibleColumns.map((column) => (
                 <th
@@ -210,6 +210,7 @@ export function TableVisualization({
           </span>
           <div className="flex items-center gap-1">
             <button
+              aria-label="Previous page"
               onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
               disabled={currentPage === 0}
               className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
@@ -220,6 +221,7 @@ export function TableVisualization({
               {currentPage + 1} / {totalPages}
             </span>
             <button
+              aria-label="Next page"
               onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={currentPage >= totalPages - 1}
               className="p-1 rounded hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"

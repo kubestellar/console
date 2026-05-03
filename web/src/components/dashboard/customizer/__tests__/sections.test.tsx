@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
+import { render } from '@testing-library/react'
+import React from 'react'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (k: string, d?: string) => d || k }),
@@ -54,6 +56,15 @@ vi.mock('../../../cards/cardDescriptor', () => ({
   getDescriptorsByCategory: () => new Map(),
 }))
 
+vi.mock('../../DashboardHealthIndicator', () => ({
+  DashboardHealthIndicator: () => React.createElement('div', { 'data-testid': 'dashboard-health' }),
+}))
+
+vi.mock('../../../layout/SidebarCustomizer', () => ({
+  SidebarCustomizer: ({ isOpen }: { isOpen: boolean }) =>
+    React.createElement('div', { 'data-testid': 'sidebar-customizer', 'data-open': isOpen }),
+}))
+
 describe('CardCatalogSection', () => {
   it('is a function component', async () => {
     const mod = await import('../sections/CardCatalogSection')
@@ -79,6 +90,75 @@ describe('DashboardSettingsSection', () => {
   it('is a function component', async () => {
     const mod = await import('../sections/DashboardSettingsSection')
     expect(typeof mod.DashboardSettingsSection).toBe('function')
+  })
+
+  it('renders without props', async () => {
+    const { DashboardSettingsSection } = await import('../sections/DashboardSettingsSection')
+    const { container } = render(React.createElement(DashboardSettingsSection))
+    expect(container.firstChild).not.toBeNull()
+  })
+
+  it('renders export button when onExport is provided', async () => {
+    const { DashboardSettingsSection } = await import('../sections/DashboardSettingsSection')
+    const onExport = vi.fn()
+    const { getByText } = render(React.createElement(DashboardSettingsSection, { onExport }))
+    expect(getByText('Export dashboard as JSON')).toBeTruthy()
+  })
+
+  it('renders reset button when onReset and isCustomized are provided', async () => {
+    const { DashboardSettingsSection } = await import('../sections/DashboardSettingsSection')
+    const onReset = vi.fn()
+    const { getByText } = render(
+      React.createElement(DashboardSettingsSection, { onReset, isCustomized: true })
+    )
+    expect(getByText('Reset to defaults')).toBeTruthy()
+  })
+
+  it('does not render reset button when isCustomized is false', async () => {
+    const { DashboardSettingsSection } = await import('../sections/DashboardSettingsSection')
+    const onReset = vi.fn()
+    const { queryByText } = render(
+      React.createElement(DashboardSettingsSection, { onReset, isCustomized: false })
+    )
+    expect(queryByText('Reset to defaults')).toBeNull()
+  })
+
+  it('calls onExport when export button clicked', async () => {
+    const { DashboardSettingsSection } = await import('../sections/DashboardSettingsSection')
+    const onExport = vi.fn()
+    const { getByText } = render(React.createElement(DashboardSettingsSection, { onExport }))
+    getByText('Export dashboard as JSON').click()
+    expect(onExport).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('NavigationSection', () => {
+  it('is a function component', async () => {
+    const mod = await import('../sections/NavigationSection')
+    expect(typeof mod.NavigationSection).toBe('function')
+  })
+
+  it('renders SidebarCustomizer in embedded mode', async () => {
+    const { NavigationSection } = await import('../sections/NavigationSection')
+    const onClose = vi.fn()
+    const { getByTestId } = render(React.createElement(NavigationSection, { onClose }))
+    expect(getByTestId('sidebar-customizer')).toBeTruthy()
+  })
+
+  it('shows dashboard name when provided', async () => {
+    const { NavigationSection } = await import('../sections/NavigationSection')
+    const onClose = vi.fn()
+    const { container } = render(
+      React.createElement(NavigationSection, { onClose, dashboardName: 'My Dashboard' })
+    )
+    expect(container.innerHTML).toContain('My Dashboard')
+  })
+
+  it('renders without dashboardName', async () => {
+    const { NavigationSection } = await import('../sections/NavigationSection')
+    const onClose = vi.fn()
+    const { container } = render(React.createElement(NavigationSection, { onClose }))
+    expect(container.firstChild).not.toBeNull()
   })
 })
 

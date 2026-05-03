@@ -11,6 +11,7 @@ export type OpenFeatureStatus = OpenFeatureDemoData
 const INITIAL_DATA: OpenFeatureStatus = {
   health: 'not-installed',
   providers: [],
+  flags: [],
   featureFlags: { total: 0, enabled: 0, disabled: 0, errorRate: 0 },
   totalEvaluations: 0,
   lastCheckTime: new Date().toISOString(),
@@ -213,6 +214,7 @@ async function fetchOpenFeatureStatus(): Promise<OpenFeatureStatus> {
   return {
     health,
     providers,
+    flags: [],
     featureFlags: {
       total: flagStats.total,
       enabled: flagStats.enabled,
@@ -252,7 +254,7 @@ export function useOpenFeatureStatus(): UseOpenFeatureStatusResult {
   const hasAnyData = (data.providers || []).length > 0 || data.health !== 'not-installed'
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     isDemoData: effectiveIsDemoData,
     hasAnyData,

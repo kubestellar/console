@@ -8,6 +8,7 @@
  * button.
  */
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ExternalLink, RefreshCw, FileText, Stethoscope } from 'lucide-react'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useCardLoadingState } from '../CardDataContext'
@@ -23,9 +24,11 @@ import { EmbedButton } from './EmbedButton'
 import { LogsModal } from './LogsModal'
 import { useMissions } from '../../../hooks/useMissions'
 import { cn } from '../../../lib/cn'
+import { formatTimeAgo } from '../../../lib/formatters'
+import { MS_PER_SECOND, MS_PER_HOUR, SECONDS_PER_MINUTE } from '../../../lib/constants/time'
 
 /** Maximum ms duration we format compactly (1 hr). Over this, show "1h+" */
-const SHORT_DURATION_CAP_MS = 3_600_000
+const SHORT_DURATION_CAP_MS = MS_PER_HOUR
 
 /** Extracted user-visible strings. Kept out of inline JSX attributes to
  * satisfy the ui-ux-standard ratchet and make a future i18n pass easy. */
@@ -36,22 +39,15 @@ const TITLE_OPEN_RUN = 'Open run on GitHub'
 const TITLE_DIAGNOSE = 'Diagnose with AI'
 
 function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`
-  const secs = Math.floor(ms / 1000)
-  if (secs < 60) return `${secs}s`
+  if (ms < MS_PER_SECOND) return `${ms}ms`
+  const secs = Math.floor(ms / MS_PER_SECOND)
+  if (secs < SECONDS_PER_MINUTE) return `${secs}s`
   if (ms >= SHORT_DURATION_CAP_MS) return '1h+'
-  return `${Math.floor(secs / 60)}m ${secs % 60}s`
-}
-
-function relativeTime(iso: string): string {
-  const secs = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000))
-  if (secs < 60) return `${secs}s ago`
-  if (secs < 3_600) return `${Math.floor(secs / 60)}m ago`
-  if (secs < 86_400) return `${Math.floor(secs / 3_600)}h ago`
-  return `${Math.floor(secs / 86_400)}d ago`
+  return `${Math.floor(secs / SECONDS_PER_MINUTE)}m ${secs % SECONDS_PER_MINUTE}s`
 }
 
 export function RecentFailures() {
+  const { t } = useTranslation()
   const shared = usePipelineFilter()
   const [localRepoFilter, setLocalRepoFilter] = useState<string | null>(null)
   const repoFilter = shared?.repoFilter ?? localRepoFilter
@@ -68,6 +64,7 @@ export function RecentFailures() {
 
   const data = hasUnified ? unifiedData.failures : individual.data
   const isLoading = hasUnified ? unifiedData.isLoading : individual.isLoading
+  const isRefreshing = hasUnified ? unifiedData.isRefreshing : individual.isRefreshing
   const error = hasUnified ? unifiedData.error : individual.error
   const refetch = hasUnified ? unifiedData.refetch : individual.refetch
   const { run: runMutation } = usePipelineMutations()
@@ -75,7 +72,7 @@ export function RecentFailures() {
   const { startMission } = useMissions()
 
   const hasData = (data?.runs?.length ?? 0) > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
 
   const rows = useMemo(() => data?.runs ?? [], [data])
 
@@ -105,7 +102,7 @@ export function RecentFailures() {
           className="text-xs bg-secondary/40 border border-border rounded px-2 py-1 text-foreground"
           aria-label={LABEL_FILTER_REPO}
         >
-          <option value="">All repos</option>
+          <option value="">{t('pipelines.allRepos')}</option>
           {repos.map((r) => (
             <option key={r} value={r}>{r}</option>
           ))}
@@ -124,7 +121,7 @@ export function RecentFailures() {
             className="hover:text-foreground flex items-center gap-1"
             aria-label={LABEL_REFRESH}
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           </button>
         </div>
       </div>
@@ -173,7 +170,7 @@ export function RecentFailures() {
                     )}
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
-                    {relativeTime(r.createdAt)}
+                    {formatTimeAgo(r.createdAt)}
                   </td>
                   <td className="py-1.5 pr-2 text-muted-foreground whitespace-nowrap">
                     {formatDuration(r.durationMs)}

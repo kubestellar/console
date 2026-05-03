@@ -20,6 +20,12 @@ import { useTranslation } from 'react-i18next'
 import { KV_CACHE_UPDATE_INTERVAL_MS } from '../../../lib/constants/network'
 import { StatusBadge } from '../../ui/StatusBadge'
 
+const GRID_BREAKPOINT_FEW = 2
+const GRID_BREAKPOINT_SMALL = 3
+const GRID_BREAKPOINT_MEDIUM = 4
+const GRID_BREAKPOINT_LARGE = 6
+const GRID_BREAKPOINT_DENSE = 9
+
 // Premium gauge with glowing arcs and ambient lighting
 interface PremiumGaugeProps {
   value: number
@@ -189,7 +195,7 @@ function HeatCell({ stat, delay }: HeatCellProps) {
         boxShadow: `0 0 20px ${colors.glow}, inset 0 0 12px rgba(255,255,255,0.2)` }}
     >
       {/* Tooltip */}
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background/95 backdrop-blur-sm rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-border shadow-xl">
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-background/95 backdrop-blur-xs rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 border border-border shadow-xl">
         <div className="text-white font-medium">{stat.podName}</div>
         <div className="text-muted-foreground">{stat.utilizationPercent}% used</div>
         <div className="text-cyan-400 text-2xs">{stat.usedGB}/{stat.totalCapacityGB} GB</div>
@@ -538,10 +544,10 @@ export function KVCacheMonitor() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className={`p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-background/50 to-secondary/30 relative ${isExpanded ? 'min-h-[500px]' : ''}`}>
+    <div className={`p-4 h-full flex-1 flex flex-col bg-linear-to-br from-background/50 to-secondary/30 relative ${isExpanded ? 'min-h-[500px]' : ''}`}>
       {/* Empty state overlay */}
       {showEmptyState && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-sm rounded-lg">
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-xs rounded-lg">
           <div className="w-12 h-12 rounded-full border-2 border-border border-t-cyan-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackMonitor')}</span>
           <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
@@ -572,7 +578,7 @@ export function KVCacheMonitor() {
           )}
 
           {/* Aggregation toggle */}
-          <div className="flex bg-secondary/80 rounded-lg p-0.5 backdrop-blur-sm">
+          <div className="flex bg-secondary/80 rounded-lg p-0.5 backdrop-blur-xs">
             <button
               onClick={() => setAggregationMode('aggregated')}
               className={`px-2 py-1 text-xs rounded transition-all ${
@@ -632,7 +638,7 @@ export function KVCacheMonitor() {
 
       {/* Summary stats with glow */}
       <div className={`grid grid-cols-2 @md:grid-cols-4 mb-4 ${isExpanded ? 'gap-4' : 'gap-2'}`}>
-        <div className="bg-secondary/60 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50">
+        <div className="bg-secondary/60 backdrop-blur-xs rounded-lg p-2 text-center border border-border/50">
           <div className="text-lg font-bold text-white flex items-center justify-center gap-1">
             {aggregateMetrics.avgUtil}%
             {trend > 2 && <TrendingUp size={14} className="text-red-400" />}
@@ -640,20 +646,20 @@ export function KVCacheMonitor() {
           </div>
           <div className="text-xs text-muted-foreground">{t('llmd.avgUtil')}</div>
         </div>
-        <div className="bg-secondary/60 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50">
+        <div className="bg-secondary/60 backdrop-blur-xs rounded-lg p-2 text-center border border-border/50">
           <div className="text-lg font-bold text-white">
             {aggregateMetrics.totalUsed.toFixed(0)}
             <span className="text-xs text-muted-foreground">/{aggregateMetrics.totalCapacity}GB</span>
           </div>
           <div className="text-xs text-muted-foreground">{t('common:common.used')}</div>
         </div>
-        <div className="bg-secondary/60 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50">
+        <div className="bg-secondary/60 backdrop-blur-xs rounded-lg p-2 text-center border border-border/50">
           <div className="text-lg font-bold text-green-400" style={{ textShadow: '0 0 10px rgba(34,197,94,0.5)' }}>
             {aggregateMetrics.avgHitRate}%
           </div>
           <div className="text-xs text-muted-foreground">{t('llmd.hitRate')}</div>
         </div>
-        <div className="bg-secondary/60 backdrop-blur-sm rounded-lg p-2 text-center border border-border/50">
+        <div className="bg-secondary/60 backdrop-blur-xs rounded-lg p-2 text-center border border-border/50">
           <div className="text-lg font-bold text-cyan-400" style={{ textShadow: '0 0 10px rgba(6,182,212,0.5)' }}>
             {stats.length}
           </div>
@@ -672,7 +678,7 @@ export function KVCacheMonitor() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="fixed bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-2xl w-[200px] z-dropdown"
+                className="fixed bg-background/95 backdrop-blur-xs rounded-lg border border-border p-3 shadow-2xl w-[200px] z-dropdown"
                 style={{ left: panelPosition.x, top: panelPosition.y }}
               >
                 {(() => {
@@ -773,14 +779,14 @@ export function KVCacheMonitor() {
               key="gauges"
               className={`h-full overflow-auto ${
                 isExpanded
-                  ? (stats.length <= 2 ? 'flex items-center justify-evenly gap-16' :
-                     stats.length <= 4 ? 'grid grid-cols-2 @md:grid-cols-4 gap-8 place-items-center' :
-                     stats.length <= 6 ? 'grid grid-cols-2 @md:grid-cols-3 gap-6 place-items-center' :
+                  ? (stats.length <= GRID_BREAKPOINT_FEW ? 'flex items-center justify-evenly gap-16' :
+                     stats.length <= GRID_BREAKPOINT_MEDIUM ? 'grid grid-cols-2 @md:grid-cols-4 gap-8 place-items-center' :
+                     stats.length <= GRID_BREAKPOINT_LARGE ? 'grid grid-cols-2 @md:grid-cols-3 gap-6 place-items-center' :
                      'grid grid-cols-2 @md:grid-cols-4 gap-4 place-items-center')
-                  : (stats.length <= 2 ? 'flex items-center justify-evenly gap-12' :
-                     stats.length <= 3 ? 'grid grid-cols-2 @md:grid-cols-3 gap-6 place-items-center' :
-                     stats.length <= 6 ? 'grid grid-cols-2 @md:grid-cols-3 gap-3 place-items-center' :
-                     stats.length <= 9 ? 'grid grid-cols-2 @md:grid-cols-3 gap-2 place-items-center' :
+                  : (stats.length <= GRID_BREAKPOINT_FEW ? 'flex items-center justify-evenly gap-12' :
+                     stats.length <= GRID_BREAKPOINT_SMALL ? 'grid grid-cols-2 @md:grid-cols-3 gap-6 place-items-center' :
+                     stats.length <= GRID_BREAKPOINT_LARGE ? 'grid grid-cols-2 @md:grid-cols-3 gap-3 place-items-center' :
+                     stats.length <= GRID_BREAKPOINT_DENSE ? 'grid grid-cols-2 @md:grid-cols-3 gap-2 place-items-center' :
                      'grid grid-cols-2 @md:grid-cols-4 gap-2 place-items-center')
               }`}
               initial={{ opacity: 0, y: 10 }}
@@ -789,8 +795,8 @@ export function KVCacheMonitor() {
             >
               {stats.slice(0, isExpanded ? 20 : 12).map((stat) => {
                 const gaugeSize = isExpanded
-                  ? (stats.length <= 2 ? 200 : stats.length <= 4 ? 180 : stats.length <= 6 ? 160 : 140)
-                  : (stats.length <= 2 ? 120 : stats.length <= 3 ? 130 : stats.length <= 6 ? 110 : stats.length <= 9 ? 100 : 85)
+                  ? (stats.length <= GRID_BREAKPOINT_FEW ? 200 : stats.length <= GRID_BREAKPOINT_MEDIUM ? 180 : stats.length <= GRID_BREAKPOINT_LARGE ? 160 : 140)
+                  : (stats.length <= GRID_BREAKPOINT_FEW ? 120 : stats.length <= GRID_BREAKPOINT_SMALL ? 130 : stats.length <= GRID_BREAKPOINT_LARGE ? 110 : stats.length <= GRID_BREAKPOINT_DENSE ? 100 : 85)
                 return (
                   <div
                     key={stat.podName}
@@ -814,13 +820,13 @@ export function KVCacheMonitor() {
               key="horseshoe"
               className={`grid h-full place-items-center overflow-auto ${
                 isExpanded
-                  ? (stats.length <= 2 ? 'grid-cols-2 gap-6' :
-                     stats.length <= 4 ? 'grid-cols-2 @md:grid-cols-4 gap-4' :
-                     stats.length <= 6 ? 'grid-cols-2 @md:grid-cols-3 gap-4' :
+                  ? (stats.length <= GRID_BREAKPOINT_FEW ? 'grid-cols-2 gap-6' :
+                     stats.length <= GRID_BREAKPOINT_MEDIUM ? 'grid-cols-2 @md:grid-cols-4 gap-4' :
+                     stats.length <= GRID_BREAKPOINT_LARGE ? 'grid-cols-2 @md:grid-cols-3 gap-4' :
                      'grid-cols-2 @md:grid-cols-4 gap-3')
-                  : (stats.length <= 2 ? 'grid-cols-2 gap-2' :
-                     stats.length <= 3 ? 'grid-cols-2 @md:grid-cols-3 gap-1' :
-                     stats.length <= 6 ? 'grid-cols-2 @md:grid-cols-3 gap-1' :
+                  : (stats.length <= GRID_BREAKPOINT_FEW ? 'grid-cols-2 gap-2' :
+                     stats.length <= GRID_BREAKPOINT_SMALL ? 'grid-cols-2 @md:grid-cols-3 gap-1' :
+                     stats.length <= GRID_BREAKPOINT_LARGE ? 'grid-cols-2 @md:grid-cols-3 gap-1' :
                      'grid-cols-2 @md:grid-cols-4 gap-1')
               }`}
               initial={{ opacity: 0, y: 10 }}
@@ -829,8 +835,8 @@ export function KVCacheMonitor() {
             >
               {stats.slice(0, isExpanded ? 16 : 8).map((stat) => {
                 const gaugeSize = isExpanded
-                  ? (stats.length <= 2 ? 240 : stats.length <= 4 ? 200 : stats.length <= 6 ? 180 : 160)
-                  : (stats.length <= 2 ? 180 : stats.length <= 3 ? 160 : stats.length <= 6 ? 140 : 120)
+                  ? (stats.length <= GRID_BREAKPOINT_FEW ? 240 : stats.length <= GRID_BREAKPOINT_MEDIUM ? 200 : stats.length <= GRID_BREAKPOINT_LARGE ? 180 : 160)
+                  : (stats.length <= GRID_BREAKPOINT_FEW ? 180 : stats.length <= GRID_BREAKPOINT_SMALL ? 160 : stats.length <= GRID_BREAKPOINT_LARGE ? 140 : 120)
                 return (
                   <div
                     key={stat.podName}

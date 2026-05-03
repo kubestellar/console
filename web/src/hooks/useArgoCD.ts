@@ -15,12 +15,12 @@ import { useClusters } from './useMCP'
 import { useGlobalFilters } from './useGlobalFilters'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MOCK_SYNC_DELAY_MS } from '../lib/constants/network'
+import { agentFetch } from './mcp/shared'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 
 // Cache expiry time (5 minutes)
 const CACHE_EXPIRY_MS = 300_000
 
-// Refresh interval (2 minutes)
-const REFRESH_INTERVAL_MS = 120_000
 
 // Number of consecutive failures before marking as failed
 const FAILURE_THRESHOLD = 3
@@ -286,10 +286,10 @@ async function triggerArgoSyncAPI(appName: string, namespace: string, cluster: s
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), FETCH_DEFAULT_TIMEOUT_MS)
   try {
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/argocd/sync`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/argocd/sync`, {
       method: 'POST',
       signal: ctrl.signal,
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      headers: { ...authHeaders(), 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ appName, namespace, cluster }) })
     const data = await res.json()
     return { success: data.success === true, error: data.error }
@@ -892,7 +892,7 @@ export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
 
       // API explicitly indicated demo data — fall through to mock
       throw new Error('No ArgoCD ApplicationSet data available')
-    } catch (err) {
+    } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to fetch ApplicationSets'
       console.error('[ArgoCD] ApplicationSets fetch failed:', errorMsg)
       setError(errorMsg)

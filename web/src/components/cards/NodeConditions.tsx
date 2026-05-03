@@ -4,7 +4,11 @@ import { useCachedNodes } from '../../hooks/useCachedData'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useCardLoadingState } from './CardDataContext'
+import { CardEmptyState } from '../../lib/cards/CardComponents'
+import { Server } from 'lucide-react'
 import { useDemoMode } from '../../hooks/useDemoMode'
+
+const MAX_VISIBLE_CONDITIONS = 20
 
 type ConditionFilter = 'all' | 'healthy' | 'cordoned' | 'pressure'
 
@@ -22,7 +26,7 @@ export function NodeConditions() {
   const { execute } = useKubectl()
 
   const hasData = nodes.length > 0
-  useCardLoadingState({
+  const { showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
@@ -81,7 +85,7 @@ export function NodeConditions() {
     setActionError(null)
     try {
       await execute(cluster, [action, nodeName])
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : `Failed to ${action} node`
       setActionError(`${action} ${nodeName}: ${message}`)
     } finally {
@@ -100,6 +104,16 @@ export function NodeConditions() {
           <div key={i} className="h-10 rounded bg-muted/50 animate-pulse" />
         ))}
       </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <CardEmptyState
+        icon={Server}
+        title={t('nodeConditions.emptyTitle', 'No nodes found')}
+        message={t('nodeConditions.emptyMessage', 'Node conditions will appear here once clusters with nodes are connected.')}
+      />
     )
   }
 
@@ -186,7 +200,7 @@ export function NodeConditions() {
       </div>
 
       <div className="space-y-1 max-h-[300px] overflow-y-auto">
-        {filtered.slice(0, 20).map(node => {
+        {filtered.slice(0, MAX_VISIBLE_CONDITIONS).map(node => {
           const conditions = (node.conditions || []) as Array<{ type: string; status: string }>
           const ready = conditions.find(c => c.type === 'Ready')
           const isReady = ready?.status === 'True'
@@ -231,9 +245,9 @@ export function NodeConditions() {
             </div>
           )
         })}
-        {filtered.length > 20 && (
+        {filtered.length > MAX_VISIBLE_CONDITIONS && (
           <div className="text-xs text-muted-foreground text-center py-1">
-            {t('nodeConditions.moreNodes', { count: filtered.length - 20 })}
+            {t('nodeConditions.moreNodes', { count: filtered.length - MAX_VISIBLE_CONDITIONS })}
           </div>
         )}
       </div>

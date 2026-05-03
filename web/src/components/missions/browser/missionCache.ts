@@ -5,11 +5,12 @@
  */
 import type { MissionExport, MissionMatch } from '../../../lib/missions/types'
 import type { ClusterContext } from '../../../hooks/useClusterContext'
+import { MS_PER_HOUR, MS_PER_MINUTE } from '../../../lib/constants/time'
 
 /** Cache time-to-live: 6 hours */
-const MISSION_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+const MISSION_CACHE_TTL_MS = 6 * MS_PER_HOUR
 /** Recommendation cache TTL: 10 minutes (shorter since it depends on cluster context) */
-const RECOMMENDATION_CACHE_TTL_MS = 10 * 60 * 1000
+const RECOMMENDATION_CACHE_TTL_MS = 10 * MS_PER_MINUTE
 /** localStorage key for persisted mission cache */
 const MISSION_CACHE_STORAGE_KEY = 'kc-mission-cache'
 
@@ -113,8 +114,13 @@ const MISSION_FILE_FORMAT_VERSION = 'kc-mission-v1'
 
 /** Convert an index entry to a MissionExport (browsing metadata only — steps loaded on demand) */
 function indexEntryToMission(entry: IndexEntry): MissionExport {
+  // Derive stable name from path: "fixes/cncf-install/install-opa.json" → "install-opa"
+  const name = entry.path
+    ? entry.path.replace(/^.*\//, '').replace(/\.json$/, '')
+    : undefined
   return {
     version: MISSION_FILE_FORMAT_VERSION,
+    name,
     title: entry.title || '',
     description: entry.description || '',
     type: (entry.type as MissionExport['type']) || 'custom',
@@ -156,43 +162,63 @@ export async function fetchMissionContent(
   if (!sourcePath) return { mission: indexMission, raw: JSON.stringify(indexMission, null, 2) }
 
   const url = `/api/missions/file?path=${encodeURIComponent(sourcePath)}`
-  const response = await fetch(url, { signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) })
-  if (!response.ok) return { mission: indexMission, raw: JSON.stringify(indexMission, null, 2) }
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(MISSION_FILE_FETCH_TIMEOUT_MS) })
+    if (!response.ok) return { mission: indexMission, raw: JSON.stringify(indexMission, null, 2) }
 
-  const text = await response.text()
-  const parsed = JSON.parse(text)
+    const text = await response.text()
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(text)
+    } catch {
+      // Non-JSON response (e.g. 502 HTML error page) — fall back to index data
+      return { mission: indexMission, raw: text }
+    }
 
-  // Extract steps from the nested `mission` object (console-kb file format)
-  // Falls back to top-level fields if the nested structure isn't present
-  const nested = parsed.mission || {}
-  const fileMeta = parsed.metadata || {}
-  const merged: MissionExport = {
-    ...indexMission,
-    steps: nested.steps || parsed.steps || indexMission.steps,
-    uninstall: nested.uninstall || parsed.uninstall,
-    upgrade: nested.upgrade || parsed.upgrade,
-    troubleshooting: nested.troubleshooting || parsed.troubleshooting,
-    resolution: nested.resolution || parsed.resolution,
-    prerequisites: parsed.prerequisites || indexMission.prerequisites,
-    metadata: {
-      ...indexMission.metadata,
-      qualityScore: fileMeta.qualityScore,
-      maturity: fileMeta.maturity,
-      projectVersion: fileMeta.projectVersion,
-      sourceUrls: fileMeta.sourceUrls,
-    },
+    // Extract steps from the nested `mission` object (console-kb file format)
+    // Falls back to top-level fields if the nested structure isn't present
+    const nested = ((parsed as Record<string, unknown>).mission || {}) as Partial<MissionExport>
+    const topLevel = parsed as Partial<MissionExport>
+    const fileMeta = ((parsed as Record<string, unknown>).metadata || {}) as NonNullable<MissionExport['metadata']>
+    const merged: MissionExport = {
+      ...indexMission,
+      steps: nested.steps || topLevel.steps || indexMission.steps,
+      uninstall: nested.uninstall || topLevel.uninstall,
+      upgrade: nested.upgrade || topLevel.upgrade,
+      troubleshooting: nested.troubleshooting || topLevel.troubleshooting,
+      resolution: nested.resolution || topLevel.resolution,
+      prerequisites: topLevel.prerequisites || indexMission.prerequisites,
+      metadata: {
+        ...indexMission.metadata,
+        qualityScore: fileMeta.qualityScore,
+        maturity: fileMeta.maturity,
+        projectVersion: fileMeta.projectVersion,
+        sourceUrls: fileMeta.sourceUrls,
+      },
+    }
+
+    return { mission: merged, raw: text }
+  } catch (err) {
+    // Network error, timeout, or unexpected failure — fall back gracefully (#11033)
+    console.warn('[MissionBrowser] fetchMissionContent failed:', err)
+    return { mission: indexMission, raw: JSON.stringify(indexMission, null, 2) }
   }
-
-  return { mission: merged, raw: text }
 }
 
 /** Request timeout for the index fetch in milliseconds */
 const INDEX_FETCH_TIMEOUT_MS = 30_000
 
+/** Maximum retry attempts for transient index fetch failures (#10966) */
+const INDEX_FETCH_MAX_RETRIES = 2
+
+/** Base delay between retry attempts in milliseconds */
+const INDEX_FETCH_RETRY_BASE_DELAY_MS = 500
+
 /**
  * Load all missions from the pre-built index in a single API call.
  * Splits results into installers and fixes, populating both caches at once.
  * Persists to localStorage for instant restore on next page load.
+ * Retries transient failures (5xx, network) with exponential backoff (#10966).
  */
 async function fetchAllFromIndex() {
   try {
@@ -200,8 +226,28 @@ async function fetchAllFromIndex() {
     // be gated by the api.get() backend-availability check (which can block when
     // the health check hasn't resolved yet on initial page load).
     const url = `/api/missions/file?path=${encodeURIComponent(FIXES_INDEX_PATH)}`
-    const response = await fetch(url, { signal: AbortSignal.timeout(INDEX_FETCH_TIMEOUT_MS) })
-    if (!response.ok) throw new Error(`Index fetch failed: ${response.status}`)
+
+    let response: Response | null = null
+    for (let attempt = 0; attempt <= INDEX_FETCH_MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, INDEX_FETCH_RETRY_BASE_DELAY_MS * (1 << (attempt - 1))))
+      }
+      try {
+        response = await fetch(url, { signal: AbortSignal.timeout(INDEX_FETCH_TIMEOUT_MS) })
+        // Success or client error (4xx) — don't retry
+        if (response.ok || response.status < 500) break
+        // 5xx — retry if attempts remain
+        console.warn(`[MissionBrowser] Index fetch returned ${response.status}, attempt ${attempt + 1}/${INDEX_FETCH_MAX_RETRIES + 1}`)
+      } catch (err) {
+        // Network error — retry if attempts remain
+        if (attempt === INDEX_FETCH_MAX_RETRIES) throw err
+        console.warn(`[MissionBrowser] Index fetch network error, attempt ${attempt + 1}/${INDEX_FETCH_MAX_RETRIES + 1}:`, err)
+      }
+    }
+
+    if (!response || !response.ok) {
+      throw new Error(`Index fetch failed: ${response?.status ?? 'no response'}`)
+    }
     const parsed = await response.json()
     const missions: IndexEntry[] = parsed?.missions || []
 
@@ -221,8 +267,8 @@ async function fetchAllFromIndex() {
     missionCache.fetchedAt = Date.now()
     missionCache.fetchError = null
     persistCacheToStorage()
-  } catch (err) {
-    console.error('[MissionBrowser] Failed to fetch index:', err)
+  } catch (err: unknown) {
+    console.warn('[MissionBrowser] Failed to fetch index:', err)
     missionCache.fetchError = err instanceof Error ? err.message : 'Failed to load missions. Please try again.'
   } finally {
     missionCache.installersDone = true

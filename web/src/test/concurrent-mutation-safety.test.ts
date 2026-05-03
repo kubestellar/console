@@ -17,15 +17,15 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // ── Named constants ─────────────────────────────────────────────────────────
 
 /** Root of the frontend source tree */
-const SRC_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
+const SRC_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
   '..',
 )
 
@@ -95,10 +95,10 @@ const KNOWN_VIOLATIONS: Record<string, string[]> = {}
 /** Recursively find all .ts/.tsx source files under a directory */
 function findSourceFiles(dir: string): string[] {
   const results: string[] = []
-  if (!fs.existsSync(dir)) return results
+  if (!existsSync(dir)) return results
 
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name)
     if (entry.isDirectory()) {
       // Skip node_modules, __tests__ (unit tests for the module itself),
       // and this test directory
@@ -117,7 +117,7 @@ function findSourceFiles(dir: string): string[] {
 
 /** Get relative path from SRC_DIR with POSIX separators */
 function relPath(filePath: string): string {
-  return path.relative(SRC_DIR, filePath).replace(/\\/g, '/')
+  return relative(SRC_DIR, filePath).replace(/\\/g, '/')
 }
 
 /**
@@ -330,7 +330,7 @@ function isTypeAnnotation(line: string): boolean {
  * Returns an array of violations.
  */
 function scanFileForMutations(filePath: string): Violation[] {
-  const src = fs.readFileSync(filePath, 'utf-8')
+  const src = readFileSync(filePath, 'utf-8')
 
   // Quick filter: skip files that don't import the concurrency helpers
   const importsConcurrency = CONCURRENCY_FN_NAMES.some(fn => src.includes(fn))
@@ -428,7 +428,7 @@ describe('Concurrent Mutation Safety Scan', () => {
     /** Minimum number of files we expect to import concurrency helpers */
     const MIN_EXPECTED_CONCURRENCY_FILES = 10
     const concurrencyFiles = sourceFiles.filter(f => {
-      const src = fs.readFileSync(f, 'utf-8')
+      const src = readFileSync(f, 'utf-8')
       return CONCURRENCY_FN_NAMES.some(fn => src.includes(fn))
     })
     expect(concurrencyFiles.length).toBeGreaterThanOrEqual(MIN_EXPECTED_CONCURRENCY_FILES)

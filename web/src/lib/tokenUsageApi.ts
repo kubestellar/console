@@ -68,7 +68,7 @@ export async function getUserTokenUsage(): Promise<UserTokenUsageRecord> {
   try {
     const { data } = await api.get<UserTokenUsageRecord>('/api/token-usage/me')
     return data
-  } catch (err) {
+  } catch (err: unknown) {
     throw toTokenUsageError(err)
   }
 }
@@ -80,7 +80,7 @@ export async function putUserTokenUsage(
   try {
     const { data } = await api.post<UserTokenUsageRecord>('/api/token-usage/me', payload)
     return data
-  } catch (err) {
+  } catch (err: unknown) {
     throw toTokenUsageError(err)
   }
 }
@@ -92,7 +92,7 @@ export async function postTokenDelta(
   try {
     const { data } = await api.post<UserTokenUsageRecord>('/api/token-usage/delta', payload)
     return data
-  } catch (err) {
+  } catch (err: unknown) {
     throw toTokenUsageError(err)
   }
 }

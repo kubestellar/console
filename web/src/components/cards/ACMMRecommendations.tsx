@@ -43,7 +43,7 @@ const LEVEL_TICKS = [1, 2, 3, 4, 5, 6] as const
 
 export function ACMMRecommendations() {
   const { scan, repo, targetLevel, setTargetLevel } = useACMM()
-  const { level, recommendations, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
+  const { level, recommendations = [], isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, lastRefresh } = scan
   const { startMission } = useMissions()
   // Use the slider's targetLevel for the role label so the card stays in
   // sync with the projection. Falls back to detected role + role string
@@ -75,7 +75,7 @@ export function ACMMRecommendations() {
     })
   }
 
-  const hasData = scan.data.detectedIds.length > 0
+  const hasData = (scan.data.detectedIds ?? []).length > 0
   const { showSkeleton } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
@@ -181,7 +181,7 @@ export function ACMMRecommendations() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="text-xs font-medium flex-1">{rec.criterion.name}</div>
-                <div className="flex gap-1 flex-shrink-0">
+                <div className="flex gap-1 shrink-0">
                   {rec.sources.map((s) => {
                     const src = SOURCES_BY_ID[s]
                     const badge = (
@@ -219,7 +219,7 @@ export function ACMMRecommendations() {
                   onClick={() => launchOne(rec)}
                   /* #8852 — bg-primary/10 against text-primary failed AA.
                      Raise to solid primary fill for legible action affordance. */
-                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors flex-shrink-0"
+                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 font-medium transition-colors shrink-0"
                   title={`Ask the selected agent to add the "${rec.criterion.name}" criterion to ${repo}`}
                 >
                   <Zap className="w-2.5 h-2.5" />

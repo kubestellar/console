@@ -44,7 +44,19 @@ export function loadMissions(): Mission[] {
   try {
     const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored)
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(stored)
+      } catch (parseErr: unknown) {
+        console.error('[Missions] Corrupted localStorage JSON — clearing:', parseErr)
+        localStorage.removeItem(MISSIONS_STORAGE_KEY)
+        return getDemoMode() ? DEMO_MISSIONS_AS_MISSIONS : []
+      }
+      if (!Array.isArray(parsed)) {
+        console.warn('[Missions] localStorage value is not an array — clearing')
+        localStorage.removeItem(MISSIONS_STORAGE_KEY)
+        return getDemoMode() ? DEMO_MISSIONS_AS_MISSIONS : []
+      }
       // In demo mode, replace stale demo data with fresh demo missions
       // (catches both empty arrays and outdated demo entries without steps)
       if (getDemoMode() && Array.isArray(parsed) && (
@@ -115,7 +127,7 @@ export function loadMissions(): Mission[] {
         return mission
       })
     }
-  } catch (e) {
+  } catch (e: unknown) {
     // issue 6437 — If the persisted payload is unparseable (the previous
     // saveMissions pass may have been interrupted mid-write, or quota
     // pressure corrupted it), fully clear the key instead of leaving a
@@ -141,7 +153,7 @@ export function loadMissions(): Mission[] {
 export function saveMissions(missions: Mission[]) {
   try {
     localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(missions))
-  } catch (e) {
+  } catch (e: unknown) {
     // QuotaExceededError: DOMException with name 'QuotaExceededError', or legacy
     // browsers that use numeric code 22 instead of the named exception.
     // Pattern matches useMetricsHistory for consistency across the codebase.
@@ -196,7 +208,7 @@ export function loadUnreadMissionIds(): Set<string> {
       if (!Array.isArray(parsed)) return new Set()
       return new Set(parsed)
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Failed to load unread missions from localStorage:', e)
   }
   return new Set()
@@ -206,7 +218,7 @@ export function loadUnreadMissionIds(): Set<string> {
 export function saveUnreadMissionIds(ids: Set<string>) {
   try {
     localStorage.setItem(UNREAD_MISSIONS_KEY, JSON.stringify([...ids]))
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Failed to save unread missions to localStorage:', e)
   }
 }
@@ -228,7 +240,17 @@ export function mergeMissions(prev: Mission[], reloaded: Mission[]): Mission[] {
     }
     const localTime = new Date(local.updatedAt).getTime()
     const remoteTime = new Date(remote.updatedAt).getTime()
-    merged.push(remoteTime >= localTime ? remote : local)
+    // #9699 — When timestamps are identical (same-millisecond burst-write from
+    // Tab A), `remoteTime >= localTime` used to unconditionally pick the remote
+    // copy, silently discarding local edits made in the same millisecond.
+    // Tie-break by message count: the version with more messages contains
+    // more user actions and should win. If counts also match, prefer remote
+    // (already-persisted) as before.
+    if (remoteTime === localTime) {
+      merged.push(remote.messages.length >= local.messages.length ? remote : local)
+    } else {
+      merged.push(remoteTime > localTime ? remote : local)
+    }
   }
   for (const remote of reloaded) {
     if (!seen.has(remote.id)) {

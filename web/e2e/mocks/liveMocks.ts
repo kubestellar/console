@@ -27,9 +27,9 @@ export const mockUser = {
 export const MOCK_DATA: Record<string, Record<string, unknown[]>> = {
   clusters: {
     clusters: [
-      { name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0', nodes: 3, pods: 12, namespaces: 4, cpuCores: 12, memoryGB: 24, nodeCount: 3, podCount: 12, storageGB: 100 },
-      { name: 'eks-prod', reachable: true, status: 'Ready', provider: 'aws', version: '1.28.0', nodes: 5, pods: 45, namespaces: 8, cpuCores: 20, memoryGB: 64, nodeCount: 5, podCount: 45, storageGB: 200 },
-      { name: 'gke-staging', reachable: true, status: 'Ready', provider: 'gcp', version: '1.28.0', nodes: 3, pods: 32, namespaces: 5, cpuCores: 12, memoryGB: 48, nodeCount: 3, podCount: 32, storageGB: 100 },
+      { name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0', nodes: 3, pods: 12, namespaces: ["default","kube-system","kube-public","argocd"], cpuCores: 12, memoryGB: 24, nodeCount: 3, podCount: 12, storageGB: 100 },
+      { name: 'eks-prod', reachable: true, status: 'Ready', provider: 'aws', version: '1.28.0', nodes: 5, pods: 45, namespaces: ["default","kube-system","kube-public","argocd","istio-system","monitoring","cert-manager","ingress-nginx"], cpuCores: 20, memoryGB: 64, nodeCount: 5, podCount: 45, storageGB: 200 },
+      { name: 'gke-staging', reachable: true, status: 'Ready', provider: 'gcp', version: '1.28.0', nodes: 3, pods: 32, namespaces: ["default","kube-system","kube-public","argocd","monitoring"], cpuCores: 12, memoryGB: 48, nodeCount: 3, podCount: 32, storageGB: 100 },
     ],
   },
   pods: {
@@ -393,6 +393,32 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     })
   }
 
+  // 11b. Object endpoints (must return {} not [])
+  const objectEndpoints = [
+    { pattern: '**/api/github-pipelines**', data: { pipelines: [], lastUpdated: new Date().toISOString() } },
+    { pattern: '**/api/cluster-groups**', data: { groups: [] } },
+    { pattern: '**/api/openfeature/status**', data: { enabled: false, features: {} } },
+    { pattern: '**/api/benchmarks/**', data: { reports: [] } },
+    { pattern: '**/api/drasi/**', data: { instances: [] } },
+    { pattern: '**/api/rbac/**', data: { items: [] } },
+    { pattern: '**/api/self-upgrade/**', data: { status: 'idle', version: '1.0.0' } },
+    { pattern: '**/api/topology**', data: { nodes: [], edges: [] } },
+    { pattern: '**/api/admission-webhooks**', data: { webhooks: [] } },
+    { pattern: '**/api/crds**', data: { crds: [] } },
+    { pattern: '**/api/attestation/**', data: { score: 100, checks: [] } },
+    { pattern: '**/api/service-exports**', data: { exports: [] } },
+    { pattern: '**/api/mcs/**', data: { imports: [] } },
+    { pattern: '**/api/gateway/**', data: { gateways: [] } },
+    { pattern: '**/api/vitess/**', data: { status: 'ok', clusters: [] } },
+  ]
+  for (const ep of objectEndpoints) {
+    await page.route(ep.pattern, async (route) => {
+      await maybeDelay()
+      await new Promise(r => setTimeout(r, 150))
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ep.data) })
+    })
+  }
+
   // 12. GitHub rewards endpoint
   await page.route('**/api/rewards/**', async (route) => {
     await maybeDelay()
@@ -424,6 +450,11 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
       '/api/permissions/', '/health', '/api/dashboards', '/api/gpu/',
       '/api/feedback/', '/api/persistence/', '/api/config/', '/api/gitops/',
       '/api/nightly-e2e/', '/api/public/nightly-e2e/', '/api/rewards/',
+      '/api/github-pipelines', '/api/cluster-groups', '/api/openfeature/',
+      '/api/benchmarks/', '/api/drasi/', '/api/rbac/', '/api/self-upgrade/',
+      '/api/topology', '/api/admission-webhooks', '/api/crds',
+      '/api/attestation/', '/api/service-exports', '/api/mcs/',
+      '/api/gateway/', '/api/vitess/',
     ]
     if (skipPatterns.some(p => url.includes(p))) {
       await route.fallback()
@@ -479,18 +510,157 @@ export async function setupLiveMocks(page: Page, options?: LiveMockOptions): Pro
     })
   })
 
-  // 15. Local agent (port 8585) — health returns 200, data returns 503
-  await page.route('http://127.0.0.1:8585/**', (route) => {
+  // 15. Local agent (port 8585) — endpoint-aware mocking
+  //
+  // Many card hooks fetch data directly from the kc-agent URL
+  // (http://127.0.0.1:8585/...) via agentFetch(). A blanket 503 causes
+  // hooks to fall back to demo data, triggering "demo badge" violations
+  // in compliance tests. Instead, return proper mock data for known
+  // resource endpoints (REST + SSE streaming).
+  const AGENT_ENDPOINT_DATA: Record<string, Record<string, unknown>> = {
+    configmaps: { configmaps: [{ name: 'app-config', namespace: 'default', cluster: MOCK_CLUSTER, dataKeys: 3, creationTimestamp: '2026-01-15T10:00:00Z' }] },
+    secrets: { secrets: [{ name: 'app-secret', namespace: 'default', cluster: MOCK_CLUSTER, type: 'Opaque', dataKeys: 2, creationTimestamp: '2026-01-15T10:00:00Z' }] },
+    serviceaccounts: { serviceaccounts: [{ name: 'default', namespace: 'default', cluster: MOCK_CLUSTER, secrets: 1, creationTimestamp: '2026-01-15T10:00:00Z' }] },
+    pods: { pods: MOCK_DATA.pods.pods },
+    events: { events: MOCK_DATA.events.events },
+    nodes: { nodes: MOCK_DATA.nodes.nodes },
+    services: { services: MOCK_DATA.services.services },
+    ingresses: { ingresses: [{ name: 'main-ingress', namespace: 'default', cluster: MOCK_CLUSTER, hosts: ['app.example.com'], paths: ['/'], backend: 'nginx-svc:80' }] },
+    networkpolicies: { networkpolicies: [{ name: 'deny-all', namespace: 'default', cluster: MOCK_CLUSTER, podSelector: {}, policyTypes: ['Ingress'] }] },
+    pvcs: { pvcs: MOCK_DATA.pvcs.pvcs },
+    pvs: { pvs: [{ name: 'pv-data', cluster: MOCK_CLUSTER, capacity: '10Gi', status: 'Bound', storageClass: 'standard', accessModes: ['ReadWriteOnce'] }] },
+    resourcequotas: { quotas: [{ name: 'default-quota', namespace: 'default', cluster: MOCK_CLUSTER, hard: { cpu: '4', memory: '8Gi' }, used: { cpu: '1', memory: '2Gi' } }] },
+    limitranges: { limitranges: [{ name: 'default-limits', namespace: 'default', cluster: MOCK_CLUSTER, limits: [{ type: 'Container', default: { cpu: '500m', memory: '256Mi' } }] }] },
+    deployments: { deployments: MOCK_DATA.deployments.deployments },
+    jobs: { jobs: [{ name: 'backup-job', namespace: 'default', cluster: MOCK_CLUSTER, completions: 1, succeeded: 1, status: 'Complete', duration: '30s' }] },
+    hpas: { hpas: [{ name: 'nginx-hpa', namespace: 'default', cluster: MOCK_CLUSTER, minReplicas: 1, maxReplicas: 10, currentReplicas: 2, targetCPU: 80, currentCPU: 45 }] },
+    replicasets: { replicasets: [{ name: 'nginx-abc123', namespace: 'default', cluster: MOCK_CLUSTER, desired: 2, ready: 2, available: 2 }] },
+    statefulsets: { statefulsets: [{ name: 'postgres', namespace: 'default', cluster: MOCK_CLUSTER, replicas: 1, ready: 1, status: 'Running' }] },
+    daemonsets: { daemonsets: [{ name: 'fluentd', namespace: 'kube-system', cluster: MOCK_CLUSTER, desired: 3, ready: 3, available: 3 }] },
+    cronjobs: { cronjobs: [{ name: 'daily-backup', namespace: 'default', cluster: MOCK_CLUSTER, schedule: '0 2 * * *', lastSchedule: '2026-01-15T02:00:00Z', active: 0 }] },
+    'gpu-nodes': { nodes: [{ name: 'gpu-node-1', cluster: MOCK_CLUSTER, gpus: [{ model: 'A100', memory: '80Gi', index: 0 }], labels: {}, allocatable: {}, capacity: {} }] },
+    clusters: { clusters: [{ name: MOCK_CLUSTER, reachable: true, status: 'Ready', provider: 'kind', version: '1.28.0' }] },
+    'cluster-health': { status: 'ok', healthy: true, reachable: true, cluster: MOCK_CLUSTER, nodeCount: 3, readyNodes: 3, podCount: 12, cpuCores: 8, memoryGB: 16, metricsAvailable: true },
+    status: { status: 'ok', version: 'e2e-test', clusters: 1, hasClaude: false },
+    namespaces: { namespaces: MOCK_DATA.namespaces.namespaces },
+    'nvidia-operators': { operators: [] },
+    'pod-issues': { issues: MOCK_DATA['pod-issues'].issues },
+    'deployment-issues': { issues: [] },
+    'security-issues': { issues: MOCK_DATA['security-issues'].issues },
+    releases: { releases: MOCK_DATA.releases.releases },
+    'warning-events': { events: MOCK_DATA['warning-events'].events },
+    'helm-releases': { releases: [{ name: 'ingress-nginx', namespace: 'default', cluster: MOCK_CLUSTER, chart: 'nginx-1.0.0', status: 'deployed', revision: 1, updated: '2026-01-15T10:00:00Z' }] },
+    operators: { operators: [{ name: 'test-operator', namespace: 'openshift-operators', cluster: MOCK_CLUSTER, status: 'Succeeded', version: '1.0.0' }] },
+    'resource-limits': { limits: MOCK_DATA['resource-limits'].limits },
+
+    // --- Compound path endpoints (kagent-crds, kagenti, prometheus, rbac, etc.) ---
+    'kagent-crds/agents': { agents: [{ name: 'weather-agent', namespace: 'kagent', cluster: MOCK_CLUSTER, agentType: 'Declarative', runtime: 'googleadk', status: 'Ready', modelConfigRef: 'gpt-4o', toolCount: 2 }] },
+    'kagent-crds/tools': { tools: [{ name: 'web-search', namespace: 'kagent', cluster: MOCK_CLUSTER, kind: 'ToolServer', url: 'http://tool:8080', config: '', discoveredTools: [{ name: 'search', description: 'Web search' }], status: 'Ready' }] },
+    'kagent-crds/models': { models: [{ name: 'gpt-4o', namespace: 'kagent', cluster: MOCK_CLUSTER, kind: 'ModelConfig', provider: 'openai', model: 'gpt-4o', status: 'Ready' }] },
+    'kagent-crds/memories': { memories: [{ name: 'default-memory', namespace: 'kagent', cluster: MOCK_CLUSTER, provider: 'chromadb', status: 'Ready' }] },
+
+    'kagenti/agents': { agents: [{ name: 'code-assistant', namespace: 'kagenti', cluster: MOCK_CLUSTER, status: 'Running', model: 'gpt-4o', tools: 2, lastActive: '2026-01-15T10:00:00Z' }] },
+    'kagenti/builds': { builds: [{ name: 'build-001', namespace: 'kagenti', cluster: MOCK_CLUSTER, status: 'Succeeded', startedAt: '2026-01-15T09:00:00Z', completedAt: '2026-01-15T09:05:00Z' }] },
+    'kagenti/cards': { cards: [{ name: 'summary-card', namespace: 'kagenti', cluster: MOCK_CLUSTER, type: 'summary', status: 'Active' }] },
+    'kagenti/tools': { tools: [{ name: 'kubectl-tool', namespace: 'kagenti', cluster: MOCK_CLUSTER, type: 'builtin', status: 'Available' }] },
+
+    'prometheus/query': { status: 'success', data: { resultType: 'vector', result: [] } },
+
+    'rbac/permissions': { permissions: { clusters: {}, namespaces: {} } },
+    'rbac/can-i': { allowed: true },
+    'permissions/summary': { summary: { clusters: 1, namespaces: 2, roles: 3 } },
+
+    'devices/alerts': { alerts: [] },
+    'devices/inventory': { devices: [] },
+
+    'pods/logs': { logs: '' },
+    'settings/export': { settings: {} },
+    'settings/keys': { keys: [] },
+    'shared': { dashboards: [] },
+
+    'vcluster/list': { vclusters: [] },
+    'vcluster/check': { installed: false },
+
+    'local-clusters': { clusters: [] },
+    'local-cluster-lifecycle': { status: 'ok' },
+    'local-cluster-tools': { tools: [] },
+
+    // --- Simple first-segment endpoints not yet covered ---
+    'argocd': { applications: [] },
+    'cilium-status': { status: 'ok', nodes: [] },
+    'federation': { federations: [] },
+    'gpu-health-cronjob': { cronjobs: [] },
+    'jaeger-status': { status: 'Healthy', version: '1.53.0', collectors: { count: 1, status: 'Healthy' }, query: { status: 'Healthy' }, metrics: { servicesCount: 3, tracesLastHour: 142, dependenciesCount: 7, avgLatencyMs: 12, p95LatencyMs: 45, p99LatencyMs: 89, spansDroppedLastHour: 0, avgQueueLength: 2 } },
+    'insights': { insights: [] },
+    'predictions': { predictions: [] },
+    'providers': { providers: [] },
+    rolebindings: { rolebindings: [{ name: 'admin-binding', namespace: 'default', cluster: MOCK_CLUSTER, roleRef: { kind: 'ClusterRole', name: 'admin' }, subjects: [{ kind: 'User', name: 'testuser' }] }] },
+  }
+
+  await page.route('http://127.0.0.1:8585/**', async (route) => {
     const url = route.request().url()
-    if (url.endsWith('/health') || url.includes('/health?')) {
-      route.fulfill({
+    const urlObj = new URL(url)
+    const pathParts = urlObj.pathname.split('/').filter(Boolean)
+
+    // Agent root health endpoint — only match /health (single segment) or /health?*
+    // Nested paths like /clusters/<name>/health are served via AGENT_ENDPOINT_DATA below.
+    if (pathParts.length === 1 && pathParts[0] === 'health') {
+      return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ status: 'ok', version: 'e2e-test', clusters: 1, hasClaude: false }),
       })
-    } else {
-      route.fulfill({ status: 503, contentType: 'application/json', body: '{"status":"unavailable"}' })
     }
+
+    // SSE streaming endpoints (e.g., /configmaps/stream, /kagent-crds/agents/stream)
+    if (pathParts[pathParts.length - 1] === 'stream' && pathParts.length >= 2) {
+      const streamParts = pathParts.slice(0, -1)
+      const sseCompound = streamParts.slice(0, 2).join('/')
+      const sseSimple = streamParts[streamParts.length - 1]
+      const sseEndpoint = AGENT_ENDPOINT_DATA[sseCompound] ? sseCompound : sseSimple
+      if (shouldError(sseEndpoint)) { await fulfillError(route, sseEndpoint); return }
+      const data = AGENT_ENDPOINT_DATA[sseEndpoint]
+      if (data) {
+        await maybeDelay()
+        const itemsKey = Object.keys(data)[0] || 'items'
+        const rawItems = (data as Record<string, unknown>)[itemsKey]
+        const items = Array.isArray(rawItems) ? rawItems : []
+        const sseBody = [
+          'event: cluster_data',
+          `data: ${JSON.stringify({ cluster: MOCK_CLUSTER, [itemsKey]: items })}`,
+          '',
+          'event: done',
+          `data: ${JSON.stringify({ totalClusters: 1, source: 'mock' })}`,
+          '',
+        ].join('\n')
+        return route.fulfill({
+          status: 200,
+          contentType: 'text/event-stream',
+          headers: { 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+          body: sseBody,
+        })
+      }
+    }
+
+    // REST endpoints — try compound key (e.g. kagent-crds/agents) then first segment
+    const compoundKey = pathParts.slice(0, 2).join('/')
+    const simpleKey = pathParts[0]
+    const endpoint = AGENT_ENDPOINT_DATA[compoundKey] ? compoundKey : simpleKey
+    if (shouldError(endpoint)) { await fulfillError(route, endpoint); return }
+    const data = AGENT_ENDPOINT_DATA[endpoint]
+    if (data) {
+      await maybeDelay()
+      await new Promise(r => setTimeout(r, 150))
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(data),
+      })
+    }
+
+    // Unknown agent endpoints — return empty data instead of 503 to prevent
+    // hooks from falling back to demo data and showing demo badges.
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], source: 'mock' }) })
   })
 
   // 16. WebSocket mock for kubectl proxy
@@ -524,9 +694,11 @@ export async function setLiveColdMode(page: Page, user?: typeof mockUser): Promi
       try {
         localStorage.setItem('token', 'test-token')
         localStorage.setItem('kc-demo-mode', 'false')
+        localStorage.setItem('kc-has-session', 'true')
         localStorage.setItem('demo-user-onboarded', 'true')
         localStorage.setItem('kubestellar-console-tour-completed', 'true')
         localStorage.setItem('kc-user-cache', JSON.stringify(usr))
+        localStorage.setItem('kc-agent-setup-dismissed', 'true')
         localStorage.setItem('kc-backend-status', JSON.stringify({ available: true, timestamp: Date.now() }))
         localStorage.setItem('kc-sqlite-migrated', '2')
 
@@ -578,11 +750,13 @@ export async function setMode(page: Page, mode: 'demo' | 'live' | 'live+cache', 
   const lsValues: Record<string, string> = {
     token: isLive ? 'test-token' : 'demo-token',
     'kc-demo-mode': String(!isLive),
+    'kc-has-session': 'true',
     'demo-user-onboarded': 'true',
     'kubestellar-console-tour-completed': 'true',
     'kc-user-cache': JSON.stringify(u),
     'kc-backend-status': JSON.stringify({ available: true, timestamp: Date.now() }),
     'kc-sqlite-migrated': '2',
+    'kc-agent-setup-dismissed': 'true',
   }
 
   if (mode === 'live+cache') {

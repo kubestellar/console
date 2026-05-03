@@ -85,6 +85,37 @@ const DESCRIPTORS: CardDescriptor[] = [
     isLiveData: true,
     component: () => import('./thanos_status').then(m => ({ default: m.ThanosStatus as ComponentType<CardComponentProps> })),
   },
+  // ── Cilium Monitoring card ──────────────────────────────────────────
+  {
+    id: 'cilium_status',
+    title: 'Cilium',
+    description: 'Cilium eBPF networking, network policy enforcement, and Hubble flow visibility.',
+    category: 'Network',
+    defaultWidth: 6,
+    visualization: 'status',
+    isLiveData: true,
+    component: () => import('./cilium_status').then(m => ({ default: m.CiliumStatus as ComponentType<CardComponentProps> })),
+  },
+  // ── CubeFS distributed file system card ────────────────────────────
+  {
+    id: 'cubefs_status',
+    title: 'CubeFS',
+    description: 'CubeFS distributed file system health, volume status, and node topology.',
+    category: 'Storage',
+    defaultWidth: 6,
+    visualization: 'status',
+    component: () => import('./cubefs_status').then(m => ({ default: m.CubefsStatus as ComponentType<CardComponentProps> })),
+  },
+  // ── Harbor registry card ──────────────────────────────────────────
+  {
+    id: 'harbor_status',
+    title: 'Harbor Registry',
+    description: 'Harbor container registry health, project status, and vulnerability scanning.',
+    category: 'Storage',
+    defaultWidth: 6,
+    visualization: 'status',
+    component: () => import('./harbor_status').then(m => ({ default: m.HarborStatus as ComponentType<CardComponentProps> })),
+  },
 ]
 
 /**

@@ -372,7 +372,7 @@ function matchesQuery(item: SearchItem, query: string): boolean {
 // --- Hook ---
 
 export function useSearchIndex(query: string) {
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { deployments } = useDeployments()
   // Search should index all available pods, not just a small subset (#7217).
   const SEARCH_POD_LIMIT = 500
@@ -512,7 +512,7 @@ export function useSearchIndex(query: string) {
     }
 
     // Scan placed cards from localStorage (fast synchronous read)
-    const customDashboardList = dashboards
+    const customDashboardList = (dashboards || [])
       .filter(d => !d.is_default)
       .map(d => ({ id: d.id, name: d.name }))
     const placedCards = scanPlacedCards(customDashboardList)
@@ -556,4 +556,11 @@ export function useSearchIndex(query: string) {
   }, [query, dynamicItems, dashboards])
 
   return { results, totalCount }
+}
+
+export const __testables = {
+  matchesQuery,
+  buildDashboardStorage,
+  scanPlacedCards,
+  scanPlacedStats,
 }

@@ -24,6 +24,7 @@ import { useResolutions, detectIssueSignature, type IssueSignature, type Resolut
 import { cn } from '../../lib/cn'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
+import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { useTranslation } from 'react-i18next'
 
 interface AISummary {
@@ -137,7 +138,7 @@ const RATE_LIMIT_MESSAGE =
  */
 async function generateAISummary(mission: Mission): Promise<AISummary> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+    const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
     let responseContent = ''
     // #9162 — Track whether the connection ever opened. If the agent closes
@@ -166,14 +167,15 @@ async function generateAISummary(mission: Mission): Promise<AISummary> {
 
     ws.onopen = () => {
       didOpen = true
-      // #9162 — Build conversation context with size caps so the assembled
-      // WebSocket frame stays under the agent's 1 MB read limit. Without
-      // this, long missions (with large tool outputs) would silently exceed
-      // the limit, the agent would close the socket, and the client would
-      // surface a misleading "Could not reach the local agent" error.
-      const conversation = buildConversationSnippet(mission.messages)
+      try {
+        // #9162 — Build conversation context with size caps so the assembled
+        // WebSocket frame stays under the agent's 1 MB read limit. Without
+        // this, long missions (with large tool outputs) would silently exceed
+        // the limit, the agent would close the socket, and the client would
+        // surface a misleading "Could not reach the local agent" error.
+        const conversation = buildConversationSnippet(mission.messages)
 
-      const prompt = `You are helping save a resolution for future reuse. Analyze this mission conversation and create a structured summary.
+        const prompt = `You are helping save a resolution for future reuse. Analyze this mission conversation and create a structured summary.
 
 MISSION: ${mission.title}
 DESCRIPTION: ${mission.description}
@@ -192,14 +194,20 @@ Create a JSON summary with these fields:
 
 Return ONLY valid JSON, no markdown code blocks or explanation.`
 
-      ws.send(JSON.stringify({
-        type: 'chat',
-        id: `summary-${crypto.randomUUID()}`,
-        payload: {
-          prompt: prompt,
-          sessionId: `resolution-${mission.id}`,
-          agent: mission.agent || undefined }
-      }))
+        ws.send(JSON.stringify({
+          type: 'chat',
+          id: `summary-${crypto.randomUUID()}`,
+          payload: {
+            prompt: prompt,
+            sessionId: `resolution-${mission.id}`,
+            agent: mission.agent || undefined }
+        }))
+      } catch (err: unknown) {
+        settle(() => {
+          ws.close()
+          reject(err instanceof Error ? err : new Error('Failed to send AI summary request'))
+        })
+      }
     }
 
     ws.onmessage = (event) => {
@@ -223,7 +231,7 @@ Return ONLY valid JSON, no markdown code blocks or explanation.`
             try {
               // Extract JSON if wrapped in code blocks
               const jsonMatch = content.match(/\{[\s\S]*\}/)
-              if (jsonMatch) {
+              if (jsonMatch?.[0]) {
                 const parsed = JSON.parse(jsonMatch[0])
                 resolve({
                   title: parsed.title || mission.title,
@@ -362,7 +370,7 @@ export function SaveResolutionDialog({
       setSummary(`**Problem:** ${aiSummary.problem}\n\n**Solution:** ${aiSummary.solution}`)
       setSteps(aiSummary.steps.length > 0 ? aiSummary.steps : [''])
       setYaml(aiSummary.yaml || '')
-    } catch (err) {
+    } catch (err: unknown) {
       setAiError(err instanceof Error ? err.message : 'Failed to generate summary')
       // Fall back to basic extraction
       setTitle(currentMission.title)
@@ -449,7 +457,7 @@ export function SaveResolutionDialog({
 
       onSaved?.()
       onClose()
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('dashboard.missions.failedToSave'))
     } finally {
       setIsSaving(false)
@@ -510,7 +518,7 @@ export function SaveResolutionDialog({
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('dashboard.missions.titlePlaceholder')}
               disabled={isGenerating}
-              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
             />
           </div>
 
@@ -527,7 +535,7 @@ export function SaveResolutionDialog({
                 onChange={(e) => setIssueType(e.target.value)}
                 placeholder={t('dashboard.missions.issueTypePlaceholder')}
                 disabled={isGenerating}
-                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
             <div>
@@ -540,7 +548,7 @@ export function SaveResolutionDialog({
                 onChange={(e) => setResourceKind(e.target.value)}
                 placeholder={t('dashboard.missions.resourceKindPlaceholder')}
                 disabled={isGenerating}
-                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
               />
             </div>
           </div>
@@ -556,7 +564,7 @@ export function SaveResolutionDialog({
               placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.problemSolutionPlaceholder')}
               rows={4}
               disabled={isGenerating}
-              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
+              className="w-full px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
             />
           </div>
 
@@ -576,7 +584,7 @@ export function SaveResolutionDialog({
                     onChange={(e) => handleStepChange(index, e.target.value)}
                     placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.stepPlaceholder')}
                     disabled={isGenerating}
-                    className="flex-1 px-3 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                    className="flex-1 px-3 py-1.5 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary disabled:opacity-50"
                   />
                   {steps.length > 1 && (
                     <button
@@ -611,7 +619,7 @@ export function SaveResolutionDialog({
               placeholder={isGenerating ? t('dashboard.missions.generating') : t('dashboard.missions.yamlPlaceholder')}
               rows={4}
               disabled={isGenerating}
-              className="w-full px-3 py-2 text-xs font-mono bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
+              className="w-full px-3 py-2 text-xs font-mono bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary resize-none disabled:opacity-50"
             />
           </div>
 
@@ -655,7 +663,7 @@ export function SaveResolutionDialog({
           {/* Error */}
           {error && (
             <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <AlertCircle className="w-4 h-4 shrink-0" />
               {error}
             </div>
           )}

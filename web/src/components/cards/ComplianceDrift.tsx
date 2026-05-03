@@ -216,7 +216,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     <div className="space-y-1.5 p-1">
       {/* Context description */}
       <div className="flex items-start gap-1.5 text-[10px] text-muted-foreground bg-secondary/20 rounded-md px-2 py-1.5 mb-1">
-        <Info className="w-3 h-3 flex-shrink-0 mt-0.5 text-muted-foreground/60" />
+        <Info className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground/60" />
         <span>{t('complianceDrift.driftDescription')}</span>
       </div>
 
@@ -249,9 +249,9 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleDriftClick(d) } }}
           >
             {d.direction === 'above' ? (
-              <TrendingUp className={`w-4 h-4 flex-shrink-0 ${isBad ? 'text-red-400' : 'text-yellow-400'}`} />
+              <TrendingUp className={`w-4 h-4 shrink-0 ${isBad ? 'text-red-400' : 'text-yellow-400'}`} />
             ) : (
-              <TrendingDown className={`w-4 h-4 flex-shrink-0 ${isBad ? 'text-red-400' : 'text-yellow-400'}`} />
+              <TrendingDown className={`w-4 h-4 shrink-0 ${isBad ? 'text-red-400' : 'text-yellow-400'}`} />
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
@@ -266,7 +266,7 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
                 {' '}({d.magnitude}σ deviation)
               </p>
             </div>
-            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
           </div>
         )
       })}

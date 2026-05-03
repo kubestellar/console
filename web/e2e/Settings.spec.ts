@@ -1,9 +1,15 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for settings tests
  */
 async function setupSettingsTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox.
+  // Without this, unmocked /health requests cause Firefox/WebKit to redirect
+  // to /login before the settings page loads. (#11003)
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -35,11 +41,22 @@ async function setupSettingsTest(page: Page) {
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 
   await page.goto('/settings')
   await page.waitForLoadState('domcontentloaded')
+  // WebKit is slower to stabilize after domcontentloaded — wait for the
+  // settings page element so assertions don't time out. (#11003)
+  const SETTINGS_VISIBLE_TIMEOUT_MS = 15_000
+  await page.getByTestId('settings-page').waitFor({ state: 'visible', timeout: SETTINGS_VISIBLE_TIMEOUT_MS })
 }
 
 test.describe('Settings Page', () => {
@@ -73,19 +90,32 @@ test.describe('Settings Page', () => {
     test('theme persists after reload', async ({ page }) => {
       await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
 
-      // Set theme in localStorage
+      // Set theme via the app's actual storage key ('kubestellar-theme-id')
+      // so the ThemeProvider applies it on reload. The 'theme' key was never
+      // read by the app — useTheme.tsx reads 'kubestellar-theme-id'. #10200
       await page.evaluate(() => {
-        localStorage.setItem('theme', 'light')
+        localStorage.setItem('kubestellar-theme-id', 'kubestellar-light')
       })
 
       await page.reload()
       await page.waitForLoadState('domcontentloaded')
+      // Wait for the settings page to fully stabilize before evaluating
+      // localStorage — on Firefox/WebKit the execution context can be
+      // destroyed if evaluate() runs mid-navigation. (#11003)
+      await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 15_000 })
 
-      // Theme should be preserved
+      // Theme should be preserved in localStorage
       const storedTheme = await page.evaluate(() =>
-        localStorage.getItem('theme')
+        localStorage.getItem('kubestellar-theme-id')
       )
-      expect(storedTheme).toBe('light')
+      expect(storedTheme).toBe('kubestellar-light')
+
+      // Verify the theme is actually applied to the DOM, not just stored. #9521
+      // The app sets class="light" or class="dark" on <html>.
+      // WebKit/Firefox may apply the class slightly after domcontentloaded —
+      // use a generous timeout for cross-browser reliability. #10134
+      const THEME_CLASS_TIMEOUT_MS = 10_000
+      await expect(page.locator('html')).toHaveClass(/light/, { timeout: THEME_CLASS_TIMEOUT_MS })
     })
   })
 

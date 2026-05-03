@@ -20,6 +20,7 @@ const ACCELERATION = 0.15
 const DECELERATION = 0.08
 const TURN_SPEED = 0.06
 const FRICTION = 0.98
+const COUNTDOWN_INTERVAL_MS = 1000
 const AI_COUNT = 3
 const FORWARD_ANGLE = -Math.PI / 2 // Pointing "up" on screen
 
@@ -208,9 +209,16 @@ export function KubeKart() {
 
     if (keys.has('arrowleft') || keys.has('a')) {
       player.angle -= TURN_SPEED * (player.speed > 0 ? 1 : -1)
-    }
-    if (keys.has('arrowright') || keys.has('d')) {
+    } else if (keys.has('arrowright') || keys.has('d')) {
       player.angle += TURN_SPEED * (player.speed > 0 ? 1 : -1)
+    } else {
+      // Auto-straighten when no turn keys pressed
+      const angleDiff = FORWARD_ANGLE - player.angle
+      if (Math.abs(angleDiff) > 0.01) {
+        player.angle += angleDiff * 0.15
+      } else {
+        player.angle = FORWARD_ANGLE
+      }
     }
 
     // Apply movement (mostly forward)
@@ -483,7 +491,7 @@ export function KubeKart() {
     if (gameState !== 'countdown') return
 
     if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(c => c - 1), 1000)
+      const timer = setTimeout(() => setCountdown(c => c - 1), COUNTDOWN_INTERVAL_MS)
       return () => clearTimeout(timer)
     } else {
       setGameState('playing')

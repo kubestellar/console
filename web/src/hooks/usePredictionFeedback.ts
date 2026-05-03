@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { PredictionFeedback, StoredFeedback, PredictionType, PredictionStats } from '../types/predictions'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { emitPredictionFeedbackSubmitted } from '../lib/analytics'
 
@@ -19,8 +20,10 @@ if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored) {
     try {
-      const parsed: StoredFeedback[] = JSON.parse(stored)
-      feedbackMap = new Map(parsed.map(f => [f.predictionId, f]))
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed)) {
+        feedbackMap = new Map(parsed.map((f: StoredFeedback) => [f.predictionId, f]))
+      }
     } catch {
       // Invalid JSON, use empty map
     }
@@ -72,9 +75,11 @@ export function usePredictionFeedback() {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored) {
         try {
-          const parsed: StoredFeedback[] = JSON.parse(stored)
-          feedbackMap = new Map(parsed.map(f => [f.predictionId, f]))
-          notifySubscribers()
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed)) {
+            feedbackMap = new Map(parsed.map((f: StoredFeedback) => [f.predictionId, f]))
+            notifySubscribers()
+          }
         } catch {
           // Invalid JSON, ignore
         }
@@ -185,9 +190,9 @@ export function usePredictionFeedback() {
  * Send feedback to backend
  */
 async function sendFeedbackToBackend(predictionId: string, feedback: PredictionFeedback): Promise<void> {
-  const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/predictions/feedback`, {
+  const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/predictions/feedback`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     body: JSON.stringify({ predictionId, feedback }),
     signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
   if (!response.ok) {

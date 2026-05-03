@@ -42,6 +42,7 @@ export type CardCategory =
   | 'insights'
   | 'drasi'
   | 'maturity'
+  | 'runtime'
 
 export interface CardDefinition {
   /** Unique card type identifier */

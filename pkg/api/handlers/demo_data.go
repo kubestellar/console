@@ -15,6 +15,16 @@ func isDemoMode(c *fiber.Ctx) bool {
 	return c.Get("X-Demo-Mode") == "true"
 }
 
+// noClusterAccessMsg is the unified error message returned by every handler
+// when the Kubernetes client is unavailable (e.g., no kubeconfig loaded, or
+// the kc-agent websocket is disconnected). Keeping this as a single constant
+// ensures the message stays in sync across handlers (#9830).
+const noClusterAccessMsg = "No cluster access"
+
+func errNoClusterAccess(c *fiber.Ctx) error {
+	return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": noClusterAccessMsg})
+}
+
 // Demo cluster data - matches frontend getDemoClusters() for consistency
 func getDemoClusters() []k8s.ClusterInfo {
 	return []k8s.ClusterInfo{
@@ -99,7 +109,7 @@ func getDemoEvents() []k8s.Event {
 // Demo warning events (filtered from events)
 func getDemoWarningEvents() []k8s.Event {
 	events := getDemoEvents()
-	var warnings []k8s.Event
+	warnings := make([]k8s.Event, 0)
 	for _, e := range events {
 		if e.Type == "Warning" {
 			warnings = append(warnings, e)
@@ -467,7 +477,7 @@ func getDemoPodLogs() string {
 // getDemoAllClusterHealth returns health for all demo clusters
 func getDemoAllClusterHealth() []k8s.ClusterHealth {
 	clusters := getDemoClusters()
-	var health []k8s.ClusterHealth
+	health := make([]k8s.ClusterHealth, 0)
 	for _, c := range clusters {
 		h := getDemoClusterHealth(c.Name)
 		health = append(health, *h)

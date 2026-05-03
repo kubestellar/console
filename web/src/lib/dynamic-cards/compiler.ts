@@ -78,7 +78,7 @@ export async function compileCardCode(tsx: string): Promise<CompileResult> {
       production: true,
     })
     return { code: result.code, error: null }
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     return { code: null, error: `Compilation error: ${message}` }
   }
@@ -190,7 +190,7 @@ export function createCardComponent(compiledCode: string): DynamicComponentResul
       createElement(component, { ...props, config: props.config ?? {} })
 
     return { component: SafeComponent, error: null, cleanup: timerCleanup }
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     return { component: null, error: `Runtime error: ${message}` }
   }

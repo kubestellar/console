@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { TimeSeriesChart, MultiSeriesChart } from '../charts'
+import { useState, useMemo, useEffect, useRef, Suspense, memo } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { useClusters } from '../../hooks/useMCP'
 import { CLUSTER_POLL_INTERVAL_MS } from '../../hooks/mcp/shared'
 import { Server, Clock, Layers, TrendingUp } from 'lucide-react'
@@ -8,6 +8,7 @@ import { useChartFilters } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 
@@ -19,30 +20,24 @@ type TimeRange = '15m' | '1h' | '6h' | '24h'
 // (fixes issue #6048).
 const MAX_HISTORY_POINTS = 60                                                  // buffer cap (points)
 const MAX_HISTORY_DURATION_MS = MAX_HISTORY_POINTS * CLUSTER_POLL_INTERVAL_MS  // max wall-clock span of buffer
-const MIN_POINT_SPACING_MS = 30 * 1000                                         // min delta between recorded points (30s)
-const MS_PER_SECOND = 1000
-const SECONDS_PER_MINUTE = 60
-const MINUTES_PER_HOUR = 60
-const MINUTES_15 = 15
-const HOURS_1 = 1
-const HOURS_6 = 6
-const HOURS_24 = 24
-const FIFTEEN_MIN_MS = MINUTES_15 * SECONDS_PER_MINUTE * MS_PER_SECOND
-const ONE_HOUR_MS = HOURS_1 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
-const SIX_HOURS_MS = HOURS_6 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
-const TWENTY_FOUR_HOURS_MS = HOURS_24 * MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
+const MIN_POINT_SPACING_MS = 30 * MS_PER_SECOND
+const FIFTEEN_MIN_MS = 15 * MS_PER_MINUTE
+const SIX_HOURS_MS = 6 * MS_PER_HOUR
+const TWENTY_FOUR_HOURS_MS = MS_PER_DAY
 
-// Sub-interval values for legacy TIME_RANGE_KEYS entries (kept for any
-// downstream consumer that still reads them). Values are illustrative only
-// and are not used for filtering the buffer itself.
 const LEGACY_15M_POINTS = 15
-const LEGACY_15M_INTERVAL_MS = 60 * MS_PER_SECOND         // 1 minute
+const LEGACY_15M_INTERVAL_MS = MS_PER_MINUTE
 const LEGACY_1H_POINTS = 20
-const LEGACY_1H_INTERVAL_MS = 180 * MS_PER_SECOND         // 3 minutes
+const LEGACY_1H_INTERVAL_MS = 3 * MS_PER_MINUTE
 const LEGACY_6H_POINTS = 24
-const LEGACY_6H_INTERVAL_MS = 900 * MS_PER_SECOND         // 15 minutes
+const LEGACY_6H_INTERVAL_MS = 15 * MS_PER_MINUTE
 const LEGACY_24H_POINTS = 24
-const LEGACY_24H_INTERVAL_MS = 3600 * MS_PER_SECOND       // 1 hour
+const LEGACY_24H_INTERVAL_MS = MS_PER_HOUR
+
+/** Metric name display threshold before truncation */
+const MAX_METRIC_NAME_DISPLAY = 15
+/** Length to truncate metric names to when they exceed the display threshold */
+const TRUNCATED_METRIC_NAME = 12
 
 const TIME_RANGE_KEYS: Array<{
   value: TimeRange
@@ -56,7 +51,7 @@ const TIME_RANGE_KEYS: Array<{
   rangeMs: number
 }> = [
   { value: '15m', labelKey: 'clusterMetrics.timeRange15m', points: LEGACY_15M_POINTS, intervalMs: LEGACY_15M_INTERVAL_MS, rangeMs: FIFTEEN_MIN_MS },
-  { value: '1h', labelKey: 'clusterMetrics.timeRange1h', points: LEGACY_1H_POINTS, intervalMs: LEGACY_1H_INTERVAL_MS, rangeMs: ONE_HOUR_MS },
+  { value: '1h', labelKey: 'clusterMetrics.timeRange1h', points: LEGACY_1H_POINTS, intervalMs: LEGACY_1H_INTERVAL_MS, rangeMs: MS_PER_HOUR },
   { value: '6h', labelKey: 'clusterMetrics.timeRange6h', points: LEGACY_6H_POINTS, intervalMs: LEGACY_6H_INTERVAL_MS, rangeMs: SIX_HOURS_MS },
   { value: '24h', labelKey: 'clusterMetrics.timeRange24h', points: LEGACY_24H_POINTS, intervalMs: LEGACY_24H_INTERVAL_MS, rangeMs: TWENTY_FOUR_HOURS_MS },
 ]
@@ -71,7 +66,7 @@ export const SUPPORTED_TIME_RANGE_KEYS = TIME_RANGE_KEYS.filter(
 
 const TIME_RANGE_MS: Record<TimeRange, number> = {
   '15m': FIFTEEN_MIN_MS,
-  '1h': ONE_HOUR_MS,
+  '1h': MS_PER_HOUR,
   '6h': SIX_HOURS_MS,
   '24h': TWENTY_FOUR_HOURS_MS,
 }
@@ -110,12 +105,21 @@ interface MetricPoint {
   clusters?: Record<string, ClusterMetricValues>
 }
 
+// Lazy-load chart components to defer the echarts vendor chunk (~1.14 MB)
+// from the critical loading path. The card itself stays eager — only the
+// chart subtrees are deferred behind React.lazy + Suspense.
+const LazyTimeSeriesChart = safeLazy(() => import('../charts/TimeSeriesChart'), 'TimeSeriesChart')
+const LazyMultiSeriesChart = safeLazy(() => import('../charts/TimeSeriesChart'), 'MultiSeriesChart')
+
+/** Height (px) of the chart area — used for both the chart and its Suspense fallback */
+const CHART_AREA_MIN_HEIGHT = 160
+
 const STORAGE_KEY = 'cluster-metrics-history'
 // Keep saved history at least as long as the live buffer can span, so that a
 // page reload does not discard recent points that would still be visible.
 const MAX_AGE_MS = MAX_HISTORY_DURATION_MS
 
-export function ClusterMetrics() {
+export const ClusterMetrics = memo(function ClusterMetrics() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading, isRefreshing, deduplicatedClusters, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode } = useDemoMode()
@@ -294,7 +298,7 @@ export function ClusterMetrics() {
     const series = Array.from(clusterNames).map((name, i) => ({
       dataKey: name,
       color: clusterColors[i % clusterColors.length],
-      name: name.length > 15 ? name.slice(0, 12) + '...' : name }))
+      name: name.length > MAX_METRIC_NAME_DISPLAY ? name.slice(0, TRUNCATED_METRIC_NAME) + '...' : name }))
 
     // Build data with all clusters as keys
     const chartData = filteredHistory.map(point => {
@@ -426,7 +430,7 @@ export function ClusterMetrics() {
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-[160px]">
+      <div className="flex-1" style={{ minHeight: CHART_AREA_MIN_HEIGHT }}>
         {clusters.length === 0 ? (
           <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
             {t('cards:clusterMetrics.noClustersSelected')}
@@ -437,21 +441,25 @@ export function ClusterMetrics() {
             <span>{data.length === 0 ? t('cards:clusterMetrics.collectingData') : t('cards:clusterMetrics.waitingForData')}</span>
             <span className="text-xs text-muted-foreground/70">{t('cards:clusterMetrics.chartWillAppear')}</span>
           </div>
-        ) : chartMode === 'per-cluster' && perClusterData.series.length > 0 ? (
-          <MultiSeriesChart
-            data={perClusterData.data}
-            series={perClusterData.series}
-            height={160}
-            showGrid
-          />
         ) : (
-          <TimeSeriesChart
-            data={data}
-            color={config.color}
-            height={160}
-            unit={config.unit}
-            showGrid
-          />
+          <Suspense fallback={<div style={{ height: CHART_AREA_MIN_HEIGHT }} className="animate-pulse bg-secondary/30 rounded" />}>
+            {chartMode === 'per-cluster' && perClusterData.series.length > 0 ? (
+              <LazyMultiSeriesChart
+                data={perClusterData.data}
+                series={perClusterData.series}
+                height={CHART_AREA_MIN_HEIGHT}
+                showGrid
+              />
+            ) : (
+              <LazyTimeSeriesChart
+                data={data}
+                color={config.color}
+                height={CHART_AREA_MIN_HEIGHT}
+                unit={config.unit}
+                showGrid
+              />
+            )}
+          </Suspense>
         )}
       </div>
 
@@ -480,4 +488,4 @@ export function ClusterMetrics() {
       )}
     </div>
   )
-}
+})

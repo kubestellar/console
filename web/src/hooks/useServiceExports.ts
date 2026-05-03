@@ -16,6 +16,8 @@ import { useClusters } from './useMCP'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type { ServiceExport } from '../types/mcs'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 
 // ============================================================================
 // Constants
@@ -25,7 +27,6 @@ import type { ServiceExport } from '../types/mcs'
 const CACHE_EXPIRY_MS = 300_000
 
 /** Auto-refresh interval — 2 minutes */
-const REFRESH_INTERVAL_MS = 120_000
 
 /** Number of consecutive failures before marking as failed */
 const FAILURE_THRESHOLD = 3
@@ -97,10 +98,6 @@ function saveToCache(data: ServiceExport[], isDemoData: boolean): void {
 // Demo Data Generator
 // ============================================================================
 
-/** Days in milliseconds */
-const MS_PER_DAY = 86_400_000
-/** Hours in milliseconds */
-const MS_PER_HOUR = 3_600_000
 
 function getDemoServiceExports(clusterNames: string[]): ServiceExport[] {
   const exports: ServiceExport[] = []

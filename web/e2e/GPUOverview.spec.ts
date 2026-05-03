@@ -6,7 +6,7 @@ import { setupDemoMode } from './helpers/setup'
  *
  * Tests that the GPUOverview card correctly renders in demo mode:
  * - Normal state with GPU data present (utilization gauge, GPU types, stats)
- * - Card is present on the /compute dashboard
+ * - Card is present on the /gpu-reservations dashboard
  * - Responsive behavior across viewports
  * - Error resilience when GPU API fails
  *
@@ -33,10 +33,10 @@ const GPU_CARD_CONTENT_TIMEOUT_MS = 20_000
 /** Minimum body length (chars) we consider "real content" on the page. */
 const MIN_BODY_CONTENT_LEN = 100
 
-/** Navigate to /compute in demo mode */
+/** Navigate to /gpu-reservations in demo mode */
 async function setupComputeDashboard(page: Page) {
   await setupDemoMode(page)
-  await page.goto('/compute')
+  await page.goto('/gpu-reservations')
   await page.waitForLoadState('domcontentloaded')
 }
 
@@ -75,7 +75,7 @@ test.describe('GPUOverview Card', () => {
       const cardTitle = page.getByText('GPU Overview').first()
       await expect(
         cardTitle,
-        'GPU Overview card is not visible on /compute — card may be broken or hidden by a regression',
+        'GPU Overview card is not visible on /gpu-reservations — card may be broken or hidden by a regression',
       ).toBeVisible({ timeout: GPU_CARD_CONTENT_TIMEOUT_MS })
     })
 
@@ -198,7 +198,7 @@ test.describe('GPUOverview Card', () => {
         })
       )
 
-      await page.goto('/compute')
+      await page.goto('/gpu-reservations')
       await page.waitForLoadState('domcontentloaded')
 
       // Page should not crash — body should be visible with content
@@ -218,7 +218,7 @@ test.describe('GPUOverview Card', () => {
         })
       )
 
-      await page.goto('/compute')
+      await page.goto('/gpu-reservations')
       await page.waitForLoadState('domcontentloaded')
 
       await expect(page.locator('body')).toBeVisible()

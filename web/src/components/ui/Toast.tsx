@@ -149,7 +149,7 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-sm shadow-lg animate-fade-in-up min-w-[250px] max-w-[400px]',
+        'flex items-center gap-3 px-4 py-3 rounded-lg border backdrop-blur-xs shadow-lg animate-fade-in-up min-w-[250px] max-w-[400px]',
         colors[toast.type]
       )}
     >

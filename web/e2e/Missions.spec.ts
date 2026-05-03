@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Missions.spec.ts — E2E coverage for the AI Missions (Mission Control) feature.
@@ -27,6 +28,9 @@ const DIALOG_VISIBLE_TIMEOUT_MS = 10_000 // dialogs open async after route hydra
 const CONTROL_VISIBLE_TIMEOUT_MS = 5_000 // interactive controls render after dialog open
 
 async function setupMissionsTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -106,11 +110,17 @@ async function setupMissionsTest(page: Page) {
     })
   )
 
-  // Seed auth token + onboarded flag so the app doesn't bounce to /login.
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Seed auth token + onboarded flag BEFORE any page script runs
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 }
 
@@ -175,13 +185,27 @@ test.describe('AI Missions', () => {
     await page.goto('/?browse=missions')
     await page.waitForLoadState('domcontentloaded')
 
-    // The missions browser renders each entry as a heading/button containing
-    // the mission name. If the Phase 1 panel regresses and renders no cards,
-    // this locator will fail instead of silently passing.
-    const missionEntry = page
-      .getByRole('dialog')
-      .getByText(/sample-mission/i)
-      .first()
-    await expect(missionEntry).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+    // The missions browser renders entries inside the mission grid. Query by
+    // the grid test-id first (structural), then fall back to text content.
+    // This avoids brittle getByText that breaks when the UI transforms the
+    // file name (strips .yaml, title-cases, etc.). See #9526.
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+
+    const missionGrid = dialog.locator('[data-testid="mission-grid"]')
+    const hasGrid = await missionGrid.isVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+    if (hasGrid) {
+      // Prefer structural assertion: at least one card in the grid
+      const cards = missionGrid.locator('.group')
+      await expect(cards.first()).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+      expect(await cards.count()).toBeGreaterThanOrEqual(1)
+    } else {
+      // Fallback: the dialog must contain at least one heading with the mission name
+      const missionEntry = dialog.getByRole('heading', { name: /sample-mission/i })
+        .or(dialog.locator('h4:has-text("sample-mission")'))
+        .first()
+      await expect(missionEntry).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+    }
   })
 })

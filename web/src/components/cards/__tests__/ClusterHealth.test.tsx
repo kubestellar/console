@@ -63,6 +63,14 @@ vi.mock('../../../lib/cards/cardHooks', async (importOriginal) => {
   }
 })
 
+vi.mock('../../../hooks/useFederation', () => ({
+  useFederationAwareness: () => ({ hubs: [], clusters: [], groups: [], pendingJoins: [], errors: [], isDemoFallback: false }),
+  getProviderLabel: (p: string) => p,
+  getStateLabel: (s: string) => s,
+  getStateColorClasses: () => '',
+  getFederationProviderLabel: (p: string) => p,
+}))
+
 vi.mock('../../clusters/utils', () => ({
   isClusterUnreachable: (c: ClusterInfo) => c.reachable === false,
   isClusterTokenExpired: (c: ClusterInfo) => c.errorMessage?.includes('token') ?? false,
@@ -89,6 +97,18 @@ vi.mock('../../ui/CloudProviderIcon', () => ({
   CloudProviderIcon: ({ provider }: { provider: string }) => <span data-testid={`cloud-${provider}`} />,
   detectCloudProvider: () => 'other',
   getProviderLabel: () => 'Other',
+}))
+
+vi.mock('react-router-dom', () => ({
+  useLocation: () => ({ pathname: '/', search: '', hash: '', state: null, key: 'default' }),
+}))
+
+vi.mock('../../ui/Tooltip', () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+vi.mock('../../../config/routes', () => ({
+  ROUTES: { CLUSTERS: '/clusters' },
 }))
 
 vi.mock('../../clusters/ClusterDetailModal', () => ({

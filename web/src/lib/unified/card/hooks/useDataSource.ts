@@ -21,7 +21,7 @@ import { useKeepAliveActive } from '../../../../hooks/useKeepAliveActive'
 const dataHookRegistry: Record<
   string,
   (params?: Record<string, unknown>) => {
-    data: unknown[] | undefined
+    data: unknown[] | unknown | undefined
     isLoading: boolean
     error: Error | null
     refetch?: () => void
@@ -71,7 +71,7 @@ export function useDataHookRegistryVersion(): number {
 export function registerDataHook(
   name: string,
   hook: (params?: Record<string, unknown>) => {
-    data: unknown[] | undefined
+    data: unknown[] | unknown | undefined
     isLoading: boolean
     error: Error | null
     refetch?: () => void
@@ -98,7 +98,7 @@ export function getRegisteredDataHooks(): string[] {
 }
 
 export interface UseDataSourceResult {
-  data: unknown[] | undefined
+  data: unknown[] | unknown | undefined
   isLoading: boolean
   error: Error | null
   refetch: () => void
@@ -277,7 +277,7 @@ function useApiDataSourceInternal(
 
       const response = await fetch(url, {
         method,
-        headers: method === 'POST' ? { 'Content-Type': 'application/json' } : undefined,
+        headers: method === 'POST' ? { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } : undefined,
         body: method === 'POST' && params ? JSON.stringify(params) : undefined,
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
@@ -294,7 +294,7 @@ function useApiDataSourceInternal(
       // Skip state update if route became inactive while fetch was in flight (#5891)
       if (!keepAliveActiveRef.current) return
       setData(resultData)
-    } catch (err) {
+    } catch (err: unknown) {
       if (!keepAliveActiveRef.current) return
       setError(err instanceof Error ? err : new Error(String(err)))
     } finally {

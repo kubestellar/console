@@ -27,6 +27,7 @@ import { RotatingTip } from '../ui/RotatingTip'
 import { api, authFetch } from '../../lib/api'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../../lib/auth'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
 import { NAMESPACE_ABORT_TIMEOUT_MS } from '../../lib/constants/network'
 import { NamespaceCard, NamespaceCardSkeleton } from './NamespaceCard'
@@ -43,6 +44,8 @@ const namespaceCache = new Map<string, NamespaceDetails[]>()
 export function NamespaceManager() {
   const { t } = useTranslation()
   const { showToast } = useToast()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const { clusters, deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   // Note: We don't check permissions upfront - the API will return auth errors for inaccessible clusters
@@ -133,6 +136,8 @@ export function NamespaceManager() {
     const fetchPromises = clustersToFetch.map(async (cluster) => {
       try {
         let clusterNamespaces: NamespaceDetails[] = []
+        let agentFailed = false
+        let apiFailed = false
 
         // Always try local agent first (works without backend auth)
         try {
@@ -155,8 +160,16 @@ export function NamespaceManager() {
                 createdAt: ns.createdAt || new Date().toISOString()
               }))
             }
+          } else {
+            agentFailed = true
           }
-        } catch {
+        } catch (err: unknown) {
+          agentFailed = true
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            console.warn(`[NamespaceManager] ${t('namespaces.errors.requestTimedOut')}`, cluster)
+          } else if (err instanceof TypeError) {
+            console.warn(`[NamespaceManager] ${t('namespaces.errors.agentNotReachable')}`, cluster)
+          }
           // Local agent failed, will fall back to API
         }
 
@@ -169,7 +182,7 @@ export function NamespaceManager() {
 
             // Extract unique namespaces from pods
             const nsSet = new Set<string>()
-            response.data.pods?.forEach(pod => {
+            ;(response.data.pods || []).forEach(pod => {
               if (pod.namespace) nsSet.add(pod.namespace)
             })
 
@@ -182,8 +195,14 @@ export function NamespaceManager() {
               })
             })
           } catch {
+            apiFailed = true
             // API also failed - cluster is likely unreachable
           }
+        }
+
+        // Track as failed if both data sources returned no data due to errors
+        if (clusterNamespaces.length === 0 && agentFailed && apiFailed) {
+          failedClusters.push(cluster)
         }
 
         // Only cache if we got data
@@ -226,7 +245,15 @@ export function NamespaceManager() {
 
     // Only show error if ALL clusters failed (no namespaces at all)
     if (failedClusters.length > 0 && totalCachedNamespaces === 0) {
-      setError(`Unable to connect to clusters. Check that the KC agent is running.`)
+      setError(t('namespaces.errors.unableToConnect', 'Unable to connect to clusters. Check that the KC agent is running.'))
+      // Allow retry on next trigger since all clusters failed
+      hasFetchedRef.current = false
+    } else if (failedClusters.length > 0) {
+      // Some clusters failed but we have partial data - show partial error
+      setError(t('namespaces.errors.someClustersUnavailable', {
+        count: failedClusters.length,
+        defaultValue: '{{count}} cluster(s) could not be reached. Showing cached data for available clusters.'
+      }))
     } else {
       // Clear any previous error since we have data
       setError(null)
@@ -235,7 +262,7 @@ export function NamespaceManager() {
     setLoading(false)
     setLoadingClusters(new Set())
     setLastUpdated(new Date())
-  }, [allClusterNames])
+  }, [allClusterNames, t])
 
   const handleRefreshNamespaces = () => fetchNamespaces(true)
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshNamespaces)
@@ -246,14 +273,17 @@ export function NamespaceManager() {
     try {
       const response = await api.get<{ bindings: typeof accessEntries }>(`/api/namespaces/${encodeURIComponent(namespace.name)}/access?cluster=${encodeURIComponent(namespace.cluster)}`)
       setAccessEntries(response.data?.bindings || [])
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to fetch access:', err)
       setAccessEntries([])
-      showToast('Failed to fetch namespace access', 'error')
+      const message = err instanceof Error && err.message?.includes('403')
+        ? t('namespaces.adminAccessRequired', 'Admin access required to view namespace details')
+        : t('namespaces.fetchAccessFailed', 'Failed to fetch namespace access')
+      showToast(message, 'error')
     } finally {
       setAccessLoading(false)
     }
-  }, [showToast])
+  }, [showToast, t])
 
   // Initial fetch when clusters are loaded - fetches ALL clusters to populate cache
   // Subsequent filter changes will just filter cached data, no refetch needed
@@ -274,10 +304,10 @@ export function NamespaceManager() {
   }, [fetchNamespaces])
 
   useEffect(() => {
-    if (selectedNamespace) {
+    if (selectedNamespace && isAdmin) {
       fetchAccess(selectedNamespace)
     }
-  }, [selectedNamespace, fetchAccess])
+  }, [selectedNamespace, fetchAccess, isAdmin])
 
   const filteredNamespaces = namespaces.filter(ns =>
     ns.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -330,7 +360,7 @@ export function NamespaceManager() {
         setSelectedNamespace(null)
       }
       setNamespaceToDelete(null)
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to delete namespace:', err)
       setError('Failed to delete namespace')
       showToast('Failed to delete namespace', 'error')
@@ -339,6 +369,7 @@ export function NamespaceManager() {
   }
 
   const handleRevokeAccess = async (binding: NamespaceAccessEntry) => {
+    if (!isAdmin) return
     if (!selectedNamespace) return
 
     if (!confirm(`Revoke access for ${binding.subjectName}?`)) {
@@ -367,7 +398,7 @@ export function NamespaceManager() {
         throw new Error(errorData.error || 'Failed to revoke access')
       }
       fetchAccess(selectedNamespace)
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to revoke access:', err)
       setError('Failed to revoke access')
       showToast('Failed to revoke access', 'error')
@@ -377,7 +408,7 @@ export function NamespaceManager() {
   // Show loading while clusters are being fetched
   if (clustersLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6">
+      <div className="min-h-full flex flex-col items-center justify-center p-6">
         <RefreshCw className="w-16 h-16 text-blue-400 mb-4 animate-spin" />
         <h2 className="text-xl font-semibold text-white mb-2">Loading Clusters...</h2>
         <p className="text-muted-foreground text-center max-w-md">
@@ -390,7 +421,7 @@ export function NamespaceManager() {
   // Show message if no clusters are selected
   if (targetClusters.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6">
+      <div className="min-h-full flex flex-col items-center justify-center p-6">
         <AlertTriangle className="w-16 h-16 text-yellow-400 mb-4" />
         <h2 className="text-xl font-semibold text-white mb-2">No Clusters Selected</h2>
         <p className="text-muted-foreground text-center max-w-md">
@@ -401,7 +432,7 @@ export function NamespaceManager() {
   }
 
   return (
-    <div className="h-full flex flex-col p-6">
+    <div className="min-h-full flex flex-col p-6">
       {/* Header */}
       <DashboardHeader
         title="Namespace Manager"
@@ -444,7 +475,7 @@ export function NamespaceManager() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('common.searchNamespaces')}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="w-full pl-10 pr-4 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
           />
         </div>
         <div className="flex items-center gap-1 p-1 rounded-lg bg-secondary/30">
@@ -627,7 +658,7 @@ export function NamespaceManager() {
             </>
           )}
 
-          {filteredNamespaces.length === 0 && !loading && loadingClusters.size === 0 && (
+          {filteredNamespaces.length === 0 && !loading && loadingClusters.size === 0 && !error && (
             <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
               <Folder className="w-12 h-12 mb-3 opacity-50" />
               <p>{t('namespaces.noNamespaces')}</p>
@@ -641,27 +672,34 @@ export function NamespaceManager() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-medium text-white">{selectedNamespace.name}</h3>
-                <p className="text-sm text-muted-foreground">Access Management</p>
+                <p className="text-sm text-muted-foreground">{t('namespaces.accessManagement', 'Access Management')}</p>
               </div>
-              <button
-                onClick={() => openGrantAccessModal()}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors text-sm"
-              >
-                <UserPlus className="w-4 h-4" />
-                Grant Access
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => openGrantAccessModal()}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors text-sm"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  {t('namespaces.grantAccess', 'Grant Access')}
+                </button>
+              )}
             </div>
 
             <ClusterBadge cluster={selectedNamespace.cluster} size="sm" className="mb-4" />
 
-            {accessLoading ? (
+            {!isAdmin ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">{t('namespaces.adminRequiredForAccess', 'Admin access required to view role bindings')}</p>
+              </div>
+            ) : accessLoading ? (
               <div className="flex items-center justify-center h-20">
                 <div className="spinner w-6 h-6" />
               </div>
             ) : accessEntries.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No role bindings found</p>
+                <p className="text-sm">{t('namespaces.noRoleBindings', 'No role bindings found')}</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -684,7 +722,7 @@ export function NamespaceManager() {
                     <button
                       onClick={() => handleRevokeAccess(entry)}
                       className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      title="Revoke access"
+                      title={t('namespaces.revokeAccess', 'Revoke access')}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

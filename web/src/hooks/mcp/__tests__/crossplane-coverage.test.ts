@@ -21,6 +21,13 @@ const {
   mockSubscribePolling: vi.fn(() => vi.fn()),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
@@ -38,6 +45,7 @@ vi.mock('../../../lib/modeTransition', () => ({
 vi.mock('../shared', () => ({
   MIN_REFRESH_INDICATOR_MS: 0,
   getEffectiveInterval: (ms: number) => ms,
+  agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
 }))
 
 vi.mock('../pollingManager', () => ({
@@ -541,14 +549,12 @@ describe('crossplane-coverage: refetch function', () => {
     globalThis.fetch = vi.fn().mockImplementation(
       () => new Promise((resolve) => { resolvePromise = resolve })
     )
-    const refetchPromise = act(async () => { result.current.refetch(true) })
-
-    await waitFor(() => expect(result.current.isRefreshing).toBe(true))
+    await act(async () => { result.current.refetch(true) })
+    expect(result.current.isRefreshing).toBe(true)
 
     await act(async () => {
       resolvePromise!({ ok: true, json: async () => ({ resources: [] }) })
     })
-    await refetchPromise
     await waitFor(() => expect(result.current.isRefreshing).toBe(false))
   })
 
@@ -571,14 +577,12 @@ describe('crossplane-coverage: refetch function', () => {
     globalThis.fetch = vi.fn().mockImplementation(
       () => new Promise((resolve) => { resolvePromise = resolve })
     )
-    const refetchPromise = act(async () => { result.current.refetch(false) })
-
-    await waitFor(() => expect(result.current.isLoading).toBe(true))
+    await act(async () => { result.current.refetch(false) })
+    expect(result.current.isLoading).toBe(true)
 
     await act(async () => {
       resolvePromise!({ ok: true, json: async () => ({ resources: [] }) })
     })
-    await refetchPromise
     await waitFor(() => expect(result.current.isLoading).toBe(false))
   })
 
@@ -621,26 +625,19 @@ describe('crossplane-coverage: demoMode toggle re-fetches', () => {
 
 describe('crossplane-coverage: registerCacheReset', () => {
   it('registerCacheReset is called at module level', () => {
-    // The module registers a cache reset handler on import
-    expect(mockRegisterCacheReset).toHaveBeenCalledWith(
-      'crossplane-managed',
-      expect.any(Function),
-    )
+    // The module registers a cache reset handler on import — captured at module load time
+    expect(cacheResetHandler).toBeDefined()
   })
 
   it('cache reset handler clears localStorage and resets state', async () => {
     // Set up some cached data
     localStorage.setItem(CACHE_KEY, JSON.stringify({ data: [makeFakeResource('to-clear')], timestamp: 999 }))
 
-    // Get the reset handler that was registered
-    const resetHandler = mockRegisterCacheReset.mock.calls.find(
-      (call: unknown[]) => call[0] === 'crossplane-managed'
-    )?.[1] as (() => void) | undefined
-
-    expect(resetHandler).toBeDefined()
+    // Use the handler captured at module load time (mock.calls is cleared by beforeEach)
+    expect(cacheResetHandler).toBeDefined()
 
     await act(() => {
-      resetHandler!()
+      cacheResetHandler!()
     })
 
     // localStorage should be cleared

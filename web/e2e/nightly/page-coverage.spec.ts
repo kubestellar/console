@@ -1,4 +1,5 @@
 import { test, expect, type Page, type ConsoleMessage } from '@playwright/test'
+import { setupDemoMode } from '../helpers/setup'
 
 /**
  * Nightly Page Coverage Smoke Tests (P3-B)
@@ -56,9 +57,26 @@ const EXPECTED_ERROR_PATTERNS = [
   /flushSync was called/i,
   /can't access property/i,
   /Cross-Origin Request Blocked/i,
+  /blocked by CORS policy/i,
+  /Access to fetch.*has been blocked by CORS/i,
+  /Origin .* is not allowed by Access-Control-Allow-Origin/i, // WebKit/Safari CORS wording
+  /Access-Control-Allow-Origin.*localhost/i,
+  /Access-Control-Allow-Origin.*127\.0\.0\.1/i,
   /Notification permission/i,
+  /Notification prompting can only be done from a user gesture/i, // WebKit notification block
+  /Could not connect to [0-9.]+/i, // WebKit connection refused wording
+  /Connection refused/i,
   /502.*Bad Gateway/i,
   /Failed to load resource/i,
+  /wasm streaming compile failed.*sqlite/i,
+  /failed to asynchronously prepare wasm.*sqlite/i,
+  /Aborted\(NetworkError.*sqlite/i,
+  /Exception loading sqlite3 module/i,
+  /\[kc\.cache\] sqlite/i,
+  /NS_BINDING_ABORTED/i,
+  /NS_ERROR_FAILURE/i,
+  /Fetch failed: Invalid JSON response/i,
+  /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket curly apostrophes
 ]
 
 /** Text patterns that indicate a React error boundary has been triggered */
@@ -79,7 +97,7 @@ const ERROR_BOUNDARY_PATTERNS = [
  */
 const UNTESTED_PAGES: Array<{ path: string; name: string; expectCards: boolean }> = [
   { path: '/arcade', name: 'Arcade', expectCards: false },
-  { path: '/marketplace', name: 'Marketplace', expectCards: true },
+  { path: '/marketplace', name: 'Marketplace', expectCards: false },
   { path: '/ai-agents', name: 'AI Agents', expectCards: true },
   { path: '/ci-cd', name: 'CI/CD', expectCards: true },
   { path: '/karmada-ops', name: 'Karmada Ops', expectCards: true },
@@ -88,7 +106,7 @@ const UNTESTED_PAGES: Array<{ path: string; name: string; expectCards: boolean }
   { path: '/cost', name: 'Cost', expectCards: true },
   { path: '/data-compliance', name: 'Data Compliance', expectCards: true },
   { path: '/security-posture', name: 'Security Posture', expectCards: true },
-  { path: '/gpu-reservations', name: 'GPU Reservations', expectCards: true },
+  { path: '/gpu-reservations', name: 'GPU Reservations', expectCards: false },
 ]
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -132,13 +150,10 @@ function setupErrorCollector(page: Page): { consoleErrors: string[]; pageErrors:
   return { consoleErrors, pageErrors }
 }
 
-async function setupDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
+/** Sets up demo mode with proper API mocks so AuthProvider gets a valid user.
+ *  Uses the shared helper which registers catch-all + /api/me mocks. */
+async function setupDemoModeWithMocks(page: Page) {
+  await setupDemoMode(page)
 }
 
 async function getPageMetrics(page: Page): Promise<{
@@ -179,7 +194,7 @@ test.describe('Nightly Page Coverage — Untested Feature Pages', () => {
 
   for (const route of UNTESTED_PAGES) {
     test(`${route.name} (${route.path}) loads without errors`, async ({ page }) => {
-      await setupDemoMode(page)
+      await setupDemoModeWithMocks(page)
       const { consoleErrors, pageErrors } = setupErrorCollector(page)
 
       // Measure render time

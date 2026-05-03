@@ -757,10 +757,11 @@ export type RendererRegistry = Record<string, RendererFunction>
 export type DataHookFunction = (
   params?: Record<string, unknown>
 ) => {
-  data: unknown[] | undefined
+  data: unknown[] | unknown | undefined
   isLoading: boolean
   error: Error | null
   refetch?: () => void
+  isDemoData?: boolean
 }
 
 /**

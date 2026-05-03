@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Cluster Admin Card E2E Tests — EtcdStatus, DNSHealth, AdmissionWebhooks
@@ -20,11 +21,12 @@ import { test, expect, Page } from '@playwright/test'
 
 const CLUSTER_ADMIN_STORAGE_KEY = 'kubestellar-cluster-admin-cards'
 
-/** Cards under test — injected into localStorage so they appear on /cluster-admin */
+/** Cards under test — injected into localStorage so they appear on /cluster-admin.
+ *  Must use `card_type` (snake_case) to match the DashboardCard interface. */
 const CARDS_UNDER_TEST = [
-  { id: 'test-etcd-1', cardType: 'etcd_status', position: { w: 4, h: 3, x: 0, y: 0 } },
-  { id: 'test-dns-1', cardType: 'dns_health', position: { w: 4, h: 3, x: 4, y: 0 } },
-  { id: 'test-webhooks-1', cardType: 'admission_webhooks', position: { w: 4, h: 3, x: 8, y: 0 } },
+  { id: 'test-etcd-1', card_type: 'etcd_status', position: { w: 4, h: 3, x: 0, y: 0 } },
+  { id: 'test-dns-1', card_type: 'dns_health', position: { w: 4, h: 3, x: 4, y: 0 } },
+  { id: 'test-webhooks-1', card_type: 'admission_webhooks', position: { w: 4, h: 3, x: 8, y: 0 } },
 ]
 
 /** Mock pods returned from /api/mcp endpoints — includes etcd and coredns pods */
@@ -100,6 +102,9 @@ const MOCK_WEBHOOKS = [
  * into localStorage so they render on the /cluster-admin dashboard.
  */
 async function setupClusterAdminTest(page: Page) {
+  // Register catch-all FIRST so specific mocks override it
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', route =>
     route.fulfill({
@@ -148,12 +153,43 @@ async function setupClusterAdminTest(page: Page) {
     })
   )
 
-  // Set auth token and inject cards under test
-  await page.goto('/login')
-  await page.evaluate(
-    ({ storageKey, cards }) => {
+  // Mock the local kc-agent HTTP endpoint (fetchAPI uses http://127.0.0.1:8585/)
+  await page.route('http://127.0.0.1:8585/**', route => {
+    const url = route.request().url()
+    if (url.includes('/clusters') || url.includes('clusters')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ clusters: MOCK_CLUSTERS }),
+      })
+    } else if (url.includes('/pods') || url.includes('pods')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ pods: MOCK_PODS }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ issues: [], events: [], nodes: [] }),
+      })
+    }
+  })
+
+  // Set auth token and inject cards under test via addInitScript
+  // so localStorage is set BEFORE any app code runs
+  await page.addInitScript(
+    ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'false')
+      localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },
     { storageKey: CLUSTER_ADMIN_STORAGE_KEY, cards: CARDS_UNDER_TEST }
@@ -167,6 +203,9 @@ async function setupClusterAdminTest(page: Page) {
  * Setup with delayed API responses so loading/skeleton states are observable.
  */
 async function setupWithLoadingDelay(page: Page) {
+  // Register catch-all FIRST so specific mocks override it
+  await mockApiFallback(page)
+
   await page.route('**/api/me', route =>
     route.fulfill({
       status: 200,
@@ -191,6 +230,16 @@ async function setupWithLoadingDelay(page: Page) {
     })
   })
 
+  // Delay local agent responses too
+  await page.route('http://127.0.0.1:8585/**', async route => {
+    await new Promise(resolve => setTimeout(resolve, 3000))
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [], pods: [] }),
+    })
+  })
+
   await page.route('**/api/admission-webhooks', async route => {
     await new Promise(resolve => setTimeout(resolve, 3000))
     await route.fulfill({
@@ -200,11 +249,17 @@ async function setupWithLoadingDelay(page: Page) {
     })
   })
 
-  await page.goto('/login')
-  await page.evaluate(
-    ({ storageKey, cards }) => {
+  await page.addInitScript(
+    ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'false')
+      localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },
     { storageKey: CLUSTER_ADMIN_STORAGE_KEY, cards: CARDS_UNDER_TEST }
@@ -218,6 +273,9 @@ async function setupWithLoadingDelay(page: Page) {
  * Setup with API errors to test empty/error fallback states.
  */
 async function setupWithErrors(page: Page) {
+  // Register catch-all FIRST so specific mocks override it
+  await mockApiFallback(page)
+
   await page.route('**/api/me', route =>
     route.fulfill({
       status: 200,
@@ -256,6 +314,24 @@ async function setupWithErrors(page: Page) {
     }
   })
 
+  // Mock local agent with empty clusters (error scenario)
+  await page.route('http://127.0.0.1:8585/**', route => {
+    const url = route.request().url()
+    if (url.includes('clusters')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ clusters: [] }),
+      })
+    } else {
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Internal server error' }),
+      })
+    }
+  })
+
   await page.route('**/api/admission-webhooks', route =>
     route.fulfill({
       status: 503,
@@ -264,11 +340,17 @@ async function setupWithErrors(page: Page) {
     })
   )
 
-  await page.goto('/login')
-  await page.evaluate(
-    ({ storageKey, cards }) => {
+  await page.addInitScript(
+    ({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-demo-mode', 'false')
+      localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
       localStorage.setItem(storageKey, JSON.stringify(cards))
     },
     { storageKey: CLUSTER_ADMIN_STORAGE_KEY, cards: CARDS_UNDER_TEST }
@@ -352,7 +434,9 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
 
       // Wait for data to render — should show cluster names from mock data
       // The card groups etcd pods by cluster — expect to see "prod-east" or "staging"
-      await expect(card.getByText('prod-east').or(card.getByText('staging'))).toBeVisible({ timeout: 10000 })
+      // Use .first() to avoid strict-mode violations when multiple cluster names
+      // appear inside the card (e.g. grouped rows + summary). #10790
+      await expect(card.getByText('prod-east').or(card.getByText('staging')).first()).toBeVisible({ timeout: 10000 })
     })
 
     test('EtcdStatus shows health status indicators', async ({ page }) => {
@@ -379,16 +463,21 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       await expect(card).toBeVisible({ timeout: 15000 })
 
       // Should show cluster names from coredns mock pods
-      await expect(card.getByText('prod-east').or(card.getByText('staging'))).toBeVisible({ timeout: 10000 })
+      // Use .first() to avoid strict-mode violations when multiple cluster names
+      // appear inside the card (e.g. grouped rows + summary). #10790
+      await expect(card.getByText('prod-east').or(card.getByText('staging')).first()).toBeVisible({ timeout: 10000 })
     })
 
     test('DNSHealth shows health status indicators for DNS pods', async ({ page }) => {
       const card = page.locator('[data-card-type="dns_health"]')
       await expect(card).toBeVisible({ timeout: 15000 })
 
-      // DNS card shows green (healthy) or yellow (degraded) status dots
-      const statusDots = card.locator('.rounded-full.w-2.h-2, .bg-green-500, .bg-yellow-500')
-      await expect(statusDots.first()).toBeVisible({ timeout: 10000 })
+      // Wait for data to load — cluster name should appear
+      await expect(card.getByText('prod-east').or(card.getByText('staging')).first()).toBeVisible({ timeout: 15000 })
+
+      // DNS card shows per-pod status pills (✓ for running, ✗ for non-running)
+      const statusPills = card.getByText('✓').or(card.getByText('✗'))
+      await expect(statusPills.first()).toBeVisible({ timeout: 10000 })
     })
 
     test('DNSHealth shows restart count when pods have restarts', async ({ page }) => {
@@ -413,11 +502,12 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       const card = page.locator('[data-card-type="admission_webhooks"]')
       await expect(card).toBeVisible({ timeout: 15000 })
 
+      // Wait for tab buttons to appear (indicates data has loaded)
+      await expect(card.locator('button.rounded-full').first()).toBeVisible({ timeout: 15000 })
+
       // Should show webhook names from mock data (or demo fallback)
-      // Look for any webhook-related text content rendered in the card
       const webhookEntries = card.locator('.bg-muted\\/30')
-      const count = await webhookEntries.count()
-      expect(count).toBeGreaterThan(0)
+      await expect(webhookEntries.first()).toBeVisible({ timeout: 10000 })
     })
 
     test('AdmissionWebhooks shows type badges (M for mutating, V for validating)', async ({ page }) => {
@@ -425,9 +515,8 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       await expect(card).toBeVisible({ timeout: 15000 })
 
       // Type badges: "M" for mutating (blue), "V" for validating (purple)
-      const mBadge = card.locator('.bg-blue-500\\/10').first()
-      const vBadge = card.locator('.bg-purple-500\\/10').first()
-      await expect(mBadge.or(vBadge)).toBeVisible({ timeout: 10000 })
+      const badge = card.locator('.bg-blue-500\\/10, .bg-purple-500\\/10').first()
+      await expect(badge).toBeVisible({ timeout: 10000 })
     })
 
     test('AdmissionWebhooks shows failure policy badges', async ({ page }) => {
@@ -512,13 +601,13 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
     test('page does not crash when all APIs return errors', async ({ page }) => {
       await setupWithErrors(page)
 
-      // The cluster-admin page should still render
-      await expect(page.locator('.pt-16')).toBeVisible({ timeout: 15000 })
+      // The cluster-admin page should still render (DashboardPage uses pt-4)
+      await expect(page.locator('.pt-4')).toBeVisible({ timeout: 15000 })
 
       // All three cards should still be in the DOM
-      await expect(page.locator('[data-card-type="etcd_status"]')).toBeVisible()
-      await expect(page.locator('[data-card-type="dns_health"]')).toBeVisible()
-      await expect(page.locator('[data-card-type="admission_webhooks"]')).toBeVisible()
+      await expect(page.locator('[data-card-type="etcd_status"]')).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('[data-card-type="dns_health"]')).toBeVisible({ timeout: 10000 })
+      await expect(page.locator('[data-card-type="admission_webhooks"]')).toBeVisible({ timeout: 10000 })
     })
   })
 

@@ -50,8 +50,9 @@ export function AppStatus(_props: AppStatusProps) {
   const { deployments, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedDeployments()
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = deployments.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: deployments.length > 0,
@@ -67,7 +68,8 @@ export function AppStatus(_props: AppStatusProps) {
   const rawApps = useMemo((): AppData[] => {
     const appMap = new Map<string, AppData>()
 
-    deployments.forEach(dep => {
+    // Guard against undefined hook return (malformed API response) per CLAUDE.md array safety rule (#9889).
+    ;(deployments || []).forEach(dep => {
       const key = dep.name
       if (!appMap.has(key)) {
         appMap.set(key, {
@@ -221,7 +223,7 @@ export function AppStatus(_props: AppStatusProps) {
         <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
           No workloads found
         </div>
-      ) : apps.map((app, idx) => {
+      ) : (apps || []).map((app, idx) => {
         const total = app.status.healthy + app.status.warning + app.status.pending
 
         return (
@@ -284,7 +286,7 @@ export function AppStatus(_props: AppStatusProps) {
 
             {/* Cluster badges */}
             <div className="flex flex-wrap gap-1 mt-2 overflow-hidden">
-              {app.clusters.map((cluster) => (
+              {(app.clusters || []).map((cluster) => (
                 <ClusterBadge key={cluster} cluster={cluster} showIcon={false} />
               ))}
             </div>

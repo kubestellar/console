@@ -10,6 +10,7 @@ export const costDashboardConfig: UnifiedDashboardConfig = {
   route: '/cost',
   statsType: 'cost',
   cards: [
+    { id: 'right-size-advisor-1', cardType: 'right_size_advisor', position: { w: 8, h: 4 } },
     { id: 'cluster-costs-1', cardType: 'cluster_costs', position: { w: 8, h: 4 } },
     { id: 'kubecost-overview-1', cardType: 'kubecost_overview', position: { w: 4, h: 3 } },
     { id: 'opencost-overview-1', cardType: 'opencost_overview', position: { w: 4, h: 3 } },

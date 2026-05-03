@@ -77,6 +77,14 @@ export function useDiagnoseRepairLoop(options: UseDiagnoseRepairLoopOptions): Us
     if (mission.status === 'completed' || mission.status === 'failed' || mission.status === 'cancelled') {
       setState(prev => {
         if (prev.phase !== 'diagnosing') return prev
+        // If the mission failed or was cancelled, transition to failed with specific context
+        if (mission.status === 'failed' || mission.status === 'cancelled') {
+          const stepContext = mission.currentStep ? ` at step: ${mission.currentStep}` : ''
+          const errorDetail = mission.status === 'failed'
+            ? `Diagnosis failed${stepContext}`
+            : `Diagnosis cancelled${stepContext}`
+          return { ...prev, phase: 'failed', error: errorDetail }
+        }
         // Generate proposed repairs from issues
         const proposedRepairs: ProposedRepair[] = repairable
           ? prev.issuesFound.map((issue, idx) => ({
@@ -94,6 +102,81 @@ export function useDiagnoseRepairLoop(options: UseDiagnoseRepairLoopOptions): Us
       })
     }
   }, [missions, state.phase, repairable])
+
+  // Safety timeout for diagnosing phase to prevent getting stuck
+  useEffect(() => {
+    if (state.phase !== 'diagnosing') return
+    
+    const DIAGNOSING_TIMEOUT_MS = 30_000 // 30 seconds safety timeout
+    const handle = setTimeout(() => {
+      setState(prev => {
+        if (prev.phase !== 'diagnosing') return prev
+        console.warn('Diagnosing phase timed out, transitioning to complete')
+        return {
+          ...prev,
+          phase: repairable ? 'proposing-repair' : 'complete',
+          proposedRepairs: repairable
+            ? prev.issuesFound.map((issue, idx) => ({
+                id: `repair-${idx}-${Date.now()}`,
+                issueId: issue.id,
+                action: getDefaultRepairAction(issue),
+                description: getDefaultRepairDescription(issue),
+                risk: getDefaultRepairRisk(issue),
+                approved: false }))
+            : []
+        }
+      })
+    }, DIAGNOSING_TIMEOUT_MS)
+    
+    activeTimers.current.add(handle)
+    return () => {
+      activeTimers.current.delete(handle)
+      clearTimeout(handle)
+    }
+  }, [state.phase, repairable])
+
+  // Listen for repair mission completion to transition from repairing to verifying.
+  // Intentionally omits state.phase from deps: we only want to react to missions
+  // updates (e.g. repair mission status change), NOT to the phase transition itself.
+  // Including state.phase would cause an immediate false trigger when entering
+  // 'repairing' if the diagnosis mission is still in a terminal state. The
+  // setState updater guard (prev.phase !== 'repairing') ensures correctness.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!missionIdRef.current || state.phase !== 'repairing') return
+    const mission = missions.find(m => m.id === missionIdRef.current)
+    if (!mission) return
+
+    // Only transition on successful completion; treat failed/cancelled as errors
+    if (mission.status === 'completed') {
+      setState(prev => {
+        if (prev.phase !== 'repairing') return prev
+        const approvedRepairs = prev.proposedRepairs.filter(r => r.approved)
+        const completed = approvedRepairs.map(r => r.id)
+        const newState = {
+          ...prev,
+          completedRepairs: [...prev.completedRepairs, ...completed],
+          phase: 'verifying' as DiagnoseRepairPhase
+        }
+        if (prev.loopCount >= prev.maxLoops - 1) {
+          newState.phase = 'complete'
+        }
+        return newState
+      })
+    } else if (mission.status === 'failed' || mission.status === 'cancelled') {
+      setState(prev => {
+        if (prev.phase !== 'repairing') return prev
+        const stepContext = mission.currentStep ? ` at step: ${mission.currentStep}` : ''
+        return {
+          ...prev,
+          phase: 'failed',
+          error: mission.status === 'failed'
+            ? `Repair failed${stepContext}`
+            : `Repair cancelled${stepContext}`
+        }
+      })
+    }
+  }, [missions]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setPhase = (phase: DiagnoseRepairPhase) => {
     setState(prev => ({ ...prev, phase }))
@@ -140,11 +223,15 @@ ${repairable ? '3. For each issue, propose a specific repair action with risk as
 
 Respond with your analysis in a clear, structured format. ${repairable ? 'For each proposed repair, indicate the risk level and what command or action would be needed.' : 'Focus on diagnosis and recommendations only.'}`
 
-    // Start mission
+    // Start mission — skip review since the user already clicked "Diagnose"
+    // intentionally. Without skipReview the mission would be queued for the
+    // ConfirmMissionPromptDialog, but the hook immediately transitions to
+    // 'diagnosing' phase expecting the mission to exist in state (#11434).
     const missionId = startMission({
       title: `${monitorType} Diagnosis`,
       description: `Diagnosing workload health issues for ${monitorType}`,
       type: 'troubleshoot',
+      skipReview: true,
       initialPrompt: diagnosePrompt,
       context })
 

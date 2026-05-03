@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
+import { Tooltip } from '../ui/Tooltip'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
@@ -13,9 +15,7 @@ import { checkOAuthConfigured } from '../../lib/api'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
 import { DeveloperSetupDialog } from '../setup/DeveloperSetupDialog'
 // Lazy-load the feedback modal (~67 KB) — only needed when user opens it
-const FeatureRequestModal = lazy(() =>
-  import('../feedback/FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
-)
+const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestModal'), 'FeatureRequestModal')
 
 interface UserProfileDropdownProps {
   user: {
@@ -169,9 +169,11 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   <User className="w-6 h-6 text-purple-400" />
                 </div>
               )}
-              <div>
-                <p className="font-medium text-foreground">{user.github_login}</p>
-                <p className="text-sm text-muted-foreground">{user.email || t('profile.noEmail')}</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-foreground truncate">{user.github_login}</p>
+                <Tooltip content={user.email || t('profile.noEmail')}>
+                  <p className="text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">{user.email || t('profile.noEmail')}</p>
+                </Tooltip>
               </div>
             </div>
           </div>
@@ -179,13 +181,13 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
           {/* User details section */}
           <div className="p-3 space-y-2 border-b border-border">
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
-              <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-muted-foreground flex-shrink-0">{t('profile.email')}</span>
+              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground shrink-0">{t('profile.email')}</span>
               <span className="text-foreground truncate">{user.email || t('profile.notSet')}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
-              <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-muted-foreground flex-shrink-0">{t('profile.slack')}</span>
+              <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-muted-foreground shrink-0">{t('profile.slack')}</span>
               <span className="text-foreground truncate">{user.slack_id || t('profile.notConnected')}</span>
             </div>
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
@@ -379,7 +381,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               onClick={handleLinkedInShare}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
-              <Linkedin className="w-4 h-4 text-[#0A66C2]" />
+              <Linkedin className="w-4 h-4 text-linkedin" />
               <span>{t('feedback.shareOnLinkedIn')}</span>
               <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">+{REWARD_ACTIONS.linkedin_share.coins}</span>
             </button>

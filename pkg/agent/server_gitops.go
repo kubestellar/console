@@ -182,7 +182,7 @@ func gitopsCloneRepo(ctx context.Context, repoURL, branch string) (string, error
 	// misinterpreted as flags by git, regardless of their content.
 	args = append(args, "--", repoURL, tempDir)
 
-	cmd := exec.CommandContext(ctx, "git", args...) // #nosec G204 -- validated above; no shell invoked
+	cmd := execCommandContext(ctx, "git", args...) // #nosec G204 -- validated above; no shell invoked
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 
@@ -338,7 +338,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if !s.validateToken(r) {
@@ -413,7 +413,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "--context", req.Cluster)
 	}
 
-	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	cmd := execCommandContext(ctx, "kubectl", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -461,7 +461,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if !s.validateToken(r) {
@@ -537,7 +537,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 		args = append(args, "--dry-run=client")
 	}
 
-	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	cmd := execCommandContext(ctx, "kubectl", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

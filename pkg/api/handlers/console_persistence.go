@@ -68,7 +68,7 @@ func (h *ConsolePersistenceHandlers) requireAdmin(c *fiber.Ctx) error {
 		return nil // no user store — skip check (dev/demo mode)
 	}
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.userStore.GetUser(currentUserID)
+	currentUser, err := h.userStore.GetUser(c.UserContext(), currentUserID)
 	if err != nil {
 		// Infrastructure failure — don't silently downgrade to a 403 which
 		// would mask a persistent DB outage and make this look like an
@@ -112,7 +112,10 @@ func (h *ConsolePersistenceHandlers) checkClusterHealth(ctx context.Context, clu
 // matches the factory signature.
 func (h *ConsolePersistenceHandlers) getClusterClient(clusterName string) (dynamic.Interface, *rest.Config, error) {
 	if h.k8sClient == nil {
-		return nil, nil, fiber.NewError(503, "Kubernetes client not available")
+		// Factory callback has no *fiber.Ctx, so we cannot call
+		// errNoClusterAccess(c) directly. Use the shared noClusterAccessMsg
+		// constant so the error message stays unified with the helper (#9830).
+		return nil, nil, fiber.NewError(fiber.StatusServiceUnavailable, noClusterAccessMsg)
 	}
 
 	client, err := h.k8sClient.GetDynamicClient(clusterName)

@@ -102,7 +102,7 @@ func (h *TokenUsageHandler) GetUserTokenUsage(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
 	}
 
-	usage, err := h.store.GetUserTokenUsage(userID)
+	usage, err := h.store.GetUserTokenUsage(c.UserContext(), userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load token usage"})
 	}
@@ -149,11 +149,11 @@ func (h *TokenUsageHandler) UpdateUserTokenUsage(c *fiber.Ctx) error {
 		TokensByCategory:   body.TokensByCategory,
 		LastAgentSessionID: body.LastAgentSessionID,
 	}
-	if err := h.store.UpdateUserTokenUsage(usage); err != nil {
+	if err := h.store.UpdateUserTokenUsage(c.UserContext(), usage); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save token usage"})
 	}
 
-	fresh, err := h.store.GetUserTokenUsage(userID)
+	fresh, err := h.store.GetUserTokenUsage(c.UserContext(), userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to reload token usage"})
 	}

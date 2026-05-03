@@ -104,7 +104,7 @@ func (h *RewardsPersistenceHandler) GetUserRewards(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
 	}
 
-	rewards, err := h.store.GetUserRewards(userID)
+	rewards, err := h.store.GetUserRewards(c.UserContext(), userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load rewards"})
 	}
@@ -156,7 +156,7 @@ func (h *RewardsPersistenceHandler) UpdateUserRewards(c *fiber.Ctx) error {
 
 	// Preserve LastDailyBonusAt from the existing row so this endpoint does
 	// NOT become a way to reset the daily-bonus cooldown.
-	existing, err := h.store.GetUserRewards(userID)
+	existing, err := h.store.GetUserRewards(c.UserContext(), userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load rewards"})
 	}
@@ -169,13 +169,13 @@ func (h *RewardsPersistenceHandler) UpdateUserRewards(c *fiber.Ctx) error {
 		BonusPoints:      body.BonusPoints,
 		LastDailyBonusAt: existing.LastDailyBonusAt,
 	}
-	if err := h.store.UpdateUserRewards(rewards); err != nil {
+	if err := h.store.UpdateUserRewards(c.UserContext(), rewards); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save rewards"})
 	}
 
 	// Re-read to return canonical server-side state (including the fresh
 	// updated_at timestamp the store assigned).
-	fresh, err := h.store.GetUserRewards(userID)
+	fresh, err := h.store.GetUserRewards(c.UserContext(), userID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to reload rewards"})
 	}
@@ -236,7 +236,7 @@ func (h *RewardsPersistenceHandler) ClaimDailyBonus(c *fiber.Ctx) error {
 		if errors.Is(err, store.ErrDailyBonusUnavailable) {
 			// Surface the current state so the UI can still render the
 			// existing balances and the timestamp of the last claim.
-			current, getErr := h.store.GetUserRewards(userID)
+			current, getErr := h.store.GetUserRewards(c.UserContext(), userID)
 			if getErr == nil {
 				resp := toResponse(current)
 				return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{

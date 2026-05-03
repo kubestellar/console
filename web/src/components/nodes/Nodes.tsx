@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { AlertCircle, ShieldAlert } from 'lucide-react'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { formatMemoryStat } from '../../lib/formatStats'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
+import { useModal } from '../../hooks/useModal'
+import { useGPUTaintFilter, GPUTaintFilterControl } from '../cards/GPUTaintFilter'
 
 const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
 
@@ -23,8 +24,11 @@ export function Nodes() {
   const error = clustersError
 
   const { drillToAllNodes, drillToAllGPU, drillToAllPods, drillToAllClusters } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
+
+  const { isVisible, hiddenGPUCount, distinctTaints, toleratedKeys, toggle, clear } = useGPUTaintFilter(gpuNodes)
+  const { isOpen: isFilterOpen, setIsOpen: setIsFilterOpen } = useModal()
+  const filterRef = useRef<HTMLDivElement>(null)
 
   // Filter clusters based on global selection
   const filteredClusters = clusters.filter(c =>
@@ -39,6 +43,7 @@ export function Nodes() {
   const totalPods = reachableClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
   const totalGPUs = gpuNodes
     .filter(node => isAllClustersSelected || globalSelectedClusters.includes(node.cluster))
+    .filter(isVisible)
     .reduce((sum, node) => sum + node.gpuCount, 0)
 
   // Calculate utilization
@@ -107,14 +112,27 @@ export function Nodes() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage
       title={t('common:nodes.title')}
       subtitle={t('common:nodes.subtitle')}
       icon="Server"
-      rightExtra={<RotatingTip page="nodes" />}
+      rightExtra={
+        <div className="flex items-center gap-3">
+          <GPUTaintFilterControl
+            distinctTaints={distinctTaints}
+            toleratedKeys={toleratedKeys}
+            onToggle={toggle}
+            onClear={clear}
+            isOpen={isFilterOpen}
+            setIsOpen={setIsFilterOpen}
+            containerRef={filterRef}
+          />
+          <RotatingTip page="nodes" />
+        </div>
+      }
       storageKey={NODES_CARDS_KEY}
       defaultCards={DEFAULT_NODES_CARDS}
       statsType="compute"
@@ -126,12 +144,24 @@ export function Nodes() {
       hasData={reachableClusters.length > 0}
       emptyState={{
         title: t('common:nodes.dashboardTitle'),
-        description: t('common:nodes.emptyDescription') }}
+        description: (
+          <div className="space-y-4">
+            <p>{t('common:nodes.emptyDescription')}</p>
+            {hiddenGPUCount > 0 && (
+              <div className="flex items-center justify-center gap-2 text-amber-400 text-sm bg-amber-500/10 p-3 rounded-lg border border-amber-500/20">
+                <ShieldAlert className="w-4 h-4" />
+                <span>{t('gpuReservations.inventory.hiddenGpus', '{{count}} GPUs hidden', { count: hiddenGPUCount })}</span>
+                <button onClick={clear} className="underline hover:text-amber-300 ml-2">Clear filters</button>
+              </div>
+            )}
+          </div>
+        )
+      }}
     >
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-400">{t('common:nodes.errorLoadingData')}</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>

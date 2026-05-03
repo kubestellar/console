@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, LayoutGrid, ChevronDown, ChevronRight, Layout, AlertTriangle } from 'lucide-react'
 import { useModalState } from '../../lib/modals'
@@ -64,25 +64,25 @@ export function DashboardCards({
     return () => window.removeEventListener('kc-add-card-from-marketplace', handler)
   }, [onAddCard])
 
-  const handleAddCards = (suggestions: CardSuggestion[]) => {
+  const handleAddCards = useCallback((suggestions: CardSuggestion[]) => {
     suggestions.forEach(card => {
       onAddCard(card.type, card.config, card.title)
     })
     addCardModal.close()
-  }
+  }, [onAddCard, addCardModal])
 
-  const handleConfigureCard = (cardId: string) => {
+  const handleConfigureCard = useCallback((cardId: string) => {
     setSelectedCardId(cardId)
     configureModal.open()
-  }
+  }, [configureModal])
 
-  const handleSaveConfig = (cardId: string, config: Record<string, unknown>, _title?: string) => {
+  const handleSaveConfig = useCallback((cardId: string, config: Record<string, unknown>, _title?: string) => {
     onUpdateCardConfig(cardId, config)
     configureModal.close()
     setSelectedCardId(null)
-  }
+  }, [onUpdateCardConfig, configureModal])
 
-  const handleApplyTemplate = (template: DashboardTemplate) => {
+  const handleApplyTemplate = useCallback((template: DashboardTemplate) => {
     // Preserve per-card position (w/h) from the template definition (#7253)
     const newCards: DashboardCard[] = template.cards.map((card, idx) => ({
       id: `${card.card_type}-${Date.now()}-${idx}`,
@@ -93,7 +93,7 @@ export function DashboardCards({
     }))
     onReplaceCards(newCards)
     templatesModal.close()
-  }
+  }, [onReplaceCards, templatesModal])
 
   const selectedCard = cards.find(c => c.id === selectedCardId)
   // Transform to the Card format expected by ConfigureCardModal

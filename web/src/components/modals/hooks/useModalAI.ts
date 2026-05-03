@@ -155,11 +155,15 @@ After I approve, help me execute the repairs step by step.`
       const { kind, name, namespace, cluster } = resource
       const shortName = name.length > MAX_NAME_LENGTH ? name.slice(0, TRUNCATED_NAME_LENGTH) + '...' : name
 
+      // #11434 — Pass skipReview so the mission is created immediately and
+      // the sidebar opens with feedback. Without it the mission was only
+      // queued for the review dialog, leaving no visible state change.
       startMission({
         title: `${action.label} ${shortName}`,
         description: action.description,
         type: action.missionType,
         cluster,
+        skipReview: true,
         initialPrompt: action.promptTemplate,
         context: {
           kind,
@@ -179,6 +183,7 @@ After I approve, help me execute the repairs step by step.`
         description: `Custom question about ${kind}`,
         type: 'custom',
         cluster,
+        skipReview: true,
         initialPrompt: prompt,
         context: {
           kind,

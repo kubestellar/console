@@ -30,6 +30,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
     clusters: [{ name: 'cluster-1' }],
+    deduplicatedClusters: [{ name: 'cluster-1' }],
     isLoading: false,
   }),
 }))

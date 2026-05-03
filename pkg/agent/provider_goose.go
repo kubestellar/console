@@ -116,6 +116,7 @@ func (g *GooseProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 	// --no-session: don't persist session state
 	cmd := exec.CommandContext(execCtx, g.cliPath, "run", "-t", prompt, "-q", "--no-session")
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
+	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

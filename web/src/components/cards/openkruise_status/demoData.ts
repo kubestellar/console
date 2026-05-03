@@ -8,15 +8,13 @@
  * Kubernetes clusters are connected.
  */
 
-/** Time offsets (in milliseconds) used for relative timestamps. */
-const ONE_MINUTE_MS = 60 * 1000
-const FIVE_MINUTES_MS = 5 * ONE_MINUTE_MS
-const FIFTEEN_MINUTES_MS = 15 * ONE_MINUTE_MS
-const ONE_HOUR_MS = 60 * ONE_MINUTE_MS
-const THREE_HOURS_MS = 3 * ONE_HOUR_MS
-const SIX_HOURS_MS = 6 * ONE_HOUR_MS
-const TWELVE_HOURS_MS = 12 * ONE_HOUR_MS
-const ONE_DAY_MS = 24 * ONE_HOUR_MS
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
+
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
+const FIFTEEN_MINUTES_MS = 15 * MS_PER_MINUTE
+const THREE_HOURS_MS = 3 * MS_PER_HOUR
+const SIX_HOURS_MS = 6 * MS_PER_HOUR
+const TWELVE_HOURS_MS = 12 * MS_PER_HOUR
 
 /* ------------------------------------------------------------------ */
 /*  CloneSets                                                          */
@@ -204,7 +202,7 @@ export const OPENKRUISE_DEMO_DATA: OpenKruiseDemoData = {
       partition: 0,
       status: 'healthy',
       image: 'registry.io/recommendation:v0.9.3',
-      updatedAt: new Date(Date.now() - ONE_DAY_MS).toISOString(),
+      updatedAt: new Date(Date.now() - MS_PER_DAY).toISOString(),
     },
     {
       name: 'legacy-batch',
@@ -235,7 +233,7 @@ export const OPENKRUISE_DEMO_DATA: OpenKruiseDemoData = {
       updateStrategy: 'InPlaceIfPossible',
       status: 'healthy',
       image: 'bitnami/kafka:3.7.0',
-      updatedAt: new Date(Date.now() - 2 * ONE_DAY_MS).toISOString(),
+      updatedAt: new Date(Date.now() - 2 * MS_PER_DAY).toISOString(),
     },
     {
       name: 'redis-cluster',
@@ -261,7 +259,7 @@ export const OPENKRUISE_DEMO_DATA: OpenKruiseDemoData = {
       updateStrategy: 'InPlaceIfPossible',
       status: 'healthy',
       image: 'postgres:16.2',
-      updatedAt: new Date(Date.now() - 7 * ONE_DAY_MS).toISOString(),
+      updatedAt: new Date(Date.now() - 7 * MS_PER_DAY).toISOString(),
     },
   ],
 
@@ -278,7 +276,7 @@ export const OPENKRUISE_DEMO_DATA: OpenKruiseDemoData = {
       rollingUpdateType: 'Standard',
       status: 'healthy',
       image: 'prom/node-exporter:v1.8.1',
-      updatedAt: new Date(Date.now() - ONE_DAY_MS).toISOString(),
+      updatedAt: new Date(Date.now() - MS_PER_DAY).toISOString(),
     },
     {
       name: 'fluent-bit',
@@ -364,7 +362,7 @@ export const OPENKRUISE_DEMO_DATA: OpenKruiseDemoData = {
       readyPods: 9,
       updateStrategy: 'RollingUpdate',
       status: 'healthy',
-      updatedAt: new Date(Date.now() - 3 * ONE_DAY_MS).toISOString(),
+      updatedAt: new Date(Date.now() - 3 * MS_PER_DAY).toISOString(),
     },
   ],
 
@@ -406,8 +404,8 @@ export const OPENKRUISE_DEMO_DATA: OpenKruiseDemoData = {
       failed: 12,
       completionPolicyType: 'Never',
       status: 'failed',
-      startedAt: new Date(Date.now() - ONE_DAY_MS).toISOString(),
-      completedAt: new Date(Date.now() - ONE_DAY_MS + ONE_HOUR_MS).toISOString(),
+      startedAt: new Date(Date.now() - MS_PER_DAY).toISOString(),
+      completedAt: new Date(Date.now() - MS_PER_DAY + MS_PER_HOUR).toISOString(),
     },
   ],
 
@@ -432,7 +430,7 @@ export const OPENKRUISE_DEMO_DATA: OpenKruiseDemoData = {
       schedule: '0 3 * * 0',
       templateKind: 'BroadcastJob',
       active: 0,
-      lastScheduleTime: new Date(Date.now() - 3 * ONE_DAY_MS).toISOString(),
+      lastScheduleTime: new Date(Date.now() - 3 * MS_PER_DAY).toISOString(),
       status: 'active',
       successfulRuns: 12,
       failedRuns: 0,

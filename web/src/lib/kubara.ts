@@ -1,3 +1,6 @@
+import { MILLICORES_PER_CORE, MIB_PER_GIB, KIB_PER_MIB, GB_TO_MIB, MB_TO_MIB, BYTES_PER_MIB } from './constants/units'
+import { MS_PER_MINUTE } from './constants/time'
+
 /**
  * Kubara catalog utilities for Mission Control integration.
  *
@@ -19,18 +22,21 @@ const KUBARA_CATALOG_FETCH_TIMEOUT_MS = 8_000
 /** Timeout (ms) for fetching a single chart's values.yaml */
 const KUBARA_VALUES_FETCH_TIMEOUT_MS = 10_000
 
-/** Base path inside the kubara-io/kubara repo for Helm charts */
-const KUBARA_HELM_BASE_PATH = 'go-binary/templates/embedded/managed-service-catalog/helm'
+/** Default GitHub repo (owner/name) — overridden by /api/kubara/config */
+const KUBARA_DEFAULT_REPO = 'kubara-io/kubara'
+
+/** Default path inside the repo — overridden by /api/kubara/config */
+const KUBARA_DEFAULT_PATH = 'go-binary/templates/embedded/managed-service-catalog/helm'
 
 /** In-memory TTL for the catalog index cache (ms) — avoids redundant fetches */
-const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000
+const CATALOG_CACHE_TTL_MS = 5 * MS_PER_MINUTE
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 /** A single entry in the Kubara chart catalog */
-export interface KubaraChartEntry {
+interface KubaraChartEntry {
   /** Chart name (e.g. "kube-prometheus-stack") */
   name: string
   /** Relative path inside the repo (e.g. "go-binary/.../helm/kube-prometheus-stack") */
@@ -48,27 +54,52 @@ export interface KubaraResourceRequests {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory catalog cache
+// In-memory catalog cache + server config
 // ---------------------------------------------------------------------------
 
 let cachedCatalog: KubaraChartEntry[] | null = null
 let cachedCatalogTimestamp = 0
+
+// Resolved once from /api/kubara/config; falls back to defaults if unreachable
+let resolvedRepo = KUBARA_DEFAULT_REPO
+let resolvedPath = KUBARA_DEFAULT_PATH
+let configPromise: Promise<void> | null = null
+
+async function ensureConfig(): Promise<void> {
+  if (configPromise) return configPromise
+  configPromise = (async () => {
+    try {
+      const res = await fetch('/api/kubara/config', {
+        signal: AbortSignal.timeout(KUBARA_CATALOG_FETCH_TIMEOUT_MS),
+      })
+      if (res.ok) {
+        const cfg = (await res.json()) as { repo?: string; path?: string }
+        if (cfg.repo) resolvedRepo = cfg.repo
+        if (cfg.path) resolvedPath = cfg.path
+      }
+    } catch {
+      // Backend unreachable — allow retry on next call
+      configPromise = null
+    }
+  })()
+  return configPromise
+}
 
 // ---------------------------------------------------------------------------
 // Static fallback catalog (used in demo mode and when fetch fails)
 // ---------------------------------------------------------------------------
 
 const STATIC_KUBARA_CHARTS: KubaraChartEntry[] = [
-  { name: 'kube-prometheus-stack', path: `${KUBARA_HELM_BASE_PATH}/kube-prometheus-stack`, description: 'Production Prometheus + Grafana + Alertmanager' },
-  { name: 'cert-manager', path: `${KUBARA_HELM_BASE_PATH}/cert-manager`, description: 'Automated TLS certificate management' },
-  { name: 'kyverno', path: `${KUBARA_HELM_BASE_PATH}/kyverno`, description: 'Kubernetes policy engine for security' },
-  { name: 'kyverno-policies', path: `${KUBARA_HELM_BASE_PATH}/kyverno-policies`, description: 'Curated Kyverno policy library' },
-  { name: 'argo-cd', path: `${KUBARA_HELM_BASE_PATH}/argo-cd`, description: 'Declarative GitOps continuous delivery' },
-  { name: 'external-secrets', path: `${KUBARA_HELM_BASE_PATH}/external-secrets`, description: 'Sync secrets from external providers' },
-  { name: 'loki', path: `${KUBARA_HELM_BASE_PATH}/loki`, description: 'Log aggregation system' },
-  { name: 'longhorn', path: `${KUBARA_HELM_BASE_PATH}/longhorn`, description: 'Cloud-native distributed storage' },
-  { name: 'metallb', path: `${KUBARA_HELM_BASE_PATH}/metallb`, description: 'Bare metal load balancer for Kubernetes' },
-  { name: 'traefik', path: `${KUBARA_HELM_BASE_PATH}/traefik`, description: 'Cloud-native ingress controller' },
+  { name: 'kube-prometheus-stack', path: `${KUBARA_DEFAULT_PATH}/kube-prometheus-stack`, description: 'Production Prometheus + Grafana + Alertmanager' },
+  { name: 'cert-manager', path: `${KUBARA_DEFAULT_PATH}/cert-manager`, description: 'Automated TLS certificate management' },
+  { name: 'kyverno', path: `${KUBARA_DEFAULT_PATH}/kyverno`, description: 'Kubernetes policy engine for security' },
+  { name: 'kyverno-policies', path: `${KUBARA_DEFAULT_PATH}/kyverno-policies`, description: 'Curated Kyverno policy library' },
+  { name: 'argo-cd', path: `${KUBARA_DEFAULT_PATH}/argo-cd`, description: 'Declarative GitOps continuous delivery' },
+  { name: 'external-secrets', path: `${KUBARA_DEFAULT_PATH}/external-secrets`, description: 'Sync secrets from external providers' },
+  { name: 'loki', path: `${KUBARA_DEFAULT_PATH}/loki`, description: 'Log aggregation system' },
+  { name: 'longhorn', path: `${KUBARA_DEFAULT_PATH}/longhorn`, description: 'Cloud-native distributed storage' },
+  { name: 'metallb', path: `${KUBARA_DEFAULT_PATH}/metallb`, description: 'Bare metal load balancer for Kubernetes' },
+  { name: 'traefik', path: `${KUBARA_DEFAULT_PATH}/traefik`, description: 'Cloud-native ingress controller' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -87,8 +118,10 @@ export async function fetchKubaraCatalog(): Promise<KubaraChartEntry[]> {
     return cachedCatalog
   }
 
+  await ensureConfig()
+
   try {
-    const url = `/api/github/repos/kubara-io/kubara/contents/${encodeURIComponent(KUBARA_HELM_BASE_PATH)}`
+    const url = `/api/github/repos/${resolvedRepo}/contents/${encodeURIComponent(resolvedPath)}`
     const response = await fetch(url, {
       signal: AbortSignal.timeout(KUBARA_CATALOG_FETCH_TIMEOUT_MS),
     })
@@ -139,8 +172,9 @@ export async function fetchKubaraValues(
   valuesUrl?: string,
 ): Promise<string | null> {
   try {
+    await ensureConfig()
     const url = valuesUrl
-      ?? `/api/github/repos/kubara-io/kubara/contents/${encodeURIComponent(`${KUBARA_HELM_BASE_PATH}/${chartName}/values.yaml`)}`
+      ?? `/api/github/repos/${resolvedRepo}/contents/${encodeURIComponent(`${resolvedPath}/${chartName}/values.yaml`)}`
     const response = await fetch(url, {
       signal: AbortSignal.timeout(KUBARA_VALUES_FETCH_TIMEOUT_MS),
     })
@@ -193,24 +227,15 @@ function parseCpuToMillicores(cpu: string): number {
   if (cpu.endsWith('m')) {
     return parseInt(cpu.slice(0, -1), 10) || 0
   }
-  // Whole or decimal cores → millicores
-  const MILLICORES_PER_CORE = 1000
   return Math.round((parseFloat(cpu) || 0) * MILLICORES_PER_CORE)
 }
 
 /** Convert a Kubernetes memory string (e.g. "128Mi", "1Gi", "512M") to MiB */
 function parseMemoryToMiB(mem: string): number {
-  const GI_TO_MIB = 1024
-  const KI_TO_MIB = 1 / 1024
-  const G_TO_MIB = 1000 * 1000 / (1024 * 1024) // ~953.67
-  const M_TO_MIB = 1000 * 1000 / (1024 * 1024)  // ~0.954 per MB
-
-  if (mem.endsWith('Gi')) return Math.round((parseFloat(mem) || 0) * GI_TO_MIB)
+  if (mem.endsWith('Gi')) return Math.round((parseFloat(mem) || 0) * MIB_PER_GIB)
   if (mem.endsWith('Mi')) return Math.round(parseFloat(mem) || 0)
-  if (mem.endsWith('Ki')) return Math.round((parseFloat(mem) || 0) * KI_TO_MIB)
-  if (mem.endsWith('G')) return Math.round((parseFloat(mem) || 0) * G_TO_MIB)
-  if (mem.endsWith('M')) return Math.round((parseFloat(mem) || 0) * M_TO_MIB)
-  // Raw number — assume bytes → MiB
-  const BYTES_PER_MIB = 1024 * 1024
+  if (mem.endsWith('Ki')) return Math.round((parseFloat(mem) || 0) / KIB_PER_MIB)
+  if (mem.endsWith('G')) return Math.round((parseFloat(mem) || 0) * GB_TO_MIB)
+  if (mem.endsWith('M')) return Math.round((parseFloat(mem) || 0) * MB_TO_MIB)
   return Math.round((parseFloat(mem) || 0) / BYTES_PER_MIB)
 }

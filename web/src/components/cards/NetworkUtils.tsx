@@ -5,6 +5,7 @@ import {
   AlertTriangle, Loader2
 } from 'lucide-react'
 import { useCardLoadingState } from './CardDataContext'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 
 // Types
@@ -57,6 +58,19 @@ const PING_INTERVALS = [
   { value: 30000, label: '30s' },
 ]
 
+// Demo ping result for demo mode (avoids backend API calls)
+function getDemoPingResult(host: string): PingResult {
+  const DEMO_LATENCIES = [12, 45, 28, 67, 8, 35, 92]
+  const latency = DEMO_LATENCIES[Math.abs(host.length) % DEMO_LATENCIES.length]
+  return {
+    host,
+    latency,
+    status: 'success',
+    timestamp: new Date(),
+    statusCode: 200,
+  }
+}
+
 // Default hosts to ping
 const DEFAULT_HOSTS = [
   'https://www.google.com',
@@ -66,9 +80,10 @@ const DEFAULT_HOSTS = [
 
 export function NetworkUtils() {
   const { t } = useTranslation()
+  const { isDemoMode } = useDemoMode()
   const [activeTab, setActiveTab] = useState<'ping' | 'ports' | 'info'>('ping')
   const [isInitialized, setIsInitialized] = useState(false)
-  useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized, isDemoData: false })
+  useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized, isDemoData: isDemoMode })
   const [savedHosts, setSavedHosts] = useState<SavedHost[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -131,7 +146,11 @@ export function NetworkUtils() {
   // The backend performs a real HTTP HEAD request and returns the actual
   // status code and server-side measured latency, avoiding the browser's
   // no-cors limitation where opaque responses hide failures.
+  // In demo mode, returns simulated results to avoid backend dependency.
   const pingHost = useCallback(async (host: string): Promise<PingResult> => {
+    if (isDemoMode) {
+      return getDemoPingResult(host)
+    }
     try {
       // Ensure URL has protocol for the backend
       let targetUrl = host
@@ -175,7 +194,7 @@ export function NetworkUtils() {
         timestamp: new Date(),
         statusCode: data.statusCode,
         error: data.error || undefined }
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof Error && error.name === 'AbortError') {
         return {
           host,
@@ -191,7 +210,7 @@ export function NetworkUtils() {
         timestamp: new Date(),
         error: error instanceof Error ? error.message : 'unknown error' }
     }
-  }, [])
+  }, [isDemoMode])
 
   // Ping all saved hosts
   const pingAllHosts = useCallback(async () => {
@@ -369,7 +388,7 @@ export function NetworkUtils() {
                 onChange={(e) => setHostInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addHost('ping')}
                 placeholder={t('networkUtils.hostOrUrl')}
-                className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
               <button
                 onClick={() => addHost('ping')}
@@ -383,11 +402,13 @@ export function NetworkUtils() {
             <div className="flex gap-2 mb-3">
               <button
                 onClick={() => setContinuousPing(!continuousPing)}
-                className={`flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-sm rounded transition-colors ${
+                disabled={!continuousPing && pingHosts.length === 0}
+                className={`flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-sm rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   continuousPing
                     ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                     : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                 }`}
+                title={pingHosts.length === 0 ? t('networkUtils.noHostsWarning') : undefined}
               >
                 {continuousPing ? (
                   <>
@@ -405,7 +426,7 @@ export function NetworkUtils() {
               <select
                 value={pingInterval}
                 onChange={(e) => setPingInterval(Number(e.target.value))}
-                className="px-2 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                className="px-2 py-1.5 text-sm bg-secondary border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary"
                 title={t('networkUtils.pingInterval')}
               >
                 {PING_INTERVALS.map(({ value, label }) => (
@@ -416,7 +437,7 @@ export function NetworkUtils() {
               </select>
               <button
                 onClick={pingAllHosts}
-                disabled={isPinging || continuousPing}
+                disabled={isPinging || continuousPing || pingHosts.length === 0}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm bg-secondary hover:bg-secondary/80 rounded disabled:opacity-50"
                 title={t('networkUtils.pingOnce')}
               >
@@ -516,14 +537,14 @@ export function NetworkUtils() {
                 value={hostInput}
                 onChange={(e) => setHostInput(e.target.value)}
                 placeholder={t('networkUtils.host')}
-                className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
               <input
                 type="number"
                 value={portInput}
                 onChange={(e) => setPortInput(e.target.value)}
                 placeholder={t('networkUtils.port')}
-                className="w-20 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-20 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
               <button
                 onClick={() => addHost('port')}

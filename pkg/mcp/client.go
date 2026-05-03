@@ -32,10 +32,11 @@ type Client struct {
 	// int64 — a type mismatch that caused every call() to block until the
 	// context deadline fired (#6622).
 	pending  map[string]chan *Response
-	tools    []Tool
-	ready    atomic.Bool // protected via atomic to avoid data races (#6942)
-	done     chan struct{}
-	stopOnce sync.Once
+	tools         []Tool
+	ready         atomic.Bool // protected via atomic to avoid data races (#6942)
+	done          chan struct{}
+	stopOnce      sync.Once
+	stdinCloseOnce sync.Once
 }
 
 // idKey converts a JSON-RPC request/response ID of any supported shape
@@ -180,11 +181,14 @@ func NewClient(name, binaryPath string, args ...string) (*Client, error) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		stdin.Close()
 		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
+		stdin.Close()
+		stdout.Close()
 		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
@@ -272,9 +276,7 @@ func (c *Client) Stop() error {
 		c.mu.Unlock()
 
 		// Close stdin pipe to send EOF to the server process
-		if c.stdin != nil {
-			c.stdin.Close()
-		}
+		c.closeStdin()
 
 		if c.cmd != nil && c.cmd.Process != nil {
 			// Kill the process, then Wait() to reap it and release OS resources
@@ -424,6 +426,14 @@ func (c *Client) notify(method string, params interface{}) error {
 	return c.send(req)
 }
 
+func (c *Client) closeStdin() {
+	c.stdinCloseOnce.Do(func() {
+		if c.stdin != nil {
+			c.stdin.Close()
+		}
+	})
+}
+
 // stdinWriteTimeout is how long send() waits for a stdin write before
 // giving up. If the child process stops consuming stdin the OS pipe
 // buffer fills and Write blocks; this timeout prevents holding the
@@ -463,9 +473,7 @@ func (c *Client) send(req Request) error {
 	case <-time.After(stdinWriteTimeout):
 		// Close stdin to unblock the stuck Write goroutine — this causes
 		// Write to return with an error, releasing writeMu via defer.
-		if c.stdin != nil {
-			c.stdin.Close()
-		}
+		c.closeStdin()
 		return fmt.Errorf("stdin write timed out after %s (child process may have stopped)", stdinWriteTimeout)
 	case <-c.done:
 		return fmt.Errorf("client stopped while writing to stdin")

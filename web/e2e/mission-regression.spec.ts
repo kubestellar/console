@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Mission System Regression Tests
@@ -14,6 +15,9 @@ import { test, expect, Page } from '@playwright/test'
  */
 
 async function setupMissionTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -94,11 +98,17 @@ async function setupMissionTest(page: Page) {
     }
   })
 
-  // Set auth token and navigate
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Seed auth token + onboarded flag BEFORE any page script runs
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 }
 
@@ -134,6 +144,7 @@ test.describe('Mission System Regression Tests', () => {
       // Open mission sidebar if present
       const missionToggle = page.locator('[data-testid="mission-sidebar-toggle"]')
         .or(page.locator('button[aria-label*="mission" i]'))
+        .or(page.locator('[data-tour="ai-missions-toggle"]'))
         .or(page.locator('button:has-text("Missions")'))
 
       if (await missionToggle.first().isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -148,12 +159,12 @@ test.describe('Mission System Regression Tests', () => {
 
           // Wait for mission content to load in the sidebar
           const missionSidebar = page.locator('[data-testid="mission-sidebar"]')
-            .or(page.locator('[class*="mission"][class*="sidebar"]'))
+            .or(page.locator('[data-tour="ai-missions"]'))
             .first()
           await expect(missionSidebar).toBeVisible({ timeout: 5000 })
 
           const sidebarContent = await page.locator('[data-testid="mission-sidebar"]')
-            .or(page.locator('[class*="mission"][class*="sidebar"]'))
+            .or(page.locator('[data-tour="ai-missions"]'))
             .first()
             .textContent()
             .catch(() => '')

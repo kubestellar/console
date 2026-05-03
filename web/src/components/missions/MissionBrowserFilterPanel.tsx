@@ -231,7 +231,7 @@ export function MissionBrowserFilterPanel({
           value={cncfFilter}
           onChange={(e) => onCncfFilterChange(e.target.value)}
           placeholder="e.g. Istio, Envoy…"
-          className="w-36 px-2 py-0.5 text-[11px] bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+          className="w-36 px-2 py-0.5 text-[11px] bg-secondary border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
         />
       </div>
 

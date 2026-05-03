@@ -19,6 +19,13 @@ const {
   mockRegisterCacheReset: vi.fn(() => vi.fn()),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
@@ -36,6 +43,7 @@ vi.mock('../../../lib/modeTransition', () => ({
 vi.mock('../shared', () => ({
   MIN_REFRESH_INDICATOR_MS: 500,
   getEffectiveInterval: (ms: number) => ms,
+  agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
 }))
 
 vi.mock('../../../lib/constants/network', async (importOriginal) => {

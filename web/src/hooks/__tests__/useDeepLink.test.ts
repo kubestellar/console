@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { buildDeepLinkURL } from '../useDeepLink'
+import { buildDeepLinkURL, sendNotificationWithDeepLink } from '../useDeepLink'
 
 // ── Mocks ──────────────────────────────────────────────────────────────
 
@@ -46,6 +46,10 @@ vi.mock('../../config/routes', () => ({
     SECURITY: '/security',
     ALERTS: '/alerts',
   },
+}))
+
+vi.mock('../useDoNotDisturb', () => ({
+  isDNDActive: () => false,
 }))
 
 // ── Tests ──────────────────────────────────────────────────────────────
@@ -512,5 +516,136 @@ describe('useDeepLink hook', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/security')
       expect(mockDrillToCluster).not.toHaveBeenCalled()
     })
+  })
+})
+
+// ── sendNotificationWithDeepLink tests ─────────────────────────────
+
+describe('sendNotificationWithDeepLink', () => {
+  let originalNotification: typeof Notification
+
+  beforeEach(() => {
+    originalNotification = globalThis.Notification
+  })
+
+  afterEach(() => {
+    globalThis.Notification = originalNotification
+    vi.restoreAllMocks()
+  })
+
+  it('does nothing when Notification API is not available', () => {
+    // Remove Notification from window
+    const desc = Object.getOwnPropertyDescriptor(window, 'Notification')
+    // @ts-expect-error - testing missing API
+    delete (window as Record<string, unknown>).Notification
+    // Should not throw
+    sendNotificationWithDeepLink('Test', 'body', { cluster: 'c1' })
+    // Restore
+    if (desc) Object.defineProperty(window, 'Notification', desc)
+  })
+
+  it('does nothing when Notification permission is not granted', () => {
+    Object.defineProperty(window, 'Notification', {
+      value: { permission: 'denied' },
+      writable: true,
+      configurable: true,
+    })
+    // Should not throw
+    sendNotificationWithDeepLink('Test', 'body', { cluster: 'c1' })
+  })
+
+  it('sends notification when permission is granted and SW is unavailable', async () => {
+    const mockNotificationInstance = {
+      onclick: null as ((e: Event) => void) | null,
+      close: vi.fn(),
+    }
+    class MockNotification {
+      static permission = 'granted'
+      onclick: ((e: Event) => void) | null = null
+      close = vi.fn()
+      constructor(public title: string, public options?: NotificationOptions) {
+        mockNotificationInstance.onclick = null
+        mockNotificationInstance.close = this.close
+        // Capture onclick assignment via proxy
+        Object.defineProperty(this, 'onclick', {
+          set: (fn: ((e: Event) => void) | null) => { mockNotificationInstance.onclick = fn },
+          get: () => mockNotificationInstance.onclick,
+        })
+      }
+    }
+    Object.defineProperty(window, 'Notification', {
+      value: MockNotification,
+      writable: true,
+      configurable: true,
+    })
+
+    // Mock navigator.serviceWorker to not support registration
+    const origSW = navigator.serviceWorker
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { register: vi.fn().mockRejectedValue(new Error('SW not supported')) },
+      configurable: true,
+    })
+
+    sendNotificationWithDeepLink('Alert', 'Node down', { drilldown: 'node', cluster: 'c1', node: 'n1' })
+
+    // Wait for async getNotificationSW to resolve and standard notification to be created
+    await vi.waitFor(() => {
+      expect(mockNotificationInstance.onclick).toBeDefined()
+    })
+
+    // Restore
+    Object.defineProperty(navigator, 'serviceWorker', { value: origSW, configurable: true })
+  })
+
+  it('notification onclick focuses window', async () => {
+    const mockNotificationInstance = {
+      onclick: null as ((e: Event) => void) | null,
+      close: vi.fn(),
+    }
+    class MockNotification2 {
+      static permission = 'granted'
+      onclick: ((e: Event) => void) | null = null
+      close = vi.fn()
+      constructor(public title: string, public options?: NotificationOptions) {
+        mockNotificationInstance.close = this.close
+        Object.defineProperty(this, 'onclick', {
+          set: (fn: ((e: Event) => void) | null) => { mockNotificationInstance.onclick = fn },
+          get: () => mockNotificationInstance.onclick,
+        })
+      }
+    }
+    Object.defineProperty(window, 'Notification', {
+      value: MockNotification2,
+      writable: true,
+      configurable: true,
+    })
+
+    // No serviceWorker
+    const origSW = navigator.serviceWorker
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: undefined,
+      configurable: true,
+    })
+
+    sendNotificationWithDeepLink('Test', 'body', { cluster: 'c1' })
+
+    await vi.waitFor(() => {
+      expect(mockNotificationInstance.onclick).not.toBeNull()
+    })
+
+    // Simulate onclick
+    const mockFocus = vi.fn()
+    const mockOpen = vi.fn().mockReturnValue({ focus: mockFocus })
+    vi.stubGlobal('open', mockOpen)
+
+    if (mockNotificationInstance.onclick) {
+      const event = { preventDefault: vi.fn() } as unknown as Event
+      mockNotificationInstance.onclick(event)
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect(mockNotificationInstance.close).toHaveBeenCalled()
+    }
+
+    vi.unstubAllGlobals()
+    Object.defineProperty(navigator, 'serviceWorker', { value: origSW, configurable: true })
   })
 })

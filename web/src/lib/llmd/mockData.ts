@@ -5,6 +5,11 @@
  * Used when VPN is unavailable or for demo purposes.
  */
 
+import { MS_PER_MINUTE } from '../constants/time'
+
+// Named time-offset constant for demo timestamp (CLAUDE.md: No Magic Numbers)
+const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
+
 // KVCache status per pod
 export interface KVCacheStats {
   podName: string
@@ -407,7 +412,7 @@ export function generateAIInsights(): AIInsight[] {
       description: 'Average prompt length increased 40% in the last hour. This may impact prefill performance.',
       recommendation: 'Monitor TTFT metrics. Consider adjusting prefill replica count if latency increases.',
       metrics: { 'Avg Prompt Length': '+40%', 'TTFT Change': '+15%' },
-      timestamp: new Date(Date.now() - 1800000), // 30 min ago
+      timestamp: new Date(Date.now() - THIRTY_MINUTES_MS),
     },
   ]
 }

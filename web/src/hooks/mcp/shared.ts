@@ -2,21 +2,27 @@ import { startTransition } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
+import { isInClusterMode } from '../useBackendHealth'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
-import { hostnameEndsWith, hostnameContainsLabel } from '../../lib/utils/urlHostname'
+import { clusterCacheRef, setClusterCacheRefClusters } from './clusterCacheRef'
+import { appendWsAuthToken } from '../../lib/utils/wsAuth'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import {
   LOCAL_AGENT_HTTP_URL,
   MCP_HOOK_TIMEOUT_MS,
   METRICS_SERVER_TIMEOUT_MS,
-  STORAGE_KEY_TOKEN,
+  DEFAULT_REFRESH_INTERVAL_MS,
 } from '../../lib/constants'
-import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS } from '../../lib/constants/network'
+import { STORAGE_KEY_TOKEN } from '../../lib/constants/storage'
+import { MCP_PROBE_TIMEOUT_MS, FOCUS_DELAY_MS, KUBECTL_MAX_TIMEOUT_MS } from '../../lib/constants/network'
 import type { ClusterInfo, ClusterHealth } from './types'
+import { LOCAL_AGENT_URL, agentFetch, AGENT_TOKEN_STORAGE_KEY } from './agentFetch'
+import { shareMetricsBetweenSameServerClusters, deduplicateClustersByServer, detectDistributionFromNamespaces, detectDistributionFromServer } from './clusterUtils'
 
-// Refresh interval for automatic polling (2 minutes) - manual refresh bypasses this
-export const REFRESH_INTERVAL_MS = 120000
+// Re-export canonical constant under the name used by MCP hooks
+export const REFRESH_INTERVAL_MS = DEFAULT_REFRESH_INTERVAL_MS
 
 // Polling intervals for cluster and GPU data freshness
 export const CLUSTER_POLL_INTERVAL_MS = 60000  // 60 seconds
@@ -25,12 +31,16 @@ export const GPU_POLL_INTERVAL_MS = 30000      // 30 seconds
 /** Cache TTL: matches cluster poll interval for freshness checks */
 export const CACHE_TTL_MS = CLUSTER_POLL_INTERVAL_MS
 
-export function getEffectiveInterval(baseInterval: number): number {
-  return baseInterval
-}
+/** Backoff multiplier applied per consecutive failure (2x, 4x, 8x …) */
+const FAILURE_BACKOFF_MULTIPLIER = 2
+/** Maximum polling interval after repeated failures (10 minutes) */
+const MAX_BACKOFF_INTERVAL_MS = 600_000
 
-/** Name length above which a cluster context name is considered auto-generated */
-const AUTO_GENERATED_NAME_LENGTH_THRESHOLD = 50
+export function getEffectiveInterval(baseInterval: number, consecutiveFailures = 0): number {
+  if (consecutiveFailures <= 0) return baseInterval
+  const multiplier = Math.pow(FAILURE_BACKOFF_MULTIPLIER, Math.min(consecutiveFailures, 5))
+  return Math.min(baseInterval * multiplier, MAX_BACKOFF_INTERVAL_MS)
+}
 
 /** Debounce delay for batching rapid cluster health check notifications */
 const CLUSTER_NOTIFY_DEBOUNCE_MS = 50
@@ -38,24 +48,8 @@ const CLUSTER_NOTIFY_DEBOUNCE_MS = 50
 // Minimum time to show the "Updating" indicator (ensures visibility for fast API responses)
 export const MIN_REFRESH_INDICATOR_MS = 500
 
-// Re-export for backward compatibility
-export const LOCAL_AGENT_URL = LOCAL_AGENT_HTTP_URL
-
-/**
- * Drop-in replacement for `fetch()` that auto-injects the KC_AGENT_TOKEN
- * Authorization header when calling the kc-agent HTTP API. Without this,
- * requests to kc-agent are rejected when KC_AGENT_TOKEN is configured.
- */
-export function agentFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  const headers = new Headers(init?.headers)
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`)
-  }
-  // Use caller-provided signal, or fall back to a default timeout
-  const signal = init?.signal ?? AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS)
-  return fetch(input, { ...init, headers, signal })
-}
+// agentFetch — extracted to ./agentFetch (auth-injecting fetch wrapper)
+export { LOCAL_AGENT_URL, agentFetch, _resetAgentTokenState } from './agentFetch'
 
 // ============================================================================
 // Shared Cluster State - ensures all useClusters() consumers see the same data
@@ -187,8 +181,7 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
     if (stored) {
       const parsed = JSON.parse(stored)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Filter out long context-path duplicates from cached data
-        return parsed.filter((c: ClusterInfo) => !c.name.includes('/'))
+        return parsed
       }
     }
   } catch {
@@ -199,9 +192,11 @@ function loadClusterCacheFromStorage(): ClusterInfo[] {
 
 function saveClusterCacheToStorage(clusters: ClusterInfo[]) {
   try {
-    // Only save clusters with meaningful data
-    // Filter out long context-path duplicates before saving
-    const toSave = clusters.filter(c => c.name && !c.name.includes("/")).map(c => ({
+    // Only save clusters with meaningful data.
+    // Filter out clusters whose name contains a slash — these are auto-generated
+    // OpenShift context names (e.g. "default/api-*.openshiftapps.com:6443/kube:admin")
+    // that should not pollute the persistent cache.
+    const toSave = clusters.filter(c => c.name && !c.name.includes('/')).map(c => ({
       name: c.name,
       context: c.context,
       server: c.server,
@@ -292,6 +287,9 @@ export let clusterCache: ClusterCache = {
   lastRefresh: storedClusters.length > 0 ? new Date() : null,
 }
 
+// Seed the standalone clusterCacheRef at module init
+setClusterCacheRefClusters(storedClusters)
+
 // Subscribers that get notified when cluster state changes.
 // Split into two sets (#7865):
 //  - dataSubscribers: notified inside React.startTransition(), so navigation
@@ -315,14 +313,14 @@ export const clusterSubscribers: Set<ClusterSubscriber> = new Set<ClusterSubscri
 export function notifyClusterDataSubscribers() {
   const snapshot = clusterCache
   startTransition(() => {
-    dataSubscribers.forEach(subscriber => subscriber(snapshot))
+    Array.from(dataSubscribers).forEach(subscriber => subscriber(snapshot))
   })
 }
 
 /** Notify only UI subscribers, urgently (outside startTransition). */
 export function notifyClusterUISubscribers() {
   const snapshot = clusterCache
-  uiSubscribers.forEach(subscriber => subscriber(snapshot))
+  Array.from(uiSubscribers).forEach(subscriber => subscriber(snapshot))
 }
 
 /**
@@ -341,11 +339,11 @@ export function notifyClusterUISubscribers() {
 export function notifyClusterSubscribers() {
   const snapshot = clusterCache
   // Urgent leg — UI subscribers + legacy (merged) subscribers.
-  uiSubscribers.forEach(subscriber => subscriber(snapshot))
-  clusterSubscribers.forEach(subscriber => subscriber(snapshot))
+  Array.from(uiSubscribers).forEach(subscriber => subscriber(snapshot))
+  Array.from(clusterSubscribers).forEach(subscriber => subscriber(snapshot))
   // Interruptible leg — only the heavy-data subscribers.
   startTransition(() => {
-    dataSubscribers.forEach(subscriber => subscriber(snapshot))
+    Array.from(dataSubscribers).forEach(subscriber => subscriber(snapshot))
   })
 }
 
@@ -363,7 +361,7 @@ export function clearClusterCacheOnLogout(): void {
     // Ignore storage errors
   }
 
-  clusterCache = {
+  Object.assign(clusterCache, {
     clusters: [],
     lastUpdated: null,
     isLoading: true,
@@ -372,7 +370,7 @@ export function clearClusterCacheOnLogout(): void {
     consecutiveFailures: 0,
     isFailed: false,
     lastRefresh: null,
-  }
+  })
   notifyClusterSubscribers()
 }
 
@@ -399,7 +397,7 @@ function handleClusterDemoModeChange() {
       }
 
       // Reset cluster cache to demo data
-      clusterCache = {
+      Object.assign(clusterCache, {
         clusters: getDemoClusters(),
         lastUpdated: new Date(),
         isLoading: false,
@@ -408,7 +406,7 @@ function handleClusterDemoModeChange() {
         consecutiveFailures: 0,
         isFailed: false,
         lastRefresh: new Date(),
-      }
+      })
       notifyClusterSubscribers()
     }
     // When switching FROM demo mode, fullFetchClusters will be called by useClusters hook
@@ -431,7 +429,7 @@ if (typeof window !== 'undefined') {
     }
 
     // Reset to loading state (shows skeletons) with empty data
-    clusterCache = {
+    Object.assign(clusterCache, {
       clusters: [],
       lastUpdated: null,
       isLoading: true, // Triggers skeleton display
@@ -440,7 +438,7 @@ if (typeof window !== 'undefined') {
       consecutiveFailures: 0,
       isFailed: false,
       lastRefresh: null,
-    }
+    })
     notifyClusterSubscribers()
   })
 }
@@ -457,7 +455,7 @@ export function notifyClusterSubscribersDebounced() {
   }
   notifyTimeout = setTimeout(() => {
     const snapshot = clusterCache
-    clusterSubscribers.forEach(subscriber => subscriber(snapshot))
+    Array.from(clusterSubscribers).forEach(subscriber => subscriber(snapshot))
     notifyClusterDataSubscribers()
     notifyTimeout = null
   }, CLUSTER_NOTIFY_DEBOUNCE_MS)
@@ -475,7 +473,15 @@ export function updateClusterCache(updates: Partial<ClusterCache>) {
     saveClusterCacheToStorage(updates.clusters)
     updateDistributionCache(updates.clusters)
   }
-  clusterCache = { ...clusterCache, ...updates }
+  // Mutate in place so that any module holding a reference to the exported
+  // `clusterCache` object sees the update (ESM live-binding of `let` exports
+  // is not preserved by all bundlers / test runners).
+  Object.assign(clusterCache, updates)
+
+  // Keep the standalone clusterCacheRef in sync (breaks circular import)
+  if (updates.clusters) {
+    setClusterCacheRefClusters(clusterCache.clusters)
+  }
 
   // Route notifications based on which slice the updates touch (#7865).
   // UI fires first (urgent) so spinner on/off commits immediately, then
@@ -493,7 +499,7 @@ export function updateClusterCache(updates: Partial<ClusterCache>) {
   // call so the pre-split contract (one notify per update) is preserved.
   if (touchesUI || touchesData) {
     const snapshot = clusterCache
-    clusterSubscribers.forEach(subscriber => subscriber(snapshot))
+    Array.from(clusterSubscribers).forEach(subscriber => subscriber(snapshot))
   } else {
     // If the updates somehow touch neither slice, fall back to notifying
     // every subscriber so nothing gets silently dropped.
@@ -510,228 +516,6 @@ export function updateClusterCache(updates: Partial<ClusterCache>) {
   }
 }
 
-// Share metrics between clusters pointing to the same server
-// This handles cases where short-named aliases (e.g., "prow") point to the same
-// server as full-context clusters that have metric data
-export function shareMetricsBetweenSameServerClusters(clusters: ClusterInfo[]): ClusterInfo[] {
-  // Build a map of server -> clusters with metrics
-  const serverMetrics = new Map<string, ClusterInfo>()
-
-  // First pass: find clusters that have metrics for each server
-  for (const cluster of (clusters || [])) {
-    if (!cluster.server) continue
-    const existing = serverMetrics.get(cluster.server)
-    // Prefer cluster with: nodeCount > 0, then capacity, then request data
-    const clusterHasNodes = cluster.nodeCount && cluster.nodeCount > 0
-    const clusterHasCapacity = !!cluster.cpuCores
-    const clusterHasRequests = !!cluster.cpuRequestsCores
-    const existingHasNodes = existing?.nodeCount && existing.nodeCount > 0
-    const existingHasCapacity = !!existing?.cpuCores
-    const existingHasRequests = !!existing?.cpuRequestsCores
-
-    // Score: 4 points for nodes, 2 points for capacity, 1 point for requests
-    const clusterScore = (clusterHasNodes ? 4 : 0) + (clusterHasCapacity ? 2 : 0) + (clusterHasRequests ? 1 : 0)
-    const existingScore = (existingHasNodes ? 4 : 0) + (existingHasCapacity ? 2 : 0) + (existingHasRequests ? 1 : 0)
-
-    if (!existing || clusterScore > existingScore) {
-      serverMetrics.set(cluster.server, cluster)
-    }
-  }
-
-  // Second pass: copy metrics to clusters missing them
-  return clusters.map(cluster => {
-    if (!cluster.server) return cluster
-
-    const source = serverMetrics.get(cluster.server)
-    if (!source) return cluster
-
-    // Check if we need to copy anything - include nodeCount, podCount, and capacity/requests
-    const needsNodes = (!cluster.nodeCount || cluster.nodeCount === 0) && source.nodeCount && source.nodeCount > 0
-    const needsPods = (!cluster.podCount || cluster.podCount === 0) && source.podCount && source.podCount > 0
-    const needsCapacity = !cluster.cpuCores && source.cpuCores
-    const needsRequests = !cluster.cpuRequestsCores && source.cpuRequestsCores
-
-    if (!needsNodes && !needsPods && !needsCapacity && !needsRequests) return cluster
-
-    // Copy all health metrics from the source cluster (node/pod counts, capacity, requests)
-    return {
-      ...cluster,
-      // Node and pod counts - critical for dashboard display
-      nodeCount: needsNodes ? source.nodeCount : cluster.nodeCount,
-      podCount: needsPods ? source.podCount : cluster.podCount,
-      // Also copy healthy and reachable flags when we copy node data
-      healthy: needsNodes ? source.healthy : cluster.healthy,
-      reachable: needsNodes ? source.reachable : cluster.reachable,
-      // CPU metrics
-      cpuCores: cluster.cpuCores ?? source.cpuCores,
-      cpuRequestsMillicores: cluster.cpuRequestsMillicores ?? source.cpuRequestsMillicores,
-      cpuRequestsCores: cluster.cpuRequestsCores ?? source.cpuRequestsCores,
-      cpuUsageCores: cluster.cpuUsageCores ?? source.cpuUsageCores,
-      // Memory metrics
-      memoryBytes: cluster.memoryBytes ?? source.memoryBytes,
-      memoryGB: cluster.memoryGB ?? source.memoryGB,
-      memoryRequestsBytes: cluster.memoryRequestsBytes ?? source.memoryRequestsBytes,
-      memoryRequestsGB: cluster.memoryRequestsGB ?? source.memoryRequestsGB,
-      memoryUsageGB: cluster.memoryUsageGB ?? source.memoryUsageGB,
-      // Storage metrics
-      storageBytes: cluster.storageBytes ?? source.storageBytes,
-      storageGB: cluster.storageGB ?? source.storageGB,
-      // Availability flags
-      metricsAvailable: cluster.metricsAvailable ?? source.metricsAvailable,
-    }
-  })
-}
-
-// Deduplicate clusters that point to the same server URL
-// Returns a single cluster per server with aliases tracking alternate context names
-// This prevents double-counting in metrics and stats
-export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInfo[] {
-  // Group clusters by server URL
-  const serverGroups = new Map<string, ClusterInfo[]>()
-  const noServerClusters: ClusterInfo[] = []
-
-  for (const cluster of (clusters || [])) {
-    if (!cluster.server) {
-      // Clusters without server URL can't be deduplicated
-      noServerClusters.push(cluster)
-      continue
-    }
-    const existing = serverGroups.get(cluster.server)
-    if (existing) {
-      existing.push(cluster)
-    } else {
-      serverGroups.set(cluster.server, [cluster])
-    }
-  }
-
-  // For each server group, select a primary cluster and track aliases
-  const deduplicatedClusters: ClusterInfo[] = []
-
-  for (const [__server, group] of serverGroups) {
-    if (group.length === 1) {
-      // No duplicates, just add the cluster
-      deduplicatedClusters.push({ ...group[0], aliases: [] })
-      continue
-    }
-
-    // Multiple clusters point to same server - select primary and merge
-    // Priority: 1) User-friendly name, 2) Has metrics, 3) Has more namespaces, 4) Current context, 5) Shorter name
-
-    // Helper to detect OpenShift-generated long context names
-    // These typically look like: "default/api-something.openshiftapps.com:6443/kube:admin"
-    // Use regex anchored to hostname boundaries to avoid substring-bypass (CodeQL #9119).
-    const OPENSHIFT_CONTEXT_RE = /(?:^|\/)(?:[^/]*\.)?openshiftapps\.com(?:[:/]|$)|(?:^|\/)(?:[^/]*\.)?openshift\.com(?:[:/]|$)/
-    const isAutoGeneratedName = (name: string): boolean => {
-      return name.includes('/api-') ||
-             name.includes(':6443/') ||
-             name.includes(':443/') ||
-             OPENSHIFT_CONTEXT_RE.test(name) ||
-             (name.includes('/') && name.includes(':') && name.length > AUTO_GENERATED_NAME_LENGTH_THRESHOLD)
-    }
-
-    const sorted = [...group].sort((a, b) => {
-      // Strongly prefer user-friendly names over auto-generated OpenShift context names
-      const aIsAuto = isAutoGeneratedName(a.name)
-      const bIsAuto = isAutoGeneratedName(b.name)
-      if (!aIsAuto && bIsAuto) return -1
-      if (aIsAuto && !bIsAuto) return 1
-
-      // Prefer cluster with metrics
-      if (a.cpuCores && !b.cpuCores) return -1
-      if (!a.cpuCores && b.cpuCores) return 1
-
-      // Prefer cluster with more namespaces (likely more complete data)
-      const aNamespaces = a.namespaces?.length || 0
-      const bNamespaces = b.namespaces?.length || 0
-      if (aNamespaces !== bNamespaces) return bNamespaces - aNamespaces
-
-      // Prefer current context
-      if (a.isCurrent && !b.isCurrent) return -1
-      if (!a.isCurrent && b.isCurrent) return 1
-
-      // Prefer shorter name (likely more user-friendly)
-      return a.name.length - b.name.length
-    })
-
-    const primary = sorted[0]
-    const aliases = sorted.slice(1).map(c => c.name)
-
-    // Merge the best metrics from all duplicates.
-    //
-    // nodeCount and podCount are counts of live resources — NOT "max across all
-    // observations". Previously we took Math.max, which over-counted after a
-    // scale-down because the larger stale value from a previous sample kept
-    // winning (issue #6112). Instead, prefer the primary cluster's current
-    // values and only fall back to an alias value when the primary hasn't
-    // reported yet (nodeCount/podCount undefined). This gives us the freshest
-    // authoritative count without resurrecting stale numbers.
-    let bestMetrics: Partial<ClusterInfo> = {}
-    for (const cluster of (group || [])) {
-      if (cluster.cpuCores && !bestMetrics.cpuCores) {
-        bestMetrics = {
-          cpuCores: cluster.cpuCores,
-          memoryBytes: cluster.memoryBytes,
-          memoryGB: cluster.memoryGB,
-          storageBytes: cluster.storageBytes,
-          storageGB: cluster.storageGB,
-          nodeCount: cluster.nodeCount,
-          podCount: cluster.podCount,
-          cpuRequestsMillicores: cluster.cpuRequestsMillicores,
-          cpuRequestsCores: cluster.cpuRequestsCores,
-          memoryRequestsBytes: cluster.memoryRequestsBytes,
-          memoryRequestsGB: cluster.memoryRequestsGB,
-          pvcCount: cluster.pvcCount,
-          pvcBoundCount: cluster.pvcBoundCount,
-        }
-      }
-    }
-    // Authoritative counts: use the primary cluster's values; only fall back to
-    // an alias when the primary has no value reported at all.
-    if (primary.nodeCount !== undefined) {
-      bestMetrics.nodeCount = primary.nodeCount
-    } else {
-      const alias = group.find(c => c !== primary && c.nodeCount !== undefined)
-      if (alias) bestMetrics.nodeCount = alias.nodeCount
-    }
-    if (primary.podCount !== undefined) {
-      bestMetrics.podCount = primary.podCount
-    } else {
-      const alias = group.find(c => c !== primary && c.podCount !== undefined)
-      if (alias) bestMetrics.podCount = alias.podCount
-    }
-    // Legacy merge loop preserved only for request metrics (below).
-    for (const cluster of (group || [])) {
-      // Merge request metrics - these may come from a different cluster than capacity
-      if (cluster.cpuRequestsCores && !bestMetrics.cpuRequestsCores) {
-        bestMetrics.cpuRequestsMillicores = cluster.cpuRequestsMillicores
-        bestMetrics.cpuRequestsCores = cluster.cpuRequestsCores
-      }
-      if (cluster.memoryRequestsGB && !bestMetrics.memoryRequestsGB) {
-        bestMetrics.memoryRequestsBytes = cluster.memoryRequestsBytes
-        bestMetrics.memoryRequestsGB = cluster.memoryRequestsGB
-      }
-    }
-
-    // Determine best health status (prefer healthy, then reachable)
-    const anyHealthy = group.some(c => c.healthy)
-    const anyReachable = group.some(c => c.reachable !== false)
-
-    deduplicatedClusters.push({
-      ...primary,
-      ...bestMetrics,
-      healthy: anyHealthy || primary.healthy,
-      reachable: anyReachable ? true : primary.reachable,
-      aliases,
-    })
-  }
-
-  // Add clusters without server URL (can't be deduplicated)
-  for (const cluster of (noServerClusters || [])) {
-    deduplicatedClusters.push({ ...cluster, aliases: [] })
-  }
-
-  return deduplicatedClusters
-}
 
 // Update a single cluster in the shared cache (debounced to prevent flashing)
 export function updateSingleClusterInCache(clusterName: string, updates: Partial<ClusterInfo>) {
@@ -768,10 +552,7 @@ export function updateSingleClusterInCache(clusterName: string, updates: Partial
     updatedClusters = shareMetricsBetweenSameServerClusters(updatedClusters)
   }
 
-  clusterCache = {
-    ...clusterCache,
-    clusters: updatedClusters,
-  }
+  Object.assign(clusterCache, { clusters: updatedClusters })
   // Persist all cluster data to localStorage
   saveClusterCacheToStorage(updatedClusters)
   // Persist distribution changes
@@ -857,7 +638,7 @@ export function connectSharedWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//${window.location.host}/ws`
 
-    const ws = new WebSocket(wsUrl)
+    const ws = new WebSocket(appendWsAuthToken(wsUrl))
 
     ws.onopen = () => {
       // Guard against race condition where onclose fires before onopen
@@ -867,7 +648,7 @@ export function connectSharedWebSocket() {
         return
       }
       // Send authentication message - backend requires this within 5 seconds
-      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const token = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
       if (token) {
         ws.send(JSON.stringify({ type: 'auth', token }))
       } else {
@@ -949,7 +730,7 @@ if (import.meta.hot) {
     initialFetchStarted = false
     healthCheckFailures = 0 // Reset health check failures on HMR
     cleanupSharedWebSocket()
-    clusterCache = {
+    Object.assign(clusterCache, {
       clusters: [],
       lastUpdated: null,
       isLoading: true,
@@ -958,11 +739,41 @@ if (import.meta.hot) {
       consecutiveFailures: 0,
       isFailed: false,
       lastRefresh: null,
-    }
+    })
     clusterSubscribers.clear()
     dataSubscribers.clear()
     uiSubscribers.clear()
   })
+}
+
+/** Storage key used by useKagentBackend to persist the preferred backend. */
+const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
+
+/** Read the preferred agent backend from localStorage (non-React). */
+function getPreferredBackend(): string {
+  try {
+    return localStorage.getItem(BACKEND_PREF_KEY) || 'kc-agent'
+  } catch {
+    return 'kc-agent'
+  }
+}
+
+/**
+ * Fetch cluster list from the backend API (/api/mcp/clusters).
+ * This endpoint works independently of kc-agent — it uses the MCP bridge or
+ * direct k8s client, making it the right choice when kagenti/kagent is active. (#9535)
+ */
+async function fetchClusterListFromBackendAPI(): Promise<ClusterInfo[] | null> {
+  try {
+    const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
+    if (data?.clusters) {
+      reportAgentDataSuccess()
+      return data.clusters
+    }
+  } catch {
+    // Backend API unavailable
+  }
+  return null
 }
 
 // Fetch basic cluster list from local agent (fast, no health check)
@@ -972,6 +783,20 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
   // On localhost, always attempt to reach the agent — it may be running even if
   // AgentManager has not detected it yet.
   if (isNetlifyDeployment) return null
+
+  // In-cluster Helm deployments have no local kc-agent. Go directly to the
+  // backend API which authenticates via the pod's ServiceAccount. (#10XXX)
+  if (isInClusterMode()) {
+    return fetchClusterListFromBackendAPI()
+  }
+
+  // When kagenti or kagent is the preferred backend, fetch clusters from the
+  // backend API (/api/mcp/clusters) which works independently of kc-agent.
+  // kc-agent's /clusters endpoint is only available when kc-agent is running. (#9535)
+  const preferred = getPreferredBackend()
+  if (preferred === 'kagenti' || preferred === 'kagent') {
+    return fetchClusterListFromBackendAPI()
+  }
 
   try {
     const controller = new AbortController()
@@ -1018,7 +843,7 @@ const MAX_HEALTH_CHECK_FAILURES = 3
 // Per-cluster failure tracking to prevent transient errors from showing "-"
 // Track first failure timestamp - only mark unreachable after 5 minutes of consecutive failures
 const clusterHealthFailureStart = new Map<string, number>() // timestamp of first failure
-const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes before marking as offline
+const OFFLINE_THRESHOLD_MS = 5 * MS_PER_MINUTE // 5 minutes before marking as offline
 
 // Helper to check if cluster has been failing long enough to mark offline
 export function shouldMarkOffline(clusterName: string): boolean {
@@ -1072,14 +897,30 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     return null
   }
 
+  // In-cluster mode: route to backend API instead of local agent endpoints (#11684)
+  if (isInClusterMode()) {
+    try {
+      const { data } = await api.get<ClusterHealth>(
+        `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`
+      )
+      if (data) {
+        healthCheckFailures = 0
+        return data
+      }
+    } catch {
+      healthCheckFailures++
+    }
+    return null
+  }
+
   // Fall back to backend API
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+  const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   try {
     const response = await fetch(
       `${LOCAL_AGENT_HTTP_URL}/clusters/${encodeURIComponent(clusterName)}/health`,
       {
         signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        headers: agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {},
       }
     )
     if (response.ok) {
@@ -1099,69 +940,6 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
   return null
 }
 
-// Helper to detect distribution from namespace list
-function detectDistributionFromNamespaces(namespaces: string[]): string | undefined {
-  if (namespaces.some(ns => ns.startsWith('openshift-') || ns === 'openshift')) {
-    return 'openshift'
-  } else if (namespaces.some(ns => ns.startsWith('gke-') || ns === 'config-management-system')) {
-    return 'gke'
-  } else if (namespaces.some(ns => ns.startsWith('aws-') || ns.startsWith('amazon-'))) {
-    return 'eks'
-  } else if (namespaces.some(ns => ns.startsWith('azure-') || ns === 'azure-arc')) {
-    return 'aks'
-  } else if (namespaces.some(ns => ns === 'cattle-system' || ns.startsWith('cattle-'))) {
-    return 'rancher'
-  }
-  return undefined
-}
-
-// Helper to detect distribution from server URL (fallback when cluster is unreachable)
-// This allows identifying cluster type even without namespace access
-// Uses parsed hostname checks (not substring matching) to prevent bypass via
-// crafted URLs like evil.com/path?q=eks.amazonaws.com (CodeQL #9119).
-function detectDistributionFromServer(server?: string): string | undefined {
-  if (!server) return undefined
-
-  // OpenShift patterns — check parsed hostname, not raw string
-  if (hostnameEndsWith(server, 'openshiftapps.com') ||
-      hostnameEndsWith(server, 'openshift.com') ||
-      // IBM FMAAS OpenShift clusters (api.fmaas-*.fmaas.res.ibm.com:6443)
-      hostnameContainsLabel(server, 'fmaas') ||
-      // Generic OpenShift API pattern (api.*.example.com:6443) — exclude EKS/AKS
-      (server.match(/^https?:\/\/api\.[^/]+:6443/) &&
-       !hostnameEndsWith(server, 'eks.amazonaws.com') &&
-       !hostnameEndsWith(server, 'azmk8s.io'))) {
-    return 'openshift'
-  }
-
-  // EKS pattern
-  if (hostnameEndsWith(server, 'eks.amazonaws.com')) {
-    return 'eks'
-  }
-
-  // GKE pattern
-  if (hostnameEndsWith(server, 'gke.io') || hostnameEndsWith(server, 'container.googleapis.com')) {
-    return 'gke'
-  }
-
-  // AKS pattern
-  if (hostnameEndsWith(server, 'azmk8s.io') || hostnameContainsLabel(server, 'hcp')) {
-    return 'aks'
-  }
-
-  // OCI OKE pattern
-  if (hostnameEndsWith(server, 'oraclecloud.com') || hostnameContainsLabel(server, 'oci')) {
-    return 'oci'
-  }
-
-  // DigitalOcean pattern
-  if (hostnameEndsWith(server, 'digitalocean.com') || hostnameEndsWith(server, 'k8s.ondigitalocean.com')) {
-    return 'digitalocean'
-  }
-
-  return undefined
-}
-
 // Track backend API failures for distribution detection separately
 let distributionDetectionFailures = 0
 const MAX_DISTRIBUTION_FAILURES = 2
@@ -1169,13 +947,27 @@ const MAX_DISTRIBUTION_FAILURES = 2
 // Detect cluster distribution by checking for system namespaces
 // Uses kubectl via WebSocket when available, falls back to backend API
 async function detectClusterDistribution(clusterName: string, kubectlContext?: string): Promise<{ distribution?: string; namespaces?: string[] }> {
+  // In-cluster mode: use backend API for namespace list (#11685)
+  if (isInClusterMode()) {
+    try {
+      const { data } = await api.get<{ namespaces: string[] }>(
+        `/api/mcp/namespaces?cluster=${encodeURIComponent(clusterName)}`
+      )
+      const namespaces = (data?.namespaces || [])
+      const distribution = detectDistributionFromNamespaces(namespaces)
+      return { distribution, namespaces }
+    } catch {
+      return {}
+    }
+  }
+
   // Try kubectl via WebSocket first (if agent available)
   // Use the kubectl context (full path) if provided, otherwise fall back to name
   if (!isAgentUnavailable()) {
     try {
       const response = await kubectlProxy.exec(
         ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
-        { context: kubectlContext || clusterName, timeout: 45000 }
+        { context: kubectlContext || clusterName, timeout: KUBECTL_MAX_TIMEOUT_MS }
       )
       if (response.exitCode === 0 && response.output) {
         const namespaces = response.output.split(/\s+/).filter(Boolean)
@@ -1194,8 +986,8 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
     return {}
   }
 
-  const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-  const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {}
+  const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
+  const headers: Record<string, string> = agentToken ? { 'Authorization': `Bearer ${agentToken}` } : {}
 
   // Helper to extract namespaces from API response
   const extractNamespaces = (items: Array<{ namespace?: string }>): string[] => {
@@ -1557,13 +1349,16 @@ export async function fullFetchClusters() {
         }
         return newCluster
       })
-      // Deduplicate clusters by server URL - prefers short names when available
-      // but keeps long names (e.g., '/api-pokprod001...' or 'default/api-...') if no short alias exists
-      const dedupedClusters = deduplicateClustersByServer(mergedClusters)
+      // Store the full (raw) cluster list in the cache. Deduplication is
+      // handled lazily by the useClusters() hook's `deduplicatedClusters`
+      // computed property. Premature dedup here was the root cause of
+      // #10316: when many kubeconfig contexts shared server URLs, the
+      // cache only held the dedup winners — hiding legitimate clusters
+      // (including the active kubectl context) from the dashboard.
 
       // Show clusters immediately with preserved health data
       await finishWithMinDuration({
-        clusters: dedupedClusters,
+        clusters: mergedClusters,
         error: null,
         lastUpdated: new Date(),
         isLoading: false,
@@ -1574,9 +1369,10 @@ export async function fullFetchClusters() {
       })
       // Reset flag before returning - allows subsequent refresh calls
       fetchInProgress = false
-      // Check health progressively (non-blocking) - use deduplicated list to avoid
-      // running health checks on long context-path duplicates
-      checkHealthProgressively(dedupedClusters)
+      // Check health on deduplicated clusters to avoid redundant probes
+      // against the same physical server from multiple contexts
+      const healthCheckClusters = deduplicateClustersByServer(mergedClusters)
+      checkHealthProgressively(healthCheckClusters)
       return
     }
 
@@ -1598,8 +1394,8 @@ export async function fullFetchClusters() {
       return
     }
 
-    // Fall back to backend API
-    const { data } = await api.get<{ clusters: ClusterInfo[] }>(`${LOCAL_AGENT_HTTP_URL}/clusters`)
+    // Fall back to backend API (/api/mcp/clusters works regardless of agent backend)
+    const { data } = await api.get<{ clusters: ClusterInfo[] }>('/api/mcp/clusters')
     // Merge new cluster list with existing cached data (preserve distribution, health, etc.)
     const existingClusters = clusterCache.clusters
     const mergedClusters = (data.clusters || []).map(newCluster => {
@@ -1636,8 +1432,10 @@ export async function fullFetchClusters() {
       lastRefresh: new Date(),
     })
     fetchInProgress = false
-    // Check health progressively (non-blocking) - will update each cluster's data including cpuCores
-    checkHealthProgressively(data.clusters || [])
+    // Check health on deduplicated clusters to avoid redundant probes
+    // against the same physical server from multiple contexts
+    const healthCheckClusters = deduplicateClustersByServer(data.clusters || [])
+    checkHealthProgressively(healthCheckClusters)
   } catch {
     // Always fall back gracefully to demo clusters - never show blocking errors
     // This ensures the UI always has data to display
@@ -1670,12 +1468,11 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
 
   // Mark the cluster as refreshing immediately and clear stale error state
   // so it shows as "loading" instead of "offline" while fetching
-  clusterCache = {
-    ...clusterCache,
+  Object.assign(clusterCache, {
     clusters: clusterCache.clusters.map(c =>
       c.name === clusterName ? { ...c, refreshing: true, reachable: undefined, errorType: undefined, errorMessage: undefined } : c
     ),
-  }
+  })
   notifyClusterSubscribers() // Immediate notification for user feedback
 
   const health = await fetchSingleClusterHealth(clusterName, kubectlContext)
@@ -1745,13 +1542,8 @@ function getDemoClusters(): ClusterInfo[] {
   ]
 }
 
-// Lightweight reference to cluster cache for domain modules
-// Modules that don't need the full singleton can import this
-export const clusterCacheRef = {
-  get clusters(): ClusterInfo[] {
-    return clusterCache.clusters
-  },
-}
+// Re-exported from clusterCacheRef.ts for backward compatibility
+export { clusterCacheRef }
 
 // Subscribe to cluster cache changes (for modules that need reactive updates).
 // Back-compat API: receives BOTH data and UI updates. Prefer the split
@@ -1773,117 +1565,31 @@ export function subscribeClusterUI(callback: (cache: ClusterCache) => void): () 
   return () => uiSubscribers.delete(callback)
 }
 
-// Setter functions for module-level state (ES modules can't assign to imported bindings)
+// Getter/setter functions for module-level state (vitest CJS transform does
+// not preserve ESM live bindings for `let` exports, so tests must use these
+// functions instead of reading the exported variable directly).
 export function setInitialFetchStarted(value: boolean) {
   initialFetchStarted = value
+}
+
+export function getInitialFetchStarted(): boolean {
+  return initialFetchStarted
 }
 
 export function setHealthCheckFailures(value: number) {
   healthCheckFailures = value
 }
 
-// ============================================================================
-// fetchWithRetry — Retry wrapper for transient failures (#3258)
-// Retries on network errors and 5xx responses with exponential backoff.
-// ============================================================================
-
-/** Options for fetchWithRetry */
-export interface FetchWithRetryOptions extends RequestInit {
-  /** Maximum number of retry attempts (default: 2, so 3 total attempts) */
-  maxRetries?: number
-  /** Initial backoff delay in ms (default: 500). Doubles on each retry. */
-  initialBackoffMs?: number
-  /** Timeout per attempt in ms (default: MCP_HOOK_TIMEOUT_MS) */
-  timeoutMs?: number
+export function getHealthCheckFailures(): number {
+  return healthCheckFailures
 }
 
-/**
- * Returns true for errors that are worth retrying: network failures and timeouts.
- */
-function isTransientError(error: unknown): boolean {
-  // Network error (fetch throws TypeError on network failure)
-  if (error instanceof TypeError) return true
-  // AbortError from timeout — worth retrying
-  if (error instanceof DOMException && error.name === 'AbortError') return true
-  return false
-}
+// fetchWithRetry — extracted to ./fetchWithRetry
+export type { FetchWithRetryOptions } from './fetchWithRetry'
+export { fetchWithRetry } from './fetchWithRetry'
 
-/**
- * Fetch with automatic retry on transient failures.
- *
- * Retries when:
- * - The fetch itself throws (network error, DNS failure, timeout)
- * - The server returns a 5xx status code
- *
- * Does NOT retry on:
- * - 4xx errors (client errors — retrying won't help)
- * - Successful responses (2xx/3xx)
- */
-export async function fetchWithRetry(
-  url: string,
-  options: FetchWithRetryOptions = {},
-): Promise<Response> {
-  const {
-    maxRetries = 2,
-    initialBackoffMs = 500,
-    timeoutMs = MCP_HOOK_TIMEOUT_MS,
-    ...fetchOptions
-  } = options
-
-  let lastError: unknown
-  const totalAttempts = maxRetries + 1
-
-  for (let attempt = 0; attempt < totalAttempts; attempt++) {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
-    // Named handler so we can remove it after fetch completes (#4772)
-    const onCallerAbort = () => controller.abort()
-    if (fetchOptions.signal) {
-      fetchOptions.signal.addEventListener('abort', onCallerAbort)
-    }
-
-    try {
-      const response = await fetch(url, {
-        ...fetchOptions,
-        signal: controller.signal,
-      })
-      clearTimeout(timeoutId)
-
-      // Don't retry on 4xx — those are permanent client errors
-      if (response.status >= 400 && response.status < 500) {
-        return response
-      }
-
-      // Retry on 5xx server errors (unless this is the last attempt)
-      if (response.status >= 500 && attempt < totalAttempts - 1) {
-        lastError = new Error(`Server error: ${response.status}`)
-        const backoff = initialBackoffMs * Math.pow(2, attempt)
-        await new Promise(resolve => setTimeout(resolve, backoff))
-        continue
-      }
-
-      return response
-    } catch (err) {
-      clearTimeout(timeoutId)
-      lastError = err
-      // Only retry on transient errors
-      if (!isTransientError(err) || attempt >= totalAttempts - 1) {
-        throw err
-      }
-      const backoff = initialBackoffMs * Math.pow(2, attempt)
-      await new Promise(resolve => setTimeout(resolve, backoff))
-    } finally {
-      // Remove abort listener to prevent accumulation (#4772)
-      if (fetchOptions.signal) {
-        fetchOptions.signal.removeEventListener('abort', onCallerAbort)
-      }
-    }
-  }
-
-  // Should not reach here, but just in case
-  throw lastError
-}
+// clusterUtils — extracted cluster utility functions
+export { shareMetricsBetweenSameServerClusters, deduplicateClustersByServer } from './clusterUtils'
 
 /** Shorten a cluster name for display — strips context prefix, truncates long names */
 export function clusterDisplayName(name: string): string {
@@ -1895,4 +1601,12 @@ export function clusterDisplayName(name: string): string {
     return base.slice(0, 22) + '…'
   }
   return base
+}
+
+export const __testables = {
+  detectDistributionFromNamespaces,
+  detectDistributionFromServer,
+  updatesTouchData,
+  updatesTouchUI,
+  applyDistributionCache,
 }

@@ -11,6 +11,7 @@ import { helmReleaseStatusConfig } from '../helm-release-status'
 import { helmValuesDiffConfig } from '../helm-values-diff'
 import { chartVersionsConfig } from '../chart-versions'
 import { kustomizationStatusConfig } from '../kustomization-status'
+import { fluxStatusConfig } from '../flux-status'
 import { operatorStatusConfig } from '../operator-status'
 import { operatorSubscriptionStatusConfig } from '../operator-subscription-status'
 import { certManagerConfig } from '../cert-manager'
@@ -26,6 +27,7 @@ const gitopsCards = [
   { name: 'helmValuesDiff', config: helmValuesDiffConfig },
   { name: 'chartVersions', config: chartVersionsConfig },
   { name: 'kustomizationStatus', config: kustomizationStatusConfig },
+  { name: 'fluxStatus', config: fluxStatusConfig },
   { name: 'operatorStatus', config: operatorStatusConfig },
   { name: 'operatorSubscriptionStatus', config: operatorSubscriptionStatusConfig },
   { name: 'certManager', config: certManagerConfig },

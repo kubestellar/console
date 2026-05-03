@@ -7,6 +7,7 @@
  * Caches responses in Netlify Blobs to avoid hitting GitHub on every request.
  */
 import { getStore } from "@netlify/blobs";
+import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const GITHUB_RAW_URL = "https://raw.githubusercontent.com";
 const KB_REPO = "kubestellar/console-kb";
@@ -21,11 +22,11 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
 
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Demo-Mode",
-};
+// See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
+const CORS_OPTS = {
+  methods: "GET, OPTIONS",
+  headers: "Content-Type, X-Demo-Mode",
+} as const;
 
 interface CacheEntry {
   body: string;
@@ -60,8 +61,10 @@ interface ScoreEntry {
 
 export default async (request: Request): Promise<Response> => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return handlePreflight(request, CORS_OPTS);
   }
+
+  const corsHeaders = buildCorsHeaders(request, CORS_OPTS);
 
   const url = new URL(request.url);
   const projectParam = url.searchParams.get("project");
@@ -70,7 +73,7 @@ export default async (request: Request): Promise<Response> => {
   // Check for demo mode
   if (request.headers.get("X-Demo-Mode") === "true") {
     if (projectParam && idParam) {
-      return jsonResponse({
+      return jsonResponse(corsHeaders, {
         path: "fixes/demo/demo-123.json",
         project: "demo",
         title: "Demo Mission",
@@ -80,7 +83,7 @@ export default async (request: Request): Promise<Response> => {
         qualitySuggestions: ["Improve context"]
       }, 200);
     } else {
-      return jsonResponse({
+      return jsonResponse(corsHeaders, {
         count: 1,
         scores: [
           {
@@ -117,12 +120,12 @@ export default async (request: Request): Promise<Response> => {
           bodyText = cached.body;
           servedFromCache = true;
         } else {
-          return jsonResponse({ error: "GitHub raw content error", status: resp.status }, resp.status);
+          return jsonResponse(corsHeaders, { error: "GitHub raw content error", status: resp.status }, resp.status);
         }
       } else {
         bodyText = await resp.text();
         if (bodyText.length > MAX_BODY_BYTES) {
-          return jsonResponse({ error: "response too large" }, 413);
+          return jsonResponse(corsHeaders, { error: "response too large" }, 413);
         }
         const entry: CacheEntry = { body: bodyText, contentType: "application/json", fetchedAt: Date.now() };
         store.setJSON(cacheKey, entry).catch(() => {});
@@ -130,14 +133,14 @@ export default async (request: Request): Promise<Response> => {
     }
 
     if (!bodyText) {
-      return jsonResponse({ error: "failed to fetch index" }, 502);
+      return jsonResponse(corsHeaders, { error: "failed to fetch index" }, 502);
     }
 
     let index: MissionIndex;
     try {
       index = JSON.parse(bodyText) as MissionIndex;
     } catch {
-      return jsonResponse({ error: "failed to parse index" }, 502);
+      return jsonResponse(corsHeaders, { error: "failed to parse index" }, 502);
     }
 
     if (projectParam && idParam) {
@@ -148,9 +151,9 @@ export default async (request: Request): Promise<Response> => {
         const idNoExt = idParam.endsWith(".json") ? idParam.slice(0, -5) : idParam;
         if (mProject === projectParam && mBaseNoExt === idNoExt) {
           if (m.qualityScore == null) {
-            return jsonResponse({ error: "Mission found but has no score associated" }, 404);
+            return jsonResponse(corsHeaders, { error: "Mission found but has no score associated" }, 404);
           }
-          return jsonResponse({
+          return jsonResponse(corsHeaders, {
             path: m.path,
             project: mProject,
             title: m.title,
@@ -161,7 +164,7 @@ export default async (request: Request): Promise<Response> => {
           }, 200, servedFromCache ? "HIT" : "MISS");
         }
       }
-      return jsonResponse({ error: "KB mission not found" }, 404);
+      return jsonResponse(corsHeaders, { error: "KB mission not found" }, 404);
     } else {
       const results: ScoreEntry[] = [];
       for (const m of (index.missions || [])) {
@@ -176,23 +179,28 @@ export default async (request: Request): Promise<Response> => {
           });
         }
       }
-      return jsonResponse({ count: results.length, scores: results }, 200, servedFromCache ? "HIT" : "MISS");
+      return jsonResponse(corsHeaders, { count: results.length, scores: results }, 200, servedFromCache ? "HIT" : "MISS");
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
     console.error("[missions-scores] Error:", message);
-    return jsonResponse({ error: "upstream request failed", detail: message }, 502);
+    return jsonResponse(corsHeaders, { error: "upstream request failed", detail: message }, 502);
   }
 };
 
-function jsonResponse(data: Record<string, unknown>, status = 200, cacheHead = "NONE"): Response {
+function jsonResponse(
+  corsHeaders: Record<string, string>,
+  data: Record<string, unknown>,
+  status = 200,
+  cacheHead = "NONE",
+): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": `public, max-age=${CDN_CACHE_MAX_AGE_S}`,
       "X-Cache": cacheHead,
-      ...CORS_HEADERS,
+      ...corsHeaders,
     },
   });
 }

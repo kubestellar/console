@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
@@ -7,9 +7,27 @@ import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMission
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
+vi.mock('./mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('./useDemoMode', () => ({
   getDemoMode: vi.fn(() => false),
   default: vi.fn(() => false),
+}))
+vi.mock('./useLocalAgent', () => ({
+  useLocalAgent: vi.fn(() => ({ isConnected: false })),
+  isAgentUnavailable: vi.fn(() => false),
+  isAgentConnected: vi.fn(() => false),
+  reportAgentDataSuccess: vi.fn(),
+  reportAgentDataError: vi.fn(),
+}))
+
+vi.mock('../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: vi.fn((url: string) => url),
 }))
 
 vi.mock('./useTokenUsage', () => ({
@@ -37,12 +55,18 @@ vi.mock('../lib/analytics', () => ({
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
   emitMissionRated: vi.fn(),
+  emitAgentTokenFailure: vi.fn(),
+  emitWsAuthMissing: vi.fn(),
+  emitSseAuthFailure: vi.fn(),
+  emitSessionRefreshFailure: vi.fn(),
 }))
 
 vi.mock('../lib/missions/preflightCheck', () => ({
   runPreflightCheck: vi.fn().mockResolvedValue({ ok: true }),
   classifyKubectlError: vi.fn().mockReturnValue({ code: 'UNKNOWN_EXECUTION_FAILURE', message: 'mock' }),
   getRemediationActions: vi.fn().mockReturnValue([]),
+  resolveRequiredTools: vi.fn(() => []),
+  runToolPreflightCheck: vi.fn().mockResolvedValue({ ok: true, tools: [] }),
 }))
 
 vi.mock('../lib/missions/scanner/malicious', () => ({
@@ -154,6 +178,7 @@ function seedMission(overrides: Partial<{
 }
 
 beforeEach(() => {
+  vi.useFakeTimers()
   localStorage.clear()
   MockWebSocket.lastInstance = null
   vi.clearAllMocks()
@@ -164,28 +189,27 @@ beforeEach(() => {
   globalThis.fetch = vi.fn().mockResolvedValue({ ok: true })
 })
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 // ── ensureConnection timeout ─────────────────────────────────────────────────
 
 describe('ensureConnection timeout', () => {
   it('rejects with CONNECTION_TIMEOUT after 5s if WS never opens', async () => {
-    vi.useFakeTimers()
-    try {
-      const { result } = renderHook(() => useMissions(), { wrapper })
+    const { result } = renderHook(() => useMissions(), { wrapper })
 
-      let missionId = ''
-      act(() => { missionId = result.current.startMission(defaultParams) })
-      await act(async () => { await Promise.resolve() })
+    let missionId = ''
+    act(() => { missionId = result.current.startMission(defaultParams) })
+    await act(async () => { await Promise.resolve() })
 
-      // Don't open the WS — let it timeout
-      act(() => { vi.advanceTimersByTime(5_100) })
-      await act(async () => { await Promise.resolve() })
+    // Don't open the WS — let it timeout
+    act(() => { vi.advanceTimersByTime(5_100) })
+    await act(async () => { await Promise.resolve() })
 
-      // Mission should fail due to connection timeout
-      const mission = result.current.missions.find(m => m.id === missionId)
-      expect(mission?.status).toBe('failed')
-    } finally {
-      vi.useRealTimers()
-    }
+    // Mission should fail due to connection timeout
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('failed')
   })
 })
 
@@ -347,6 +371,8 @@ describe('non-quota localStorage save errors', () => {
 
     // Trigger a save by changing missions state
     act(() => { result.current.startMission(defaultParams) })
+    // Flush the 500ms debounced save timer (#9617)
+    act(() => { vi.advanceTimersByTime(600) })
 
     expect(errorSpy).toHaveBeenCalledWith('Failed to save missions to localStorage:', expect.any(Error))
 
@@ -649,10 +675,11 @@ describe('mission reconnection on WebSocket open', () => {
     act(() => { result.current.connectToAgent() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
-    // Wait for the MISSION_RECONNECT_DELAY_MS (500ms) timer to fire
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 600))
-    })
+    // Wait for the MISSION_RECONNECT_DELAY_MS (500ms) timer to fire.
+    // Fake timers are active (set in beforeEach), so we must advance the
+    // clock rather than relying on a real setTimeout that would never fire.
+    act(() => { vi.advanceTimersByTime(600) })
+    await act(async () => { await Promise.resolve() })
 
     // Check all WS send calls to see what types were sent
     const allCalls = MockWebSocket.lastInstance?.send.mock.calls ?? []

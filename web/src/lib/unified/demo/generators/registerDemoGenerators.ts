@@ -7,6 +7,10 @@
 
 import { registerDemoDataBatch } from '../demoDataRegistry'
 import type { DemoDataEntry } from '../types'
+import { MS_PER_HOUR, MS_PER_DAY } from '../../../constants/time'
+
+const TWO_DAYS_MS = 2 * MS_PER_DAY
+const ONE_WEEK_MS = 7 * MS_PER_DAY
 
 // Import existing demo data functions (these are scattered across the codebase)
 // We'll reference them here for registration
@@ -101,10 +105,10 @@ function getDemoGPUNodes() {
  */
 function getDemoHelmReleases() {
   return [
-    { name: 'nginx-ingress', namespace: 'ingress', cluster: 'eks-prod-us-east-1', chart: 'nginx-ingress', version: '4.7.1', status: 'deployed', updated: Date.now() - 86400000 },
-    { name: 'prometheus-stack', namespace: 'monitoring', cluster: 'gke-staging', chart: 'kube-prometheus-stack', version: '45.7.1', status: 'deployed', updated: Date.now() - 172800000 },
-    { name: 'redis', namespace: 'cache', cluster: 'aks-dev-westeu', chart: 'redis', version: '17.11.3', status: 'failed', updated: Date.now() - 3600000 },
-    { name: 'cert-manager', namespace: 'cert-manager', cluster: 'openshift-prod', chart: 'cert-manager', version: '1.12.0', status: 'deployed', updated: Date.now() - 604800000 },
+    { name: 'nginx-ingress', namespace: 'ingress', cluster: 'eks-prod-us-east-1', chart: 'nginx-ingress', version: '4.7.1', status: 'deployed', updated: Date.now() - MS_PER_DAY },
+    { name: 'prometheus-stack', namespace: 'monitoring', cluster: 'gke-staging', chart: 'kube-prometheus-stack', version: '45.7.1', status: 'deployed', updated: Date.now() - TWO_DAYS_MS },
+    { name: 'redis', namespace: 'cache', cluster: 'aks-dev-westeu', chart: 'redis', version: '17.11.3', status: 'failed', updated: Date.now() - MS_PER_HOUR },
+    { name: 'cert-manager', namespace: 'cert-manager', cluster: 'openshift-prod', chart: 'cert-manager', version: '1.12.0', status: 'deployed', updated: Date.now() - ONE_WEEK_MS },
   ]
 }
 

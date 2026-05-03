@@ -7,7 +7,7 @@ import {
   DEMO_TOKEN_VALUE,
   FETCH_DEFAULT_TIMEOUT_MS,
 } from './constants'
-import { emitSessionExpired } from './analytics'
+import { emitSessionExpired, emitHttpError } from './analytics'
 
 const API_BASE = ''
 const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
@@ -21,7 +21,7 @@ const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token shou
 const AUTH_LOGOUT_ENDPOINT = '/auth/logout'
 
 // Public API paths that don't require authentication (served without JWT on the backend)
-const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file']
+const PUBLIC_API_PREFIXES = ['/api/missions/browse', '/api/missions/file', '/api/compliance/']
 
 // Error class for unauthenticated requests
 export class UnauthenticatedError extends Error {
@@ -37,6 +37,32 @@ export class UnauthorizedError extends Error {
     super('Token is invalid or expired')
     this.name = 'UnauthorizedError'
   }
+}
+
+/** localStorage key for global API rate-limit backoff deadline (epoch ms). */
+const STORAGE_KEY_RATE_LIMIT_UNTIL = 'kc-api-rate-limit-until'
+/** Default Retry-After when the header is missing or unparseable. */
+const DEFAULT_RATE_LIMIT_RETRY_AFTER_S = 60
+
+export class RateLimitError extends Error {
+  retryAfter: number
+  constructor(retryAfter: number) {
+    super(`Rate limited. Try again in ${retryAfter} seconds.`)
+    this.name = 'RateLimitError'
+    this.retryAfter = retryAfter
+  }
+}
+
+function handle429(response: Response): never {
+  const retryAfterRaw = response.headers.get('Retry-After')
+  const retryAfter = retryAfterRaw ? parseInt(retryAfterRaw, 10) : DEFAULT_RATE_LIMIT_RETRY_AFTER_S
+  const effectiveRetry = Number.isFinite(retryAfter) && retryAfter > 0
+    ? retryAfter : DEFAULT_RATE_LIMIT_RETRY_AFTER_S
+  try {
+    localStorage.setItem(STORAGE_KEY_RATE_LIMIT_UNTIL,
+      String(Date.now() + effectiveRetry * 1000))
+  } catch { /* storage quota / private browsing */ }
+  throw new RateLimitError(effectiveRetry)
 }
 
 // Debounce 401 handling to avoid multiple simultaneous logouts
@@ -87,6 +113,11 @@ function handle401(): void {
       handling401 = false
       return
     }
+    if (verifyResponse.status === 429) {
+      console.warn('[API] 401 received but /api/me returned 429 (rate-limited) — keeping session')
+      handling401 = false
+      return
+    }
     performSessionExpiry()
   }).catch(() => {
     // Verify probe failed (network error / timeout / no backend). Treat the
@@ -119,6 +150,7 @@ function performSessionExpiry(): void {
       method: 'POST',
       headers,
       credentials: 'include',
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
     }).catch(() => {
       // Backend unreachable — cookie will expire naturally
     })
@@ -244,7 +276,7 @@ export async function checkBackendAvailability(forceCheck = false): Promise<bool
           available: backendAvailable,
           timestamp: backendLastCheckTime,
         }))
-      } catch { /* ignore */ }
+      } catch (e: unknown) { console.error('[api] failed to cache backend status:', e) }
       return backendAvailable
     } catch {
       backendAvailable = false
@@ -324,7 +356,7 @@ function markBackendFailure(): void {
   // Persisting false causes fresh page loads to inherit stale "backend down" state.
   try {
     localStorage.removeItem(BACKEND_STATUS_KEY)
-  } catch { /* ignore */ }
+  } catch (e: unknown) { console.error('[api] failed to clear backend status cache:', e) }
 }
 
 function markBackendSuccess(): void {
@@ -335,7 +367,7 @@ function markBackendSuccess(): void {
       available: true,
       timestamp: backendLastCheckTime,
     }))
-  } catch { /* ignore */ }
+  } catch (e: unknown) { console.error('[api] failed to cache backend success:', e) }
 }
 
 /**
@@ -454,6 +486,9 @@ class ApiClient {
     // Skip API calls to protected endpoints when not authenticated
     const isPublicPath = PUBLIC_API_PREFIXES.some(prefix => path.startsWith(prefix))
     if (options?.requiresAuth !== false && !isPublicPath && !this.hasToken()) {
+      // Do NOT emit a GA4 error here — this is expected behavior when an
+      // unauthenticated user visits a protected page. Emitting it caused
+      // false-positive monitoring alerts (#9968, #9979, #9980, #9984).
       throw new UnauthenticatedError()
     }
 
@@ -490,10 +525,11 @@ class ApiClient {
         if (response.status === 401) {
           throw new UnauthorizedError()
         }
+        if (response.status === 429) {
+          handle429(response)
+        }
         const errorText = await response.text().catch(() => '')
-        // Note: We don't mark backend as failed on 500 responses here.
-        // The health check is the source of truth for backend availability.
-        // Individual API 500s could be endpoint-specific issues, not infrastructure failure.
+        emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -501,20 +537,21 @@ class ApiClient {
       const data = await response.json().catch(() => null)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
-    } catch (err) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
-      // Only mark backend failure on actual network errors (fetch TypeError)
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
+        emitHttpError('network', err.message)
       }
       throw err
     }
   }
 
-  async post<T = unknown>(path: string, body?: unknown, options?: { timeout?: number }): Promise<{ data: T }> {
+  async post<T = unknown>(path: string, body?: unknown, options?: { timeout?: number; headers?: Record<string, string> }): Promise<{ data: T }> {
     // Check backend availability
     const available = await checkBackendAvailability()
     if (!available) {
@@ -526,7 +563,7 @@ class ApiClient {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
         method: 'POST',
-        headers: this.getHeaders(),
+        headers: { ...this.getHeaders(), ...options?.headers },
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
@@ -544,8 +581,11 @@ class ApiClient {
         if (response.status === 401) {
           throw new UnauthorizedError()
         }
+        if (response.status === 429) {
+          handle429(response)
+        }
         const errorText = await response.text().catch(() => '')
-        // Note: Don't mark backend as failed on 500s - health check is source of truth
+        emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -553,14 +593,15 @@ class ApiClient {
       const data = await response.json().catch(() => null)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
-    } catch (err) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
-      // Only mark backend failure on actual network errors
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
+        emitHttpError('network', err.message)
       }
       throw err
     }
@@ -596,8 +637,11 @@ class ApiClient {
         if (response.status === 401) {
           throw new UnauthorizedError()
         }
+        if (response.status === 429) {
+          handle429(response)
+        }
         const errorText = await response.text().catch(() => '')
-        // Note: Don't mark backend as failed on 500s - health check is source of truth
+        emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
@@ -605,14 +649,15 @@ class ApiClient {
       const data = await response.json().catch(() => null)
       if (data === null) throw new Error('Invalid JSON response from API')
       return { data }
-    } catch (err) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
-      // Only mark backend failure on actual network errors
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
+        emitHttpError('network', err.message)
       }
       throw err
     }
@@ -647,20 +692,24 @@ class ApiClient {
         if (response.status === 401) {
           throw new UnauthorizedError()
         }
+        if (response.status === 429) {
+          handle429(response)
+        }
         const errorText = await response.text().catch(() => '')
-        // Note: Don't mark backend as failed on 500s - health check is source of truth
+        emitHttpError(String(response.status), errorText || '')
         throw new Error(errorText || `API error: ${response.status}`)
       }
       markBackendSuccess()
       this.checkTokenRefresh(response)
-    } catch (err) {
+    } catch (err: unknown) {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
         throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
       }
-      // Only mark backend failure on actual network errors
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
+        emitHttpError('network', err.message)
       }
       throw err
     }
@@ -676,6 +725,27 @@ export const api = new ApiClient()
  *
  * Existing callers only need to change `fetch(url, init)` -> `authFetch(url, init)`.
  */
+/**
+ * Safely parse a Response as JSON, guarding against HTML responses.
+ *
+ * On Netlify, unmatched API routes fall through to the SPA catch-all which
+ * returns index.html (200 OK, text/html). Calling `.json()` on that response
+ * throws "Unexpected token '<'" (#9797). This helper checks the Content-Type
+ * header first and throws a descriptive error instead of a cryptic parse error.
+ *
+ * Usage:
+ *   const data = await safeJson<MyType>(response)
+ */
+export async function safeJson<T = unknown>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new Error(
+      `Expected JSON response but received ${contentType || 'unknown content-type'} (status ${response.status})`,
+    )
+  }
+  return response.json() as Promise<T>
+}
+
 export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers = new Headers(init?.headers)

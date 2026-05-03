@@ -95,7 +95,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {totalItems} namespaces
@@ -135,7 +135,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
               sortDirection,
               onSortDirectionChange: setSortDirection,
             }}
-            className="!mb-0"
+            className="mb-0!"
           />
         </div>
       </div>
@@ -150,7 +150,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-blue-400 font-medium">OpenCost Integration</p>
           <p className="text-muted-foreground">
@@ -163,7 +163,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
       </div>
 
       {/* Total cost */}
-      <div className="p-3 rounded-lg bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 mb-3">
+      <div className="p-3 rounded-lg bg-linear-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 mb-3">
         <p className="text-xs text-blue-400 mb-1">Monthly Cost (Demo)</p>
         <p className="text-xl font-bold text-foreground">${totalCost.toLocaleString()}</p>
       </div>
@@ -214,7 +214,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
             tabIndex={0}
             onClick={activate}
             onKeyDown={handleKeyDown}
-            className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+            className="p-2 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
           >
             <div className="flex flex-wrap items-center justify-between gap-y-2 mb-1.5">
               <div className="flex items-center gap-2">
@@ -228,7 +228,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
             </div>
             <div className="h-1 bg-secondary rounded-full overflow-hidden mb-1.5">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"
+                className="h-full bg-linear-to-r from-blue-500 to-cyan-500 rounded-full"
                 style={{ width: `${(ns.totalCost / maxCost) * 100}%` }}
               />
             </div>

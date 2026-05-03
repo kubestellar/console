@@ -83,7 +83,7 @@ function generateCardRenderFunction(cardType: string, displayName?: string): str
     } else {
       data = JSON.parse(trimmed);
     }
-  } catch (e) {
+  } catch (e: unknown) {
     error = 'Parse error';
   }
 
@@ -489,7 +489,7 @@ export const render = ({ output }) => {
     } else {
       data = JSON.parse(trimmed);
     }
-  } catch (e) {
+  } catch (e: unknown) {
     error = 'Parse error';
   }
 
@@ -622,7 +622,7 @@ export const render = ({ output }) => {
     } else {
       data = JSON.parse(trimmed);
     }
-  } catch (e) {
+  } catch (e: unknown) {
     error = 'Parse error';
   }
 

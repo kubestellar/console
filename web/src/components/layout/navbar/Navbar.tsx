@@ -1,7 +1,8 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
+import { safeLazy } from '../../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink, Sparkles } from 'lucide-react'
+import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
@@ -15,16 +16,11 @@ import { AlertBadge } from '../../ui/AlertBadge'
 import { FeatureRequestButton } from '../../feedback'
 // Lazy-load SearchDropdown — it imports useSearchIndex which pulls in 5 MCP
 // modules (~135 KB). The search bar appears after the chunk loads (near-instant).
-const SearchDropdown = lazy(() =>
-  import('./SearchDropdown').then(m => ({ default: m.SearchDropdown }))
-)
+const SearchDropdown = safeLazy(() => import('./SearchDropdown'), 'SearchDropdown')
 
 // Lazy-load AgentSelector — agent UI components (~41 KB) are only needed
 // when a local kc-agent is available (never on console.kubestellar.io).
-const AgentSelector = lazy(() =>
-  import('../../agent/AgentSelector').then(m => ({ default: m.AgentSelector }))
-)
-import { useMissions } from '../../../hooks/useMissions'
+const AgentSelector = safeLazy(() => import('../../agent/AgentSelector'), 'AgentSelector')
 import { TokenUsageWidget } from './TokenUsageWidget'
 import { ClusterFilterPanel } from './ClusterFilterPanel'
 import { AgentStatusIndicator } from './AgentStatusIndicator'
@@ -49,24 +45,19 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
   const { isMobile } = useMobile()
   const { t } = useTranslation()
   const branding = useBranding()
-  const { missions, isSidebarOpen, openSidebar } = useMissions()
-  const missionsNeedingAttention = missions.filter(m =>
-    m.status === 'waiting_input' || m.status === 'failed'
-  ).length
-
   // Close mobile more menu on route change
   useEffect(() => {
     setShowMobileMore(false)
   }, [location.pathname])
 
   return (
-    <nav data-tour="navbar" style={{ top: topOffset }} className="fixed left-0 right-0 h-16 glass z-toast px-3 md:px-6 flex items-center justify-between">
+    <nav data-tour="navbar" style={{ top: topOffset }} className="fixed left-0 right-0 h-16 glass z-sticky px-3 md:px-6 flex items-center justify-between overflow-x-clip">
       {/* Left side: Hamburger + Logo — shrink-0 so logo is never compressed */}
       <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Hamburger menu - mobile only */}
         <button
           onClick={toggleMobileSidebar}
-          className="p-2 min-w-[44px] min-h-[44px] flex md:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+          className="p-2 min-w-[44px] min-h-[44px] flex md:hidden items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
           aria-label={config.isMobileOpen ? t('navbar.closeMenu') : t('navbar.openMenu')}
         >
           {config.isMobileOpen ? (
@@ -79,8 +70,9 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         {/* Logo - clickable to navigate home */}
         <button
           type="button"
+          data-testid="navbar-home-btn"
           onClick={() => navigate(ROUTES.HOME)}
-          className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 md:gap-3 p-2 -m-2 min-w-[44px] min-h-[44px] hover:opacity-80 transition-opacity cursor-pointer"
           aria-label={t('navbar.goHome')}
         >
           <LogoWithStar className="w-8 h-8 md:w-9 md:h-9" showStar={false} />
@@ -88,8 +80,8 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         <button
           type="button"
           onClick={() => navigate(ROUTES.HOME)}
-          className="hidden lg:flex flex-col leading-tight justify-center min-h-[44px] hover:opacity-80 transition-opacity text-left"
-          aria-label={t('navbar.goHome')}
+          className="hidden lg:flex flex-col leading-tight justify-center min-h-[44px] hover:opacity-80 transition-opacity text-left cursor-pointer"
+          title={t('navbar.goHome')}
         >
           <span className="text-base md:text-lg font-semibold text-foreground">{branding.appName}</span>
           <RotatingTagline />
@@ -104,7 +96,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             href={branding.docsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors"
+            className="hidden lg:flex items-center p-1.5 hover:bg-secondary rounded-md transition-colors cursor-pointer"
             aria-label={t('navbar.viewDocs')}
           >
             <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
@@ -122,7 +114,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
       {/* Right side — no shrink-0 here so the container participates in flex
            negotiation with the search bar, preventing overlap when the AI Mission
            button is visible (#4409). Individual critical items use shrink-0. */}
-      <div className="flex items-center gap-1 md:gap-3">
+      <div className="flex items-center gap-1 md:gap-3 min-w-0">
         {/* Core desktop items: md+ (768px) */}
         <div className="hidden md:flex items-center gap-2">
           {/* Unified Filter */}
@@ -133,29 +125,11 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <Suspense fallback={null}><AgentSelector compact /></Suspense>
         </div>
 
-        {/* Extended desktop items: lg+ (1024px) */}
-        <div className="hidden lg:flex items-center gap-2">
+        {/* Extended desktop items: xl+ (1280px) — moved from lg to xl to
+             prevent button overflow at the 1024px breakpoint (#10001). */}
+        <div className="hidden xl:flex items-center gap-2">
           {/* Update Indicator */}
           <UpdateIndicator />
-
-          {/* AI Missions — opens the mission sidebar */}
-          {!isSidebarOpen && (
-            <Tooltip content={t('help.aiMissions')} side="bottom">
-              <button
-                onClick={openSidebar}
-                className="relative flex items-center gap-1.5 px-3 py-1.5 h-9 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
-                aria-label={t('missionSidebar.openAIMissions')}
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>{t('missionSidebar.aiMissions')}</span>
-                {missionsNeedingAttention > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-purple-500 text-white rounded-full animate-pulse">
-                    {missionsNeedingAttention}
-                  </span>
-                )}
-              </button>
-            </Tooltip>
-          )}
 
           {/* Visit Streak */}
           <StreakBadge />
@@ -177,7 +151,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <Tooltip content={t('help.themeToggle')} side="bottom">
             <button
               onClick={toggleTheme}
-              className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors"
+              className="p-2 w-9 h-9 flex items-center justify-center shrink-0 hover:bg-secondary rounded-lg transition-colors cursor-pointer"
               aria-label={t('navbar.themeToggle', { theme })}
             >
               {theme === 'dark' ? (
@@ -194,11 +168,12 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
           <AlertBadge />
         </div>
 
-        {/* Overflow menu — visible below lg for items hidden at narrow widths */}
-        <div className="relative lg:hidden shrink-0">
+        {/* Overflow menu — visible below xl for items hidden at narrow widths */}
+        <div className="relative xl:hidden shrink-0">
           <button
+            data-testid="navbar-overflow-btn"
             onClick={() => setShowMobileMore(!showMobileMore)}
-            className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors"
+            className="p-2 min-w-[44px] min-h-[44px] hover:bg-secondary rounded-lg transition-colors cursor-pointer"
             aria-label={t('navbar.moreOptions')}
           >
             <MoreVertical className="w-5 h-5 text-muted-foreground" />
@@ -207,7 +182,7 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
             <>
               {/* Backdrop */}
               <div
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-overlay"
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay"
                 onClick={() => setShowMobileMore(false)}
               />
               {/* Bottom sheet menu on mobile */}
@@ -228,10 +203,10 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                   {/* Items only hidden at <md (768px): filter, agent status, agent selector */}
                   <div className="md:hidden">
                     <div className="px-3 py-2">
-                      <ClusterFilterPanel />
+                      <ClusterFilterPanel showLabel />
                     </div>
                     <div className="px-3 py-2">
-                      <AgentStatusIndicator />
+                      <AgentStatusIndicator showLabel />
                     </div>
                     <div className="px-3 py-2">
                       <Suspense fallback={null}><AgentSelector compact /></Suspense>
@@ -239,35 +214,18 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
                     <div className="border-t border-border mx-3 my-1" />
                   </div>
 
-                  {/* Items hidden at <lg (1024px): AI missions, update, token usage, feature request, tour */}
-                  {!isSidebarOpen && (
-                    <div className="px-3 py-2">
-                      <button
-                        onClick={() => { openSidebar(); setShowMobileMore(false) }}
-                        className="relative flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400"
-                        aria-label={t('missionSidebar.openAIMissions')}
-                      >
-                        <Sparkles className="w-4 h-4 shrink-0" />
-                        <span className="truncate min-w-0">{t('missionSidebar.aiMissions')}</span>
-                        {missionsNeedingAttention > 0 && (
-                          <span className="flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-purple-500 text-white rounded-full animate-pulse">
-                            {missionsNeedingAttention}
-                          </span>
-                        )}
-                      </button>
-                    </div>
-                  )}
+                  {/* Items hidden at <xl (1280px): update, token usage, feature request, tour */}
                   <div className="px-3 py-2">
-                    <UpdateIndicator />
+                    <UpdateIndicator showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <TokenUsageWidget />
+                    <TokenUsageWidget showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <FeatureRequestButton />
+                    <FeatureRequestButton showLabel />
                   </div>
                   <div className="px-3 py-2">
-                    <LearnDropdown />
+                    <LearnDropdown showLabel />
                   </div>
                 </div>
               </div>

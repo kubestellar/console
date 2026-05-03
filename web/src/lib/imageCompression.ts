@@ -47,7 +47,7 @@ export async function compressScreenshot(dataUri: string): Promise<string | null
     // Still too large — give up
     console.warn('[Screenshot] Image too large even after aggressive compression')
     return null
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[Screenshot] Compression failed:', err)
     return null
   }

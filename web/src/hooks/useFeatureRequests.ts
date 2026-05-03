@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../lib/api'
+import { api, RateLimitError } from '../lib/api'
 import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION, DEMO_TOKEN_VALUE } from '../lib/constants'
 import { MIN_PERCEIVED_DELAY_MS } from '../lib/constants/network'
+import { MS_PER_DAY, MS_PER_HOUR } from '../lib/constants/time'
 
 /** Cache TTL: 30 seconds — polling interval for status updates */
 const CACHE_TTL_MS = 30_000
@@ -82,6 +83,40 @@ export interface Notification {
 /** Target repository for issue creation */
 export type TargetRepo = 'console' | 'docs'
 
+export interface ConsoleError {
+  timestamp: string
+  level: 'error' | 'warn'
+  message: string
+  source?: string
+}
+
+export interface FailedApiCall {
+  timestamp: string
+  status: number | string
+  endpoint: string
+  detail?: string
+}
+
+export interface DiagnosticInfo {
+  agent_version?: string
+  commit_sha?: string
+  build_time?: string
+  go_version?: string
+  agent_os?: string
+  agent_arch?: string
+  install_method?: string
+  clusters?: number
+  agent_connection_status?: string
+  agent_connection_failures?: number
+  agent_last_error?: string
+  browser_user_agent?: string
+  browser_platform?: string
+  browser_language?: string
+  screen_resolution?: string
+  window_size?: string
+  page_url?: string
+}
+
 export interface CreateFeatureRequestInput {
   title: string
   description: string
@@ -89,6 +124,12 @@ export interface CreateFeatureRequestInput {
   target_repo?: TargetRepo
   /** Base64 data-URI screenshots to upload and embed in the GitHub issue */
   screenshots?: string[]
+  /** Recent browser console errors captured automatically for bug reports */
+  console_errors?: ConsoleError[]
+  /** Recent failed API calls (4xx/5xx) captured automatically */
+  failed_api_calls?: FailedApiCall[]
+  /** Agent and browser diagnostics for debugging */
+  diagnostics?: DiagnosticInfo
 }
 
 export interface SubmitFeedbackInput {
@@ -149,7 +190,7 @@ const DEMO_FEATURE_REQUESTS: FeatureRequest[] = [
     status: 'fix_ready',
     pr_number: 87,
     pr_url: 'https://github.com/kubestellar/console/pull/87',
-    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
+    created_at: new Date(Date.now() - 3 * MS_PER_DAY).toISOString() },
   {
     id: 'demo-2',
     user_id: 'demo-user',
@@ -159,7 +200,7 @@ const DEMO_FEATURE_REQUESTS: FeatureRequest[] = [
     github_issue_number: 56,
     github_issue_url: 'https://github.com/kubestellar/console/issues/56',
     status: 'feasibility_study',
-    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
+    created_at: new Date(Date.now() - 1 * MS_PER_DAY).toISOString() },
   {
     id: 'demo-3',
     user_id: 'demo-user',
@@ -171,7 +212,7 @@ const DEMO_FEATURE_REQUESTS: FeatureRequest[] = [
     status: 'fix_complete',
     pr_number: 72,
     pr_url: 'https://github.com/kubestellar/console/pull/72',
-    created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() },
+    created_at: new Date(Date.now() - 7 * MS_PER_DAY).toISOString() },
 ]
 
 const INITIAL_DEMO_NOTIFICATIONS: Notification[] = [
@@ -183,7 +224,7 @@ const INITIAL_DEMO_NOTIFICATIONS: Notification[] = [
     title: 'PR Ready: Add dark mode toggle',
     message: 'A pull request has been created for your feature request.',
     read: false,
-    created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    created_at: new Date(Date.now() - 2 * MS_PER_HOUR).toISOString(),
     action_url: 'https://github.com/kubestellar/console/pull/87' },
   {
     id: 'demo-notif-2',
@@ -193,7 +234,7 @@ const INITIAL_DEMO_NOTIFICATIONS: Notification[] = [
     title: 'Merged: Export dashboard as PDF',
     message: 'Your feature request has been implemented and merged.',
     read: true,
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    created_at: new Date(Date.now() - 5 * MS_PER_DAY).toISOString(),
     action_url: 'https://github.com/kubestellar/console/pull/72' },
 ]
 
@@ -359,6 +400,11 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
       const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, mergedOpts)
       setRequests(prev => [data, ...prev])
       return data
+    } catch (err: unknown) {
+      if (err instanceof RateLimitError) {
+        throw new Error('Too many requests — please wait a moment and try again.')
+      }
+      throw err
     } finally {
       setIsSubmitting(false)
     }

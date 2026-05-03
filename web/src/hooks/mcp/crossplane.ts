@@ -5,6 +5,7 @@ import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { MIN_REFRESH_INDICATOR_MS, getEffectiveInterval } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../../lib/constants'
 
 export interface CrossplaneManagedResource {
   apiVersion: string
@@ -53,7 +54,6 @@ function getDemoManagedResources(): CrossplaneManagedResource[] {
 
 const CACHE_KEY = 'kc-crossplane-managed-cache'
 const CACHE_TTL_MS = 30000
-const REFRESH_INTERVAL_MS = 120000
 
 interface ManagedCache {
   data: CrossplaneManagedResource[]
@@ -84,7 +84,7 @@ function loadFromStorage() {
           timestamp: parsed.timestamp || 0 }
       }
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.debug('[Crossplane] Failed to load cache:', err)
   }
 
@@ -100,7 +100,7 @@ function saveToStorage(
       CACHE_KEY,
       JSON.stringify({ data, timestamp })
     )
-  } catch (err) {
+  } catch (err: unknown) {
     console.debug('[Crossplane] Failed to save cache:', err)
   }
 }
@@ -152,7 +152,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
     }
   }, [])
 
-  const notifyListeners = (isRefreshing: boolean, isLoading = false, isDemoData = false) => {
+  const notifyListenersRef = useRef((isRefreshing: boolean, isLoading = false, isDemoData = false) => {
       const state: ManagedCacheState = {
         resources: managedCache.data,
         isLoading,
@@ -166,7 +166,8 @@ export function useCrossplaneManagedResources(cluster?: string) {
         isDemoData }
 
       managedCache.listeners.forEach(l => l(state))
-    }
+    })
+  const notifyListeners = notifyListenersRef.current
 
   const refetch = useCallback(
     async (silent = false) => {
@@ -205,7 +206,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
 
           setTimeout(() => {
             setIsRefreshing(false)
-            notifyListeners(false, false, true)
+            if (!cluster) notifyListeners(false, false, true)
           }, MIN_REFRESH_INDICATOR_MS)
 
           return
@@ -233,7 +234,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
         setConsecutiveFailures(0)
         setLastRefresh(Date.now())
         setIsDemoData(false)
-      } catch (err) {
+      } catch (err: unknown) {
         const message =
           err instanceof Error
             ? err.message
@@ -253,7 +254,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
         if (!cluster) notifyListeners(false)
       }
     },
-    [cluster, notifyListeners]
+    [cluster]
   )
 
   useEffect(() => {
@@ -279,7 +280,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
     // Poll for Crossplane managed resources (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `crossplaneManaged:${cluster || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(true),
     )
 
@@ -292,7 +293,7 @@ export function useCrossplaneManagedResources(cluster?: string) {
       unsubscribePolling()
       unregister()
     }
-  }, [refetch, cluster])
+  }, [refetch, cluster, consecutiveFailures])
 
   useEffect(() => {
     if (initialMountRef.current) {
@@ -320,7 +321,7 @@ if (typeof window !== 'undefined') {
   registerCacheReset('crossplane-managed', () => {
     try {
       localStorage.removeItem(CACHE_KEY)
-    } catch (err) {
+    } catch (err: unknown) {
       console.debug('[Crossplane] Failed to clear cache:', err)
     }
 

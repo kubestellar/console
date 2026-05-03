@@ -5,7 +5,7 @@ import {
   FileCode, Gauge, AlertCircle, Layers, HardDrive, Globe, Users, Terminal, TrendingUp,
   Gamepad2, Puzzle, Target, Zap, Crown, Ghost, Bird, Rocket, Wand2, Stethoscope,
   MonitorCheck, Monitor, Workflow, Split, Router, BookOpen, Cloudy, Rss, Frame, Wrench, Phone,
-  Clock, Settings, BarChart3, Grid3x3,
+  Clock, Settings, BarChart3, Grid3x3, BrainCircuit
 } from 'lucide-react'
 
 export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: string }>, color: string }> = {
@@ -103,6 +103,8 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   pvc_status: { icon: HardDrive, color: 'text-blue-400' },
   pv_status: { icon: HardDrive, color: 'text-purple-400' },
   storage_overview: { icon: Database, color: 'text-purple-400' },
+  // CubeFS
+  cubefs_status: { icon: Database, color: 'text-green-400' },
   resource_quota_status: { icon: Gauge, color: 'text-orange-400' },
 
   // Network
@@ -114,6 +116,7 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   gateway_status: { icon: Network, color: 'text-purple-400' },
   ingress_status: { icon: Network, color: 'text-blue-400' },
   network_policy_status: { icon: Shield, color: 'text-cyan-400' },
+  cilium_status: { icon: Network, color: 'text-emerald-400' },
 
   // Compute
   compute_overview: { icon: Cpu, color: 'text-purple-400' },
@@ -190,6 +193,8 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   coredns_status: { icon: Network, color: 'text-cyan-400' },
   // CRI-O
   crio_status: { icon: Box, color: 'text-blue-400' },
+  // Containerd
+  containerd_status: { icon: Box, color: 'text-blue-400' },
 
   // Games
   sudoku_game: { icon: Puzzle, color: 'text-purple-400' },
@@ -239,6 +244,13 @@ export const CARD_ICONS: Record<string, { icon: ComponentType<{ className?: stri
   k3s_status: { icon: Box, color: 'text-green-400' },
   kubevirt_status: { icon: Monitor, color: 'text-orange-400' },
   vcluster_status: { icon: Layers, color: 'text-purple-400' },
+  karmada_status: { icon: Package, color: 'text-indigo-400' },
+  kserve_status: { icon: BrainCircuit, color: 'text-purple-400' },
+  fluid_status: { icon: Database, color: 'text-blue-400' },
+  harbor_status: { icon: Package, color: 'text-blue-400' },
+  // Deployment Risk Score card — #9827
+  deployment_risk_score: { icon: Shield, color: 'text-yellow-400' },
+  kuberay_fleet: { icon: BrainCircuit, color: 'text-purple-400' },
   multi_tenancy_overview: { icon: Shield, color: 'text-cyan-400' },
   tenant_isolation_setup: { icon: Settings, color: 'text-yellow-400' },
   tenant_topology: { icon: GitBranch, color: 'text-emerald-400' },

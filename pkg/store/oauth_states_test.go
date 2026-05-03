@@ -30,7 +30,7 @@ func TestOAuthStateRoundTrip(t *testing.T) {
 
 	t.Run("StoreOAuthState and ConsumeOAuthState round-trip", func(t *testing.T) {
 		const state = "state-happy-path"
-		require.NoError(t, s.StoreOAuthState(state, oauthStateTestTTL))
+		require.NoError(t, s.StoreOAuthState(ctx, state, oauthStateTestTTL))
 
 		ok, err := s.ConsumeOAuthState(context.Background(), state)
 		require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestOAuthStateRoundTrip(t *testing.T) {
 
 	t.Run("ConsumeOAuthState is single-use", func(t *testing.T) {
 		const state = "state-single-use"
-		require.NoError(t, s.StoreOAuthState(state, oauthStateTestTTL))
+		require.NoError(t, s.StoreOAuthState(ctx, state, oauthStateTestTTL))
 
 		ok, err := s.ConsumeOAuthState(context.Background(), state)
 		require.NoError(t, err)
@@ -59,7 +59,7 @@ func TestOAuthStateRoundTrip(t *testing.T) {
 
 	t.Run("ConsumeOAuthState returns false for expired state", func(t *testing.T) {
 		const state = "state-expired"
-		require.NoError(t, s.StoreOAuthState(state, oauthStateExpiredTTL))
+		require.NoError(t, s.StoreOAuthState(ctx, state, oauthStateExpiredTTL))
 
 		ok, err := s.ConsumeOAuthState(context.Background(), state)
 		require.NoError(t, err)
@@ -76,11 +76,11 @@ func TestCleanupExpiredOAuthStates(t *testing.T) {
 	s := newTestStore(t)
 
 	// Seed a mix of expired and valid states.
-	require.NoError(t, s.StoreOAuthState("expired-1", oauthStateExpiredTTL))
-	require.NoError(t, s.StoreOAuthState("expired-2", oauthStateExpiredTTL))
-	require.NoError(t, s.StoreOAuthState("valid-1", oauthStateTestTTL))
+	require.NoError(t, s.StoreOAuthState(ctx, "expired-1", oauthStateExpiredTTL))
+	require.NoError(t, s.StoreOAuthState(ctx, "expired-2", oauthStateExpiredTTL))
+	require.NoError(t, s.StoreOAuthState(ctx, "valid-1", oauthStateTestTTL))
 
-	removed, err := s.CleanupExpiredOAuthStates()
+	removed, err := s.CleanupExpiredOAuthStates(ctx)
 	require.NoError(t, err)
 	require.Equal(t, int64(2), removed)
 
@@ -105,7 +105,7 @@ func TestOAuthStateSurvivesRestart(t *testing.T) {
 	require.NoError(t, err)
 
 	const state = "state-across-restart"
-	require.NoError(t, s1.StoreOAuthState(state, oauthStateTestTTL))
+	require.NoError(t, s1.StoreOAuthState(ctx, state, oauthStateTestTTL))
 	require.NoError(t, s1.Close())
 
 	// "Restart" — reopen the same DB file from scratch.
@@ -128,7 +128,7 @@ func TestConsumeOAuthState_ConcurrentSingleUse(t *testing.T) {
 	s := newTestStore(t)
 
 	const state = "state-concurrent-race"
-	require.NoError(t, s.StoreOAuthState(state, oauthStateTestTTL))
+	require.NoError(t, s.StoreOAuthState(ctx, state, oauthStateTestTTL))
 
 	var (
 		wg        sync.WaitGroup

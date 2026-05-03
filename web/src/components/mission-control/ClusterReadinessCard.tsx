@@ -89,7 +89,7 @@ export function ClusterReadinessCard({
     <div
       className={cn(
         'rounded-xl border bg-card p-4 transition-all',
-        isRecommended && 'border-violet-500/50 shadow-[0_0_12px_rgba(139,92,246,0.15)]',
+        isRecommended && 'border-purple-500/50 shadow-[0_0_12px_rgba(139,92,246,0.15)]',
         !isRecommended && 'border-border'
       )}
     >
@@ -103,7 +103,7 @@ export function ClusterReadinessCard({
             <h4 className="text-sm font-medium truncate" title={cluster.name}>{clusterDisplayName(cluster.name)}</h4>
             <span
               className={cn(
-                'w-2 h-2 rounded-full flex-shrink-0',
+                'w-2 h-2 rounded-full shrink-0',
                 cluster.healthy ? 'bg-green-500' : 'bg-red-500'
               )}
               title={cluster.healthy ? 'Healthy' : 'Unhealthy'}
@@ -176,7 +176,7 @@ export function ClusterReadinessCard({
             const icon = isPositive ? '✓' : isError ? '⚠' : '•'
             return (
               <p key={i} className={cn('text-[10px] flex items-start gap-1', color)}>
-                <span className="flex-shrink-0">{icon}</span>
+                <span className="shrink-0">{icon}</span>
                 <span>{w}</span>
               </p>
             )

@@ -112,7 +112,7 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"clusters": clusters, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetClusterHealth returns health for a specific cluster
@@ -148,7 +148,7 @@ func (h *MCPHandlers) GetClusterHealth(c *fiber.Ctx) error {
 		return c.JSON(health)
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetAllClusterHealth returns health for all clusters
@@ -170,7 +170,7 @@ func (h *MCPHandlers) GetAllClusterHealth(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"health": health})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetNodes returns detailed node information
@@ -237,7 +237,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"nodes": nodes, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetEvents returns events from clusters
@@ -343,7 +343,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // GetWarningEvents returns warning events from clusters
@@ -446,7 +446,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"events": events, "source": "k8s", "cluster": cluster})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }
 
 // CheckSecurityIssues returns security misconfigurations
@@ -516,5 +516,5 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"issues": issues, "source": "k8s"})
 	}
 
-	return c.Status(503).JSON(fiber.Map{"error": "No cluster access available"})
+	return errNoClusterAccess(c)
 }

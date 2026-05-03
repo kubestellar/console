@@ -1,27 +1,37 @@
 /**
  * Hook for fetching GitHub-sourced reward data.
- * Queries the backend which proxies GitHub Search API for the logged-in user's
- * issues and PRs across configured orgs, computes points on the fly.
+ * Calls the Netlify function on console.kubestellar.io (10-min Blob cache)
+ * instead of the local Go backend, saving the user's GitHub API quota.
+ *
+ * Also fetches the last 20 contributions (issues/PRs) directly from the
+ * public GitHub Search API (no auth needed for public repos).
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../lib/auth'
-import { STORAGE_KEY_TOKEN, STORAGE_KEY_HAS_SESSION } from '../lib/constants'
-import { BACKEND_DEFAULT_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import type { GitHubRewardsResponse } from '../types/rewards'
+import type { GitHubRewardsResponse, GitHubContribution, GitHubRewardType } from '../types/rewards'
+import { GITHUB_REWARD_POINTS } from '../types/rewards'
+import { MS_PER_MINUTE } from '../lib/constants/time'
+
+/** Always fetch from the Netlify function (cached, no user token needed). */
+const REWARDS_API_BASE = 'https://console.kubestellar.io'
 
 /** Prefix for per-user localStorage cache keys */
 const CACHE_KEY_PREFIX = 'github-rewards-cache'
 /** Legacy cache key (pre-per-user). Cleared on first load to prevent stale data. */
 const LEGACY_CACHE_KEY = 'github-rewards-cache'
 /** How long client-side cached rewards data is considered fresh (15 minutes) */
-const CLIENT_CACHE_TTL_MS = 15 * 60 * 1000
+const CLIENT_CACHE_TTL_MS = 15 * MS_PER_MINUTE
 /** Interval between automatic background refreshes (10 minutes) */
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000
+const REFRESH_INTERVAL_MS = 10 * MS_PER_MINUTE
+/** Max recent contributions to fetch from the GitHub Search API */
+const CONTRIBUTIONS_PER_PAGE = 20
+/** GitHub orgs to search for contributions */
+const CONTRIBUTIONS_SEARCH_ORGS = ['kubestellar', 'llm-d', 'clubanderson']
 
 /** Returns a per-user localStorage cache key */
-function userCacheKey(login: string): string {
+export function userCacheKey(login: string): string {
   return `${CACHE_KEY_PREFIX}:${login}`
 }
 
@@ -74,6 +84,66 @@ function saveCache(login: string, data: GitHubRewardsResponse): void {
   }
 }
 
+export interface GitHubSearchItem {
+  html_url: string
+  title: string
+  number: number
+  created_at: string
+  pull_request?: { merged_at: string | null }
+  labels: Array<{ name: string }>
+  repository_url: string
+}
+
+export function classifySearchItem(item: GitHubSearchItem): GitHubRewardType {
+  const isPR = !!item.pull_request
+  if (isPR) {
+    return item.pull_request?.merged_at ? 'pr_merged' : 'pr_opened'
+  }
+  const labelNames = (item.labels || []).map(l => l.name.toLowerCase())
+  if (labelNames.some(l => l.includes('bug'))) return 'issue_bug'
+  if (labelNames.some(l => l.includes('feature') || l.includes('enhancement'))) return 'issue_feature'
+  return 'issue_other'
+}
+
+export function repoFromUrl(repositoryUrl: string): string {
+  const parts = repositoryUrl.split('/')
+  const len = parts.length
+  return len >= 2 ? `${parts[len - 2]}/${parts[len - 1]}` : repositoryUrl
+}
+
+/** GitHub Search API base — public, no auth needed for public repos */
+const GITHUB_SEARCH_API = 'https://api.github.com/search/issues'
+
+async function fetchRecentContributions(
+  login: string,
+): Promise<GitHubContribution[]> {
+  const orgFilter = CONTRIBUTIONS_SEARCH_ORGS.map(o => `org:${o}`).join('+')
+  const query = `author:${encodeURIComponent(login)}+${orgFilter}`
+  const url = `${GITHUB_SEARCH_API}?q=${query}&sort=updated&per_page=${CONTRIBUTIONS_PER_PAGE}`
+
+  const res = await fetch(url, {
+    headers: { Accept: 'application/vnd.github.v3+json' },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  })
+  if (!res.ok) return []
+
+  const json = await res.json().catch(() => null) as { items?: GitHubSearchItem[] } | null
+  if (!json?.items) return []
+
+  return (json.items || []).map((item): GitHubContribution => {
+    const type = classifySearchItem(item)
+    return {
+      type,
+      title: item.title,
+      url: item.html_url,
+      repo: repoFromUrl(item.repository_url),
+      number: item.number,
+      points: GITHUB_REWARD_POINTS[type],
+      created_at: item.created_at,
+    }
+  })
+}
+
 export function useGitHubRewards() {
   const { user, isAuthenticated } = useAuth()
   const [data, setData] = useState<GitHubRewardsResponse | null>(null)
@@ -97,7 +167,6 @@ export function useGitHubRewards() {
     if (cached) {
       setData(cached)
     } else {
-      // No valid cache — clear any stale data from a previous user
       setData(null)
     }
   }, [githubLogin, isDemoUser])
@@ -105,56 +174,31 @@ export function useGitHubRewards() {
   const fetchRewards = useCallback(async () => {
     if (!isAuthenticated || isDemoUser || !githubLogin) return
 
-    // #8494 — Support cookie-only sessions (#6590). The JWT may live
-    // exclusively in the HttpOnly kc_auth cookie with no token in
-    // localStorage. Check both the token AND the session hint so we
-    // don't bail out for cookie-only authenticated users.
-    // Both reads are wrapped because localStorage can throw in
-    // restricted browser modes (private browsing, disabled storage).
-    let token: string | null = null
-    let hasCookieSession = false
-    try {
-      token = localStorage.getItem(STORAGE_KEY_TOKEN)
-      hasCookieSession = localStorage.getItem(STORAGE_KEY_HAS_SESSION) === 'true'
-    } catch {
-      // localStorage unavailable — fall through
-    }
-    if (!token && !hasCookieSession) return
-
     setIsLoading(true)
     try {
-      const apiBase = import.meta.env.VITE_API_BASE_URL || BACKEND_DEFAULT_URL
-      // Pass login as query param for Netlify Function compatibility (no JWT
-      // validation on serverless). The Go backend ignores this param and reads
-      // the login from the JWT instead — no security impact either way since
-      // reward data is computed from public GitHub activity.
-      const headers: Record<string, string> = {}
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`
-      }
-      const res = await fetch(`${apiBase}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
-        headers,
-        // #8494 — credentials: 'include' sends the HttpOnly kc_auth cookie
-        // for cookie-only sessions where no Bearer token is available.
-        credentials: 'include',
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-      if (!res.ok) throw new Error(`API error: ${res.status}`)
-      // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
-      // before the outer try/catch processes the rejection (microtask timing issue).
-      const result = await res.json().catch(() => null) as GitHubRewardsResponse | null
+      const [rewardsRes, contributions] = await Promise.all([
+        fetch(`${REWARDS_API_BASE}/api/rewards/github?login=${encodeURIComponent(githubLogin)}`, {
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        }),
+        fetchRecentContributions(githubLogin).catch(() => [] as GitHubContribution[]),
+      ])
+
+      if (!rewardsRes.ok) throw new Error(`API error: ${rewardsRes.status}`)
+      const result = await rewardsRes.json().catch(() => null) as GitHubRewardsResponse | null
       if (!result) throw new Error('Invalid JSON response')
 
-      // Guard against stale response arriving after user switched accounts
       if (loginRef.current !== githubLogin) return
 
-      setData(result)
-      saveCache(githubLogin, result)
+      const merged: GitHubRewardsResponse = {
+        ...result,
+        contributions: contributions.length > 0 ? contributions : result.contributions,
+      }
+
+      setData(merged)
+      saveCache(githubLogin, merged)
       setError(null)
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unknown error')
-      // On failure, clear data if the cache has also expired (prevents
-      // indefinite stale display). If cache is still valid, keep showing it.
       const cached = loadCache(githubLogin)
       if (!cached) {
         setData(null)

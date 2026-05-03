@@ -7,6 +7,7 @@
  * No GITHUB_TOKEN required — the repo is public.
  */
 import { getStore } from "@netlify/blobs";
+import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const GITHUB_RAW_URL = "https://raw.githubusercontent.com";
 const KB_REPO = "kubestellar/console-kb";
@@ -24,11 +25,16 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 /** CDN edge cache: tell Netlify CDN to cache successful responses for 10 minutes */
 const CDN_CACHE_MAX_AGE_S = 600;
 
-const CORS_HEADERS: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+/** Number of retry attempts for transient upstream errors (#10966, #11033) */
+const MAX_RETRIES = 3;
+/** Base delay between retries in milliseconds */
+const RETRY_BASE_DELAY_MS = 500;
+
+// See web/netlify/functions/_shared/cors.ts for allowlist rationale (#9879).
+const CORS_OPTS = {
+  methods: "GET, OPTIONS",
+  headers: "Content-Type",
+} as const;
 
 interface CacheEntry {
   body: string;
@@ -38,13 +44,15 @@ interface CacheEntry {
 
 export default async (request: Request): Promise<Response> => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    return handlePreflight(request, CORS_OPTS);
   }
+
+  const corsHeaders = buildCorsHeaders(request, CORS_OPTS);
 
   const url = new URL(request.url);
   const path = url.searchParams.get("path");
   if (!path) {
-    return jsonResponse({ error: "path query parameter is required" }, 400);
+    return jsonResponse(corsHeaders, { error: "path query parameter is required" }, 400);
   }
   const ref = url.searchParams.get("ref") || DEFAULT_REF;
   const cacheKey = `file:${ref}:${path}`;
@@ -60,19 +68,32 @@ export default async (request: Request): Promise<Response> => {
           "Content-Type": cached.contentType,
           "Cache-Control": `public, max-age=${CDN_CACHE_MAX_AGE_S}`,
           "X-Cache": "HIT",
-          ...CORS_HEADERS,
+          ...corsHeaders,
         },
       });
     }
 
-    // Fetch from GitHub
+    // Fetch from GitHub with retry for transient errors (#10966)
     const rawUrl = `${GITHUB_RAW_URL}/${KB_REPO}/${ref}/${path}`;
-    const resp = await fetch(rawUrl, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
+    let resp: Response | null = null;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        await new Promise((r) => setTimeout(r, RETRY_BASE_DELAY_MS * (1 << (attempt - 1))));
+      }
+      resp = await fetch(rawUrl, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+      // Don't retry 4xx (client errors) — only transient 5xx
+      if (resp.ok || resp.status === 404 || resp.status < 500) break;
+      console.warn(`[missions-file] Upstream ${resp.status}, attempt ${attempt + 1}/${MAX_RETRIES + 1}`);
+    }
+
+    if (!resp) {
+      return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
+    }
 
     if (resp.status === 404) {
-      return jsonResponse({ error: "file not found" }, 404);
+      return jsonResponse(corsHeaders, { error: "file not found" }, 404);
     }
     if (!resp.ok) {
       // If GitHub fails but we have stale cache, serve it
@@ -82,16 +103,16 @@ export default async (request: Request): Promise<Response> => {
           headers: {
             "Content-Type": cached.contentType,
             "X-Cache": "STALE",
-            ...CORS_HEADERS,
+            ...corsHeaders,
           },
         });
       }
-      return jsonResponse({ error: "GitHub raw content error", status: resp.status }, resp.status);
+      return jsonResponse(corsHeaders, { error: "GitHub raw content error", status: resp.status }, resp.status);
     }
 
     const body = await resp.text();
     if (body.length > MAX_BODY_BYTES) {
-      return jsonResponse({ error: "response too large" }, 413);
+      return jsonResponse(corsHeaders, { error: "response too large" }, 413);
     }
 
     const contentType = path.endsWith(".json") ? "application/json" : "text/plain";
@@ -106,19 +127,23 @@ export default async (request: Request): Promise<Response> => {
         "Content-Type": contentType,
         "Cache-Control": `public, max-age=${CDN_CACHE_MAX_AGE_S}`,
         "X-Cache": "MISS",
-        ...CORS_HEADERS,
+        ...corsHeaders,
       },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
     console.error("[missions-file] Error:", message);
-    return jsonResponse({ error: "upstream request failed", detail: message }, 502);
+    return jsonResponse(corsHeaders, { error: "upstream request failed", detail: message }, 502);
   }
 };
 
-function jsonResponse(data: Record<string, unknown>, status = 200): Response {
+function jsonResponse(
+  corsHeaders: Record<string, string>,
+  data: Record<string, unknown>,
+  status = 200,
+): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
+    headers: { "Content-Type": "application/json", ...corsHeaders },
   });
 }

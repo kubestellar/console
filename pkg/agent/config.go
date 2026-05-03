@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/kubestellar/console/pkg/fileutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -129,8 +130,8 @@ func (cm *ConfigManager) saveLocked() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	// Write with secure permissions
-	if err := os.WriteFile(cm.configPath, data, configFileMode); err != nil {
+	// Atomic write: temp file → fsync → rename to prevent corruption
+	if err := fileutil.AtomicWriteFile(cm.configPath, data, configFileMode); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 

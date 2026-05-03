@@ -239,7 +239,7 @@ async function hydrateFromBackend(): Promise<void> {
       lastKnownSessionId = record.last_agent_session_id
     }
     updateSharedUsage({ byCategory: merged }, true)
-  } catch (err) {
+  } catch (err: unknown) {
     if (err instanceof TokenUsageUnauthenticatedError) {
       backendUnauthenticated = true
       return
@@ -298,7 +298,7 @@ async function flushPendingDeltas(): Promise<void> {
         delta,
         agent_session_id: lastKnownSessionId ?? '',
       })
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof TokenUsageUnauthenticatedError) {
         backendUnauthenticated = true
         return
@@ -447,6 +447,8 @@ async function fetchTokenUsage() {
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), QUICK_ABORT_TIMEOUT_MS)
+    // Use plain fetch — /health does not require auth and avoids CORS
+    // preflight failures from X-Requested-With header (#10459).
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
@@ -708,4 +710,21 @@ export function addCategoryTokens(tokens: number, category: TokenCategory = 'oth
   updateSharedUsage({
     used: sharedUsage.used + tokens,
     byCategory: newByCategory })
+}
+
+export const __testables = {
+  loadPersistedUsage,
+  persistUsage,
+  getNextResetDate,
+  MAX_SINGLE_DELTA_TOKENS,
+  MIN_STOP_THRESHOLD,
+  LAST_KNOWN_USAGE_KEY,
+  AGENT_SESSION_KEY,
+  DEFAULT_CATEGORY,
+  TOKEN_USAGE_FLUSH_INTERVAL_MS,
+  TOKEN_USAGE_FLUSH_THRESHOLD,
+  DEFAULT_SETTINGS,
+  DEFAULT_BY_CATEGORY,
+  DEMO_TOKEN_USAGE,
+  DEMO_BY_CATEGORY,
 }

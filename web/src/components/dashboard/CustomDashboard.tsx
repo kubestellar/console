@@ -44,7 +44,6 @@ import { useModalState } from '../../lib/modals'
 import { formatCardTitle } from '../../lib/formatCardTitle'
 import { StatsOverview, StatBlockValue } from '../ui/StatsOverview'
 import { getClusterHealthState, isClusterUnreachable } from '../clusters/utils'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useRefreshIndicator } from '../../hooks/useRefreshIndicator'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { DashboardHealthIndicator } from './DashboardHealthIndicator'
@@ -140,7 +139,7 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, onHeightChan
         {onInsertAfter && (
           <button
             onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
-            className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
+            className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
             aria-label="Add card"
             title="Add card here"
           >
@@ -174,7 +173,7 @@ function SortableCard({ card, onConfigure, onRemove, onWidthChange, onHeightChan
       {onInsertAfter && (
         <button
           onClick={(e) => { e.stopPropagation(); onInsertAfter() }}
-          className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
+          className="absolute top-1/2 -translate-y-1/2 right-2 z-20 opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary transition-all w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold shadow-lg hover:scale-110 ring-2 ring-background"
           aria-label="Add card"
           title="Add card here"
         >
@@ -270,8 +269,7 @@ export function CustomDashboard() {
     }
   }
 
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
-  const getStatValue = createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)
+  const getStatValue = getDashboardStatValue
 
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [cards, setCards] = useState<Card[]>([])
@@ -356,7 +354,7 @@ export function CustomDashboard() {
         }
       }
       setLastUpdated(new Date())
-    } catch (error) {
+    } catch (error: unknown) {
       // Discard errors from stale requests
       if (thisRequestId !== requestIdRef.current) return
 
@@ -441,7 +439,7 @@ export function CustomDashboard() {
       for (const card of cardsToAdd) {
         try {
           await api.post(`/api/dashboards/${id}/cards`, card)
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Failed to persist card:', error)
           showToast('Failed to persist card to backend', 'error')
         }
@@ -459,7 +457,7 @@ export function CustomDashboard() {
     if (id) {
       try {
         await api.delete(`/api/dashboards/${id}/cards/${cardId}`)
-      } catch (error) {
+      } catch (error: unknown) {
         // Card is already removed from UI state above — backend failure is
         // non-critical. Log for debugging but don't alarm the user. (#8564)
         console.debug('Backend card deletion failed (card already removed from UI):', error)
@@ -513,7 +511,7 @@ export function CustomDashboard() {
       for (const card of templateCards) {
         try {
           await api.post(`/api/dashboards/${id}/cards`, card)
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Failed to persist template card:', error)
           showToast('Failed to persist template card', 'error')
         }
@@ -788,7 +786,7 @@ export function CustomDashboard() {
         />
         <BaseModal.Content>
           <div className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-foreground font-medium">{t('dashboard.delete.warning')}</p>
               <p className="text-sm text-muted-foreground mt-1">

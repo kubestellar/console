@@ -129,6 +129,19 @@ vi.mock('../../../lib/kubectlProxy', () => ({
   },
 }))
 
+// Mock ConfirmDialog so it renders its title/message inline (no portal/animation issues)
+vi.mock('../../../lib/modals/ConfirmDialog', () => ({
+  ConfirmDialog: ({ isOpen, onConfirm, title, confirmLabel }: {
+    isOpen: boolean; onConfirm: () => void; title: string; confirmLabel: string
+  }) =>
+    isOpen ? (
+      <div data-testid="confirm-dialog">
+        <span>{title}</span>
+        <button onClick={onConfirm}>{confirmLabel}</button>
+      </div>
+    ) : null,
+}))
+
 import { Pods } from '../Pods'
 
 describe('Pods Component', () => {
@@ -160,7 +173,8 @@ describe('Pods Component', () => {
   it('renders the empty state message when no pods', () => {
     mockPodIssues = []
     renderPods()
-    expect(screen.getByText('No Pod Issues')).toBeTruthy()
+    // After i18n wrapping, the mock t() returns the key string
+    expect(screen.getByText('pods.noPodIssues')).toBeTruthy()
     expect(
       screen.getByText('All pods are running healthy across your clusters')
     ).toBeTruthy()
@@ -197,13 +211,12 @@ describe('Pods Component', () => {
   })
 
   it('shows confirmation dialog when Delete is clicked', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPods()
     const deleteBtn = screen.getByLabelText('Delete pod')
     fireEvent.click(deleteBtn)
-    expect(confirmSpy).toHaveBeenCalled()
-    expect(showToastSpy).toHaveBeenCalledWith('pods.deleting', 'info')
-    confirmSpy.mockRestore()
+    // After i18n PR #10487 window.confirm was replaced with ConfirmDialog
+    expect(screen.getByTestId('confirm-dialog')).toBeTruthy()
+    expect(screen.getByText('pods.confirmDeleteTitle')).toBeTruthy()
   })
 
 

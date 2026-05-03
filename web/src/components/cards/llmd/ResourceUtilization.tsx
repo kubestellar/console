@@ -6,7 +6,7 @@
  * Highlight best-in-class for each metric.
  */
 import { useState, useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../../charts/LazyEChart'
 import { BarChart3, Trophy } from 'lucide-react'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useReportCardDataState } from '../CardDataContext'
@@ -21,6 +21,12 @@ import {
   TOOLTIP_TIGHT_GAP_PX } from '../../../lib/llmd/tooltipSpacing'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { CHART_MIN_HEIGHT_PX, CHART_TEXT_WHITE, CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE } from '../../../lib/constants/ui'
+
+const GRID_LEFT_PX = 145
+const GRID_RIGHT_PX = 20
+const GRID_TOP_PX = 5
+const GRID_BOTTOM_PX = 20
 
 type MetricMode = 'throughput' | 'ttftP50Ms' | 'tpotP50Ms' | 'p99LatencyMs'
 
@@ -104,12 +110,12 @@ export function ResourceUtilization() {
     if (data.length === 0) return {}
     return {
       backgroundColor: 'transparent',
-      grid: { left: 145, right: 20, top: 5, bottom: 20 },
+      grid: { left: GRID_LEFT_PX, right: GRID_RIGHT_PX, top: GRID_TOP_PX, bottom: GRID_BOTTOM_PX },
       xAxis: {
         type: 'value' as const,
         axisLabel: {
           color: '#71717a',
-          fontSize: 10,
+          fontSize: CHART_AXIS_FONT_SIZE,
           formatter: (v: number) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)),
         },
         axisLine: { lineStyle: { color: '#71717a' } },
@@ -124,7 +130,7 @@ export function ResourceUtilization() {
             const entry = data.find(d => d.name === value)
             return entry?.isBest ? '#fbbf24' : '#a1a1aa'
           },
-          fontSize: 10,
+          fontSize: CHART_AXIS_FONT_SIZE,
           fontWeight: ((value: string) => {
             const entry = data.find(d => d.name === value)
             return entry?.isBest ? 600 : 400
@@ -140,7 +146,7 @@ export function ResourceUtilization() {
       tooltip: {
         backgroundColor: 'rgba(15,23,42,0.95)',
         borderColor: 'rgba(100,116,139,0.3)',
-        textStyle: { color: '#fff', fontSize: 12 },
+        textStyle: { color: CHART_TEXT_WHITE, fontSize: CHART_BODY_FONT_SIZE },
         formatter: (params: { data: { entry: BarEntry } }) => {
           const e = params.data?.entry
           if (!e) return ''
@@ -224,9 +230,9 @@ export function ResourceUtilization() {
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-0" style={{ minHeight: 200 }}>
+      <div className="flex-1 min-h-0" style={{ minHeight: CHART_MIN_HEIGHT_PX }}>
         {data.length > 0 ? (
-          <ReactECharts
+          <LazyEChart
             option={chartOption}
             style={{ height: '100%', width: '100%' }}
             notMerge={true}

@@ -1,6 +1,13 @@
 import { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
-import { CHART_TOOLTIP_CONTENT_STYLE } from '../../lib/constants'
+import {
+  CHART_TOOLTIP_CONTENT_STYLE,
+  CHART_TOOLTIP_TEXT_COLOR,
+  CHART_TICK_COLOR,
+  CHART_GRID_STROKE,
+  CHART_AXIS_FONT_SIZE,
+  CHART_BODY_FONT_SIZE,
+} from '../../lib/constants'
 
 interface DataPoint {
   name: string
@@ -41,7 +48,7 @@ export function RadarChart({
       tooltip: {
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: '#e0e0e0', fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
       },
       radar: {
         indicator: data.map(d => ({
@@ -51,17 +58,17 @@ export function RadarChart({
         shape: 'polygon' as const,
         splitNumber: 4,
         axisName: {
-          color: '#888',
-          fontSize: 10,
+          color: CHART_TICK_COLOR,
+          fontSize: CHART_AXIS_FONT_SIZE,
         },
         splitLine: {
           show: showGrid,
-          lineStyle: { color: '#333' },
+          lineStyle: { color: CHART_GRID_STROKE },
         },
         splitArea: { show: false },
         axisLine: {
           show: showGrid,
-          lineStyle: { color: '#333' },
+          lineStyle: { color: CHART_GRID_STROKE },
         },
       },
       series: [{
@@ -133,12 +140,12 @@ export function MultiRadarChart({
       tooltip: {
         backgroundColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).backgroundColor as string,
         borderColor: (CHART_TOOLTIP_CONTENT_STYLE as Record<string, unknown>).borderColor as string,
-        textStyle: { color: '#e0e0e0', fontSize: 12 },
+        textStyle: { color: CHART_TOOLTIP_TEXT_COLOR, fontSize: CHART_BODY_FONT_SIZE },
       },
       legend: showLegend ? {
         data: series.map(s => s.name || s.dataKey),
         bottom: 0,
-        textStyle: { color: '#888', fontSize: 12 },
+        textStyle: { color: CHART_TICK_COLOR, fontSize: CHART_BODY_FONT_SIZE },
       } : undefined,
       radar: {
         indicator: data.map((d, i) => ({
@@ -146,15 +153,15 @@ export function MultiRadarChart({
           max: d.fullMark || maxVals[i] || 100,
         })),
         shape: 'polygon' as const,
-        axisName: { color: '#888', fontSize: 10 },
+        axisName: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
         splitLine: {
           show: showGrid,
-          lineStyle: { color: '#333' },
+          lineStyle: { color: CHART_GRID_STROKE },
         },
         splitArea: { show: false },
         axisLine: {
           show: showGrid,
-          lineStyle: { color: '#333' },
+          lineStyle: { color: CHART_GRID_STROKE },
         },
       },
       series: [{

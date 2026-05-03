@@ -50,23 +50,23 @@ func TestMarkNotificationReadByUser_RejectsCrossUserMarkRead(t *testing.T) {
 		Title:            markNotificationTestTitle,
 		Message:          markNotificationTestBody,
 	}
-	require.NoError(t, s.CreateNotification(aliceNotif))
+	require.NoError(t, s.CreateNotification(ctx, aliceNotif))
 	require.NotEqual(t, uuid.Nil, aliceNotif.ID)
 
 	// Bob tries to mark alice's notification as read — must fail.
-	err := s.MarkNotificationReadByUser(aliceNotif.ID, bob.ID)
+	err := s.MarkNotificationReadByUser(ctx, aliceNotif.ID, bob.ID)
 	require.Error(t, err, "cross-user mark-as-read must be rejected")
 	assert.Contains(t, err.Error(), "not found")
 
 	// The notification must still be unread (the offending UPDATE must
 	// not have been executed at all).
-	unread, err := s.GetUnreadNotificationCount(alice.ID)
+	unread, err := s.GetUnreadNotificationCount(ctx, alice.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 1, unread, "alice's notification must still be unread after bob's attempt")
 
 	// Alice can mark her own notification — must succeed.
-	require.NoError(t, s.MarkNotificationReadByUser(aliceNotif.ID, alice.ID))
-	unread, err = s.GetUnreadNotificationCount(alice.ID)
+	require.NoError(t, s.MarkNotificationReadByUser(ctx, aliceNotif.ID, alice.ID))
+	unread, err = s.GetUnreadNotificationCount(ctx, alice.ID)
 	require.NoError(t, err)
 	assert.Equal(t, 0, unread, "alice's own mark-read must succeed")
 }
@@ -119,7 +119,7 @@ func TestCreateGPUReservationWithCapacity_AtomicQuotaCheck(t *testing.T) {
 				StartDate:     time.Now().Format(time.RFC3339),
 				DurationHours: 1,
 			}
-			err := s.CreateGPUReservationWithCapacity(r, gpuQuotaTestCapacity)
+			err := s.CreateGPUReservationWithCapacity(ctx, r, gpuQuotaTestCapacity)
 			switch {
 			case err == nil:
 				atomic.AddInt64(&successes, 1)
@@ -144,7 +144,7 @@ func TestCreateGPUReservationWithCapacity_AtomicQuotaCheck(t *testing.T) {
 
 	// Authoritative check against the DB: the stored total cannot exceed
 	// the capacity cap, even under concurrent load.
-	total, err := s.GetClusterReservedGPUCount("cluster-race", nil)
+	total, err := s.GetClusterReservedGPUCount(ctx, "cluster-race", nil)
 	require.NoError(t, err)
 	assert.LessOrEqual(t, total, gpuQuotaTestCapacity,
 		"stored reserved total must never exceed cluster capacity (#6612)")
@@ -179,11 +179,11 @@ func TestGPUReservation_MultiType_RoundTrip(t *testing.T) {
 		StartDate:     time.Now().Format(time.RFC3339),
 		DurationHours: 1,
 	}
-	require.NoError(t, s.CreateGPUReservation(r))
+	require.NoError(t, s.CreateGPUReservation(ctx, r))
 	require.NotEqual(t, uuid.Nil, r.ID)
 
 	// Read back through the same path the API handler uses.
-	fetched, err := s.GetGPUReservation(r.ID)
+	fetched, err := s.GetGPUReservation(ctx, r.ID)
 	require.NoError(t, err)
 	require.NotNil(t, fetched)
 	assert.Equal(t, []string{gpuMultiTypeA100, gpuMultiTypeH100}, fetched.GPUTypes,
@@ -221,9 +221,9 @@ func TestGPUReservation_LegacySingleType_BackCompat(t *testing.T) {
 		StartDate:     time.Now().Format(time.RFC3339),
 		DurationHours: 1,
 	}
-	require.NoError(t, s.CreateGPUReservation(r))
+	require.NoError(t, s.CreateGPUReservation(ctx, r))
 
-	fetched, err := s.GetGPUReservation(r.ID)
+	fetched, err := s.GetGPUReservation(ctx, r.ID)
 	require.NoError(t, err)
 	require.NotNil(t, fetched)
 	assert.Equal(t, []string{gpuMultiTypeA100}, fetched.GPUTypes,
@@ -250,9 +250,9 @@ func TestCreateGPUReservationWithCapacity_ZeroCapacityFallsThrough(t *testing.T)
 		StartDate:     time.Now().Format(time.RFC3339),
 		DurationHours: 1,
 	}
-	require.NoError(t, s.CreateGPUReservationWithCapacity(r, 0))
+	require.NoError(t, s.CreateGPUReservationWithCapacity(ctx, r, 0))
 
-	list, err := s.ListUserGPUReservations(owner.ID)
+	list, err := s.ListUserGPUReservations(ctx, owner.ID)
 	require.NoError(t, err)
 	require.Len(t, list, 1)
 }
@@ -271,7 +271,7 @@ func TestSaveOnboardingResponse_UpsertPreservesIdentity(t *testing.T) {
 		QuestionKey: "role",
 		Answer:      "platform",
 	}
-	require.NoError(t, s.SaveOnboardingResponse(first))
+	require.NoError(t, s.SaveOnboardingResponse(ctx, first))
 	firstID := first.ID
 
 	// Second save with the same (user_id, question_key) must UPDATE in
@@ -281,9 +281,9 @@ func TestSaveOnboardingResponse_UpsertPreservesIdentity(t *testing.T) {
 		QuestionKey: "role",
 		Answer:      "app-dev",
 	}
-	require.NoError(t, s.SaveOnboardingResponse(second))
+	require.NoError(t, s.SaveOnboardingResponse(ctx, second))
 
-	got, err := s.GetOnboardingResponses(u.ID)
+	got, err := s.GetOnboardingResponses(ctx, u.ID)
 	require.NoError(t, err)
 	require.Len(t, got, 1, "upsert must not create a second row for the same (user_id, question_key)")
 	assert.Equal(t, "app-dev", got[0].Answer)
@@ -306,7 +306,7 @@ func TestUpdateCard_MissingReturnsErrNoRows(t *testing.T) {
 		DashboardID: uuid.New(),
 		CardType:    models.CardType("bogus"),
 	}
-	err := s.UpdateCard(missing)
+	err := s.UpdateCard(ctx, missing)
 	require.Error(t, err, "UpdateCard on a non-existent id must return an error")
 }
 
@@ -325,7 +325,7 @@ func TestIncrementUserCoins_ContextCancelled(t *testing.T) {
 // TestConsumeOAuthState_ContextCancelled pins #6613 for the OAuth path.
 func TestConsumeOAuthState_ContextCancelled(t *testing.T) {
 	s := newTestStore(t)
-	require.NoError(t, s.StoreOAuthState("cancel-state", oauthStateTestTTL))
+	require.NoError(t, s.StoreOAuthState(ctx, "cancel-state", oauthStateTestTTL))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -346,7 +346,7 @@ func TestGetBulkUtilizationSnapshots_BatchesLargeRequests(t *testing.T) {
 		ids[i] = uuid.New().String()
 	}
 	// Should succeed (empty result) rather than error.
-	result, err := s.GetBulkUtilizationSnapshots(ids)
+	result, err := s.GetBulkUtilizationSnapshots(ctx, ids)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	require.Empty(t, result)

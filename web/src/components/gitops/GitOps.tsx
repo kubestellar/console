@@ -5,10 +5,11 @@ import { useClusters, useHelmReleases, useOperatorSubscriptions } from '../../ho
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { useToast } from '../ui/Toast'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { RefreshCw, GitBranch, FolderGit, Box, Loader2 } from 'lucide-react'
 import { SyncDialog } from './SyncDialog'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDemoMode } from '../../hooks/useDemoMode'
 import { StatBlockValue } from '../ui/StatsOverview'
@@ -80,7 +81,7 @@ function getTimeAgo(timestamp: string | undefined, t: TFunction): string {
   const now = new Date()
   const then = new Date(timestamp)
   const diffMs = now.getTime() - then.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
+  const diffMins = Math.floor(diffMs / MS_PER_MINUTE)
   const diffHours = Math.floor(diffMins / 60)
   if (diffHours > 0) return t('gitops.hoursAgo', { count: diffHours })
   if (diffMins > 0) return t('gitops.minutesAgo', { count: diffMins })
@@ -89,11 +90,10 @@ function getTimeAgo(timestamp: string | undefined, t: TFunction): string {
 
 export function GitOps() {
   const { t } = useTranslation(['common', 'cards'])
-  const { clusters, isRefreshing: dataRefreshing, refetch } = useClusters()
+  const { clusters, deduplicatedClusters, isRefreshing: dataRefreshing, refetch } = useClusters()
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubs } = useOperatorSubscriptions()
   const { drillToAllHelm, drillToAllOperators } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { showToast } = useToast()
 
   // Local state
@@ -138,10 +138,10 @@ export function GitOps() {
     c.context || c.name.split('/').pop() || ''
   const resolveAppCluster = (preferred: string): { cluster: string; ambiguous: boolean } => {
     if (preferred) return { cluster: preferred, ambiguous: false }
-    if (clusters.length === EXACTLY_ONE_CLUSTER) {
-      return { cluster: clusterDisplayName(clusters[0]), ambiguous: false }
+    if (deduplicatedClusters.length === EXACTLY_ONE_CLUSTER) {
+      return { cluster: clusterDisplayName(deduplicatedClusters[0]), ambiguous: false }
     }
-    return { cluster: '', ambiguous: clusters.length > EXACTLY_ONE_CLUSTER }
+    return { cluster: '', ambiguous: deduplicatedClusters.length > EXACTLY_ONE_CLUSTER }
   }
 
   // #5952 — detectAllDrift is now a callable ref so the refresh button can
@@ -199,11 +199,12 @@ export function GitOps() {
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       const agentAuthHeaders: Record<string, string> = {
         'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
       }
       if (token) agentAuthHeaders['Authorization'] = `Bearer ${token}`
       const promises = configs.map(async (appConfig) => {
         try {
-          const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
+          const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gitops/detect-drift`, {
             method: 'POST',
             headers: agentAuthHeaders,
             body: JSON.stringify({
@@ -229,7 +230,7 @@ export function GitOps() {
               status: 'ok' as const,
               drifted: data.drifted,
               resources: data.resources || [] } satisfies DriftResult }
-        } catch (e) {
+        } catch (e: unknown) {
           // #6156 — Failed drift checks MUST NOT be coerced to
           // `drifted: false` — that rendered as "synced + healthy" (false
           // green). Return status: 'error' so the UI can render a distinct
@@ -259,9 +260,9 @@ export function GitOps() {
     detectAllDriftRef.current = detectAllDrift
     detectAllDrift()
     return () => { cancelled = true }
-    // resolveAppCluster depends on `clusters`, which is the effective dep here.
+    // resolveAppCluster depends on `deduplicatedClusters`, which is the effective dep here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clusters])
+  }, [deduplicatedClusters])
 
   // Handle sync action - open the sync dialog
   const handleSync = (app: GitOpsApp) => {
@@ -416,7 +417,7 @@ export function GitOps() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Filters and Apps List - rendered before cards
   const filtersAndAppsList = (

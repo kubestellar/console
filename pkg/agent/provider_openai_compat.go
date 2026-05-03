@@ -70,7 +70,7 @@ func chatViaOpenAICompatibleWithHeaders(ctx context.Context, req *ChatRequest, p
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseBytes))
 		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -160,7 +160,7 @@ func streamViaOpenAICompatibleWithHeaders(ctx context.Context, req *ChatRequest,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseBytes))
 		return nil, fmt.Errorf("API returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 

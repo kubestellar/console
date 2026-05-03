@@ -108,7 +108,13 @@ interface CacheComplianceReport {
 
 const BATCH_SIZE = 24
 const BATCH_LOAD_TIMEOUT_MS = 30_000
-const WARM_RETURN_WAIT_MS = 3_000
+/**
+ * How long to poll for warm-return content.  CI runners often need more time
+ * because the SQLite worker and IDB preload race with React hydration under
+ * CPU contention.  5s gives the async loadFromStorage() path enough headroom
+ * after a full page navigation fallback.
+ */
+const WARM_RETURN_WAIT_MS = process.env.CI ? 5_000 : 3_000
 /** Polling interval (ms) for the resilient warm-snapshot capture loop. */
 const WARM_POLL_INTERVAL_MS = 200
 /** Max retry attempts for page.evaluate calls that may race with navigation */
@@ -120,13 +126,19 @@ const EVALUATE_RETRY_DELAY_MS = 500
  * preview servers under load. 20s default is too tight when the server is
  * already serving other suites (#9101).
  */
-const BATCH_NAV_TIMEOUT_MS = !!process.env.CI ? 90_000 : 45_000
+const BATCH_NAV_TIMEOUT_MS = process.env.CI ? 90_000 : 45_000
 /**
  * Overall test timeout (ms). 300s base × 2 CI multiplier = 600s, matching
  * the suite wall-clock cap in run-all-tests.sh (#9101).
  */
 const CACHE_TEST_TIMEOUT_MS = 300_000
 const CI_TIMEOUT_MULTIPLIER = 2
+/**
+ * Maximum acceptable average warm time-to-content (ms).
+ * CI shared runners exhibit 2-3× slower React hydration due to CPU
+ * contention and virtualisation overhead, so we apply a multiplier.
+ */
+const WARM_TTC_THRESHOLD_MS = process.env.CI ? 1_000 : 500
 
 
 // Mock data, setupAuth, setupLiveMocks, setLiveColdMode, navigateToBatch,
@@ -544,11 +556,10 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   // run-all-tests.sh. No testInfo.setTimeout was set before (#9101), so the
   // test ran against the global config timeout (1200s) which meant timeout
   // errors only surfaced as wall-clock kills.
-  testInfo.setTimeout(!!process.env.CI ? CACHE_TEST_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : CACHE_TEST_TIMEOUT_MS)
+  testInfo.setTimeout(process.env.CI ? CACHE_TEST_TIMEOUT_MS * CI_TIMEOUT_MULTIPLIER : CACHE_TEST_TIMEOUT_MS)
 
   const allBatchResults: Array<{ batchIndex: number; cards: CardCacheResult[] }> = []
   const coldSnapshots: Map<string, ColdLoadSnapshot> = new Map()
-  let totalCards = 0
 
   page.on('console', (msg) => {
     if (msg.type() === 'error') console.log(`[Browser ERROR] ${msg.text()}`)
@@ -579,7 +590,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   // ── Phase 2: Warmup — prime Vite module cache ──────────────────────────
   console.log('[CacheTest] Phase 2: Warmup — priming module cache')
   const warmupManifest = await navigateToBatch(page, 0, 180_000)
-  totalCards = warmupManifest.totalCards
+  const totalCards = warmupManifest.totalCards
   const totalBatches = Math.ceil(totalCards / BATCH_SIZE)
   console.log(`[CacheTest] Total cards: ${totalCards}, batches: ${totalBatches}`)
   // Wait for warmup batch to fully load
@@ -604,6 +615,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
       }
       localStorage.setItem('kc-demo-mode', 'false')
       localStorage.setItem('token', 'test-token')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
     })
 
     const manifest = await navigateToBatch(page, batch, BATCH_NAV_TIMEOUT_MS)
@@ -766,7 +778,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
       } else if (!textSimilar) {
         status = 'warn'
         details = `Content mismatch: cold=${coldSnap.textLength} chars, warm=${warmSnap.textLength} chars`
-      } else if (warmSnap.timeToContentMs !== null && warmSnap.timeToContentMs > 500) {
+      } else if (warmSnap.timeToContentMs !== null && warmSnap.timeToContentMs > WARM_TTC_THRESHOLD_MS) {
         status = 'warn'
         details = `Cache loaded but slow: ${Math.round(warmSnap.timeToContentMs)}ms to content`
       } else {
@@ -854,7 +866,7 @@ test('card cache compliance — storage and retrieval', async ({ page }, testInf
   const realFails = allCards.filter((c) => c.status === 'fail' && !c.details.includes('initialData')).length
   expect(realFails, `${realFails} real cache failures (excl. initialData) — cards fell back to demo data instead of using cache`).toBe(0)
   if (avgTtc !== null) {
-    expect(avgTtc, `Avg warm time-to-content ${Math.round(avgTtc)}ms should be < 500ms`).toBeLessThan(500)
+    expect(avgTtc, `Avg warm time-to-content ${Math.round(avgTtc)}ms should be < ${WARM_TTC_THRESHOLD_MS}ms`).toBeLessThan(WARM_TTC_THRESHOLD_MS)
   }
 
   // ── Phase 8: Per-card cache key mapping ─────────────────────────────

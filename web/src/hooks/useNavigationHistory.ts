@@ -35,7 +35,10 @@ export function useNavigationHistory() {
 export function getNavigationBehavior() {
   let history: string[] = []
   try {
-    history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    if (Array.isArray(parsed)) {
+      history = parsed
+    }
   } catch {
     // Corrupted data — reset
   }

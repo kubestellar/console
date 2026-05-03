@@ -33,18 +33,11 @@ export function getChartColor(index: number): string {
     4: '#f59e0b', // amber/warning
     5: '#ef4444', // red
     6: '#06b6d4', // cyan
-    7: '#8b5cf6', // violet
+    7: '#8b5cf6', // purple
     8: '#14b8a6', // teal
   }
   
   return fallbacks[colorIndex] || fallbacks[1]
-}
-
-/**
- * Get multiple chart colors as an array
- */
-export function getChartColors(count: number): string[] {
-  return Array.from({ length: count }, (_, i) => getChartColor(i + 1))
 }
 
 /**

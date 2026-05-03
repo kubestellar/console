@@ -399,7 +399,7 @@ export function AlertSection({
   return (
     <div className={`p-3 rounded-lg border ${styles[type]} ${className}`}>
       <div className="flex items-start gap-2">
-        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
         <div>
           {title && (
             <p className="font-medium text-sm">{title}</p>

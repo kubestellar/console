@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { setupStrictDemoMode } from './helpers/api-mocks'
 
 /**
  * E2E tests for the Settings > System Updates section.
@@ -37,45 +38,51 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
   page.on('console', () => {})
 
   const wsRoutes: WsRoutes = { routes: [] }
-  let firstWsResolve: () => void
-  const firstWsReady = new Promise<void>((resolve) => {
-    firstWsResolve = resolve
+
+  // Strict API mocking — logs unmocked calls instead of silently returning {}
+  await setupStrictDemoMode(page, {
+    logUnmocked: true,
+    failOnUnmocked: false,
+    customHandlers: [
+      // Mock auth with test user
+      {
+        pattern: '**/api/me',
+        handler: async (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify(MOCK_USER),
+          }),
+      },
+      // Mock health — default to "ok" (individual tests may override after setup)
+      {
+        pattern: '**/health',
+        handler: async (route) => {
+          const url = new URL(route.request().url())
+          if (url.pathname !== '/health') return route.fallback()
+          return route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: 'ok', version: 'dev', oauth_configured: true }),
+          })
+        },
+      },
+      // Mock MCP / agent HTTP endpoints
+      {
+        pattern: '**/api/mcp/**',
+        handler: async (route) =>
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
+          }),
+      },
+    ],
   })
-
-  // Mock auth
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify(MOCK_USER),
-    })
-  )
-
-  // Mock health — default to "ok" (individual tests may override after setup)
-  await page.route('**/health', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ status: 'ok', version: 'dev', oauth_configured: true }),
-    })
-  )
-
-  // Mock MCP / agent HTTP endpoints
-  await page.route('**/api/mcp/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
-    })
-  )
-  await page.route('http://127.0.0.1:8585/**', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-  )
 
   // Mock the kc-agent WebSocket — capture WebSocketRoute handles from callback
   await page.routeWebSocket('ws://127.0.0.1:8585/**', (ws) => {
     wsRoutes.routes.push(ws)
-    firstWsResolve()
     ws.onMessage((data) => {
       try {
         const msg = JSON.parse(String(data))
@@ -86,20 +93,34 @@ async function setupUpdateTest(page: Page): Promise<WsRoutes> {
     })
   })
 
-  // Set auth token + skip onboarding/tour
-  await page.goto('/login')
-  await page.evaluate(() => {
-    localStorage.setItem('token', 'test-token')
+  // Set auth token + skip onboarding/tour BEFORE navigation
+  await page.addInitScript(() => {
+    localStorage.setItem('token', 'demo-token')
+    localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kubestellar-console-tour-completed', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 
   await page.goto('/settings')
   await page.waitForLoadState('domcontentloaded')
   await expect(page.getByTestId('settings-page')).toBeVisible({ timeout: 10000 })
 
-  // Wait for at least one WebSocket connection to be established
-  await firstWsReady
+  // Wait for at least one WebSocket connection to be established.
+  // The app connects to ws://127.0.0.1:8585 for kc-agent; if it doesn't
+  // attempt the connection within 5s, fail fast instead of hanging.
+  const WS_CONNECT_TIMEOUT_MS = 5000
+  await expect
+    .poll(() => wsRoutes.routes.length, {
+      message: 'Expected at least one WebSocket connection to kc-agent',
+      timeout: WS_CONNECT_TIMEOUT_MS,
+    })
+    .toBeGreaterThan(0)
 
   return wsRoutes
 }
@@ -132,9 +153,13 @@ test.describe('Update Settings', () => {
   test('shows progress banner during update', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    // Send "pulling" progress
-    sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    // Retry sending progress until the banner appears — handles the race
+    // between WS connection established and React's useEffect registering
+    // the update_progress message handler.
+    await expect(async () => {
+      sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
+      await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
+    }).toPass({ timeout: 10000 })
     await expect(page.getByTestId('update-progress-message')).toContainText('Pulling latest changes')
 
     // "Done" and "Failed" banners should NOT be visible during update
@@ -145,9 +170,11 @@ test.describe('Update Settings', () => {
   test('progress bar advances through build stages', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    // Stage 1: pulling at 10%
-    sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
-    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    // Stage 1: pulling at 10% (retry to handle handler-registration race)
+    await expect(async () => {
+      sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
+      await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 1000 })
+    }).toPass({ timeout: 10000 })
     const bar = page.getByTestId('update-progress-bar')
     await expect(bar).toHaveCSS('width', /\d+/)
 
@@ -224,9 +251,10 @@ test.describe('Update Settings', () => {
   test('shows failed banner with error details', async ({ page }) => {
     const ws = await setupUpdateTest(page)
 
-    sendProgress(ws, 'failed', 'Frontend build failed, rolling back...', 30, 'npm ERR! code ELIFECYCLE')
-
-    await expect(page.getByTestId('update-failed-banner')).toBeVisible({ timeout: 5000 })
+    await expect(async () => {
+      sendProgress(ws, 'failed', 'Frontend build failed, rolling back...', 30, 'npm ERR! code ELIFECYCLE')
+      await expect(page.getByTestId('update-failed-banner')).toBeVisible({ timeout: 1000 })
+    }).toPass({ timeout: 10000 })
     await expect(page.getByTestId('update-failed-error')).toContainText('npm ERR!')
 
     // Progress and done banners should NOT be visible
@@ -242,6 +270,40 @@ test.describe('Update Settings', () => {
 
     await page.getByTestId('update-failed-dismiss').click()
     await expect(page.getByTestId('update-failed-banner')).not.toBeVisible()
+  })
+
+  test('recovers state after WebSocket disconnect during update', async ({ page }) => {
+    const ws = await setupUpdateTest(page)
+
+    // Start an update — UI should show the progress banner
+    sendProgress(ws, 'pulling', 'Pulling latest changes...', 10)
+    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('update-progress-message')).toContainText('Pulling latest changes')
+
+    // Simulate a mid-update disconnect by closing every open WS connection
+    const routeCountBeforeDisconnect = ws.routes.length
+    for (const route of ws.routes) {
+      route.close({ code: 1006, reason: 'Simulated network drop' })
+    }
+
+    // The app will attempt to reconnect — routeWebSocket handler in
+    // setupUpdateTest captures the new connection into ws.routes.
+    // Wait until at least one NEW connection appears.
+    const RECONNECT_TIMEOUT_MS = 10_000
+    await expect
+      .poll(() => ws.routes.length, { timeout: RECONNECT_TIMEOUT_MS })
+      .toBeGreaterThan(routeCountBeforeDisconnect)
+
+    // Resume the update on the new connection(s) — send a later stage
+    sendProgress(ws, 'building', 'Building Go binaries...', 60)
+    await expect(page.getByTestId('update-progress-banner')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('update-progress-message')).toContainText('Building Go binaries')
+
+    // Complete the update
+    sendProgress(ws, 'done', 'Update complete — restart successful', 100)
+    await expect(page.getByTestId('update-done-banner')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('update-progress-banner')).not.toBeVisible()
+    await expect(page.getByTestId('update-refresh-button')).toBeVisible()
   })
 
   test('transitions from progress to done correctly', async ({ page }) => {

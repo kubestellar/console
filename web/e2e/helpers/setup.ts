@@ -46,7 +46,7 @@ export const MOCK_DEMO_USER = {
 export const EXPECTED_ERROR_PATTERNS = [
   /Failed to fetch/i, // Network errors in demo mode
   /WebSocket/i, // WebSocket not available in tests
-  /can't establish a connection/i, // Firefox WebSocket connection errors
+  /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket connection errors (Firefox uses curly apostrophes)
   /ResizeObserver loop (?:limit exceeded|completed with undelivered notifications)/i, // Benign ResizeObserver loop warning
   /validateDOMNesting/i, // Already tracked by Auto-QA DOM errors check
   /act\(\)/i, // React testing warnings
@@ -58,11 +58,19 @@ export const EXPECTED_ERROR_PATTERNS = [
   /Cross-Origin Request Blocked/i, // CORS errors when backend/agent not running
   /blocked by CORS policy/i, // Chromium CORS wording (Firefox uses pattern above)
   /Access to fetch.*has been blocked by CORS/i, // Chromium-specific phrasing; Medium blog public fallback is cross-origin from vite preview (localhost:4173 → console.kubestellar.io)
+  /Origin .* is not allowed by Access-Control-Allow-Origin/i, // WebKit/Safari CORS wording (distinct from Chromium/Firefox patterns above)
+  /Access-Control-Allow-Origin.*localhost/i, // WebKit CORS variant referencing localhost origin
+  /Access-Control-Allow-Origin.*127\.0\.0\.1/i, // WebKit CORS variant referencing loopback IP
   /Notification permission/i, // Firefox blocks notification requests outside user gestures
+  /Notification prompting can only be done from a user gesture/i, // WebKit/Safari wording for notification gesture block
   /ERR_CONNECTION_REFUSED/i, // Backend/agent not running in CI
-  /net::ERR_/i, // Any network-level Chrome error in demo mode
+  /net::ERR_CONNECTION_REFUSED.*(:8585|:8080|localhost)/i, // Agent/backend ports only in demo mode (#11294)
+  /Could not connect to [0-9.]+/i, // WebKit wording for connection refused (no net:: prefix)
+  /Connection refused.*(:8585|:8080|127\.0\.0\.1|localhost)/i, // Backend/agent connection only (#11294)
   /502.*Bad Gateway/i, // Reverse proxy errors when backend not running
-  /Failed to load resource/i, // Generic resource load failures in demo mode
+  /Failed to load resource.*(:8585|:8080|:4173|\/api\/)/i, // Backend/preview API resource failures (#11294, #11660)
+  /the server responded with a status of [45]\d{2}/i, // 4xx/5xx status errors in demo/CI mode (#11520, #11660)
+  /console\.kubestellar\.io/i, // External origin fetch failures when hosted site is unavailable from CI (#11520)
   // SQLite WASM cache worker — webkit/Safari can't streaming-compile the
   // sqlite3 wasm, and the worker has a documented IndexedDB fallback path
   // (see lib/cache/worker.ts). These errors emit from the sqlite-wasm loader
@@ -79,6 +87,12 @@ export const EXPECTED_ERROR_PATTERNS = [
   // indicate a real page failure — they're test harness cleanup noise.
   /NS_BINDING_ABORTED/i,
   /NS_ERROR_FAILURE/i,
+  /Fetch failed: Invalid JSON response/i,
+  /\[Cache\] Failed to/i, // Cache persistence errors in CI (no OPFS/IndexedDB support) (#11660)
+  /\[IndexedData\] Failed to/i, // IndexedDB fallback errors in CI (#11660)
+  /\[CacheWorkerRpc\] Worker error/i, // Cache worker failures in CI (#11660)
+  /\[mockApiFallback\]/i, // Test mock logging that leaks to browser console (#11660)
+  /Error fetching from cluster/i, // Cluster fetch errors when backend is unavailable (#11660)
 ]
 
 function isExpectedError(message: string): boolean {
@@ -131,13 +145,327 @@ export async function mockApiMe(page: Page) {
   )
 }
 
+/**
+ * Catch-all mock for /api/** requests and the root /health endpoint.
+ * Returns empty JSON 200 for API calls, and a minimal health payload for
+ * /health — omitting `enabled_dashboards` so all sidebar routes remain visible.
+ *
+ * Without mocking /health, useSidebarConfig.fetchEnabledDashboards() can
+ * receive an enabled_dashboards list from the CI Go backend that filters out
+ * sidebar routes like /deploy, breaking navigation-dependent tests.
+ *
+ * Register BEFORE specific mocks (Playwright matches in reverse order).
+ */
+export async function mockApiFallback(page: Page) {
+  // Mock the root /health endpoint. Omitting enabled_dashboards means all
+  // dashboards are shown (applyDashboardFilter only filters when the array
+  // is present and non-empty). Only matches the root-level path.
+  await page.route('**/health', (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname !== '/health') return route.fallback()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ok',
+        version: 'dev',
+        oauth_configured: false,
+        in_cluster: false,
+        no_local_agent: true,
+        install_method: 'dev',
+      }),
+    })
+  })
+
+  // IMPORTANT: Playwright matches routes in REVERSE registration order (last registered = first matched).
+  // Register the catch-all FIRST (lowest priority) so the active-users specific mock below
+  // overrides it. Previously the catch-all was registered last and intercepted /api/active-users
+  // before the specific mock, returning {} → Number.isFinite(undefined)=false → error/retry
+  // re-render cycles in Firefox/webkit causing DOM instability.
+  //
+  // STRICT MOCKING: Log unmocked API calls to help detect missing endpoints (#11225)
+  await page.route('**/api/**', (route) => {
+    const url = route.request().url()
+    // eslint-disable-next-line no-console
+    console.error(`[mockApiFallback] Unmocked API call: ${url}`)
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  })
+
+  // Registered AFTER the catch-all → higher priority. Trailing * matches query params too.
+  // Returns valid data so useActiveUsers stays stable (no error state / re-renders).
+  await page.route('**/api/active-users*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ activeUsers: 1, totalConnections: 1 }),
+    })
+  )
+
+  // /api/dashboards expects an array — the catch-all returns {} which is
+  // truthy but not an array, causing (data || []).filter crashes (#10818).
+  await page.route('**/api/dashboards*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+
+  // Explicit mocks for endpoints that MSW marks as passthrough (#11660).
+  // Without these, requests reach vite preview (which returns 404) or the Go
+  // backend (which may return 503 when external services are unreachable).
+  // Registered AFTER the catch-all so they take priority.
+  await page.route('**/api/youtube/playlist*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [] }),
+    })
+  )
+  await page.route('**/api/youtube/thumbnail/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: '' })
+  )
+  await page.route('**/api/medium/blog*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [] }),
+    })
+  )
+  await page.route('**/api/missions/browse*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+  await page.route('**/api/missions/scores*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ topScores: [], userScore: null }),
+    })
+  )
+  await page.route('**/api/missions/file*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  await page.route('**/api/rewards/github*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ topContributors: [], recentActivity: [] }),
+    })
+  )
+  await page.route('**/api/rewards/badge/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '' })
+  )
+  await page.route('**/api/issue-stats*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ open: 0, closed: 0, totalComments: 0 }),
+    })
+  )
+  await page.route('**/api/github-pipelines*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ workflows: [] }),
+    })
+  )
+  await page.route('**/api/nightly-e2e/runs*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+  await page.route('**/api/public/nightly-e2e/runs*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+  await page.route('**/api/nps*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  await page.route('**/api/feedback-app*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  await page.route('**/api/analytics-dashboard*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  await page.route('**/api/acmm/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  // Analytics collection endpoints — return 204 No Content
+  await page.route('**/api/gtag*', (route) =>
+    route.fulfill({ status: 204, body: '' })
+  )
+  await page.route('**/api/m*', (route) => {
+    // Only intercept the analytics /api/m endpoint, not other /api/m* routes
+    const url = new URL(route.request().url())
+    if (url.pathname === '/api/m') {
+      return route.fulfill({ status: 204, body: '' })
+    }
+    return route.fallback()
+  })
+  await page.route('**/api/send*', (route) =>
+    route.fulfill({ status: 204, body: '' })
+  )
+  await page.route('**/api/ksc*', (route) =>
+    route.fulfill({ status: 204, body: '' })
+  )
+
+  // Mock the local kc-agent HTTP endpoint. Even in demo mode, the cluster
+  // cache probes http://127.0.0.1:8585/clusters before falling back to demo
+  // data. Without this mock the probe hangs in CI (nobody on port 8585),
+  // keeping isLoading=true and blocking page render.
+  //
+  // Return 503 (not 200 with empty data) so fetchClusterListFromAgent()
+  // returns null and fullFetchClusters() falls through to the demo-data
+  // fallback path. A 200 with { clusters: [] } is truthy and short-circuits
+  // the demo fallback, leaving stats/sublabels empty (#compute-deep failures).
+  await page.route('http://127.0.0.1:8585/**', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Service unavailable (test mock)' }),
+    })
+  )
+
+  // Mock external console.kubestellar.io API requests (#11520). Hooks like
+  // useGitHubRewards and useMediumBlog fetch from https://console.kubestellar.io
+  // which is a different origin — not caught by the same-origin **/api/** pattern.
+  // In CI (vite preview on localhost:4173), these requests escape route mocking
+  // and hit the real server, which may return 503, generating console errors.
+  await page.route('https://console.kubestellar.io/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+}
+
+/**
+ * Strict variant of mockApiFallback for suites that must detect missing endpoint mocks.
+ *
+ * #11295 — The permissive mockApiFallback returns HTTP 200/{} for any unmocked
+ * /api/** endpoint. This silently passes tests when components receive {} instead
+ * of the expected array/object shape, masking missing mocks.
+ *
+ * mockApiFallbackStrict returns HTTP 404 for unmocked endpoints instead.
+ * Components that handle errors gracefully will show error state (correct behaviour
+ * in test); components that don't guard against error responses will surface
+ * crashes — which is the intent.
+ *
+ * Use for: smoke.spec.ts, fullstack-smoke.spec.ts, route-coverage.spec.ts,
+ * console-error-scan tests. These suites benefit from strict mock coverage.
+ *
+ * Keep using mockApiFallback for: visual regression, perf, and tests that
+ * intentionally exercise degraded states.
+ *
+ * Register BEFORE specific mocks (Playwright matches in reverse order).
+ */
+export async function mockApiFallbackStrict(page: Page) {
+  // Register /health, active-users, dashboards, and kc-agent mocks identically
+  // to mockApiFallback so the app shell loads correctly.
+  await page.route('**/health', (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname !== '/health') return route.fallback()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ok',
+        version: 'dev',
+        oauth_configured: false,
+        in_cluster: false,
+        no_local_agent: true,
+        install_method: 'dev',
+      }),
+    })
+  })
+
+  // Catch-all: return 404 for unmocked endpoints. 404 is a real HTTP error
+  // that components should handle — it surfaces missing mocks as test failures
+  // rather than silent empty-state renders.
+  await page.route('**/api/**', (route) => {
+    const url = route.request().url()
+    // eslint-disable-next-line no-console
+    console.error(`[mockApiFallbackStrict] Unmocked API call (returning 404): ${url}`)
+    route.fulfill({
+      status: 404,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: `No mock registered for ${url}` }),
+    })
+  })
+
+  await page.route('**/api/active-users*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ activeUsers: 1, totalConnections: 1 }),
+    })
+  )
+
+  await page.route('**/api/dashboards*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+
+  await page.route('http://127.0.0.1:8585/**', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Service unavailable (test mock)' }),
+    })
+  )
+}
+
 export async function setupDemoMode(page: Page) {
+  await mockApiFallback(page)
   // Seed localStorage before page scripts execute — prevents the app from
   // briefly rendering the /login screen before the demo flag is picked up.
   await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
   // Mock /api/me so AuthProvider has a deterministic user without a backend.
   await mockApiMe(page)
@@ -248,6 +576,7 @@ export const DEFAULT_AUTH_USER: MockApiUser = {
  * instead (or both, depending on what the app under test expects).
  */
 export async function setupAuth(page: Page, user?: Partial<MockApiUser>): Promise<void> {
+  await mockApiFallback(page)
   const u: MockApiUser = { ...DEFAULT_AUTH_USER, ...(user || {}) }
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -297,6 +626,11 @@ export async function setupAuthLocalStorage(
   }
   await page.addInitScript((o: typeof opts) => {
     localStorage.setItem('token', o.token)
+    localStorage.setItem('kc-has-session', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
     if (o.demoMode !== undefined) {
       localStorage.setItem('kc-demo-mode', String(o.demoMode))
     }
@@ -307,7 +641,7 @@ export async function setupAuthLocalStorage(
       localStorage.setItem('kc-onboarding-complete', 'true')
     }
     if (o.tourComplete) {
-      localStorage.setItem('kc-tour-complete', 'true')
+      localStorage.setItem('kubestellar-console-tour-completed', 'true')
     }
     if (o.setupComplete) {
       localStorage.setItem('kc-setup-complete', 'true')
@@ -317,8 +651,8 @@ export async function setupAuthLocalStorage(
 
 /** Default clusters returned from a mocked MCP `**\/api/mcp/**` call */
 export const DEFAULT_MCP_CLUSTERS = [
-  { name: 'cluster-1', context: 'ctx-1', healthy: true, nodeCount: 5, podCount: 45 },
-  { name: 'cluster-2', context: 'ctx-2', healthy: true, nodeCount: 3, podCount: 32 },
+  { name: 'cluster-1', healthy: true, nodeCount: 5, podCount: 45 },
+  { name: 'cluster-2', healthy: true, nodeCount: 3, podCount: 32 },
 ]
 
 /** Options for `setupMCP` — override cluster/issue/event/node payloads */
@@ -367,13 +701,35 @@ export async function setupMCP(page: Page, options?: SetupMCPOptions): Promise<v
 export async function setupDashboardTest(page: Page): Promise<void> {
   await setupAuth(page)
   await setupMCP(page)
+  // Mock /api/dashboards so the dashboard component doesn't wait for a
+  // backend response before falling back to demo cards. Without this mock,
+  // the unmocked request can time out on slower mobile-emulation runtimes,
+  // causing card-rendering assertions to fail.
+  await page.route('**/api/dashboards', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
   // Seed localStorage BEFORE any page script runs — page.evaluate() runs
   // after the page has already parsed and executed scripts, which is too
   // late for webkit/Safari where the auth redirect fires synchronously.
   await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
+    localStorage.setItem('token', 'demo-token')
+    localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
+  // Webkit mobile emulation (mobile-safari) is significantly slower to
+  // stabilize the DOM after domcontentloaded — wait for the main layout
+  // element to be visible so assertions in beforeEach don't time out
+  // (#nightly-playwright).
+  await page.locator('#root').waitFor({ state: 'visible', timeout: 15000 })
 }

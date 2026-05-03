@@ -8,7 +8,7 @@ import { renderHook, act } from '@testing-library/react'
 const mockPodIssues = vi.fn(() => ({ issues: [] }))
 const mockDeploymentIssues = vi.fn(() => ({ issues: [] }))
 const mockSecurityIssues = vi.fn(() => ({ issues: [] }))
-const mockClusters = vi.fn(() => ({ clusters: [] }))
+const mockClusters = vi.fn(() => ({ clusters: [], deduplicatedClusters: [] }))
 const mockNodes = vi.fn(() => ({ nodes: [] }))
 const mockPods = vi.fn(() => ({ pods: [] }))
 
@@ -120,7 +120,7 @@ describe('useMissionSuggestions', () => {
     mockPodIssues.mockReturnValue({ issues: [] })
     mockDeploymentIssues.mockReturnValue({ issues: [] })
     mockSecurityIssues.mockReturnValue({ issues: [] })
-    mockClusters.mockReturnValue({ clusters: [] })
+    mockClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [] })
     mockNodes.mockReturnValue({ nodes: [] })
     mockPods.mockReturnValue({ pods: [] })
     // Reset snooze/dismiss mocks
@@ -247,6 +247,7 @@ describe('useMissionSuggestions', () => {
   it('generates a health mission for unreachable clusters', () => {
     mockClusters.mockReturnValue({
       clusters: [makeCluster({ name: 'prod', reachable: false, errorMessage: 'timeout' })],
+      deduplicatedClusters: [makeCluster({ name: 'prod', reachable: false, errorMessage: 'timeout' })],
     })
     const { result } = renderHook(() => useMissionSuggestions())
 
@@ -259,6 +260,7 @@ describe('useMissionSuggestions', () => {
   it('generates a health mission for unhealthy clusters (healthy=false)', () => {
     mockClusters.mockReturnValue({
       clusters: [makeCluster({ name: 'staging', healthy: false })],
+      deduplicatedClusters: [makeCluster({ name: 'staging', healthy: false })],
     })
     const { result } = renderHook(() => useMissionSuggestions())
     expect(result.current.suggestions.find(s => s.type === 'health')).toBeDefined()
@@ -267,6 +269,7 @@ describe('useMissionSuggestions', () => {
   it('does not generate a health mission for healthy clusters', () => {
     mockClusters.mockReturnValue({
       clusters: [makeCluster({ reachable: true, healthy: true })],
+      deduplicatedClusters: [makeCluster({ reachable: true, healthy: true })],
     })
     const { result } = renderHook(() => useMissionSuggestions())
     expect(result.current.suggestions.find(s => s.type === 'health')).toBeUndefined()
@@ -384,6 +387,7 @@ describe('useMissionSuggestions', () => {
     })
     mockClusters.mockReturnValue({
       clusters: [makeCluster({ reachable: false })], // critical
+      deduplicatedClusters: [makeCluster({ reachable: false })], // critical
     })
     mockDeploymentIssues.mockReturnValue({
       issues: [makeDeploymentIssue({ replicas: 3, readyReplicas: 0 })], // high
@@ -520,6 +524,7 @@ describe('useMissionSuggestions', () => {
   it('hasSuggestions is true when there are visible suggestions', () => {
     mockClusters.mockReturnValue({
       clusters: [makeCluster({ reachable: false })],
+      deduplicatedClusters: [makeCluster({ reachable: false })],
     })
     const { result } = renderHook(() => useMissionSuggestions())
     expect(result.current.hasSuggestions).toBe(true)
@@ -580,6 +585,7 @@ describe('useMissionSuggestions', () => {
     })
     mockClusters.mockReturnValue({
       clusters: [makeCluster({ reachable: false })],
+      deduplicatedClusters: [makeCluster({ reachable: false })],
     })
     mockNodes.mockReturnValue({
       nodes: [makeNode({ conditions: [{ type: 'MemoryPressure', status: 'True' }] })],

@@ -1,30 +1,18 @@
 import { CheckCircle, AlertTriangle, RefreshCw, Server } from 'lucide-react'
+import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useFlatcarStatus } from './useFlatcarStatus'
 import { compareFlatcarVersions } from './versionUtils'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('flatcar.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('flatcar.syncedJustNow')
-    if (diff < hour) return t('flatcar.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('flatcar.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('flatcar.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 
 export function FlatcarStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
-  const { data, error, showSkeleton, showEmptyState } = useFlatcarStatus()
+  const formatRelativeTime = createCardSyncFormatter(t, 'flatcar')
+  const { data, error, isRefreshing, showSkeleton, showEmptyState } = useFlatcarStatus()
 
   if (showSkeleton) {
     return (
@@ -80,7 +68,7 @@ export function FlatcarStatus() {
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className="w-3 h-3" />
+          <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
           <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>

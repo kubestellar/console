@@ -206,6 +206,14 @@ if [ -z "$KC_AGENT_BIN" ]; then
     fi
 fi
 
+# Generate KC_AGENT_TOKEN if not already set — both kc-agent and the Go
+# backend must share the same secret so the frontend can authenticate.
+if [ -z "${KC_AGENT_TOKEN:-}" ]; then
+    KC_AGENT_TOKEN="$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p 2>/dev/null || cat /dev/urandom | tr -dc 'a-f0-9' | head -c 64)"
+    echo "Auto-generated KC_AGENT_TOKEN for this session."
+fi
+export KC_AGENT_TOKEN
+
 # Start kc-agent and verify it is running
 AGENT_PID=""
 AGENT_RUNNING=false

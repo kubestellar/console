@@ -16,7 +16,12 @@ const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.Compon
   other: { label: 'Other', icon: MoreHorizontal, color: 'bg-muted-foreground' },
 }
 
-export function TokenUsageWidget() {
+interface TokenUsageWidgetProps {
+  /** Force label text to be visible (used in overflow menu) */
+  showLabel?: boolean
+}
+
+export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { usage, alertLevel, percentage, remaining, isDemoData } = useTokenUsage()
@@ -69,8 +74,8 @@ export function TokenUsageWidget() {
         {isDemoData && (
           <StatusBadge color="yellow" role="img" aria-label={t('layout.navbar.demoModeActive')}>{t('layout.demo')}</StatusBadge>
         )}
-        <span className="text-xs font-medium hidden sm:inline">{percentage.toFixed(0)}%</span>
-        <div className="w-12 h-1.5 bg-secondary rounded-full overflow-hidden hidden sm:block">
+        <span className={cn("text-xs font-medium", showLabel ? 'inline' : 'hidden sm:inline')}>{percentage.toFixed(0)}%</span>
+        <div className={cn("w-12 h-1.5 bg-secondary rounded-full overflow-hidden", showLabel ? 'block' : 'hidden sm:block')}>
           <div
             className={`h-full transition-all ${
               isDemoData
@@ -88,7 +93,7 @@ export function TokenUsageWidget() {
 
       {/* Token details dropdown */}
       {showTokenDetails && (
-        <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-4 z-50">
+        <div className="absolute top-full right-0 mt-2 w-64 bg-card border border-border rounded-lg shadow-xl p-4 z-dropdown">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-foreground">{t('layout.navbar.tokenUsage')}</h4>
             {isDemoData && (

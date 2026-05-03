@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { api } from '../../lib/api'
 import { fetchSSE } from '../../lib/sseClient'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
@@ -84,7 +83,7 @@ export let gpuNodeCache: GPUNodeCache = loadGPUCacheFromStorage()
 export const gpuNodeSubscribers = new Set<(cache: GPUNodeCache) => void>()
 
 export function notifyGPUNodeSubscribers() {
-  gpuNodeSubscribers.forEach(subscriber => subscriber(gpuNodeCache))
+  Array.from(gpuNodeSubscribers).forEach(subscriber => subscriber(gpuNodeCache))
 }
 
 // Register with mode transition coordinator for unified cache clearing
@@ -212,7 +211,9 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       } catch {
         // SSE failed, try REST fallback
         try {
-          const { data } = await api.get<{ nodes: GPUNode[] }>(`${LOCAL_AGENT_HTTP_URL}/gpu-nodes?${params}`)
+          const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gpu-nodes?${params}`)
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+          const data = await resp.json()
           newNodes = data.nodes || []
           fetchSucceeded = true
         } catch {
@@ -350,7 +351,7 @@ export function useGPUNodes(cluster?: string) {
     // Poll GPU node data periodically (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `gpuNodes:${cluster || 'all'}`,
-      getEffectiveInterval(GPU_POLL_INTERVAL_MS),
+      getEffectiveInterval(GPU_POLL_INTERVAL_MS, gpuNodeCache.consecutiveFailures),
       () => fetchGPUNodes(cluster, 'poll'),
     )
 
@@ -364,7 +365,7 @@ export function useGPUNodes(cluster?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [cluster])
+  }, [cluster, gpuNodeCache.consecutiveFailures])
 
   const refetch = useCallback(() => {
     fetchGPUNodes(cluster)
@@ -515,7 +516,7 @@ export function useNodes(cluster?: string) {
             return
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(`[useNodes] Local agent failed for ${cluster}:`, err)
       }
     }
@@ -638,7 +639,9 @@ export function useNVIDIAOperators(cluster?: string) {
       // REST fallback
       const urlParams = new URLSearchParams()
       if (cluster) urlParams.append('cluster', cluster)
-      const { data } = await api.get<{ operators?: NVIDIAOperatorStatus[], operator?: NVIDIAOperatorStatus }>(`${LOCAL_AGENT_HTTP_URL}/nvidia-operators?${urlParams}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/nvidia-operators?${urlParams}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       if (data.operators) {
         setOperators(data.operators)
       } else if (data.operator) {

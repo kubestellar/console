@@ -63,7 +63,7 @@ export function MissionBrowserFixesTab({
             value={fixerSearch}
             onChange={(e) => onFixerSearchChange(e.target.value)}
             placeholder="Search fixes…"
-            className="w-full pl-10 pr-4 py-1.5 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+            className="w-full pl-10 pr-4 py-1.5 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
           />
         </div>
         {!fixerSearch && globalSearchActive && (

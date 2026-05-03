@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { StatTile } from '../shared/StatTile'
 import {
   CheckCircle,
   AlertTriangle,
@@ -16,6 +17,7 @@ import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useOpenYurtStatus } from './useOpenYurtStatus'
 import type { OpenYurtNodePool, NodePoolStatus, NodePoolType, OpenYurtGateway, GatewayStatus } from './demoData'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,48 +79,10 @@ const GATEWAY_STATUS_CONFIG: Record<
   },
 }
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('openyurt.syncedJustNow')
-    const minute = 60_000
-    const hour = 60 * minute
-    const day = 24 * hour
-    if (diff < minute) return t('openyurt.syncedJustNow')
-    if (diff < hour) return t('openyurt.syncedMinutesAgo', { count: Math.floor(diff / minute) })
-    if (diff < day) return t('openyurt.syncedHoursAgo', { count: Math.floor(diff / hour) })
-    return t('openyurt.syncedDaysAgo', { count: Math.floor(diff / day) })
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-
-function StatTile({
-  icon,
-  label,
-  value,
-  colorClass,
-  borderClass,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: number
-  colorClass: string
-  borderClass: string
-}) {
-  return (
-    <div className={`p-3 rounded-lg bg-secondary/30 border ${borderClass}`}>
-      <div className="flex items-center gap-2 mb-1">
-        {icon}
-        <span className={`text-xs ${colorClass}`}>{label}</span>
-      </div>
-      <span className="text-2xl font-bold text-foreground">{value}</span>
-    </div>
-  )
-}
 
 function NodeReadinessBar({
   ready,
@@ -149,7 +113,7 @@ function NodePoolRow({ pool }: { pool: OpenYurtNodePool }) {
   return (
     <div className="rounded-md bg-muted/30 px-3 py-2 space-y-1.5">
       {/* Row 1: name + status + node count */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 min-w-0">
           {statusCfg.icon}
           <span className="text-xs font-medium truncate">{pool.name}</span>
@@ -163,7 +127,7 @@ function NodePoolRow({ pool }: { pool: OpenYurtNodePool }) {
       </div>
 
       {/* Row 2: pool type + autonomy */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
           {typeCfg.icon}
           {typeCfg.label}
@@ -186,7 +150,7 @@ function GatewayRow({ gw }: { gw: OpenYurtGateway }) {
   const cfg = GATEWAY_STATUS_CONFIG[gw.status]
 
   return (
-    <div className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-md bg-muted/20">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-md bg-muted/20">
       <div className="flex items-center gap-1.5 min-w-0">
         {cfg.icon}
         <span className="text-xs truncate">{gw.name}</span>
@@ -203,7 +167,7 @@ function GatewayRow({ gw }: { gw: OpenYurtGateway }) {
 
 export function OpenYurtStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'openyurt')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useOpenYurtStatus()
   const [search, setSearch] = useState('')
 
@@ -238,11 +202,11 @@ export function OpenYurtStatus() {
   if (showSkeleton) {
     return (
       <div className="h-full flex flex-col min-h-card gap-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-y-2">
           <Skeleton variant="rounded" width={120} height={28} />
           <Skeleton variant="rounded" width={80} height={20} />
         </div>
-        <SkeletonStats className="grid-cols-4" />
+        <SkeletonStats className="grid-cols-2 @md:grid-cols-4" />
         <Skeleton variant="rounded" height={32} />
         <SkeletonList items={3} className="flex-1" />
       </div>
@@ -287,7 +251,7 @@ export function OpenYurtStatus() {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded gap-4 overflow-hidden">
       {/* ── Header: health badge + controller pods + last check ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex items-center gap-2">
           <div
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${healthColorClass}`}
@@ -315,7 +279,7 @@ export function OpenYurtStatus() {
 
       {/* ── Stats grid ── */}
       {nodePools.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 @md:grid-cols-4 gap-2">
           <StatTile
             icon={<Server className="w-4 h-4 text-blue-400" />}
             label={t('openyurt.totalNodes', 'Nodes')}

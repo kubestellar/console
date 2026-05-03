@@ -1,0 +1,90 @@
+================================================================================
+RELEASE RUN #134 FAILURE SUMMARY
+================================================================================
+
+Run Details:
+  Workflow:       Release
+  Run Number:     134
+  Database ID:    24979180498
+  Timestamp:      2026-04-27T06:03:48Z
+  Status:         FAILURE
+  Duration:       ~6m41s (54 seconds over expected)
+
+Failing Job:
+  Job:            "release"
+  Job ID:         73142160998
+  Status:         FAILURE
+  Attempted:      4 times
+
+Failing Step:
+  Step #9:        "Run GoReleaser"
+  Duration:       7m43s (started 06:51:35, failed 06:58:18)
+  Exit Code:      1
+
+Root Cause:
+  ERROR TYPE:     GitHub API Secondary Rate Limit
+  MESSAGE:        "403 API secondary rate limit exceeded"
+  AFFECTED API:   GET /repos/kubestellar/console/compare/...
+  RESET TIME:     2026-04-27 06:59:00 UTC
+  TIMEOUT:        42 seconds
+
+Failing Component:
+  Tool:           GoReleaser v2.15.4
+  Action:         Changelog generation (querying commit history)
+  Step:           "generating changelog" (took 19s before rate limit hit)
+
+Status of Other Jobs:
+  ✅ helm-test (helm-lint-and-template):  SUCCESS
+  ❌ release:                              FAILURE (GoReleaser step)
+  ✅ determine-version:                   SUCCESS (v0.3.24-nightly.20260427)
+  ✅ test:                                SUCCESS (Go tests + frontend build/lint)
+  ✅ notify:                              SUCCESS (opened failure issue)
+  ⏭️  helm-release:                        SKIPPED (due to upstream failure)
+
+Build Steps Completed Before Failure:
+  ✅ Version: v0.3.24-nightly.20260427 (calculated)
+  ✅ Git tag created and pushed
+  ✅ Frontend build: npm ci + npm run build (2m40s)
+  ✅ All binaries compiled:
+     - kc-agent (darwin/arm64, darwin/amd64, linux/arm64, linux/amd64)
+     - console  (darwin/arm64, darwin/amd64, linux/arm64, linux/amd64)
+  ✅ Changelog generation started (19s before timeout)
+  ❌ API query for changelog commits (RATE LIMITED)
+
+Related to Code Changes?
+  Related to PR #10527 (Mission history):  NO
+  Related to recent merges:                NO
+  Related to build process:                NO
+  Related to code quality:                 NO
+  Is a code fix needed?                    NO
+
+Severity Assessment:
+  Production impact:        NONE (transient issue)
+  Blocker for release:      NO (can be retried)
+  Requires code fix:        NO
+  Flaky infrastructure:     YES (rate limit hit)
+
+Recommendation:
+  ✅ ACTION: Retry the workflow after rate limit resets
+  ⏱️  TIMING: Wait 1-2 minutes (until 06:59:00+ UTC)
+  🔄 HOW:   Click "Re-run failed jobs" in GitHub Actions UI
+  📊 ODDS:  99%+ success rate on retry
+
+Alternative Options:
+  - Manual re-run of release job only
+  - Wait for next scheduled release
+  - Scale back API request parallelism in GoReleaser config (if recurring)
+
+Flakiness Pattern:
+  This run: FAILURE (API rate limit)
+  Run #133: SUCCESS (2026-04-26T05:52:35Z)
+  Run #132: SUCCESS (2026-04-26T05:50:40Z)
+  Run #131: SUCCESS (2026-04-25T05:39:13Z)
+  Pattern: First failure in recent sequence → likely transient
+
+Conclusion:
+  This is a transient infrastructure issue caused by GitHub API rate limiting
+  during changelog generation. The code is stable and ready to release. Simply
+  retry the workflow after the rate limit window closes (~1 minute).
+
+================================================================================

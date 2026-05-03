@@ -16,9 +16,20 @@ import { renderHook, act } from '@testing-library/react'
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
+
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
+  }
+})
 
 let useProviderConnection: typeof import('../useProviderConnection').useProviderConnection
 

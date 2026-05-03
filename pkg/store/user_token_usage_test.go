@@ -31,7 +31,7 @@ const (
 func TestGetUserTokenUsage_ReturnsZeroForNewUser(t *testing.T) {
 	store := newTestStore(t)
 
-	got, err := store.GetUserTokenUsage(testTokenUsageUserID)
+	got, err := store.GetUserTokenUsage(ctx, testTokenUsageUserID)
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	assert.Equal(t, testTokenUsageUserID, got.UserID)
@@ -43,7 +43,7 @@ func TestGetUserTokenUsage_ReturnsZeroForNewUser(t *testing.T) {
 
 func TestGetUserTokenUsage_EmptyUserIDReturnsError(t *testing.T) {
 	store := newTestStore(t)
-	_, err := store.GetUserTokenUsage("")
+	_, err := store.GetUserTokenUsage(ctx, "")
 	require.Error(t, err)
 }
 
@@ -59,9 +59,9 @@ func TestUpdateUserTokenUsage_RoundTrip(t *testing.T) {
 		},
 		LastAgentSessionID: testSessionA,
 	}
-	require.NoError(t, store.UpdateUserTokenUsage(u))
+	require.NoError(t, store.UpdateUserTokenUsage(ctx, u))
 
-	got, err := store.GetUserTokenUsage(testTokenUsageUserID)
+	got, err := store.GetUserTokenUsage(ctx, testTokenUsageUserID)
 	require.NoError(t, err)
 	assert.Equal(t, testTokenDelta1Plus2, got.TotalTokens)
 	assert.Equal(t, testTokenDelta1, got.TokensByCategory[testCategoryMissions])
@@ -83,9 +83,9 @@ func TestUpdateUserTokenUsage_ClampsNegativesToZero(t *testing.T) {
 			testCategoryMissions: negativeCategory,
 		},
 	}
-	require.NoError(t, store.UpdateUserTokenUsage(u))
+	require.NoError(t, store.UpdateUserTokenUsage(ctx, u))
 
-	got, err := store.GetUserTokenUsage(testTokenUsageUserID)
+	got, err := store.GetUserTokenUsage(ctx, testTokenUsageUserID)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), got.TotalTokens)
 	assert.Equal(t, int64(0), got.TokensByCategory[testCategoryMissions])
@@ -159,7 +159,7 @@ func TestAddUserTokenDelta_ConcurrentIncrementsAreAtomic(t *testing.T) {
 	}
 	wg.Wait()
 
-	got, err := store.GetUserTokenUsage(testTokenUsageUserID)
+	got, err := store.GetUserTokenUsage(ctx, testTokenUsageUserID)
 	require.NoError(t, err)
 	wantTotal := int64(testConcurrentWorkers) * testConcurrentDelta
 	assert.Equal(t, wantTotal, got.TotalTokens, "concurrent deltas must sum without lost updates")

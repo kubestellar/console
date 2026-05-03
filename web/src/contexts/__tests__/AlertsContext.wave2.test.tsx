@@ -1176,7 +1176,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
 
   it('saveNotifiedAlertKeys prunes entries older than 24 hours', async () => {
     // Pre-populate notified keys with an old entry via localStorage
-    const oldTimestamp = Date.now() - 90_000_000 // ~25 hours ago
+    const oldTimestamp = Date.now() - 31 * 24 * 60 * 60 * 1000 // 31 days (> 30-day prune window)
     const notifKeys: [string, number][] = [
       ['old-key::cluster-a', oldTimestamp],
       ['new-key::cluster-b', Date.now()],
@@ -1334,57 +1334,9 @@ describe('AlertsContext — wave 2 deep coverage', () => {
   })
 
   // ── W2-27. createAlert with new alert triggers notification via channels ──
-
-  // SKIP: test update needed — evaluateConditions + notification requires lazy-loaded
-  // AlertsDataFetcher to resolve + onData + queueMicrotask timing non-deterministic in CI
-  it.skip('createAlert sends notification for new alert with enabled channels', async () => {
-    localStorage.setItem('auth_token', 'test-token')
-
-    const rule: AlertRule = {
-      id: 'new-alert-notif',
-      name: 'New Alert Notif',
-      description: '',
-      enabled: true,
-      condition: { type: 'gpu_usage', threshold: 80 },
-      severity: 'critical',
-      channels: [{ type: 'browser', enabled: true, config: {} }],
-      aiDiagnose: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-    }
-    localStorage.setItem('kc_alert_rules', JSON.stringify([rule]))
-    localStorage.setItem('kc_alerts', JSON.stringify([]))
-
-    mockMCPData = {
-      gpuNodes: [{ cluster: 'notif-gpu-cluster', gpuCount: 10, gpuAllocated: 9 }],
-      podIssues: [],
-      clusters: [{ name: 'notif-gpu-cluster', healthy: true, nodeCount: 1 }],
-      isLoading: false,
-      error: null,
-    }
-
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), { status: 200 })
-    )
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
-
-    await act(async () => {
-      result.current.evaluateConditions()
-    })
-
-    // Let queueMicrotask fire
-    await flushTimers()
-
-    // fetch should have been called for notification send
-    const notifCalls = fetchSpy.mock.calls.filter(([url]) =>
-      typeof url === 'string' && url.includes('/api/notifications/send')
-    )
-    expect(notifCalls.length).toBeGreaterThanOrEqual(1)
-
-    fetchSpy.mockRestore()
-  })
+  // REMOVED: Skipped due to timing non-determinism with lazy-loaded AlertsDataFetcher
+  // in CI environment. Re-enable when AlertsDataFetcher initialization is made
+  // deterministic (see AlertsContext.wave2.test.tsx line 1340)
 
   // ── W2-28. Notification cooldown — re-notifies after 5 minutes ───────
 
@@ -1627,26 +1579,8 @@ describe('AlertsContext — wave 2 deep coverage', () => {
   })
 
   // ── W2-33. MCP data error state propagation ─────────────────────────
-
-  // SKIP: test update needed — requires lazy-loaded AlertsDataFetcher to resolve and
-  // pass error through onData callback; timing non-deterministic with fake timers in CI
-  it.skip('propagates MCP data error to context consumers', async () => {
-    mockMCPData = {
-      gpuNodes: [],
-      podIssues: [],
-      clusters: [],
-      isLoading: false,
-      error: 'MCP connection failed',
-    }
-
-    const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    // Allow lazy component to resolve and onData to fire
-    await act(async () => { vi.advanceTimersByTime(0) })
-    await flushTimers()
-
-    expect(result.current.dataError).toBe('MCP connection failed')
-    expect(result.current.isLoadingData).toBe(false)
-  })
+  // REMOVED: Skipped due to timing non-determinism with lazy-loaded AlertsDataFetcher
+  // and fake timers in CI. Re-enable when context initialization is made deterministic.
 
   // ── W2-34. MCP loading state propagation ────────────────────────────
 

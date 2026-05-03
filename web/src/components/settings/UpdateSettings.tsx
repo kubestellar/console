@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useModal } from '../../hooks/useModal'
 import {
   Download,
   RefreshCw,
@@ -22,6 +23,7 @@ import {
   HardDrive,
   GitCommitHorizontal,
   Info,
+  Store,
 } from 'lucide-react'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
@@ -39,6 +41,7 @@ import {
   emitUpdateStalled,
   emitUpdateRefreshed,
 } from '../../lib/analytics'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 
 /** Minimum spin duration to guarantee one full rotation (matches cards) */
 const MIN_SPIN_DURATION = 1000
@@ -54,6 +57,9 @@ const TRIGGER_STALL_TIMEOUT_MS = 30_000
 
 /** Countdown tick interval in milliseconds */
 const COUNTDOWN_TICK_MS = 1000
+
+/** Duration (ms) to show the transient "check complete" banner before auto-dismiss */
+const CHECK_RESULT_DISPLAY_MS = 4000
 
 /** Scroll to a settings section by ID (mirrors Settings.tsx logic) */
 function scrollToSettingsSection(sectionId: string) {
@@ -91,6 +97,8 @@ export function UpdateSettings() {
     setAutoUpdateEnabled,
     triggerUpdate,
     cancelUpdate,
+    lastCheckResult,
+    clearLastCheckResult,
   } = useVersionCheck()
 
   // WebSocket-driven update progress from kc-agent
@@ -136,11 +144,11 @@ export function UpdateSettings() {
     (o) => !o.devOnly || installMethod === 'dev'
   )
 
-  const [showReleaseNotes, setShowReleaseNotes] = useState(false)
-  const [showPrereqs, setShowPrereqs] = useState(false)
-  const [showScopeInfo, setShowScopeInfo] = useState(false)
+  const releaseNotes = useModal()
+  const prereqs = useModal()
+  const scopeInfo = useModal()
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null)
-  const [channelDropdownOpen, setChannelDropdownOpen] = useState(false)
+  const channelDropdown = useModal()
   const [triggerState, setTriggerState] = useState<'idle' | 'triggered' | 'error'>('idle')
   const [triggerError, setTriggerError] = useState<string | null>(null)
   // Tracks a user-requested cancellation so we can show a pending state on the
@@ -187,6 +195,13 @@ export function UpdateSettings() {
     forceCheck()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Auto-dismiss the transient check result banner after a short delay
+  useEffect(() => {
+    if (!lastCheckResult) return
+    const timer = setTimeout(() => clearLastCheckResult(), CHECK_RESULT_DISPLAY_MS)
+    return () => clearTimeout(timer)
+  }, [lastCheckResult, clearLastCheckResult])
 
   // Clear triggered state once WebSocket progress starts or update fails.
   // Emit GA4 lifecycle events for update completion/failure.
@@ -250,9 +265,9 @@ export function UpdateSettings() {
     if (!lastChecked) return t('settings.updates.never')
     const now = Date.now()
     const diff = now - lastChecked
-    if (diff < 60000) return t('settings.updates.justNow')
-    if (diff < 3600000) return t('settings.updates.minutesAgo', { count: Math.floor(diff / 60000) })
-    if (diff < 86400000) return t('settings.updates.hoursAgo', { count: Math.floor(diff / 3600000) })
+    if (diff < MS_PER_MINUTE) return t('settings.updates.justNow')
+    if (diff < MS_PER_HOUR) return t('settings.updates.minutesAgo', { count: Math.floor(diff / MS_PER_MINUTE) })
+    if (diff < MS_PER_DAY) return t('settings.updates.hoursAgo', { count: Math.floor(diff / MS_PER_HOUR) })
     return new Date(lastChecked).toLocaleDateString()
   }
 
@@ -336,14 +351,14 @@ export function UpdateSettings() {
       {/* Scope info — explains what System Updates controls vs. other update types */}
       <div className="mb-4">
         <button
-          onClick={() => setShowScopeInfo(!showScopeInfo)}
+          onClick={scopeInfo.toggle}
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <Info className="w-4 h-4" />
           <span>{t('settings.updates.scopeInfoToggle')}</span>
-          {showScopeInfo ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          {scopeInfo.isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
-        {showScopeInfo && (
+        {scopeInfo.isOpen && (
           <div className="mt-3 rounded-lg bg-secondary/50 border border-border p-4 space-y-3 text-sm">
             <div>
               <span className="font-medium text-foreground">{t('settings.updates.scopeSystemTitle')}</span>
@@ -357,6 +372,13 @@ export function UpdateSettings() {
               <span className="font-medium text-foreground">{t('settings.updates.scopeCardDataTitle')}</span>
               <span className="text-muted-foreground"> — {t('settings.updates.scopeCardDataDesc')}</span>
             </div>
+            <div className="flex items-start gap-2 pt-2 border-t border-border">
+              <Store className="w-4 h-4 mt-0.5 text-purple-400 shrink-0" />
+              <div>
+                <span className="font-medium text-foreground">{t('settings.updates.scopeMarketplaceTitle')}</span>
+                <span className="text-muted-foreground"> — {t('settings.updates.scopeMarketplaceDesc')}</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -368,7 +390,7 @@ export function UpdateSettings() {
         </label>
         <div className="relative">
           <button
-            onClick={() => setChannelDropdownOpen(!channelDropdownOpen)}
+            onClick={channelDropdown.toggle}
             className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-secondary border border-border text-foreground hover:bg-secondary/80 transition-colors"
           >
             <span className="flex items-center gap-2">
@@ -376,17 +398,17 @@ export function UpdateSettings() {
               {visibleChannels.find((o) => o.value === channel)?.label}
             </span>
             <ChevronDown
-              className={`w-4 h-4 transition-transform ${channelDropdownOpen ? 'rotate-180' : ''}`}
+              className={`w-4 h-4 transition-transform ${channelDropdown.isOpen ? 'rotate-180' : ''}`}
             />
           </button>
-          {channelDropdownOpen && (
+          {channelDropdown.isOpen && (
             <div className="absolute z-dropdown mt-2 w-full rounded-lg bg-card border border-border shadow-xl">
               {visibleChannels.map((option) => (
                 <button
                   key={option.value}
                   onClick={() => {
                     setChannel(option.value)
-                    setChannelDropdownOpen(false)
+                    channelDropdown.close()
                   }}
                   className={`w-full flex items-center justify-between px-4 py-3 hover:bg-secondary/50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
                     channel === option.value ? 'bg-primary/10' : ''
@@ -425,7 +447,7 @@ export function UpdateSettings() {
         return (
           <div className="mb-4 rounded-lg bg-secondary/30 border border-border overflow-hidden">
             <button
-              onClick={() => setShowPrereqs(!showPrereqs)}
+              onClick={prereqs.toggle}
               className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-secondary/50 transition-colors"
             >
               <div className="flex items-center gap-2">
@@ -438,9 +460,9 @@ export function UpdateSettings() {
                     : t('settings.updates.prereqsMissing', { count: failCount })}
                 </span>
               </div>
-              {showPrereqs ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              {prereqs.isOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
             </button>
-            {showPrereqs && (
+            {prereqs.isOpen && (
               <div className="px-4 pb-4 space-y-2 border-t border-border pt-3">
                 <PrereqRow
                   ok={agentConnected}
@@ -551,12 +573,22 @@ export function UpdateSettings() {
         </div>
       )}
 
-      {/* Dev Mode Warning */}
-      {!isDeveloperChannel && !currentVersion.includes('nightly') && !currentVersion.includes('weekly') && currentVersion !== 'unknown' && (
+      {/* Dev Mode Warning — only shown for actual dev installs (running from source)
+           where the version doesn't match a release tag pattern. Helm/binary installs
+           often report versions without the 'v' prefix (e.g., "0.3.21") which is normal. */}
+      {installMethod === 'dev' && !isDeveloperChannel && !currentVersion.includes('nightly') && !currentVersion.includes('weekly') && currentVersion !== 'unknown' && (
         <div className="p-3 rounded-lg mb-4 bg-yellow-500/10 border border-yellow-500/20">
           <p className="text-xs text-yellow-400">
             {t('settings.updates.devVersion', { envVar: 'VITE_APP_VERSION' })}
           </p>
+        </div>
+      )}
+
+      {/* Transient check-complete feedback — auto-dismissed after CHECK_RESULT_DISPLAY_MS */}
+      {lastCheckResult === 'success' && !isChecking && !isVisuallySpinning && !hasUpdate && !error && (
+        <div data-testid="check-complete-banner" className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center gap-2 animate-in fade-in">
+          <Check className="w-4 h-4 text-green-400 shrink-0" />
+          <p className="text-sm text-green-400">{t('settings.updates.upToDate')}</p>
         </div>
       )}
 
@@ -632,6 +664,8 @@ export function UpdateSettings() {
                 if (!result.success) {
                   setCancelState('error')
                   setCancelError(result.error ?? t('settings.updates.cancelFailed'))
+                } else {
+                  setCancelState('idle')
                 }
               }}
               disabled={!canCancel || cancelState === 'pending'}
@@ -810,7 +844,7 @@ export function UpdateSettings() {
             <p className="text-sm text-red-400 font-medium">{t('settings.updates.errorChecking')}</p>
             <p className="text-xs text-red-400/80 mt-1">{error}</p>
             <p className="text-xs text-muted-foreground mt-2">
-              Try clicking &quot;Check Now&quot; to retry, or verify that kc-agent is running and network is available.
+              {t('settings.updates.errorHint')}
             </p>
           </div>
         )}
@@ -836,6 +870,8 @@ export function UpdateSettings() {
               if (!result.success) {
                 setTriggerState('error')
                 setTriggerError(result.error ?? 'Unknown error')
+                triggerGuardRef.current = false
+              } else {
                 triggerGuardRef.current = false
               }
             }}
@@ -930,17 +966,17 @@ export function UpdateSettings() {
       {latestRelease && latestRelease.releaseNotes && (
         <div className="mb-4">
           <button
-            onClick={() => setShowReleaseNotes(!showReleaseNotes)}
+            onClick={releaseNotes.toggle}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
-            {showReleaseNotes ? (
+            {releaseNotes.isOpen ? (
               <ChevronUp className="w-4 h-4" />
             ) : (
               <ChevronDown className="w-4 h-4" />
             )}
             {t('settings.updates.releaseNotes')}
           </button>
-          {showReleaseNotes && (
+          {releaseNotes.isOpen && (
             <div className="mt-2 p-4 rounded-lg bg-secondary/30 border border-border">
               <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-sans">
                 {latestRelease.releaseNotes}
@@ -986,7 +1022,7 @@ export function UpdateSettings() {
           </div>
 
           {/* Coding Agent tip */}
-          <div className="p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
+          <div className="p-4 rounded-lg bg-linear-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20">
             <div className="flex items-center gap-2 mb-2">
               <Bot className="w-4 h-4 text-purple-400" />
               <span className="text-sm font-medium text-foreground">{t('settings.updates.devCodingAgent')}</span>
@@ -1180,8 +1216,10 @@ function formatCommitDate(iso: string): string {
   const date = new Date(iso)
   const now = Date.now()
   const diff = now - date.getTime()
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`
+  const DAYS_PER_WEEK = 7
+  const MS_PER_WEEK = MS_PER_DAY * DAYS_PER_WEEK
+  if (diff < MS_PER_HOUR) return `${Math.floor(diff / MS_PER_MINUTE)}m ago`
+  if (diff < MS_PER_DAY) return `${Math.floor(diff / MS_PER_HOUR)}h ago`
+  if (diff < MS_PER_WEEK) return `${Math.floor(diff / MS_PER_DAY)}d ago`
   return date.toLocaleDateString()
 }

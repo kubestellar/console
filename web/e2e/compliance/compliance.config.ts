@@ -89,6 +89,7 @@ function getWebServer() {
 const port = useDevServer ? DEV_PORT : PREVIEW_PORT
 
 export default defineConfig({
+  globalTeardown: '../global-teardown.ts',
   testDir: '.',
   // Per-test timeout (PER_TEST_TIMEOUT_MS × CI_TIMEOUT_MULTIPLIER in CI).
   // Tightened from the old 40-minute monolithic cap (Issue 9088) — each

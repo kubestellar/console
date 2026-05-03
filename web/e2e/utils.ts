@@ -135,6 +135,7 @@ export async function authenticateAndNavigate(page: Page, path: string, options?
   await page.evaluate(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
 
   // Navigate to target path

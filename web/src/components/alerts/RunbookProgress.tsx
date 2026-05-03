@@ -1,7 +1,6 @@
 import { CheckCircle2, XCircle, Loader2, SkipForward, Clock } from 'lucide-react'
 import type { EvidenceStepResult } from '../../lib/runbooks/types'
-
-const MS_PER_SECOND = 1_000 // Milliseconds in one second
+import { MS_PER_SECOND } from '../../lib/constants/time'
 
 interface RunbookProgressProps {
   title: string

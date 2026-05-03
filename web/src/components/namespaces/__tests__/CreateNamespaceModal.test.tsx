@@ -16,9 +16,9 @@ const MOCK_LATENCY_MS = 200
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockAuthFetch = vi.fn()
-vi.mock('../../../lib/api', () => ({
-  authFetch: vi.fn((...args) => mockAuthFetch(...args)),
+const mockAgentFetch = vi.fn()
+vi.mock('../../../hooks/mcp/shared', () => ({
+  agentFetch: vi.fn((...args) => mockAgentFetch(...args)),
 }))
 
 const mockTranslation = vi.fn((key: string) => key)
@@ -32,7 +32,7 @@ vi.mock('react-i18next', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
-  mockAuthFetch.mockReset()
+  mockAgentFetch.mockReset()
 })
 
 afterEach(() => {
@@ -109,7 +109,7 @@ describe('CreateNamespaceModal', () => {
 
   it('successfully creates namespace with POST to kc-agent', async () => {
     const user = userEvent.setup()
-    mockAuthFetch.mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
+    mockAgentFetch.mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
 
     render(
       <CreateNamespaceModal
@@ -128,7 +128,7 @@ describe('CreateNamespaceModal', () => {
     await user.click(createBtn)
 
     await waitFor(() => {
-      expect(mockAuthFetch).toHaveBeenCalledWith(
+      expect(mockAgentFetch).toHaveBeenCalledWith(
         expect.stringContaining('/namespaces'),
         expect.any(Object)
       )
@@ -137,7 +137,7 @@ describe('CreateNamespaceModal', () => {
 
   it('displays error when creation fails', async () => {
     const user = userEvent.setup()
-    mockAuthFetch.mockResolvedValueOnce(
+    mockAgentFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: 'Namespace already exists' }), { status: 409 })
     )
 
@@ -214,7 +214,7 @@ describe('CreateNamespaceModal', () => {
 
   it('includes team label in POST body when provided', async () => {
     const user = userEvent.setup()
-    mockAuthFetch.mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
+    mockAgentFetch.mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200 }))
 
     render(
       <CreateNamespaceModal
@@ -233,14 +233,14 @@ describe('CreateNamespaceModal', () => {
     await user.click(createBtn)
 
     await waitFor(() => {
-      const callBody = mockAuthFetch.mock.calls[0]?.[1]?.body as string
+      const callBody = mockAgentFetch.mock.calls[0]?.[1]?.body as string
       expect(callBody).toContain('"team":"platform-team"')
     })
   })
 
   it('disables create button while creation is in progress', async () => {
     const user = userEvent.setup()
-    mockAuthFetch.mockImplementationOnce(
+    mockAgentFetch.mockImplementationOnce(
       () => new Promise(resolve => setTimeout(() => resolve(new Response(JSON.stringify({}), { status: 200 })), MOCK_LATENCY_MS))
     )
 

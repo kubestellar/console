@@ -55,7 +55,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r, http.MethodPost, http.MethodOptions)
 	w.Header().Set("Content-Type", "application/json")
 	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	if !s.validateToken(r) {
@@ -131,7 +131,7 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 
 	// Strategy 2: argocd CLI if available.
 	if _, err := exec.LookPath("argocd"); err == nil {
-		cmd := exec.CommandContext(r.Context(), "argocd", "app", "sync", req.AppName,
+		cmd := execCommandContext(r.Context(), "argocd", "app", "sync", req.AppName,
 			"--namespace", namespace,
 			"--prune",
 			"--timeout", argocdCLITimeoutSeconds,

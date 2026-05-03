@@ -9,7 +9,9 @@
  */
 
 import { getDemoMode } from './useDemoMode'
+import { isInClusterMode } from './useBackendHealth'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
 const RECONNECT_DELAY = 1000
 const REQUEST_TIMEOUT = 30000
 
@@ -50,9 +52,14 @@ class KubectlService {
       return
     }
 
+    // In-cluster deployments have no local kc-agent WebSocket — skip connection
+    if (isInClusterMode()) {
+      return
+    }
+
     this.isConnecting = true
     try {
-      this.ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      this.ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
       this.ws.onopen = () => {
         this.isConnecting = false
@@ -171,14 +178,20 @@ export const kubectlService = new KubectlService()
 import { useEffect } from 'react'
 
 export function useKubectl() {
+  const inCluster = isInClusterMode()
+
   useEffect(() => {
+    if (inCluster) return
     const unsubscribe = kubectlService.subscribe()
     return unsubscribe
-  }, [])
+  }, [inCluster])
 
   const execute = async (context: string, args: string[]): Promise<string> => {
+    if (inCluster) {
+      throw new Error('kubectl terminal requires local kc-agent')
+    }
     return kubectlService.execute(context, args)
   }
 
-  return { execute }
+  return { execute, unavailable: inCluster }
 }

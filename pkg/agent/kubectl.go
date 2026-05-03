@@ -23,8 +23,8 @@ import (
 
 const (
 	// kubectlExecTimeout bounds how long any kubectl subprocess can run
-	// before it is killed. Prevents goroutine/FD leaks from hung apiservers. (#7258)
-	kubectlExecTimeout = 60 * time.Second
+	// before it is killed. Prevents goroutine/FD leaks from hung apiservers. (#7258, #7206)
+	kubectlExecTimeout = 30 * time.Second
 
 	// kubectlRenameTimeout bounds the kubectl config rename-context command. (#7279)
 	kubectlRenameTimeout = 30 * time.Second
@@ -98,6 +98,14 @@ func (k *KubectlProxy) ListContexts() ([]protocol.ClusterInfo, string) {
 }
 
 func (k *KubectlProxy) Execute(ctxName, namespace string, args []string) protocol.KubectlResponse {
+	return k.ExecuteWithContext(context.Background(), ctxName, namespace, args)
+}
+
+// ExecuteWithContext runs a kubectl command, deriving the execution deadline
+// from the supplied parent context. When the parent is cancelled (e.g. the
+// WebSocket connection closes), the kubectl process is killed immediately
+// instead of running until its own timeout expires (#9997).
+func (k *KubectlProxy) ExecuteWithContext(parent context.Context, ctxName, namespace string, args []string) protocol.KubectlResponse {
 	cmdArgs := []string{}
 	if k.kubeconfig != "" {
 		cmdArgs = append(cmdArgs, "--kubeconfig", k.kubeconfig)
@@ -114,8 +122,9 @@ func (k *KubectlProxy) Execute(ctxName, namespace string, args []string) protoco
 		return protocol.KubectlResponse{ExitCode: 1, Error: "Disallowed kubectl command"}
 	}
 
-	// Bound kubectl execution with a context timeout to prevent goroutine/FD leaks (#7258)
-	ctx, cancel := context.WithTimeout(context.Background(), kubectlExecTimeout)
+	// Bound kubectl execution with a context timeout to prevent goroutine/FD leaks (#7258).
+	// Derive from the parent context so client disconnect also cancels the command (#9997).
+	ctx, cancel := context.WithTimeout(parent, kubectlExecTimeout)
 	defer cancel()
 
 	cmd := execCommandContext(ctx, "kubectl", cmdArgs...)
@@ -123,21 +132,11 @@ func (k *KubectlProxy) Execute(ctxName, namespace string, args []string) protoco
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// kubectlCommandTimeout prevents a hung kubectl call from blocking
-	// the handler indefinitely (e.g. unreachable apiserver) (#7206).
-	const kubectlCommandTimeout = 30 * time.Second
-	timer := time.AfterFunc(kubectlCommandTimeout, func() {
-		if cmd.Process != nil {
-			cmd.Process.Kill()
-		}
-	})
-
 	err := cmd.Run()
-	timedOut := !timer.Stop()
 	exitCode := 0
 	if err != nil {
-		if timedOut {
-			return protocol.KubectlResponse{ExitCode: 1, Error: fmt.Sprintf("kubectl timed out after %s", kubectlCommandTimeout)}
+		if ctx.Err() == context.DeadlineExceeded {
+			return protocol.KubectlResponse{ExitCode: 1, Error: fmt.Sprintf("kubectl timed out after %s", kubectlExecTimeout)}
 		}
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()

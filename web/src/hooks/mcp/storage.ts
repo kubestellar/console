@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { REFRESH_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch, clusterCacheRef } from './shared'
+import { deduplicateClustersByServer } from './dedup'
 import { subscribePolling } from './pollingManager'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
@@ -28,7 +28,7 @@ type StorageSubscriber = (state: StorageSharedState) => void
 const storageSubscribers = new Set<StorageSubscriber>()
 
 function notifyStorageSubscribers() {
-  storageSubscribers.forEach(subscriber => subscriber(storageSharedState))
+  Array.from(storageSubscribers).forEach(subscriber => subscriber(storageSharedState))
 }
 
 export function subscribeStorageCache(callback: StorageSubscriber): () => void {
@@ -144,9 +144,11 @@ export function usePVCs(cluster?: string, namespace?: string) {
       try {
         // If cluster is specified, fetch from that cluster only
         // If no cluster specified, aggregate from all clusters
+        const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false)
+        const dedupClusters = deduplicateClustersByServer(allClusters)
         const clustersToFetch = cluster
           ? [{ name: cluster, context: cluster }]
-          : clusterCacheRef.clusters.filter(c => c.reachable !== false)
+          : dedupClusters
 
         if (clustersToFetch.length > 0) {
           const allPVCs: PVC[] = []
@@ -208,9 +210,11 @@ export function usePVCs(cluster?: string, namespace?: string) {
     // Try kubectl proxy as fallback
     if (!isAgentUnavailable()) {
       try {
+        const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false)
+        const dedupClusters = deduplicateClustersByServer(allClusters)
         const clustersToFetch = cluster
           ? [{ name: cluster, context: clusterCacheRef.clusters.find(c => c.name === cluster)?.context || cluster }]
-          : clusterCacheRef.clusters.filter(c => c.reachable !== false)
+          : dedupClusters
 
         if (clustersToFetch.length > 0) {
           const allPVCs: PVC[] = []
@@ -266,7 +270,9 @@ export function usePVCs(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ pvcs: PVC[] }>(`${LOCAL_AGENT_HTTP_URL}/pvcs?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pvcs?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       const newData = data.pvcs || []
       const now = new Date()
 
@@ -314,7 +320,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
     // Poll for PVC updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `pvcs:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => { if (!cancelled) refetch(true) },
     )
 
@@ -328,7 +334,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cacheKey])
+  }, [refetch, cacheKey, consecutiveFailures])
 
   // Subscribe to cache reset notifications - triggers skeleton when cache is cleared
   useEffect(() => {
@@ -372,16 +378,87 @@ export function usePVs(cluster?: string) {
 
   const refetch = useCallback(async () => {
     if (!isMountedRef.current) return
-    setIsLoading(true)
     setIsRefreshing(true)
-    try {
-      const params = new URLSearchParams()
-      if (cluster) params.append('cluster', cluster)
-      const { data } = await api.get<{ pvs: PV[] }>(`${LOCAL_AGENT_HTTP_URL}/pvs?${params}`)
+
+    // If demo mode is enabled, use demo data
+    if (isDemoMode()) {
       if (!isMountedRef.current) return
-      setPVs(data.pvs || [])
+      setPVs([])
+      setIsLoading(false)
+      setIsRefreshing(false)
       setError(null)
-      setConsecutiveFailures(0)
+      return
+    }
+
+    if (isAgentUnavailable()) {
+      if (isMountedRef.current) {
+        setError('Agent unavailable')
+        setConsecutiveFailures(prev => prev + 1)
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
+      return
+    }
+
+    try {
+      const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false)
+      const dedupClusters = deduplicateClustersByServer(allClusters)
+      const clustersToFetch = cluster
+        ? [{ name: cluster, context: cluster }]
+        : dedupClusters
+
+      if (clustersToFetch.length === 0) {
+        if (isMountedRef.current) {
+          setPVs([])
+          setIsLoading(false)
+          setIsRefreshing(false)
+          setError(null)
+        }
+        return
+      }
+
+      const allPVs: PV[] = []
+      let anySuccess = false
+
+      const fetchTasks = clustersToFetch.map((c) => async () => {
+        try {
+          const params = new URLSearchParams()
+          params.append('cluster', c.context || c.name)
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
+          const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pvs?${params}`, {
+            signal: controller.signal,
+            headers: { 'Accept': 'application/json' },
+          })
+          clearTimeout(timeoutId)
+          if (response.ok) {
+            const agentData = await response.json()
+            const mappedPVs: PV[] = (agentData.pvs || []).map((p: PV) => ({ ...p, cluster: c.name }))
+            return { success: true, pvs: mappedPVs }
+          }
+        } catch {
+          // Individual cluster failure - continue with others
+        }
+        return { success: false, pvs: [] }
+      })
+
+      const settled = await settledWithConcurrency(fetchTasks)
+      for (const entry of (settled || [])) {
+        if (entry.status === 'fulfilled' && entry.value.success) {
+          anySuccess = true
+          allPVs.push(...entry.value.pvs)
+        }
+      }
+
+      if (!isMountedRef.current) return
+      if (anySuccess) {
+        setPVs(allPVs)
+        setError(null)
+        setConsecutiveFailures(0)
+      } else {
+        setError('Failed to fetch PVs from any cluster')
+        setConsecutiveFailures(prev => prev + 1)
+      }
     } catch (err: unknown) {
       if (isMountedRef.current) {
         const message = err instanceof Error ? err.message : 'Failed to fetch PVs'
@@ -401,7 +478,7 @@ export function usePVs(cluster?: string) {
     // Poll for PV updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `pvs:${cluster || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(),
     )
 
@@ -414,7 +491,7 @@ export function usePVs(cluster?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster])
+  }, [refetch, cluster, consecutiveFailures])
 
   return { pvs, isLoading, isRefreshing, error, refetch, consecutiveFailures, isFailed: consecutiveFailures >= 3 }
 }
@@ -429,6 +506,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isDemoFallback, setIsDemoFallback] = useState(false)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data (unless forceLive overrides)
@@ -447,16 +525,20 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ resourceQuotas: ResourceQuota[] }>(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setResourceQuotas(data.resourceQuotas || [])
       setIsDemoFallback(false)
       setError(null)
+      setConsecutiveFailures(0)
     } catch {
       // Don't show error - ResourceQuotas are optional
       setError(null)
       // Don't fall back to demo data - show empty instead
       setResourceQuotas([])
       setIsDemoFallback(false)
+      setConsecutiveFailures(prev => prev + 1)
     } finally {
       setIsLoading(false)
     }
@@ -467,7 +549,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
     // Poll for resource quota updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `resourceQuotas:${cluster || 'all'}:${namespace || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(),
     )
 
@@ -480,7 +562,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster, namespace])
+  }, [refetch, cluster, namespace, consecutiveFailures])
 
   return { resourceQuotas, isLoading, error, refetch, isDemoFallback }
 }
@@ -490,6 +572,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
   const [limitRanges, setLimitRanges] = useState<LimitRange[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data
@@ -507,14 +590,18 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ limitRanges: LimitRange[] }>(`${LOCAL_AGENT_HTTP_URL}/limitranges?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/limitranges?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setLimitRanges(data.limitRanges || [])
       setError(null)
+      setConsecutiveFailures(0)
     } catch {
       // Don't show error - LimitRanges are optional
       setError(null)
       // Don't fall back to demo data - show empty instead
       setLimitRanges([])
+      setConsecutiveFailures(prev => prev + 1)
     } finally {
       setIsLoading(false)
     }
@@ -525,7 +612,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
     // Poll for limit range updates (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       `limitRanges:${cluster || 'all'}:${namespace || 'all'}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       () => refetch(),
     )
 
@@ -538,20 +625,30 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster, namespace])
+  }, [refetch, cluster, namespace, consecutiveFailures])
 
   return { limitRanges, isLoading, error, refetch }
 }
 
 // Create or update a ResourceQuota
 export async function createOrUpdateResourceQuota(spec: ResourceQuotaSpec): Promise<ResourceQuota> {
-  const { data } = await api.post<{ resourceQuota: ResourceQuota }>(`${LOCAL_AGENT_HTTP_URL}/resourcequotas`, spec)
+  const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(spec),
+  })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+  const data = await resp.json()
   return data.resourceQuota
 }
 
 // Delete a ResourceQuota
 export async function deleteResourceQuota(cluster: string, namespace: string, name: string): Promise<void> {
-  await api.delete(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?cluster=${cluster}&namespace=${namespace}&name=${name}`)
+  const params = new URLSearchParams({ cluster, namespace, name })
+  const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params.toString()}`, {
+    method: 'DELETE',
+  })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 }
 
 // Common GPU resource types for quotas
@@ -701,4 +798,13 @@ if (typeof window !== 'undefined') {
       notifyStorageSubscribers()
     }, 0)
   })
+}
+
+export const __storageTestables = {
+  getDemoPVCs,
+  getDemoResourceQuotas,
+  getDemoLimitRanges,
+  loadPVCsCacheFromStorage,
+  savePVCsCacheToStorage,
+  PVCS_CACHE_KEY,
 }

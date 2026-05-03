@@ -73,6 +73,7 @@ export function DiscoverCardsPlaceholder({
             <button
               onClick={() => setCurrentIndex(prev => (prev - 1 + available.length) % available.length)}
               className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+              aria-label="Previous card"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -89,6 +90,7 @@ export function DiscoverCardsPlaceholder({
             <button
               onClick={() => setCurrentIndex(prev => (prev + 1) % available.length)}
               className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+              aria-label="Next card"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

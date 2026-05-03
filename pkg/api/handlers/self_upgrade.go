@@ -183,7 +183,7 @@ func (h *SelfUpgradeHandler) GetStatus(c *fiber.Ctx) error {
 	resp.Namespace = namespace
 	resp.ReleaseName = getReleaseName()
 
-	ctx, cancel := context.WithTimeout(context.Background(), selfUpgradeTimeout)
+	ctx, cancel := context.WithTimeout(c.Context(), selfUpgradeTimeout)
 	defer cancel()
 
 	client, err := h.getInClusterClient()
@@ -238,7 +238,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 			Error: "self-upgrade unavailable — user store is not configured",
 		})
 	}
-	user, err := h.store.GetUser(userID)
+	user, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil {
 		slog.Warn("[self-upgrade] SECURITY: failed to look up user for role check",
 			"user_id", userID, "error", err)
@@ -300,7 +300,7 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 		})
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), selfUpgradeTimeout)
+	ctx, cancel := context.WithTimeout(c.Context(), selfUpgradeTimeout)
 	defer cancel()
 
 	client, err := h.getInClusterClient()

@@ -169,6 +169,11 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('/sucrase/')) {
             return 'sucrase-vendor'
           }
+          // Code editor — only used by Drasi stream samples drawer;
+          // isolate so the CodeMirror editor never loads on normal pages.
+          if (id.includes('/@codemirror/') || id.includes('/@uiw/react-codemirror/') || id.includes('/codemirror/') || id.includes('/@lezer/')) {
+            return 'codemirror-vendor'
+          }
           // Internationalization
           if (id.includes('/i18next') || id.includes('/react-i18next/')) {
             return 'i18n-vendor'
@@ -255,9 +260,9 @@ export default defineConfig(({ mode }) => ({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'netlify/functions/__tests__/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'e2e/**/*'],
-    teardownTimeout: process.env.CI ? 60_000 : 10_000, // CI runners need more time to terminate workers
+    teardownTimeout: process.env.CI ? 120_000 : 10_000, // CI: increased from 60s to 120s for worker cleanup stability (#10436)
     // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
     maxWorkers: process.env.CI ? 2 : undefined,
     minWorkers: process.env.CI ? 1 : undefined,
@@ -286,6 +291,32 @@ export default defineConfig(({ mode }) => ({
         '**/*.md',
         '**/demo*Data*.{ts,tsx}',
         '**/icons.{ts,tsx}',
+        // Barrel re-export files: V8 cannot count ESM re-export bindings as
+        // executable lines. These files contain only `export { } from` or
+        // `export * from` statements with no executable logic — excluding them
+        // prevents structurally-uncoverable lines from dragging down the metric.
+        'src/lib/analytics.ts',
+        'src/hooks/useMCP.ts',
+        'src/hooks/useCachedKeda.ts',
+        // lib/demo barrel re-exports: each of these is a thin `export { } from`
+        // wrapper pointing at the card-level demoData. V8 cannot mark ESM
+        // re-export bindings as covered even when tests import them — same issue
+        // as src/lib/analytics.ts. Exclude to prevent 0% drag.
+        'src/lib/demo/chaos_mesh.ts',
+        'src/lib/demo/dapr.ts',
+        'src/lib/demo/envoy.ts',
+        'src/lib/demo/grpc.ts',
+        'src/lib/demo/keda.ts',
+        'src/lib/demo/kubevela.ts',
+        'src/lib/demo/linkerd.ts',
+        'src/lib/demo/openfeature.ts',
+        'src/lib/demo/openfga.ts',
+        'src/lib/demo/spiffe.ts',
+        'src/lib/demo/strimzi.ts',
+        'src/lib/demo/volcano.ts',
+        'src/lib/demo/wasmcloud.ts',
+        // Type-only file: pure TypeScript interfaces/types compile to no JS bytecode.
+        'src/lib/cache/workerMessages.ts',
       ],
     },
   },

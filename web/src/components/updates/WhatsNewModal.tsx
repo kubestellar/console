@@ -1,16 +1,21 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
+import { formatTimeAgo } from '../../lib/formatters'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { Download, Clock, SkipForward, ChevronDown, Copy, Check, Loader2 } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
+import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { BaseModal } from '../../lib/modals'
+import { MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
+import { useSelfUpgrade } from '../../hooks/useSelfUpgrade'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { buildReleaseNotesComponents } from '../../lib/markdown/releaseNotesComponents'
 import { cn } from '../../lib/cn'
 import { copyToClipboard } from '../../lib/clipboard'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { api, RateLimitError } from '../../lib/api'
 import { emitWhatsNewUpdateClicked, emitWhatsNewRemindLater } from '../../lib/analytics'
 
 const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
@@ -19,9 +24,9 @@ const SNOOZE_STORAGE_KEY = 'kc-update-snoozed'
 // development don't get a dead button. Runs once on module load.
 try { localStorage.removeItem('kc-whats-new-modal-disabled') } catch { /* ignore */ }
 
-const SNOOZE_DURATION_1H_MS = 60 * 60 * 1000
-const SNOOZE_DURATION_1D_MS = 24 * 60 * 60 * 1000
-const SNOOZE_DURATION_1W_MS = 7 * 24 * 60 * 60 * 1000
+const SNOOZE_DURATION_1H_MS = MS_PER_HOUR
+const SNOOZE_DURATION_1D_MS = MS_PER_DAY
+const SNOOZE_DURATION_1W_MS = 7 * MS_PER_DAY
 
 export function isUpdateSnoozed(): boolean {
   try {
@@ -43,18 +48,7 @@ function snoozeUpdate(durationMs: number) {
   }
 }
 
-function formatRelativeTime(date: Date): string {
-  const diffMs = Date.now() - date.getTime()
-  const diffMin = Math.floor(diffMs / 60_000)
-  if (diffMin < 1) return 'just now'
-  if (diffMin < 60) return `${diffMin}m ago`
-  const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `${diffH}h ago`
-  const diffD = Math.floor(diffH / 24)
-  if (diffD === 1) return 'yesterday'
-  if (diffD < 30) return `${diffD}d ago`
-  return date.toLocaleDateString()
-}
+
 
 interface WhatsNewModalProps {
   isOpen: boolean
@@ -73,6 +67,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     skipVersion,
     triggerUpdate,
   } = useVersionCheck()
+  const { triggerUpgrade } = useSelfUpgrade()
 
   const [updating, setUpdating] = useState(false)
   const [showPreviousReleases, setShowPreviousReleases] = useState(false)
@@ -103,44 +98,42 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
         // Step 1: Get the date of the currently running commit
         let sinceDate: string | null = null
         if (commitHash && commitHash !== 'unknown') {
-          const commitResp = await fetch(
-            `/api/github/repos/kubestellar/console/commits/${commitHash}`,
-            { credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
-          )
-          if (commitResp.ok) {
-            const commitData = await commitResp.json()
+          try {
+            const { data: commitData } = await api.get<{ commit?: { committer?: { date?: string } } }>(
+              `/api/github/repos/kubestellar/console/commits/${commitHash}`,
+              { timeout: FETCH_DEFAULT_TIMEOUT_MS },
+            )
             sinceDate = commitData?.commit?.committer?.date ?? null
+          } catch {
+            // Commit lookup failure is non-fatal — show all PRs
           }
         }
 
         // Step 2: Fetch recent merged PRs
-        const resp = await fetch(
+        if (cancelled) return
+        const { data } = await api.get<Array<{ number: number; title: string; merged_at: string | null }>>(
           `/api/github/repos/kubestellar/console/pulls?state=closed&sort=updated&direction=desc&per_page=${MAX_RECENT_PRS}`,
-          { credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) },
+          { timeout: FETCH_DEFAULT_TIMEOUT_MS },
         )
         if (cancelled) return
-        if (!resp.ok) {
-          setPrsError(`GitHub responded ${resp.status}`)
-          return
-        }
-        const data = await resp.json()
-        if (cancelled) return
         const merged = (data || [])
-          .filter((pr: { merged_at: string | null }) => pr.merged_at)
-          // Only show PRs merged AFTER the running commit
-          .filter((pr: { merged_at: string }) => {
-            if (!sinceDate) return true // no commit date = show all
-            return new Date(pr.merged_at) > new Date(sinceDate)
+          .filter((pr) => pr.merged_at)
+          .filter((pr) => {
+            if (!sinceDate) return true
+            return new Date(pr.merged_at!) > new Date(sinceDate)
           })
-          .map((pr: { number: number; title: string; merged_at: string }) => ({
+          .map((pr) => ({
             number: pr.number,
             title: pr.title,
-            merged_at: pr.merged_at,
+            merged_at: pr.merged_at!,
           }))
         setRecentPRs(merged)
-      } catch (err) {
+      } catch (err: unknown) {
         if (cancelled) return
-        // Don't surface AbortError (user closed modal) as an error
+        if (err instanceof RateLimitError) {
+          setPrsError('GitHub API rate limit reached — data will refresh automatically. Try again in a moment.')
+          return
+        }
         const message = err instanceof Error ? err.message : 'Network error'
         setPrsError(message)
       } finally {
@@ -163,12 +156,10 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
     setUpdating(true)
     try {
       if (installMethod === 'helm') {
-        const res = await fetch('/api/self-upgrade/trigger', {
-          method: 'POST',
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
-        if (!res.ok) {
-          showToast(`Update failed: ${res.status}`, 'error')
+        const tag = latestRelease?.tag ?? ''
+        const result = await triggerUpgrade(tag)
+        if (!result.success) {
+          showToast(result.error ?? 'Update failed', 'error')
           return
         }
       } else {
@@ -181,12 +172,12 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
       emitWhatsNewUpdateClicked(latestRelease?.tag ?? '', installMethod ?? 'unknown')
       showToast('Update running in background', 'info')
       onClose()
-    } catch (err) {
+    } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Update failed', 'error')
     } finally {
       setUpdating(false)
     }
-  }, [installMethod, triggerUpdate, showToast, onClose])
+  }, [installMethod, triggerUpdate, triggerUpgrade, latestRelease?.tag, showToast, onClose])
 
   const handleSkip = useCallback(() => {
     if (latestRelease) {
@@ -206,9 +197,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   const handleCopyCommand = useCallback(async (cmd: string) => {
     await copyToClipboard(cmd)
     setCopiedCommand(cmd)
-    /** Delay before clearing the "copied" indicator so user sees feedback (ms) */
-    const COPY_FEEDBACK_CLEAR_MS = 2000
-    setTimeout(() => setCopiedCommand(null), COPY_FEEDBACK_CLEAR_MS)
+    setTimeout(() => setCopiedCommand(null), COPY_FEEDBACK_TIMEOUT_MS)
   }, [])
 
   const manualCommands: { label: string; command: string }[] = useMemo(() => {
@@ -231,7 +220,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
   // minimal modal with the commit SHA instead of full release notes.
   if (!latestRelease && !isOpen) return null
 
-  const relativeTime = latestRelease ? formatRelativeTime(latestRelease.publishedAt) : 'just now'
+  const relativeTime = latestRelease ? formatTimeAgo(latestRelease.publishedAt) : 'just now'
 
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg">
@@ -246,7 +235,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
         <div className="space-y-4">
           {/* Primary release notes — or recent merged PRs as fallback */}
           {hasReleaseNotes ? (
-            <div className="prose dark:prose-invert max-w-none text-sm overflow-x-auto break-words [word-break:break-word] prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-code:text-purple-700 dark:prose-code:text-purple-300 prose-code:bg-black/5 dark:prose-code:bg-black/20 prose-code:px-1 prose-code:rounded">
+            <div className="prose dark:prose-invert max-w-none text-sm overflow-x-auto wrap-break-word [word-break:break-word] prose-pre:my-5 prose-pre:bg-transparent prose-pre:p-0 prose-code:text-purple-700 dark:prose-code:text-purple-300 prose-code:bg-black/5 dark:prose-code:bg-black/20 prose-code:px-1 prose-code:rounded">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkBreaks]}
                 components={markdownComponents}
@@ -281,7 +270,7 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
                   <span className="text-xs text-muted-foreground font-mono shrink-0">#{pr.number}</span>
                   <span className="text-sm text-foreground group-hover:text-primary transition-colors">{pr.title}</span>
                   <span className="text-xs text-muted-foreground ml-auto shrink-0">
-                    {formatRelativeTime(new Date(pr.merged_at))}
+                    {formatTimeAgo(new Date(pr.merged_at))}
                   </span>
                 </a>
               ))}
@@ -315,10 +304,10 @@ export function WhatsNewModal({ isOpen, onClose }: WhatsNewModalProps) {
                         className="flex items-center justify-between w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 transition-colors rounded-lg"
                       >
                         <span className="font-medium text-foreground">{release.tag}</span>
-                        <span className="text-xs text-muted-foreground">{formatRelativeTime(release.publishedAt)}</span>
+                        <span className="text-xs text-muted-foreground">{formatTimeAgo(release.publishedAt)}</span>
                       </button>
                       {expandedRelease === release.tag && release.releaseNotes && (
-                        <div className="px-3 pb-3 prose dark:prose-invert max-w-none text-xs overflow-x-auto break-words [word-break:break-word]">
+                        <div className="px-3 pb-3 prose dark:prose-invert max-w-none text-xs overflow-x-auto wrap-break-word [word-break:break-word]">
                           <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} components={markdownComponents}>
                             {release.releaseNotes}
                           </ReactMarkdown>

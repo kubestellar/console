@@ -34,6 +34,7 @@ const mockClusterCacheRef = vi.hoisted(() => ({
 
 vi.mock('../mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 const mockKubectlExec = vi.hoisted(() => vi.fn())
@@ -441,7 +442,7 @@ describe('useDeployMissions', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        deployments: [{ name: 'nginx', replicas: 2, readyReplicas: 2 }],
+        deployments: [{ name: 'nginx', replicas: 2, readyReplicas: 2, updatedReplicas: 2, status: 'running' }],
       }),
     })
     mockKubectlExec.mockResolvedValue({ exitCode: 1, output: '' })
@@ -511,7 +512,7 @@ describe('useDeployMissions', () => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({
-            deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1 }],
+            deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1, updatedReplicas: 1, status: 'running' }],
           }),
         })
       }
@@ -547,7 +548,7 @@ describe('useDeployMissions', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1 }],
+        deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1, updatedReplicas: 1, status: 'running' }],
       }),
     })
     mockKubectlExec.mockResolvedValue({ exitCode: 1, output: '' })
@@ -1004,7 +1005,7 @@ describe('useDeployMissions', () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1 }],
+        deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1, updatedReplicas: 1, status: 'running' }],
       }),
     })
 
@@ -1303,7 +1304,7 @@ describe('useDeployMissions', () => {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({
-            deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1 }],
+            deployments: [{ name: 'nginx', replicas: 1, readyReplicas: 1, updatedReplicas: 1, status: 'running' }],
           }),
         })
       }

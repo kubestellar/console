@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server, Package } from 'lucide-react'
+import { formatTimeAgo } from '../../lib/formatters'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHelmReleases } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -174,32 +175,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
     }
   }
 
-  // Time unit constants (milliseconds) — used to format the relative "X ago" label
-  // on each release row. Backend sometimes returns an empty string, `null`, or a
-  // non-ISO timestamp (e.g. when a release has never been upgraded), which made
-  // `new Date(timestamp).getTime()` return NaN and rendered "NaNd ago" (#9095).
-  const MS_PER_HOUR = 3_600_000
-  const MS_PER_DAY = 86_400_000
-  /** Fallback shown when `timestamp` is missing/invalid — prevents "NaNd ago" (#9095). */
   const UNKNOWN_TIME_LABEL = 'Unknown'
-
-  const formatTime = (timestamp: string | null | undefined) => {
-    // Guard against missing / empty input before constructing a Date —
-    // `new Date('')` and `new Date(null as unknown as string)` both produce
-    // Invalid Date whose getTime() is NaN, which poisons every math op below.
-    if (!timestamp) return UNKNOWN_TIME_LABEL
-    const date = new Date(timestamp)
-    const parsed = date.getTime()
-    if (Number.isNaN(parsed)) return UNKNOWN_TIME_LABEL
-
-    const diff = new Date().getTime() - parsed
-    // Negative diffs (clock skew / future timestamps) — treat as "just now" rather
-    // than rendering a negative number of hours ago.
-    if (diff < 0) return `0h ago`
-
-    if (diff < MS_PER_DAY) return `${Math.floor(diff / MS_PER_HOUR)}h ago`
-    return `${Math.floor(diff / MS_PER_DAY)}d ago`
-  }
 
   // Counts from namespace-filtered releases (pre-pagination summary)
   const deployedCount = namespacedReleases.filter(r => r.status === 'deployed').length
@@ -371,7 +347,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
                     {release.cluster && <div className="shrink-0"><ClusterBadge cluster={release.cluster} size="sm" /></div>}
                     <span className="truncate" title={`Chart: ${release.chart}, Version: ${release.version}`}>{release.chart}@{release.version}</span>
                     <span className="shrink-0 whitespace-nowrap" title={`Helm revision: ${release.revision}`}>Rev {release.revision}</span>
-                    <span className="ml-auto shrink-0 whitespace-nowrap" title={`Last updated: ${release.updated && !Number.isNaN(new Date(release.updated).getTime()) ? new Date(release.updated).toLocaleString() : UNKNOWN_TIME_LABEL}`}>{formatTime(release.updated)}</span>
+                    <span className="ml-auto shrink-0 whitespace-nowrap" title={`Last updated: ${release.updated && !Number.isNaN(new Date(release.updated).getTime()) ? new Date(release.updated).toLocaleString() : UNKNOWN_TIME_LABEL}`}>{formatTimeAgo(release.updated ?? '', { invalidLabel: UNKNOWN_TIME_LABEL })}</span>
                   </div>
                 </div>
               )

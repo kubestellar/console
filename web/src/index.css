@@ -1,9 +1,28 @@
 /* Load default fonts only — theme fonts are lazy-loaded by useTheme */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap')
+layer(base);
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@config '../tailwind.config.js';
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 @layer base {
   :root {
@@ -120,6 +139,33 @@
     --cncf-default-start: #6366f1;
     --cncf-default-end: #8b5cf6;
 
+    /* Game colors */
+    --game-background: #0a0a1a;
+    --game-player: #00d4aa;
+    --game-enemy-1: #ff6b6b;
+    --game-enemy-2: #ffd93d;
+    --game-enemy-3: #6bcb77;
+    --game-bullet: #00ffff;
+    --game-grid: #1e3a5f;
+    --game-player-glow: rgba(0, 212, 170, 0.3);
+    --game-food-glow: rgba(255, 107, 107, 0.3);
+    --game-overlay: rgba(0, 0, 0, 0.6);
+
+    /* Chart tooltips */
+    --chart-tooltip-bg: rgba(30, 30, 46, 0.95);
+    --chart-tooltip-border: rgba(255, 255, 255, 0.1);
+    --shadow-error-glow: 0 0 10px -5px rgba(239, 68, 68, 0.3);
+    --chart-warning: #f97316;
+    --chart-warning-opaque: rgba(249, 115, 22, 0.4);
+    --chart-success: #22c55e;
+    --chart-success-opaque: rgba(34, 197, 94, 0.4);
+    --doom-wall-1: #8b0000;
+    --doom-wall-2: #006400;
+    --doom-wall-3: #00008b;
+    --doom-wall-4: #8b8b00;
+    --doom-ceiling: #1a1a2e;
+    --doom-floor: #2d2d2d;
+
     /* Font - can be overridden by theme */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
@@ -160,6 +206,16 @@
 @layer base {
   * {
     @apply border-border;
+  }
+
+  /* Ensure all interactive elements show pointer cursor */
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
   }
 
   /* Globally disable backdrop-filter — creates GPU compositing layers
@@ -422,6 +478,15 @@
 
 /* Enhanced scrollbar for panels, sidebars, and dropdowns —
    slim and subtle, only visible on hover/scroll */
+.scroll-enhanced {
+  /* scrollbar-gutter: stable is only applied in browsers that support it
+     (Chrome 94+, Edge 94+, Firefox 97+). Classic-scrollbar environments
+     (Windows, most Linux distros) without the property don't reserve space,
+     preventing the unwanted ~15-17px permanent right-padding. */
+  @supports (scrollbar-gutter: stable) {
+    scrollbar-gutter: stable;
+  }
+}
 .scroll-enhanced::-webkit-scrollbar {
   width: 6px;
 }
@@ -491,7 +556,7 @@
 .input {
   @apply bg-input text-foreground rounded-lg px-4 py-2;
   @apply border border-border;
-  @apply focus:outline-none focus:ring-2 focus:ring-ring;
+  @apply focus:outline-hidden focus:ring-2 focus:ring-ring;
   @apply transition-all duration-200;
 }
 
@@ -532,6 +597,15 @@
 .animate-spin-slow,
 .animate-spin-slower {
   backface-visibility: hidden;
+}
+
+/* Main content margin transition: smooth during normal sidebar open/close,
+   disabled during active resize so cards reflow immediately (#11454, #11458). */
+[data-transition-margin] {
+  transition: margin 300ms ease;
+}
+html[data-mission-resizing] [data-transition-margin] {
+  transition: none;
 }
 
 /* Smooth value transitions */
@@ -1738,7 +1812,7 @@
 
 /* GitHub-flavored markdown preview (dark mode) */
 .ghmd {
-  color: #e6edf3;
+  color: hsl(var(--foreground));
   font-size: 14px;
   line-height: 1.6;
   word-wrap: break-word;
@@ -1748,14 +1822,14 @@
   margin-bottom: 16px;
   font-weight: 600;
   line-height: 1.25;
-  color: #e6edf3;
+  color: hsl(var(--foreground));
 }
-.ghmd h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid #30363d; }
-.ghmd h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #30363d; }
+.ghmd h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid hsl(var(--border)); }
+.ghmd h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid hsl(var(--border)); }
 .ghmd h3 { font-size: 1.25em; }
 .ghmd h4 { font-size: 1em; }
 .ghmd p { margin-top: 0; margin-bottom: 16px; }
-.ghmd a { color: #58a6ff; text-decoration: none; }
+.ghmd a { color: hsl(var(--primary)); text-decoration: none; }
 .ghmd a:hover { text-decoration: underline; }
 .ghmd ul, .ghmd ol { padding-left: 2em; margin-top: 0; margin-bottom: 16px; }
 .ghmd li { margin-top: 0.25em; }
@@ -1763,21 +1837,21 @@
 .ghmd blockquote {
   margin: 0 0 16px;
   padding: 0 1em;
-  color: #8b949e;
-  border-left: 0.25em solid #30363d;
+  color: hsl(var(--muted-foreground));
+  border-left: 0.25em solid hsl(var(--border));
 }
 .ghmd hr {
   height: 0.25em;
   padding: 0;
   margin: 24px 0;
-  background-color: #30363d;
+  background-color: hsl(var(--border));
   border: 0;
 }
 .ghmd code:not(pre code) {
   padding: 0.2em 0.4em;
   margin: 0;
   font-size: 85%;
-  background-color: rgba(110, 118, 129, 0.4);
+  background-color: hsl(var(--secondary));
   border-radius: 6px;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
@@ -1786,7 +1860,7 @@
   overflow: auto;
   font-size: 85%;
   line-height: 1.45;
-  background-color: #161b22;
+  background-color: hsl(var(--secondary));
   border-radius: 6px;
   margin-bottom: 16px;
 }
@@ -1809,14 +1883,14 @@
 }
 .ghmd table th, .ghmd table td {
   padding: 6px 13px;
-  border: 1px solid #30363d;
+  border: 1px solid hsl(var(--border));
 }
 .ghmd table th {
   font-weight: 600;
-  background-color: #161b22;
+  background-color: hsl(var(--secondary));
 }
-.ghmd table tr { background-color: transparent; border-top: 1px solid #21262d; }
-.ghmd table tr:nth-child(2n) { background-color: #161b22; }
+.ghmd table tr { background-color: transparent; border-top: 1px solid hsl(var(--border)); }
+.ghmd table tr:nth-child(2n) { background-color: hsl(var(--secondary) / 0.5); }
 .ghmd img { max-width: 100%; box-sizing: border-box; }
-.ghmd strong { font-weight: 600; color: #e6edf3; }
+.ghmd strong { font-weight: 600; color: hsl(var(--foreground)); }
 .ghmd em { font-style: italic; }

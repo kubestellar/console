@@ -522,7 +522,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   const [activeTab, setActiveTab] = useState<'settings' | 'behaviors' | 'ai'>('settings')
   const [aiChanges, setAiChanges] = useState<string[]>([])
   const [aiError, setAiError] = useState<string | null>(null)
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const { addTokens } = useTokenUsage()
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMountedRef = useRef(true)
@@ -869,7 +869,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
                     onClick={() => toggleBehavior(behavior.key)}
                   >
                     <div className={cn(
-                      'w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors',
+                      'w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors',
                       behaviors[behavior.key]
                         ? 'bg-purple-500 border-purple-500'
                         : 'border-border'

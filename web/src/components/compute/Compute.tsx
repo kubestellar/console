@@ -5,7 +5,6 @@ import { Button } from '../ui/Button'
 import { useClusters, useGPUNodes } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -46,7 +45,6 @@ export function Compute() {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected } = useGlobalFilters()
   const { drillToResources } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   // State for cluster comparison selection
   const [selectedForComparison, setSelectedForComparison] = useState<string[]>([])
@@ -169,7 +167,7 @@ export function Compute() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   /** Maximum number of clusters that can be selected for side-by-side comparison. */
   const MAX_COMPARISON_CLUSTERS = 4
@@ -264,7 +262,7 @@ export function Compute() {
                 aria-pressed={isSelected}
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-1">
+                  <div className="shrink-0 mt-1">
                     {isSelected ? (
                       <CheckSquare className="w-5 h-5 text-purple-400" />
                     ) : (
@@ -273,7 +271,7 @@ export function Compute() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
                       <h4 className="font-medium text-foreground truncate" title={cluster.name}>
                         {cluster.context || cluster.name}
                       </h4>
@@ -312,7 +310,7 @@ export function Compute() {
     <DashboardPage
       title="Compute"
       subtitle="Monitor compute resources across clusters"
-      icon="Cpu"
+      icon="Monitor"
       rightExtra={<RotatingTip page="compute" />}
       storageKey={COMPUTE_CARDS_KEY}
       defaultCards={DEFAULT_COMPUTE_CARDS}
@@ -331,7 +329,7 @@ export function Compute() {
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-400">Error loading compute data</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>

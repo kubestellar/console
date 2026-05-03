@@ -6,7 +6,7 @@
  * in the original analytics.ts.
  */
 
-import { send, setAnalyticsUserProperties } from './analytics-core'
+import { send, setAnalyticsUserProperties, emitError } from './analytics-core'
 import type { InstallCopySource, ProviderSummary } from './analytics-types'
 import { CAPABILITY_TOOL_EXEC, CAPABILITY_CHAT } from './analytics-types'
 import { isDemoMode } from './demoMode'
@@ -348,6 +348,33 @@ export function emitApiProviderConnected(provider: string) {
 export function emitDemoModeToggled(enabled: boolean) {
   send('ksc_demo_mode_toggled', { enabled: String(enabled) })
   setAnalyticsUserProperties({ demo_mode: String(enabled) })
+}
+
+// ── Auth / Connection Failure Detection ─────────────────────────
+// These events fire when auth-dependent paths silently degrade.
+// The GA4 error monitor workflow creates issues when thresholds are hit.
+//
+// All four emitters route through emitError() so they respect the
+// per-category throttle window (ERROR_THROTTLE_MS) and the per-page
+// session budget (MAX_ERRORS_PER_PAGE_SESSION). Previously they called
+// send('ksc_error', …) directly — bypassing throttling — which caused
+// the agent_token_failure 4→17→60 trend (#10996) and the ksc_error
+// 3.6× spike (#11006) when polling hooks retried every 30-60 s.
+
+export function emitAgentTokenFailure(reason: string) {
+  emitError('agent_token_failure', reason.slice(0, 100))
+}
+
+export function emitWsAuthMissing(url: string) {
+  emitError('ws_auth_missing', url.replace(/^wss?:\/\/[^/]+/, '').slice(0, 100))
+}
+
+export function emitSseAuthFailure(url: string) {
+  emitError('sse_auth_failure', url.replace(/^https?:\/\/[^/]+/, '').slice(0, 100))
+}
+
+export function emitSessionRefreshFailure(reason: string) {
+  emitError('session_refresh_failure', reason.slice(0, 100))
 }
 
 // ── kc-agent Connection ─────────────────────────────────────────

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Loader2, Database } from 'lucide-react'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants/network'
 import { getDynamicCard } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { compileCardCode, createCardComponent } from '../../lib/dynamic-cards/compiler'
 import { Skeleton } from '../ui/Skeleton'
@@ -9,9 +10,12 @@ import { useCardData } from '../../lib/cards/cardHooks'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useCardDemoState, useReportCardDataState } from './CardDataContext'
 import { cn } from '../../lib/cn'
+import { useCache } from '../../lib/cache'
 import type { DynamicCardDefinition, DynamicCardDefinition_T1 } from '../../lib/dynamic-cards/types'
 import type { CardComponentProps, CardComponent } from './cardRegistry'
 import { useTranslation } from 'react-i18next'
+
+const MAX_AUTO_GRID_COLS = 3
 
 /**
  * DynamicCard: Meta-component that renders dynamic card definitions.
@@ -115,13 +119,39 @@ export interface Tier1Props {
 
 export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const { t } = useTranslation(['cards', 'common'])
-  const [apiData, setApiData] = useState<Record<string, unknown>[]>([])
-  const [apiLoading, setApiLoading] = useState(false)
-  const [apiError, setApiError] = useState<string | null>(null)
 
   // Compute validation flags up front (before hooks) to keep hook call order stable (#4910)
   const isInvalidConfig = !cardDefinition || typeof cardDefinition !== 'object'
   const isMissingEndpoint = !isInvalidConfig && cardDefinition?.dataSource === 'api' && !cardDefinition?.apiEndpoint
+
+  const isApiSource = !isInvalidConfig && cardDefinition?.dataSource === 'api'
+  const apiEndpoint = cardDefinition?.apiEndpoint || ''
+
+  // API data via useCache (persists across navigation, SWR pattern, demo fallback)
+  const {
+    data: apiData,
+    isLoading: apiLoading,
+    isFailed: apiFailed,
+    isDemoFallback,
+    error: apiError,
+    consecutiveFailures,
+  } = useCache<Record<string, unknown>[]>({
+    key: `dynamic-card-api-${apiEndpoint}`,
+    initialData: [],
+    demoData: [{ id: 'demo-1', name: 'Demo Item', status: 'active' }],
+    persist: true,
+    enabled: isApiSource && !isInvalidConfig && !isMissingEndpoint && !!apiEndpoint,
+    fetcher: async () => {
+      const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+      const res = await fetch(apiEndpoint, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json = await res.json()
+      return Array.isArray(json) ? json : (json.items || json.data || [json])
+    },
+  })
 
   const data = isInvalidConfig
     ? []
@@ -130,46 +160,14 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
         : apiData)
 
   // Report loading state to CardWrapper so header stays in sync with body (#5208)
-  const isApiSource = !isInvalidConfig && cardDefinition?.dataSource === 'api'
   useReportCardDataState({
-    isFailed: !!apiError,
-    consecutiveFailures: apiError ? 1 : 0,
+    isFailed: apiFailed,
+    consecutiveFailures,
     errorMessage: apiError ?? undefined,
     isLoading: isApiSource ? apiLoading : false,
     hasData: isApiSource ? apiData.length > 0 : true,
-    isDemoData: false,
+    isDemoData: isDemoFallback && !apiLoading,
   })
-
-  // Fetch API data if needed
-  useEffect(() => {
-    if (isInvalidConfig || isMissingEndpoint) return
-    if (cardDefinition?.dataSource !== 'api' || !cardDefinition?.apiEndpoint) return
-
-    let cancelled = false
-    setApiLoading(true)
-    setApiError(null)
-
-    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-    fetch(cardDefinition.apiEndpoint, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return res.json()
-      })
-      .then((json) => {
-        if (cancelled) return
-        setApiData(Array.isArray(json) ? json : json.items || json.data || [json])
-        setApiLoading(false)
-      })
-      .catch(err => {
-        if (cancelled) return
-        setApiError(err.message)
-        setApiLoading(false)
-      })
-
-    return () => { cancelled = true }
-  }, [isInvalidConfig, isMissingEndpoint, cardDefinition?.dataSource, cardDefinition?.apiEndpoint])
 
   // useCardData for search/pagination — guard against undefined cardDefinition
   const searchFields = ((cardDefinition?.searchFields || []) as (keyof Record<string, unknown>)[])
@@ -249,7 +247,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
       {showStats && cardDefinition.stats && cardDefinition.stats.length > 0 && (
         <div className={cn(
           'grid gap-2 mb-3',
-          cardDefinition.stats.length <= 3 ? `grid-cols-${cardDefinition.stats.length}` : 'grid-cols-4',
+          cardDefinition.stats.length <= MAX_AUTO_GRID_COLS ? `grid-cols-${cardDefinition.stats.length}` : 'grid-cols-4',
         )}>
           {cardDefinition.stats.map((stat, idx) => {
             // Resolve stat value from data
@@ -281,7 +279,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
             value={filters.search}
             onChange={(e) => filters.setSearch(e.target.value)}
             placeholder={t('common:common.search')}
-            className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+            className="w-full text-xs px-2.5 py-1.5 rounded-md bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
           />
         </div>
       )}
@@ -318,7 +316,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
                   {(cardDefinition.columns || []).map(col => {
                     const val = String((item as Record<string, unknown>)[col.field] ?? '-')
                     if (col.format === 'badge') {
-                      // Issue 9071: swap `bg-gray-500/20` -> `bg-muted` (semantic, auto-switches).
+                      // Semantic badge color — adapts to both light and dark themes.
                       const badgeColor = col.badgeColors?.[val] || 'bg-muted text-muted-foreground'
                       return (
                         <span
@@ -432,7 +430,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
         cleanupRef.current = componentResult.cleanup
         setCardComponent(() => componentResult.component)
         setCompiling(false)
-      } catch (err) {
+      } catch (err: unknown) {
         if (cancelled) return
         const message = err instanceof Error ? err.message : String(err)
         // Message is already surfaced to the user via setError below (#8816)
@@ -463,7 +461,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
       <div className="h-full flex flex-col items-center justify-center p-4 text-center">
         <AlertTriangle className="w-6 h-6 text-red-400 mb-2" />
         <p className="text-sm text-red-400 font-medium">{t('dynamicCard.compilationError')}</p>
-        <p className="text-xs text-muted-foreground mt-1 max-w-sm font-mono break-words">
+        <p className="text-xs text-muted-foreground mt-1 max-w-sm font-mono wrap-break-word">
           {error}
         </p>
       </div>

@@ -5,9 +5,9 @@
  */
 
 import { useSyncExternalStore } from 'react'
-import { useCache, type RefreshCategory } from '../lib/cache'
+import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
-import { fetchAPI, fetchFromAllClusters, fetchViaSSE } from '../lib/cache/fetcherUtils'
+import { fetchFromAllClusters, fetchViaSSE, getClusterFetcher } from '../lib/cache/fetcherUtils'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { NodesResponseSchema } from '../lib/schemas'
 import { validateArrayResponse } from '../lib/schemas/validate'
@@ -69,19 +69,6 @@ function publishNodeClusterErrors(next: readonly NodeClusterError[]) {
 // Shared types
 // ============================================================================
 
-/** Shared result shape for all useCached* hooks */
-interface CachedHookResult<T> {
-  data: T
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
-  error: string | null
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
-}
-
 // ============================================================================
 // CoreDNS types (defined here — this is the canonical location)
 // ============================================================================
@@ -123,7 +110,7 @@ export function useCachedNodes(
     persist: true,
     fetcher: async () => {
       if (cluster) {
-        const raw = await fetchAPI<unknown>('nodes', { cluster })
+        const raw = await getClusterFetcher()<unknown>('nodes', { cluster })
         const data = validateArrayResponse<{ nodes: NodeInfo[] }>(NodesResponseSchema, raw, '/api/mcp/nodes', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
@@ -148,7 +135,7 @@ export function useCachedNodes(
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -229,7 +216,7 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
       // scan, src/test/concurrent-mutation-safety.test.ts).
       const tasks = reachable.map((cluster) => async (): Promise<PerClusterNodeResult> => {
         try {
-          const raw = await fetchAPI<unknown>('nodes', { cluster: cluster.name })
+          const raw = await getClusterFetcher()<unknown>('nodes', { cluster: cluster.name })
           const data = validateArrayResponse<{ nodes: NodeInfo[] }>(
             NodesResponseSchema,
             raw,
@@ -240,7 +227,7 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
             nodes: (data.nodes || []).map((n) => ({ ...n, cluster: cluster.name })),
             error: null,
           }
-        } catch (err) {
+        } catch (err: unknown) {
           // Per-cluster failure: tolerate it so a single unreachable cluster
           // doesn't wipe the whole aggregate. Accumulated nodes from other
           // clusters still render.  Issue 9355 — classify the error (auth /
@@ -301,7 +288,7 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
@@ -310,7 +297,7 @@ export function useCachedAllNodes(): CachedHookResult<NodeInfo[]> & {
     // multi-cluster drill-down can explain an empty list with "lacks
     // list-nodes RBAC on cluster X" rather than a generic warning.
     clusterErrors,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 // fetches coredns pods from kube-system and builds per-cluster health info
@@ -327,7 +314,7 @@ export function useCachedCoreDNSStatus(
     fetcher: async () => {
       let pods: PodInfo[]
       if (cluster) {
-        const data = await fetchAPI<{ pods: PodInfo[] }>('pods', { cluster, namespace: 'kube-system' })
+        const data = await getClusterFetcher()<{ pods: PodInfo[] }>('pods', { cluster, namespace: 'kube-system' })
         pods = (data.pods || []).map(p => ({ ...p, cluster }))
       } else {
         pods = await fetchFromAllClusters<PodInfo>('pods', 'pods', { namespace: 'kube-system' })
@@ -370,10 +357,10 @@ export function useCachedCoreDNSStatus(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }

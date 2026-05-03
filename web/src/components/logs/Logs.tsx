@@ -3,10 +3,10 @@ import { useClusters } from '../../hooks/useMCP'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { RotatingTip } from '../ui/RotatingTip'
+import { MS_PER_HOUR } from '../../lib/constants/time'
 
 const LOGS_CARDS_KEY = 'kubestellar-logs-cards'
 
@@ -24,7 +24,7 @@ const DEFAULT_LOGS_CARDS = [
 ]
 
 export function Logs() {
-  const { clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters } = useClusters()
   const { events, isLoading: eventsLoading, isRefreshing: eventsRefreshing, lastRefresh, refetch: refetchEvents } = useCachedEvents()
   const warningEvents = events.filter(e => e.type === 'Warning')
   const lastUpdated = lastRefresh ? new Date(lastRefresh) : null
@@ -32,7 +32,6 @@ export function Logs() {
   const isRefreshing = clustersRefreshing || eventsRefreshing
 
   const { drillToAllEvents, drillToAllClusters } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   const handleRefresh = () => {
@@ -62,7 +61,7 @@ export function Logs() {
     e.type === 'Error' ||
     (e.type === 'Warning' && (e.reason?.toLowerCase().includes('error') || e.reason?.toLowerCase().includes('failed')))
   ).length
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+  const oneHourAgo = new Date(Date.now() - MS_PER_HOUR)
   const currentRecentCount = filteredEvents.filter(e => {
     if (!e.lastSeen) return false
     const eventTime = new Date(e.lastSeen)
@@ -110,13 +109,13 @@ export function Logs() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage
       title="Logs & Events"
       subtitle="Monitor cluster events and application logs"
-      icon="ScrollText"
+      icon="FileText"
       rightExtra={<RotatingTip page="logs" />}
       storageKey={LOGS_CARDS_KEY}
       defaultCards={DEFAULT_LOGS_CARDS}

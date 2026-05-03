@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { CheckCircle2, Clock, XCircle, AlertCircle, ExternalLink, Globe, ArrowRight, Server } from 'lucide-react'
+import { AlertCircle, ExternalLink, Globe, ArrowRight, Server } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { Skeleton } from '../ui/Skeleton'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { gatewayStatusIcons, gatewayStatusColors } from '../../lib/cards/statusMappers'
 import { K8S_DOCS } from '../../config/externalApis'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -13,35 +14,8 @@ import type { Gateway } from '../../hooks/useGatewayStatus'
 // Gateway status types
 type GatewayStatusType = 'Programmed' | 'Accepted' | 'Pending' | 'NotAccepted' | 'Unknown'
 
-const getStatusIcon = (status: GatewayStatusType) => {
-  switch (status) {
-    case 'Programmed':
-      return CheckCircle2
-    case 'Accepted':
-      return CheckCircle2
-    case 'Pending':
-      return Clock
-    case 'NotAccepted':
-      return XCircle
-    default:
-      return Clock
-  }
-}
-
-const getStatusColors = (status: GatewayStatusType) => {
-  switch (status) {
-    case 'Programmed':
-      return { bg: 'bg-green-500/20', text: 'text-green-400', border: 'border-green-500/20' }
-    case 'Accepted':
-      return { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/20' }
-    case 'Pending':
-      return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500/20' }
-    case 'NotAccepted':
-      return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500/20' }
-    default:
-      return { bg: 'bg-gray-500/20', text: 'text-muted-foreground', border: 'border-gray-500/20' }
-  }
-}
+const getStatusIcon = (status: GatewayStatusType) => gatewayStatusIcons[status]
+const getStatusColors = (status: GatewayStatusType) => gatewayStatusColors[status]
 
 type SortByOption = 'name' | 'cluster' | 'status'
 type SortTranslationKey = 'common:common.name' | 'common:common.cluster' | 'common:common.status'
@@ -84,10 +58,11 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   }, [allGateways])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = (allGateways || []).length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: (allGateways || []).length > 0,
+    hasAnyData: hasData,
     isDemoData,
     isFailed,
     consecutiveFailures })
@@ -164,7 +139,7 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
   return (
     <div className="h-full flex flex-col min-h-card">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('gatewayStatus.nGateways', { count: totalItems })}
@@ -214,24 +189,26 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
         className="mb-3"
       />
 
-      {/* Gateway API Integration Notice */}
-      <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
-        <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-purple-400 font-medium">{t('gatewayStatus.gatewayApiTitle')}</p>
-          <p className="text-muted-foreground">
-            {t('gatewayStatus.gatewayApiDesc')}{' '}
-            <a
-              href={K8S_DOCS.gatewayApiGettingStarted}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:underline"
-            >
-              {t('gatewayStatus.installGuide')}
-            </a>
-          </p>
+      {/* Gateway API Integration Notice — only shown when no real data detected */}
+      {isDemoData && (
+        <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
+          <AlertCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-purple-400 font-medium">{t('gatewayStatus.gatewayApiTitle')}</p>
+            <p className="text-muted-foreground">
+              {t('gatewayStatus.gatewayApiDesc')}{' '}
+              <a
+                href={K8S_DOCS.gatewayApiGettingStarted}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:underline"
+              >
+                {t('gatewayStatus.installGuide')}
+              </a>
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
@@ -316,13 +293,15 @@ export function GatewayStatus({ config: _config }: GatewayStatusProps) {
         needsPagination={needsPagination && itemsPerPage !== 'unlimited'}
       />
 
-      {/* Quick install command */}
-      <div className="mt-3 pt-3 border-t border-border/50">
-        <p className="text-2xs text-muted-foreground font-medium mb-2">{t('gatewayStatus.quickInstall')}</p>
-        <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
-          {K8S_DOCS.gatewayApiInstallCommand}
-        </code>
-      </div>
+      {/* Quick install command — only shown when no real data detected */}
+      {isDemoData && (
+        <div className="mt-3 pt-3 border-t border-border/50">
+          <p className="text-2xs text-muted-foreground font-medium mb-2">{t('gatewayStatus.quickInstall')}</p>
+          <code className="block p-2 rounded bg-secondary text-2xs text-muted-foreground font-mono overflow-x-auto whitespace-nowrap">
+            {K8S_DOCS.gatewayApiInstallCommand}
+          </code>
+        </div>
+      )}
 
       {/* Footer links */}
       <div className="flex items-center justify-center gap-3 pt-2 mt-2 border-t border-border/50 text-2xs">

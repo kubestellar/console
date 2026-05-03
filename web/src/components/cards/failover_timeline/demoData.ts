@@ -8,6 +8,8 @@
  * Used in demo mode or when no Karmada control plane is accessible.
  */
 
+import { MS_PER_MINUTE } from '../../../lib/constants/time'
+
 /** Demo data shows as checked 30 seconds ago */
 const DEMO_LAST_CHECK_OFFSET_MS = 30_000
 
@@ -29,8 +31,6 @@ const CLUSTER_RECOVERY_OFFSET_MIN = 12
 /** Offset in minutes for post-recovery rebalance */
 const RECOVERY_REBALANCE_OFFSET_MIN = 10
 
-/** Number of minutes per millisecond conversion factor */
-const MS_PER_MINUTE = 60_000
 
 export type FailoverEventType =
   | 'cluster_down'

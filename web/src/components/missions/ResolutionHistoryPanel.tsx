@@ -27,12 +27,14 @@ import { ShareMissionDialog } from './ShareMissionDialog'
 import { SubmitToKBDialog } from './SubmitToKBDialog'
 import { useTranslation } from 'react-i18next'
 import { DELETE_CONFIRM_TIMEOUT_MS } from '../../lib/constants/network'
+import { Button } from '../ui/Button'
 
 interface ResolutionHistoryPanelProps {
   onApplyResolution?: (resolution: Resolution) => void
 }
 
 export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryPanelProps) {
+  const { t } = useTranslation()
   const { resolutions, sharedResolutions, deleteResolution, shareResolution } = useResolutions()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showPersonal, setShowPersonal] = useState(true)
@@ -40,6 +42,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [exportResolution, setExportResolution] = useState<Resolution | null>(null)
   const [submitKBResolution, setSubmitKBResolution] = useState<Resolution | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const deleteConfirmTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
@@ -50,11 +53,62 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
     setExpandedId(prev => prev === id ? null : id)
   }
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  const handleSelectAll = () => {
+    const allIds = new Set<string>()
+    for (const resolution of resolutions) {
+      allIds.add(resolution.id)
+    }
+    for (const resolution of sharedResolutions) {
+      allIds.add(resolution.id)
+    }
+    setSelectedIds(allIds)
+  }
+
+  const handleDeselectAll = () => {
+    setSelectedIds(new Set())
+  }
+
+  const handleClearAll = () => {
+    for (const resolution of resolutions) {
+      deleteResolution(resolution.id)
+    }
+    for (const resolution of sharedResolutions) {
+      deleteResolution(resolution.id)
+    }
+    setSelectedIds(new Set())
+    setExpandedId(null)
+  }
+
+  const handleDeleteSelected = () => {
+    for (const id of selectedIds) {
+      deleteResolution(id)
+    }
+    setSelectedIds(new Set())
+    setExpandedId(null)
+  }
+
   const handleDelete = (id: string) => {
     if (deleteConfirmId === id) {
       deleteResolution(id)
       setDeleteConfirmId(null)
       setExpandedId(null)
+      setSelectedIds(prev => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
     } else {
       setDeleteConfirmId(id)
       // Auto-clear confirm after 3s
@@ -71,11 +125,11 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
 
   if (totalResolutions === 0) {
     return (
-      <div className="flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
+      <div className="shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
         <div className="bg-card border border-border rounded-lg p-4">
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <BookMarked className="w-4 h-4 text-purple-400" />
-            Resolution History
+            {t('common.resolutionHistory')}
           </h4>
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <AlertCircle className="w-8 h-8 text-muted-foreground/50 mb-2" />
@@ -92,15 +146,57 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   }
 
   return (
-    <div className="flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
+    <div className="shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
       <div className="bg-card border border-border rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-          <BookMarked className="w-4 h-4 text-purple-400" />
-          Resolution History
-          <span className="ml-auto text-xs text-muted-foreground font-normal">
-            {totalResolutions} saved
-          </span>
-        </h4>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <BookMarked className="w-4 h-4 text-purple-400" />
+            {t('navigation.history')}
+            <span className="ml-2 text-xs text-muted-foreground font-normal">
+              {totalResolutions} saved
+            </span>
+          </h4>
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleDeleteSelected}
+                  icon={<Trash2 className="w-3.5 h-3.5" />}
+                >
+                  {t('actions.deleteSelected')} ({selectedIds.size})
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeselectAll}
+                >
+                  {t('actions.deselectAll')}
+                </Button>
+              </>
+            )}
+            {selectedIds.size === 0 && totalResolutions > 0 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSelectAll}
+                >
+                  {t('actions.selectAll')}
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleClearAll}
+                  icon={<Trash2 className="w-3.5 h-3.5" />}
+                >
+                  {t('actions.clearAll')}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Personal Resolutions */}
         {resolutions.length > 0 && (
@@ -120,7 +216,9 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                     key={resolution.id}
                     resolution={resolution}
                     isExpanded={expandedId === resolution.id}
+                    isSelected={selectedIds.has(resolution.id)}
                     onToggle={() => toggleExpand(resolution.id)}
+                    onToggleSelect={() => toggleSelect(resolution.id)}
                     onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
                     onDelete={() => handleDelete(resolution.id)}
                     onShare={() => handleShare(resolution.id)}
@@ -153,7 +251,9 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
                     key={resolution.id}
                     resolution={resolution}
                     isExpanded={expandedId === resolution.id}
+                    isSelected={selectedIds.has(resolution.id)}
                     onToggle={() => toggleExpand(resolution.id)}
+                    onToggleSelect={() => toggleSelect(resolution.id)}
                     onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
                     onDelete={() => handleDelete(resolution.id)}
                     onExport={() => setExportResolution(resolution)}
@@ -192,7 +292,9 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
 interface ResolutionCardProps {
   resolution: Resolution
   isExpanded: boolean
+  isSelected: boolean
   onToggle: () => void
+  onToggleSelect: () => void
   onApply?: () => void
   onDelete: () => void
   onShare?: () => void
@@ -206,7 +308,9 @@ interface ResolutionCardProps {
 function ResolutionCard({
   resolution,
   isExpanded,
+  isSelected,
   onToggle,
+  onToggleSelect,
   onApply,
   onDelete,
   onShare,
@@ -228,49 +332,64 @@ function ResolutionCard({
   })
 
   return (
-    <div className="border border-border rounded-lg bg-secondary/30 overflow-hidden">
+    <div className={cn(
+      "border border-border rounded-lg bg-secondary/30 overflow-hidden",
+      isSelected && "ring-2 ring-primary/50"
+    )}>
       {/* Header */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-start gap-2 p-2.5 text-left hover:bg-secondary/50 transition-colors"
-      >
-        {isExpanded ? (
-          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-        ) : (
-          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-foreground truncate">
-              {resolution.title}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className="text-2xs text-muted-foreground flex items-center gap-1">
-              <Tag className="w-2.5 h-2.5" />
-              {resolution.issueSignature.type}
-            </span>
-            <span className="text-2xs text-muted-foreground flex items-center gap-1">
-              <Clock className="w-2.5 h-2.5" />
-              {formattedDate}
-            </span>
-            {successRate !== null && (
-              <span className={cn(
-                "text-2xs",
-                successRate >= 80 ? "text-green-400" :
-                successRate >= 50 ? "text-yellow-400" : "text-muted-foreground"
-              )}>
-                {effectiveness.timesSuccessful}/{effectiveness.timesUsed}
+      <div className="flex items-start gap-2 p-2.5">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={(e) => {
+            e.stopPropagation()
+            onToggleSelect()
+          }}
+          className="mt-1 w-4 h-4 rounded border-border bg-secondary text-primary focus:ring-2 focus:ring-primary/50 cursor-pointer"
+          aria-label={t('actions.selectItem', { title: resolution.title })}
+        />
+        <button
+          onClick={onToggle}
+          className="flex-1 flex items-start gap-2 text-left hover:bg-secondary/50 transition-colors rounded px-1"
+        >
+          {isExpanded ? (
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-foreground truncate">
+                {resolution.title}
               </span>
-            )}
-            {showSharedBy && resolution.sharedBy && (
-              <span className="text-2xs text-blue-400">
-                @{resolution.sharedBy}
+            </div>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <span className="text-2xs text-muted-foreground flex items-center gap-1">
+                <Tag className="w-2.5 h-2.5" />
+                {resolution.issueSignature.type}
               </span>
-            )}
+              <span className="text-2xs text-muted-foreground flex items-center gap-1">
+                <Clock className="w-2.5 h-2.5" />
+                {formattedDate}
+              </span>
+              {successRate !== null && (
+                <span className={cn(
+                  "text-2xs",
+                  successRate >= 80 ? "text-green-400" :
+                  successRate >= 50 ? "text-yellow-400" : "text-muted-foreground"
+                )}>
+                  {effectiveness.timesSuccessful}/{effectiveness.timesUsed}
+                </span>
+              )}
+              {showSharedBy && resolution.sharedBy && (
+                <span className="text-2xs text-blue-400">
+                  @{resolution.sharedBy}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      </button>
+        </button>
+      </div>
 
       {/* Expanded Content */}
       {isExpanded && (
@@ -342,7 +461,7 @@ function ResolutionCard({
                     e.stopPropagation()
                     onSubmitToKB()
                   }}
-                  className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-2xs font-medium bg-gradient-to-r from-purple-500/20 to-purple-400/20 hover:from-purple-500/30 hover:to-purple-400/30 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 rounded-md shadow-sm shadow-purple-500/10 hover:shadow-purple-500/20 transition-all duration-200"
+                  className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-2xs font-medium bg-linear-to-r from-purple-500/20 to-purple-400/20 hover:from-purple-500/30 hover:to-purple-400/30 text-purple-400 border border-purple-500/30 hover:border-purple-400/50 rounded-md shadow-xs shadow-purple-500/10 hover:shadow-purple-500/20 transition-all duration-200"
                   title="Submit to Knowledge Base"
                 >
                   <BookUp className="w-3.5 h-3.5" />

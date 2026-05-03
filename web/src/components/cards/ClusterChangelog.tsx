@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle } from 'lucide-react'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
@@ -19,8 +20,9 @@ export function ClusterChangelog() {
   const { t } = useTranslation('cards')
   const { events, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, refetch, lastRefresh: eventsLastRefresh } = useCachedEvents(undefined, undefined, { limit: 200 })
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')
+  const hasData = events.length > 0
   const { showSkeleton } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: events.length > 0,
     isDemoData: isDemoFallback,
@@ -30,7 +32,7 @@ export function ClusterChangelog() {
   const cutoff = (() => {
     const now = Date.now()
     const hours: Record<TimeRange, number> = { '1h': 1, '6h': 6, '24h': 24, '7d': 168 }
-    return now - hours[timeRange] * 3600000
+    return now - hours[timeRange] * MS_PER_HOUR
   })()
 
   const changeEvents = useMemo(() => {
@@ -71,10 +73,10 @@ export function ClusterChangelog() {
     const d = new Date(ts)
     const now = new Date()
     const diff = now.getTime() - d.getTime()
-    if (diff < 60000) return t('clusterChangelog.justNow')
-    if (diff < 3600000) return t('clusterChangelog.minutesAgo', { count: Math.floor(diff / 60000) })
-    if (diff < 86400000) return t('clusterChangelog.hoursAgo', { count: Math.floor(diff / 3600000) })
-    return t('clusterChangelog.daysAgo', { count: Math.floor(diff / 86400000) })
+    if (diff < MS_PER_MINUTE) return t('clusterChangelog.justNow')
+    if (diff < MS_PER_HOUR) return t('clusterChangelog.minutesAgo', { count: Math.floor(diff / MS_PER_MINUTE) })
+    if (diff < MS_PER_DAY) return t('clusterChangelog.hoursAgo', { count: Math.floor(diff / MS_PER_HOUR) })
+    return t('clusterChangelog.daysAgo', { count: Math.floor(diff / MS_PER_DAY) })
   }
 
   return (
@@ -106,14 +108,14 @@ export function ClusterChangelog() {
       {/* Error Display */}
       {isFailed && (
         <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-xs font-medium text-red-400">{t('clusterChangelog.errorLoading')}</p>
             <p className="text-2xs text-muted-foreground mt-0.5">{t('clusterChangelog.fetchFailed', { count: consecutiveFailures })}</p>
           </div>
           <button
             onClick={() => refetch()}
-            className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 flex-shrink-0"
+            className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 shrink-0"
           >
             {t('clusterChangelog.retry')}
           </button>

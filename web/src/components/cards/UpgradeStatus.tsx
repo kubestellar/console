@@ -7,15 +7,19 @@ import { useMissions } from '../../hooks/useMissions'
 import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
 import { useLocalAgent } from '../../hooks/useLocalAgent'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
+import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { safeGetJSON, safeSetJSON } from '../../lib/safeLocalStorage'
 import { useTranslation } from 'react-i18next'
 
 const WS_CONNECTION_TIMEOUT_MS = 5000
+const WS_READY_CHECK_INTERVAL_MS = 100
+const VERSION_REQUEST_TIMEOUT_MS = 10_000
 
 interface UpgradeStatusProps {
   config?: Record<string, unknown>
@@ -31,7 +35,7 @@ const SORT_OPTIONS = [
 
 // Module-level cache for cluster versions (persists across component remounts + page refreshes)
 const STORAGE_KEY = 'kc-cluster-versions'
-const VERSION_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const VERSION_CACHE_TTL = 5 * MS_PER_MINUTE // 5 minutes
 
 // Load persisted cache from localStorage on module init
 const versionCache: Record<string, { version: string; timestamp: number }> =
@@ -123,7 +127,7 @@ function createVersionWsHandle(): VersionWsHandle {
         const checkInterval = setInterval(() => {
           if (destroyed) { clearInterval(checkInterval); reject(new Error('Handle destroyed')); return }
           if (ws?.readyState === WebSocket.OPEN) { clearInterval(checkInterval); resolve(ws) }
-        }, 100)
+        }, WS_READY_CHECK_INTERVAL_MS)
         // #6206: store the timeout handle so destroy() can cancel it.
         // Without this, the timeout would fire after unmount, call
         // clearInterval on a dead handle, and reject an already-settled
@@ -141,7 +145,7 @@ function createVersionWsHandle(): VersionWsHandle {
 
     return new Promise((resolve, reject) => {
       try {
-        ws = new WebSocket(LOCAL_AGENT_WS_URL)
+        ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       } catch {
         connecting = false
         reject(new Error('Failed to create WebSocket'))
@@ -154,7 +158,7 @@ function createVersionWsHandle(): VersionWsHandle {
           closeWs()
           reject(new Error('WebSocket connection timeout'))
         }
-      }, 10000)
+      }, VERSION_REQUEST_TIMEOUT_MS)
 
       ws.onopen = () => {
         clearTimeout(connectionTimeout)
@@ -217,7 +221,7 @@ function createVersionWsHandle(): VersionWsHandle {
         const timeout = setTimeout(() => {
           pendingRequests.delete(requestId)
           resolve(getCachedVersion(clusterName))
-        }, 10000)
+        }, VERSION_REQUEST_TIMEOUT_MS)
 
         pendingRequests.set(requestId, (version) => {
           clearTimeout(timeout)
@@ -772,6 +776,7 @@ Please proceed step by step and ask for confirmation before making any changes.`
                   handleStartUpgrade(cluster.name, cluster.currentVersion, cluster.targetVersion)
                 }}
                 className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-xs font-medium transition-colors w-full justify-center"
+                aria-label={`Start upgrade of ${cluster.name} to ${cluster.targetVersion}`}
               >
                 <Rocket className="w-3 h-3" />
                 Start Upgrade to {cluster.targetVersion}

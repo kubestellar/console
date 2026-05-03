@@ -42,7 +42,13 @@ export class AppErrorBoundary extends Component<Props, State> {
     console.error('[AppErrorBoundary] Uncaught error:', error, errorInfo)
     // Mark as reported so the global window 'error' handler skips it (prevents double-counting)
     markErrorReported(error.message)
-    emitError('uncaught_render', error.message)
+    // Pass the Error + componentStack so emitError can derive error_type
+    // (from error.name) and component_name (from the React component stack)
+    // for the new GA4 custom dimensions added in #9861.
+    emitError('uncaught_render', error.message, undefined, {
+      error,
+      componentStack: errorInfo.componentStack ?? undefined,
+    })
   }
 
   handleReload = () => {
@@ -78,12 +84,12 @@ export class AppErrorBoundary extends Component<Props, State> {
               {i18next.t('common:appError.description', 'An unexpected error occurred. Try rendering the page again, go back to the dashboard, or reload the app.')}
             </p>
             {this.state.error && (
-              // `break-words` (overflow-wrap: break-word) prefers to wrap on
+              // `wrap-break-word` (overflow-wrap: break-word) prefers to wrap on
               // whitespace and only breaks mid-word when a single token is
               // wider than the container. `break-all` (used previously) would
               // split after any character, producing lines like
               // "…cardType is undefine" / "d" (issue #5902).
-              <p className="text-xs text-muted-foreground/70 font-mono mb-6 break-words whitespace-pre-wrap">
+              <p className="text-xs text-muted-foreground/70 font-mono mb-6 wrap-break-word whitespace-pre-wrap">
                 {this.state.error.message}
               </p>
             )}

@@ -27,8 +27,10 @@ export function CoreDNSStatus({ config }: CoreDNSStatusProps) {
 
   const isDemoData = isDemoFallback
 
+  const hasData = clusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
     isDemoData,
     hasAnyData: clusters.length > 0,
     isFailed,
@@ -125,7 +127,7 @@ function ClusterRow({ cluster, t }: { cluster: CoreDNSClusterStatus; t: ReturnTy
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
         <div className="flex items-center gap-2">
           <StatusIcon
-            className={`w-4 h-4 flex-shrink-0 ${cluster.healthy ? 'text-green-400' : 'text-red-400'}`}
+            className={`w-4 h-4 shrink-0 ${cluster.healthy ? 'text-green-400' : 'text-red-400'}`}
           />
           <span className="text-sm font-medium truncate">{cluster.cluster}</span>
         </div>
@@ -171,7 +173,7 @@ function ClusterRow({ cluster, t }: { cluster: CoreDNSClusterStatus; t: ReturnTy
 
       {!cluster.healthy && (
         <div className="flex items-center gap-1 text-xs text-red-400 mt-1">
-          <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+          <AlertTriangle className="w-3 h-3 shrink-0" />
           <span>{t('coreDNSStatus.podNotReady', { ready: readyCount, total: cluster.pods.length })}</span>
         </div>
       )}

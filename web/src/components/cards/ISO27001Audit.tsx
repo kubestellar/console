@@ -76,10 +76,10 @@ const STATUS_ORDER: Record<string, number> = { fail: 0, warning: 1, pass: 2, man
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
-    case 'pass': return <CheckCircle2 className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-    case 'fail': return <XCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-    case 'warning': return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
-    default: return <MinusCircle className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+    case 'pass': return <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
+    case 'fail': return <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+    case 'warning': return <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+    default: return <MinusCircle className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
   }
 }
 
@@ -320,6 +320,8 @@ export function ISO27001Audit({ config }: ISO27001AuditProps) {
                     <button
                       onClick={() => toggleVerify(verifyKey)}
                       className="flex items-center gap-0.5 mt-1 text-[10px] text-blue-400 hover:text-blue-300"
+                      aria-label={`${isVerifyOpen ? 'Hide' : 'Show'} verification command for ${f.category}`}
+                      aria-expanded={isVerifyOpen}
                     >
                       <Terminal className="w-3 h-3" />
                       {isVerifyOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}

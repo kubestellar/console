@@ -33,6 +33,7 @@ const mockClusterCacheRef = vi.hoisted(() => ({
 
 vi.mock('../mcp/shared', () => ({
   clusterCacheRef: mockClusterCacheRef,
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
 }))
 
 const mockKubectlExec = vi.hoisted(() => vi.fn())
@@ -41,16 +42,29 @@ vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockKubectlExec(...args) },
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-  STORAGE_KEY_TOKEN: 'kc-auth-token',
-  STORAGE_KEY_MISSIONS_ACTIVE: 'kc-missions-active',
-  STORAGE_KEY_MISSIONS_HISTORY: 'kc-missions-history',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
+    STORAGE_KEY_TOKEN: 'kc-auth-token',
+    STORAGE_KEY_MISSIONS_ACTIVE: 'kc-missions-active',
+    STORAGE_KEY_MISSIONS_HISTORY: 'kc-missions-history',
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10000,
   DEPLOY_ABORT_TIMEOUT_MS: 5000,
+  MCP_HOOK_TIMEOUT_MS: 15_000,
+}))
+
+vi.mock('../useBackendHealth', () => ({
+  isInClusterMode: vi.fn().mockReturnValue(false),
+}))
+
+vi.mock('../../lib/api', () => ({
+  api: { get: vi.fn().mockResolvedValue({ data: null }) },
 }))
 
 import { useDeployMissions } from '../useDeployMissions'
@@ -283,7 +297,7 @@ describe('useDeployMissions — expanded edge cases', () => {
       }
       if (url.includes('/deploy-status/')) {
         return Promise.resolve(new Response(JSON.stringify({
-          status: 'Running',
+          status: 'running',
           replicas: 2,
           readyReplicas: 2,
         }), { status: 200 }))

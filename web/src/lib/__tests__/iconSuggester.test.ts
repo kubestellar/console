@@ -285,8 +285,216 @@ describe('suggestDashboardIcon', () => {
     vi.mocked(getDemoMode).mockReturnValue(false)
   })
 
-  // WebSocket-success path tests deferred — the async WS mock flow
-  // doesn't resolve reliably within vitest's timeout. The keyword +
-  // random fallback paths are well-covered above; the WS path is
-  // exercised in the E2E suite when a real kc-agent is connected.
+  it('uses AI icon from WebSocket stream response', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'stream', payload: { content: 'Shield', done: true } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Security Overview')
+    expect(icon).toBe('Shield')
+  })
+
+  it('uses AI icon from WebSocket result response', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'result', payload: { content: 'Database' } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Data Store')
+    expect(icon).toBe('Database')
+  })
+
+  it('handles WebSocket error message type gracefully', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'error', payload: { message: 'fail' } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('My Dashboard')
+    expect(typeof icon).toBe('string')
+  })
+
+  it('accumulates streamed content across multiple messages', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'stream', payload: { content: 'Lay' } }) })
+          this.onmessage?.({ data: JSON.stringify({ type: 'stream', payload: { content: 'outDashboard', done: true } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Main View')
+    expect(icon).toBe('LayoutDashboard')
+  })
+
+  it('parses icon from messy AI response with quotes', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'result', payload: { content: '"Server"' } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Cluster Nodes')
+    expect(icon).toBe('Server')
+  })
+
+  it('parses icon from response containing icon name in longer text', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'result', payload: { content: 'I recommend using the Shield icon' } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Protect Everything')
+    expect(icon).toBe('Shield')
+  })
+
+  it('handles case-insensitive icon matching from AI response', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'result', payload: { content: 'shield' } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Guard Zone')
+    expect(icon).toBe('Shield')
+  })
+
+  it('falls back to keywords when AI returns unrecognized icon name', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'result', payload: { content: 'NotARealIcon' } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Cluster Health')
+    expect(icon).toBe('Server')
+  })
+
+  it('handles WebSocket onclose with partial response', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'stream', payload: { content: 'Database' } }) })
+          this.onclose?.()
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Data Warehouse')
+    expect(icon).toBe('Database')
+  })
+
+  it('handles invalid JSON in WebSocket message without crashing', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: '{invalid json' })
+          this.onmessage?.({ data: JSON.stringify({ type: 'result', payload: { content: 'Cpu' } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Compute Resources')
+    expect(icon).toBe('Cpu')
+  })
+
+  it('uses result payload content over accumulated stream when result type received', async () => {
+    vi.stubGlobal('WebSocket', class {
+      onopen: (() => void) | null = null
+      onmessage: ((event: { data: string }) => void) | null = null
+      onerror: (() => void) | null = null
+      onclose: (() => void) | null = null
+      send = vi.fn()
+      close = vi.fn()
+      constructor() {
+        setTimeout(() => {
+          this.onopen?.()
+          this.onmessage?.({ data: JSON.stringify({ type: 'stream', payload: { content: 'Shield' } }) })
+          this.onmessage?.({ data: JSON.stringify({ type: 'result', payload: { content: 'Lock' } }) })
+        }, 0)
+      }
+    })
+    const icon = await suggestDashboardIcon('Auth Security')
+    expect(icon).toBe('Lock')
+  })
 })

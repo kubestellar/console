@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { Globe, Server, Cloud, ZoomIn, ZoomOut, Maximize2, Filter, X } from 'lucide-react'
 import { useClusters, type ClusterInfo } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -10,11 +10,18 @@ import DOMPurify from 'dompurify'
 import WorldMapSvgUrl from '../../assets/world-map.svg'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useToast } from '../ui/Toast'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCache } from '../../lib/cache'
+import { CLUSTER_MARKER_FONT_SIZE } from '../../lib/constants'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
 
 /** Search input debounce delay (#6213). */
 const SEARCH_DEBOUNCE_MS = 250
+
+/** Cluster name display threshold before truncation */
+const MAX_CLUSTER_NAME_DISPLAY = 12
+/** Length to truncate cluster names to when they exceed the display threshold */
+const TRUNCATED_NAME_LENGTH = 10
 
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
@@ -219,8 +226,7 @@ type StatusFilter = 'all' | 'healthy' | 'unhealthy'
 
 export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   const { t } = useTranslation(['cards', 'common'])
-  const { showToast } = useToast()
-  const { deduplicatedClusters: allClusters, isLoading, isRefreshing } = useClusters()
+  const { deduplicatedClusters: allClusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { drillToCluster } = useDrillDownActions()
   const { isDemoMode } = useDemoMode()
 
@@ -230,45 +236,29 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode })
+    isDemoData: isDemoMode,
+    isFailed,
+    consecutiveFailures })
 
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected,
     customFilter } = useGlobalFilters()
 
-  // Map SVG state
-  const [mapSvg, setMapSvg] = useState<string>('')
-  const [mapLoading, setMapLoading] = useState(true)
-  const [mapError, setMapError] = useState(false)
-
-  // Fetch SVG content
-  useEffect(() => {
-    const controller = new AbortController()
-    setMapLoading(true)
-    setMapError(false)
-    
-    fetch(WorldMapSvgUrl, { signal: controller.signal })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load map')
-        return res.text()
-      })
-      .then(svg => {
-        // Sanitize SVG to prevent XSS from embedded scripts or event handlers
-        setMapSvg(DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }))
-        setMapLoading(false)
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError') {
-          console.error('Failed to load world map:', err)
-          showToast('Failed to load world map', 'error')
-          setMapError(true)
-          setMapLoading(false)
-        }
-      })
-    
-    return () => controller.abort()
-  }, [])
+  // Map SVG via useCache (persists across navigation, avoids re-fetch)
+  const { data: mapSvg, isLoading: mapLoading, isFailed: mapError } = useCache<string>({
+    key: 'cluster-locations-map-svg',
+    initialData: '',
+    persist: true,
+    fetcher: async () => {
+      const res = await fetch(WorldMapSvgUrl, { signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
+      if (!res.ok) throw new Error('Failed to load map')
+      const svg = await res.text()
+      // Sanitize SVG to prevent XSS from embedded scripts or event handlers
+      return DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } })
+    },
+    autoRefresh: false,
+  })
 
   // Map controls state
   const [zoom, setZoom] = useState(1)
@@ -325,7 +315,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, statusFilter, debouncedSearchFilter])
 
   // Group clusters by region
-  const regionGroups = (() => {
+  const regionGroups = useMemo(() => {
     const groups = new Map<string, RegionInfo>()
 
     for (const cluster of clusters) {
@@ -346,15 +336,21 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     }
 
     return Array.from(groups.values()).sort((a, b) => b.clusters.length - a.clusters.length)
-  })()
+  }, [clusters])
 
   // Calculate stats
-  const stats = (() => {
+  const stats = useMemo(() => {
     const healthyClusters = clusters.filter(c => c.healthy).length
     const uniqueRegions = regionGroups.length
     const providers = new Set(regionGroups.map(r => r.provider))
     return { healthyClusters, totalClusters: clusters.length, uniqueRegions, providerCount: providers.size }
-  })()
+  }, [clusters, regionGroups])
+
+  // Memoize provider legend to avoid expensive flatMap+Set on every render
+  const MAX_LEGEND_PROVIDERS = 5
+  const providerLegend = useMemo(() => {
+    return Array.from(new Set(regionGroups.flatMap(r => r.clusters.map(c => detectCloudProvider(c.name, c.server, c.namespaces))))).slice(0, MAX_LEGEND_PROVIDERS)
+  }, [regionGroups])
 
   // Map controls
   const handleZoomIn = () => {
@@ -443,7 +439,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               placeholder={t('common:common.searchClusters')}
-              className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+              className="flex-1 px-2 py-1 text-xs bg-secondary rounded border border-border text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
             />
             {searchFilter && (
               <button onClick={() => setSearchFilter('')} aria-label={t('common:common.clearSearch', 'Clear search')} className="text-muted-foreground hover:text-foreground">
@@ -493,7 +489,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       {/* World Map */}
       <div
         ref={mapRef}
-        className="flex-1 relative min-h-[180px] bg-gradient-to-b from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
+        className="flex-1 relative min-h-[180px] bg-linear-to-b from-gray-900/50 to-gray-800/30 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -577,11 +573,11 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                           ? 'bg-green-500/20 border-green-500/40 hover:bg-green-500/30'
                           : 'bg-red-500/20 border-red-500/40 hover:bg-red-500/30'
                       }`}
-                      style={{ fontSize: 8 }}
+                      style={{ fontSize: CLUSTER_MARKER_FONT_SIZE }}
                     >
                       <CloudProviderIcon provider={provider} size={10} />
                       <span className="text-[9px] font-medium text-foreground max-w-[60px] truncate">
-                        {cluster.name.length > 12 ? cluster.name.substring(0, 10) + '…' : cluster.name}
+                        {cluster.name.length > MAX_CLUSTER_NAME_DISPLAY ? cluster.name.substring(0, TRUNCATED_NAME_LENGTH) + '…' : cluster.name}
                       </span>
                       <div className={`w-1.5 h-1.5 rounded-full ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
                     </button>
@@ -646,7 +642,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       {regionGroups.length > 0 && (
         <div className="mt-2 pt-2 border-t border-border/50">
           <div className="flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
-            {Array.from(new Set(regionGroups.flatMap(r => r.clusters.map(c => detectCloudProvider(c.name, c.server, c.namespaces))))).slice(0, 5).map(provider => (
+            {providerLegend.map(provider => (
               <div key={provider} className="flex items-center gap-1">
                 <CloudProviderIcon provider={provider} size={10} />
                 <span className="capitalize">{provider}</span>

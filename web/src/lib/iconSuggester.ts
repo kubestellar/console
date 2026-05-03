@@ -7,6 +7,9 @@
 
 import { getDemoMode } from '../hooks/useDemoMode'
 import { LOCAL_AGENT_WS_URL } from './constants'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
+
+const ICON_SUGGESTION_TIMEOUT_MS = 5_000
 
 // All Lucide icons available in the sidebar
 const ICON_POOL = [
@@ -94,10 +97,10 @@ function askAgentForIcon(name: string): Promise<string | null> {
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       resolve(null)
-    }, 5000)
+    }, ICON_SUGGESTION_TIMEOUT_MS)
 
     try {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       let response = ''
       const requestId = `icon-suggest-${Date.now()}`
 

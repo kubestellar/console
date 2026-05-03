@@ -6,7 +6,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
-import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
+import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardEmptyState } from '../../lib/cards/CardComponents'
 import { useCardData } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
 import {
@@ -157,7 +157,7 @@ export function ServiceStatus() {
 
   // Report data state to CardWrapper for failure badge rendering
   const hasData = services.length > 0
-  const { showSkeleton } = useCardLoadingState({
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoFallback,
@@ -245,6 +245,16 @@ export function ServiceStatus() {
           <Skeleton variant="rounded" height={50} />
         </div>
       </div>
+    )
+  }
+
+  if (showEmptyState) {
+    return (
+      <CardEmptyState
+        icon={Globe}
+        title={t('serviceStatus.emptyTitle', 'No services found')}
+        message={t('serviceStatus.emptyMessage', 'Services will appear here once they are deployed to your clusters.')}
+      />
     )
   }
 

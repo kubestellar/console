@@ -63,6 +63,7 @@ function ProviderRow({ provider, onConfigure }: { provider: ProviderHealthInfo; 
           onClick={(e) => { e.stopPropagation(); onConfigure() }}
           className="shrink-0 p-1 hover:bg-purple-500/20 rounded transition-colors text-muted-foreground hover:text-purple-400"
           title={t('providerHealth.configureInSettings')}
+          aria-label={t('providerHealth.configureInSettings')}
         >
           <Settings className="w-3.5 h-3.5" />
         </button>
