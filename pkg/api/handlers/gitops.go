@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -428,8 +429,14 @@ func (h *GitOpsHandlers) getHelmReleasesViaK8sAPI(ctx context.Context, cluster s
 		}
 
 		key := releaseKey{name: releaseName, namespace: secret.Namespace}
-		if prev, exists := best[key]; !exists || revision > prev.Revision {
+		revNum, _ := strconv.Atoi(revision)
+		if prev, exists := best[key]; !exists {
 			best[key] = hr
+		} else {
+			prevNum, _ := strconv.Atoi(prev.Revision)
+			if revNum > prevNum {
+				best[key] = hr
+			}
 		}
 	}
 
@@ -442,6 +449,10 @@ func (h *GitOpsHandlers) getHelmReleasesViaK8sAPI(ctx context.Context, cluster s
 		"cluster", cluster, "count", len(releases))
 	return releases, nil
 }
+
+// maxHelmReleaseBytes bounds decompressed Helm release payloads to prevent
+// excessive memory usage from malformed or adversarial secrets.
+const maxHelmReleaseBytes = 10 * 1024 * 1024 // 10 MB
 
 // decodeHelmRelease decodes the Helm release payload stored in a secret's
 // "release" data field. Helm stores this as: base64(gzip(json)).
@@ -457,7 +468,7 @@ func decodeHelmRelease(data []byte) (*helmReleaseBody, error) {
 	}
 	defer gz.Close()
 
-	uncompressed, err := io.ReadAll(gz)
+	uncompressed, err := io.ReadAll(io.LimitReader(gz, maxHelmReleaseBytes))
 	if err != nil {
 		return nil, err
 	}
