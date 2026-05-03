@@ -296,7 +296,7 @@ func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2
 		go func(idx int, wf NightlyWorkflow) {
 			defer func() {
 				if r := recover(); r != nil {
-					slog.Error("panic in nightly workflow fetch", "workflow", wf.Name, "error", r)
+					slog.Error("panic in nightly workflow fetch", "workflow", wf.WorkflowFile, "error", r)
 					ch <- result{idx: idx, err: fmt.Errorf("panic: %v", r)}
 				}
 			}()
@@ -1014,3 +1014,4 @@ func successRate(runs []NightlyRun) float64 {
 	}
 	return float64(passed) / float64(len(runs))
 }
+
