@@ -334,7 +334,6 @@ if [ -z "$FAST_MODE" ]; then
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
           ["cache-test"]=600
-          ["deploy-test"]=600
           ["benchmark-test"]=600
           # deploy-test: npm run build (~2m) + vite preview start (up to 3m) + 11 tests
           #   running serially with 6-minute per-test timeout. Default 300s cap kills
