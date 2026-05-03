@@ -294,6 +294,13 @@ export function startEngagementTracking(onFlush: () => void) {
 
 /** Stop engagement tracking (called on opt-out) */
 export function stopEngagementTracking() {
+  for (const event of INTERACTION_EVENTS) {
+    document.removeEventListener(event, markActive)
+  }
+  if (visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler)
+    visibilityHandler = null
+  }
   if (heartbeatTimer) {
     clearInterval(heartbeatTimer)
     heartbeatTimer = null

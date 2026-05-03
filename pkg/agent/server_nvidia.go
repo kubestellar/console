@@ -114,7 +114,7 @@ func (s *Server) handleNvidiaOperatorsHTTP(w http.ResponseWriter, r *http.Reques
 						slog.Error("[NvidiaOperators] recovered from panic", "cluster", clusterName, "panic", r)
 					}
 				}()
-				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
+				clusterCtx, clusterCancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
 				defer clusterCancel()
 
 				client, err := s.k8sClient.GetClient(clusterName)
