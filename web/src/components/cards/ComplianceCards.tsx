@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { AlertTriangle, AlertCircle, Shield, ExternalLink, Info, Loader2, ChevronRight, Sparkles } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Shield, ShieldOff, ExternalLink, Info, Loader2, ChevronRight, Sparkles } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
@@ -234,7 +234,7 @@ export function FalcoAlerts({ config: _config }: CardConfig) {
 
 export function TrivyScan({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
-  const { statuses, aggregated, isLoading, isRefreshing, installed, hasErrors, isDemoData, clustersChecked, totalClusters, refetch } = useTrivy()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, hasErrors, isDemoData, clustersChecked, totalClusters, unavailableReason, refetch } = useTrivy()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
@@ -300,19 +300,23 @@ Please proceed step by step.`,
       context: {} })
   }
 
+  // (#11747) In-cluster mode: show informative unavailable state
+  if (unavailableReason) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
+        <ShieldOff className="w-8 h-8 opacity-50" />
+        <p>Vulnerability scanning not available</p>
+        <p className="text-xs opacity-70">Requires kc-agent (local agent mode)</p>
+      </div>
+    )
+  }
+
   // Only show full-screen spinner on very first load with zero data
   if (isLoading && Object.keys(statuses).length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         {totalClusters > 0 && (
-          <span className="text-xs text-muted-foreground">
-            {t('cards:trivyScan.checkingClusters', { checked: clustersChecked, total: totalClusters })}
-          </span>
-        )}
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-3">
@@ -456,7 +460,7 @@ Please proceed step by step.`,
 
 export function KubescapeScan({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
-  const { statuses, aggregated, isLoading, isRefreshing, installed, hasErrors, isDemoData, clustersChecked, totalClusters, refetch } = useKubescape()
+  const { statuses, aggregated, isLoading, isRefreshing, installed, hasErrors, isDemoData, clustersChecked, totalClusters, unavailableReason, refetch } = useKubescape()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
@@ -525,6 +529,17 @@ Please proceed step by step.`,
   }
 
   const score = filtered.overallScore
+
+  // (#11747) In-cluster mode: show informative unavailable state
+  if (unavailableReason) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
+        <ShieldOff className="w-8 h-8 opacity-50" />
+        <p>Security posture scanning not available</p>
+        <p className="text-xs opacity-70">Requires kc-agent (local agent mode)</p>
+      </div>
+    )
+  }
 
   // Only show full-screen spinner on very first load with zero data
   if (isLoading && Object.keys(statuses).length === 0) {
@@ -734,7 +749,7 @@ Please proceed step by step.`,
 
 export function PolicyViolations({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
-  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, hasErrors: kyvernoHasErrors, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal, refetch: kyvernoRefetch } = useKyverno()
+  const { statuses: kyvernoStatuses, isLoading: kyvernoLoading, isRefreshing: kyvernoRefreshing, isDemoData: kyvernoDemoData, installed: kyvernoInstalled, hasErrors: kyvernoHasErrors, clustersChecked: kyvernoChecked, totalClusters: kyvernoTotal, unavailableReason: kyvernoUnavailable, refetch: kyvernoRefetch } = useKyverno()
   const { startMission } = useMissions()
   const { selectedClusters } = useGlobalFilters()
   const [modalCluster, setModalCluster] = useState<string | null>(null)
@@ -812,6 +827,17 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   const hasData = violations.length > 0 || kyvernoDemoData
   // #6219: surface kyverno fetch failures.
   useCardLoadingState({ isLoading: kyvernoLoading && !hasData, isRefreshing: kyvernoRefreshing, hasAnyData: hasData, isDemoData: kyvernoDemoData, isFailed: kyvernoHasErrors })
+
+  // (#11747) In-cluster mode: show informative unavailable state
+  if (kyvernoUnavailable) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
+        <ShieldOff className="w-8 h-8 opacity-50" />
+        <p>Policy violation scanning not available</p>
+        <p className="text-xs opacity-70">Requires kc-agent (local agent mode)</p>
+      </div>
+    )
+  }
 
   if (violations.length === 0 && !kyvernoDemoData) {
     // Still scanning — show loading state instead of definitive empty state
@@ -961,8 +987,8 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 
 export function ComplianceScore({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
-  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, installed: ksInstalled, hasErrors: ksHasErrors, clustersChecked: ksChecked, totalClusters: ksTotal } = useKubescape()
-  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, installed: kyInstalled, hasErrors: kyHasErrors, clustersChecked: kyChecked, totalClusters: kyTotal } = useKyverno()
+  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, installed: ksInstalled, hasErrors: ksHasErrors, clustersChecked: ksChecked, totalClusters: ksTotal, unavailableReason: ksUnavailable } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, installed: kyInstalled, hasErrors: kyHasErrors, clustersChecked: kyChecked, totalClusters: kyTotal, unavailableReason: kyUnavailable } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
   const { startMission } = useMissions()
   const [showBreakdown, setShowBreakdown] = useState(false)
@@ -1059,6 +1085,17 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   // (single-tool failure still produces a meaningful partial score).
   const scoreFailed = ksHasErrors && kyHasErrors
   useCardLoadingState({ isLoading: isLoading && !scoreHasData, hasAnyData: scoreHasData, isDemoData, isFailed: scoreFailed })
+
+  // (#11747) In-cluster mode: show informative unavailable state
+  if (ksUnavailable && kyUnavailable) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
+        <ShieldOff className="w-8 h-8 opacity-50" />
+        <p>Compliance scoring not available</p>
+        <p className="text-xs opacity-70">Requires kc-agent (local agent mode)</p>
+      </div>
+    )
+  }
 
   const scoreCtx = getScoreContext(score)
 

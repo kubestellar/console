@@ -19,6 +19,7 @@ import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../li
 import { STORAGE_KEY_KYVERNO_CACHE, STORAGE_KEY_KYVERNO_CACHE_TIME } from '../lib/constants/storage'
 import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import { CRD_CHECK_TIMEOUT_MS, CRD_DATA_FETCH_TIMEOUT_MS } from '../lib/constants/network'
+import { isInClusterMode } from './useBackendHealth'
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -340,6 +341,7 @@ export function useKyverno() {
   const [clustersChecked, setClustersChecked] = useState(0)
   /** Tracks consecutive full-refresh failures for useCardLoadingState */
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [unavailableReason, setUnavailableReason] = useState<string | null>(null)
   const initialLoadDone = useRef(!!cachedSnapshot)
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
@@ -347,6 +349,16 @@ export function useKyverno() {
   const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
 
   const refetch = useCallback(async (silent = false) => {
+    // In-cluster mode: kubectlProxy requires kc-agent which isn't available.
+    // Return unavailable state instead of silently showing zeros. (#11747)
+    if (isInClusterMode() && !isDemoMode) {
+      setStatuses({})
+      setIsLoading(false)
+      setIsRefreshing(false)
+      setUnavailableReason('Kyverno scanning requires kc-agent (not available in-cluster deployments)')
+      return
+    }
+
     if (clusters.length === 0) {
       setIsLoading(false)
       return
@@ -487,5 +499,7 @@ export function useKyverno() {
     clustersChecked,
     /** Total number of clusters being checked */
     totalClusters: clusters.length,
+    /** Set when scanning is unavailable (e.g. in-cluster mode without kc-agent) */
+    unavailableReason,
     refetch }
 }
