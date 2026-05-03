@@ -9,6 +9,7 @@ import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, cl
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import type { PodInfo, PodIssue, Deployment, DeploymentIssue, Job, HPA, ReplicaSet, StatefulSet, DaemonSet, CronJob } from './types'
+import { isInClusterMode } from '../useBackendHealth'
 import { classifyError, type ClusterErrorType } from '../../lib/errorClassifier'
 import {
   WorkloadsSharedState,
@@ -423,7 +424,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       if (namespace) sseParams.namespace = namespace
 
       const allPods = await fetchSSE<PodInfo>({
-        url: `${LOCAL_AGENT_HTTP_URL}/pods/stream`,
+        url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/pods/stream`,
         params: sseParams,
         itemsKey: 'pods',
         signal: abortController.signal,
@@ -599,7 +600,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       if (namespace) sseParams.namespace = namespace
 
       const allPods = await fetchSSE<PodInfo>({
-        url: `${LOCAL_AGENT_HTTP_URL}/pods/stream`,
+        url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/pods/stream`,
         params: sseParams,
         itemsKey: 'pods',
         signal: abortController.signal,
@@ -1154,7 +1155,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
     }
 
     // Try local agent HTTP endpoint first (works without backend)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -1227,7 +1228,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
 
     // Fall back to REST API
     try {
-      if (isDemoMode() || !LOCAL_AGENT_HTTP_URL) {
+      if (isDemoMode() || !LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
         setDeployments([])
         const now = new Date()
         setLastUpdated(now)
@@ -1240,7 +1241,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const url = `${LOCAL_AGENT_HTTP_URL}/deployments?${params}`
+      const url = `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/deployments?${params}`
 
       const response = await fetchWithRetry(url, {
         method: 'GET',
@@ -1337,7 +1338,7 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -1372,7 +1373,7 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
       if (cluster) sseParams.cluster = cluster
       if (namespace) sseParams.namespace = namespace
       const result = await fetchSSE<Job>({
-        url: `${LOCAL_AGENT_HTTP_URL}/jobs/stream`,
+        url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/jobs/stream`,
         params: sseParams,
         itemsKey: 'jobs',
         signal: abortController.signal,
@@ -1419,7 +1420,7 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -1442,7 +1443,7 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
         console.debug('[useHPAs] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL) {
+    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
       setIsLoading(false)
       return
     }
@@ -1490,7 +1491,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
   const refetch = useCallback(async () => {
     setIsLoading(true)
     // Try local agent first
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -1513,7 +1514,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
         console.debug('[useReplicaSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL) {
+    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
       setIsLoading(false)
       return
     }
@@ -1559,7 +1560,7 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -1582,7 +1583,7 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
         console.debug('[useStatefulSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL) {
+    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
       setIsLoading(false)
       return
     }
@@ -1628,7 +1629,7 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -1651,7 +1652,7 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
         console.debug('[useDaemonSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL) {
+    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
       setIsLoading(false)
       return
     }
@@ -1697,7 +1698,7 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -1720,7 +1721,7 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
         console.debug('[useCronJobs] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL) {
+    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
       setIsLoading(false)
       return
     }

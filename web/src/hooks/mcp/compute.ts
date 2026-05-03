@@ -9,6 +9,7 @@ import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, LOCAL_AGENT_URL, agentFetch
 import { subscribePolling } from './pollingManager'
 import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
 import { classifyError, type ClusterErrorType } from '../../lib/errorClassifier'
+import { isInClusterMode } from '../useBackendHealth'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
 
 /**
@@ -192,7 +193,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       try {
         // Try SSE streaming first for progressive rendering
         const sseResult = await fetchSSE<GPUNode>({
-          url: `${LOCAL_AGENT_HTTP_URL}/gpu-nodes/stream`,
+          url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/gpu-nodes/stream`,
           params: Object.fromEntries(params.entries()),
           itemsKey: 'nodes',
           onClusterData: (_cluster, items) => {
@@ -211,7 +212,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       } catch {
         // SSE failed, try REST fallback
         try {
-          const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gpu-nodes?${params}`)
+          const resp = await agentFetch(`${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/gpu-nodes?${params}`)
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
           const data = await resp.json()
           newNodes = data.nodes || []
@@ -533,7 +534,7 @@ export function useNodes(cluster?: string) {
       if (cluster) sseParams.cluster = cluster
 
       const allNodes = await fetchSSE<NodeInfo>({
-        url: `${LOCAL_AGENT_HTTP_URL}/nodes/stream`,
+        url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/nodes/stream`,
         params: sseParams,
         itemsKey: 'nodes',
         onClusterData: (_clusterName, items) => {
@@ -618,7 +619,7 @@ export function useNVIDIAOperators(cluster?: string) {
         try {
           const accumulated: NVIDIAOperatorStatus[] = []
           const result = await fetchSSE<NVIDIAOperatorStatus>({
-            url: `${LOCAL_AGENT_HTTP_URL}/nvidia-operators/stream`,
+            url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/nvidia-operators/stream`,
             params,
             itemsKey: 'operators',
             onClusterData: (_clusterName, items) => {
@@ -639,7 +640,7 @@ export function useNVIDIAOperators(cluster?: string) {
       // REST fallback
       const urlParams = new URLSearchParams()
       if (cluster) urlParams.append('cluster', cluster)
-      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/nvidia-operators?${urlParams}`)
+      const resp = await agentFetch(`${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/nvidia-operators?${urlParams}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
       if (data.operators) {
