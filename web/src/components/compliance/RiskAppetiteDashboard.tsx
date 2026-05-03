@@ -62,6 +62,54 @@ const BAR_COLOR = {
   red: 'bg-red-500',
 }
 
+// ── Memoized sub-components ───────────────────────────────────────────
+
+/** Renders a single threshold row with appetite/actual bar comparison */
+const ThresholdCard = memo(function ThresholdCard({ t }: { t: AppetiteThreshold }) {
+  const maxVal = Math.max(t.tolerance_max, t.actual_exposure, t.appetite_level) * 1.2
+  const appetitePct = (t.appetite_level / maxVal) * 100
+  const actualPct = (t.actual_exposure / maxVal) * 100
+  const tolerancePct = (t.tolerance_max / maxVal) * 100
+
+  return (
+    <div className={`bg-gray-800/50 rounded-lg border p-4 ${STATUS_BG[t.status]}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {STATUS_ICON[t.status]}
+          <h3 className="text-sm font-semibold text-white">{t.category}</h3>
+        </div>
+        <div className="flex items-center gap-4 text-xs">
+          <span className="text-gray-400">Appetite: <span className="text-blue-400 font-bold">{t.appetite_level}</span></span>
+          <span className="text-gray-400">Actual: <span className={`font-bold ${
+            t.status === 'red' ? 'text-red-400' : t.status === 'amber' ? 'text-yellow-400' : 'text-green-400'
+          }`}>{t.actual_exposure}</span></span>
+          <span className="text-gray-400">Max: {t.tolerance_max}</span>
+        </div>
+      </div>
+
+      {/* Bar chart comparison */}
+      <div className="space-y-1.5 mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400 w-16">Appetite</span>
+          <div className="flex-1 h-4 bg-gray-700 rounded-full overflow-hidden relative">
+            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${appetitePct}%` }} />
+            <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400" style={{ left: `${tolerancePct}%` }} />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400 w-16">Actual</span>
+          <div className="flex-1 h-4 bg-gray-700 rounded-full overflow-hidden relative">
+            <div className={`h-full rounded-full ${BAR_COLOR[t.status]}`} style={{ width: `${actualPct}%` }} />
+            <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400" style={{ left: `${tolerancePct}%` }} />
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500 italic">{t.statement}</p>
+    </div>
+  )
+})
+
 // ── Component ─────────────────────────────────────────────────────────
 
 export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardContent() {
@@ -188,51 +236,9 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
       {/* Appetite vs Exposure tab */}
       {activeTab === 'appetite' && (
         <div className="space-y-4">
-          {thresholds.map(t => {
-            const maxVal = Math.max(t.tolerance_max, t.actual_exposure, t.appetite_level) * 1.2
-            const appetitePct = (t.appetite_level / maxVal) * 100
-            const actualPct = (t.actual_exposure / maxVal) * 100
-            const tolerancePct = (t.tolerance_max / maxVal) * 100
-
-            return (
-              <div key={t.category} className={`bg-gray-800/50 rounded-lg border p-4 ${STATUS_BG[t.status]}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    {STATUS_ICON[t.status]}
-                    <h3 className="text-sm font-semibold text-white">{t.category}</h3>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs">
-                    <span className="text-gray-400">Appetite: <span className="text-blue-400 font-bold">{t.appetite_level}</span></span>
-                    <span className="text-gray-400">Actual: <span className={`font-bold ${
-                      t.status === 'red' ? 'text-red-400' : t.status === 'amber' ? 'text-yellow-400' : 'text-green-400'
-                    }`}>{t.actual_exposure}</span></span>
-                    <span className="text-gray-400">Max: {t.tolerance_max}</span>
-                  </div>
-                </div>
-
-                {/* Bar chart comparison */}
-                <div className="space-y-1.5 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400 w-16">Appetite</span>
-                    <div className="flex-1 h-4 bg-gray-700 rounded-full overflow-hidden relative">
-                      <div className="h-full bg-blue-500 rounded-full" style={{ width: `${appetitePct}%` }} />
-                      {/* Tolerance line */}
-                      <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400" style={{ left: `${tolerancePct}%` }} />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400 w-16">Actual</span>
-                    <div className="flex-1 h-4 bg-gray-700 rounded-full overflow-hidden relative">
-                      <div className={`h-full rounded-full ${BAR_COLOR[t.status]}`} style={{ width: `${actualPct}%` }} />
-                      <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400" style={{ left: `${tolerancePct}%` }} />
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-xs text-gray-500 italic">{t.statement}</p>
-              </div>
-            )
-          })}
+          {thresholds.map(t => (
+            <ThresholdCard key={t.category} t={t} />
+          ))}
 
           <div className="flex gap-4 text-xs text-gray-400">
             <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-500 inline-block" /> Appetite</span>

@@ -129,12 +129,18 @@ func startGitHubProxyLimiterEvictor(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			githubProxyLimiters.Lock()
 			now := time.Now()
+			// Collect stale keys under lock, then delete — avoids
+			// holding the lock for the entire iteration when map is large.
+			githubProxyLimiters.Lock()
+			stale := make([]string, 0)
 			for userID, entry := range githubProxyLimiters.m {
 				if now.Sub(entry.lastUsed) > githubProxyLimiterIdleTTL {
-					delete(githubProxyLimiters.m, userID)
+					stale = append(stale, userID)
 				}
+			}
+			for _, id := range stale {
+				delete(githubProxyLimiters.m, id)
 			}
 			githubProxyLimiters.Unlock()
 		}
