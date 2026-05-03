@@ -375,6 +375,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
   // Track data presence in a ref so the useCallback doesn't need ingresses in deps
   const hasDataRef = useRef(false)
   hasDataRef.current = ingresses.length > 0
+  const hasReceivedLiveDataRef = useRef(false)
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data so the Demo badge correctly
@@ -395,7 +396,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
     }
     // Only show loading skeleton when we have no data yet; otherwise just
     // show refreshing indicator to prevent flickering (#11542).
-    const hasExistingData = hasDataRef.current
+    const hasExistingData = hasDataRef.current || hasReceivedLiveDataRef.current
     if (!hasExistingData) {
       setIsLoading(true)
     }
@@ -415,6 +416,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
         if (response.ok) {
           const data = await response.json()
           setIngresses(data.ingresses || [])
+          hasReceivedLiveDataRef.current = true
           setIsDemoFallback(false)
           setError(null)
           setConsecutiveFailures(0)
@@ -431,7 +433,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
     const token = localStorage.getItem(STORAGE_KEY_TOKEN)
     if (!token) {
       // Only clear data if we never had any; preserve stale data otherwise (#11540)
-      if (!hasDataRef.current) {
+      if (!hasReceivedLiveDataRef.current) {
         setIngresses([])
       }
       setIsLoading(false)
@@ -446,6 +448,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
       setIngresses(data.ingresses || [])
+      hasReceivedLiveDataRef.current = true
       setIsDemoFallback(false)
       setError(null)
       setConsecutiveFailures(0)
@@ -455,7 +458,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
       const message = err instanceof Error ? err.message : 'Network request failed'
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setIsDemoFallback(false)
+      // Don't flip isDemoFallback on error — preserve demo badge if no live data received (#11640)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -497,11 +500,12 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
   // Track data presence in a ref so the useCallback doesn't need networkpolicies in deps
   const hasDataRef = useRef(false)
   hasDataRef.current = networkpolicies.length > 0
+  const hasReceivedLiveDataRef = useRef(false)
 
   const refetch = useCallback(async () => {
     // Only show loading skeleton when we have no data yet; otherwise just
     // show refreshing indicator to prevent flickering (#11542).
-    const hasExistingData = hasDataRef.current
+    const hasExistingData = hasDataRef.current || hasReceivedLiveDataRef.current
     if (!hasExistingData) {
       setIsLoading(true)
     }
@@ -521,6 +525,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
         if (response.ok) {
           const data = await response.json()
           setNetworkPolicies(data.networkpolicies || [])
+          hasReceivedLiveDataRef.current = true
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -540,6 +545,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
       setNetworkPolicies(data.networkpolicies || [])
+      hasReceivedLiveDataRef.current = true
       setError(null)
       setConsecutiveFailures(0)
     } catch (err: unknown) {
@@ -548,6 +554,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const message = err instanceof Error ? err.message : 'Network request failed'
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
+      // Don't flip isDemoFallback on error — preserve demo badge if no live data received (#11640)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)

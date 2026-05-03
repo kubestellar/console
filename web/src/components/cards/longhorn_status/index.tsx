@@ -242,7 +242,7 @@ export function LonghornStatus() {
 
   // When all cluster fetches have failed, show unified error state instead of
   // rendering misleading partial/empty data from stale cache (#11539).
-  if (isFailed && !isDemoData) {
+  if (consecutiveFailures > 0 && !isRefreshing && !isDemoData) {
     return (
       <div className="h-full flex items-center justify-center p-4">
         <EmptyState
