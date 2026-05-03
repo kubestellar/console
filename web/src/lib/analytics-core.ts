@@ -862,23 +862,50 @@ export function _resetCapturedApiCalls() {
   capturedApiCalls.length = 0
 }
 
-// ── Per-card / per-page error throttling (#10092) ──────────────────────
+// ── Global error-event rate limiter (#11638) ──────────────────────────
+// A cascading bug (e.g. FedRAMP `in_process` rendering, cluster dedup
+// missing `aliases`) can trigger errors from many distinct cards/pages
+// simultaneously, bypassing per-card throttles. This global limiter caps
+// the total number of ksc_error and ksc_http_error events sent within any
+// sliding window, regardless of source.
+const ERROR_EVENT_MAX_PER_WINDOW = 10
+const ERROR_EVENT_WINDOW_MS = 5 * 60 * 1000 // 5 minutes
+const globalErrorEventTimestamps: { ksc_error: number[]; ksc_http_error: number[] } = {
+  ksc_error: [],
+  ksc_http_error: [],
+}
+
+function isGlobalRateLimited(eventName: 'ksc_error' | 'ksc_http_error'): boolean {
+  const now = Date.now()
+  const timestamps = globalErrorEventTimestamps[eventName]
+  // Evict expired timestamps
+  while (timestamps.length > 0 && now - timestamps[0] > ERROR_EVENT_WINDOW_MS) {
+    timestamps.shift()
+  }
+  if (timestamps.length >= ERROR_EVENT_MAX_PER_WINDOW) return true
+  timestamps.push(now)
+  return false
+}
+
+// ── Per-card / per-page error throttling (#10092, #11638) ─────────────
 // CI/CD cards poll every 30-120s. Without throttling, a single broken card
 // generates dozens of ksc_error events per session. We cap emissions to at
 // most one per card+category per throttle window, and enforce a per-page
 // session budget so a single route can't dominate the error stream.
-const ERROR_THROTTLE_MS = 60_000
+// Increased from 60s to 5min to handle persistent polling failures (#11638).
+const ERROR_THROTTLE_MS = 300_000
 const MAX_ERRORS_PER_PAGE_SESSION = 50
 const recentErrorEmissions = new Map<string, number>()
 const pageErrorCounts = new Map<string, number>()
 
-// ── ksc_http_error throttling (#11511) ─────────────────────────────────
+// ── ksc_http_error throttling (#11511, #11638) ────────────────────────
 // The ksc_http_error event fires from unhandledrejection/error handlers for
 // auth and 5xx fetch failures. Without throttling, polling cards that hit
 // repeated failures (e.g. expired token, upstream 502) emit ksc_http_error
-// on every poll cycle — causing GA4 event volume to spike at 3.5× baseline.
+// on every poll cycle — causing GA4 event volume to spike at 3.5-10.5× baseline.
 // Throttle to at most one emission per status+page combination per window.
-const HTTP_ERROR_THROTTLE_MS = 60_000
+// Increased from 60s to 5min to handle persistent polling failures (#11638).
+const HTTP_ERROR_THROTTLE_MS = 300_000
 const recentHttpErrorEmissions = new Map<string, number>()
 
 function isHttpErrorThrottled(httpStatus: string, page: string): boolean {
@@ -907,6 +934,8 @@ export function _resetErrorThrottles() {
   recentErrorEmissions.clear()
   pageErrorCounts.clear()
   recentHttpErrorEmissions.clear()
+  globalErrorEventTimestamps.ksc_error = []
+  globalErrorEventTimestamps.ksc_http_error = []
 }
 
 /**
@@ -933,6 +962,8 @@ export function _resetAnalyticsState() {
   recentErrorEmissions.clear()
   pageErrorCounts.clear()
   recentHttpErrorEmissions.clear()
+  globalErrorEventTimestamps.ksc_error = []
+  globalErrorEventTimestamps.ksc_http_error = []
   capturedErrors.length = 0
   capturedApiCalls.length = 0
 }
@@ -945,7 +976,7 @@ export function _resetAnalyticsState() {
 export function emitHttpError(httpStatus: string, errorDetail: string) {
   const page = window.location.pathname
   pushCapturedApiCall(httpStatus, page, errorDetail)
-  if (!isHttpErrorThrottled(httpStatus, page)) {
+  if (!isHttpErrorThrottled(httpStatus, page) && !isGlobalRateLimited('ksc_http_error')) {
     send('ksc_http_error', {
       http_status: httpStatus,
       error_detail: errorDetail.slice(0, ERROR_DETAIL_MAX_LEN),
@@ -986,6 +1017,7 @@ export function emitError(
 ) {
   const page = window.location.pathname
   if (isErrorThrottled(category, page, cardId)) return
+  if (isGlobalRateLimited('ksc_error')) return
 
   const errorType = inferErrorType(detail, extra?.error)
   const componentName = inferComponentName(cardId, extra?.componentStack, extra?.error)
