@@ -181,6 +181,37 @@ describe('sanitizeMission', () => {
     expect(parsed.steps[0].description).toContain('<REDACTED-')
     expect(parsed.security.sanitized).toBe(true)
   })
+
+  it('redacts sensitive data inside resolution.summary and resolution.yaml', () => {
+    const mission = makeMission({
+      steps: [],
+      resolution: {
+        summary: 'Connect to 10.0.0.5 to resolve',
+        yaml: 'host: 10.0.0.5',
+        steps: ['SSH to 10.0.0.5'],
+      },
+    })
+    const findings = scanForSensitiveData(mission)
+    const result = sanitizeMission(mission, findings)
+
+    expect(result.mission.resolution?.summary).toContain('<REDACTED-IP-')
+    expect(result.mission.resolution?.summary).not.toContain('10.0.0.5')
+    expect(result.mission.resolution?.yaml).toContain('<REDACTED-IP-')
+    expect(result.mission.resolution?.steps[0]).toContain('<REDACTED-IP-')
+  })
+
+  it('redacts sensitive data inside prerequisites', () => {
+    const mission = makeMission({
+      steps: [],
+      prerequisites: ['Cluster at 10.0.0.5 must be reachable', 'Clean env'],
+    })
+    const findings = scanForSensitiveData(mission)
+    const result = sanitizeMission(mission, findings)
+
+    expect(result.mission.prerequisites?.[0]).toContain('<REDACTED-IP-')
+    expect(result.mission.prerequisites?.[0]).not.toContain('10.0.0.5')
+    expect(result.mission.prerequisites?.[1]).toBe('Clean env')
+  })
 })
 
 describe('generateSanitizationPreview', () => {

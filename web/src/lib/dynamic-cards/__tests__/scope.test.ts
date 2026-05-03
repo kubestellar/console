@@ -83,8 +83,23 @@ describe('createTimerScope', () => {
     expect(() => scope.safeClearTimeout(undefined)).not.toThrow()
   })
 
-  it('safeClearInterval handles undefined', () => {
-    expect(() => scope.safeClearInterval(undefined)).not.toThrow()
+  it('safeSetInterval throws when timer limit is exceeded', () => {
+    const MAX_TIMERS = 20
+    for (let i = 0; i < MAX_TIMERS; i++) {
+      scope.safeSetTimeout(() => {}, 999999)
+    }
+    expect(() => scope.safeSetInterval(() => {}, 1000)).toThrow('Timer limit exceeded')
+  })
+
+  it('safeSetInterval swallows errors thrown by the callback', () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    scope.safeSetInterval(() => { throw new Error('interval bomb') }, 1000)
+    vi.advanceTimersByTime(1000)
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('[DynamicCard]'),
+      expect.any(Error)
+    )
+    consoleErrorSpy.mockRestore()
   })
 })
 
@@ -123,9 +138,9 @@ describe('getDynamicScope', () => {
     expect(typeof scope.SpinWrapper).toBe('function')
   })
 
-  it('provides UI components', () => {
+  it('__timerCleanup runs without error', () => {
     const scope = getDynamicScope()
-    expect(scope.Skeleton).toBeDefined()
-    expect(scope.Pagination).toBeDefined()
+    // Should not throw even when called with no active timers or fetches
+    expect(() => scope.__timerCleanup()).not.toThrow()
   })
 })
