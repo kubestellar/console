@@ -24,6 +24,7 @@ const (
 	rewardsAPITimeout       = 30 * time.Second
 	rewardsPerPage          = 100              // GitHub max per page
 	rewardsMaxPages         = 100              // REST Issues API supports up to 10,000 per repo
+	rewardsMaxItems         = 10_000           // Hard cap on total items across all pages
 	maxRewardsResponseBytes = 10 * 1024 * 1024 // 10 MiB cap on GitHub API responses
 )
 
@@ -267,7 +268,7 @@ type searchPRRef struct {
 // time are returned. Items created before sinceISO are filtered out
 // client-side (the API's `since` param filters by updated_at, not created_at).
 func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]searchItem, error) {
-	var allItems []searchItem
+	allItems := make([]searchItem, 0, rewardsPerPage)
 
 	for page := 1; page <= rewardsMaxPages; page++ {
 		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=all&per_page=%d&page=%d&sort=created&direction=desc&since=%s",
@@ -316,6 +317,10 @@ func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]s
 		}
 
 		if len(pageItems) < rewardsPerPage {
+			break
+		}
+		if len(allItems) >= rewardsMaxItems {
+			slog.Warn("[rewards] hit max items cap", "repo", repo, "user", login, "count", len(allItems))
 			break
 		}
 	}

@@ -260,7 +260,13 @@ func (h *GitOpsHandlers) getOperatorsForCluster(ctx context.Context, cluster str
 			}
 			if fetchCtx.Err() == nil {
 				slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
-				time.Sleep(gitopsRetryDelay)
+				// Monitor context cancellation to avoid blocking the goroutine
+				// if the client disconnects during the retry delay.
+				select {
+				case <-fetchCtx.Done():
+					return &fetchResult{operators: []Operator{}}, nil
+				case <-time.After(gitopsRetryDelay):
+				}
 				operators, err = h.fetchOperatorsFromCluster(fetchCtx, cluster)
 			}
 		}
@@ -343,7 +349,11 @@ func (h *GitOpsHandlers) getOperatorsForClusterWithError(ctx context.Context, cl
 			}
 			if fetchCtx.Err() == nil {
 				slog.Warn("[GitOps] retrying operator fetch after transient error", "cluster", cluster)
-				time.Sleep(gitopsRetryDelay)
+				select {
+				case <-fetchCtx.Done():
+					return &fetchResult{operators: []Operator{}}, nil
+				case <-time.After(gitopsRetryDelay):
+				}
 				operators, err = h.fetchOperatorsFromCluster(fetchCtx, cluster)
 			}
 		}
