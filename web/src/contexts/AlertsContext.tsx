@@ -23,11 +23,11 @@ import {
   loadFromStorage,
   saveToStorage,
   saveAlerts,
-  STORAGE_KEY_AUTH_TOKEN,
-  FETCH_DEFAULT_TIMEOUT_MS,
   DEFAULT_TEMPERATURE_THRESHOLD_F,
   DEFAULT_WIND_SPEED_THRESHOLD_MPH,
 } from './alertStorage'
+import { STORAGE_KEY_AUTH_TOKEN } from '../lib/constants/storage'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import {
   shouldDispatchBrowserNotification,
   isClusterUnreachable,
