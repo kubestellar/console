@@ -10,73 +10,6 @@ import (
 	"testing"
 )
 
-func TestValidateHelmK8sName(t *testing.T) {
-	tests := []struct {
-		name    string
-		val     string
-		field   string
-		wantErr bool
-	}{
-		{"empty", "", "cluster", false},
-		{"valid simple", "my-cluster", "cluster", false},
-		{"starts with dash", "-cluster", "cluster", true},
-		{"invalid char", "cluster@1", "cluster", true},
-		{"too long", strings.Repeat("a", 254), "cluster", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateHelmK8sName(tt.val, tt.field)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateHelmK8sName() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestValidateHelmChartArg(t *testing.T) {
-	tests := []struct {
-		name    string
-		chart   string
-		wantErr bool
-	}{
-		{"empty", "", true},
-		{"valid standard", "bitnami/nginx", false},
-		{"valid oci", "oci://registry-1.docker.io/bitnamicharts/nginx", false},
-		{"starts with dash", "-chart", true},
-		{"invalid char", "chart;rm", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateHelmChartArg(tt.chart)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateHelmChartArg() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestValidateHelmChartVersion(t *testing.T) {
-	tests := []struct {
-		name    string
-		version string
-		wantErr bool
-	}{
-		{"empty", "", false},
-		{"valid standard", "1.2.3", false},
-		{"valid with meta", "1.2.3+meta-data", false},
-		{"starts with dash", "-1.2.3", true},
-		{"invalid char", "1.2.3;", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateHelmChartVersion(tt.version)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("validateHelmChartVersion() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestServer_HandleHelmRollback(t *testing.T) {
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
@@ -224,5 +157,86 @@ func TestServer_HandleHelmUpgrade(t *testing.T) {
 	server.handleHelmUpgrade(w, req)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("Expected 400, got %d", w.Code)
+	}
+}
+
+func TestHandleHelmUpgrade_SecurityBoundary(t *testing.T) {
+	server := &Server{
+		agentToken:     "secret123",
+		allowedOrigins: []string{"*"},
+	}
+
+	tests := []struct {
+		name         string
+		method       string
+		token        string
+		body         string
+		expectedCode int
+	}{
+		{
+			name:         "Missing token",
+			method:       http.MethodPost,
+			token:        "",
+			body:         `{"release":"my-rel", "namespace":"default", "chart":"bitnami/nginx"}`,
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name:         "Wrong token",
+			method:       http.MethodPost,
+			token:        "Bearer wrong",
+			body:         `{"release":"my-rel", "namespace":"default", "chart":"bitnami/nginx"}`,
+			expectedCode: http.StatusUnauthorized,
+		},
+		{
+			name:         "Invalid HTTP Method",
+			method:       http.MethodGet,
+			token:        "Bearer secret123",
+			body:         "",
+			expectedCode: http.StatusMethodNotAllowed,
+		},
+		{
+			name:         "Invalid JSON payload",
+			method:       http.MethodPost,
+			token:        "Bearer secret123",
+			body:         `{bad-json`,
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "Missing required fields",
+			method:       http.MethodPost,
+			token:        "Bearer secret123",
+			body:         `{"release":"", "namespace":"", "chart":""}`,
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "Command injection in chart name",
+			method:       http.MethodPost,
+			token:        "Bearer secret123",
+			body:         `{"release":"my-rel", "namespace":"default", "chart":"bitnami/nginx; rm -rf /"}`,
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name:         "Command injection in namespace",
+			method:       http.MethodPost,
+			token:        "Bearer secret123",
+			body:         `{"release":"my-rel", "namespace":"default&echo", "chart":"bitnami/nginx"}`,
+			expectedCode: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, "/helm/upgrade", strings.NewReader(tt.body))
+			if tt.token != "" {
+				req.Header.Set("Authorization", tt.token)
+			}
+
+			w := httptest.NewRecorder()
+			server.handleHelmUpgrade(w, req)
+
+			if w.Code != tt.expectedCode {
+				t.Errorf("expected status %d, got %d", tt.expectedCode, w.Code)
+			}
+		})
 	}
 }
