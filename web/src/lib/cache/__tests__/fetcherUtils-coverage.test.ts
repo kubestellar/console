@@ -28,7 +28,7 @@ vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
 }))
 vi.mock('../../constants', () => ({
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-  STORAGE_KEY_TOKEN: 'kc-token',
+  STORAGE_KEY_TOKEN: 'token',
 }))
 vi.mock('../../constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
@@ -163,7 +163,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('falls back to API fetch when clusterCacheRef is empty', async () => {
-      localStorage.setItem('kc-token', 'test-token')
+      localStorage.setItem('token', 'test-token')
       const mockResponse = { clusters: [{ name: 'remote-a', reachable: true }] }
       mockValidateArrayResponse.mockReturnValue(mockResponse)
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -181,7 +181,7 @@ describe('fetcherUtils extended coverage', () => {
 
   describe('fetchFromAllClusters', () => {
     beforeEach(() => {
-      localStorage.setItem('kc-token', 'test-token')
+      localStorage.setItem('token', 'test-token')
     })
 
     it('throws when no clusters are available', async () => {
@@ -319,7 +319,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('falls back to fetchFromAllClusters when token is demo-token', async () => {
-      localStorage.setItem('kc-token', 'demo-token')
+      localStorage.setItem('token', 'demo-token')
       ;(clusterCacheRef as { clusters: Array<{ name: string; reachable?: boolean }> }).clusters = [
         { name: 'c1', reachable: true },
       ]
@@ -333,7 +333,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('falls back to fetchFromAllClusters when backend unavailable', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(true)
       ;(clusterCacheRef as { clusters: Array<{ name: string; reachable?: boolean }> }).clusters = [
         { name: 'c1', reachable: true },
@@ -348,7 +348,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('uses SSE when token and backend are available', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(false)
       mockFetchSSE.mockResolvedValue([{ name: 'pod-1' }])
 
@@ -358,7 +358,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('falls back to REST when SSE throws', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(false)
       mockFetchSSE.mockRejectedValue(new Error('SSE connection failed'))
       ;(clusterCacheRef as { clusters: Array<{ name: string; reachable?: boolean }> }).clusters = [
@@ -374,7 +374,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('throws on partial SSE failure with throwIfPartialFailureEmpty', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(false)
       // SSE returns empty but has cluster errors — the throw inside the try
       // block is caught by fetchViaSSE's catch, which falls back to
@@ -407,7 +407,7 @@ describe('fetcherUtils extended coverage', () => {
 
   describe('fetchFromAllClustersViaBackend', () => {
     it('throws when no clusters are available', async () => {
-      localStorage.setItem('kc-token', 'test-token')
+      localStorage.setItem('token', 'test-token')
       ;(clusterCacheRef as { clusters: unknown[] }).clusters = []
       mockValidateArrayResponse.mockReturnValue({ clusters: [] })
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -420,7 +420,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('throws when all backend fetches fail', async () => {
-      localStorage.setItem('kc-token', 'test-token')
+      localStorage.setItem('token', 'test-token')
       ;(clusterCacheRef as { clusters: Array<{ name: string; reachable?: boolean }> }).clusters = [
         { name: 'c1', reachable: true },
       ]
@@ -454,7 +454,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('uses SSE via /api/mcp/ prefix when token is available', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(false)
       mockFetchSSE.mockResolvedValue([{ name: 'pod-1' }])
 
@@ -466,7 +466,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('falls back to REST when SSE throws', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(false)
       mockFetchSSE.mockRejectedValue(new Error('connection reset'))
       ;(clusterCacheRef as { clusters: Array<{ name: string; reachable?: boolean }> }).clusters = [
@@ -494,14 +494,14 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('throws when token is demo-token', async () => {
-      localStorage.setItem('kc-token', 'demo-token')
+      localStorage.setItem('token', 'demo-token')
       await expect(fetchViaGitOpsSSE('repos', 'repos')).rejects.toThrow(
         'No data source available'
       )
     })
 
     it('throws when backend is unavailable', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(true)
       await expect(fetchViaGitOpsSSE('repos', 'repos')).rejects.toThrow(
         'No data source available'
@@ -509,7 +509,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('uses SSE via /api/gitops/ prefix when available', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(false)
       mockFetchSSE.mockResolvedValue([{ repo: 'myrepo' }])
 
@@ -521,7 +521,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('calls onProgress during streaming', async () => {
-      localStorage.setItem('kc-token', 'real-token')
+      localStorage.setItem('token', 'real-token')
       mockIsBackendUnavailable.mockReturnValue(false)
       const progressCalls: unknown[][] = []
       mockFetchSSE.mockImplementation(async (opts: { onClusterData?: (cluster: string, items: unknown[]) => void }) => {
@@ -547,7 +547,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('throws on non-ok response', async () => {
-      localStorage.setItem('kc-token', 'valid-token')
+      localStorage.setItem('token', 'valid-token')
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
         new Response('Not Found', { status: 404 })
       )
@@ -555,7 +555,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('throws on non-JSON response', async () => {
-      localStorage.setItem('kc-token', 'valid-token')
+      localStorage.setItem('token', 'valid-token')
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
         new Response('not json at all', { status: 200 })
       )
@@ -563,7 +563,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('parses successful JSON response', async () => {
-      localStorage.setItem('kc-token', 'valid-token')
+      localStorage.setItem('token', 'valid-token')
       vi.spyOn(globalThis, 'fetch').mockResolvedValue(
         new Response(JSON.stringify({ pods: ['a'] }), { status: 200 })
       )
@@ -572,7 +572,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('passes params as query string', async () => {
-      localStorage.setItem('kc-token', 'valid-token')
+      localStorage.setItem('token', 'valid-token')
       const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
         new Response(JSON.stringify({}), { status: 200 })
       )
@@ -590,7 +590,7 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('uses /api/mcp/ prefix', async () => {
-      localStorage.setItem('kc-token', 'valid-token')
+      localStorage.setItem('token', 'valid-token')
       const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
         new Response(JSON.stringify({}), { status: 200 })
       )

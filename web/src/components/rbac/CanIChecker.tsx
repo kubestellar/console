@@ -4,6 +4,7 @@ import { useCanI } from '../../hooks/usePermissions'
 import { useClusters, useNamespaces } from '../../hooks/useMCP'
 import { Button } from '../ui/Button'
 import { useTranslation } from 'react-i18next'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 
 const COMMON_VERBS = ['get', 'list', 'create', 'update', 'delete', 'watch', 'patch']
 
@@ -163,7 +164,7 @@ function formReducer(state: FormState, action: FormAction): FormState {
   }
 }
 
-export function CanIChecker() {
+function CanICheckerContent() {
   const { t } = useTranslation('common')
   const { deduplicatedClusters: rawClusters } = useClusters()
   const clusters = rawClusters.map(c => c.name)
@@ -595,5 +596,13 @@ export function CanIChecker() {
         )}
       </div>
     </div>
+  )
+}
+
+export function CanIChecker() {
+  return (
+    <PageErrorBoundary>
+      <CanICheckerContent />
+    </PageErrorBoundary>
   )
 }

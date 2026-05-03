@@ -8,6 +8,7 @@ import { ExternalLink } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { aiAgentsDashboardConfig } from '../../config/dashboards/ai-agents'
 import { RotatingTip } from '../ui/RotatingTip'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 
 const STORAGE_KEYS: Record<string, string> = {
   kagenti: 'kubestellar-aiagents-kagenti-cards',
@@ -23,7 +24,7 @@ function getTabDefaultCards(tabId: string) {
     position: { w: card.position?.w || 4, h: card.position?.h || 2 } }))
 }
 
-export function AIAgents() {
+function AIAgentsContent() {
   const { t } = useTranslation('common')
   const { summary, isLoading, isDemoData: hookIsDemoData, refetch, error } = useKagentiSummary()
   const tabs = aiAgentsDashboardConfig.tabs || []
@@ -149,5 +150,13 @@ export function AIAgents() {
         </div>
       )}
     </DashboardPage>
+  )
+}
+
+export function AIAgents() {
+  return (
+    <PageErrorBoundary>
+      <AIAgentsContent />
+    </PageErrorBoundary>
   )
 }

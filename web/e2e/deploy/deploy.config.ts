@@ -38,9 +38,9 @@ const port = useDevServer ? DEV_PORT : PREVIEW_PORT
 
 export default defineConfig({
   testDir: '.',
-  timeout: 360_000, // 6 minutes — increased for deploy polling stability
+  timeout: 120_000, // 2 min — tests use fully-mocked APIs, no real network I/O
   expect: { timeout: 20_000 },
-  retries: 2,
+  retries: 1, // 1 retry sufficient for flakes; avoids tripling wall-clock budget
   workers: 1,
   reporter: [
     ['json', { outputFile: '../test-results/deploy-results.json' }],

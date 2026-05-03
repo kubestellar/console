@@ -35,3 +35,8 @@ export function getWorkloadsSharedState(): WorkloadsSharedState {
 export function setWorkloadsSharedState(newState: Partial<WorkloadsSharedState>) {
   workloadsSharedState = { ...workloadsSharedState, ...newState }
 }
+
+/** Test-only: clear all subscribers to prevent leakage between tests. */
+export function _clearSubscribersForTest() {
+  workloadsSubscribers.clear()
+}

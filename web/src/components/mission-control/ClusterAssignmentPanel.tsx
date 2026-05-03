@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Loader2, Wand2, Shuffle, LayoutGrid, Table } from 'lucide-react'
 import { motion } from 'framer-motion'
-import ReactMarkdown from 'react-markdown'
+import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import { Button } from '../ui/Button'

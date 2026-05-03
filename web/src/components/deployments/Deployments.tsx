@@ -10,6 +10,7 @@ import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards, deploymentsDashboardConfig } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { migrateStorageKey } from '../../lib/dashboards/migrateStorageKey'
+import { PageErrorBoundary } from '../PageErrorBoundary'
 
 /** Storage key sourced from central dashboard config to prevent mismatches */
 const DEPLOYMENTS_CARDS_KEY = deploymentsDashboardConfig.storageKey ?? 'deployments-dashboard-cards'
@@ -21,7 +22,7 @@ migrateStorageKey(LEGACY_DEPLOYMENTS_CARDS_KEY, DEPLOYMENTS_CARDS_KEY)
 // Default cards for the deployments dashboard
 const DEFAULT_DEPLOYMENTS_CARDS = getDefaultCards('deployments')
 
-export function Deployments() {
+function DeploymentsContent() {
   const { t } = useTranslation()
   // Use cached hooks for stale-while-revalidate pattern
   const { deployments, isLoading, isRefreshing: dataRefreshing, lastRefresh, refetch, error: deploymentsError } = useCachedDeployments()
@@ -131,5 +132,13 @@ export function Deployments() {
         </div>
       )}
     </DashboardPage>
+  )
+}
+
+export function Deployments() {
+  return (
+    <PageErrorBoundary>
+      <DeploymentsContent />
+    </PageErrorBoundary>
   )
 }

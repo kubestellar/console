@@ -206,6 +206,7 @@ type Server struct {
 	gpuUtilWorker       *GPUUtilizationWorker
 	workloadHandlers    *handlers.WorkloadHandlers // for cache refresh shutdown (#10007)
 	rewardsHandler      *handlers.RewardsHandler   // for eviction goroutine shutdown
+	failureTracker      *middleware.FailureTracker  // tracks auth failure counts for rate limiting
 	done                chan struct{}              // closed on Shutdown to stop background goroutines
 	shutdownOnce        sync.Once                  // ensures Shutdown is idempotent (#6478)
 }
@@ -664,6 +665,7 @@ func (s *Server) setupRoutes() {
 	// FailureTracker for per-user/IP auth failure counting (#8676 Phase 1).
 	// Exposed via c.Locals for use in auth handlers in future phases.
 	failureTracker := middleware.NewFailureTracker()
+s.failureTracker = failureTracker
 
 	// Rate limit auth endpoints — stricter to prevent brute-force.
 	// Uses composite key (userID:IP when authenticated, IP alone pre-auth)

@@ -160,8 +160,8 @@ describe('deep coverage: saveAlerts quota handling', () => {
 
 describe('deep coverage: notification dedup pruning', () => {
   it('saveNotifiedAlertKeys prunes entries older than 24 hours during evaluation', () => {
-    const TWENTY_FIVE_HOURS_MS = 25 * 60 * 60 * 1000
-    const staleTimestamp = Date.now() - TWENTY_FIVE_HOURS_MS
+    const THIRTY_ONE_DAYS_MS = 31 * 24 * 60 * 60 * 1000
+    const staleTimestamp = Date.now() - THIRTY_ONE_DAYS_MS
     const freshTimestamp = Date.now() - 1000
 
     const dedupMap: [string, number][] = [

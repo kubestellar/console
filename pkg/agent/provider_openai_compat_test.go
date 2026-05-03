@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -78,10 +79,14 @@ func TestChatViaOpenAICompatible(t *testing.T) {
 }
 
 func TestStreamViaOpenAICompatible(t *testing.T) {
+	var mu sync.Mutex
 	var capturedAuth string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
 		capturedAuth = r.Header.Get("Authorization")
-		if capturedAuth != "Bearer test-key" {
+		auth := capturedAuth
+		mu.Unlock()
+		if auth != "Bearer test-key" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -107,6 +112,8 @@ func TestStreamViaOpenAICompatible(t *testing.T) {
 		t.Fatalf("streamViaOpenAICompatible failed: %v", err)
 	}
 
+	mu.Lock()
+	defer mu.Unlock()
 	if capturedAuth != "Bearer test-key" {
 		t.Errorf("Expected Authorization header %q, got %q", "Bearer test-key", capturedAuth)
 	}

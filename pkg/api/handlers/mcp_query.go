@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
 )
@@ -30,6 +31,18 @@ func queryAllClusters[T any](
 	clusters []k8s.ClusterInfo,
 	queryFn func(ctx context.Context, clusterName string) ([]T, error),
 ) ([]T, *clusterErrorTracker) {
+	return queryAllClustersWithTimeout(ctx, clusters, mcpDefaultTimeout, queryFn)
+}
+
+// queryAllClustersWithTimeout is like queryAllClusters but accepts a custom
+// per-cluster timeout. Use this when the default timeout is insufficient
+// (e.g., GPU node queries, pod listings on large clusters).
+func queryAllClustersWithTimeout[T any](
+	ctx context.Context,
+	clusters []k8s.ClusterInfo,
+	perClusterTimeout time.Duration,
+	queryFn func(ctx context.Context, clusterName string) ([]T, error),
+) ([]T, *clusterErrorTracker) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	results := make([]T, 0)
@@ -42,7 +55,7 @@ func queryAllClusters[T any](
 		wg.Add(1)
 		go func(clusterName string) {
 			defer wg.Done()
-			itemCtx, cancel := context.WithTimeout(clusterCtx, mcpDefaultTimeout)
+			itemCtx, cancel := context.WithTimeout(clusterCtx, perClusterTimeout)
 			defer cancel()
 			items, err := queryFn(itemCtx, clusterName)
 			if err != nil {

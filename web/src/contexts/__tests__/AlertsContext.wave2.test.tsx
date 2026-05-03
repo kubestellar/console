@@ -1176,7 +1176,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
 
   it('saveNotifiedAlertKeys prunes entries older than 24 hours', async () => {
     // Pre-populate notified keys with an old entry via localStorage
-    const oldTimestamp = Date.now() - 90_000_000 // ~25 hours ago
+    const oldTimestamp = Date.now() - 31 * 24 * 60 * 60 * 1000 // 31 days (> 30-day prune window)
     const notifKeys: [string, number][] = [
       ['old-key::cluster-a', oldTimestamp],
       ['new-key::cluster-b', Date.now()],

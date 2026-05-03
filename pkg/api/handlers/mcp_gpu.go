@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"sync"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -29,34 +28,10 @@ func (h *MCPHandlers) GetGPUNodes(c *fiber.Ctx) error {
 				return handleK8sError(c, err)
 			}
 
-			var wg sync.WaitGroup
-			var mu sync.Mutex
-			allNodes := make([]k8s.GPUNode, 0)
-			clusterTimeout := mcpExtendedTimeout // Increased for large GPU clusters
-			var errTracker clusterErrorTracker
-
-			clusterCtx, clusterCancel := context.WithCancel(c.Context())
-			defer clusterCancel()
-
-			for _, cl := range clusters {
-				wg.Add(1)
-				go func(clusterName string) {
-					defer wg.Done()
-					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
-					defer cancel()
-
-					nodes, err := h.k8sClient.GetGPUNodes(ctx, clusterName)
-					if err != nil {
-						errTracker.add(clusterName, err)
-					} else if len(nodes) > 0 {
-						mu.Lock()
-						allNodes = append(allNodes, nodes...)
-						mu.Unlock()
-					}
-				}(cl.Name)
-			}
-
-			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+			allNodes, errTracker := queryAllClustersWithTimeout(c.Context(), clusters, mcpExtendedTimeout,
+				func(ctx context.Context, clusterName string) ([]k8s.GPUNode, error) {
+					return h.k8sClient.GetGPUNodes(ctx, clusterName)
+				})
 			return c.JSON(errTracker.annotate(fiber.Map{"nodes": allNodes, "source": "k8s"}))
 		}
 
@@ -94,34 +69,10 @@ func (h *MCPHandlers) GetGPUNodeHealth(c *fiber.Ctx) error {
 				return handleK8sError(c, err)
 			}
 
-			var wg sync.WaitGroup
-			var mu sync.Mutex
-			allNodes := make([]k8s.GPUNodeHealthStatus, 0)
-			clusterTimeout := mcpExtendedTimeout
-			var errTracker clusterErrorTracker
-
-			clusterCtx, clusterCancel := context.WithCancel(c.Context())
-			defer clusterCancel()
-
-			for _, cl := range clusters {
-				wg.Add(1)
-				go func(clusterName string) {
-					defer wg.Done()
-					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
-					defer cancel()
-
-					nodes, err := h.k8sClient.GetGPUNodeHealth(ctx, clusterName)
-					if err != nil {
-						errTracker.add(clusterName, err)
-					} else if len(nodes) > 0 {
-						mu.Lock()
-						allNodes = append(allNodes, nodes...)
-						mu.Unlock()
-					}
-				}(cl.Name)
-			}
-
-			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+			allNodes, errTracker := queryAllClustersWithTimeout(c.Context(), clusters, mcpExtendedTimeout,
+				func(ctx context.Context, clusterName string) ([]k8s.GPUNodeHealthStatus, error) {
+					return h.k8sClient.GetGPUNodeHealth(ctx, clusterName)
+				})
 			return c.JSON(errTracker.annotate(fiber.Map{"nodes": allNodes, "source": "k8s"}))
 		}
 
@@ -226,34 +177,17 @@ func (h *MCPHandlers) GetNVIDIAOperatorStatus(c *fiber.Ctx) error {
 				return handleK8sError(c, err)
 			}
 
-			var wg sync.WaitGroup
-			var mu sync.Mutex
-			allStatus := make([]*k8s.NVIDIAOperatorStatus, 0)
-			clusterTimeout := mcpDefaultTimeout
-			var errTracker clusterErrorTracker
-
-			clusterCtx, clusterCancel := context.WithCancel(c.Context())
-			defer clusterCancel()
-
-			for _, cl := range clusters {
-				wg.Add(1)
-				go func(clusterName string) {
-					defer wg.Done()
-					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
-					defer cancel()
-
+			allStatus, errTracker := queryAllClusters(c.Context(), clusters,
+				func(ctx context.Context, clusterName string) ([]*k8s.NVIDIAOperatorStatus, error) {
 					status, err := h.k8sClient.GetNVIDIAOperatorStatus(ctx, clusterName)
 					if err != nil {
-						errTracker.add(clusterName, err)
-					} else if status.GPUOperator != nil || status.NetworkOperator != nil {
-						mu.Lock()
-						allStatus = append(allStatus, status)
-						mu.Unlock()
+						return nil, err
 					}
-				}(cl.Name)
-			}
-
-			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
+					if status.GPUOperator != nil || status.NetworkOperator != nil {
+						return []*k8s.NVIDIAOperatorStatus{status}, nil
+					}
+					return nil, nil
+				})
 			return c.JSON(errTracker.annotate(fiber.Map{"operators": allStatus, "source": "k8s"}))
 		}
 

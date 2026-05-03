@@ -34,7 +34,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   high: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
   medium: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
   low: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  info: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+  info: 'bg-gray-500/20 text-gray-200 border-gray-500/30',
 }
 
 const RISK_STYLES: Record<string, string> = {
@@ -202,7 +202,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
                     {f.severity}
                   </span>
                 </div>
-                <p className="text-sm text-gray-300 mb-2">{f.description}</p>
+                <p className="text-sm text-gray-200 mb-2">{f.description}</p>
                 <p className="text-xs text-blue-300">
                   <span className="font-medium">Recommendation:</span> {f.recommendation}
                 </p>
@@ -238,9 +238,9 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
                     </div>
                   </td>
                   <td className="p-3">
-                    <span className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300">{b.kind}</span>
+                    <span className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-200">{b.kind}</span>
                   </td>
-                  <td className="p-3 text-gray-300">
+                  <td className="p-3 text-gray-200">
                     <div className="flex items-center gap-1">
                       {b.subject_kind === 'User' ? <Users className="w-3 h-3" /> :
                        b.subject_kind === 'Group' ? <Users className="w-3 h-3" /> :
@@ -249,9 +249,9 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
                     </div>
                     <span className="text-xs text-gray-500">{b.subject_kind}</span>
                   </td>
-                  <td className="p-3 text-gray-300 font-mono text-xs">{b.role_name}</td>
-                  <td className="p-3 text-gray-300">{b.cluster}</td>
-                  <td className="p-3 text-gray-300">{b.namespace || '—'}</td>
+                  <td className="p-3 text-gray-200 font-mono text-xs">{b.role_name}</td>
+                  <td className="p-3 text-gray-200">{b.cluster}</td>
+                  <td className="p-3 text-gray-200">{b.namespace || '—'}</td>
                   <td className="p-3">
                     <span className={`font-medium text-xs ${RISK_STYLES[b.risk_level] || 'text-gray-400'}`}>
                       {b.risk_level === 'critical' ? <AlertTriangle className="w-3 h-3 inline mr-1" /> : null}

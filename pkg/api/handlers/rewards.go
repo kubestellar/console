@@ -24,7 +24,9 @@ const (
 	rewardsAPITimeout       = 30 * time.Second
 	rewardsPerPage          = 100              // GitHub max per page
 	rewardsMaxPages         = 100              // REST Issues API supports up to 10,000 per repo
+	rewardsMaxItems         = 10_000           // Hard cap on total items across all pages
 	maxRewardsResponseBytes = 10 * 1024 * 1024 // 10 MiB cap on GitHub API responses
+	maxRewardsTotalItems    = 10_000           // Hard cap on total items across all repos
 )
 
 // RewardsConfig holds configuration for the rewards handler.
@@ -267,7 +269,7 @@ type searchPRRef struct {
 // time are returned. Items created before sinceISO are filtered out
 // client-side (the API's `since` param filters by updated_at, not created_at).
 func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]searchItem, error) {
-	var allItems []searchItem
+	allItems := make([]searchItem, 0, rewardsPerPage)
 
 	for page := 1; page <= rewardsMaxPages; page++ {
 		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=all&per_page=%d&page=%d&sort=created&direction=desc&since=%s",
@@ -313,9 +315,17 @@ func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]s
 			}
 			item.RepoURL = "https://api.github.com/repos/" + repo
 			allItems = append(allItems, *item)
+			if len(allItems) >= maxRewardsTotalItems {
+				slog.Warn("[rewards] total items cap reached", "repo", repo, "login", login, "cap", maxRewardsTotalItems)
+				return allItems, nil
+			}
 		}
 
 		if len(pageItems) < rewardsPerPage {
+			break
+		}
+		if len(allItems) >= rewardsMaxItems {
+			slog.Warn("[rewards] hit max items cap", "repo", repo, "user", login, "count", len(allItems))
 			break
 		}
 	}
@@ -475,14 +485,24 @@ func (h *RewardsHandler) startEviction() {
 		for {
 			select {
 			case <-ticker.C:
-				h.mu.Lock()
+				h.mu.RLock()
 				now := time.Now()
+				var staleKeys []string
 				for login, entry := range h.cache {
 					if now.Sub(entry.fetchedAt) > rewardsCacheTTL {
-						delete(h.cache, login)
+						staleKeys = append(staleKeys, login)
 					}
 				}
-				h.mu.Unlock()
+				h.mu.RUnlock()
+				if len(staleKeys) > 0 {
+					h.mu.Lock()
+					for _, login := range staleKeys {
+						if entry, ok := h.cache[login]; ok && now.Sub(entry.fetchedAt) > rewardsCacheTTL {
+							delete(h.cache, login)
+						}
+					}
+					h.mu.Unlock()
+				}
 			case <-h.evictCtx.Done():
 				return
 			}

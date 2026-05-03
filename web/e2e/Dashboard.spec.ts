@@ -346,7 +346,12 @@ test.describe('Dashboard Page', () => {
     })
 
     test('refresh button triggers data reload', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible({ timeout: 5000 })
+      // Wait for dashboard to fully render before checking for refresh button.
+      // On slower browsers (Firefox, WebKit) the button can take longer to
+      // appear after initial page load. (#11660)
+      const DASHBOARD_RENDER_TIMEOUT_MS = 15_000
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: DASHBOARD_RENDER_TIMEOUT_MS })
+      await expect(page.getByTestId('dashboard-refresh-button')).toBeVisible({ timeout: DASHBOARD_RENDER_TIMEOUT_MS })
 
       // In demo mode, cache hooks have effectiveEnabled=false (demoMode=true
       // disables fetching), so triggerAllRefetches() won't produce network

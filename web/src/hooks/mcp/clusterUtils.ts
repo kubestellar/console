@@ -183,6 +183,11 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
           cpuRequestsCores: cluster.cpuRequestsCores,
           memoryRequestsBytes: cluster.memoryRequestsBytes,
           memoryRequestsGB: cluster.memoryRequestsGB,
+          cpuUsageMillicores: cluster.cpuUsageMillicores,
+          cpuUsageCores: cluster.cpuUsageCores,
+          memoryUsageBytes: cluster.memoryUsageBytes,
+          memoryUsageGB: cluster.memoryUsageGB,
+          metricsAvailable: cluster.metricsAvailable,
           pvcCount: cluster.pvcCount,
           pvcBoundCount: cluster.pvcBoundCount,
         }
@@ -202,16 +207,30 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
       const alias = group.find(c => c !== primary && c.podCount !== undefined)
       if (alias) bestMetrics.podCount = alias.podCount
     }
-    // Legacy merge loop preserved only for request metrics (below).
+    // Legacy merge loop: fill in request/usage metrics that may come from a
+    // different cluster context than the one that reported capacity.
     for (const cluster of (group || [])) {
-      // Merge request metrics - these may come from a different cluster than capacity
-      if (cluster.cpuRequestsCores && !bestMetrics.cpuRequestsCores) {
+      // Merge request metrics — nullish checks on both sides preserve valid 0 values
+      if (cluster.cpuRequestsCores != null && bestMetrics.cpuRequestsCores == null) {
         bestMetrics.cpuRequestsMillicores = cluster.cpuRequestsMillicores
         bestMetrics.cpuRequestsCores = cluster.cpuRequestsCores
       }
-      if (cluster.memoryRequestsGB && !bestMetrics.memoryRequestsGB) {
+      if (cluster.memoryRequestsGB != null && bestMetrics.memoryRequestsGB == null) {
         bestMetrics.memoryRequestsBytes = cluster.memoryRequestsBytes
         bestMetrics.memoryRequestsGB = cluster.memoryRequestsGB
+      }
+      // Merge usage metrics — nullish checks on both sides preserve valid 0 values
+      if (cluster.cpuUsageCores != null && bestMetrics.cpuUsageCores == null) {
+        bestMetrics.cpuUsageMillicores = cluster.cpuUsageMillicores
+        bestMetrics.cpuUsageCores = cluster.cpuUsageCores
+      }
+      if (cluster.memoryUsageGB != null && bestMetrics.memoryUsageGB == null) {
+        bestMetrics.memoryUsageBytes = cluster.memoryUsageBytes
+        bestMetrics.memoryUsageGB = cluster.memoryUsageGB
+      }
+      // Merge metricsAvailable flag
+      if (cluster.metricsAvailable && !bestMetrics.metricsAvailable) {
+        bestMetrics.metricsAvailable = cluster.metricsAvailable
       }
     }
 

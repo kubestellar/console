@@ -290,4 +290,77 @@ describe('DashboardGrid', () => {
     expect(grid).toBeInTheDocument()
     expect(grid?.children).toHaveLength(0)
   })
+
+  it('reads legacy card_type field when cardType is absent', () => {
+    mockGetCardConfig = (type: string) => ({ type, title: type })
+
+    const legacyPlacement = {
+      id: 'c1',
+      card_type: 'legacy-type',
+      position: { w: 4, h: 2 },
+    } as unknown as DashboardCardPlacement
+
+    render(<DashboardGrid cards={[legacyPlacement]} />)
+    expect(screen.getByTestId('unified-card-legacy-type')).toBeInTheDocument()
+  })
+
+  it('clamps card width to 6 on narrow viewport (innerWidth < 1024)', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      value: 800,
+      configurable: true,
+      writable: true,
+    })
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as MediaQueryList)
+
+    mockGetCardConfig = (type: string) => ({ type, title: type })
+    const { container } = render(
+      <DashboardGrid cards={[makePlacement('c1', 'test-card', 4, 2)]} />,
+    )
+    // w=4 on narrow viewport clamps to span 6
+    const el = container.querySelector('[style*="span 6 / span 6"]')
+    expect(el).not.toBeNull()
+
+    Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true, writable: true })
+    vi.restoreAllMocks()
+  })
+
+  it('does not clamp wide cards on narrow viewport when w >= 6', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      value: 800,
+      configurable: true,
+      writable: true,
+    })
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as MediaQueryList)
+
+    mockGetCardConfig = (type: string) => ({ type, title: type })
+    const { container } = render(
+      <DashboardGrid cards={[makePlacement('c1', 'test-card', 8, 2)]} />,
+    )
+    // w=8 >= 6, stays as span 8 even on narrow viewport
+    const el = container.querySelector('[style*="span 8 / span 8"]')
+    expect(el).not.toBeNull()
+
+    Object.defineProperty(window, 'innerWidth', { value: 1280, configurable: true, writable: true })
+    vi.restoreAllMocks()
+  })
+
+  it('renders DragOverlay element when drag-drop is enabled', () => {
+    mockGetCardConfig = (type: string) => ({ type, title: type })
+    render(
+      <DashboardGrid
+        cards={[makePlacement('c1', 'test-card')]}
+        features={{ dragDrop: true }}
+        onReorder={vi.fn()}
+      />,
+    )
+    expect(screen.getByTestId('drag-overlay')).toBeInTheDocument()
+  })
 })

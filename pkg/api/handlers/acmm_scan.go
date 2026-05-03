@@ -34,6 +34,12 @@ const (
 	acmmUserAgent = "kubestellar-console/1.0"
 )
 
+// acmmHTTPClient is a dedicated client for ACMM GitHub API calls.
+// Using http.DefaultClient would race under concurrent requests and
+// lacks a timeout, risking indefinite hangs on unresponsive upstreams.
+var acmmHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
+
 var (
 	repoSlugRE = regexp.MustCompile(`^[\w.\-]+/[\w.\-]+$`)
 	aiAuthors  = map[string]bool{
@@ -463,7 +469,7 @@ func githubGet(ctx context.Context, url, token string) ([]byte, error) {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := acmmHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("GitHub API request failed: %w", err)
 	}

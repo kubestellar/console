@@ -492,6 +492,11 @@ func (s *Server) handlePodsStreamSSE(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.kubectl == nil {
+		http.Error(w, "kubectl proxy not initialized", http.StatusServiceUnavailable)
+		return
+	}
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming not supported", http.StatusInternalServerError)
@@ -603,6 +608,11 @@ func (s *Server) handleJobsStreamSSE(w http.ResponseWriter, r *http.Request) {
 
 	if s.k8sClient == nil {
 		http.Error(w, "k8s client not initialized", http.StatusServiceUnavailable)
+		return
+	}
+
+	if s.kubectl == nil {
+		http.Error(w, "kubectl proxy not initialized", http.StatusServiceUnavailable)
 		return
 	}
 

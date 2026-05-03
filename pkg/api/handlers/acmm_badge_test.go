@@ -76,10 +76,10 @@ func (m *badgeMockTransport) callsFor(url string) int {
 	return m.calls[url]
 }
 
-// setupBadgeMock replaces http.DefaultClient with a mock transport.
+// setupBadgeMock replaces acmmHTTPClient with a mock transport.
 // repos lists the repo slugs that may have background recompute goroutines;
-// cleanup blocks until all their computing flags clear, preventing the DATA
-// RACE on http.DefaultClient that `go test -race` detects.
+// cleanup blocks until all their computing flags clear, preventing a DATA
+// RACE on the client pointer.
 func setupBadgeMock(t *testing.T, repos ...string) *badgeMockTransport {
 	m := &badgeMockTransport{
 		bodies:   make(map[string]string),
@@ -87,13 +87,13 @@ func setupBadgeMock(t *testing.T, repos ...string) *badgeMockTransport {
 		delays:   make(map[string]time.Duration),
 		calls:    make(map[string]int),
 	}
-	oldClient := http.DefaultClient
-	http.DefaultClient = &http.Client{Transport: m}
+	oldClient := acmmHTTPClient
+	acmmHTTPClient = &http.Client{Transport: m}
 	t.Cleanup(func() {
 		// Wait for background recomputeBadge goroutines to finish so we
-		// don't race on the http.DefaultClient pointer.
+		// don't race on the acmmHTTPClient pointer.
 		waitForBadgeRecompute(repos, 5*time.Second)
-		http.DefaultClient = oldClient
+		acmmHTTPClient = oldClient
 	})
 	return m
 }

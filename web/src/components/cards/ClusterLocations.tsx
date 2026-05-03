@@ -315,7 +315,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
   }, [allClusters, globalSelectedClusters, isAllClustersSelected, customFilter, statusFilter, debouncedSearchFilter])
 
   // Group clusters by region
-  const regionGroups = (() => {
+  const regionGroups = useMemo(() => {
     const groups = new Map<string, RegionInfo>()
 
     for (const cluster of clusters) {
@@ -336,15 +336,21 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
     }
 
     return Array.from(groups.values()).sort((a, b) => b.clusters.length - a.clusters.length)
-  })()
+  }, [clusters])
 
   // Calculate stats
-  const stats = (() => {
+  const stats = useMemo(() => {
     const healthyClusters = clusters.filter(c => c.healthy).length
     const uniqueRegions = regionGroups.length
     const providers = new Set(regionGroups.map(r => r.provider))
     return { healthyClusters, totalClusters: clusters.length, uniqueRegions, providerCount: providers.size }
-  })()
+  }, [clusters, regionGroups])
+
+  // Memoize provider legend to avoid expensive flatMap+Set on every render
+  const MAX_LEGEND_PROVIDERS = 5
+  const providerLegend = useMemo(() => {
+    return Array.from(new Set(regionGroups.flatMap(r => r.clusters.map(c => detectCloudProvider(c.name, c.server, c.namespaces))))).slice(0, MAX_LEGEND_PROVIDERS)
+  }, [regionGroups])
 
   // Map controls
   const handleZoomIn = () => {
@@ -636,7 +642,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
       {regionGroups.length > 0 && (
         <div className="mt-2 pt-2 border-t border-border/50">
           <div className="flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
-            {Array.from(new Set(regionGroups.flatMap(r => r.clusters.map(c => detectCloudProvider(c.name, c.server, c.namespaces))))).slice(0, 5).map(provider => (
+            {providerLegend.map(provider => (
               <div key={provider} className="flex items-center gap-1">
                 <CloudProviderIcon provider={provider} size={10} />
                 <span className="capitalize">{provider}</span>

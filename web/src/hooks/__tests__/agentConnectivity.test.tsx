@@ -58,6 +58,30 @@ vi.mock('../../lib/utils/localStorage', () => ({
   safeSetItem: vi.fn(),
 }))
 
+// Mock AlertsContext service modules (added after #11559 refactor)
+vi.mock('../../contexts/notifications', () => ({
+  shouldDispatchBrowserNotification: vi.fn(() => false),
+  isClusterUnreachable: vi.fn(() => false),
+  sendNotifications: vi.fn(),
+  sendBatchedNotifications: vi.fn(),
+}))
+vi.mock('../../contexts/alertStorage', () => ({
+  ALERTS_KEY: 'kc_alerts',
+  MAX_ALERTS: 500,
+  loadNotifiedAlertKeys: vi.fn(() => new Map()),
+  saveNotifiedAlertKeys: vi.fn(),
+  loadFromStorage: vi.fn(() => []),
+  saveToStorage: vi.fn(),
+  saveAlerts: vi.fn(),
+  STORAGE_KEY_AUTH_TOKEN: 'auth_token',
+  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+  DEFAULT_TEMPERATURE_THRESHOLD_F: 100,
+  DEFAULT_WIND_SPEED_THRESHOLD_MPH: 40,
+}))
+vi.mock('../../contexts/alertRunbooks', () => ({
+  findAndExecuteRunbook: vi.fn(() => Promise.resolve(null)),
+}))
+
 // Dynamically imported after each module reset
 let useLocalAgent: typeof import('../useLocalAgent').useLocalAgent
 let reportAgentDataError: typeof import('../useLocalAgent').reportAgentDataError
@@ -571,9 +595,11 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
       await flushMicrotasks()
       const callsAfterTrigger = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
-      // Advance 3 seconds — should fire multiple checks at 1s interval
-      await act(async () => { vi.advanceTimersByTime(3000) })
-      await flushMicrotasks()
+      // Advance in 1s increments to allow each checkAgent() to complete before the next fires
+      for (let i = 0; i < 3; i++) {
+        await act(async () => { vi.advanceTimersByTime(1000) })
+        await flushMicrotasks()
+      }
 
       const callsAfter3s = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length
       // At least 2 additional checks in 3 seconds (1s interval)
@@ -703,9 +729,14 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
   // ===========================================================================
 
   describe('connection event log', () => {
-    it('logs connecting event on startup', () => {
-      mockFetchHang()
+    it('logs connecting event on startup', async () => {
+      // Use mockFetchOk so checkAgent() completes and calls this.setState(),
+      // which creates a new state object reference and triggers React re-render.
+      // Without a setState call, addEvent's mutation of connectionEvents is
+      // invisible to React (same object reference → skipped update).
+      mockFetchOk()
       const { result } = renderHook(() => useLocalAgent())
+      await flushMicrotasks()
 
       const events = result.current.connectionEvents
       expect(events.some(e => e.type === 'connecting')).toBe(true)

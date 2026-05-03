@@ -1,5 +1,60 @@
 # Reviewer Log
 
+## Pass 95 — 2026-05-03T05:20–06:20 UTC
+
+### Trigger
+KICK — nightly=RED, nightlyPlaywright=RED, nightlyRel=RED. coverage=89%<91%. 60 unaddressed Copilot comments (8 HIGH, 41 MEDIUM, 11 LOW). GA4 nominal.
+
+### RED Indicator Analysis
+
+**nightly=RED**: `deploy-test` Playwright suite killed after 300s wall-clock timeout in 2026-05-02 run. Scanner-owned. Filed issue #11659.
+
+**nightlyPlaywright=RED**: ~15 failures in `mission-*` and GPUOverview E2E tests. Scanner-owned. Filed issue #11660.
+
+**nightlyRel=RED**: Historical pattern — transient GoReleaser/Docker rate limits at 5AM UTC. No action this pass; monitoring.
+
+**coverage=89%<91%**: Added 26 new tests for `clusterUtils.ts` (untested production deduplication code). Remaining gap to close in future passes.
+
+### HIGH Copilot Comments Fixed
+
+| PR | Comment | Fix Applied |
+|----|---------|-------------|
+| #11633/#11625 | Data race — `capturedAuth` read without lock in httptest handler | Fixed: `auth := capturedAuth` inside lock; use `auth` outside |
+| #11557 | Truthy checks skip 0-valued metrics (idle clusters) | Fixed: changed `if (cluster.cpuUsageCores && ...)` → `!= null` for all 4 metric conditions |
+| #11648 | Comment in `useNetworkPolicies` error handler references non-existent `isDemoFallback` | Fixed: updated comment to accurately describe stale-data-preservation behavior |
+
+### MEDIUM Copilot Comments Fixed
+
+| PR | File | Fix Applied |
+|----|------|-------------|
+| #11566 | server_http_workloads.go | Added `s.kubectl == nil` guard in `handlePodsStreamSSE` and `handleJobsStreamSSE` before `ListContexts()` |
+| #11646 | clusterUtils.test.ts | Added 26 new tests (new file) covering deduplication, metric merging, distribution detection |
+
+### Merges
+- PR #11656 (queryAllClusters helper, -272 LOC, AI-authored, CI pass) → merged ✅
+
+### PRs Created
+
+| PR | Branch | Fix |
+|----|--------|-----|
+| #11661 | fix/reviewer-pass95-races-and-coverage | Fix data race, comment accuracy, nil guards, clusterUtils coverage |
+
+### Issues Filed
+
+| Issue | Title |
+|-------|-------|
+| #11659 | nightly: deploy-test suite killed after 300s wall-clock timeout |
+| #11660 | nightlyPlaywright: E2E test failures in mission-* and GPUOverview suites |
+
+### HIGH Comments Still Open
+- PR#11647: agentConnectivity.test.tsx STORAGE_KEY_AUTH_TOKEN — already fixed in merged code (`'auth_token'`), comment is stale
+- PR#11647: agentLoopbackFailurePaths.test.ts — already fixed in merged code
+- PR#11559: alertStorage.ts optional re-export comment — informational
+- PR#11566: server.go SSE contract lacking Go unit test — future pass
+- PR#11608: errorHandlingConsistency.test.tsx redundant test title — future pass
+
+---
+
 ## Pass 93 — 2026-05-02T18:30–19:45 UTC
 
 ### Trigger
@@ -1028,3 +1083,166 @@ All 6 HIGH source-file comments remain addressed from passes 78–81:
 - nightlyPlaywright: waiting for next nightly run post-source-fixes
 
 **Status:** Source fixes committed; PR #11210 in CI. Monitoring nightlyRel completion.
+
+---
+
+## Reviewer Pass — 2026-05-03T08:30Z
+
+### Coverage
+- **Current**: Lines=89.54% (badge shows 90%), Statements=88.18%, Branches=78.77%, Functions=86.04%
+- **Target**: 91% lines — gap is ~1.5pp
+- PR #11676 (fix/coverage-tests) merged at 08:02 UTC; Coverage Suite run 25273723308 confirms 89.54% post-merge
+- Badge guard triggered: badge not updated because `round(89.54)=90` == previous 90%; hive `coverage-last.txt` still shows `90`
+- **Action needed**: ~1.5pp additional coverage required; follow-up PR needed targeting uncovered modules
+
+### CI Workflow Health
+| Workflow | Status | Notes |
+|---|---|---|
+| Nightly Test Suite | ✅ GREEN | 32/32 pass today (run 25272298112); yesterday FAILURE fixed by PR #11666 |
+| Playwright Cross-Browser (Nightly) | 🔴 RED | Failure 3/3 recent runs (25272866690, 25246507690, 25209161348); issue #11675 filed; scanner owns fix |
+| Nightly UX Journey Tests | 🔴 RED | Failure 2/2 recent runs (25271523968, 25245155005); issue #11678 filed today; Playwright — scanner owns |
+| Release | 🟡 YELLOW | 3 runs cancelled on May 3 (01:00, 06:01, 06:03 UTC); arm64 docker-build cancelled in all 3; all ran before PR #11669 timeout fix (merged 06:53 UTC); next nightly run should pass |
+| Coverage Suite | ✅ GREEN | Last 3 runs success (25273940347 in-progress, 25273723308 ✓, 25272437269 ✓) |
+| Build and Deploy KC | ✅ GREEN | Last 5 builds all succeeded; deploy jobs on PR branches correctly skipped |
+| Post-Merge Playwright Verification | ✅ GREEN | 25273940336 success |
+| Go Tests | ✅ GREEN | 25273940337 success |
+
+### Release Freshness
+- **Nightly**: `v0.3.24-nightly.20260503` published 2026-05-03T01:18 (~7h ago) — ✅ within 36h window
+  - Note: release GitHub tag/notes created; arm64 docker image absent (arm64 build was cancelled pre-fix)
+- **Weekly/Stable**: No stable release; release.yml cron collision on Sundays (both `0 5 * * *` + `0 5 * * 0`) — two concurrent runs both failing; no impact this week (Saturday)
+- **Previous nightlies**: v0.3.20-nightly.20260408 was last prior (25 days gap); cadence irregular
+
+### Build and Deploy KC — Last 5 Runs
+| Run ID | Branch | Build | deploy-vllm-d | deploy-pok-prod |
+|---|---|---|---|---|
+| 25273940324 | main | ✅ | in_progress | in_progress |
+| 25273723303 | main | ✅ | ✅ success | ✅ success |
+| 25273612073 | fix/arch-mcp-nullsafety | ✅ | skipped (PR) | skipped (PR) |
+| 25273452015 | fix/coverage-tests | ✅ | skipped (PR) | skipped (PR) |
+| 25273077493 | main | ✅ | ✅ success | ✅ success |
+
+vllm-d and pok-prod01 deploy correctly on all main-branch pushes; skipped on PR branch runs as expected.
+
+### Helm Chart
+- `deploy/helm/kubestellar-console/Chart.yaml`: `version: 0.0.0`, `appVersion: "latest"` — static placeholder, never bumped with releases
+- Last `helm-release.yml` run: 2026-04-23 (10 days ago, success)
+- Helm chart version not synchronized with nightly release tags — **known gap, not blocking**
+
+### Brew Formula
+- `brewFresh=1` per hive metrics → ✅ fresh
+- No `.rb` formula in console repo (formula lives in tap repo)
+
+### Actions Taken This Pass
+- PR #11676 merged (fix/coverage-tests — clusterUtils truthy-check + coverage tests)
+- Issue #11678 filed (Nightly UX Journey Tests: sidebar ci-cd→acmm nav failure)
+- Issue #11679 filed (Release arm64 timeout, pre-fix; resolved by PR #11669)
+- docs #1574 confirmed merged
+
+### Open Items
+- Coverage 89.54% vs 91% target — follow-up coverage PR needed
+- nightlyPlaywright RED — issue #11675 (scanner owns)
+- nightlyRel: next nightly run (tomorrow 05:00 UTC) expected to pass with PR #11669 arm64 timeout fix
+- Helm chart version frozen at 0.0.0 — not linked to release tags
+
+---
+
+## Reviewer Pass — 2026-05-03T08:45Z
+
+### Hive Pull
+- `git pull /tmp/hive main` — no new commits (hive/main = `87e28bcb4`, already in origin/main)
+
+### GA4
+- Nominal — no anomalies (generated 08:16 UTC)
+
+### Merge-Eligible PRs
+- None (count=0); no merges performed
+
+### RED Indicators
+| Indicator | Status | Action |
+|---|---|---|
+| Playwright Cross-Browser (Nightly) | 🔴 RED | Issue #11675 filed; scanner owns |
+| Nightly UX Journey Tests | 🔴 RED | Issue #11678 filed; scanner owns |
+| Release | 🟡 pre-fix | 3 cancels from arm64 timeout; PR #11669 merged; next nightly run should pass |
+| Coverage | 🟡 89.54% (target 91%) | Addressed below |
+| Nightly Test Suite | ✅ GREEN | 32/32 pass |
+| Build and Deploy KC | ✅ GREEN | vllm-d/pok-prod ✓ on main runs |
+
+### Copilot Comments Fixed (HIGH + MEDIUM from merged PRs)
+
+**HIGH: `STORAGE_KEY_TOKEN` mock mismatch** (PR#11647 on agentLoopbackFailurePaths.test.ts)
+- All `STORAGE_KEY_TOKEN: 'kc-token'` mock overrides changed to `'token'` (real constant value in `lib/constants/storage.ts`)
+- All direct `localStorage.setItem('kc-token', ...)` / `localStorage.removeItem('kc-token')` calls updated to use `'token'`
+- Tests remain self-consistent; now aligned with production constant value
+
+**MEDIUM: workloadSubscriptions subscriber leak** (PR#11676)
+- Exported `_clearSubscribersForTest()` from `workloadSubscriptions.ts`
+- `beforeEach` in `workloadSubscriptions.test.ts` now calls both `setWorkloadsSharedState()` AND `_clearSubscribersForTest()`
+- Fixed misleading comment that claimed subscribers were cleaned in beforeEach
+
+**Coverage: `useIsTablet` untested (useMobile.ts at 56.5%)**
+- Added 6 comprehensive tests for `useIsTablet` hook in `useMobile.test.ts`
+- Covers: default false, default true, correct media query string, change event (desktop→tablet, tablet→desktop), cleanup on unmount
+- Expected impact: useMobile.ts 56.5% → ~95%; improves overall lines coverage
+
+### Commits Pushed
+- `aca0ea053` — 🐛 Fix HIGH copilot comments: align STORAGE_KEY_TOKEN mock, add useIsTablet tests, fix subscriber cleanup
+
+### Remaining Coverage Gap
+- Coverage Suite run 25273940347 reported 89.54% lines (target 91%)
+- useIsTablet tests expected to close ~0.3pp; remaining gap ~1.2pp
+- Uncovered modules: `useMissions.provider.tsx` (21.8%), `DashboardPage.tsx` (63.5%), `DashboardGrid.tsx` (75.5%), `UnifiedDashboard.tsx` (75.7%)
+- Follow-up coverage PRs needed for these larger components (complex React rendering)
+
+---
+
+## Reviewer Pass — 2026-05-03T10:00Z
+
+### Hive Pull
+- `git pull /tmp/hive` — diverged; rebased onto upstream/main (3a4232403)
+- New upstream commits: `3a4232403` (helm exec → K8s API for release listing), `33ea1cb53` (WebSocket isInClusterMode guard)
+
+### GA4
+- Nominal — no anomalies
+
+### RED Indicators
+| Indicator | Status | Action |
+|---|---|---|
+| nightlyPlaywright | 🔴 RED | Scanner owns; issue #11675 filed |
+| nightlyRel | 🔴 RED | PR #11669 (arm64 timeout fix) merged; next nightly run expected to pass |
+| weeklyRel | 🔴 RED | Same root cause as nightlyRel; will resolve with next run |
+| coverage | � 90% (target 91%) | 9 new coverage tests added this pass (below) |
+
+### HIGH Copilot Comments Fixed This Pass
+
+**Data race in provider_openai_compat_test.go (PR#11625, PR#11633)**
+- Commit `c39d3206d` had accidentally *reverted* the correct fix by removing the local `auth` variable
+- Restored: `auth := capturedAuth` before `mu.Unlock()` so the 401 check reads the local copy, not the shared variable — eliminates race under `go test -race`
+
+**alertStorage.ts spurious re-exports (PR#11559)**
+- Removed `export { FETCH_DEFAULT_TIMEOUT_MS, STORAGE_KEY_AUTH_TOKEN }` from `alertStorage.ts`
+- Neither constant belongs to the storage layer; no consumers import them via this module
+- Import line trimmed to only `STORAGE_KEY_NOTIFIED_ALERT_KEYS` (which IS used in the file body)
+
+### Coverage: 9 New Tests Added
+
+**DashboardGrid coverage tests (+4 tests)**
+- Legacy `card_type` field (branch: `placement.cardType || placement.card_type`)
+- Narrow viewport clamping: w=4 → span 6 when innerWidth < 1024
+- Wide card no-clamp: w=8 stays span 8 on narrow viewport
+- DragOverlay element present when drag-drop enabled
+
+**DashboardPage handler coverage (+5 tests, new file)**
+- `handleRemoveCard` → calls `removeCard(cardId)`
+- `handleConfigureCard` → calls `openConfigureCard(cardId)`
+- `handleWidthChange` → calls `updateCardWidth(cardId, newWidth)`
+- `handleHeightChange` → calls `updateCardHeight(cardId, newHeight)`
+- `handleSaveCardConfig` → calls `configureCard(cardId, config)` and `setConfiguringCard(null)`
+
+### Commits Pushed
+- `66feb6c3f` — 🐛 Fix HIGH Copilot comments: data race in openai_compat_test, alertStorage re-exports; add coverage tests
+
+### Remaining Items
+- Coverage: still ~90%, need +1pp to reach 91%. Key gap: `useMissions.provider.tsx` (21.8%, 3162 lines — complex React/WS component, requires heavy mock infrastructure to improve)
+- nightlyPlaywright RED — scanner owns
+- nightlyRel/weeklyRel RED — PR #11669 arm64 fix should resolve on next nightly run

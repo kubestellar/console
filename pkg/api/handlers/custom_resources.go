@@ -119,10 +119,17 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	clusterCtx, clusterCancel := context.WithCancel(c.Context())
 	defer clusterCancel()
 
+	// Bound concurrency to avoid spawning unbounded goroutines for large fleets.
+	const crFetchConcurrency = 10
+	sem := make(chan struct{}, crFetchConcurrency)
+
 	for _, cl := range clusters {
 		wg.Add(1)
 		go func(clusterName string) {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
 			ctx, cancel := context.WithTimeout(clusterCtx, mcpDefaultTimeout)
 			defer cancel()
 

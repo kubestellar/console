@@ -35,142 +35,142 @@ describe('fetcherUtils backend routing', () => {
     // We test the function by importing with different mock states
 
     it('returns false when no preference is set (default kc-agent)', async () => {
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-        STORAGE_KEY_TOKEN: 'kc-token',
+        STORAGE_KEY_TOKEN: 'token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
-      const { isClusterModeBackend } = await import('../../cache/fetcherUtils')
+      const { isClusterModeBackend } = await import('../cache/fetcherUtils')
       expect(isClusterModeBackend()).toBe(false)
     })
 
     it('returns true when preference is kagent', async () => {
       localStorage.setItem(BACKEND_PREF_KEY, 'kagent')
 
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-        STORAGE_KEY_TOKEN: 'kc-token',
+        STORAGE_KEY_TOKEN: 'token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
-      const { isClusterModeBackend } = await import('../../cache/fetcherUtils')
+      const { isClusterModeBackend } = await import('../cache/fetcherUtils')
       expect(isClusterModeBackend()).toBe(true)
     })
 
     it('returns true when preference is kagenti', async () => {
       localStorage.setItem(BACKEND_PREF_KEY, 'kagenti')
 
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-        STORAGE_KEY_TOKEN: 'kc-token',
+        STORAGE_KEY_TOKEN: 'token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
-      const { isClusterModeBackend } = await import('../../cache/fetcherUtils')
+      const { isClusterModeBackend } = await import('../cache/fetcherUtils')
       expect(isClusterModeBackend()).toBe(true)
     })
 
     it('returns false for unrecognized preference value', async () => {
       localStorage.setItem(BACKEND_PREF_KEY, 'kc-agent')
 
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-        STORAGE_KEY_TOKEN: 'kc-token',
+        STORAGE_KEY_TOKEN: 'token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
-      const { isClusterModeBackend } = await import('../../cache/fetcherUtils')
+      const { isClusterModeBackend } = await import('../cache/fetcherUtils')
       expect(isClusterModeBackend()).toBe(false)
     })
   })
 
   describe('abortAllFetches()', () => {
     it('can be called without throwing', async () => {
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-        STORAGE_KEY_TOKEN: 'kc-token',
+        STORAGE_KEY_TOKEN: 'token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
-      const { abortAllFetches } = await import('../../cache/fetcherUtils')
+      const { abortAllFetches } = await import('../cache/fetcherUtils')
       expect(() => abortAllFetches()).not.toThrow()
     })
 
     it('can be called multiple times in succession', async () => {
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-        STORAGE_KEY_TOKEN: 'kc-token',
+        STORAGE_KEY_TOKEN: 'token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
-      const { abortAllFetches } = await import('../../cache/fetcherUtils')
+      const { abortAllFetches } = await import('../cache/fetcherUtils')
       expect(() => {
         abortAllFetches()
         abortAllFetches()
@@ -184,14 +184,16 @@ describe('fetcherUtils backend routing', () => {
 // Section 2: Agent Fetchers — Early Bail When Agent Unavailable
 // ===========================================================================
 
-describe('agentFetchers failure paths', () => {
-  const mockIsAgentUnavailable = vi.fn(() => false)
-  const mockClusterCacheRef = {
-    clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }>,
-  }
-  const mockAgentFetch = vi.fn()
-  const mockGetPodIssues = vi.fn()
+// Mock variables for agentFetchers section — declared at module scope so
+// vi.doMock factories in beforeEach can reference them.
+const mockIsAgentUnavailable = vi.fn(() => false)
+const mockClusterCacheRef = {
+  clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }>,
+}
+const mockAgentFetch = vi.fn()
+const mockGetPodIssues = vi.fn()
 
+describe('agentFetchers failure paths', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -199,35 +201,31 @@ describe('agentFetchers failure paths', () => {
     mockClusterCacheRef.clusters = []
     localStorage.clear()
 
-    vi.mock('../../../lib/kubectlProxy', () => ({
+    vi.doMock('../kubectlProxy', () => ({
       kubectlProxy: { getPodIssues: (...args: unknown[]) => mockGetPodIssues(...args) },
     }))
-    vi.mock('../../mcp/shared', () => ({
+    vi.doMock('../../hooks/mcp/shared', () => ({
       clusterCacheRef: mockClusterCacheRef,
       agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
     }))
-    vi.mock('../../mcp/dedup', () => ({
+    vi.doMock('../../hooks/mcp/dedup', () => ({
       deduplicateClustersByServer: (clusters: Array<{ name: string }>) => clusters,
     }))
-    vi.mock('../../useLocalAgent', () => ({
+    vi.doMock('../../hooks/useLocalAgent', () => ({
       isAgentUnavailable: () => mockIsAgentUnavailable(),
     }))
-    vi.mock('../../../lib/constants', async (importOriginal) => {
-      const actual = (await importOriginal()) as Record<string, unknown>
-      return {
-        ...actual,
-        LOCAL_AGENT_HTTP_URL: 'http://localhost:8089',
-        STORAGE_KEY_TOKEN: 'kc-token',
-        FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-      }
-    })
-    vi.mock('../../../lib/constants/network', () => ({
+    vi.doMock('../constants', () => ({
+      LOCAL_AGENT_HTTP_URL: 'http://localhost:8089',
+      STORAGE_KEY_TOKEN: 'token',
       FETCH_DEFAULT_TIMEOUT_MS: 10_000,
     }))
-    vi.mock('../../../lib/cache/fetcherUtils', () => ({
+    vi.doMock('../constants/network', () => ({
+      FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+    }))
+    vi.doMock('../cache/fetcherUtils', () => ({
       AGENT_HTTP_TIMEOUT_MS: 5_000,
     }))
-    vi.mock('../../../lib/utils/concurrency', () => ({
+    vi.doMock('../utils/concurrency', () => ({
       settledWithConcurrency: async (
         tasks: Array<() => Promise<unknown>>,
         _concurrency: number | undefined,
@@ -243,6 +241,10 @@ describe('agentFetchers failure paths', () => {
         }
       },
     }))
+    // Mock AlertsContext service modules (added after #11559 refactor)
+    vi.doMock('../../contexts/notifications', () => ({}))
+    vi.doMock('../../contexts/alertStorage', () => ({}))
+    vi.doMock('../../contexts/alertRunbooks', () => ({}))
   })
 
   afterEach(() => {
@@ -252,7 +254,7 @@ describe('agentFetchers failure paths', () => {
   describe('fetchPodIssuesViaAgent', () => {
     it('returns empty array when agent is unavailable', async () => {
       mockIsAgentUnavailable.mockReturnValue(true)
-      const { fetchPodIssuesViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchPodIssuesViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchPodIssuesViaAgent()
       expect(result).toEqual([])
       expect(mockGetPodIssues).not.toHaveBeenCalled()
@@ -260,7 +262,7 @@ describe('agentFetchers failure paths', () => {
 
     it('returns empty array when no clusters are available', async () => {
       mockClusterCacheRef.clusters = []
-      const { fetchPodIssuesViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchPodIssuesViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchPodIssuesViaAgent()
       expect(result).toEqual([])
     })
@@ -274,7 +276,7 @@ describe('agentFetchers failure paths', () => {
         { name: 'bad-pod', namespace: 'default', status: 'CrashLoopBackOff' },
       ])
 
-      const { fetchPodIssuesViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchPodIssuesViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchPodIssuesViaAgent()
 
       expect(result.length).toBeGreaterThan(0)
@@ -288,7 +290,7 @@ describe('agentFetchers failure paths', () => {
       ]
       mockGetPodIssues.mockResolvedValue([])
 
-      const { fetchPodIssuesViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchPodIssuesViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       await fetchPodIssuesViaAgent()
 
       // Should only call for 'good' cluster
@@ -300,7 +302,7 @@ describe('agentFetchers failure paths', () => {
       mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
       mockGetPodIssues.mockResolvedValue(null)
 
-      const { fetchPodIssuesViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchPodIssuesViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchPodIssuesViaAgent()
 
       // Should not throw; null is guarded with (issues || [])
@@ -314,7 +316,7 @@ describe('agentFetchers failure paths', () => {
       ])
 
       const progressCb = vi.fn()
-      const { fetchPodIssuesViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchPodIssuesViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       await fetchPodIssuesViaAgent(undefined, progressCb)
 
       expect(progressCb).toHaveBeenCalled()
@@ -324,7 +326,7 @@ describe('agentFetchers failure paths', () => {
   describe('fetchDeploymentsViaAgent', () => {
     it('returns empty array when agent is unavailable', async () => {
       mockIsAgentUnavailable.mockReturnValue(true)
-      const { fetchDeploymentsViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchDeploymentsViaAgent()
       expect(result).toEqual([])
       expect(mockAgentFetch).not.toHaveBeenCalled()
@@ -332,7 +334,7 @@ describe('agentFetchers failure paths', () => {
 
     it('returns empty array when no clusters available', async () => {
       mockClusterCacheRef.clusters = []
-      const { fetchDeploymentsViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchDeploymentsViaAgent()
       expect(result).toEqual([])
     })
@@ -341,7 +343,7 @@ describe('agentFetchers failure paths', () => {
       mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
       mockAgentFetch.mockResolvedValue({ ok: false, status: 503 })
 
-      const { fetchDeploymentsViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       // Errors are caught per-cluster by settledWithConcurrency
       const result = await fetchDeploymentsViaAgent()
       // Failed clusters produce no results
@@ -355,7 +357,7 @@ describe('agentFetchers failure paths', () => {
         json: () => Promise.reject(new Error('invalid json')),
       })
 
-      const { fetchDeploymentsViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchDeploymentsViaAgent()
       expect(result).toEqual([])
     })
@@ -369,7 +371,7 @@ describe('agentFetchers failure paths', () => {
         }),
       })
 
-      const { fetchDeploymentsViaAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchDeploymentsViaAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchDeploymentsViaAgent()
 
       expect(result.length).toBe(1)
@@ -381,14 +383,14 @@ describe('agentFetchers failure paths', () => {
   describe('fetchWorkloadsFromAgent', () => {
     it('returns null when agent is unavailable', async () => {
       mockIsAgentUnavailable.mockReturnValue(true)
-      const { fetchWorkloadsFromAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchWorkloadsFromAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchWorkloadsFromAgent()
       expect(result).toBeNull()
     })
 
     it('returns null when no clusters available', async () => {
       mockClusterCacheRef.clusters = []
-      const { fetchWorkloadsFromAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchWorkloadsFromAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchWorkloadsFromAgent()
       expect(result).toBeNull()
     })
@@ -397,7 +399,7 @@ describe('agentFetchers failure paths', () => {
       mockClusterCacheRef.clusters = [{ name: 'c1', reachable: true }]
       mockAgentFetch.mockResolvedValue({ ok: false, status: 500 })
 
-      const { fetchWorkloadsFromAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchWorkloadsFromAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchWorkloadsFromAgent()
       expect(result).toBeNull()
     })
@@ -416,7 +418,7 @@ describe('agentFetchers failure paths', () => {
         }),
       })
 
-      const { fetchWorkloadsFromAgent } = await import('../../useCachedData/agentFetchers')
+      const { fetchWorkloadsFromAgent } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchWorkloadsFromAgent()
 
       expect(result).not.toBeNull()
@@ -431,43 +433,43 @@ describe('agentFetchers failure paths', () => {
   describe('fetchCiliumStatus', () => {
     it('returns null when agent is unavailable', async () => {
       mockIsAgentUnavailable.mockReturnValue(true)
-      const { fetchCiliumStatus } = await import('../../useCachedData/agentFetchers')
+      const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchCiliumStatus()
       expect(result).toBeNull()
     })
 
     it('returns null when no auth token', async () => {
       mockIsAgentUnavailable.mockReturnValue(false)
-      localStorage.removeItem('kc-token')
-      const { fetchCiliumStatus } = await import('../../useCachedData/agentFetchers')
+      localStorage.removeItem('token')
+      const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchCiliumStatus()
       expect(result).toBeNull()
     })
 
     it('returns null when token is demo-token', async () => {
       mockIsAgentUnavailable.mockReturnValue(false)
-      localStorage.setItem('kc-token', 'demo-token')
-      const { fetchCiliumStatus } = await import('../../useCachedData/agentFetchers')
+      localStorage.setItem('token', 'demo-token')
+      const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchCiliumStatus()
       expect(result).toBeNull()
     })
 
     it('returns null on fetch error (suppresses console noise)', async () => {
       mockIsAgentUnavailable.mockReturnValue(false)
-      localStorage.setItem('kc-token', 'real-token-123')
+      localStorage.setItem('token', 'real-token-123')
       mockAgentFetch.mockRejectedValue(new Error('Connection refused'))
 
-      const { fetchCiliumStatus } = await import('../../useCachedData/agentFetchers')
+      const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchCiliumStatus()
       expect(result).toBeNull()
     })
 
     it('returns null on non-ok HTTP response', async () => {
       mockIsAgentUnavailable.mockReturnValue(false)
-      localStorage.setItem('kc-token', 'real-token-123')
+      localStorage.setItem('token', 'real-token-123')
       mockAgentFetch.mockResolvedValue({ ok: false, status: 404 })
 
-      const { fetchCiliumStatus } = await import('../../useCachedData/agentFetchers')
+      const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchCiliumStatus()
       expect(result).toBeNull()
     })
@@ -481,7 +483,7 @@ describe('agentFetchers failure paths', () => {
 describe('WebSocket exponential backoff', () => {
   it('getWsBackoffDelay returns base delay for attempt 0', async () => {
     const { getWsBackoffDelay, WS_RECONNECT_BASE_DELAY_MS, WS_BACKOFF_JITTER_MAX_MS } =
-      await import('../../constants/network')
+      await vi.importActual<typeof import('../constants/network')>('../constants/network')
 
     // Run multiple times to account for jitter
     const delays: number[] = []
@@ -498,7 +500,7 @@ describe('WebSocket exponential backoff', () => {
 
   it('getWsBackoffDelay doubles with each attempt', async () => {
     const { getWsBackoffDelay, WS_RECONNECT_BASE_DELAY_MS, WS_BACKOFF_JITTER_MAX_MS } =
-      await import('../../constants/network')
+      await vi.importActual<typeof import('../constants/network')>('../constants/network')
 
     // Use minimum possible (subtract jitter) to verify doubling
     const minDelay0 = WS_RECONNECT_BASE_DELAY_MS
@@ -522,7 +524,7 @@ describe('WebSocket exponential backoff', () => {
 
   it('getWsBackoffDelay is capped at max delay', async () => {
     const { getWsBackoffDelay, WS_RECONNECT_MAX_DELAY_MS, WS_BACKOFF_JITTER_MAX_MS } =
-      await import('../../constants/network')
+      await vi.importActual<typeof import('../constants/network')>('../constants/network')
 
     // Very high attempt number
     for (let i = 0; i < 20; i++) {
@@ -532,7 +534,7 @@ describe('WebSocket exponential backoff', () => {
   })
 
   it('getWsBackoffDelay adds random jitter (not deterministic)', async () => {
-    const { getWsBackoffDelay } = await import('../../constants/network')
+    const { getWsBackoffDelay } = await vi.importActual<typeof import('../constants/network')>('../constants/network')
 
     const delays = new Set<number>()
     for (let i = 0; i < 50; i++) {
@@ -544,7 +546,7 @@ describe('WebSocket exponential backoff', () => {
   })
 
   it('MAX_WS_RECONNECT_ATTEMPTS is a reasonable limit', async () => {
-    const { MAX_WS_RECONNECT_ATTEMPTS } = await import('../../constants/network')
+    const { MAX_WS_RECONNECT_ATTEMPTS } = await vi.importActual<typeof import('../constants/network')>('../constants/network')
 
     expect(MAX_WS_RECONNECT_ATTEMPTS).toBeGreaterThanOrEqual(3)
     expect(MAX_WS_RECONNECT_ATTEMPTS).toBeLessThanOrEqual(20)
@@ -557,30 +559,30 @@ describe('WebSocket exponential backoff', () => {
 
 describe('network constants for agent connectivity', () => {
   it('WS_CONNECT_TIMEOUT_MS is between 1s and 10s', async () => {
-    const { WS_CONNECT_TIMEOUT_MS } = await import('../../constants/network')
+    const { WS_CONNECT_TIMEOUT_MS } = await vi.importActual<typeof import('../constants/network')>('../constants/network')
     expect(WS_CONNECT_TIMEOUT_MS).toBeGreaterThanOrEqual(1_000)
     expect(WS_CONNECT_TIMEOUT_MS).toBeLessThanOrEqual(10_000)
   })
 
   it('WS_CONNECTION_COOLDOWN_MS is positive and reasonable', async () => {
-    const { WS_CONNECTION_COOLDOWN_MS } = await import('../../constants/network')
+    const { WS_CONNECTION_COOLDOWN_MS } = await vi.importActual<typeof import('../constants/network')>('../constants/network')
     expect(WS_CONNECTION_COOLDOWN_MS).toBeGreaterThan(0)
     expect(WS_CONNECTION_COOLDOWN_MS).toBeLessThanOrEqual(60_000)
   })
 
   it('WS_RECONNECT_BASE_DELAY_MS < WS_RECONNECT_MAX_DELAY_MS', async () => {
     const { WS_RECONNECT_BASE_DELAY_MS, WS_RECONNECT_MAX_DELAY_MS } =
-      await import('../../constants/network')
+      await vi.importActual<typeof import('../constants/network')>('../constants/network')
     expect(WS_RECONNECT_BASE_DELAY_MS).toBeLessThan(WS_RECONNECT_MAX_DELAY_MS)
   })
 
   it('FETCH_DEFAULT_TIMEOUT_MS is a positive number', async () => {
-    const { FETCH_DEFAULT_TIMEOUT_MS } = await import('../../constants/network')
+    const { FETCH_DEFAULT_TIMEOUT_MS } = await vi.importActual<typeof import('../constants/network')>('../constants/network')
     expect(FETCH_DEFAULT_TIMEOUT_MS).toBeGreaterThan(0)
   })
 
   it('agent suppression helpers exist and are callable', async () => {
-    const { suppressLocalAgent, isLocalAgentSuppressed } = await import('../../constants/network')
+    const { suppressLocalAgent, isLocalAgentSuppressed } = await vi.importActual<typeof import('../constants/network')>('../constants/network')
     expect(typeof suppressLocalAgent).toBe('function')
     expect(typeof isLocalAgentSuppressed).toBe('function')
   })
@@ -600,14 +602,14 @@ describe('agent URL suppression', () => {
   })
 
   it('LOCAL_AGENT_WS_URL points to 127.0.0.1:8585 by default', async () => {
-    const { LOCAL_AGENT_WS_URL } = await import('../../constants/network')
+    const { LOCAL_AGENT_WS_URL } = await vi.importActual<typeof import('../constants/network')>('../constants/network')
     // In test env (not Netlify), should be the real URL
     expect(LOCAL_AGENT_WS_URL).toContain('127.0.0.1')
     expect(LOCAL_AGENT_WS_URL).toContain('8585')
   })
 
   it('LOCAL_AGENT_HTTP_URL points to 127.0.0.1:8585 by default', async () => {
-    const { LOCAL_AGENT_HTTP_URL } = await import('../../constants/network')
+    const { LOCAL_AGENT_HTTP_URL } = await vi.importActual<typeof import('../constants/network')>('../constants/network')
     expect(LOCAL_AGENT_HTTP_URL).toContain('127.0.0.1')
     expect(LOCAL_AGENT_HTTP_URL).toContain('8585')
   })

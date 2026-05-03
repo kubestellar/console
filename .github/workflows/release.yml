@@ -292,7 +292,7 @@ jobs:
   docker-build:
     needs: [determine-version, release]
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     if: needs.release.result == 'success'
     strategy:
       fail-fast: false
@@ -330,6 +330,27 @@ jobs:
       - name: Build and push per-platform image
         id: build
         uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
+        continue-on-error: true
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: |
+            APP_VERSION=${{ needs.determine-version.outputs.version }}
+            COMMIT_HASH=${{ github.sha }}
+          cache-from: type=gha,scope=docker-${{ steps.prep.outputs.pair }}
+          cache-to: type=gha,scope=docker-${{ steps.prep.outputs.pair }},mode=max
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+
+      - name: Wait before retry
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "::warning::Build failed for ${{ matrix.platform }}, retrying in 30s..."
+          sleep 30
+
+      - name: Build and push per-platform image (retry)
+        id: build-retry
+        if: steps.build.outcome == 'failure'
+        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7.1.0
         with:
           context: .
           platforms: ${{ matrix.platform }}
@@ -343,7 +364,7 @@ jobs:
       - name: Export digest
         run: |
           mkdir -p /home/runner/digests
-          digest="${{ steps.build.outputs.digest }}"
+          digest="${{ steps.build-retry.outputs.digest || steps.build.outputs.digest }}"
           touch "/home/runner/digests/${digest#sha256:}"
 
       - name: Upload digest

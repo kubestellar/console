@@ -13,7 +13,7 @@ vi.mock('../../../hooks/mcp/shared', () => ({
 }))
 vi.mock('../../constants', () => ({
   LOCAL_AGENT_HTTP_URL: 'http://localhost:8585',
-  STORAGE_KEY_TOKEN: 'kc-token',
+  STORAGE_KEY_TOKEN: 'token',
 }))
 vi.mock('../../constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
@@ -62,7 +62,7 @@ describe('fetcherUtils', () => {
     })
 
     it('returns stored token value', () => {
-      localStorage.setItem('kc-token', 'test-token-123')
+      localStorage.setItem('token', 'test-token-123')
       expect(getToken()).toBe('test-token-123')
     })
   })

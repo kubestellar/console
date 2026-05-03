@@ -141,7 +141,7 @@ export function StorageOverview() {
 
   // When all cluster fetches have failed, show unified error state instead of
   // rendering misleading partial/empty data from stale cache (#11539).
-  if (isFailed && !isDemoFallback && !isDemoMode) {
+  if (consecutiveFailures > 0 && !(clustersRefreshing || pvcsRefreshing) && !isDemoFallback && !isDemoMode) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
         <AlertTriangle className="w-8 h-8 mb-2 text-red-400 opacity-70" />

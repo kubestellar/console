@@ -117,7 +117,7 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
-      <span className="ml-3 text-gray-300">Loading Sigstore data…</span>
+      <span className="ml-3 text-gray-200">Loading Sigstore data…</span>
     </div>
   )
 
@@ -175,17 +175,17 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 bg-gray-900/50 border border-gray-600 rounded px-3 py-2">
               <ShieldCheck className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-gray-300">{summary.trust_roots} Trust Roots</span>
+              <span className="text-sm text-gray-200">{summary.trust_roots} Trust Roots</span>
             </div>
             <span className="text-gray-600">→</span>
             <div className="flex items-center gap-2 bg-gray-900/50 border border-gray-600 rounded px-3 py-2">
               <BadgeCheck className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-gray-300">{summary.policies_enforced} Policies</span>
+              <span className="text-sm text-gray-200">{summary.policies_enforced} Policies</span>
             </div>
             <span className="text-gray-600">→</span>
             <div className="flex items-center gap-2 bg-gray-900/50 border border-gray-600 rounded px-3 py-2">
               <CheckCircle2 className="w-4 h-4 text-green-400" />
-              <span className="text-sm text-gray-300">{summary.verified_signatures} Verified</span>
+              <span className="text-sm text-gray-200">{summary.verified_signatures} Verified</span>
             </div>
           </div>
         </div>
@@ -224,8 +224,8 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
               {signatures.map((s, i) => (
                 <tr key={i} className="border-b border-gray-800 hover:bg-gray-800/30">
                   <td className="py-2 px-3 text-white font-mono text-xs max-w-xs truncate">{s.image}</td>
-                  <td className="py-2 px-3 text-gray-300 text-xs">{s.signer}</td>
-                  <td className="py-2 px-3 text-gray-300 text-xs">{s.issuer}</td>
+                  <td className="py-2 px-3 text-gray-200 text-xs">{s.signer}</td>
+                  <td className="py-2 px-3 text-gray-200 text-xs">{s.issuer}</td>
                   <td className="py-2 px-3">
                     {s.transparency_log ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-gray-500" />}
                   </td>
@@ -259,9 +259,9 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
               {verifications.map((v) => (
                 <tr key={v.id} className="border-b border-gray-800 hover:bg-gray-800/30">
                   <td className="py-2 px-3 text-white font-mono text-xs max-w-xs truncate">{v.image}</td>
-                  <td className="py-2 px-3 text-gray-300 text-xs">{v.policy}</td>
-                  <td className="py-2 px-3 text-gray-300 text-xs">{v.cosign_version}</td>
-                  <td className="py-2 px-3 text-gray-300">{v.certificate_chain} certs</td>
+                  <td className="py-2 px-3 text-gray-200 text-xs">{v.policy}</td>
+                  <td className="py-2 px-3 text-gray-200 text-xs">{v.cosign_version}</td>
+                  <td className="py-2 px-3 text-gray-200">{v.certificate_chain} certs</td>
                   <td className="py-2 px-3">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border ${RESULT_BG[v.result]} ${RESULT_COLORS[v.result]}`}>
                       {RESULT_ICON[v.result]}

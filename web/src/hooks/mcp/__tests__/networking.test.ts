@@ -413,6 +413,7 @@ describe('useServices', () => {
   })
 
   it('sets isFailed to true after 3 consecutive failures', async () => {
+    vi.useFakeTimers()
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 503,
@@ -420,9 +421,16 @@ describe('useServices', () => {
 
     const { result } = renderHook(() => useServices())
 
-    // With exponential backoff, consecutiveFailures in useEffect deps causes
-    // cascading re-fetches. The hook quickly accumulates >= 3 failures.
-    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3))
+    // First failure happens on mount
+    await act(async () => { await Promise.resolve() })
+
+    // Advance time to trigger polling and accumulate failures
+    for (let i = 0; i < 3; i++) {
+      await act(async () => { vi.advanceTimersByTime(120_000) })
+      await act(async () => { await Promise.resolve() })
+    }
+
+    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(3)
     expect(result.current.isFailed).toBe(true)
   })
 

@@ -846,10 +846,13 @@ describe('cross-tab logout (#6065)', () => {
 describe('proactive logout on expiry (#6069)', () => {
   it('calls logout() when timeUntilExpiry drops below zero', async () => {
     const MS_PER_SECOND = 1000
-    const TWO_MINUTES_SEC = 120
+    const THIRTY_SEC = 30
     const nowSec = Math.floor(Date.now() / MS_PER_SECOND)
-    // Token expires in 2 minutes — inside the 30-minute warning threshold
-    const aboutToExpireToken = makeJwt({ exp: nowSec + TWO_MINUTES_SEC })
+    // Token expires in 30 s — well inside the 30-minute warning threshold.
+    // checkExpiry fires immediately on mount (not expired yet) and then
+    // every EXPIRY_CHECK_INTERVAL_MS (60 s). At the 60 s tick the token
+    // has been expired for ~30 s, triggering the proactive logout path.
+    const aboutToExpireToken = makeJwt({ exp: nowSec + THIRTY_SEC })
 
     localStorage.setItem(STORAGE_KEY_TOKEN, aboutToExpireToken)
     const cachedUser = { id: 'u1', github_id: '1', github_login: 'test', onboarded: true }
@@ -859,12 +862,15 @@ describe('proactive logout on expiry (#6069)', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     const { result } = await renderWithAuthProvider()
-    await vi.advanceTimersByTimeAsync(100)
 
-    // Fast-forward past the token exp (2 min + buffer) and past the next
-    // checkExpiry interval (60s) so the proactive logout fires.
-    const THREE_MINUTES_MS = 3 * 60 * 1_000
-    await vi.advanceTimersByTimeAsync(THREE_MINUTES_MS)
+    // Advance past the token expiry (30 s) and the first checkExpiry
+    // interval tick (60 s).  Wrap each step in act() so React flushes
+    // state updates (e.g. logout → setTokenState(null)) between timer
+    // callbacks, preventing the background revalidation interval from
+    // racing and re-entering demo mode.
+    const STEP_MS = 31_000
+    await act(async () => { await vi.advanceTimersByTimeAsync(STEP_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(STEP_MS) })
 
     // After expiry, the interval should have invoked logout() which clears
     // the in-memory token.
