@@ -294,6 +294,12 @@ func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2
 	ch := make(chan result, len(nightlyWorkflows))
 	for i, wf := range nightlyWorkflows {
 		go func(idx int, wf NightlyWorkflow) {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in nightly workflow fetch", "workflow", wf.Name, "error", r)
+					ch <- result{idx: idx, err: fmt.Errorf("panic: %v", r)}
+				}
+			}()
 			select {
 			case <-ctx.Done():
 				ch <- result{idx: idx, err: ctx.Err()}
@@ -562,6 +568,12 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 
 	for _, gp := range guidePaths {
 		go func(guidePath string) {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in fetchAllGuideImages goroutine", "guide", guidePath, "error", r)
+					ch <- guideResult{path: guidePath, images: make(map[string]string)}
+				}
+			}()
 			prefix := "guides/" + guidePath + "/"
 			images := make(map[string]string)
 
