@@ -21,6 +21,7 @@ import {
   Puzzle,
   Heart } from 'lucide-react'
 import { emitFromHeadlampViewed, emitFromHeadlampActioned, emitFromHeadlampTabSwitch, emitFromHeadlampCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
+import { ROUTES } from '../config/routes'
 import { copyToClipboard } from '../lib/clipboard'
 
 /* ------------------------------------------------------------------ */
@@ -432,7 +433,7 @@ export function FromHeadlamp() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               onClick={() => emitFromHeadlampActioned('hero_try_demo')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-teal-500 hover:bg-teal-600 text-white font-semibold text-lg transition-colors"
             >
@@ -554,7 +555,7 @@ export function FromHeadlamp() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               onClick={() => emitFromHeadlampActioned('footer_try_demo')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-teal-500 hover:bg-teal-600 text-white font-semibold text-lg transition-colors"
             >

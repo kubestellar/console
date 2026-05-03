@@ -57,6 +57,7 @@ import { UpdateProgressBanner } from '../updates/UpdateProgressBanner'
 import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { VersionCheckProvider } from '../../hooks/useVersionCheck'
 import { copyToClipboard } from '../../lib/clipboard'
+import { ROUTES } from '../../config/routes'
 
 // Lazy-load the AI mission sidebar so react-markdown and remark plugins are
 // not part of the initial bundle — they only load when the sidebar is first rendered.
@@ -575,7 +576,7 @@ export function Layout({ children: _children }: LayoutProps) {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <Link
-                    to="/settings"
+                    to={ROUTES.SETTINGS}
                     className="flex items-center gap-1 text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
                   >
                     <Settings className="w-3 h-3" />

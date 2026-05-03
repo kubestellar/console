@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { ROUTES } from '../config/routes'
 import {
   ArrowRight,
   Network,
@@ -123,7 +124,7 @@ export function FeatureInspektorGadget() {
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600 transition-colors"
             >
               See it in action
@@ -216,7 +217,7 @@ export function FeatureInspektorGadget() {
       {/* CTA */}
       <section className="max-w-4xl mx-auto px-6 py-16 text-center">
         <Link
-          to="/"
+          to={ROUTES.HOME}
           className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-blue-500 text-white font-medium text-lg hover:bg-blue-600 transition-colors"
         >
           <Sparkles className="w-5 h-5" />

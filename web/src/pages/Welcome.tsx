@@ -66,7 +66,7 @@ const SCENARIOS: Scenario[] = [
     icon: <Sparkles className="w-6 h-6 text-purple-400" />,
     title: 'AI diagnoses a crashing pod',
     description: 'Watch the AI mission scan your cluster, find the root cause, and propose a fix — all in natural language.',
-    link: '/',
+    link: ROUTES.HOME,
   },
   {
     icon: <Layers className="w-6 h-6 text-purple-400" />,
@@ -78,25 +78,25 @@ const SCENARIOS: Scenario[] = [
     icon: <Cpu className="w-6 h-6 text-purple-400" />,
     title: 'GPU workload monitoring',
     description: 'Track GPU reservations, utilization, and AI/ML workload performance with built-in dashboards.',
-    link: '/ai-ml',
+    link: ROUTES.AI_ML,
   },
   {
     icon: <Shield className="w-6 h-6 text-purple-400" />,
     title: 'Security & compliance scoring',
     description: 'OPA, Kyverno, Kubescape, and Trivy — all built in. See your compliance posture in seconds.',
-    link: '/compliance',
+    link: ROUTES.COMPLIANCE,
   },
   {
     icon: <DollarSign className="w-6 h-6 text-purple-400" />,
     title: 'Cost visibility per namespace',
     description: 'OpenCost integration shows exactly where your spend is going. No separate billing tool.',
-    link: '/cost',
+    link: ROUTES.COST,
   },
   {
     icon: <GitBranch className="w-6 h-6 text-purple-400" />,
     title: 'GitOps sync status',
     description: 'ArgoCD and Flux drift detection baked in. See what\'s out of sync at a glance.',
-    link: '/gitops',
+    link: ROUTES.GITOPS,
   },
 ]
 
@@ -234,7 +234,7 @@ export function Welcome() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               onClick={() => emitWelcomeActioned('hero_explore_demo', ref)}
               className="inline-flex items-center gap-2 px-8 py-4 sm:py-3.5 rounded-lg bg-purple-500 hover:bg-purple-600 active:bg-purple-700 text-white font-semibold text-lg transition-colors w-full sm:w-auto justify-center"
             >
@@ -321,7 +321,7 @@ export function Welcome() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               onClick={() => emitWelcomeActioned('footer_explore_demo', ref)}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
             >

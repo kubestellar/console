@@ -17,6 +17,7 @@ import {
   Check } from 'lucide-react'
 import { copyToClipboard } from '../lib/clipboard'
 import { emitInstallCommandCopied } from '../lib/analytics'
+import { ROUTES } from '../config/routes'
 
 
 /* ------------------------------------------------------------------ */
@@ -224,7 +225,7 @@ export function FromHolmesGPT() {
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-purple-500 text-white font-medium hover:bg-purple-600 transition-colors"
             >
               Try the Dashboard
@@ -372,7 +373,7 @@ export function FromHolmesGPT() {
           plus the multi-cluster dashboard, eBPF tracing, and 140+ monitoring cards you've been missing.
         </p>
         <Link
-          to="/"
+          to={ROUTES.HOME}
           className="inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-purple-500 text-white font-medium text-lg hover:bg-purple-600 transition-colors"
         >
           <Sparkles className="w-5 h-5" />

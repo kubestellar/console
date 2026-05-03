@@ -19,6 +19,7 @@ import {
   Package,
   Puzzle } from 'lucide-react'
 import { emitWhiteLabelViewed, emitWhiteLabelActioned, emitWhiteLabelTabSwitch, emitWhiteLabelCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
+import { ROUTES } from '../config/routes'
 import { copyToClipboard } from '../lib/clipboard'
 
 /* ------------------------------------------------------------------ */
@@ -465,7 +466,7 @@ export function WhiteLabel() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               onClick={() => emitWhiteLabelActioned('hero_try_demo')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
             >
@@ -560,7 +561,7 @@ export function WhiteLabel() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               onClick={() => emitWhiteLabelActioned('footer_try_demo')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
             >

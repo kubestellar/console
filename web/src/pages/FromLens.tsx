@@ -20,6 +20,7 @@ import {
   Copy,
   Check } from 'lucide-react'
 import { emitFromLensViewed, emitFromLensActioned, emitFromLensTabSwitch, emitFromLensCommandCopy, emitInstallCommandCopied } from '../lib/analytics'
+import { ROUTES } from '../config/routes'
 import { copyToClipboard } from '../lib/clipboard'
 
 /* ------------------------------------------------------------------ */
@@ -444,7 +445,7 @@ export function FromLens() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               onClick={() => emitFromLensActioned('hero_try_demo')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
             >
@@ -561,7 +562,7 @@ export function FromLens() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              to="/"
+              to={ROUTES.HOME}
               onClick={() => emitFromLensActioned('footer_try_demo')}
               className="inline-flex items-center gap-2 px-8 py-3 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-semibold text-lg transition-colors"
             >
