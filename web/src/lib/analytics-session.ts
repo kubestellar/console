@@ -259,15 +259,20 @@ export function getSessionPageViewCount(): number {
   return sessionPageViewCount
 }
 
+/** Stored reference to the visibility handler so it can be removed on stop */
+let visibilityHandler: (() => void) | null = null
+
+/** Interaction events tracked for engagement */
+const INTERACTION_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const
+
 /** Start tracking user engagement via interaction and visibility signals */
 export function startEngagementTracking(onFlush: () => void) {
-  const interactionEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const
-  for (const event of interactionEvents) {
+  for (const event of INTERACTION_EVENTS) {
     document.addEventListener(event, markActive, { passive: true })
   }
 
   // Track page visibility — pause engagement when tab is hidden
-  document.addEventListener('visibilitychange', () => {
+  visibilityHandler = () => {
     if (document.visibilityState === 'hidden') {
       if (isUserActive) {
         accumulatedEngagementMs += Date.now() - engagementStartMs
@@ -277,7 +282,8 @@ export function startEngagementTracking(onFlush: () => void) {
     } else {
       markActive()
     }
-  })
+  }
+  document.addEventListener('visibilitychange', visibilityHandler)
 
   // Start heartbeat to detect idle
   heartbeatTimer = setInterval(checkEngagement, ENGAGEMENT_HEARTBEAT_MS)
@@ -291,6 +297,13 @@ export function stopEngagementTracking() {
   if (heartbeatTimer) {
     clearInterval(heartbeatTimer)
     heartbeatTimer = null
+  }
+  for (const event of INTERACTION_EVENTS) {
+    document.removeEventListener(event, markActive)
+  }
+  if (visibilityHandler) {
+    document.removeEventListener('visibilitychange', visibilityHandler)
+    visibilityHandler = null
   }
 }
 
