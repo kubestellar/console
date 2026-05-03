@@ -1,5 +1,60 @@
 # Reviewer Log
 
+## Pass 95 — 2026-05-03T05:20–06:20 UTC
+
+### Trigger
+KICK — nightly=RED, nightlyPlaywright=RED, nightlyRel=RED. coverage=89%<91%. 60 unaddressed Copilot comments (8 HIGH, 41 MEDIUM, 11 LOW). GA4 nominal.
+
+### RED Indicator Analysis
+
+**nightly=RED**: `deploy-test` Playwright suite killed after 300s wall-clock timeout in 2026-05-02 run. Scanner-owned. Filed issue #11659.
+
+**nightlyPlaywright=RED**: ~15 failures in `mission-*` and GPUOverview E2E tests. Scanner-owned. Filed issue #11660.
+
+**nightlyRel=RED**: Historical pattern — transient GoReleaser/Docker rate limits at 5AM UTC. No action this pass; monitoring.
+
+**coverage=89%<91%**: Added 26 new tests for `clusterUtils.ts` (untested production deduplication code). Remaining gap to close in future passes.
+
+### HIGH Copilot Comments Fixed
+
+| PR | Comment | Fix Applied |
+|----|---------|-------------|
+| #11633/#11625 | Data race — `capturedAuth` read without lock in httptest handler | Fixed: `auth := capturedAuth` inside lock; use `auth` outside |
+| #11557 | Truthy checks skip 0-valued metrics (idle clusters) | Fixed: changed `if (cluster.cpuUsageCores && ...)` → `!= null` for all 4 metric conditions |
+| #11648 | Comment in `useNetworkPolicies` error handler references non-existent `isDemoFallback` | Fixed: updated comment to accurately describe stale-data-preservation behavior |
+
+### MEDIUM Copilot Comments Fixed
+
+| PR | File | Fix Applied |
+|----|------|-------------|
+| #11566 | server_http_workloads.go | Added `s.kubectl == nil` guard in `handlePodsStreamSSE` and `handleJobsStreamSSE` before `ListContexts()` |
+| #11646 | clusterUtils.test.ts | Added 26 new tests (new file) covering deduplication, metric merging, distribution detection |
+
+### Merges
+- PR #11656 (queryAllClusters helper, -272 LOC, AI-authored, CI pass) → merged ✅
+
+### PRs Created
+
+| PR | Branch | Fix |
+|----|--------|-----|
+| #11661 | fix/reviewer-pass95-races-and-coverage | Fix data race, comment accuracy, nil guards, clusterUtils coverage |
+
+### Issues Filed
+
+| Issue | Title |
+|-------|-------|
+| #11659 | nightly: deploy-test suite killed after 300s wall-clock timeout |
+| #11660 | nightlyPlaywright: E2E test failures in mission-* and GPUOverview suites |
+
+### HIGH Comments Still Open
+- PR#11647: agentConnectivity.test.tsx STORAGE_KEY_AUTH_TOKEN — already fixed in merged code (`'auth_token'`), comment is stale
+- PR#11647: agentLoopbackFailurePaths.test.ts — already fixed in merged code
+- PR#11559: alertStorage.ts optional re-export comment — informational
+- PR#11566: server.go SSE contract lacking Go unit test — future pass
+- PR#11608: errorHandlingConsistency.test.tsx redundant test title — future pass
+
+---
+
 ## Pass 93 — 2026-05-02T18:30–19:45 UTC
 
 ### Trigger
