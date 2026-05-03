@@ -35,20 +35,20 @@ describe('fetcherUtils backend routing', () => {
     // We test the function by importing with different mock states
 
     it('returns false when no preference is set (default kc-agent)', async () => {
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
         STORAGE_KEY_TOKEN: 'kc-token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
@@ -59,20 +59,20 @@ describe('fetcherUtils backend routing', () => {
     it('returns true when preference is kagent', async () => {
       localStorage.setItem(BACKEND_PREF_KEY, 'kagent')
 
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
         STORAGE_KEY_TOKEN: 'kc-token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
@@ -83,20 +83,20 @@ describe('fetcherUtils backend routing', () => {
     it('returns true when preference is kagenti', async () => {
       localStorage.setItem(BACKEND_PREF_KEY, 'kagenti')
 
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
         STORAGE_KEY_TOKEN: 'kc-token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
@@ -107,20 +107,20 @@ describe('fetcherUtils backend routing', () => {
     it('returns false for unrecognized preference value', async () => {
       localStorage.setItem(BACKEND_PREF_KEY, 'kc-agent')
 
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
         STORAGE_KEY_TOKEN: 'kc-token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
@@ -131,20 +131,20 @@ describe('fetcherUtils backend routing', () => {
 
   describe('abortAllFetches()', () => {
     it('can be called without throwing', async () => {
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
         STORAGE_KEY_TOKEN: 'kc-token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
@@ -153,20 +153,20 @@ describe('fetcherUtils backend routing', () => {
     })
 
     it('can be called multiple times in succession', async () => {
-      vi.mock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
-      vi.mock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
-      vi.mock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
-      vi.mock('../../../hooks/mcp/clusterCacheRef', () => ({
+      vi.doMock('../../api', () => ({ isBackendUnavailable: vi.fn(() => false) }))
+      vi.doMock('../../sseClient', () => ({ fetchSSE: vi.fn() }))
+      vi.doMock('../../../hooks/useBackendHealth', () => ({ isInClusterMode: () => false }))
+      vi.doMock('../../../hooks/mcp/clusterCacheRef', () => ({
         clusterCacheRef: { clusters: [] },
       }))
-      vi.mock('../../constants', () => ({
+      vi.doMock('../../constants', () => ({
         LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
         STORAGE_KEY_TOKEN: 'kc-token',
       }))
-      vi.mock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
-      vi.mock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
-      vi.mock('../../schemas', () => ({ ClustersResponseSchema: {} }))
-      vi.mock('../../schemas/validate', () => ({
+      vi.doMock('../../constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 10_000 }))
+      vi.doMock('../../utils/concurrency', () => ({ settledWithConcurrency: vi.fn() }))
+      vi.doMock('../../schemas', () => ({ ClustersResponseSchema: {} }))
+      vi.doMock('../../schemas/validate', () => ({
         validateArrayResponse: vi.fn((_s: unknown, raw: unknown) => raw),
       }))
 
