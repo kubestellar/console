@@ -730,7 +730,11 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
 
   describe('connection event log', () => {
     it('logs connecting event on startup', async () => {
-      mockFetchHang()
+      // Use mockFetchOk so checkAgent() completes and calls this.setState(),
+      // which creates a new state object reference and triggers React re-render.
+      // Without a setState call, addEvent's mutation of connectionEvents is
+      // invisible to React (same object reference → skipped update).
+      mockFetchOk()
       const { result } = renderHook(() => useLocalAgent())
       await flushMicrotasks()
 

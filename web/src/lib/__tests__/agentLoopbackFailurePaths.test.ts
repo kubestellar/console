@@ -184,14 +184,16 @@ describe('fetcherUtils backend routing', () => {
 // Section 2: Agent Fetchers — Early Bail When Agent Unavailable
 // ===========================================================================
 
-describe('agentFetchers failure paths', () => {
-  const mockIsAgentUnavailable = vi.fn(() => false)
-  const mockClusterCacheRef = {
-    clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }>,
-  }
-  const mockAgentFetch = vi.fn()
-  const mockGetPodIssues = vi.fn()
+// Mock variables for agentFetchers section — declared at module scope so
+// vi.doMock factories in beforeEach can reference them.
+const mockIsAgentUnavailable = vi.fn(() => false)
+const mockClusterCacheRef = {
+  clusters: [] as Array<{ name: string; context?: string; reachable?: boolean }>,
+}
+const mockAgentFetch = vi.fn()
+const mockGetPodIssues = vi.fn()
 
+describe('agentFetchers failure paths', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -199,35 +201,31 @@ describe('agentFetchers failure paths', () => {
     mockClusterCacheRef.clusters = []
     localStorage.clear()
 
-    vi.mock('../../../lib/kubectlProxy', () => ({
+    vi.doMock('../kubectlProxy', () => ({
       kubectlProxy: { getPodIssues: (...args: unknown[]) => mockGetPodIssues(...args) },
     }))
-    vi.mock('../../mcp/shared', () => ({
+    vi.doMock('../../hooks/mcp/shared', () => ({
       clusterCacheRef: mockClusterCacheRef,
       agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
     }))
-    vi.mock('../../mcp/dedup', () => ({
+    vi.doMock('../../hooks/mcp/dedup', () => ({
       deduplicateClustersByServer: (clusters: Array<{ name: string }>) => clusters,
     }))
-    vi.mock('../../useLocalAgent', () => ({
+    vi.doMock('../../hooks/useLocalAgent', () => ({
       isAgentUnavailable: () => mockIsAgentUnavailable(),
     }))
-    vi.mock('../../../lib/constants', async (importOriginal) => {
-      const actual = (await importOriginal()) as Record<string, unknown>
-      return {
-        ...actual,
-        LOCAL_AGENT_HTTP_URL: 'http://localhost:8089',
-        STORAGE_KEY_TOKEN: 'kc-token',
-        FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-      }
-    })
-    vi.mock('../../../lib/constants/network', () => ({
+    vi.doMock('../constants', () => ({
+      LOCAL_AGENT_HTTP_URL: 'http://localhost:8089',
+      STORAGE_KEY_TOKEN: 'kc-token',
       FETCH_DEFAULT_TIMEOUT_MS: 10_000,
     }))
-    vi.mock('../../../lib/cache/fetcherUtils', () => ({
+    vi.doMock('../constants/network', () => ({
+      FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+    }))
+    vi.doMock('../cache/fetcherUtils', () => ({
       AGENT_HTTP_TIMEOUT_MS: 5_000,
     }))
-    vi.mock('../../../lib/utils/concurrency', () => ({
+    vi.doMock('../utils/concurrency', () => ({
       settledWithConcurrency: async (
         tasks: Array<() => Promise<unknown>>,
         _concurrency: number | undefined,
@@ -244,28 +242,9 @@ describe('agentFetchers failure paths', () => {
       },
     }))
     // Mock AlertsContext service modules (added after #11559 refactor)
-    vi.mock('../../../contexts/notifications', () => ({
-      shouldDispatchBrowserNotification: vi.fn(() => false),
-      isClusterUnreachable: vi.fn(() => false),
-      sendNotifications: vi.fn(),
-      sendBatchedNotifications: vi.fn(),
-    }))
-    vi.mock('../../../contexts/alertStorage', () => ({
-      ALERTS_KEY: 'kc_alerts',
-      MAX_ALERTS: 500,
-      loadNotifiedAlertKeys: vi.fn(() => new Map()),
-      saveNotifiedAlertKeys: vi.fn(),
-      loadFromStorage: vi.fn(() => []),
-      saveToStorage: vi.fn(),
-      saveAlerts: vi.fn(),
-      STORAGE_KEY_AUTH_TOKEN: 'auth_token',
-      FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-      DEFAULT_TEMPERATURE_THRESHOLD_F: 100,
-      DEFAULT_WIND_SPEED_THRESHOLD_MPH: 40,
-    }))
-    vi.mock('../../../contexts/alertRunbooks', () => ({
-      findAndExecuteRunbook: vi.fn(() => Promise.resolve(null)),
-    }))
+    vi.doMock('../../contexts/notifications', () => ({}))
+    vi.doMock('../../contexts/alertStorage', () => ({}))
+    vi.doMock('../../contexts/alertRunbooks', () => ({}))
   })
 
   afterEach(() => {
@@ -461,7 +440,7 @@ describe('agentFetchers failure paths', () => {
 
     it('returns null when no auth token', async () => {
       mockIsAgentUnavailable.mockReturnValue(false)
-      localStorage.removeItem('auth_token')
+      localStorage.removeItem('kc-token')
       const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchCiliumStatus()
       expect(result).toBeNull()
@@ -469,7 +448,7 @@ describe('agentFetchers failure paths', () => {
 
     it('returns null when token is demo-token', async () => {
       mockIsAgentUnavailable.mockReturnValue(false)
-      localStorage.setItem('auth_token', 'demo-token')
+      localStorage.setItem('kc-token', 'demo-token')
       const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
       const result = await fetchCiliumStatus()
       expect(result).toBeNull()
@@ -477,7 +456,7 @@ describe('agentFetchers failure paths', () => {
 
     it('returns null on fetch error (suppresses console noise)', async () => {
       mockIsAgentUnavailable.mockReturnValue(false)
-      localStorage.setItem('auth_token', 'real-token-123')
+      localStorage.setItem('kc-token', 'real-token-123')
       mockAgentFetch.mockRejectedValue(new Error('Connection refused'))
 
       const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
@@ -487,7 +466,7 @@ describe('agentFetchers failure paths', () => {
 
     it('returns null on non-ok HTTP response', async () => {
       mockIsAgentUnavailable.mockReturnValue(false)
-      localStorage.setItem('auth_token', 'real-token-123')
+      localStorage.setItem('kc-token', 'real-token-123')
       mockAgentFetch.mockResolvedValue({ ok: false, status: 404 })
 
       const { fetchCiliumStatus } = await import('../../hooks/useCachedData/agentFetchers')
