@@ -36,7 +36,8 @@ import {
   sendBatchedNotifications,
 } from './notifications'
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
-import { findRunbookForCondition, executeRunbook } from '../lib/runbooks/builtins'
+import { findRunbookForCondition } from '../lib/runbooks/builtins'
+import { executeRunbook } from '../lib/runbooks/executor'
 
 
 // Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of

@@ -9,7 +9,7 @@
 
 import type { Alert } from '../types/alerts'
 import { findRunbookForCondition } from '../lib/runbooks/builtins'
-import { executeRunbook, type ExecutionContext } from '../lib/runbooks/executor'
+import { executeRunbook } from '../lib/runbooks/executor'
 
 export interface RunbookExecutionResult {
   enrichedPrompt: string
