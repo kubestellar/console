@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
 import { Gauge, Cpu, HardDrive, Box, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
 import { Button } from '../ui/Button'
@@ -111,6 +112,7 @@ function QuotaModal({
   )
   const [showGpuPresets, setShowGpuPresets] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const gpuDropdownKeyNav = useDropdownKeyNav(() => setShowGpuPresets(false))
 
   const { namespaces: clusterNamespaces } = useCachedNamespaces(cluster || undefined)
   const availableNamespaces = cluster ? clusterNamespaces : namespaces
@@ -240,7 +242,7 @@ function QuotaModal({
                     GPU
                   </Button>
                   {showGpuPresets && (
-                    <div className="absolute right-0 top-full mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-10">
+                    <div role="menu" onKeyDown={gpuDropdownKeyNav} className="absolute right-0 top-full mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-10">
                       {GPU_RESOURCE_TYPES.map(rt => (
                         <button
                           key={rt.key}

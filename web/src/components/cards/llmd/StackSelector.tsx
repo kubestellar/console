@@ -12,6 +12,7 @@
  */
 import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } from 'lucide-react'
+import { useDropdownKeyNav } from '../../../hooks/useDropdownKeyNav'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
@@ -209,6 +210,7 @@ export function StackSelector() {
   const { t } = useTranslation()
   const stackContext = useOptionalStack()
   const { isOpen, close: closeDropdown, toggle } = useModalState()
+  const stackListKeyNav = useDropdownKeyNav(closeDropdown)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -504,7 +506,7 @@ export function StackSelector() {
             </div>
 
             {/* Stack list */}
-            <div className="max-h-112 min-h-[100px] overflow-y-auto overscroll-contain scroll-enhanced">
+            <div role="listbox" onKeyDown={stackListKeyNav} className="max-h-112 min-h-[100px] overflow-y-auto overscroll-contain scroll-enhanced">
               {filteredAndSortedStacks.length > 0 ? (
                 Object.entries(stacksByCluster).sort(([a], [b]) => a.localeCompare(b)).map(([cluster, clusterStacks]) => (
                   <div key={cluster}>
