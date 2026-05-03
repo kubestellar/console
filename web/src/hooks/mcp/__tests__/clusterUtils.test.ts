@@ -312,4 +312,198 @@ describe('clusterUtils.detectDistributionFromServer', () => {
   it('returns undefined for undefined input', () => {
     expect(detectDistributionFromServer(undefined)).toBeUndefined()
   })
+
+  it('detects aks from azmk8s.io server URL', () => {
+    expect(detectDistributionFromServer('https://my-cluster.azmk8s.io')).toBe('aks')
+  })
+
+  it('detects oci from oraclecloud.com server URL', () => {
+    expect(detectDistributionFromServer('https://cluster.oraclecloud.com')).toBe('oci')
+  })
+
+  it('detects digitalocean from k8s.ondigitalocean.com server URL', () => {
+    expect(detectDistributionFromServer('https://cluster.k8s.ondigitalocean.com')).toBe('digitalocean')
+  })
+
+  it('detects gke from gke.io server URL', () => {
+    expect(detectDistributionFromServer('https://cluster.gke.io')).toBe('gke')
+  })
+
+  it('detects openshift from openshift.com server URL', () => {
+    expect(detectDistributionFromServer('https://api.cluster.openshift.com:6443')).toBe('openshift')
+  })
+
+  it('detects openshift from fmaas pattern', () => {
+    expect(detectDistributionFromServer('https://api.fmaas-prod.fmaas.res.ibm.com:6443')).toBe('openshift')
+  })
+
+  it('detects openshift from generic api:6443 pattern', () => {
+    expect(detectDistributionFromServer('https://api.mycluster.example.com:6443')).toBe('openshift')
+  })
+
+  it('returns undefined for empty string', () => {
+    expect(detectDistributionFromServer('')).toBeUndefined()
+  })
+})
+
+// =============================================================================
+// detectDistributionFromNamespaces — additional distributions
+// =============================================================================
+
+describe('clusterUtils.detectDistributionFromNamespaces (additional)', () => {
+  it('detects eks from aws- namespace prefix', () => {
+    expect(detectDistributionFromNamespaces(['aws-node', 'default'])).toBe('eks')
+  })
+
+  it('detects eks from amazon- namespace prefix', () => {
+    expect(detectDistributionFromNamespaces(['amazon-cloudwatch', 'default'])).toBe('eks')
+  })
+
+  it('detects aks from azure- namespace prefix', () => {
+    expect(detectDistributionFromNamespaces(['azure-system', 'default'])).toBe('aks')
+  })
+
+  it('detects aks from exact azure-arc namespace', () => {
+    expect(detectDistributionFromNamespaces(['azure-arc', 'default'])).toBe('aks')
+  })
+
+  it('detects rancher from cattle-system namespace', () => {
+    expect(detectDistributionFromNamespaces(['cattle-system', 'default'])).toBe('rancher')
+  })
+
+  it('detects rancher from cattle- prefix', () => {
+    expect(detectDistributionFromNamespaces(['cattle-fleet-system', 'default'])).toBe('rancher')
+  })
+})
+
+// =============================================================================
+// deduplicateClustersByServer — sorting/priority edge cases
+// =============================================================================
+
+describe('clusterUtils.deduplicateClustersByServer (priority)', () => {
+  it('prefers reachable cluster as primary over unreachable', () => {
+    const unreachable = makeCluster({
+      name: 'unreachable',
+      server: 'https://api.test',
+      reachable: false,
+      cpuCores: 32,
+    })
+    const reachable = makeCluster({
+      name: 'reachable',
+      server: 'https://api.test',
+      reachable: true,
+      cpuCores: 8,
+    })
+    const result = deduplicateClustersByServer([unreachable, reachable])
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('reachable')
+    expect(result[0].aliases).toContain('unreachable')
+  })
+
+  it('prefers user-friendly name over auto-generated OpenShift name', () => {
+    const autoName = makeCluster({
+      name: 'default/api-cluster.openshiftapps.com:6443/kube:admin',
+      server: 'https://api.test',
+    })
+    const friendlyName = makeCluster({
+      name: 'my-cluster',
+      server: 'https://api.test',
+    })
+    const result = deduplicateClustersByServer([autoName, friendlyName])
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('my-cluster')
+  })
+
+  it('prefers current context when other criteria are equal', () => {
+    const notCurrent = makeCluster({
+      name: 'cluster-a',
+      server: 'https://api.test',
+    })
+    const current = makeCluster({
+      name: 'cluster-b',
+      server: 'https://api.test',
+      isCurrent: true,
+    })
+    const result = deduplicateClustersByServer([notCurrent, current])
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('cluster-b')
+  })
+
+  it('prefers shorter name as tiebreaker', () => {
+    const short = makeCluster({
+      name: 'prod',
+      server: 'https://api.test',
+    })
+    const long = makeCluster({
+      name: 'production-cluster',
+      server: 'https://api.test',
+    })
+    const result = deduplicateClustersByServer([long, short])
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('prod')
+  })
+
+  it('prefers cluster with more namespaces', () => {
+    const fewNs = makeCluster({
+      name: 'few-ns',
+      server: 'https://api.test',
+      namespaces: ['default'],
+    })
+    const moreNs = makeCluster({
+      name: 'more-ns',
+      server: 'https://api.test',
+      namespaces: ['default', 'kube-system', 'monitoring'],
+    })
+    const result = deduplicateClustersByServer([fewNs, moreNs])
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('more-ns')
+  })
+
+  it('uses primary nodeCount when available (not alias)', () => {
+    const primary = makeCluster({
+      name: 'primary',
+      server: 'https://api.test',
+      cpuCores: 16,
+      nodeCount: 3,
+    })
+    const alias = makeCluster({
+      name: 'alias-very-long-auto-generated-name',
+      server: 'https://api.test',
+      nodeCount: 10,
+    })
+    const result = deduplicateClustersByServer([primary, alias])
+    expect(result[0].nodeCount).toBe(3)
+  })
+
+  it('falls back to alias nodeCount when primary has undefined', () => {
+    const primary = makeCluster({
+      name: 'primary',
+      server: 'https://api.test',
+      cpuCores: 16,
+    })
+    const alias = makeCluster({
+      name: 'alias-very-long-auto-generated-name',
+      server: 'https://api.test',
+      nodeCount: 5,
+    })
+    const result = deduplicateClustersByServer([primary, alias])
+    expect(result[0].nodeCount).toBe(5)
+  })
+
+  it('sets healthy=true if any cluster in group is healthy', () => {
+    const unhealthy = makeCluster({
+      name: 'unhealthy',
+      server: 'https://api.test',
+      healthy: false,
+      reachable: true,
+    })
+    const healthy = makeCluster({
+      name: 'healthy-alias',
+      server: 'https://api.test',
+      healthy: true,
+      reachable: false,
+    })
+    const result = deduplicateClustersByServer([unhealthy, healthy])
+    expect(result[0].healthy).toBe(true)
+  })
 })
