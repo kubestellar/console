@@ -10,6 +10,7 @@
 import type { Alert } from '../types/alerts'
 import { findRunbookForCondition } from '../lib/runbooks/builtins'
 import { executeRunbook } from '../lib/runbooks/executor'
+import type { RunbookContext } from '../lib/runbooks/types'
 
 export interface RunbookExecutionResult {
   enrichedPrompt: string
@@ -31,7 +32,7 @@ export async function findAndExecuteRunbook(
   if (!runbook) return null
 
   try {
-    const context: ExecutionContext = {
+    const context: RunbookContext = {
       cluster: alert.cluster,
       namespace: alert.namespace,
       resource: alert.resource,
