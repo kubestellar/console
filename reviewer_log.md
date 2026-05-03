@@ -1,5 +1,61 @@
 # Reviewer Log
 
+## Pass 103 — 2026-05-04 20:45 UTC
+
+### Trigger
+KICK — CI=80% (transient: Playwright E2E in_progress at snapshot time). Coverage=89.38%<91% target. 33 unaddressed Copilot comments (0 HIGH, 28 MEDIUM, 5 LOW). GA4 nominal.
+
+### RED Indicator Analysis
+
+**CI=80%**: Transient. Main branch was healthy at investigation time (11/11 complete workflows passing). The 80% snapshot was captured while Playwright E2E Tests, Console App Smoke, and Stuck Detection were still in_progress.
+
+**Coverage=89.38%**: Gap of ~1.62pp to the 91% target. Addressed by adding 5 new tests targeting previously zero-covered branches in `sanitizer.ts` (resolution/prerequisites) and `scope.ts` (interval timer limit, error swallowing, `__timerCleanup`).
+
+### MEDIUM Copilot Comments Fixed
+
+| PR | File | Issue | Fix Applied |
+|----|------|-------|-------------|
+| #11712 | `pkg/agent/provider_local_openai_compat_test.go` | 3 tests used `GetConfigManager()` directly, mutating `~/.kc/config.yaml` | Replaced all 3 with `isolateConfigManager(t)` |
+| #11713 | `pkg/api/handlers/ping_test.go` | Target Timeout subtest made real network request to `8.8.8.7` | Replaced with deterministic `errTransport{context.DeadlineExceeded}` mock; added `require.NoError` |
+| #11552 | `pkg/api/handlers/swap_test.go` | `resp, _ := app.Test(req)` ignoring errors in 3 subtests | Added `require.NoError(t, err)` after each `app.Test()` call |
+
+### Coverage Tests Added
+
+| File | New Tests | Lines Covered |
+|------|-----------|---------------|
+| `sanitizer.test.ts` | `redacts sensitive data inside resolution.*` | `sanitizer.ts` lines 99–113 |
+| `sanitizer.test.ts` | `redacts sensitive data inside prerequisites` | `sanitizer.ts` lines 118–122 |
+| `scope.test.ts` | `safeSetInterval throws when timer limit is exceeded` | `scope.ts` line 86 |
+| `scope.test.ts` | `safeSetInterval swallows errors thrown by the callback` | `scope.ts` line 93 |
+| `scope.test.ts` | `__timerCleanup runs without error` | `scope.ts` lines 172–173 |
+
+### PRs Created
+
+| PR | Branch | Fix |
+|----|--------|-----|
+| #11757 | fix/reviewer-pass102-test-reliability | Go test reliability (config isolation, ping mock, swap error checks) + 5 coverage tests |
+
+### Merges Attempted
+
+- PR #1568 (kubestellar/docs, workflow sync): CI pass, merge-eligible. Blocked — GraphQL auth 401 (`gh pr merge --admin` requires GraphQL token).
+
+### Build/Test Verification
+
+- `go build ./pkg/agent/... ./pkg/api/handlers/...` ✅
+- `go vet ./pkg/agent/... ./pkg/api/handlers/...` ✅
+- `go test ./pkg/agent/... -run TestLocalOpenAICompatProvider` — 4/4 pass ✅
+- `go test ./pkg/api/handlers/... -run TestPingHandler` — pass ✅
+- `go test ./pkg/api/handlers/... -run TestSwapHandlers` — 4/4 subtests pass ✅
+- `vitest run sanitizer.test.ts scope.test.ts` — 33/33 pass ✅
+
+### Outstanding
+
+- PR #11757: CI pending → merge when green
+- Coverage: 5 new tests push toward 91% target; next gap targets are `useDropdownKeyNav.ts` (8.33%), `scope.ts` remaining branches
+- PR #1568 (kubestellar/docs): blocked by GraphQL auth limitation — skip until token refresh
+
+---
+
 ## Pass 95 — 2026-05-03T05:20–06:20 UTC
 
 ### Trigger
