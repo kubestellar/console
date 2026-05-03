@@ -36,12 +36,12 @@ log "START"
 
 # Extract PR list from actionable.json
 prs=$(python3 -c "
-import json
-with open('$ACTIONABLE_FILE') as f:
+import json,sys
+with open(sys.argv[1]) as f:
     data = json.load(f)
 for p in data.get('prs', {}).get('items', []):
     print(f\"{p['repo']}:{p['number']}\")
-" 2>/dev/null)
+" "$ACTIONABLE_FILE" 2>/dev/null)
 
 if [ -z "$prs" ]; then
   python3 -c "
@@ -105,7 +105,7 @@ else:
       title=$(echo "$pr_info" | python3 -c "import json,sys; print(json.load(sys.stdin).get('title',''))" 2>/dev/null || echo "")
       mergeable=$(echo "$pr_info" | python3 -c "import json,sys; print(json.load(sys.stdin).get('mergeable','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
 
-      echo "{\"repo\":\"$repo\",\"number\":$num,\"status\":\"$status\",\"author\":\"$author\",\"title\":$(python3 -c "import json; print(json.dumps('$title'[:100]))" 2>/dev/null || echo '""'),\"mergeable\":\"$mergeable\"}" > "$checks_tmp/${repo//\//_}_${num}.json"
+      echo "{\"repo\":\"$repo\",\"number\":$num,\"status\":\"$status\",\"author\":\"$author\",\"title\":$(python3 -c "import json,sys; print(json.dumps(sys.argv[1][:100]))" "$title" 2>/dev/null || echo '""'),\"mergeable\":\"$mergeable\"}" > "$checks_tmp/${repo//\//_}_${num}.json"
     fi
   ) &
 done
@@ -160,7 +160,7 @@ print(json.dumps(result, indent=2))
 
 mv "$TMP_FILE" "$OUTPUT_FILE"
 
-eligible_count=$(python3 -c "import json; print(len(json.load(open('$OUTPUT_FILE')).get('merge_eligible',[])))" 2>/dev/null || echo 0)
-total=$(python3 -c "import json; d=json.load(open('$OUTPUT_FILE')); print(len(d.get('merge_eligible',[]))+len(d.get('not_ready',[])))" 2>/dev/null || echo 0)
+eligible_count=$(python3 -c "import json,sys; print(len(json.load(open(sys.argv[1])).get('merge_eligible',[])))" "$OUTPUT_FILE" 2>/dev/null || echo 0)
+total=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(len(d.get('merge_eligible',[]))+len(d.get('not_ready',[])))" "$OUTPUT_FILE" 2>/dev/null || echo 0)
 
 log "DONE — $eligible_count merge-eligible out of $total PRs"

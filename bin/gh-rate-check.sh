@@ -67,11 +67,11 @@ get_api_reset_epoch() {
 # --- Phase 1: Check and expire existing pullbacks ---
 for pullback_file in "$PULLBACK_STATE_DIR"/pullback_*.json; do
   [ -f "$pullback_file" ] || continue
-  expiry=$(python3 -c "import json; print(json.load(open('$pullback_file')).get('expiry_epoch', 0))" 2>/dev/null || echo 0)
+  expiry=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('expiry_epoch', 0))" "$pullback_file" 2>/dev/null || echo 0)
   if (( now_epoch >= expiry )); then
     # Pullback expired — unpause only the agents this pullback paused
-    paused_by_us=$(python3 -c "import json; print(' '.join(json.load(open('$pullback_file')).get('paused_agents', [])))" 2>/dev/null || echo "")
-    cli_name=$(python3 -c "import json; print(json.load(open('$pullback_file')).get('cli', 'unknown'))" 2>/dev/null || echo "unknown")
+    paused_by_us=$(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1])).get('paused_agents', [])))" "$pullback_file" 2>/dev/null || echo "")
+    cli_name=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('cli', 'unknown'))" "$pullback_file" 2>/dev/null || echo "unknown")
     for agent in $paused_by_us; do
       if [ -f "$GOVERNOR_FLAG_DIR/operator_paused_${agent}" ]; then
         log "PULLBACK-SKIP $agent — operator-paused, not resuming after pullback for cli=$cli_name"
@@ -104,8 +104,8 @@ fi
 new_alerts=$(echo "$existing" | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
-now = $now_epoch
-ttl = $TTL_SECONDS
+now = int(sys.argv[1])
+ttl = int(sys.argv[2])
 def is_active(a):
     reset = a.get('api_reset_epoch', 0)
     if reset > 0:
@@ -113,7 +113,7 @@ def is_active(a):
     return now - a.get('detected_epoch', 0) < ttl
 alerts = [a for a in data.get('alerts', []) if is_active(a)]
 print(json.dumps(alerts))
-" 2>/dev/null || echo '[]')
+" "$now_epoch" "$TTL_SECONDS" 2>/dev/null || echo '[]')
 
 # --- Phase 2.5: Recovery check — clear alerts if API rate limit has recovered ---
 # If we have active alerts but the API shows remaining > 0, the limit has reset.
@@ -126,8 +126,8 @@ if [ "$alert_count" -gt 0 ]; then
     # Also expire any active pullbacks since the limit has reset
     for pullback_file in "$PULLBACK_STATE_DIR"/pullback_*.json; do
       [ -f "$pullback_file" ] || continue
-      paused_by_us=$(python3 -c "import json; print(' '.join(json.load(open('$pullback_file')).get('paused_agents', [])))" 2>/dev/null || echo "")
-      cli_name=$(python3 -c "import json; print(json.load(open('$pullback_file')).get('cli', 'unknown'))" 2>/dev/null || echo "unknown")
+      paused_by_us=$(python3 -c "import json,sys; print(' '.join(json.load(open(sys.argv[1])).get('paused_agents', [])))" "$pullback_file" 2>/dev/null || echo "")
+      cli_name=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('cli', 'unknown'))" "$pullback_file" 2>/dev/null || echo "unknown")
       for agent in $paused_by_us; do
         if [ -f "$GOVERNOR_FLAG_DIR/operator_paused_${agent}" ]; then
           continue

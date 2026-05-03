@@ -722,12 +722,12 @@ _ENUM_FILE="/var/run/hive-metrics/actionable.json"
 _MERGE_FILE="/var/run/hive-metrics/merge-eligible.json"
 _WORK_LIST=""
 if [ -f "$_ENUM_FILE" ]; then
-  _ENUM_ISSUES=$(python3 -c "import json; print(json.load(open('$_ENUM_FILE')).get('issues',{}).get('count',0))" 2>/dev/null || echo 0)
-  _ENUM_PRS=$(python3 -c "import json; print(json.load(open('$_ENUM_FILE')).get('prs',{}).get('count',0))" 2>/dev/null || echo 0)
-  _ENUM_SLA=$(python3 -c "import json; print(json.load(open('$_ENUM_FILE')).get('issues',{}).get('sla_violations',0))" 2>/dev/null || echo 0)
+  _ENUM_ISSUES=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('issues',{}).get('count',0))" "$_ENUM_FILE" 2>/dev/null || echo 0)
+  _ENUM_PRS=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('prs',{}).get('count',0))" "$_ENUM_FILE" 2>/dev/null || echo 0)
+  _ENUM_SLA=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('issues',{}).get('sla_violations',0))" "$_ENUM_FILE" 2>/dev/null || echo 0)
   _ISSUES_INLINE=$(python3 -c "
-import json
-d = json.load(open('$_ENUM_FILE'))
+import json,sys
+d = json.load(open(sys.argv[1]))
 items = sorted(d.get('issues',{}).get('items',[]), key=lambda x: x.get('age_minutes',0), reverse=True)
 # Only show scanner-lane issues (classifier pre-assigns lanes)
 scanner_items = [i for i in items if i.get('lane', 'scanner') == 'scanner']
@@ -736,22 +736,22 @@ for i in scanner_items[:20]:
     model = i.get('model_recommendation', 'sonnet')
     tracker = ' [TRACKER]' if i.get('is_tracker') else ''
     print(f\"  {i['age_minutes']}m {i['repo']}#{i['number']} [{tier}/{model}] [{','.join(i.get('labels',[]))}] {i['title'][:60]}{tracker}\")
-" 2>/dev/null || echo "  (none)")
+" "$_ENUM_FILE" 2>/dev/null || echo "  (none)")
   # Build cluster summary for scanner
   _CLUSTERS_INLINE=$(python3 -c "
-import json
-d = json.load(open('$_ENUM_FILE'))
+import json,sys
+d = json.load(open(sys.argv[1]))
 clusters = d.get('clusters', [])
 for c in clusters[:10]:
     nums = ', '.join(f\"#{i['number']}\" for i in c['issues'])
     print(f\"  BUNDLE [{c['key']}]: {nums} ({c['count']} issues)\")
-" 2>/dev/null || echo "")
+" "$_ENUM_FILE" 2>/dev/null || echo "")
   _PRS_INLINE=$(python3 -c "
-import json
-d = json.load(open('$_ENUM_FILE'))
+import json,sys
+d = json.load(open(sys.argv[1]))
 for p in d.get('prs',{}).get('items',[]):
     print(f\"  {p['repo']}#{p['number']} by @{p.get('author','')} {p['title'][:70]}\")
-" 2>/dev/null || echo "  (none)")
+" "$_ENUM_FILE" 2>/dev/null || echo "  (none)")
   _WORK_LIST="ACTIONABLE ISSUES (${_ENUM_ISSUES}, oldest first):
 ${_ISSUES_INLINE}
 ACTIONABLE PRs (${_ENUM_PRS}):
@@ -761,14 +761,14 @@ ${_PRS_INLINE}"
 fi
 _MERGE_INLINE=""
 if [ -f "$_MERGE_FILE" ]; then
-  _MERGE_COUNT=$(python3 -c "import json; print(json.load(open('$_MERGE_FILE')).get('count',0))" 2>/dev/null || echo 0)
+  _MERGE_COUNT=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('count',0))" "$_MERGE_FILE" 2>/dev/null || echo 0)
   if [ "$_MERGE_COUNT" -gt 0 ] 2>/dev/null; then
     _MERGE_LIST=$(python3 -c "
-import json
-d = json.load(open('$_MERGE_FILE'))
+import json,sys
+d = json.load(open(sys.argv[1]))
 for p in d.get('merge_eligible',[]):
     print(f\"  {p['repo']}#{p['number']} {p['title'][:70]}\")
-" 2>/dev/null || echo "  (none)")
+" "$_MERGE_FILE" 2>/dev/null || echo "  (none)")
     _MERGE_INLINE="
 MERGE-READY PRs (${_MERGE_COUNT}):
 ${_MERGE_LIST}"
@@ -808,12 +808,12 @@ for _rk in nightly nightlyCompliance nightlyDashboard nightlyPlaywright hourly w
 done
 # Read deploy job names from HEALTH_DEPLOY_JOBS config (JSON array)
 _deploy_job_names=$(python3 -c "
-import json
-jobs = json.loads('${HEALTH_DEPLOY_JOBS:-[]}')
+import json,sys
+jobs = json.loads(sys.argv[1])
 for j in jobs:
     name = j.get('name', '') if isinstance(j, dict) else j
     if name: print(name)
-" 2>/dev/null || true)
+" "${HEALTH_DEPLOY_JOBS:-[]}" 2>/dev/null || true)
 for _dk in $_deploy_job_names; do
   _dv=$(echo "$_rh_json" | jq -r ".${_dk} // -1" 2>/dev/null || echo -1)
   [ "$_dv" = "0" ] && _rh_reds="${_rh_reds} deploy:${_dk}=RED"
@@ -836,22 +836,22 @@ _GA4_FILE="/var/run/hive-metrics/ga4-anomalies.json"
 _COPILOT_PREAMBLE=""
 _GA4_PREAMBLE=""
 if [ -f "$_COPILOT_FILE" ]; then
-  _COPILOT_COUNT=$(python3 -c "import json; d=json.load(open('$_COPILOT_FILE')); print(d.get('total_unaddressed',0))" 2>/dev/null || echo 0)
+  _COPILOT_COUNT=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d.get('total_unaddressed',0))" "$_COPILOT_FILE" 2>/dev/null || echo 0)
   if [ "$_COPILOT_COUNT" -gt 0 ] 2>/dev/null; then
     _COPILOT_DETAILS=$(python3 -c "
-import json
-d = json.load(open('$_COPILOT_FILE'))
+import json,sys
+d = json.load(open(sys.argv[1]))
 for c in d.get('comments', [])[:10]:
     sev = c.get('severity','?').upper()
     print(f\"  [{sev}] {c['repo']}#{c['pr_number']} {c.get('file','')}:{c.get('line','')} — {c['body'][:80]}\")
-" 2>/dev/null || echo "  (details unavailable)")
+" "$_COPILOT_FILE" 2>/dev/null || echo "  (details unavailable)")
     _COPILOT_PREAMBLE="
 COPILOT COMMENTS (${_COPILOT_COUNT} unaddressed — pre-fetched):
 ${_COPILOT_DETAILS}"
   fi
 fi
 if [ -f "$_GA4_FILE" ]; then
-  _GA4_SUMMARY=$(python3 -c "import json; print(json.load(open('$_GA4_FILE')).get('summary',''))" 2>/dev/null || echo "")
+  _GA4_SUMMARY=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('summary',''))" "$_GA4_FILE" 2>/dev/null || echo "")
   if [ -n "$_GA4_SUMMARY" ]; then
     _GA4_PREAMBLE="
 GA4: ${_GA4_SUMMARY}"
@@ -880,8 +880,8 @@ _OUTREACH_FILE="/var/run/hive-metrics/outreach-prs.json"
 _OUTREACH_PREAMBLE=""
 if [ -f "$_OUTREACH_FILE" ]; then
   _OUTREACH_PREAMBLE=$(python3 -c "
-import json
-d = json.load(open('$_OUTREACH_FILE'))
+import json,sys
+d = json.load(open(sys.argv[1]))
 c = d.get('counts', {})
 violations = d.get('one_pr_per_org_violations', {})
 lines = []
@@ -892,7 +892,7 @@ blocked = d.get('blocked_orgs', [])
 if blocked:
     lines.append(f'Blocked orgs (have open PR): {\", \".join(blocked[:20])}')
 print('\n'.join(lines))
-" 2>/dev/null || echo "")
+" "$_OUTREACH_FILE" 2>/dev/null || echo "")
 fi
 _OUTREACH_SECTION=""
 [ -n "$_OUTREACH_PREAMBLE" ] && _OUTREACH_SECTION="

@@ -97,8 +97,8 @@ for p in prs:
     echo "$comments" | python3 -c "
 import json, sys
 
-repo = '${repo}'
-pr_num = ${pr_num}
+repo = sys.argv[2]
+pr_num = int(sys.argv[3])
 comments = json.load(sys.stdin)
 severity_keywords = json.loads(sys.argv[1])
 
@@ -124,7 +124,7 @@ for c in comments:
         'created_at': c.get('created_at', '')
     }
     print(json.dumps(result))
-" "$SEVERITY_KEYWORDS_JSON" >> "$all_comments_tmp" 2>/dev/null || true
+" "$SEVERITY_KEYWORDS_JSON" "$repo" "$pr_num" >> "$all_comments_tmp" 2>/dev/null || true
   done
 done
 
@@ -161,5 +161,5 @@ print(json.dumps(result, indent=2))
 
 mv "$TMP_FILE" "$OUTPUT_FILE"
 
-total=$(python3 -c "import json; d=json.load(open('$OUTPUT_FILE')); print(d['total_unaddressed'])" 2>/dev/null || echo 0)
+total=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['total_unaddressed'])" "$OUTPUT_FILE" 2>/dev/null || echo 0)
 log "DONE — $total unaddressed Copilot comments found"

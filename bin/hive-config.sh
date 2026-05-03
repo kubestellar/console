@@ -28,10 +28,10 @@ _hive_yq() {
   elif command -v python3 &>/dev/null; then
     python3 -c "
 import yaml, sys, json
-with open('$_HIVE_CONFIG') as f:
+with open(sys.argv[1]) as f:
     d = yaml.safe_load(f)
 # Navigate dotted path
-path = '''$1'''.lstrip('.')
+path = sys.argv[2].lstrip('.')
 parts = []
 current = ''
 for ch in path:
@@ -66,7 +66,7 @@ elif val is None:
     print('null')
 else:
     print(val)
-" 2>/dev/null
+" "$_HIVE_CONFIG" "$1" 2>/dev/null
   else
     echo ""
   fi
@@ -89,7 +89,7 @@ _hive_read_array() {
     echo "${2:-}"
   else
     if command -v python3 &>/dev/null; then
-      python3 -c "import json; print(' '.join(json.loads('''$val''')))" 2>/dev/null || echo "${2:-}"
+      python3 -c "import json,sys; print(' '.join(json.loads(sys.argv[1])))" "$val" 2>/dev/null || echo "${2:-}"
     else
       echo "$val" | tr -d '[]",' | xargs
     fi
