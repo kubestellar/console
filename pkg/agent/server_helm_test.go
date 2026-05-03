@@ -10,6 +10,85 @@ import (
 	"testing"
 )
 
+func TestValidateHelmK8sName(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		field   string
+		wantErr bool
+	}{
+		{"empty name is valid", "", "release", false},
+		{"valid standard name", "my-release-123", "release", false},
+		{"valid complex name", "nginx.ingress_1", "namespace", false},
+		{"starts with dash", "-my-release", "release", true},
+		{"contains invalid character", "myrelease@123", "release", true},
+		{"contains space", "my release", "release", true},
+		{"contains semicolon", "release;rm", "release", true},
+		{"exceeds max length", strings.Repeat("a", helmMaxK8sNameLen+1), "release", true},
+		{"exactly max length", strings.Repeat("a", helmMaxK8sNameLen), "release", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateHelmK8sName(tt.input, tt.field)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateHelmK8sName() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateHelmChartArg(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"empty chart", "", true},
+		{"starts with dash", "-bitnami/nginx", true},
+		{"valid repo chart", "bitnami/nginx", false},
+		{"valid oci format", "oci://registry-1.docker.io/bitnamicharts/nginx", false},
+		{"valid complex name", "my-repo/my_chart.v1", false},
+		{"contains invalid character", "bitnami/nginx&", true},
+		{"contains space", "bitnami nginx", true},
+		{"exceeds max length", "bitnami/" + strings.Repeat("a", helmMaxChartLen), true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateHelmChartArg(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateHelmChartArg() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateHelmChartVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"empty version", "", false},
+		{"valid semantic version", "1.2.3", false},
+		{"valid version with dash", "1.2.3-alpha.1", false},
+		{"valid version with plus", "1.2.3+build.456", false},
+		{"starts with dash", "-1.2.3", true},
+		{"contains space", "1.2.3 alpha", true},
+		{"contains invalid character", "1.2.3&alpha", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateHelmChartVersion(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateHelmChartVersion() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestServer_HandleHelmRollback(t *testing.T) {
 	defer func() { execCommand = exec.Command; execCommandContext = exec.CommandContext }()
 	execCommand = fakeExecCommand
