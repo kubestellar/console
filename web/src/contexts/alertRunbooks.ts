@@ -7,7 +7,7 @@
  * - Deep-link generation for navigation
  */
 
-import type { Alert, AlertRule } from '../types/alerts'
+import type { Alert } from '../types/alerts'
 import { findRunbookForCondition } from '../lib/runbooks/builtins'
 import { executeRunbook, type ExecutionContext } from '../lib/runbooks/executor'
 

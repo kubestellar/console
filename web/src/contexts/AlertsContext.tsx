@@ -31,11 +31,12 @@ import {
 import {
   shouldDispatchBrowserNotification,
   isClusterUnreachable,
-  PERSISTENT_CLUSTER_CONDITIONS,
   type BrowserNotificationParams,
   sendNotifications,
   sendBatchedNotifications,
 } from './notifications'
+import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
+import { findRunbookForCondition, executeRunbook } from '../lib/runbooks/builtins'
 
 
 // Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of
@@ -260,15 +261,7 @@ function applyMutations(
 
 // Local storage keys
 const ALERT_RULES_KEY = 'kc_alert_rules'
-const ALERTS_KEY = 'kc_alerts'
 
-/** Maximum number of alerts to retain in memory and storage at any time. */
-const MAX_ALERTS = 500
-
-/** Default temperature threshold for extreme-heat weather alerts (°F). */
-const DEFAULT_TEMPERATURE_THRESHOLD_F = 100
-/** Default wind-speed threshold for high-wind weather alerts (mph). */
-const DEFAULT_WIND_SPEED_THRESHOLD_MPH = 40
 
 interface AlertsContextValue {
   alerts: Alert[]
@@ -848,12 +841,6 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
     const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
     return sendNotifications(alert, channels, token, API_BASE, FETCH_DEFAULT_TIMEOUT_MS)
-  }
-
-  const localSendBatchedNotifications = async (items: Array<{ alert: Alert; channels: AlertChannel[] }>) => {
-    const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
-    return sendBatchedNotifications(items, token, API_BASE, FETCH_DEFAULT_TIMEOUT_MS, settledWithConcurrency)
   }
 
   // ── Centralized browser notification dispatch (#8750, #8751, #8752) ──
@@ -1648,7 +1635,9 @@ Please provide:
       // Send batched notifications after state flush (fire-and-forget)
       if (acc.notifications.length > 0) {
         queueMicrotask(() => {
-          sendBatchedNotifications(acc.notifications).catch(() => {
+          const token = safeGet(STORAGE_KEY_AUTH_TOKEN)
+          const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+          sendBatchedNotifications(acc.notifications, token, API_BASE, FETCH_DEFAULT_TIMEOUT_MS, settledWithConcurrency).catch(() => {
             // Silent failure - notifications are best-effort
           })
         })
