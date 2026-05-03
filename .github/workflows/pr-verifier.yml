@@ -5,42 +5,10 @@ on:
     types: [opened, edited, synchronize, reopened]
 
 permissions:
-  contents: read
+  checks: write
+  pull-requests: read
 
 jobs:
-  verify-pr:
-    name: verify PR contents
-    # Skip verification for dependabot PRs — they use different title conventions
-    if: github.actor != 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: read
-      pull-requests: write
-    steps:
-      - name: Login to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Pull verifier image
-        run: docker pull ghcr.io/kubestellar/pr-verifier:v0.4.3
-
-      - name: Verifier action
-        id: verifier
-        continue-on-error: true
-        run: |
-          docker run --rm \
-            -e INPUT_GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
-            -e GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME" \
-            -e GITHUB_EVENT_PATH="/github/event.json" \
-            -e GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \
-            -e GITHUB_SHA="$GITHUB_SHA" \
-            -e GITHUB_REF="$GITHUB_REF" \
-            -e GITHUB_WORKSPACE="/github/workspace" \
-            -v "$GITHUB_EVENT_PATH:/github/event.json:ro" \
-            -v "$GITHUB_WORKSPACE:/github/workspace:ro" \
-            ghcr.io/kubestellar/pr-verifier:v0.4.3
+  verify:
+    uses: kubestellar/infra/.github/workflows/reusable-pr-verifier.yml@main
+    secrets: inherit
