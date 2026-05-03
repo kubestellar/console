@@ -1,10 +1,12 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -31,6 +33,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/fileutil"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/kagent"
 	"github.com/kubestellar/console/pkg/kagenti_provider"
@@ -49,13 +52,32 @@ const (
 	defaultDevFrontendURL   = "http://localhost:5174"
 	defaultProdFrontendURL  = "http://localhost:8080"
 
+	// kcAgentBaseURL is the loopback URL of the co-located kc-agent HTTP server.
+	// The backend proxies auto-update requests to this address so the browser
+	// never makes a cross-origin call to kc-agent (avoids CORS/PNA issues).
+	kcAgentBaseURL = "http://127.0.0.1:8585"
+
+	// kcAgentProxyTimeout is the timeout for proxied requests to kc-agent.
+	kcAgentProxyTimeout = 30 * time.Second
+
+	// maxAgentProxyResponseBytes caps io.ReadAll on kc-agent proxy responses.
+	maxAgentProxyResponseBytes = 10 * 1024 * 1024 // 10 MiB
+
 	// apiDefaultBodyLimit is the per-route body-size limit enforced by the
 	// bodyGuard middleware on all API routes except feedback screenshot uploads.
 	apiDefaultBodyLimit = 1 * 1024 * 1024 // 1 MB — sufficient for JSON API requests
 
 	// feedbackBodyLimit is the global Fiber BodyLimit, elevated to support
 	// base64-encoded screenshot uploads in POST /api/feedback/requests.
-	feedbackBodyLimit = 20 * 1024 * 1024 // 20 MB — base64 screenshot uploads
+	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
+	feedbackBodyLimit = 5 * 1024 * 1024 // 5 MB — base64 screenshot uploads
+
+	// envMaxBodyBytes is the environment variable that overrides the global
+	// Fiber BodyLimit applied to every HTTP request (#9891). When unset or
+	// invalid, the server falls back to feedbackBodyLimit so feedback screenshot
+	// uploads continue to work. Larger deployments can raise this for big
+	// form posts; smaller appliances can lower it to tighten DoS surface.
+	envMaxBodyBytes = "MAX_BODY_BYTES"
 )
 
 // Version is the build version, injected via ldflags at build time.
@@ -144,6 +166,25 @@ type Config struct {
 	BrandIssuesURL    string // ISSUES_URL (default: "https://github.com/kubestellar/kubestellar/issues/new")
 	BrandRepoURL      string // REPO_URL (default: "https://github.com/kubestellar/console")
 	BrandHostedDomain string // HOSTED_DOMAIN — domain for demo mode (default: "console.kubestellar.io")
+	// AgentToken is the shared secret for authenticating with kc-agent.
+	// startup-oauth.sh generates this and passes it to both kc-agent and
+	// the Go backend via the KC_AGENT_TOKEN env var. The backend serves
+	// it to authenticated users via GET /api/agent/token so the frontend
+	// can call kc-agent endpoints that require Bearer auth.
+	AgentToken string
+	// Kubara platform catalog configuration
+	// KubaraCatalogRepo is the GitHub owner/name of the catalog repo
+	// (e.g. "my-org/my-catalog"). Defaults to "kubara-io/kubara".
+	KubaraCatalogRepo string
+	// KubaraCatalogPath is the directory path inside the repo containing
+	// Helm chart subdirectories. Defaults to the standard Kubara path.
+	KubaraCatalogPath string
+	// NoLocalAgent suppresses the frontend's local kc-agent connections
+	// (ws://127.0.0.1:8585). Set to true for in-cluster deployments
+	// (Helm/Kubernetes) where no local kc-agent exists on the user's machine.
+	// Exposed via /health as "no_local_agent" so the pre-built frontend image
+	// can detect this at runtime without requiring a VITE_NO_LOCAL_AGENT rebuild.
+	NoLocalAgent bool
 	// Watchdog support: when set, the backend listens on this port instead of Port
 	BackendPort int
 }
@@ -158,11 +199,16 @@ type Server struct {
 	k8sClient           *k8s.MultiClusterClient
 	notificationService *notifications.Service
 	persistenceStore    *store.PersistenceStore
-	loadingSrv          *http.Server // temporary loading screen server
-	shuttingDown        int32        // atomic flag: 1 during graceful shutdown
+	loadingSrv          *http.Server          // temporary loading screen server
+	authHandler         *handlers.AuthHandler // guarded by oauthMu for hot-reload
+	oauthMu             sync.RWMutex          // protects authHandler during manifest flow hot-reload
+	shuttingDown        int32                 // atomic flag: 1 during graceful shutdown
 	gpuUtilWorker       *GPUUtilizationWorker
-	done                chan struct{} // closed on Shutdown to stop background goroutines
-	shutdownOnce        sync.Once     // ensures Shutdown is idempotent (#6478)
+	workloadHandlers    *handlers.WorkloadHandlers // for cache refresh shutdown (#10007)
+	rewardsHandler      *handlers.RewardsHandler   // for eviction goroutine shutdown
+	failureTracker      *middleware.FailureTracker  // tracks auth failure counts for rate limiting
+	done                chan struct{}              // closed on Shutdown to stop background goroutines
+	shutdownOnce        sync.Once                  // ensures Shutdown is idempotent (#6478)
 }
 
 // NewServer creates a new API server. It starts a temporary loading page
@@ -228,18 +274,20 @@ func NewServer(cfg Config) (*Server, error) {
 		"::1/128",        // IPv6 loopback
 	}
 
-	// BodyLimit is set to feedbackBodyLimit (20 MB) because the feedback endpoint
+	// BodyLimit defaults to feedbackBodyLimit (5 MB) because the feedback endpoint
 	// accepts base64-encoded screenshot uploads. Per-route enforcement is done by
 	// bodyGuard middleware (1 MB for most routes) and analyticsBodyGuard (64 KB).
-	// Fiber buffers up to BodyLimit before middleware runs, so a concurrent flood
-	// of max-size bodies can still cause memory pressure (#7039). ReadTimeout (30s)
-	// bounds the buffering window; for stricter enforcement, deploy behind an
-	// ingress controller with its own body-size limit (e.g. nginx client_max_body_size).
+	// Reduced from 20 MB to 5 MB to limit memory-based DoS surface (#9710).
+	// Deployers can override via MAX_BODY_BYTES env var (#9891) to raise the cap
+	// for large form uploads or lower it to tighten the DoS surface further.
+	// ReadTimeout (30s) further bounds the buffering window.
+	maxBodyBytes := resolveMaxBodyBytes()
+	slog.Info("fiber body limit configured", "bytes", maxBodyBytes)
 	app := fiber.New(fiber.Config{
 		ErrorHandler:            customErrorHandler,
 		ReadBufferSize:          16384,
 		WriteBufferSize:         16384,
-		BodyLimit:               feedbackBodyLimit,
+		BodyLimit:               maxBodyBytes,
 		ReadTimeout:             30 * time.Second,
 		WriteTimeout:            5 * time.Minute, // large static assets on slow networks
 		IdleTimeout:             2 * time.Minute,
@@ -357,10 +405,24 @@ func NewServer(cfg Config) (*Server, error) {
 
 // startLoadingServer starts a temporary HTTP server that serves a loading page.
 // It returns immediately — the server runs in a background goroutine.
+//
+// The loading server intentionally returns HTTP 503 (Service Unavailable) on
+// /health while the real Fiber app is still initializing. This matters for
+// readiness probes, smoke tests, and `curl -sf` style checks (#9904): without
+// it, callers think the backend is ready as soon as the loading page binds,
+// race ahead to real API routes like /auth/github, and get the loading HTML
+// back with HTTP 200 — which looks like a broken auth contract but is
+// actually the loading page's catch-all `/` handler answering the request.
+// A 503 on /health forces probes to keep polling until the real server is up.
 func startLoadingServer(addr string) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		// 503 + Retry-After tells orchestrators and smoke tests the backend is
+		// not ready yet. The body still describes the state for human debugging.
+		const loadingHealthRetryAfterSec = "1"
+		w.Header().Set("Retry-After", loadingHealthRetryAfterSec)
+		w.WriteHeader(http.StatusServiceUnavailable)
 		w.Write([]byte(`{"status":"starting"}`))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -407,7 +469,7 @@ func (s *Server) setupMiddleware() {
 	s.app.Use(cors.New(cors.Config{
 		AllowOrigins:     s.config.FrontendURL,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Requested-With,X-KC-Client-Auth",
 		ExposeHeaders:    "X-Token-Refresh",
 		AllowCredentials: true,
 	}))
@@ -452,13 +514,17 @@ func (s *Server) setupMiddleware() {
 		// Without it the font lookup throws, labels fail to render, and the
 		// globe initialization aborts — leaving the right side of the login
 		// page blank.
+		//
+		// connect-src includes https://raw.githubusercontent.com because the
+		// Marketplace page fetches registry.json from the console-marketplace
+		// repo on GitHub (#10653). Without it the browser blocks the request.
 		c.Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://www.googletagmanager.com; "+
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"img-src 'self' data: https:; "+
-				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
+				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://console.kubestellar.io https://api.github.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
 				"font-src 'self' data: https://fonts.gstatic.com; "+
 				"object-src 'none'; "+
 				"base-uri 'self'")
@@ -522,119 +588,63 @@ setInterval(async function(){try{var r=await fetch('/healthz');if(r.ok){var d=aw
 // was set, which caused downstream UIs to show a "GitHub login" button
 // that was guaranteed to fail on click.
 func (s *Server) oauthConfigured() bool {
+	s.oauthMu.RLock()
+	defer s.oauthMu.RUnlock()
 	return s.config.GitHubClientID != "" && s.config.GitHubSecret != ""
 }
 
+// resolveOAuthCredentials checks the SQLite store for persisted OAuth
+// credentials (from the GitHub App Manifest flow) when env vars are empty.
+func (s *Server) resolveOAuthCredentials() {
+	if s.config.GitHubClientID != "" && s.config.GitHubSecret != "" {
+		return
+	}
+	dbID, dbSecret, err := s.store.GetOAuthCredentials(context.Background())
+	if err != nil || dbID == "" {
+		return
+	}
+	s.config.GitHubClientID = dbID
+	s.config.GitHubSecret = dbSecret
+	slog.Info("[Server] loaded OAuth credentials from database (manifest flow)")
+}
+
+// reloadOAuth hot-swaps the auth handler with new OAuth credentials after
+// the GitHub App Manifest flow completes. Existing in-flight requests
+// finish against the old handler; new requests use the updated one.
+func (s *Server) reloadOAuth(clientID, clientSecret string) {
+	s.oauthMu.Lock()
+	defer s.oauthMu.Unlock()
+
+	s.config.GitHubClientID = clientID
+	s.config.GitHubSecret = clientSecret
+
+	if s.authHandler != nil {
+		s.authHandler.Stop()
+	}
+
+	s.authHandler = handlers.NewAuthHandler(s.store, handlers.AuthConfig{
+		GitHubClientID: clientID,
+		GitHubSecret:   clientSecret,
+		GitHubURL:      s.config.GitHubURL,
+		JWTSecret:      s.config.JWTSecret,
+		FrontendURL:    s.config.FrontendURL,
+		BackendURL:     s.backendURL(),
+		DevUserLogin:   s.config.DevUserLogin,
+		DevUserEmail:   s.config.DevUserEmail,
+		DevUserAvatar:  s.config.DevUserAvatar,
+		GitHubToken:    s.config.GitHubToken,
+		DevMode:        s.config.DevMode,
+		SkipOnboarding: s.config.SkipOnboarding,
+	})
+	s.authHandler.SetHub(s.hub)
+	slog.Info("[Server] OAuth config hot-reloaded after manifest flow")
+}
+
 func (s *Server) setupRoutes() {
-	// Minimal probe endpoint for load balancers and k8s liveness checks.
-	// Returns only status — no configuration metadata.
-	s.app.Get("/healthz", func(c *fiber.Ctx) error {
-		if atomic.LoadInt32(&s.shuttingDown) == 1 {
-			return c.JSON(fiber.Map{"status": "shutting_down"})
-		}
-		return c.JSON(fiber.Map{"status": "ok"})
-	})
+	s.setupHealthRoutes()
 
-	// Health check — returns version and UI configuration for the frontend.
-	// Build metadata (go_version, git_commit, etc.) lives in /api/version.
-	s.app.Get("/health", func(c *fiber.Ctx) error {
-		if atomic.LoadInt32(&s.shuttingDown) == 1 {
-			return c.JSON(fiber.Map{"status": "shutting_down", "version": Version})
-		}
-		inCluster := s.k8sClient != nil && s.k8sClient.IsInCluster()
-
-		// Determine cluster reachability status. If we have a k8s client,
-		// check cached health data — if no clusters are reachable, report
-		// "degraded" instead of "ok" so monitoring can detect the problem.
-		healthStatus := "ok"
-		if s.k8sClient != nil {
-			cachedHealth := s.k8sClient.GetCachedHealth()
-			if len(cachedHealth) > 0 {
-				anyReachable := false
-				for _, h := range cachedHealth {
-					if h != nil && h.Reachable {
-						anyReachable = true
-						break
-					}
-				}
-				if !anyReachable {
-					healthStatus = "degraded"
-				}
-			}
-			// If no cached health data yet, keep "ok" — health poller hasn't run yet
-		}
-
-		resp := fiber.Map{
-			"status":           healthStatus,
-			"version":          Version,
-			"oauth_configured": s.oauthConfigured(),
-			"in_cluster":       inCluster,
-			"install_method":   detectInstallMethod(inCluster),
-			"project":          s.config.ConsoleProject,
-			"branding": fiber.Map{
-				"appName":            s.config.BrandAppName,
-				"appShortName":       s.config.BrandAppShortName,
-				"tagline":            s.config.BrandTagline,
-				"logoUrl":            s.config.BrandLogoURL,
-				"faviconUrl":         s.config.BrandFaviconURL,
-				"themeColor":         s.config.BrandThemeColor,
-				"docsUrl":            s.config.BrandDocsURL,
-				"communityUrl":       s.config.BrandCommunityURL,
-				"websiteUrl":         s.config.BrandWebsiteURL,
-				"issuesUrl":          s.config.BrandIssuesURL,
-				"repoUrl":            s.config.BrandRepoURL,
-				"hostedDomain":       s.config.BrandHostedDomain,
-				"showStarDecoration": s.config.ConsoleProject == "kubestellar",
-				"showAdopterNudge":   s.config.ConsoleProject == "kubestellar",
-				"showDemoToLocalCTA": s.config.ConsoleProject == "kubestellar",
-				"showRewards":        s.config.ConsoleProject == "kubestellar",
-				"showLinkedInShare":  s.config.ConsoleProject == "kubestellar",
-			},
-		}
-		if s.config.EnabledDashboards != "" {
-			// Explicit ENABLED_DASHBOARDS takes precedence over project presets
-			dashboards := strings.Split(s.config.EnabledDashboards, ",")
-			trimmed := make([]string, 0, len(dashboards))
-			for _, d := range dashboards {
-				if t := strings.TrimSpace(d); t != "" {
-					trimmed = append(trimmed, t)
-				}
-			}
-			if len(trimmed) > 0 {
-				resp["enabled_dashboards"] = trimmed
-			}
-		} else if presetDashboards := getProjectDashboards(s.config.ConsoleProject); presetDashboards != nil {
-			// Fall back to project preset dashboard list
-			resp["enabled_dashboards"] = presetDashboards
-		}
-		return c.JSON(resp)
-	})
-
-	// Version endpoint — lightweight, returns only build metadata.
-	// In dev mode (go run), VCS info from debug.ReadBuildInfo() may be empty,
-	// so we fall back to git commands for commit and time.
-	s.app.Get("/api/version", func(c *fiber.Ctx) error {
-		gitCommit := buildInfo.VCSRevision
-		gitTime := buildInfo.VCSTime
-		gitDirty := buildInfo.VCSModified == "true"
-
-		// Fallback: if VCS revision is empty (e.g. go run without VCS info),
-		// try to read from git directly
-		if gitCommit == "" {
-			gitCommit = gitFallbackRevision()
-		}
-		if gitTime == "" {
-			gitTime = gitFallbackTime()
-		}
-
-		return c.JSON(fiber.Map{
-			"version":    Version,
-			"go_version": buildInfo.GoVersion,
-			"git_commit": gitCommit,
-			"git_time":   gitTime,
-			"git_dirty":  gitDirty,
-		})
-	})
+	// Resolve OAuth credentials from SQLite if env vars are empty (manifest flow).
+	s.resolveOAuthCredentials()
 
 	// Auth routes (public)
 	auth := handlers.NewAuthHandler(s.store, handlers.AuthConfig{
@@ -651,9 +661,11 @@ func (s *Server) setupRoutes() {
 		DevMode:        s.config.DevMode,
 		SkipOnboarding: s.config.SkipOnboarding,
 	})
+	s.authHandler = auth
 	// FailureTracker for per-user/IP auth failure counting (#8676 Phase 1).
 	// Exposed via c.Locals for use in auth handlers in future phases.
 	failureTracker := middleware.NewFailureTracker()
+s.failureTracker = failureTracker
 
 	// Rate limit auth endpoints — stricter to prevent brute-force.
 	// Uses composite key (userID:IP when authenticated, IP alone pre-auth)
@@ -683,8 +695,30 @@ func (s *Server) setupRoutes() {
 
 	// Wire WebSocket hub into auth handler so logout disconnects WS sessions (#4906)
 	auth.SetHub(s.hub)
-	s.app.Get("/auth/github", authLimiter, injectTracker, auth.GitHubLogin)
-	s.app.Get("/auth/github/callback", authLimiter, injectTracker, auth.GitHubCallback)
+
+	// Auth routes delegate through s.authHandler (behind oauthMu) so the
+	// GitHub App Manifest flow can hot-swap credentials without a restart.
+	s.app.Get("/auth/github", authLimiter, injectTracker, func(c *fiber.Ctx) error {
+		s.oauthMu.RLock()
+		h := s.authHandler
+		s.oauthMu.RUnlock()
+		return h.GitHubLogin(c)
+	})
+	s.app.Get("/auth/github/callback", authLimiter, injectTracker, func(c *fiber.Ctx) error {
+		s.oauthMu.RLock()
+		h := s.authHandler
+		s.oauthMu.RUnlock()
+		return h.GitHubCallback(c)
+	})
+
+	// GitHub App Manifest one-click OAuth setup (kubestellar/kubestellar#3761).
+	manifest := handlers.NewManifestHandler(
+		s.store, s.backendURL(), s.config.FrontendURL, s.config.GitHubURL,
+		func(clientID, clientSecret string) { s.reloadOAuth(clientID, clientSecret) },
+		s.oauthConfigured,
+	)
+	s.app.Get("/auth/manifest/setup", authLimiter, manifest.ManifestSetup)
+	s.app.Get("/auth/manifest/callback", authLimiter, manifest.ManifestCallback)
 	// #6587 — /auth/logout now requires JWTAuth. Previously anyone could
 	// POST /auth/logout with any JWT (even a stolen one) because the route
 	// was registered without the auth middleware. Requiring JWTAuth proves
@@ -696,12 +730,22 @@ func (s *Server) setupRoutes() {
 	// token is rejected by the middleware before the handler even runs.
 	jwtAuth := middleware.JWTAuth(s.config.JWTSecret)
 	csrfGuard := middleware.RequireCSRF()
-	s.app.Post("/auth/refresh", authLimiter, injectTracker, csrfGuard, jwtAuth, auth.RefreshToken)
-	s.app.Post("/auth/logout", authLimiter, injectTracker, csrfGuard, jwtAuth, auth.Logout)
+	s.app.Post("/auth/refresh", authLimiter, injectTracker, csrfGuard, jwtAuth, func(c *fiber.Ctx) error {
+		s.oauthMu.RLock()
+		h := s.authHandler
+		s.oauthMu.RUnlock()
+		return h.RefreshToken(c)
+	})
+	s.app.Post("/auth/logout", authLimiter, injectTracker, csrfGuard, jwtAuth, func(c *fiber.Ctx) error {
+		s.oauthMu.RLock()
+		h := s.authHandler
+		s.oauthMu.RUnlock()
+		return h.Logout(c)
+	})
 
 	// Public endpoint rate limiter — loose limit to prevent DoS on unauthenticated
 	// routes (active-users, ping, nightly-e2e, youtube, medium, analytics) (#7029).
-	publicLimiterMaxRequests := 60         // max requests per window per IP
+	publicLimiterMaxRequests := 120        // max requests per window per IP (#9969: raised from 60 — multiple users behind shared NAT)
 	publicLimiterWindow := 1 * time.Minute // sliding window duration
 	publicLimiter := limiter.New(limiter.Config{
 		Max:        publicLimiterMaxRequests,
@@ -725,84 +769,35 @@ func (s *Server) setupRoutes() {
 		return c.Next()
 	}
 
-	// Active users endpoint (public — returns only aggregate counts, no sensitive data)
-	s.app.Get("/api/active-users", publicLimiter, func(c *fiber.Ctx) error {
-		wsUsers := s.hub.GetActiveUsersCount()
-		demoSessions := s.hub.GetDemoSessionCount()
-		wsTotalConns := s.hub.GetTotalConnectionsCount()
-
-		// Return whichever is higher (WebSocket users or demo sessions)
-		activeUsers := wsUsers
-		if demoSessions > wsUsers {
-			activeUsers = demoSessions
+	// Wrap publicLimiter to skip critical paths that must never be rate-limited
+	// by background polling collateral. Fiber v2 group("/api") prefix matching
+	// applies group middleware to ALL /api/* routes — including /api/me,
+	// /api/feedback/requests, /api/github/*, and /api/version — even though
+	// those routes are registered standalone outside the group. Without this
+	// skip wrapper, 16 compliance/supply-chain handlers each creating
+	// Group("/api", publicLimiter) would stack 16 independent publicLimiter
+	// checks on every /api/* request.
+	publicLimiterSkipPaths := map[string]bool{
+		"/api/feedback/requests": true,
+		"/api/me":                true,
+		"/api/version":           true,
+	}
+	publicLimiterWithSkip := func(c *fiber.Ctx) error {
+		path := c.Path()
+		if publicLimiterSkipPaths[path] {
+			return c.Next()
 		}
-		totalConnections := wsTotalConns
-		if demoSessions > wsTotalConns {
-			totalConnections = demoSessions
+		if strings.HasPrefix(path, "/api/github/") {
+			return c.Next()
 		}
-
-		return c.JSON(fiber.Map{
-			"activeUsers":      activeUsers,
-			"totalConnections": totalConnections,
-		})
-	})
-
-	// Active users heartbeat endpoint (for demo mode session counting)
-	// This is unauthenticated telemetry — session IDs are validated for length
-	// and the total number of unique sessions is capped to prevent inflation.
-	s.app.Post("/api/active-users", publicLimiter, func(c *fiber.Ctx) error {
-		var body struct {
-			SessionID string `json:"sessionId"`
+		if strings.HasPrefix(path, "/api/auth/") {
+			return c.Next()
 		}
-		if err := c.BodyParser(&body); err != nil || body.SessionID == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "sessionId required"})
-		}
-		if !s.hub.RecordDemoSession(body.SessionID) {
-			return c.Status(429).JSON(fiber.Map{"error": "session limit reached"})
-		}
-		demoCount := s.hub.GetDemoSessionCount()
-		return c.JSON(fiber.Map{
-			"activeUsers":      demoCount,
-			"totalConnections": demoCount,
-		})
-	})
+		return publicLimiter(c)
+	}
+	publicAPI := s.app.Group("/api", publicLimiterWithSkip)
 
-	// Public API routes (no auth — only non-sensitive, publicly-available data)
-	// Nightly E2E status is public GitHub Actions data, safe for desktop widgets
-	nightlyE2EPublic := handlers.NewNightlyE2EHandler(s.config.GitHubToken)
-	s.app.Get("/api/public/nightly-e2e/runs", publicLimiter, nightlyE2EPublic.GetRuns)
-	s.app.Get("/api/public/nightly-e2e/run-logs", publicLimiter, nightlyE2EPublic.GetRunLogs)
-
-	// Analytics proxies (public — no auth required, have their own origin validation)
-	// MUST be registered before the /api group so JWTAuth middleware doesn't intercept them.
-	// Protected by publicLimiter (#7029) and analyticsBodyGuard (#7030).
-	s.app.All("/api/m", publicLimiter, analyticsBodyGuard, handlers.GA4CollectProxy)
-	s.app.Get("/api/gtag", publicLimiter, handlers.GA4ScriptProxy)
-	s.app.Get("/api/ksc", publicLimiter, handlers.UmamiScriptProxy)
-	s.app.Post("/api/send", publicLimiter, analyticsBodyGuard, handlers.UmamiCollectProxy)
-
-	// Network ping proxy (public — lightweight server-side HTTP HEAD for latency measurement)
-	// Avoids browser no-cors limitations that produce unreliable results
-	s.app.Get("/api/ping", publicLimiter, handlers.PingHandler)
-
-	// MCP handlers (used in protected routes below)
-	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
-	// SECURITY FIX: All MCP routes are now protected regardless of dev mode
-	// Dev mode only affects things like frontend URLs and default users,
-	// NOT authentication requirements
-
-	// YouTube playlist (public — proxies to YouTube RSS feed, cached 1h)
-	s.app.Get("/api/youtube/playlist", publicLimiter, handlers.YouTubePlaylistHandler)
-	s.app.Get("/api/youtube/thumbnail/:id", publicLimiter, handlers.YouTubeThumbnailProxy)
-
-	// Medium blog (public — proxies to Medium RSS feed, cached 1h)
-	s.app.Get("/api/medium/blog", publicLimiter, handlers.MediumBlogHandler)
-
-	// ACMM scan — registered below on the authenticated api group
-
-	// Mission knowledge base browse/file (public — proxies to public GitHub repo)
-	missions := handlers.NewMissionsHandler()
-	missions.RegisterPublicRoutes(s.app.Group("/api/missions"))
+	s.setupPublicRoutes(publicLimiter, analyticsBodyGuard, publicAPI)
 
 	// API routes (protected) — with rate limiting
 	//
@@ -811,16 +806,32 @@ func (s *Server) setupRoutes() {
 	// an independent counter, so the effective limit is `max × N` where N is the
 	// pod count. A shared Redis/Valkey storage backend is recommended for strict
 	// enforcement across replicas but is out of scope for this change.
-	apiLimiterMaxRequests := 200        // max requests per window per IP
+	apiLimiterMaxRequests := 2000       // max requests per window per user+IP (#10100: raised from 600 — dashboard + background polling can exceed 600 in the first minute)
 	apiLimiterWindow := 1 * time.Minute // sliding window duration
 	apiLimiter := limiter.New(limiter.Config{
-		Max:        apiLimiterMaxRequests,
-		Expiration: apiLimiterWindow,
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.IP()
-		},
+		Max:          apiLimiterMaxRequests,
+		Expiration:   apiLimiterWindow,
+		KeyGenerator: middleware.CompositeKey, // per-user+IP: authenticated users are bucketed individually (#9969)
 		LimitReached: func(c *fiber.Ctx) error {
 			c.Set("Retry-After", strconv.Itoa(int(apiLimiterWindow.Seconds()))) // #7040
+			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
+		},
+	})
+
+	// feedbackLimiter is a dedicated per-user rate limiter for the issue
+	// submission endpoint (#9969). It uses a 1-hour window so a single user
+	// can submit at least 10 feature requests per hour without being blocked
+	// by background API polling that may saturate the general apiLimiter.
+	// CompositeKey keys on userID+IP for authenticated users and plain IP
+	// for unauthenticated callers.
+	const feedbackLimiterMaxRequests = 10  // 10 submissions per user per hour
+	feedbackLimiterWindow := 1 * time.Hour // sliding window duration
+	feedbackLimiter := limiter.New(limiter.Config{
+		Max:          feedbackLimiterMaxRequests,
+		Expiration:   feedbackLimiterWindow,
+		KeyGenerator: middleware.CompositeKey,
+		LimitReached: func(c *fiber.Ctx) error {
+			c.Set("Retry-After", strconv.Itoa(int(feedbackLimiterWindow.Seconds()))) // #9969
 			return c.Status(429).JSON(fiber.Map{"error": "too many requests, try again later"})
 		},
 	})
@@ -835,12 +846,113 @@ func (s *Server) setupRoutes() {
 		}
 		return c.Next()
 	}
-	api := s.app.Group("/api", apiLimiter, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
 
-	// User routes
+	// Feedback POST route: uses its own feedbackLimiter (10 req/hr per user).
+	// The apiLimiterWithSkip wrapper exempts this path so dashboard polling
+	// cannot block user feedback submission (#9969).
+	feedbackCfg := handlers.LoadFeedbackConfig()
+	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
+	s.app.Post("/api/feedback/requests", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), feedbackLimiter, feedback.CreateFeatureRequest)
+
+	// Wrap apiLimiter so it skips the feedback POST — that route has its own
+	// dedicated feedbackLimiter (10 req/hr). Without this, Fiber's group prefix
+	// matching applies apiLimiter to ALL /api/* routes including the standalone
+	// POST registered above, causing 429 when dashboard polling exhausts the
+	// general budget.
+	apiLimiterSkipPaths := map[string]bool{
+		"/api/feedback/requests": true, // feedback submission has its own feedbackLimiter
+		"/api/me":                true, // user identity — must survive for login to work
+		"/api/version":           true, // version check for update dialog
+		"/api/mcp/clusters":      true, // cluster discovery — must not be blocked by auth-retry cascades (#10925)
+	}
+	apiLimiterSkipPrefixes := []string{
+		"/api/github/", // GitHub proxy (updates dialog, contributions list) has its own per-user limiter
+	}
+	apiLimiterWithSkip := func(c *fiber.Ctx) error {
+		path := c.Path()
+		if apiLimiterSkipPaths[path] {
+			return c.Next()
+		}
+		for _, prefix := range apiLimiterSkipPrefixes {
+			if strings.HasPrefix(path, prefix) {
+				return c.Next()
+			}
+		}
+		return apiLimiter(c)
+	}
+
+	api := s.app.Group("/api", apiLimiterWithSkip, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
+
+	// User identity routes — exempt from both apiLimiter (via skip list) and
+	// authLimiter. JWTAuth is sufficient protection. The old authLimiter
+	// (10 req/min) caused login loops: initial page load fires multiple /api/me
+	// calls, exhausting the budget and triggering a 429→redirect→login cycle.
 	user := handlers.NewUserHandler(s.store)
-	api.Get("/me", user.GetCurrentUser)
-	api.Put("/me", user.UpdateCurrentUser)
+	s.app.Get("/api/me", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), user.GetCurrentUser)
+	s.app.Put("/api/me", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), user.UpdateCurrentUser)
+
+	// kc-agent token endpoint — returns the shared KC_AGENT_TOKEN so the
+	// frontend can authenticate to kc-agent HTTP endpoints (auto-update, etc.).
+	// Auth-protected: only logged-in users can retrieve this.
+	agentToken := s.config.AgentToken
+	api.Get("/agent/token", func(c *fiber.Ctx) error {
+		if agentToken == "" {
+			return c.JSON(fiber.Map{"token": ""})
+		}
+		return c.JSON(fiber.Map{"token": agentToken})
+	})
+
+	// kc-agent auto-update proxy — forwards /api/agent/auto-update/* to the
+	// co-located kc-agent at 127.0.0.1:8585. This avoids cross-origin requests
+	// from the browser (localhost:8080 → 127.0.0.1:8585) which trigger CORS
+	// and Private Network Access checks that are fragile across browser versions.
+	// The backend injects the Bearer token server-side so the frontend never
+	// needs to know KC_AGENT_TOKEN for auto-update operations.
+	// allowedAgentSubPaths restricts which kc-agent endpoints the proxy
+	// can forward to — prevents path-traversal attacks via crafted :path.
+	allowedAgentSubPaths := map[string]bool{
+		"status":  true,
+		"config":  true,
+		"trigger": true,
+		"cancel":  true,
+	}
+	agentHTTPClient := &http.Client{Timeout: kcAgentProxyTimeout}
+	api.All("/agent/auto-update/:path", func(c *fiber.Ctx) error {
+		subPath := c.Params("path")
+
+		// Reject path-traversal sequences and non-allowlisted endpoints.
+		if strings.Contains(subPath, "..") || strings.Contains(subPath, "%2e") || strings.Contains(subPath, "%2E") || !allowedAgentSubPaths[subPath] {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid agent proxy path"})
+		}
+
+		targetURL := kcAgentBaseURL + "/auto-update/" + subPath
+
+		var bodyReader io.Reader
+		if len(c.Body()) > 0 {
+			bodyReader = bytes.NewReader(c.Body())
+		}
+
+		req, err := http.NewRequestWithContext(c.Context(), c.Method(), targetURL, bodyReader)
+		if err != nil {
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to create proxy request"})
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Requested-With", "XMLHttpRequest")
+		if agentToken != "" {
+			req.Header.Set("Authorization", "Bearer "+agentToken)
+		}
+
+		resp, err := agentHTTPClient.Do(req)
+		if err != nil {
+			slog.Warn("[agent-proxy] request failed", "path", subPath, "error", err)
+			return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "kc-agent unreachable"})
+		}
+		defer resp.Body.Close()
+
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxAgentProxyResponseBytes))
+		c.Set("Content-Type", resp.Header.Get("Content-Type"))
+		return c.Status(resp.StatusCode).Send(body)
+	})
 
 	// GitHub API proxy — keeps PAT server-side, frontend calls /api/github/*
 	githubProxy := handlers.NewGitHubProxyHandler(s.config.GitHubToken, s.store)
@@ -858,6 +970,8 @@ func (s *Server) setupRoutes() {
 
 	// ACMM scan — uses server's GitHub token like other GitHub-powered cards
 	api.Get("/acmm/scan", handlers.ACMMScanHandler)
+	// ACMM badge — shields.io endpoint with server-side caching
+	api.Get("/acmm/badge", handlers.ACMMBadgeHandler)
 
 	// Persistent settings routes
 	settingsHandler := handlers.NewSettingsHandler(settings.GetSettingsManager(), s.store)
@@ -909,6 +1023,7 @@ func (s *Server) setupRoutes() {
 	// Events (anonymous product feedback)
 	events := handlers.NewEventHandler(s.store)
 	api.Post("/events", events.RecordEvent)
+	api.Get("/events", events.GetEvents)
 
 	// RBAC and User Management routes
 	rbac := handlers.NewRBACHandler(s.store, s.k8sClient)
@@ -939,6 +1054,19 @@ func (s *Server) setupRoutes() {
 	auditHandler := handlers.NewAuditHandler(s.store)
 	api.Get("/admin/audit-log", auditHandler.GetAuditLog)
 
+	// Compliance frameworks: pass nil evaluator for demo/synthetic results.
+	// A real evaluator requires a ClusterProber implementation backed by
+	// kubeconfig access to each managed cluster.
+	// Read-only GET routes are registered as public above; only POST
+	// (evaluate, report) requires authentication.
+	complianceFrameworks := handlers.NewComplianceFrameworksHandler(nil)
+	complianceFrameworks.RegisterRoutes(api.Group("/compliance/frameworks"))
+
+	// Compliance report generation: shares the same route group so
+	// POST /compliance/frameworks/:id/report sits alongside evaluate.
+	complianceReports := handlers.NewComplianceReportsHandler(nil)
+	complianceReports.RegisterRoutes(api.Group("/compliance/frameworks"))
+
 	// Namespace read routes. GET /namespaces is viewer-or-above (see
 	// ListNamespaces's requireViewerOrAbove check) and
 	// GET /namespaces/:name/access is admin-only (see GetNamespaceAccess).
@@ -954,6 +1082,7 @@ func (s *Server) setupRoutes() {
 	api.Get("/admin/rate-limit-status", adminHandler.GetRateLimitStatus)
 
 	// Mission knowledge base routes (validate, share — protected)
+	missions := handlers.NewMissionsHandler()
 	missions.RegisterRoutes(api.Group("/missions"))
 
 	// Orbit (recurring maintenance) routes — protected
@@ -965,192 +1094,35 @@ func (s *Server) setupRoutes() {
 	orbit.RegisterRoutes(api.Group("/orbit"))
 	orbit.StartScheduler(s.done)
 
-	// MCP routes (cluster operations via kubestellar tools and direct k8s)
-	// SECURITY: All MCP routes require authentication in both dev and production modes
-	api.Get("/mcp/status", mcpHandlers.GetStatus)
-	api.Get("/mcp/tools/ops", mcpHandlers.GetOpsTools)
-	api.Get("/mcp/tools/deploy", mcpHandlers.GetDeployTools)
-	api.Get("/mcp/clusters", mcpHandlers.ListClusters)
-	api.Get("/mcp/clusters/health", mcpHandlers.GetAllClusterHealth)
-	api.Get("/mcp/clusters/:cluster/health", mcpHandlers.GetClusterHealth)
-	api.Get("/mcp/pods", mcpHandlers.GetPods)
-	api.Get("/mcp/pod-issues", mcpHandlers.FindPodIssues)
-	api.Get("/mcp/deployment-issues", mcpHandlers.FindDeploymentIssues)
-	api.Get("/mcp/deployments", mcpHandlers.GetDeployments)
-	api.Get("/mcp/gpu-nodes", mcpHandlers.GetGPUNodes)
-	api.Get("/mcp/gpu-nodes/health", mcpHandlers.GetGPUNodeHealth)
-	api.Get("/mcp/gpu-nodes/health/cronjob", mcpHandlers.GetGPUHealthCronJobStatus)
-	// POST and DELETE /mcp/gpu-nodes/health/cronjob moved to kc-agent
-	// (#7993 Phase 3e). The agent exposes /gpu-health-cronjob with the same
-	// body shape, running under the user's kubeconfig.
-	api.Get("/mcp/gpu-nodes/health/cronjob/results", mcpHandlers.GetGPUHealthCronJobResults)
-	api.Get("/mcp/nvidia-operators", mcpHandlers.GetNVIDIAOperatorStatus)
-	api.Get("/mcp/nodes", mcpHandlers.GetNodes)
-	api.Get("/mcp/flatcar/nodes", mcpHandlers.GetFlatcarNodes)
-	api.Get("/mcp/events", mcpHandlers.GetEvents)
-	api.Get("/mcp/events/warnings", mcpHandlers.GetWarningEvents)
-	api.Get("/mcp/security-issues", mcpHandlers.CheckSecurityIssues)
-	api.Get("/mcp/services", mcpHandlers.GetServices)
-	api.Get("/mcp/jobs", mcpHandlers.GetJobs)
-	api.Get("/mcp/hpas", mcpHandlers.GetHPAs)
-	api.Get("/mcp/configmaps", mcpHandlers.GetConfigMaps)
-	api.Get("/mcp/secrets", mcpHandlers.GetSecrets)
-	api.Get("/mcp/serviceaccounts", mcpHandlers.GetServiceAccounts)
-	api.Get("/mcp/pvcs", mcpHandlers.GetPVCs)
-	api.Get("/mcp/pvs", mcpHandlers.GetPVs)
-	api.Get("/mcp/resourcequotas", mcpHandlers.GetResourceQuotas)
-	api.Post("/mcp/resourcequotas", mcpHandlers.CreateOrUpdateResourceQuota)
-	api.Delete("/mcp/resourcequotas", mcpHandlers.DeleteResourceQuota)
-	api.Get("/mcp/limitranges", mcpHandlers.GetLimitRanges)
-	api.Get("/mcp/pods/logs", mcpHandlers.GetPodLogs)
-	api.Post("/mcp/tools/ops/call", mcpHandlers.CallOpsTool)
-	api.Post("/mcp/tools/deploy/call", mcpHandlers.CallDeployTool)
-	api.Get("/mcp/wasmcloud/hosts", mcpHandlers.GetWasmCloudHosts)
-	api.Get("/mcp/wasmcloud/actors", mcpHandlers.GetWasmCloudActors)
-	api.Get("/mcp/custom-resources", mcpHandlers.GetCustomResources)
-	// Drasi reverse proxy — forwards to drasi-server (mode 1+2) or drasi-platform
-	// (mode 3) so the `/drasi` dashboard speaks the same client code to either.
-	// See pkg/api/handlers/drasi_proxy.go for the protocol detection contract.
-	api.All("/drasi/proxy/*", mcpHandlers.ProxyDrasi)
-	api.Get("/mcp/replicasets", mcpHandlers.GetReplicaSets)
-	api.Get("/mcp/statefulsets", mcpHandlers.GetStatefulSets)
-	api.Get("/mcp/daemonsets", mcpHandlers.GetDaemonSets)
-	api.Get("/mcp/cronjobs", mcpHandlers.GetCronJobs)
-	api.Get("/mcp/ingresses", mcpHandlers.GetIngresses)
-	api.Get("/mcp/networkpolicies", mcpHandlers.GetNetworkPolicies)
-	api.Get("/mcp/pod-network-stats", mcpHandlers.GetPodNetworkStats)
-	api.Get("/mcp/resource-yaml", mcpHandlers.GetResourceYAML)
+	// Cross-cluster event journal (#9967 Phase 1)
+	timeline := handlers.NewTimelineHandler(s.store, s.k8sClient)
+	api.Get("/timeline", timeline.GetTimeline)
+	timeline.StartEventCollector(s.done)
 
-	// Widget-friendly aliases — the widget registry references these shorter
-	// paths.  Without explicit routes they fall through to the SPA catch-all
-	// which returns index.html (HTTP 307), breaking exported widgets.
-	// See: #4140, #4141, #4142
-	api.Get("/mcp/workloads", mcpHandlers.GetWorkloads)
-	api.Get("/mcp/security", mcpHandlers.CheckSecurityIssues)
-	api.Get("/mcp/storage", mcpHandlers.GetPVCs)
-	api.Get("/mcp/network", mcpHandlers.GetNetworkPolicies)
-	api.Get("/mcp/namespaces", namespaces.ListNamespaces)
+	// Cluster discovery routes — registered outside the /api JWTAuth group so
+	// that in dev mode they are accessible before the browser has completed
+	// auto-login. Without this, the frontend's initial /api/mcp/clusters call
+	// hits 401, retries cascade, and eventually trigger 429 rate-limits
+	// (#10925). In production (OAuth configured) full JWTAuth is applied.
+	mcpHandlers := handlers.NewMCPHandlers(s.bridge, s.k8sClient, s.store)
+	clusterDiscoveryAuth := middleware.JWTAuth(s.config.JWTSecret)
+	if s.config.DevMode {
+		// In dev mode, allow unauthenticated cluster discovery so the
+		// dashboard can render cluster data while the auto-login completes.
+		clusterDiscoveryAuth = func(c *fiber.Ctx) error { return c.Next() }
+	}
+	s.app.Get("/api/mcp/clusters", bodyGuard, csrfGuard, clusterDiscoveryAuth, mcpHandlers.ListClusters)
+	s.app.Get("/api/mcp/clusters/health", bodyGuard, csrfGuard, clusterDiscoveryAuth, mcpHandlers.GetAllClusterHealth)
 
-	// SSE streaming variants — stream per-cluster results as they arrive
-	api.Get("/mcp/pods/stream", mcpHandlers.GetPodsStream)
-	api.Get("/mcp/pod-issues/stream", mcpHandlers.FindPodIssuesStream)
-	api.Get("/mcp/deployment-issues/stream", mcpHandlers.FindDeploymentIssuesStream)
-	api.Get("/mcp/deployments/stream", mcpHandlers.GetDeploymentsStream)
-	api.Get("/mcp/events/stream", mcpHandlers.GetEventsStream)
-	api.Get("/mcp/services/stream", mcpHandlers.GetServicesStream)
-	api.Get("/mcp/security-issues/stream", mcpHandlers.CheckSecurityIssuesStream)
-	api.Get("/mcp/nodes/stream", mcpHandlers.GetNodesStream)
-	api.Get("/mcp/gpu-nodes/stream", mcpHandlers.GetGPUNodesStream)
-	api.Get("/mcp/gpu-nodes/health/stream", mcpHandlers.GetGPUNodeHealthStream)
-	api.Get("/mcp/events/warnings/stream", mcpHandlers.GetWarningEventsStream)
-	api.Get("/mcp/jobs/stream", mcpHandlers.GetJobsStream)
-	api.Get("/mcp/configmaps/stream", mcpHandlers.GetConfigMapsStream)
-	api.Get("/mcp/secrets/stream", mcpHandlers.GetSecretsStream)
-	api.Get("/mcp/nvidia-operators/stream", mcpHandlers.GetNVIDIAOperatorStatusStream)
-	api.Get("/mcp/workloads/stream", mcpHandlers.GetWorkloadsStream)
+	s.setupMCPRoutes(api, namespaces)
 
-	// GitOps routes (drift detection and sync)
-	// SECURITY: All GitOps routes require authentication in both dev and production modes
-	gitopsHandlers := handlers.NewGitOpsHandlers(s.bridge, s.k8sClient, s.store)
-	api.Get("/gitops/drifts", gitopsHandlers.ListDrifts)
-	api.Get("/gitops/helm-releases", gitopsHandlers.ListHelmReleases)
-	api.Get("/gitops/helm-history", gitopsHandlers.ListHelmHistory)
-	api.Get("/gitops/helm-values", gitopsHandlers.GetHelmValues)
-	api.Get("/gitops/kustomizations", gitopsHandlers.ListKustomizations)
-	api.Get("/gitops/operators", gitopsHandlers.ListOperators)
-	api.Get("/gitops/operators/stream", gitopsHandlers.StreamOperators)
-	api.Get("/gitops/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
-	api.Get("/gitops/operator-subscriptions/stream", gitopsHandlers.StreamOperatorSubscriptions)
-	api.Get("/gitops/helm-releases/stream", gitopsHandlers.StreamHelmReleases)
-	// POST /gitops/detect-drift, /gitops/sync, /gitops/helm-rollback,
-	// /gitops/helm-uninstall, and /gitops/helm-upgrade moved to kc-agent in
-	// #7993 Phase 4 (agent-side added in 3a/3b). They run under the user's
-	// kubeconfig instead of the backend pod ServiceAccount.
-	// Helm self-upgrade (in-cluster Deployment patch)
-	selfUpgradeHandler := handlers.NewSelfUpgradeHandler(s.k8sClient, s.hub, s.store)
-	api.Get("/self-upgrade/status", selfUpgradeHandler.GetStatus)
-	api.Post("/self-upgrade/trigger", selfUpgradeHandler.TriggerUpgrade)
-	// ArgoCD routes (Application CRD discovery and sync)
-	api.Get("/gitops/argocd/applications", gitopsHandlers.ListArgoApplications)
-	api.Get("/gitops/argocd/applicationsets", gitopsHandlers.ListArgoApplicationSets)
-	api.Get("/gitops/argocd/health", gitopsHandlers.GetArgoHealthSummary)
-	api.Get("/gitops/argocd/sync", gitopsHandlers.GetArgoSyncSummary)
-	api.Get("/gitops/argocd/status", gitopsHandlers.GetArgoStatus)
-	// POST /gitops/argocd/sync moved to kc-agent in #7993 Phase 4 (agent-side
-	// added in Phase 3c). Runs under the user's kubeconfig.
-	// Frontend compatibility alias
-	api.Get("/mcp/operator-subscriptions", gitopsHandlers.ListOperatorSubscriptions)
+	s.setupGitOpsRoutes(api)
 
-	// MCS (Multi-Cluster Service) routes
-	mcsHandlers := handlers.NewMCSHandlers(s.k8sClient, s.hub)
-	api.Get("/mcs/status", mcsHandlers.GetMCSStatus)
-	api.Get("/mcs/exports", mcsHandlers.ListServiceExports)
-	api.Get("/mcs/exports/:cluster/:namespace/:name", mcsHandlers.GetServiceExport)
-	// Create/Delete ServiceExport routes removed in #7993 Phase 1.5 PR B.
-	// User-initiated mutations now run via kc-agent /serviceexports under
-	// the user's kubeconfig. The backend handlers had no frontend consumer.
-	api.Get("/mcs/imports", mcsHandlers.ListServiceImports)
-	api.Get("/mcs/imports/:cluster/:namespace/:name", mcsHandlers.GetServiceImport)
-
-	// Gateway API routes
-	gatewayHandlers := handlers.NewGatewayHandlers(s.k8sClient, s.hub)
-	api.Get("/gateway/status", gatewayHandlers.GetGatewayAPIStatus)
-	api.Get("/gateway/gateways", gatewayHandlers.ListGateways)
-	api.Get("/gateway/gateways/:cluster/:namespace/:name", gatewayHandlers.GetGateway)
-	api.Get("/gateway/httproutes", gatewayHandlers.ListHTTPRoutes)
-	api.Get("/gateway/httproutes/:cluster/:namespace/:name", gatewayHandlers.GetHTTPRoute)
-
-	// CRD routes (Custom Resource Definition browser)
-	crdHandlers := handlers.NewCRDHandlers(s.k8sClient)
-	api.Get("/crds", crdHandlers.ListCRDs)
-
-	// Lima routes (Lima VM status)
-	limaHandlers := handlers.NewLimaHandlers(s.k8sClient)
-	api.Get("/lima", limaHandlers.ListLima)
-
-	// MCS ServiceExport routes
-	svcExportHandlers := handlers.NewServiceExportHandlers(s.k8sClient)
-	api.Get("/service-exports", svcExportHandlers.ListServiceExports)
-
-	// Admission webhook routes
-	webhookHandlers := handlers.NewWebhookHandlers(s.k8sClient)
-	api.Get("/admission-webhooks", webhookHandlers.ListWebhooks)
-
-	// Service Topology routes
-	topologyHandlers := handlers.NewTopologyHandlers(s.k8sClient, s.hub)
-	api.Get("/topology", topologyHandlers.GetTopology)
-
-	// Workload routes
-	workloadHandlers := handlers.NewWorkloadHandlers(s.k8sClient, s.hub, s.store)
-	// Reload persisted cluster groups on startup (#7013).
-	workloadHandlers.LoadPersistedClusterGroups()
-	api.Get("/workloads", workloadHandlers.ListWorkloads)
-	api.Get("/workloads/capabilities", workloadHandlers.GetClusterCapabilities)
-	api.Get("/workloads/policies", workloadHandlers.ListBindingPolicies)
-	api.Get("/workloads/deploy-status/:cluster/:namespace/:name", workloadHandlers.GetDeployStatus)
-	api.Get("/workloads/deploy-logs/:cluster/:namespace/:name", workloadHandlers.GetDeployLogs)
-	api.Get("/workloads/resolve-deps/:cluster/:namespace/:name", workloadHandlers.ResolveDependencies)
-	api.Get("/workloads/monitor/:cluster/:namespace/:name", workloadHandlers.MonitorWorkload)
-	api.Get("/workloads/:cluster/:namespace/:name", workloadHandlers.GetWorkload)
-	// NOTE: /workloads/deploy, /workloads/scale, and the DELETE
-	// /workloads/:cluster/:namespace/:name route all moved to kc-agent
-	// (#7993 Phase 1 PRs A and B). The agent uses the user's kubeconfig
-	// instead of the backend pod SA for those mutating operations.
-
-	// Cluster Group routes
-	api.Get("/cluster-groups", workloadHandlers.ListClusterGroups)
-	api.Post("/cluster-groups", workloadHandlers.CreateClusterGroup)
-	api.Post("/cluster-groups/sync", workloadHandlers.SyncClusterGroups)
-	api.Post("/cluster-groups/evaluate", workloadHandlers.EvaluateClusterQuery)
-	api.Post("/cluster-groups/ai-query", workloadHandlers.GenerateClusterQuery)
-	api.Put("/cluster-groups/:name", workloadHandlers.UpdateClusterGroup)
-	api.Delete("/cluster-groups/:name", workloadHandlers.DeleteClusterGroup)
+	s.setupK8sResourceRoutes(api)
 
 	// Feature requests and feedback routes
-	feedbackCfg := handlers.LoadFeedbackConfig()
-	feedback := handlers.NewFeedbackHandler(s.store, feedbackCfg)
-	// Feedback token routes removed — consolidated into /api/github/token/* endpoints
-	api.Post("/feedback/requests", feedback.CreateFeatureRequest)
+	// POST route is registered outside the /api group to exempt it from apiLimiter (#9969)
+	// GET routes still use the group limiters for general API protection
 	api.Get("/feedback/requests", feedback.ListFeatureRequests)
 	api.Get("/feedback/queue", feedback.ListAllFeatureRequests)
 	api.Get("/feedback/requests/:id", feedback.GetFeatureRequest)
@@ -1169,17 +1141,17 @@ func (s *Server) setupRoutes() {
 	api.Get("/benchmarks/reports/stream", benchmarkHandlers.StreamReports)
 
 	// GitHub activity rewards (points for issues/PRs across configured orgs)
-	rewardsHandler := handlers.NewRewardsHandler(handlers.RewardsConfig{
+	s.rewardsHandler = handlers.NewRewardsHandler(handlers.RewardsConfig{
 		GitHubToken: s.config.GitHubToken,
 		Orgs:        s.config.RewardsGitHubOrgs,
 	})
-	api.Get("/rewards/github", rewardsHandler.GetGitHubRewards)
+	api.Get("/rewards/github", s.rewardsHandler.GetGitHubRewards)
 
 	// Public contributor-tier badge (RFC #8862 Phase 2). SVG response, no
 	// auth required, rate-limited via publicLimiter (60 req/min/IP). Mounted
 	// on s.app, not `api`, because the `api` group is gated by JWTAuth and
 	// this endpoint must be reachable from READMEs via Camo.
-	badgeHandler := handlers.NewBadgeHandler(rewardsHandler, s.store)
+	badgeHandler := handlers.NewBadgeHandler(s.rewardsHandler, s.store)
 	s.app.Get("/api/rewards/badge/:github_login", publicLimiter, badgeHandler.GetBadge)
 
 	// Persistent per-user reward balances (issue #6011). Every authenticated
@@ -1206,9 +1178,11 @@ func (s *Server) setupRoutes() {
 	api.Get("/nightly-e2e/run-logs", nightlyE2E.GetRunLogs)
 
 	// Kubara platform catalog — server-side cache so all users share one
-	// upstream fetch from kubara-io/kubara (#8487)
-	kubaraCatalog := handlers.NewKubaraCatalogHandler(s.config.GitHubToken)
+	// upstream fetch. Repo/path are configurable via KUBARA_CATALOG_REPO and
+	// KUBARA_CATALOG_PATH for private or self-hosted catalogs (#8487).
+	kubaraCatalog := handlers.NewKubaraCatalogHandler(s.config.GitHubToken, s.config.KubaraCatalogRepo, s.config.KubaraCatalogPath)
 	api.Get("/kubara/catalog", kubaraCatalog.GetCatalog)
+	api.Get("/kubara/config", kubaraCatalog.GetConfig)
 
 	// GPU reservation routes — capacity provider uses live k8s node data
 	// so the server never trusts client-supplied GPU limits (#5421).
@@ -1511,6 +1485,17 @@ func (s *Server) Shutdown() error {
 			s.gpuUtilWorker.Stop()
 		}
 		s.hub.Close()
+		// #10007 — stop the periodic cluster group cache refresh goroutine.
+		if s.workloadHandlers != nil {
+			s.workloadHandlers.StopCacheRefresh()
+		}
+		// stop the rewards eviction goroutine (goroutine leak prevention).
+		if s.rewardsHandler != nil {
+			s.rewardsHandler.StopEviction()
+		}
+		// stop the operator cache and GitHub proxy limiter eviction goroutines.
+		handlers.StopOperatorCacheEvictor()
+		handlers.StopGitHubProxyLimiterEvictor()
 		// #7043 — stop the SSE cache evictor goroutine that was started
 		// lazily by sseCacheSet. Without this the goroutine leaks after
 		// server shutdown.
@@ -1574,7 +1559,20 @@ func LoadConfigFromEnv() Config {
 		dbPath = p
 	}
 
-	devMode := os.Getenv("DEV_MODE") == "true"
+	devModeEnv := os.Getenv("DEV_MODE")
+	devMode := devModeEnv == "true"
+
+	// Defense-in-depth: auto-activate dev mode when OAuth is unconfigured (#10925).
+	// Without this, a missing DEV_MODE export (e.g. older start.sh) causes the
+	// auth-retry cascade: JWTAuth rejects every request → frontend retries → 429.
+	// Skip auto-activation when DEV_MODE is explicitly "false" — the one-click
+	// manifest flow intentionally starts with no OAuth credentials (#10931).
+	githubClientID := os.Getenv("GITHUB_CLIENT_ID")
+	githubSecret := os.Getenv("GITHUB_CLIENT_SECRET")
+	if !devMode && devModeEnv != "false" && githubClientID == "" && githubSecret == "" {
+		slog.Warn("[Config] No GitHub OAuth credentials and DEV_MODE not set — auto-activating dev mode")
+		devMode = true
+	}
 
 	// Frontend URL can be explicitly set via env var
 	// If not set, leave empty and compute default in NewServer based on final DevMode
@@ -1598,8 +1596,8 @@ func LoadConfigFromEnv() Config {
 		Port:                  port,
 		DevMode:               devMode,
 		DatabasePath:          dbPath,
-		GitHubClientID:        os.Getenv("GITHUB_CLIENT_ID"),
-		GitHubSecret:          os.Getenv("GITHUB_CLIENT_SECRET"),
+		GitHubClientID:        githubClientID,
+		GitHubSecret:          githubSecret,
 		GitHubURL:             getEnvOrDefault("GITHUB_URL", "https://github.com"),
 		JWTSecret:             jwtSecret,
 		FrontendURL:           frontendURL,
@@ -1611,6 +1609,8 @@ func LoadConfigFromEnv() Config {
 		DevUserLogin:  getEnvOrDefault("DEV_USER_LOGIN", "dev-user"),
 		DevUserEmail:  getEnvOrDefault("DEV_USER_EMAIL", "dev@localhost"),
 		DevUserAvatar: getEnvOrDefault("DEV_USER_AVATAR", ""),
+		// kc-agent shared secret (generated by startup-oauth.sh)
+		AgentToken: os.Getenv("KC_AGENT_TOKEN"),
 		// Consolidated GitHub token (FEEDBACK_GITHUB_TOKEN preferred, GITHUB_TOKEN as alias)
 		GitHubToken:         settings.ResolveGitHubTokenEnv(),
 		GitHubWebhookSecret: os.Getenv("GITHUB_WEBHOOK_SECRET"),
@@ -1623,6 +1623,9 @@ func LoadConfigFromEnv() Config {
 		// Benchmark data from Google Drive
 		BenchmarkGoogleDriveAPIKey: os.Getenv("GOOGLE_DRIVE_API_KEY"),
 		BenchmarkFolderID:          getEnvOrDefault("BENCHMARK_FOLDER_ID", "1r2Z2Xp1L0KonUlvQHvEzed8AO9Xj8IPm"),
+		// Kubara platform catalog (optional — defaults to kubara-io/kubara public catalog)
+		KubaraCatalogRepo: os.Getenv("KUBARA_CATALOG_REPO"),
+		KubaraCatalogPath: os.Getenv("KUBARA_CATALOG_PATH"),
 		// Sidebar dashboard filter
 		EnabledDashboards: os.Getenv("ENABLED_DASHBOARDS"),
 		// White-label project context
@@ -1640,6 +1643,8 @@ func LoadConfigFromEnv() Config {
 		BrandIssuesURL:    getEnvOrDefault("ISSUES_URL", "https://github.com/kubestellar/kubestellar/issues/new"),
 		BrandRepoURL:      getEnvOrDefault("REPO_URL", "https://github.com/kubestellar/console"),
 		BrandHostedDomain: getEnvOrDefault("HOSTED_DOMAIN", "console.kubestellar.io"),
+		// Suppress local kc-agent connections in in-cluster deployments
+		NoLocalAgent: os.Getenv("NO_LOCAL_AGENT") == "true",
 		// Watchdog backend port override
 		BackendPort: backendPort,
 	}
@@ -1650,6 +1655,25 @@ func getEnvOrDefault(key, defaultVal string) string {
 		return v
 	}
 	return defaultVal
+}
+
+// resolveMaxBodyBytes returns the global Fiber BodyLimit in bytes.
+// It reads the envMaxBodyBytes environment variable and falls back to
+// feedbackBodyLimit when the value is unset, non-numeric, or non-positive.
+// This is the canonical cap that rejects oversized payloads before Fiber
+// buffers them, mitigating memory-exhaustion DoS (#9891).
+func resolveMaxBodyBytes() int {
+	raw := os.Getenv(envMaxBodyBytes)
+	if raw == "" {
+		return feedbackBodyLimit
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 {
+		slog.Warn("invalid MAX_BODY_BYTES env var; using default",
+			"value", raw, "default_bytes", feedbackBodyLimit)
+		return feedbackBodyLimit
+	}
+	return n
 }
 
 // warnDefaultEnvVars logs a warning for each env var that is not explicitly
@@ -1735,7 +1759,7 @@ func persistSecret(path, secret string) {
 		slog.Warn("Could not create directory for JWT secret", "dir", dir, "error", err)
 		return
 	}
-	if err := os.WriteFile(path, []byte(secret+"\n"), secretFilePerms); err != nil {
+	if err := fileutil.AtomicWriteFile(path, []byte(secret+"\n"), secretFilePerms); err != nil {
 		slog.Warn("Could not persist dev JWT secret", "path", path, "error", err)
 	} else {
 		slog.Info("Persisted dev JWT secret", "path", path)

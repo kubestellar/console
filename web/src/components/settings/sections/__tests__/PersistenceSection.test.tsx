@@ -37,7 +37,7 @@ vi.mock('../../../../hooks/usePersistence', () => ({
 }))
 
 vi.mock('../../../../hooks/mcp/clusters', () => ({
-  useClusters: () => ({ clusters: [] }),
+  useClusters: () => ({ clusters: [], deduplicatedClusters: [] }),
 }))
 
 import { PersistenceSection } from '../PersistenceSection'

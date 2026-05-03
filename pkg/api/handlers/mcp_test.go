@@ -111,7 +111,7 @@ func TestMCPGetPods_NoClusterAccessReturns503(t *testing.T) {
 
 	var payload map[string]interface{}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&payload))
-	assert.Equal(t, "No cluster access available", payload["error"])
+	assert.Equal(t, "No cluster access", payload["error"])
 }
 
 func TestMCPGetPods_SingleClusterEmptyIsArray(t *testing.T) {

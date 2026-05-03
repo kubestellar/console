@@ -4,9 +4,13 @@ import { AgentCapabilityToolExec } from '../types/agent'
 import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
-import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { useLocalAgent } from './useLocalAgent'
+import { agentFetch } from './mcp/shared'
+import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
-import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
+import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
+import { runPreflightCheck, runToolPreflightCheck, resolveRequiredTools, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
@@ -76,6 +80,9 @@ interface MissionContextValue {
   runSavedMission: (missionId: string, cluster?: string) => void
   updateSavedMission: (missionId: string, updates: SavedMissionUpdates) => void
   sendMessage: (missionId: string, content: string) => void
+  /** Remove a user message and all subsequent messages, returning the content
+   *  so the caller can populate the chat input for editing. (#10450) */
+  editAndResend: (missionId: string, messageId: string) => string | null
   retryPreflight: (missionId: string) => void
   cancelMission: (missionId: string) => void
   dismissMission: (missionId: string) => void
@@ -121,7 +128,7 @@ const MISSION_RECONNECT_DELAY_MS = 500
  * half-finished prompt. 30 minutes is conservative: it covers lunch/
  * meeting gaps while still protecting against overnight reconnects.
  */
-const MISSION_RECONNECT_MAX_AGE_MS = 30 * 60 * 1000
+const MISSION_RECONNECT_MAX_AGE_MS = 30 * MS_PER_MINUTE
 /**
  * issue 6429 — Cap how many prior messages we re-append to the prompt on
  * reconnect. Long-running missions can accumulate hundreds of turns; some
@@ -189,9 +196,28 @@ const CANCEL_CONFIRMED_MESSAGE_TYPE = 'cancel_confirmed'
  */
 const WAITING_INPUT_TIMEOUT_MS = 600_000 // 10 minutes
 
+/**
+ * Patterns that identify system messages generated when the local agent is
+ * unreachable. Used by both the reconnect useEffect (#10525) and the retry
+ * path in sendMessage to strip stale errors from chat history.
+ */
+const AGENT_DISCONNECT_ERROR_PATTERNS = [
+  'Local Agent Not Connected',
+  'agent not available',
+  'agent not responding',
+] as const
+
+/** Returns true when a MissionMessage is a stale agent-disconnect error. */
+function isStaleAgentErrorMessage(msg: MissionMessage): boolean {
+  return (
+    msg.role === 'system' &&
+    AGENT_DISCONNECT_ERROR_PATTERNS.some(pattern => msg.content.includes(pattern))
+  )
+}
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
+  const { isConnected: isAgentConnected } = useLocalAgent()
   // #7313 — Restore the active mission ID from localStorage so a reload
   // remembers which mission was selected. Sidebar visibility is restored
   // separately via SIDEBAR_OPEN_STORAGE_KEY (kc_mission_sidebar_open).
@@ -426,8 +452,15 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       suppressNextSaveRef.current = false
       return
     }
-    lastWrittenAtRef.current = Date.now()
-    saveMissions(missions)
+    // #9617 — Debounce saves to avoid JSON.stringify on every SSE chunk.
+    // During streaming, missions update on every chunk (~50ms). Without
+    // debouncing, saveMissions runs synchronous JSON.stringify on the full
+    // mission array for every chunk, blocking the main thread.
+    const timer = setTimeout(() => {
+      lastWrittenAtRef.current = Date.now()
+      saveMissions(missions)
+    }, 500)
+    return () => clearTimeout(timer)
   }, [missions])
 
   // #6668 — Listen for cross-tab mission updates. When another tab writes
@@ -516,7 +549,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             }
           }
           missionStatusTimers.current.clear()
-        } catch (err) {
+        } catch (err: unknown) {
           // #6767 — Message is issue-agnostic; this branch now covers
           // #6758, #6762, and #6767 follow-ups.
           console.warn('[Missions] Cross-tab remote reset detected — failed to clear local mission state to match:', err)
@@ -541,7 +574,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           const next = new Set([...prev].filter(id => reloadedIds.has(id)))
           return next.size === prev.size ? prev : next
         })
-      } catch (err) {
+      } catch (err: unknown) {
         console.warn('[Missions] issue 6668 — failed to reload from cross-tab write:', err)
       }
     }
@@ -553,6 +586,37 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     saveUnreadMissionIds(unreadMissionIds)
   }, [unreadMissionIds])
+
+  // #10525 — Clear stale agent-unavailable errors when the agent reconnects.
+  // When a mission fails because the local agent was disconnected, the error
+  // message gets locked into the chat history. Once the agent reconnects, we
+  // transition those failed missions back to 'saved' so the user can retry
+  // cleanly without seeing the stale "Local Agent Not Connected" error.
+  const prevAgentConnected = useRef(isAgentConnected)
+  useEffect(() => {
+    const wasConnected = prevAgentConnected.current
+    prevAgentConnected.current = isAgentConnected
+    if (!wasConnected && isAgentConnected) {
+      setMissions(prev => {
+        const hasStale = prev.some(m =>
+          m.status === 'failed' &&
+          (m.messages || []).some(isStaleAgentErrorMessage)
+        )
+        if (!hasStale) return prev
+        return prev.map(m => {
+          if (m.status !== 'failed') return m
+          if (!(m.messages || []).some(isStaleAgentErrorMessage)) return m
+          const cleanedMessages = (m.messages || []).filter(msg => !isStaleAgentErrorMessage(msg))
+          return {
+            ...m,
+            status: 'saved' as MissionStatus,
+            currentStep: undefined,
+            messages: cleanedMessages,
+          }
+        })
+      })
+    }
+  }, [isAgentConnected])
 
   // Periodically check for missions stuck in "running" state.
   // Two failure conditions are detected (#2375, #3079):
@@ -696,7 +760,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         // The backoff is reset later, after the first application-layer
         // message actually arrives, not here.
         connectionEstablished.current = false
-        wsRef.current = new WebSocket(LOCAL_AGENT_WS_URL)
+        wsRef.current = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)
@@ -982,7 +1046,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           try {
             const message = JSON.parse(event.data)
             handleAgentMessageRef.current(message)
-          } catch (e) {
+          } catch (e: unknown) {
             console.error('[Missions] Failed to parse message:', e)
           }
         }
@@ -1182,7 +1246,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           setAgentsLoading(false)
           reject(new Error('CONNECTION_FAILED'))
         }
-      } catch (err) {
+      } catch (err: unknown) {
         clearTimeout(timeout)
         reject(err)
       }
@@ -1409,12 +1473,21 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     const isDedicatedCancelAck =
       message.type === CANCEL_ACK_MESSAGE_TYPE ||
       message.type === CANCEL_CONFIRMED_MESSAGE_TYPE
+    // #9477 — The backend may send `cancelled` without `sessionId` in the
+    // payload (e.g. when the cancel request payload itself had an empty
+    // sessionId, or when a proxy strips the field). Previously the check
+    // required BOTH `cancelled` AND `sessionId` in the payload, causing the
+    // message to fall through to the generic result handler where it was
+    // silently dropped (the cancel message's `id` is `cancel-<ts>`, which
+    // is never registered in pendingRequests). This left the UI stuck on
+    // "Cancelling..." indefinitely. Now we only require `cancelled` in the
+    // payload, and fall back to resolving the mission ID from cancelIntents
+    // or the missions list when `sessionId`/`id` are absent.
     const isCancelResultMessage =
       message.type === 'result' &&
       !!message.payload &&
       typeof message.payload === 'object' &&
-      'cancelled' in (message.payload as Record<string, unknown>) &&
-      'sessionId' in (message.payload as Record<string, unknown>)
+      'cancelled' in (message.payload as Record<string, unknown>)
     if (isDedicatedCancelAck || isCancelResultMessage) {
       const payload = message.payload as {
         sessionId?: string
@@ -1425,7 +1498,23 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       }
       // #7310 — Backend may send `id` instead of `sessionId` in the cancel_ack
       // payload. Check both fields to avoid a permanent cancelling state lock.
-      const cancelledMissionId = payload.sessionId || payload.id
+      // #9477 — When neither field is present, resolve the mission ID from the
+      // active cancel intents or from missions currently in 'cancelling' status.
+      let cancelledMissionId = payload.sessionId || payload.id
+      if (!cancelledMissionId) {
+        // First try cancelIntents — the authoritative set of missions with
+        // pending cancellation requests.
+        const intentIds = Array.from(cancelIntents.current)
+        if (intentIds.length === 1) {
+          cancelledMissionId = intentIds[0]
+        } else {
+          // Fall back to the first mission in 'cancelling' status.
+          const cancellingMission = missionsRef.current.find(m => m.status === 'cancelling')
+          if (cancellingMission) {
+            cancelledMissionId = cancellingMission.id
+          }
+        }
+      }
       if (cancelledMissionId) {
         // Treat either `success === false` (cancel_ack shape) or
         // `cancelled === false` (result shape from handleCancelChat) as a
@@ -1701,18 +1790,20 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // Clear active token tracking for this mission and emit completion
         // event (#6016 — per-operation tracking keyed by missionId).
         clearActiveTokenCategory(missionId)
-        if (m.status === 'running') {
+        const resultIsError = !!chatPayload.isError
+        if (m.status === 'running' && !resultIsError) {
           // #7326 — Cap duration at 24 hours to prevent numeric overflow
           // from clock skew or backgrounded tabs.
-          const MAX_MISSION_DURATION_SEC = 86_400 // 24 hours
           const rawDuration = Math.round((Date.now() - m.createdAt.getTime()) / 1000)
-          const clampedDuration = Math.min(Math.max(rawDuration, 0), MAX_MISSION_DURATION_SEC)
+          const clampedDuration = Math.min(Math.max(rawDuration, 0), SECONDS_PER_DAY)
           emitMissionCompleted(m.type, clampedDuration)
           // Notify data-dependent components (e.g. ACMM scan) so they
           // re-fetch after a mission may have changed the repo's state.
           window.dispatchEvent(new CustomEvent('kc-mission-completed', {
             detail: { missionId, missionType: m.type },
           }))
+        } else if (m.status === 'running' && resultIsError) {
+          emitMissionError(m.type, chatPayload.content || 'Mission failed')
         }
 
         const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
@@ -1764,7 +1855,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         // 'completed', so reaching this state is the correct lifecycle end (#5479).
         return {
           ...m,
-          status: 'completed' as MissionStatus,
+          status: (resultIsError ? 'failed' : 'completed') as MissionStatus,
           currentStep: undefined,
           updatedAt: new Date(),
           agent: chatPayload.agent || m.agent,
@@ -1794,7 +1885,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
           errorContent = `**Mission interrupted — agent not available**\n\nThe AI agent was disconnected or is not reachable. This often happens after a page refresh.\n\n**To fix:**\n1. Make sure your agent (e.g., Claude Code, bob) is running\n2. Select the agent from the top navbar\n3. Click **Retry Mission** below to rerun your request`
         } else if (payload.code === 'authentication_error') {
-          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Run `/login` in your Claude Code terminal to refresh your OAuth token, or update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
+          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Restart kc-agent to refresh authentication, or run `gh auth status` in your terminal to verify your credentials. You can also update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
         } else if (payload.code === 'mission_timeout') {
           errorContent = `**Mission Timed Out**\n\n${payload.message}\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
         }
@@ -1816,7 +1907,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           combinedErrorText.includes('failed to authenticate')
 
         if (isAuthError) {
-          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Run `/login` in your Claude Code terminal to refresh your OAuth token, or update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
+          errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Restart kc-agent to refresh authentication, or run `gh auth status` in your terminal to verify your credentials. You can also update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
         }
 
         // Detect rate limit / quota errors from the AI provider (HTTP 429)
@@ -1868,21 +1959,48 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     enhancedPrompt: string,
     params: { cluster?: string; context?: Record<string, unknown>; type?: string },
   ) => {
-    const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || '')
-    // Run preflight on ALL target clusters, not just the first one (#7177).
-    const clusterContexts = params.cluster?.split(',').map(c => c.trim()).filter(Boolean) || []
-    const preflightPromise = missionNeedsCluster && clusterContexts.length > 0
-      ? Promise.all(
-          clusterContexts.map(ctx =>
-            runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts), ctx)
-          )
-        ).then(results => {
-          const failed = results.find(r => !r.ok)
-          return failed || { ok: true as const }
-        })
-      : missionNeedsCluster
-        ? runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts))
-        : Promise.resolve({ ok: true } as PreflightResult)
+    // --- Phase 1: Tool availability check (#11077) ---
+    const requiredTools = resolveRequiredTools(params.type)
+    const toolCheckPromise = runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools)
+
+    toolCheckPromise.then(toolResult => {
+      if (!toolResult.ok && toolResult.error) {
+        setMissions(prev => prev.map(m =>
+          m.id === missionId ? {
+            ...m,
+            status: 'blocked' as MissionStatus,
+            currentStep: 'Missing required tools',
+            preflightError: toolResult.error,
+            messages: [
+              ...m.messages,
+              {
+                id: generateMessageId('tool-preflight'),
+                role: 'system' as const,
+                content: `**Pre-flight Tool Check Failed**\n\n${toolResult.error?.message || 'Required tools are missing.'}\n\nInstall the missing tools and retry the mission.`,
+                timestamp: new Date(),
+              },
+            ],
+          } : m
+        ))
+        return
+      }
+
+      // --- Phase 2: Cluster access check (existing logic) ---
+      const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || '')
+      // Run preflight on ALL target clusters, not just the first one (#7177).
+      const clusterContexts = params.cluster?.split(',').map(c => c.trim()).filter(Boolean) || []
+      const preflightPromise = missionNeedsCluster && clusterContexts.length > 0
+        ? Promise.all(
+            clusterContexts.map(ctx =>
+              runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts), ctx)
+            )
+          ).then(results => {
+            const failed = results.find(r => !r.ok)
+            return failed || { ok: true as const }
+          })
+        : missionNeedsCluster
+          ? runPreflightCheck((args, opts) => kubectlProxy.exec(args, opts))
+          : Promise.resolve({ ok: true } as PreflightResult)
 
     preflightPromise.then(preflight => {
       if (!preflight.ok && 'error' in preflight && preflight.error) {
@@ -1908,6 +2026,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           preflight.error?.code || 'preflight_unknown',
           preflight.error?.message
         )
+        if (preflight.error?.message) {
+          emitError('cluster_access', preflight.error.message)
+        }
         return
       }
 
@@ -1943,6 +2064,31 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
               content: `**Preflight Check Error**\n\nThe preflight check encountered an unexpected error. The mission has been blocked to prevent unvalidated execution.\n\nError: ${err instanceof Error ? err.message : 'Unknown error'}`,
               timestamp: new Date() }
           ]
+        } : m
+      ))
+    })
+    }) // end toolCheckPromise.then
+    .catch((err) => {
+      // Tool check itself threw — block with a generic error
+      setMissions(prev => prev.map(m =>
+        m.id === missionId ? {
+          ...m,
+          status: 'blocked' as MissionStatus,
+          currentStep: 'Tool check error',
+          preflightError: {
+            code: 'UNKNOWN_EXECUTION_FAILURE',
+            message: err instanceof Error ? err.message : 'Unknown error',
+            details: { hint: 'The tool pre-flight check threw an unexpected error. Verify the local agent is running.' },
+          },
+          messages: [
+            ...m.messages,
+            {
+              id: generateMessageId('tool-check-error'),
+              role: 'system' as const,
+              content: `**Tool Check Error**\n\nFailed to verify required tools: ${err instanceof Error ? err.message : 'Unknown error'}`,
+              timestamp: new Date(),
+            },
+          ],
         } : m
       ))
     })
@@ -2343,6 +2489,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             ]
           } : m
         ))
+        if (preflight.error?.message) {
+          emitError('cluster_access', preflight.error.message)
+        }
         return
       }
 
@@ -2571,9 +2720,9 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     } else {
       // HTTP fallback — WS may be disconnected during long agent runs.
       // Use the response body to determine if cancellation succeeded (#5477).
-      fetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
+      agentFetch(`${LOCAL_AGENT_HTTP_URL}/cancel-chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ sessionId: missionId }) }).then(async response => {
         // #7303 — Guard against post-unmount finalization from HTTP fallback
         if (unmountedRef.current) return
@@ -2665,13 +2814,19 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m
+      // #10525 — When retrying a failed mission, strip stale agent-disconnect
+      // error messages so the user doesn't see the old error alongside the new
+      // attempt. Only filter when the mission was previously failed.
+      const baseMessages = m.status === 'failed'
+        ? (m.messages || []).filter(msg => !isStaleAgentErrorMessage(msg))
+        : (m.messages || [])
       return {
         ...m,
         status: 'running',
         currentStep: 'Processing...',
         updatedAt: new Date(),
         messages: [
-          ...m.messages,
+          ...baseMessages,
           {
             id: generateMessageId(),
             role: 'user',
@@ -2733,6 +2888,29 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         } : m
       ))
     })
+  }
+
+  // Edit and resend: remove a user message and everything after it,
+  // returning the original content so the UI can populate the input (#10450).
+  const editAndResend = (missionId: string, messageId: string): string | null => {
+    let removedContent: string | null = null
+    setMissions(prev => prev.map(m => {
+      if (m.id !== missionId) return m
+      const msgIndex = m.messages.findIndex(msg => msg.id === messageId)
+      if (msgIndex < 0) return m
+      const targetMsg = m.messages[msgIndex]
+      if (targetMsg.role !== 'user') return m
+      removedContent = targetMsg.content
+      return {
+        ...m,
+        // Truncate from the edited message onward
+        messages: m.messages.slice(0, msgIndex),
+        // Reset status so the user can re-send
+        status: m.status === 'running' || m.status === 'cancelling' ? m.status : 'waiting_input' as MissionStatus,
+        updatedAt: new Date(),
+      }
+    }))
+    return removedContent
   }
 
   // Dismiss/remove a mission from the list
@@ -2862,7 +3040,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }), () => {
         console.error('[Missions] Failed to send agent selection after retries')
       })
-    }).catch(err => {
+    }).catch((err: unknown) => {
       selectAgentPending.current = null
       console.error('[Missions] Failed to select agent:', err)
     })
@@ -2874,7 +3052,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     // connection requests (e.g. clicking "Reconnect" after giveup).
     // Moved from ensureConnection so auto-reconnect preserves backoff.
     wsReconnectAttempts.current = 0
-    ensureConnection().catch(err => {
+    ensureConnection().catch((err: unknown) => {
       console.error('[Missions] Failed to connect to agent:', err)
     })
   }
@@ -3013,13 +3191,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
   // state changes.
   const handlersRef = useRef({
     startMission, saveMission, runSavedMission, updateSavedMission, sendMessage,
-    retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
+    editAndResend, retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
     setActiveMission, markMissionAsRead, selectAgent, connectToAgent,
     toggleSidebar, openSidebar, closeSidebar, minimizeSidebar, expandSidebar,
     handleSetFullScreen, confirmPendingReview, cancelPendingReview })
   handlersRef.current = {
     startMission, saveMission, runSavedMission, updateSavedMission, sendMessage,
-    retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
+    editAndResend, retryPreflight, cancelMission, dismissMission, renameMission, rateMission,
     setActiveMission, markMissionAsRead, selectAgent, connectToAgent,
     toggleSidebar, openSidebar, closeSidebar, minimizeSidebar, expandSidebar,
     handleSetFullScreen, confirmPendingReview, cancelPendingReview }
@@ -3036,6 +3214,8 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       handlersRef.current.updateSavedMission(...args),
     sendMessage: (...args: Parameters<typeof sendMessage>) =>
       handlersRef.current.sendMessage(...args),
+    editAndResend: (...args: Parameters<typeof editAndResend>) =>
+      handlersRef.current.editAndResend(...args),
     retryPreflight: (...args: Parameters<typeof retryPreflight>) =>
       handlersRef.current.retryPreflight(...args),
     cancelMission: (...args: Parameters<typeof cancelMission>) =>
@@ -3151,6 +3331,7 @@ const MISSIONS_FALLBACK: MissionContextValue = {
   runSavedMission: () => {},
   updateSavedMission: () => {},
   sendMessage: () => {},
+  editAndResend: () => null,
   retryPreflight: () => {},
   cancelMission: () => {},
   dismissMission: () => {},

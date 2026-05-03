@@ -159,7 +159,7 @@ export function Onboarding() {
       await refreshUser()
 
       navigate(ROUTES.HOME)
-    } catch (err) {
+    } catch (err: unknown) {
       // For demo mode, still allow navigation even if there's an error
       const token = safeGetItem(STORAGE_KEY_TOKEN)
       if (token === DEMO_TOKEN_VALUE) {

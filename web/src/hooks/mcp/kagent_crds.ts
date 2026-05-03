@@ -1,6 +1,8 @@
 import { mapSettledWithConcurrency } from '../../lib/utils/concurrency'
 import { isAgentUnavailable, reportAgentDataSuccess } from '../useLocalAgent'
-import { clusterCacheRef, LOCAL_AGENT_URL, agentFetch as sharedAgentFetch } from './shared'
+import { clusterCacheRef, agentFetch as sharedAgentFetch } from './shared'
+import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { deduplicateClustersByServer } from './dedup'
 import { useCache } from '../../lib/cache'
 import type {
   KagentCRDAgent,
@@ -60,7 +62,7 @@ function getDemoMemories(): KagentCRDMemory[] {
 const AGENT_TIMEOUT = 15000
 
 async function agentFetch<T>(path: string, cluster: string, namespace?: string): Promise<T | null> {
-  if (isAgentUnavailable()) return null
+  if (isAgentUnavailable() || !LOCAL_AGENT_HTTP_URL) return null
 
   const params = new URLSearchParams()
   params.append('cluster', cluster)
@@ -69,14 +71,14 @@ async function agentFetch<T>(path: string, cluster: string, namespace?: string):
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), AGENT_TIMEOUT)
   try {
-    const res = await sharedAgentFetch(`${LOCAL_AGENT_URL}${path}?${params}`, {
+    const res = await sharedAgentFetch(`${LOCAL_AGENT_HTTP_URL}${path}?${params}`, {
       signal: ctrl.signal,
       headers: { Accept: 'application/json' },
     })
     clearTimeout(tid)
     if (!res.ok) throw new Error(`Agent returned ${res.status} for ${path} (cluster: ${cluster})`)
     return await res.json()
-  } catch (err) {
+  } catch (err: unknown) {
     clearTimeout(tid)
     // Log the error so it is visible in the console
     console.warn(`[kagent_crds] fetch failed for ${path} (cluster: ${cluster}):`, err)
@@ -96,7 +98,8 @@ async function agentFetchAllClusters<T>(
 ): Promise<T[]> {
   if (isAgentUnavailable()) return []
 
-  const clusters = clusterCacheRef.clusters.filter(c => c.reachable !== false && !c.name.includes('/'))
+  const allClusters = clusterCacheRef.clusters.filter(c => c.reachable !== false && !c.name.includes('/'))
+  const clusters = deduplicateClustersByServer(allClusters)
   if (clusters.length === 0) return []
 
   const targets = specificCluster

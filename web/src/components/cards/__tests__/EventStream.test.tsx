@@ -205,13 +205,15 @@ describe('EventStream', () => {
     it('shows empty state when showEmptyState=true', () => {
       setupDefaults({ showEmptyState: true })
       render(<EventStream />)
-      expect(screen.getByText('No events')).toBeInTheDocument()
+      const el = screen.getByTestId('empty-state')
+      expect(el).toBeInTheDocument()
+      expect(el.textContent).toContain('cards:eventStream.noEvents')
     })
 
     it('shows no-recent-events message when events list is empty after filtering', () => {
       setupDefaults({ events: [] })
       render(<EventStream />)
-      expect(screen.getByText('No recent events')).toBeInTheDocument()
+      expect(screen.getByText('cards:eventStream.noMatchingEvents')).toBeInTheDocument()
     })
   })
 

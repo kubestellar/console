@@ -29,6 +29,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Select } from '../ui/Select'
 import { Input } from '../ui/Input'
+import { useTranslation } from 'react-i18next'
 
 // ── Tunables (no magic numbers) ────────────────────────────────────────────
 /** Default number of tail lines requested from the backend. */
@@ -55,6 +56,7 @@ interface PodLogsProps {
 }
 
 export function PodLogs({ config }: PodLogsProps) {
+  const { t } = useTranslation('cards')
   const {
     deduplicatedClusters: allClusters,
     isLoading: clustersLoading,
@@ -169,7 +171,7 @@ export function PodLogs({ config }: PodLogsProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded overflow-hidden">
       {/* Selector row */}
-      <div className="flex flex-wrap items-center gap-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-2 mb-2 shrink-0">
         <Select
           selectSize="sm"
           aria-label="Cluster"
@@ -256,6 +258,7 @@ export function PodLogs({ config }: PodLogsProps) {
           disabled={!effectivePod || isBusy}
           className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg border border-border bg-secondary text-muted-foreground hover:text-foreground disabled:opacity-50"
           title="Refresh logs"
+          aria-label={t('podLogs.refreshLogsAria')}
         >
           <RefreshCw className={`w-3 h-3 ${isBusy ? 'animate-spin' : ''}`} />
           Refresh
@@ -263,10 +266,10 @@ export function PodLogs({ config }: PodLogsProps) {
       </div>
 
       {/* Log viewer */}
-      <div className="flex-1 min-h-0 rounded-lg border border-border bg-slate-950 overflow-hidden">
+      <div className="flex-1 min-h-0 rounded-lg border border-border bg-card overflow-hidden">
         {logsError ? (
           <div className="h-full flex items-center justify-center gap-2 p-4 text-xs text-red-400">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="break-all">{logsError}</span>
           </div>
         ) : !effectivePod ? (

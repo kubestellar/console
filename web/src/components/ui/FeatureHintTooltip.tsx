@@ -40,7 +40,7 @@ export function FeatureHintTooltip({
           variant="ghost"
           size="sm"
           onClick={onDismiss}
-          className="flex-shrink-0 p-0.5 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300"
+          className="shrink-0 p-0.5 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300"
           aria-label="Dismiss hint"
           icon={<X className="w-3 h-3" />}
         />

@@ -110,6 +110,7 @@ test('react commits per navigation stays under budget', async ({ page }) => {
       try {
         window.localStorage.setItem(demoKey, demoValue)
         window.localStorage.setItem(tokenKey, tokenValue)
+        window.localStorage.setItem('kc-agent-setup-dismissed', 'true')
       } catch {
         // Ignore: happens when the test storage partition is not yet
         // available. The next page load will still see the attempt.

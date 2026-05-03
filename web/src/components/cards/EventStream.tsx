@@ -48,7 +48,7 @@ interface EventStreamConfig {
 }
 
 function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const { isDemoMode } = useDemoMode()
   const userLimit =
     typeof config?.limit === 'number' && config.limit > 0 ? config.limit : null
@@ -77,10 +77,11 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
   )
 
   // Report state to CardWrapper for refresh animation
+  const hasData = filteredRawEvents.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
     isDemoData: isDemoMode || isDemoFallback,
-    hasAnyData: filteredRawEvents.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures,
     isRefreshing,
@@ -200,8 +201,8 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
     return (
       <CardEmptyState
         icon={Radio}
-        title="No events"
-        message="Cluster events will appear here when activity is detected."
+        title={t('cards:eventStream.noEvents')}
+        message={t('cards:eventStream.noEventsHint')}
       />
     )
   }
@@ -258,7 +259,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
       <div ref={containerRef} className="flex-1 space-y-1.5 overflow-y-auto min-h-card-content" style={containerStyle}>
         {events.length === 0 ? (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            No recent events
+            {t('cards:eventStream.noMatchingEvents')}
           </div>
         ) : (
           events.map((event, idx) => {
@@ -272,7 +273,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
                 onClick={() => handleEventClick(event)}
                 title={`Click to view details for ${event.object}`}
               >
-                <div className={`p-1.5 rounded ${style.bg} flex-shrink-0`} title={style.tooltip}>
+                <div className={`p-1.5 rounded ${style.bg} shrink-0`} title={style.tooltip}>
                   <EventIcon className={`w-3.5 h-3.5 ${style.color}`} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -305,7 +306,7 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
        * the card from growing/shrinking on refresh (#8384).
        */}
       <div
-        className="flex-shrink-0"
+        className="shrink-0"
         style={{ minHeight: `${EVENT_STREAM_FOOTER_MIN_HEIGHT_PX}px` }}
       >
         <CardPaginationFooter

@@ -20,7 +20,7 @@ func TestIsAllowedGitHubPath(t *testing.T) {
 		// Blocked paths
 		{"gists", "/gists", false},
 		{"orgs", "/orgs/kubestellar", false},
-		{"search", "/search/issues", false},
+		{"search", "/search/issues", true},
 		{"empty", "/", false},
 		{"admin", "/admin/users", false},
 		{"events", "/events", false},

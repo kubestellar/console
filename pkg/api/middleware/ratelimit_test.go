@@ -1,8 +1,13 @@
 package middleware
 
 import (
+	"io"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 )
 
 func TestFailureTracker_RecordAndGet(t *testing.T) {
@@ -209,4 +214,52 @@ func TestFailureTracker_Timestamps(t *testing.T) {
 	if rec.LastAt.Before(rec.FirstAt) {
 		t.Fatalf("LastAt %v should be >= FirstAt %v", rec.LastAt, rec.FirstAt)
 	}
+}
+
+func TestCompositeKey(t *testing.T) {
+	app := fiber.New(fiber.Config{
+		ProxyHeader: fiber.HeaderXForwardedFor,
+	})
+
+	app.Get("/test", func(c *fiber.Ctx) error {
+		return c.SendString(CompositeKey(c))
+	})
+
+	t.Run("IP only", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("X-Forwarded-For", "1.1.1.1")
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+		if string(body) != "1.1.1.1" {
+			t.Errorf("expected 1.1.1.1, got %q", string(body))
+		}
+	})
+
+	t.Run("UserID and IP", func(t *testing.T) {
+		uid := uuid.New()
+		appWithAuth := fiber.New(fiber.Config{
+			ProxyHeader: fiber.HeaderXForwardedFor,
+		})
+		appWithAuth.Get("/test", func(c *fiber.Ctx) error {
+			c.Locals("userID", uid)
+			return c.SendString(CompositeKey(c))
+		})
+
+		req := httptest.NewRequest("GET", "/test", nil)
+		req.Header.Set("X-Forwarded-For", "2.2.2.2")
+		resp, err := appWithAuth.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		body, _ := io.ReadAll(resp.Body)
+		expected := uid.String() + ":2.2.2.2"
+		if string(body) != expected {
+			t.Errorf("expected %s, got %q", expected, string(body))
+		}
+	})
 }

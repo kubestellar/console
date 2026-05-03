@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import type { ProviderConnectionState } from '../types/agent'
 import { INITIAL_PROVIDER_CONNECTION_STATE, PROVIDER_PREREQUISITES } from '../types/agent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { agentFetch } from './mcp/shared'
 
 /** Timeout for provider readiness check (10 seconds) */
 const PROVIDER_CONNECT_TIMEOUT_MS = 10_000
@@ -32,7 +33,7 @@ async function checkProviderReady(providerName: string): Promise<ProviderCheckRe
   // Try the dedicated provider check endpoint first (supports handshake)
   try {
     const checkUrl = `${LOCAL_AGENT_HTTP_URL}/provider/check?name=${encodeURIComponent(providerName)}`
-    const checkResponse = await fetch(checkUrl, {
+    const checkResponse = await agentFetch(checkUrl, {
       signal: AbortSignal.timeout(15_000) })
     if (checkResponse.ok) {
       const data = await checkResponse.json()
@@ -49,9 +50,13 @@ async function checkProviderReady(providerName: string): Promise<ProviderCheckRe
     // /provider/check not available -- fall through to health check
   }
 
-  // Fallback: check the health endpoint for simple provider presence
+  // Fallback: check the health endpoint for simple provider presence.
+  // Use plain fetch — /health does not require auth and avoids CORS
+  // preflight failures from X-Requested-With header (#10459).
   try {
     const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(3_000) })
     if (!response.ok) {
       return { ready: false, error: `Agent returned HTTP ${response.status}` }

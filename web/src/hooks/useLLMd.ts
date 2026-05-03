@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { getDemoMode } from './useDemoMode'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { KUBECTL_DEFAULT_TIMEOUT_MS, KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 
-// Refresh interval for automatic polling (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
 
 // LLM-d component types
 export type LLMdComponentType = 'model' | 'epp' | 'gateway' | 'prometheus' | 'autoscaler' | 'other'
@@ -241,14 +241,14 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
           try {
             const resp = await kubectlProxy.exec(
               ['get', 'deployments', '-A', '-o', 'json'],
-              { context: cluster, timeout: 15000 }
+              { context: cluster, timeout: KUBECTL_MEDIUM_TIMEOUT_MS }
             )
             if (resp.exitCode === 0 && resp.output) {
               const data = JSON.parse(resp.output)
               const items = data.items || []
               allDeployments.push(...items)
             }
-          } catch (err) {
+          } catch (err: unknown) {
             // Suppress demo mode errors - they're expected when agent is unavailable
             const errMsg = err instanceof Error ? err.message : String(err)
             if (!errMsg.includes('demo mode')) {
@@ -264,7 +264,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
           const autoscalerMap = new Map<string, 'hpa' | 'va' | 'both'>()
 
           try {
-            const hpaResponse = await kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: 10000 })
+            const hpaResponse = await kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_DEFAULT_TIMEOUT_MS })
             if (hpaResponse.exitCode === 0) {
               const hpaData = JSON.parse(hpaResponse.output)
               const hpas = (hpaData.items || []) as HPAResource[]
@@ -278,7 +278,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
           } catch { /* ignore */ }
 
           try {
-            const vaResponse = await kubectlProxy.exec(['get', 'variantautoscalings', '-A', '-o', 'json'], { context: cluster, timeout: 10000 })
+            const vaResponse = await kubectlProxy.exec(['get', 'variantautoscalings', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_DEFAULT_TIMEOUT_MS })
             if (vaResponse.exitCode === 0) {
               const vaData = JSON.parse(vaResponse.output)
               const vas = (vaData.items || []) as VariantAutoscalingResource[]
@@ -405,7 +405,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
               initialLoadDone.current = true
             }
           }
-        } catch (err) {
+        } catch (err: unknown) {
           // Suppress demo mode errors - they're expected when agent is unavailable
           const errMsg = err instanceof Error ? err.message : String(err)
           if (!errMsg.includes('demo mode')) {
@@ -418,7 +418,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
       setConsecutiveFailures(0)
       setLastRefresh(new Date())
       initialLoadDone.current = true
-    } catch (err) {
+    } catch (err: unknown) {
       // Suppress demo mode errors
       const errMsg = err instanceof Error ? err.message : String(err)
       if (!errMsg.includes('demo mode')) {
@@ -438,7 +438,7 @@ export function useLLMdServers(clusters: string[] = ['vllm-d', 'platform-eval'])
   }
 
   useEffect(() => {
-    refetch(false).catch(err => {
+    refetch(false).catch((err: unknown) => {
       console.error('[useLLMdServers] Initial fetch error:', err)
     })
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
@@ -514,7 +514,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
           // Get InferencePools
           const response = await kubectlProxy.exec(
             ['get', 'inferencepools', '-A', '-o', 'json'],
-            { context: cluster, timeout: 30000 }
+            { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }
           )
 
           if (response.exitCode !== 0) {
@@ -550,7 +550,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
               initialLoadDone.current = true
             }
           }
-        } catch (err) {
+        } catch (err: unknown) {
           // Suppress demo mode errors - they're expected when agent is unavailable
           const errMsg = err instanceof Error ? err.message : String(err)
           if (!errMsg.includes('demo mode')) {
@@ -563,7 +563,7 @@ export function useLLMdModels(clusters: string[] = ['vllm-d', 'platform-eval']) 
       setConsecutiveFailures(0)
       setLastRefresh(new Date())
       initialLoadDone.current = true
-    } catch (err) {
+    } catch (err: unknown) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
       if (!silent) {

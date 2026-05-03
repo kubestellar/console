@@ -19,9 +19,10 @@ import {
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { isNetlifyDeployment } from '../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
-const REFRESH_IDLE_MS = 5 * 60 * 1000    // 5 minutes when idle
-const REFRESH_ACTIVE_MS = 2 * 60 * 1000  // 2 minutes when jobs are running
+const REFRESH_IDLE_MS = 5 * MS_PER_MINUTE    // 5 minutes when idle
+const REFRESH_ACTIVE_MS = 2 * MS_PER_MINUTE  // 2 minutes when jobs are running
 
 const DEMO_DATA = generateDemoNightlyData()
 
@@ -40,7 +41,7 @@ function loadCachedData(): NightlyE2EData {
       const parsed = JSON.parse(raw) as NightlyE2EData
       if (parsed.guides?.length > 0 && !parsed.isDemo) return parsed
     }
-  } catch { /* ignore */ }
+  } catch (e: unknown) { console.warn('[useNightlyE2EData] failed to read cached nightly data:', e) }
   return { guides: [], isDemo: false }
 }
 
@@ -71,8 +72,9 @@ export function useNightlyE2EData() {
     demoData: { guides: DEMO_DATA, isDemo: true },
     persist: true,
     refreshInterval,
-    demoWhenEmpty: true, // Show demo data immediately during cold start instead of skeleton loading
-    liveInDemoMode: isNetlifyDeployment, // Only fetch live in demo mode on console.kubestellar.io
+    demoWhenEmpty: true,
+    isEmpty: (d) => !d.guides || d.guides.length === 0 || d.guides.every(g => (g.runs || []).length === 0),
+    liveInDemoMode: isNetlifyDeployment,
     fetcher: async () => {
       // Try authenticated endpoint first, then public fallback
       const endpoints = ['/api/nightly-e2e/runs', '/api/public/nightly-e2e/runs']
@@ -171,4 +173,13 @@ export function useNightlyE2EData() {
     consecutiveFailures: cacheResult.consecutiveFailures,
     refetch: cacheResult.refetch,
   }
+}
+
+export const __testables = {
+  loadCachedData,
+  saveCachedData,
+  getAuthHeaders,
+  REFRESH_IDLE_MS,
+  REFRESH_ACTIVE_MS,
+  LS_CACHE_KEY,
 }

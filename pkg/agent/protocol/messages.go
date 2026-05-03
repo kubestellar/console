@@ -41,6 +41,11 @@ type Message struct {
 type HealthPayload struct {
 	Status             string            `json:"status"`
 	Version            string            `json:"version"`
+	CommitSHA          string            `json:"commitSHA,omitempty"`
+	BuildTime          string            `json:"buildTime,omitempty"`
+	GoVersion          string            `json:"goVersion,omitempty"`
+	OS                 string            `json:"os"`
+	Arch               string            `json:"arch"`
 	Clusters           int               `json:"clusters"`
 	HasClaude          bool              `json:"hasClaude"`
 	Claude             *ClaudeInfo       `json:"claude,omitempty"`
@@ -187,6 +192,11 @@ type ChatRequest struct {
 	Prompt    string        `json:"prompt"`
 	SessionID string        `json:"sessionId,omitempty"`
 	History   []ChatMessage `json:"history,omitempty"` // Previous messages for context
+	// ClusterContext is the kubeconfig context name of the cluster the user is
+	// currently viewing. When set, tool-capable agents scope kubectl commands
+	// to this context via --context, preventing multi-cluster context drift
+	// where the AI operates on a different cluster than the user expects. (#9485)
+	ClusterContext string `json:"clusterContext,omitempty"`
 	// DryRun is a server-enforced flag. When true, the kubectl proxy rejects
 	// mutating commands (apply, create, delete, etc.) for this session,
 	// preventing the AI agent from making real changes even if it ignores the
@@ -201,6 +211,7 @@ type ChatStreamPayload struct {
 	Agent     string           `json:"agent"`
 	SessionID string           `json:"sessionId"`
 	Done      bool             `json:"done"`
+	IsError   bool             `json:"isError,omitempty"`
 	Usage     *ChatTokenUsage  `json:"usage,omitempty"`
 }
 

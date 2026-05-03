@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatStat, formatStatIfAvailable, formatMemoryStat, formatStorageStat, formatPercentStat } from '../formatStats'
+import { formatStat, formatMemoryStat, formatStorageStat } from '../formatStats'
 
 describe('formatStat', () => {
   it('returns dash for undefined', () => {
@@ -51,20 +51,6 @@ describe('formatStat', () => {
   })
 })
 
-describe('formatStatIfAvailable', () => {
-  it('returns dash when hasData is false', () => {
-    expect(formatStatIfAvailable(42, false)).toBe('-')
-  })
-
-  it('formats normally when hasData is true', () => {
-    expect(formatStatIfAvailable(42, true)).toBe('42')
-  })
-
-  it('returns dash for null even when hasData', () => {
-    expect(formatStatIfAvailable(null, true)).toBe('-')
-  })
-})
-
 describe('formatMemoryStat', () => {
   it('returns dash when hasData is false', () => {
     expect(formatMemoryStat(10, false)).toBe('-')
@@ -111,29 +97,3 @@ describe('formatStorageStat', () => {
   })
 })
 
-describe('formatPercentStat', () => {
-  it('returns dash when hasData is false', () => {
-    expect(formatPercentStat(50, false)).toBe('-')
-  })
-
-  it('returns dash for undefined', () => {
-    expect(formatPercentStat(undefined)).toBe('-')
-  })
-
-  it('returns dash for null', () => {
-    expect(formatPercentStat(null)).toBe('-')
-  })
-
-  it('formats percentage', () => {
-    expect(formatPercentStat(75.6)).toBe('76%')
-  })
-
-  it('clamps to 0-100 range', () => {
-    expect(formatPercentStat(-10)).toBe('0%')
-    expect(formatPercentStat(150)).toBe('100%')
-  })
-
-  it('formats zero percent', () => {
-    expect(formatPercentStat(0)).toBe('0%')
-  })
-})

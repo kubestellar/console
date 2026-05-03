@@ -240,7 +240,7 @@ function DeploymentIssuesInternal({ config }: DeploymentIssuesProps) {
               title={t('deploymentIssues.clickToView', { name: issue.name })}
             >
               <div className="flex items-start gap-3 group">
-                <div className="p-2 rounded-lg bg-red-500/20 flex-shrink-0" title={iconTooltip}>
+                <div className="p-2 rounded-lg bg-red-500/20 shrink-0" title={iconTooltip}>
                   <Icon className="w-4 h-4 text-red-400" />
                 </div>
                 <div className="flex-1 min-w-0">

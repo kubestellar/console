@@ -93,7 +93,10 @@ document.addEventListener('visibilitychange', () => {
 })
 
 // Also check on a periodic interval for long-lived tabs
-setInterval(checkForStaleHtml, STALE_CHECK_INTERVAL_MS)
+// Store interval ID so the timer is trackable (avoids orphaned-timer lint warnings)
+const _staleCheckInterval = setInterval(checkForStaleHtml, STALE_CHECK_INTERVAL_MS)
+// Suppress unused-variable warning — the interval intentionally runs for the app lifetime
+void _staleCheckInterval
 
 // Enable MSW mock service worker in demo mode (Netlify previews)
 const enableMocking = async () => {
@@ -110,7 +113,7 @@ const enableMocking = async () => {
     // mockServiceWorker.js URL string never appears in the index bundle.
     const { startMocking: start } = await import('./mocks/browser')
     await start()
-  } catch (error) {
+  } catch (error: unknown) {
     // If service worker fails to start (e.g., in some browser contexts),
     // log the error but continue rendering the app without mocking
     console.error('MSW service worker failed to start:', error)
@@ -155,9 +158,9 @@ enableMocking()
 
         const { meta } = await rpc.preloadAll()
         initPreloadedMeta(meta)
-      } catch (e) {
+      } catch (e: unknown) {
         console.warn('[Cache] SQLite worker init: using IndexedDB fallback:', e)
-        try { await migrateFromLocalStorage() } catch { /* ignore */ }
+        try { await migrateFromLocalStorage() } catch (migrateErr: unknown) { console.warn('[Cache] failed to migrate from localStorage:', migrateErr) }
       }
     })()
 

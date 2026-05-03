@@ -25,19 +25,22 @@ describe('DASHBOARD_CHUNKS', () => {
   })
 
   it('every loader returns a Promise when invoked', async () => {
-    for (const [key, loader] of Object.entries(DASHBOARD_CHUNKS)) {
-      const result = loader()
-      expect(result).toBeInstanceOf(Promise)
-      // Await to exercise the import path; catch errors from missing modules
-      try {
-        await result
-      } catch {
-        // Dynamic import may fail in test env — that's fine,
-        // we just need the loader function itself to be exercised
-      }
-      expect(key).toBeTruthy()
-    }
-  })
+    const entries = Object.entries(DASHBOARD_CHUNKS)
+    // Resolve all chunk imports in parallel to avoid serial timeout accumulation
+    await Promise.all(
+      entries.map(async ([key, loader]) => {
+        const result = loader()
+        expect(result).toBeInstanceOf(Promise)
+        try {
+          await result
+        } catch {
+          // Dynamic import may fail in test env — that's fine,
+          // we just need the loader function itself to be exercised
+        }
+        expect(key).toBeTruthy()
+      }),
+    )
+  }, 15_000)
 
   it('does not have unknown keys', () => {
     expect(DASHBOARD_CHUNKS['nonexistent']).toBeUndefined()

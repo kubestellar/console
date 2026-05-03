@@ -23,7 +23,7 @@ export function scanMissionFile(jsonContent: string): FileScanResult {
 
   try {
     parsed = JSON.parse(jsonContent)
-  } catch (err) {
+  } catch (err: unknown) {
     return {
       valid: false,
       findings: [

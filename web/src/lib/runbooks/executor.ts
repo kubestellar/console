@@ -133,7 +133,7 @@ export async function executeRunbook(
         data,
         durationMs: Date.now() - startTime,
       }
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       if (step.optional) {
         stepResults[i] = {

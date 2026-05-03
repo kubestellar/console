@@ -105,7 +105,7 @@ function parseYamlDocuments(text: string): { resources: ParsedResource[]; errors
 
       resources.push({ kind, name, namespace, image })
     }
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     errors.push(`YAML parse error: ${message}`)
   }
@@ -390,7 +390,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
     return renderPreviewTable([resource])
   }
 
-  const inputClasses = 'w-full px-3 py-2 text-sm rounded-lg border border-border bg-secondary/30 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50 focus:border-purple-500/50'
+  const inputClasses = 'w-full px-3 py-2 text-sm rounded-lg border border-border bg-secondary/30 text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50 focus:border-purple-500/50'
   const labelClasses = 'block text-xs font-medium text-muted-foreground mb-1'
 
   // -----------------------------------------------------------------------

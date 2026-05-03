@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../../lib/api'
 import { fetchSSE } from '../../lib/sseClient'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
@@ -80,7 +79,9 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ configmaps: ConfigMap[] }>(`${LOCAL_AGENT_HTTP_URL}/configmaps?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/configmaps?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setConfigMaps(data.configmaps || [])
       setError(null)
     } catch {
@@ -183,7 +184,9 @@ export function useSecrets(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ secrets: Secret[] }>(`${LOCAL_AGENT_HTTP_URL}/secrets?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/secrets?${params}`)
+      if (!resp.ok) throw new Error(`secrets fetch failed: ${resp.status}`)
+      const data = await resp.json() as { secrets: Secret[] }
       setSecrets(data.secrets || [])
       setError(null)
     } catch {
@@ -260,7 +263,9 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ serviceAccounts: ServiceAccount[] }>(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts?${params}`)
+      if (!resp.ok) throw new Error(`serviceaccounts fetch failed: ${resp.status}`)
+      const data = await resp.json() as { serviceAccounts: ServiceAccount[] }
       setServiceAccounts(data.serviceAccounts || [])
       setError(null)
     } catch {

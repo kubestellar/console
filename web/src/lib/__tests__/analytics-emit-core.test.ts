@@ -166,6 +166,7 @@ import {
   emitConsensusModeToggled,
   emitPredictionFeedbackSubmitted,
   emitChunkReloadRecoveryFailed,
+  emitHttpError,
   startGlobalErrorTracking,
   emitScreenshotAttached,
   emitScreenshotUploadFailed,
@@ -503,6 +504,33 @@ describe('emitSnoozed default duration', () => {
 
   it('does not throw with explicit duration', () => {
     expect(() => emitSnoozed('alert', '24h')).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// emitHttpError
+// ---------------------------------------------------------------------------
+
+describe('emitHttpError', () => {
+  it('does not throw for a 404', () => {
+    expect(() => emitHttpError(404, '/api/clusters')).not.toThrow()
+  })
+
+  it('does not throw for a 500 with detail', () => {
+    expect(() => emitHttpError(500, '/api/namespaces', 'Internal Server Error')).not.toThrow()
+  })
+
+  it('does not throw when endpoint contains a query string', () => {
+    expect(() => emitHttpError(404, '/api/feedback/queue?count_only=true')).not.toThrow()
+  })
+
+  it('does not throw when endpoint is very long', () => {
+    const longEndpoint = '/api/' + 'x'.repeat(200)
+    expect(() => emitHttpError(400, longEndpoint)).not.toThrow()
+  })
+
+  it('does not throw with a string status code', () => {
+    expect(() => emitHttpError('0', '/api/health')).not.toThrow()
   })
 })
 

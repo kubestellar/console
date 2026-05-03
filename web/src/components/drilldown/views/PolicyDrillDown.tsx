@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
@@ -12,6 +12,7 @@ import {
 import { cn } from '../../../lib/cn'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -84,6 +85,7 @@ export function PolicyDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod } = useDrillDownActions()
+  const { close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -125,7 +127,7 @@ export function PolicyDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
@@ -282,6 +284,7 @@ Please:
    - "Should I check related policies?"
    - "All done"`
 
+    closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
       title: `Diagnose Policy: ${policyName}`,
       description: `Analyze ${policyType === 'kyverno' ? 'Kyverno' : 'OPA'} policy and violations`,
@@ -392,7 +395,7 @@ Please:
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Policy Info Card */}
-            <div className="p-4 rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
+            <div className="p-4 rounded-lg bg-linear-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20">
               <div className="flex items-start gap-3">
                 <Shield className="w-8 h-8 text-blue-400 mt-1" />
                 <div className="flex-1 min-w-0">

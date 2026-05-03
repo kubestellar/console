@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -33,7 +34,7 @@ type feedbackStoreStub struct {
 	lastUnreadUserID        uuid.UUID
 }
 
-func (s *feedbackStoreStub) GetUserNotifications(userID uuid.UUID, limit int) ([]models.Notification, error) {
+func (s *feedbackStoreStub) GetUserNotifications(_ context.Context, userID uuid.UUID, limit int) ([]models.Notification, error) {
 	s.lastNotificationsUserID = userID
 	s.lastNotificationsLimit = limit
 	if s.notificationsErr != nil {
@@ -42,7 +43,7 @@ func (s *feedbackStoreStub) GetUserNotifications(userID uuid.UUID, limit int) ([
 	return s.notifications, nil
 }
 
-func (s *feedbackStoreStub) GetUnreadNotificationCount(userID uuid.UUID) (int, error) {
+func (s *feedbackStoreStub) GetUnreadNotificationCount(_ context.Context, userID uuid.UUID) (int, error) {
 	s.lastUnreadUserID = userID
 	if s.unreadErr != nil {
 		return 0, s.unreadErr

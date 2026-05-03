@@ -21,6 +21,7 @@ vi.mock('../../../hooks/usePermissions', () => ({
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => ({
     clusters: [{ name: 'cluster-a' }, { name: 'cluster-b' }],
+    deduplicatedClusters: [{ name: 'cluster-a' }, { name: 'cluster-b' }],
   }),
   useNamespaces: () => ({
     namespaces: ['default', 'kube-system'],
@@ -144,7 +145,7 @@ describe('CanIChecker — no clusters', () => {
     // Re-mock useClusters with empty array
     const useMCPModule = await import('../../../hooks/useMCP')
     vi.spyOn(useMCPModule, 'useClusters').mockReturnValue({
-      clusters: [],
+      clusters: [], deduplicatedClusters: [],
       isLoading: false,
       error: null,
     } as ReturnType<typeof useMCPModule.useClusters>)

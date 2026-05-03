@@ -7,9 +7,27 @@ import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMission
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
+vi.mock('./mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('./useDemoMode', () => ({
   getDemoMode: vi.fn(() => false),
   default: vi.fn(() => false),
+}))
+vi.mock('./useLocalAgent', () => ({
+  useLocalAgent: vi.fn(() => ({ isConnected: false })),
+  isAgentUnavailable: vi.fn(() => false),
+  isAgentConnected: vi.fn(() => false),
+  reportAgentDataSuccess: vi.fn(),
+  reportAgentDataError: vi.fn(),
+}))
+
+vi.mock('../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: vi.fn((url: string) => url),
 }))
 
 vi.mock('./useTokenUsage', () => ({
@@ -37,12 +55,18 @@ vi.mock('../lib/analytics', () => ({
   emitMissionCompleted: vi.fn(),
   emitMissionError: vi.fn(),
   emitMissionRated: vi.fn(),
+  emitAgentTokenFailure: vi.fn(),
+  emitWsAuthMissing: vi.fn(),
+  emitSseAuthFailure: vi.fn(),
+  emitSessionRefreshFailure: vi.fn(),
 }))
 
 vi.mock('../lib/missions/preflightCheck', () => ({
   runPreflightCheck: vi.fn().mockResolvedValue({ ok: true }),
   classifyKubectlError: vi.fn().mockReturnValue({ code: 'UNKNOWN_EXECUTION_FAILURE', message: 'mock' }),
   getRemediationActions: vi.fn().mockReturnValue([]),
+  resolveRequiredTools: vi.fn(() => []),
+  runToolPreflightCheck: vi.fn().mockResolvedValue({ ok: true, tools: [] }),
 }))
 
 vi.mock('../lib/missions/scanner/malicious', () => ({
@@ -848,6 +872,31 @@ describe('cancelling mission receives terminal messages', () => {
     })
 
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelled')
+  })
+
+  // #9477 — When the backend sends `{type: "result", payload: {cancelled: true}}`
+  // WITHOUT a `sessionId` field, the hook should resolve the mission ID from
+  // the active cancel intents and still finalize the cancellation instead of
+  // leaving the UI stuck on "Cancelling..." forever.
+  it('finalizes cancellation on result with cancelled:true but no sessionId (#9477)', async () => {
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    const { missionId } = await startMissionWithConnection(result)
+
+    act(() => { result.current.cancelMission(missionId) })
+    expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('cancelling')
+
+    // Backend replies with cancelled:true but omits sessionId entirely
+    act(() => {
+      MockWebSocket.lastInstance?.simulateMessage({
+        id: `cancel-${Date.now()}`,
+        type: 'result',
+        payload: { cancelled: true },
+      })
+    })
+
+    const mission = result.current.missions.find(m => m.id === missionId)
+    expect(mission?.status).toBe('cancelled')
+    expect(mission?.messages.some(m => m.content.includes('cancelled by user'))).toBe(true)
   })
 
   it('prevents double-cancel (no duplicate timeout)', async () => {

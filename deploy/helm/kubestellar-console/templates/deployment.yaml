@@ -267,6 +267,13 @@ spec:
             - name: CLUSTER_NAME
               value: {{ .Values.clusterName | quote }}
             {{- end }}
+            # Suppress local kc-agent connections — in-cluster deployments
+            # accessed via port-forward or ingress have no local kc-agent
+            # on the user's machine. Without this, the frontend sends
+            # WebSocket/HTTP requests to 127.0.0.1:8585 that always fail,
+            # causing console errors and 429 cascades. (#10267)
+            - name: NO_LOCAL_AGENT
+              value: "true"
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:

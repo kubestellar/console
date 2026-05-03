@@ -9,9 +9,10 @@
 #   curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 #
 # Options:
-#   --version, -v <tag>   Specific version to download (default: latest stable)
-#   --dir, -d <path>      Install directory (default: ./kubestellar-console)
-#   --port, -p <port>     Console port (default: 8080)
+#   --version, -v <tag>     Specific version to download (default: latest stable)
+#   --channel, -c <name>    Update channel: stable, unstable (default: from ~/.kc/settings.json or stable)
+#   --dir, -d <path>        Install directory (default: ./kubestellar-console)
+#   --port, -p <port>       Console port (default: 8080)
 #
 # kc-agent runs as a background daemon (survives Ctrl+C / terminal close).
 # To stop it:  kill $(cat ./kubestellar-console/kc-agent.pid)
@@ -27,6 +28,7 @@ set -e
 # --- Defaults ---
 INSTALL_DIR="./kubestellar-console"
 VERSION=""
+CHANNEL=""
 PORT=8080
 REPO="kubestellar/console"
 GITHUB_API="https://api.github.com"
@@ -34,12 +36,51 @@ GITHUB_API="https://api.github.com"
 # --- Parse args ---
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --version|-v) VERSION="$2"; shift 2 ;;
-        --dir|-d) INSTALL_DIR="$2"; shift 2 ;;
-        --port|-p) PORT="$2"; shift 2 ;;
+        --version|-v)
+            if [[ -z "${2:-}" || "${2:-}" == -* ]]; then echo "Error: --version requires a value"; exit 1; fi
+            VERSION="$2"; shift 2 ;;
+        --channel|-c)
+            if [[ -z "${2:-}" || "${2:-}" == -* ]]; then echo "Error: --channel requires a value"; exit 1; fi
+            CHANNEL="$2"; shift 2 ;;
+        --dir|-d)
+            if [[ -z "${2:-}" || "${2:-}" == -* ]]; then echo "Error: --dir requires a value"; exit 1; fi
+            INSTALL_DIR="$2"; shift 2 ;;
+        --port|-p)
+            if [[ -z "${2:-}" || "${2:-}" == -* ]]; then echo "Error: --port requires a value"; exit 1; fi
+            PORT="$2"; shift 2 ;;
         *) shift ;;
     esac
 done
+
+# --- Resolve update channel ---
+# Priority: CLI flag > persisted setting in ~/.kc/settings.json > default (stable)
+resolve_channel() {
+    if [ -n "$CHANNEL" ]; then
+        echo "$CHANNEL"
+        return
+    fi
+
+    local settings_file="$HOME/.kc/settings.json"
+    if [ -f "$settings_file" ]; then
+        local saved
+        saved=$(grep -o '"autoUpdateChannel" *: *"[^"]*"' "$settings_file" 2>/dev/null \
+            | sed 's/"autoUpdateChannel" *: *"//;s/"//' || true)
+        if [ -n "$saved" ]; then
+            echo "$saved"
+            return
+        fi
+    fi
+
+    echo "stable"
+}
+
+CHANNEL=$(resolve_channel)
+
+# --- Validate channel (after resolve so persisted values are checked too) ---
+case "$CHANNEL" in
+    stable|unstable) ;;
+    *) echo "Error: Invalid channel '$CHANNEL'. Allowed values: stable unstable"; exit 1 ;;
+esac
 
 # --- Detect platform ---
 detect_platform() {
@@ -73,26 +114,36 @@ resolve_version() {
         return
     fi
 
-    echo "Resolving latest version..." >&2
+    echo "Resolving latest version (channel: $CHANNEL)..." >&2
 
     local latest api_response http_code
 
-    # Try to get latest stable release (non-prerelease) via releases list
     api_response=$(curl -sSL -w '\n%{http_code}' "${GITHUB_API}/repos/${REPO}/releases" 2>/dev/null)
     http_code=$(echo "$api_response" | tail -1)
     api_response=$(echo "$api_response" | sed '$d')
 
     if [ "$http_code" = "200" ]; then
-        latest=$(echo "$api_response" \
-            | grep -o '"tag_name": *"[^"]*"' \
-            | head -20 \
-            | sed 's/"tag_name": *"//;s/"//' \
-            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
-            | head -1)
+        if [ "$CHANNEL" = "unstable" ]; then
+            # Unstable channel: pick the latest nightly pre-release
+            latest=$(echo "$api_response" \
+                | grep -o '"tag_name": *"[^"]*"' \
+                | head -20 \
+                | sed 's/"tag_name": *"//;s/"//' \
+                | grep -E 'nightly' \
+                | head -1)
+        else
+            # Stable channel: pick the latest stable (non-prerelease) tag
+            latest=$(echo "$api_response" \
+                | grep -o '"tag_name": *"[^"]*"' \
+                | head -20 \
+                | sed 's/"tag_name": *"//;s/"//' \
+                | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+                | head -1)
+        fi
     fi
 
-    # Fall back to /releases/latest endpoint (includes prereleases)
-    if [ -z "$latest" ]; then
+    # Fall back to /releases/latest endpoint (stable only, GitHub excludes prereleases)
+    if [ -z "$latest" ] && [ "$CHANNEL" != "unstable" ]; then
         api_response=$(curl -sSL -w '\n%{http_code}' "${GITHUB_API}/repos/${REPO}/releases/latest" 2>/dev/null)
         http_code=$(echo "$api_response" | tail -1)
         api_response=$(echo "$api_response" | sed '$d')
@@ -107,10 +158,17 @@ resolve_version() {
     # Fall back to git tags if API is unavailable (rate-limited, network issues)
     if [ -z "$latest" ]; then
         echo "  API unavailable (HTTP $http_code), trying git ls-remote..." >&2
-        latest=$(git ls-remote --tags --sort=-v:refname "https://github.com/${REPO}.git" 'v*' 2>/dev/null \
-            | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*$' \
-            | head -1 \
-            | sed 's|refs/tags/||')
+        if [ "$CHANNEL" = "unstable" ]; then
+            latest=$(git ls-remote --tags --sort=-v:refname "https://github.com/${REPO}.git" 'v*nightly*' 2>/dev/null \
+                | grep -o 'refs/tags/v[^^{} ]*' \
+                | head -1 \
+                | sed 's|refs/tags/||')
+        else
+            latest=$(git ls-remote --tags --sort=-v:refname "https://github.com/${REPO}.git" 'v*' 2>/dev/null \
+                | grep -o 'refs/tags/v[0-9]*\.[0-9]*\.[0-9]*$' \
+                | head -1 \
+                | sed 's|refs/tags/||')
+        fi
     fi
 
     if [ -z "$latest" ]; then
@@ -185,6 +243,7 @@ PLATFORM=$(detect_platform)
 VERSION=$(resolve_version)
 
 echo "  Version:  $VERSION"
+echo "  Channel:  $CHANNEL"
 echo "  Platform: $PLATFORM"
 echo "  Directory: $INSTALL_DIR"
 echo ""
@@ -272,11 +331,9 @@ fi
 # Warn when GitHub OAuth credentials are not configured
 if [ -z "$GITHUB_CLIENT_ID" ] || [ -z "$GITHUB_CLIENT_SECRET" ]; then
     echo ""
-    echo "Note: No GitHub OAuth credentials found."
-    echo "  Console will start in dev mode (auto-login, no GitHub authentication)."
-    echo "  To enable GitHub login, create a .env file with:"
-    echo "    GITHUB_CLIENT_ID=<your-client-id>"
-    echo "    GITHUB_CLIENT_SECRET=<your-client-secret>"
+    echo "Note: No GitHub OAuth credentials found in .env."
+    echo "  You can set up GitHub sign-in from the login page (one-click setup)"
+    echo "  or add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to .env manually."
     echo ""
 fi
 

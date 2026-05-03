@@ -10,11 +10,11 @@ import { useTranslation } from 'react-i18next'
 type Notebook = typeof DEMO_NOTEBOOKS[number]
 type SortByOption = 'name' | 'user' | 'status'
 
-const SORT_OPTIONS = [
-  { value: 'name' as const, label: 'Name' },
-  { value: 'user' as const, label: 'User' },
-  { value: 'status' as const, label: 'Status' },
-]
+const SORT_OPTION_KEYS = [
+  { value: 'name' as const, labelKey: 'mlNotebooks.sortName' },
+  { value: 'user' as const, labelKey: 'mlNotebooks.sortUser' },
+  { value: 'status' as const, labelKey: 'mlNotebooks.sortStatus' },
+] as const
 
 interface MLNotebooksProps {
   config?: Record<string, unknown>
@@ -89,7 +89,7 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
             limit: itemsPerPage,
             onLimitChange: setItemsPerPage,
             sortBy: sorting.sortBy,
-            sortOptions: SORT_OPTIONS,
+            sortOptions: SORT_OPTION_KEYS.map(opt => ({ value: opt.value, label: t(opt.labelKey) })),
             onSortChange: (v) => sorting.setSortBy(v as SortByOption),
             sortDirection: sorting.sortDirection,
             onSortDirectionChange: sorting.setSortDirection,
@@ -102,18 +102,18 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
       <CardSearchInput
         value={filters.search}
         onChange={filters.setSearch}
-        placeholder="Search notebooks..."
+        placeholder={t('mlNotebooks.searchNotebooks')}
         className="mb-3"
       />
 
       {/* Integration notice */}
       <div className="flex items-start gap-2 p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs mb-4">
-        <AlertCircle className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <div>
           <p className="text-blue-400 font-medium">{t('cards:mlNotebooks.notebookDetection')}</p>
           <p className="text-muted-foreground">
             {t('cards:mlNotebooks.notebookDetectionDescription')}{' '}
-            <a href="https://jupyterhub.readthedocs.io/en/stable/getting-started/index.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline-block py-2">
+            <a href="https://jupyterhub.readthedocs.io/en/stable/getting-started/index.html" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline inline">
               JupyterHub docs <ExternalLink className="w-3 h-3 inline" />
             </a>
           </p>
@@ -125,8 +125,8 @@ export function MLNotebooks({ config: _config }: MLNotebooksProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-muted-foreground border-b border-border/50">
-              <th className="text-left py-2">Notebook</th>
-              <th className="text-left py-2">User</th>
+              <th className="text-left py-2">{t('mlNotebooks.columnNotebook')}</th>
+              <th className="text-left py-2">{t('mlNotebooks.columnUser')}</th>
               <th className="text-right py-2">{t('common:common.resources')}</th>
               <th className="text-right py-2">{t('common:common.status')}</th>
             </tr>

@@ -33,6 +33,14 @@ describe('useModal', () => {
     expect(result.current.isOpen).toBe(false)
   })
 
+  it('setIsOpen() sets arbitrary value', () => {
+    const { result } = renderHook(() => useModal())
+    act(() => result.current.setIsOpen(true))
+    expect(result.current.isOpen).toBe(true)
+    act(() => result.current.setIsOpen(false))
+    expect(result.current.isOpen).toBe(false)
+  })
+
   it('returns stable callback references across renders', () => {
     const { result, rerender } = renderHook(() => useModal())
     const firstOpen = result.current.open

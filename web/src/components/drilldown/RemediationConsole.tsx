@@ -27,52 +27,64 @@ interface RemediationConsoleProps {
   issues: string[]
 }
 
+// Animation delay constants for simulated remediation steps
+const THINKING_DELAY_MS = 800
+const ACTION_DELAY_MS = 1000
+const ACTION_LONG_DELAY_MS = 1200
+const ANALYSIS_DELAY_MS = 1500
+const INFO_DELAY_MS = 600
+const RESULT_DELAY_MS = 500
+
+// Token usage estimation constants
+const BASE_TOKEN_ESTIMATE = 1000
+const TOKENS_PER_STEP_ESTIMATE = 100
+
 // Simulated remediation steps based on issue type
 const REMEDIATION_FLOWS: Record<string, Array<{ type: LogEntry['type']; message: string; details?: string; delay: number }>> = {
   CrashLoopBackOff: [
-    { type: 'thinking', message: 'Analyzing CrashLoopBackOff issue...', delay: 800 },
-    { type: 'action', message: 'Fetching pod logs to identify root cause', delay: 1200 },
-    { type: 'info', message: 'Found error in container logs: "Error: Cannot find module \'express\'"', delay: 1500 },
-    { type: 'thinking', message: 'This appears to be a missing dependency issue. Checking if this is a code or image problem...', delay: 1000 },
-    { type: 'action', message: 'Checking deployment image and pull policy', delay: 800 },
-    { type: 'info', message: 'Image: myapp:latest, PullPolicy: Always', delay: 600 },
-    { type: 'thinking', message: 'The issue is likely in the container image. Recommending image rebuild or rollback.', delay: 1000 },
-    { type: 'result', message: 'Recommendation: Rollback to previous working image version or fix the Docker build', details: 'kubectl rollout undo deployment/myapp -n default', delay: 500 },
+    { type: 'thinking', message: 'Analyzing CrashLoopBackOff issue...', delay: THINKING_DELAY_MS },
+    { type: 'action', message: 'Fetching pod logs to identify root cause', delay: ACTION_LONG_DELAY_MS },
+    { type: 'info', message: 'Found error in container logs: "Error: Cannot find module \'express\'"', delay: ANALYSIS_DELAY_MS },
+    { type: 'thinking', message: 'This appears to be a missing dependency issue. Checking if this is a code or image problem...', delay: ACTION_DELAY_MS },
+    { type: 'action', message: 'Checking deployment image and pull policy', delay: THINKING_DELAY_MS },
+    { type: 'info', message: 'Image: myapp:latest, PullPolicy: Always', delay: INFO_DELAY_MS },
+    { type: 'thinking', message: 'The issue is likely in the container image. Recommending image rebuild or rollback.', delay: ACTION_DELAY_MS },
+    { type: 'result', message: 'Recommendation: Rollback to previous working image version or fix the Docker build', details: 'kubectl rollout undo deployment/myapp -n default', delay: RESULT_DELAY_MS },
   ],
   ImagePullBackOff: [
-    { type: 'thinking', message: 'Analyzing ImagePullBackOff issue...', delay: 800 },
-    { type: 'action', message: 'Checking image reference and pull secrets', delay: 1000 },
-    { type: 'info', message: 'Image: registry.example.com/app:v2.0', delay: 600 },
-    { type: 'action', message: 'Verifying image pull secrets in namespace', delay: 1200 },
-    { type: 'error', message: 'No valid pull secret found for registry.example.com', delay: 800 },
-    { type: 'thinking', message: 'The pod needs a pull secret to access the private registry.', delay: 1000 },
-    { type: 'result', message: 'Fix: Create or update image pull secret for the registry', details: 'kubectl create secret docker-registry regcred --docker-server=registry.example.com --docker-username=<user> --docker-password=<pass> -n default', delay: 500 },
+    { type: 'thinking', message: 'Analyzing ImagePullBackOff issue...', delay: THINKING_DELAY_MS },
+    { type: 'action', message: 'Checking image reference and pull secrets', delay: ACTION_DELAY_MS },
+    { type: 'info', message: 'Image: registry.example.com/app:v2.0', delay: INFO_DELAY_MS },
+    { type: 'action', message: 'Verifying image pull secrets in namespace', delay: ACTION_LONG_DELAY_MS },
+    { type: 'error', message: 'No valid pull secret found for registry.example.com', delay: THINKING_DELAY_MS },
+    { type: 'thinking', message: 'The pod needs a pull secret to access the private registry.', delay: ACTION_DELAY_MS },
+    { type: 'result', message: 'Fix: Create or update image pull secret for the registry', details: 'kubectl create secret docker-registry regcred --docker-server=registry.example.com --docker-username=<user> --docker-password=<pass> -n default', delay: RESULT_DELAY_MS },
   ],
   OOMKilled: [
-    { type: 'thinking', message: 'Analyzing OOMKilled issue...', delay: 800 },
-    { type: 'action', message: 'Checking container resource limits', delay: 1000 },
-    { type: 'info', message: 'Current memory limit: 256Mi, Request: 128Mi', delay: 600 },
-    { type: 'action', message: 'Analyzing memory usage patterns from metrics', delay: 1500 },
-    { type: 'info', message: 'Peak memory usage before OOM: 254Mi (99% of limit)', delay: 800 },
-    { type: 'thinking', message: 'The container is running out of memory. Need to increase limits or optimize the application.', delay: 1000 },
-    { type: 'result', message: 'Recommendation: Increase memory limit to 512Mi', details: 'kubectl patch deployment myapp -p \'{"spec":{"template":{"spec":{"containers":[{"name":"app","resources":{"limits":{"memory":"512Mi"}}}]}}}}\'', delay: 500 },
+    { type: 'thinking', message: 'Analyzing OOMKilled issue...', delay: THINKING_DELAY_MS },
+    { type: 'action', message: 'Checking container resource limits', delay: ACTION_DELAY_MS },
+    { type: 'info', message: 'Current memory limit: 256Mi, Request: 128Mi', delay: INFO_DELAY_MS },
+    { type: 'action', message: 'Analyzing memory usage patterns from metrics', delay: ANALYSIS_DELAY_MS },
+    { type: 'info', message: 'Peak memory usage before OOM: 254Mi (99% of limit)', delay: THINKING_DELAY_MS },
+    { type: 'thinking', message: 'The container is running out of memory. Need to increase limits or optimize the application.', delay: ACTION_DELAY_MS },
+    { type: 'result', message: 'Recommendation: Increase memory limit to 512Mi', details: 'kubectl patch deployment myapp -p \'{"spec":{"template":{"spec":{"containers":[{"name":"app","resources":{"limits":{"memory":"512Mi"}}}]}}}}\'', delay: RESULT_DELAY_MS },
   ],
   Pending: [
-    { type: 'thinking', message: 'Analyzing why pod is stuck in Pending state...', delay: 800 },
-    { type: 'action', message: 'Checking node resources and scheduling constraints', delay: 1200 },
-    { type: 'info', message: 'Pod requests: CPU 2, Memory 4Gi', delay: 600 },
-    { type: 'action', message: 'Checking available cluster capacity', delay: 1000 },
-    { type: 'info', message: 'Available: CPU 0.5, Memory 1Gi across all nodes', delay: 800 },
-    { type: 'thinking', message: 'Insufficient cluster resources to schedule the pod.', delay: 1000 },
-    { type: 'result', message: 'Options: Scale up cluster, reduce pod resource requests, or remove other workloads', details: 'Consider: kubectl scale deployment less-critical-app --replicas=0', delay: 500 },
+    { type: 'thinking', message: 'Analyzing why pod is stuck in Pending state...', delay: THINKING_DELAY_MS },
+    { type: 'action', message: 'Checking node resources and scheduling constraints', delay: ACTION_LONG_DELAY_MS },
+    { type: 'info', message: 'Pod requests: CPU 2, Memory 4Gi', delay: INFO_DELAY_MS },
+    { type: 'action', message: 'Checking available cluster capacity', delay: ACTION_DELAY_MS },
+    { type: 'info', message: 'Available: CPU 0.5, Memory 1Gi across all nodes', delay: THINKING_DELAY_MS },
+    { type: 'thinking', message: 'Insufficient cluster resources to schedule the pod.', delay: ACTION_DELAY_MS },
+    { type: 'result', message: 'Options: Scale up cluster, reduce pod resource requests, or remove other workloads', details: 'Consider: kubectl scale deployment less-critical-app --replicas=0', delay: RESULT_DELAY_MS },
   ],
   default: [
-    { type: 'thinking', message: 'Analyzing the issue...', delay: 800 },
-    { type: 'action', message: 'Gathering diagnostic information', delay: 1200 },
-    { type: 'action', message: 'Checking pod events and logs', delay: 1000 },
-    { type: 'action', message: 'Analyzing resource configuration', delay: 1000 },
-    { type: 'thinking', message: 'Determining best remediation approach...', delay: 1200 },
-    { type: 'result', message: 'Analysis complete. Review the gathered information above for next steps.', delay: 500 },
+    { type: 'thinking', message: 'Analyzing the issue...', delay: THINKING_DELAY_MS },
+    { type: 'action', message: 'Gathering diagnostic information', delay: ACTION_LONG_DELAY_MS },
+    { type: 'action', message: 'Checking pod events and logs', delay: ACTION_DELAY_MS },
+    { type: 'action', message: 'Analyzing resource configuration', delay: ACTION_DELAY_MS },
+    { type: 'thinking', message: 'Determining best remediation approach...', delay: ACTION_LONG_DELAY_MS },
+    { type: 'result', message: 'Analysis complete. Review the gathered information above for next steps.', delay: RESULT_DELAY_MS },
   ],
 }
 
@@ -173,8 +185,7 @@ export function RemediationConsole({
         type: 'info',
         message: 'Remediation analysis complete',
       })
-      // Track token usage for AI remediation (~1000 tokens for analysis)
-      addTokens(1000 + flow.length * 100)
+      addTokens(BASE_TOKEN_ESTIMATE + flow.length * TOKENS_PER_STEP_ESTIMATE)
     }
 
     setIsRunning(false)
@@ -295,7 +306,7 @@ export function RemediationConsole({
         type: 'output',
         message: output,
       })
-    } catch (error) {
+    } catch (error: unknown) {
       // Fall back to simulated output when backend is unavailable
       const message = error instanceof Error ? error.message : 'Connection failed'
       setShellError(`MCP bridge unavailable: ${message}`)
@@ -397,7 +408,7 @@ Labels:       app=${resourceName.split('-')[0]}
   const REMEDIATION_MODAL_TITLE_ID = 'remediation-console-title'
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-modal">
       <div
         role="dialog"
         aria-modal="true"
@@ -464,7 +475,7 @@ Labels:       app=${resourceName.split('-')[0]}
         </div>
 
         {/* Console Output */}
-        <div className="flex-1 overflow-y-auto p-4 bg-[#0d0d0d] font-mono text-sm">
+        <div className="flex-1 overflow-y-auto p-4 bg-terminal font-mono text-sm">
           {activeTab === 'ai' ? (
             // AI Tab Content
             logs.length === 0 ? (
@@ -584,11 +595,11 @@ Labels:       app=${resourceName.split('-')[0]}
 
         {/* Shell Input (only shown in shell tab) */}
         {activeTab === 'shell' && (
-          <div className="p-3 border-t border-border bg-[#0d0d0d]">
+          <div className="p-3 border-t border-border bg-terminal">
             {shellError && (
               <div className="mb-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-xs">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                  <AlertTriangle className="w-3 h-3 shrink-0" />
                   <span>{shellError}</span>
                 </div>
                 {lastFailedCommand && (
@@ -616,7 +627,7 @@ Labels:       app=${resourceName.split('-')[0]}
                 onKeyDown={handleShellKeyDown}
                 placeholder={t('remediation.enterCommand')}
                 disabled={isExecuting}
-                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
+                className="flex-1 bg-transparent border-none outline-hidden text-foreground placeholder:text-muted-foreground"
                 autoFocus
               />
               <button

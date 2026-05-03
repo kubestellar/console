@@ -35,7 +35,7 @@ func (h *SettingsHandler) requireAdmin(c *fiber.Ctx) error {
 		return nil
 	}
 	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(currentUserID)
+	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
 	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
 		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
 	}

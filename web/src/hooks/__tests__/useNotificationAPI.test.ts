@@ -62,7 +62,7 @@ describe('useNotificationAPI', () => {
     await act(async () => {
       try {
         await result.current.testNotification('slack', {})
-      } catch (e) {
+      } catch (e: unknown) {
         caughtError = e
       }
     })
@@ -90,7 +90,7 @@ describe('useNotificationAPI', () => {
     await act(async () => {
       try {
         await result.current.testNotification('email', {})
-      } catch (e) {
+      } catch (e: unknown) {
         caughtError = e
       }
     })

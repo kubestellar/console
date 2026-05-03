@@ -1,262 +1,54 @@
 import { useState, useEffect, useCallback, useMemo, useRef, createContext, use, type ReactNode } from 'react'
 import type {
   UpdateChannel,
-  ReleaseType,
   GitHubRelease,
   ParsedRelease,
-  ReleasesCache,
   InstallMethod,
   AutoUpdateStatus,
   UpdateProgress } from '../types/updates'
 import { emitSessionContext } from '../lib/analytics'
 import { UPDATE_STORAGE_KEYS } from '../types/updates'
-import { LOCAL_AGENT_HTTP_URL, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, FETCH_EXTERNAL_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 import { useLocalAgent } from './useLocalAgent'
+
+// Re-export pure utilities so existing consumers that import from this file
+// continue to work without changing their import paths.
+export {
+  parseReleaseTag,
+  parseRelease,
+  getLatestForChannel,
+  isDevVersion,
+  isNewerVersion,
+} from './versionUtils'
+
+import {
+  GITHUB_API_URL,
+  GITHUB_MAIN_SHA_URL,
+  MIN_CHECK_INTERVAL_MS,
+  AUTO_UPDATE_POLL_MS,
+  DEV_SHA_CACHE_KEY,
+  ERROR_DISPLAY_THRESHOLD,
+  HEALTH_FETCH_TIMEOUT_MS,
+  HEALTH_FETCH_MAX_RETRIES,
+  HEALTH_FETCH_RETRY_DELAY_MS,
+  TRIGGER_UPDATE_TIMEOUT_MS,
+  CANCEL_UPDATE_TIMEOUT_MS,
+  safeJsonParse,
+  parseRelease,
+  getLatestForChannel,
+  isDevVersion,
+  isNewerVersion,
+  loadCache,
+  saveCache,
+  isCacheValid,
+  loadChannel,
+  loadAutoUpdateEnabled,
+  loadSkippedVersions,
+} from './versionUtils'
 
 declare const __APP_VERSION__: string
 declare const __COMMIT_HASH__: string
-
-const GITHUB_API_URL =
-  '/api/github/repos/kubestellar/console/releases'
-const GITHUB_MAIN_SHA_URL =
-  '/api/github/repos/kubestellar/console/git/ref/heads/main'
-const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes cache
-const MIN_CHECK_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes minimum between checks
-const AUTO_UPDATE_POLL_MS = 60 * 1000 // Poll kc-agent for update status every 60s
-const DEV_SHA_CACHE_KEY = 'kc-dev-latest-sha'
-
-/** Timeout for the /health fetch during install-method detection (ms) */
-/** Number of consecutive fetch failures before surfacing an error to the UI */
-const ERROR_DISPLAY_THRESHOLD = 2
-/** Timeout for the /health fetch during install-method detection (ms) */
-const HEALTH_FETCH_TIMEOUT_MS = 3000
-/** Max retries for /health when the backend is still warming up */
-const HEALTH_FETCH_MAX_RETRIES = 2
-/** Delay between /health retries (ms) — gives the backend time to finish warmup */
-const HEALTH_FETCH_RETRY_DELAY_MS = 3000
-/** Timeout for the POST /auto-update/trigger request (ms) */
-const TRIGGER_UPDATE_TIMEOUT_MS = 30_000
-/** Timeout for the POST /auto-update/cancel request (ms) — cancellation should be fast */
-const CANCEL_UPDATE_TIMEOUT_MS = 5_000
-
-/**
- * Parse a release tag to determine its type and extract date.
- *
- * Tag patterns:
- * - v0.0.1-nightly.20250124 -> { type: 'nightly', date: '20250124' }
- * - v0.0.1-weekly.20250124 -> { type: 'weekly', date: '20250124' }
- * - v1.2.3 -> { type: 'stable', date: null }
- */
-export function parseReleaseTag(tag: string): { type: ReleaseType; date: string | null } {
-  const nightlyMatch = tag.match(/^v[\d.]+.*-nightly\.(\d{8})$/)
-  if (nightlyMatch) {
-    return { type: 'nightly', date: nightlyMatch[1] }
-  }
-
-  const weeklyMatch = tag.match(/^v[\d.]+.*-weekly\.(\d{8})$/)
-  if (weeklyMatch) {
-    return { type: 'weekly', date: weeklyMatch[1] }
-  }
-
-  // Semantic version without suffix is considered stable
-  if (/^v\d+\.\d+\.\d+$/.test(tag)) {
-    return { type: 'stable', date: null }
-  }
-
-  // Default to stable for other patterns
-  return { type: 'stable', date: null }
-}
-
-/**
- * Parse a GitHub release into our normalized format.
- */
-export function parseRelease(release: GitHubRelease): ParsedRelease {
-  const { type, date } = parseReleaseTag(release.tag_name)
-  return {
-    tag: release.tag_name,
-    version: release.tag_name,
-    type,
-    date,
-    publishedAt: new Date(release.published_at),
-    releaseNotes: release.body || '',
-    url: release.html_url }
-}
-
-/**
- * Get the latest release for a given channel.
- *
- * - stable channel: stable (full semver) releases like v0.3.11
- * - unstable channel: nightly releases
- * - developer channel: returns null (uses SHA-based tracking instead)
- */
-export function getLatestForChannel(
-  releases: ParsedRelease[],
-  channel: UpdateChannel
-): ParsedRelease | null {
-  if (channel === 'developer') return null
-
-  const targetType: ReleaseType = channel === 'stable' ? 'stable' : 'nightly'
-
-  const filtered = releases
-    .filter((r) => r.type === targetType)
-    .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime())
-
-  return filtered[0] || null
-}
-
-/**
- * Check if a version string is a development version.
- * Development versions are simple semver without nightly/weekly suffix.
- */
-export function isDevVersion(version: string): boolean {
-  // Dev versions: 0.1.0, 1.0.0, unknown, dev
-  if (version === 'unknown' || version === 'dev') return true
-  // Simple semver without suffix (no nightly/weekly)
-  const parsed = parseReleaseTag(version)
-  // If it parsed as 'stable' type but doesn't start with 'v' or has no date, it's dev
-  if (parsed.type === 'stable' && !version.startsWith('v')) return true
-  return false
-}
-
-/**
- * Compare two version tags to determine if an update is available.
- * Returns true if latestTag is newer than currentTag.
- *
- * For developer channel, comparison is done via SHA (not here — see autoUpdateStatus).
- * For release channels, compares tag dates or semver parts.
- */
-export function isNewerVersion(currentTag: string, latestTag: string, channel: UpdateChannel): boolean {
-  if (currentTag === latestTag) return false
-
-  // Developer channel uses SHA comparison, not tag comparison
-  if (channel === 'developer') return false
-
-  // Don't show updates for development versions (unless on developer channel)
-  if (isDevVersion(currentTag)) return false
-
-  // Extract dates from tags for nightly/weekly comparison
-  const currentParsed = parseReleaseTag(currentTag)
-  const latestParsed = parseReleaseTag(latestTag)
-
-  // Stable channel: if user is on a nightly/weekly pre-release and a newer stable exists, show update
-  // e.g., current = v0.3.11-nightly.20260218, latest = v0.3.12 → update available
-  if (channel === 'stable' && latestParsed.type === 'stable' && currentParsed.type !== 'stable') {
-    // Extract base version from current (e.g., "0.3.11" from "v0.3.11-nightly.20260218")
-    const currentBase = currentTag.replace(/^v/, '').split('-')[0]
-    const latestBase = latestTag.replace(/^v/, '')
-    const currentParts = currentBase.split('.').map(Number)
-    const latestParts = latestBase.split('.').map(Number)
-    for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
-      const c = currentParts[i] || 0
-      const l = latestParts[i] || 0
-      if (l > c) return true
-      if (l < c) return false
-    }
-    // Same base version — stable release is the final version of the pre-release
-    return false
-  }
-
-  // Only compare same types (nightly vs nightly, weekly vs weekly)
-  if (currentParsed.type !== latestParsed.type) return false
-
-  // If both have dates, compare them
-  if (currentParsed.date && latestParsed.date) {
-    return latestParsed.date > currentParsed.date
-  }
-
-  // For semantic versions, do a simple comparison
-  const currentParts = currentTag.replace(/^v/, '').split(/[.-]/)
-  const latestParts = latestTag.replace(/^v/, '').split(/[.-]/)
-
-  for (let i = 0; i < Math.max(currentParts.length, latestParts.length); i++) {
-    const current = currentParts[i] || '0'
-    const latest = latestParts[i] || '0'
-
-    // Try numeric comparison first
-    const currentNum = parseInt(current, 10)
-    const latestNum = parseInt(latest, 10)
-
-    if (!isNaN(currentNum) && !isNaN(latestNum)) {
-      if (latestNum > currentNum) return true
-      if (latestNum < currentNum) return false
-    } else {
-      // String comparison
-      if (latest > current) return true
-      if (latest < current) return false
-    }
-  }
-
-  return false
-}
-
-/**
- * Load cached releases from localStorage.
- */
-function loadCache(): ReleasesCache | null {
-  try {
-    const cached = localStorage.getItem(UPDATE_STORAGE_KEYS.RELEASES_CACHE)
-    if (!cached) return null
-
-    const parsed = JSON.parse(cached) as ReleasesCache
-    return parsed
-  } catch {
-    return null
-  }
-}
-
-/**
- * Save releases to localStorage cache.
- */
-function saveCache(data: GitHubRelease[], etag: string | null): void {
-  const cache: ReleasesCache = {
-    data,
-    timestamp: Date.now(),
-    etag }
-  localStorage.setItem(UPDATE_STORAGE_KEYS.RELEASES_CACHE, JSON.stringify(cache))
-}
-
-/**
- * Check if cache is still valid based on TTL.
- */
-function isCacheValid(cache: ReleasesCache): boolean {
-  return Date.now() - cache.timestamp < CACHE_TTL_MS
-}
-
-/**
- * Load channel preference from localStorage.
- * Defaults to 'developer' for localhost (dev installs), 'stable' otherwise.
- */
-function loadChannel(): UpdateChannel {
-  const stored = localStorage.getItem(UPDATE_STORAGE_KEYS.CHANNEL)
-  if (stored === 'stable' || stored === 'unstable' || stored === 'developer') {
-    return stored
-  }
-  // Dev installs (localhost) default to developer channel so they get notified of new main commits
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    return 'developer'
-  }
-  return 'stable'
-}
-
-/**
- * Load auto-update enabled preference from localStorage.
- */
-function loadAutoUpdateEnabled(): boolean {
-  return localStorage.getItem(UPDATE_STORAGE_KEYS.AUTO_UPDATE_ENABLED) === 'true'
-}
-
-/**
- * Load skipped versions from localStorage.
- */
-function loadSkippedVersions(): string[] {
-  try {
-    const stored = localStorage.getItem(UPDATE_STORAGE_KEYS.SKIPPED_VERSIONS)
-    if (!stored) return []
-    return JSON.parse(stored) as string[]
-  } catch {
-    return []
-  }
-}
 
 /**
  * Hook for checking version updates from GitHub releases.
@@ -284,6 +76,14 @@ function useVersionCheckCore() {
   // Consecutive failure counter — errors are only surfaced to the UI after
   // ERROR_DISPLAY_THRESHOLD consecutive failures to avoid flicker on transient errors.
   const consecutiveFailuresRef = useRef(0)
+
+  // Signals that the user just changed the update channel, so forceCheck
+  // should run once the new channel state is committed.
+  const channelChangedRef = useRef(false)
+
+  // Transient result of the last completed check — shown briefly in the UI
+  // so the user gets feedback after clicking "Check Now".
+  const [lastCheckResult, setLastCheckResult] = useState<'success' | 'no-update' | null>(null)
 
   // Auto-update state
   const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState(loadAutoUpdateEnabled)
@@ -330,10 +130,11 @@ function useVersionCheckCore() {
     if (!agentSupportsAutoUpdate) return
     try {
       console.debug('[version-check] Fetching auto-update status from kc-agent...')
-      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/status`, {
-        signal: AbortSignal.timeout(10000) })
+      const resp = await fetch('/api/agent/auto-update/status', {
+        credentials: 'include',
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (resp.ok) {
-        const data = (await resp.json()) as AutoUpdateStatus
+        const data = await safeJsonParse<AutoUpdateStatus>(resp, 'Auto-update status')
         console.debug('[version-check] Auto-update status:', data)
         setAutoUpdateStatus(data)
         // Clear any stale error from a previous failed check
@@ -353,7 +154,7 @@ function useVersionCheckCore() {
           setError(`kc-agent returned ${resp.status}`)
         }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.debug('[version-check] Auto-update status error:', err)
       consecutiveFailuresRef.current += 1
       if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
@@ -385,7 +186,7 @@ function useVersionCheckCore() {
         headers,
         signal: AbortSignal.timeout(5000) })
       if (resp.ok) {
-        const data = await resp.json()
+        const data = await safeJsonParse<{ object?: { sha?: string } }>(resp, 'GitHub main SHA')
         const sha = data?.object?.sha as string | undefined
         if (sha) {
           console.debug('[version-check] Latest main SHA:', sha.slice(0, 7))
@@ -393,12 +194,16 @@ function useVersionCheckCore() {
           localStorage.setItem(DEV_SHA_CACHE_KEY, sha)
           localStorage.removeItem('kc-github-rate-limit-until')
         }
+        // Update lastChecked timestamp so the UI reflects the check time
+        const now = Date.now()
+        setLastChecked(now)
+        localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, String(now))
       } else if (resp.status === 403 || resp.status === 429) {
         // Rate limited — back off for 15 minutes
         const resetHeader = resp.headers.get('X-RateLimit-Reset')
         const backoffUntil = resetHeader
           ? parseInt(resetHeader, 10) * 1000
-          : Date.now() + 15 * 60 * 1000
+          : Date.now() + 15 * MS_PER_MINUTE
         localStorage.setItem('kc-github-rate-limit-until', String(backoffUntil))
         console.debug('[version-check] GitHub API rate-limited, backing off until', new Date(backoffUntil).toLocaleTimeString())
         setError('GitHub API rate limit — add a GitHub token in Settings for higher limits')
@@ -408,7 +213,7 @@ function useVersionCheckCore() {
       } else {
         console.debug('[version-check] GitHub API error:', resp.status)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.debug('[version-check] Failed to fetch main SHA:', err)
       // Load from cache as fallback
       const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
@@ -442,10 +247,10 @@ function useVersionCheckCore() {
       console.debug('[version-check] Fetching commits:', currentSHA.slice(0, 7), '→', latestSHA.slice(0, 7))
       const resp = await fetch(
         `/api/github/repos/kubestellar/console/compare/${currentSHA}...${latestSHA}`,
-        { headers, signal: AbortSignal.timeout(10000) }
+        { headers, signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) }
       )
       if (resp.ok) {
-        const data = await resp.json()
+        const data = await safeJsonParse<{ commits?: Array<{ sha: string; commit: { message: string; author: { name: string; date: string } } }> }>(resp, 'GitHub compare')
         const commits = (data.commits || []).slice(-20).reverse().map((c: { sha: string; commit: { message: string; author: { name: string; date: string } } }) => ({
           sha: c.sha,
           message: c.commit.message.split('\n')[0], // First line only
@@ -454,29 +259,35 @@ function useVersionCheckCore() {
         console.debug('[version-check] Fetched', commits.length, 'commits')
         setRecentCommits(commits)
       } else if (resp.status === 403 || resp.status === 429) {
-        const backoffUntil = Date.now() + 15 * 60 * 1000
+        const backoffUntil = Date.now() + 15 * MS_PER_MINUTE
         localStorage.setItem('kc-github-rate-limit-until', String(backoffUntil))
         console.debug('[version-check] Compare API rate-limited, backing off')
       } else {
         console.debug('[version-check] Compare API error:', resp.status)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.debug('[version-check] Failed to fetch commits:', err)
     }
   }, [commitHash, latestMainSHA])
 
   /**
    * Set update channel and persist to localStorage + kc-agent.
+   * Triggers a fresh version check so the UI immediately reflects the new channel.
    */
   const setChannel = useCallback(async (newChannel: UpdateChannel) => {
     setChannelState(newChannel)
     localStorage.setItem(UPDATE_STORAGE_KEYS.CHANNEL, newChannel)
 
+    // Mark channel as changed before the async sync so that the effect
+    // triggered by setChannelState sees the flag immediately.
+    channelChangedRef.current = true
+
     // Sync to kc-agent
     try {
-      await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
+      await fetch('/api/agent/auto-update/config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ enabled: autoUpdateEnabled, channel: newChannel }),
         signal: AbortSignal.timeout(3000) })
     } catch {
@@ -493,9 +304,10 @@ function useVersionCheckCore() {
 
     // Sync to kc-agent
     try {
-      await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/config`, {
+      await fetch('/api/agent/auto-update/config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ enabled, channel }),
         signal: AbortSignal.timeout(3000) })
     } catch {
@@ -510,9 +322,10 @@ function useVersionCheckCore() {
   const triggerUpdate = async (): Promise<{ success: boolean; error?: string }> => {
     console.debug('[version-check] Triggering update via kc-agent, channel:', channel)
     try {
-      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/trigger`, {
+      const resp = await fetch('/api/agent/auto-update/trigger', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ channel }),
         signal: AbortSignal.timeout(TRIGGER_UPDATE_TIMEOUT_MS) })
       if (resp.ok) {
@@ -524,7 +337,7 @@ function useVersionCheckCore() {
         : `kc-agent returned ${resp.status}`
       console.debug('[version-check] Update trigger failed:', errText)
       return { success: false, error: errText }
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'kc-agent not reachable'
       console.debug('[version-check] Update trigger error:', msg)
       return { success: false, error: msg }
@@ -540,9 +353,10 @@ function useVersionCheckCore() {
   const cancelUpdate = async (): Promise<{ success: boolean; error?: string }> => {
     console.debug('[version-check] Cancelling in-progress update via kc-agent')
     try {
-      const resp = await fetch(`${LOCAL_AGENT_HTTP_URL}/auto-update/cancel`, {
+      const resp = await fetch('/api/agent/auto-update/cancel', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(CANCEL_UPDATE_TIMEOUT_MS) })
       if (resp.ok) {
         console.debug('[version-check] Cancel request accepted')
@@ -555,7 +369,7 @@ function useVersionCheckCore() {
         ? 'kc-agent does not support cancel yet — restart with latest code'
         : `kc-agent returned ${resp.status}`
       return { success: false, error: errText }
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'kc-agent not reachable'
       return { success: false, error: msg }
     }
@@ -610,7 +424,7 @@ function useVersionCheckCore() {
         throw new Error(`GitHub API error: ${response.status}`)
       }
 
-      const data = (await response.json()) as GitHubRelease[]
+      const data = await safeJsonParse<GitHubRelease[]>(response, 'GitHub releases')
       const etag = response.headers.get('ETag')
 
       // Filter out drafts
@@ -625,7 +439,7 @@ function useVersionCheckCore() {
       setError(null)
       setLastChecked(Date.now())
       localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, Date.now().toString())
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to check for updates'
       consecutiveFailuresRef.current += 1
       if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
@@ -679,10 +493,13 @@ function useVersionCheckCore() {
 
   /**
    * Force a fresh check, bypassing cache.
+   * Sets lastCheckResult so the UI can show transient success/no-update feedback.
    */
   const forceCheck = async (): Promise<void> => {
     console.debug('[version-check] Force check — channel:', channel, 'agentSupportsAutoUpdate:', agentSupportsAutoUpdate)
     setIsChecking(true)
+    // Clear any previous transient result while the new check is in progress
+    setLastCheckResult(null)
     // Reset consecutive failure counter on user-initiated check so a single
     // success clears the error, and a single failure doesn't flash red.
     consecutiveFailuresRef.current = 0
@@ -705,6 +522,16 @@ function useVersionCheckCore() {
       await fetchReleases(true)
     } finally {
       setIsChecking(false)
+      // Signal a transient result so the UI can flash feedback.
+      // An error means the check failed (error state is already set above),
+      // so only set a result when there is no error.
+      if (consecutiveFailuresRef.current === 0) {
+        // hasUpdate is derived from state that was just set, but React hasn't
+        // re-rendered yet. We use 'success' here as a generic "check succeeded"
+        // signal — the UI will read hasUpdate on the next render to decide
+        // whether to show "Update available" or "Up to date".
+        setLastCheckResult('success')
+      }
     }
   }
 
@@ -795,7 +622,7 @@ function useVersionCheckCore() {
       try {
         const resp = await fetch('/health', { signal: AbortSignal.timeout(HEALTH_FETCH_TIMEOUT_MS) })
         if (resp.ok) {
-          const data = await resp.json()
+          const data = await safeJsonParse<{ install_method?: string }>(resp, 'Backend health')
           if (data.install_method && !cancelled) {
             setInstallMethod(data.install_method as InstallMethod)
             return // success — no retry needed
@@ -851,6 +678,17 @@ function useVersionCheckCore() {
     }
   }, [channel, hasUpdate, fetchRecentCommits])
 
+  // When the user changes the update channel, trigger a fresh check so the
+  // UI immediately reflects the new channel's latest release / SHA.
+  useEffect(() => {
+    if (!channelChangedRef.current) return
+    channelChangedRef.current = false
+    forceCheck()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel])
+
+  const clearLastCheckResult = useCallback(() => setLastCheckResult(null), [])
+
   return {
     // State
     currentVersion,
@@ -864,6 +702,7 @@ function useVersionCheckCore() {
     lastChecked,
     skippedVersions,
     releases,
+    lastCheckResult,
 
     // Auto-update state
     autoUpdateEnabled,
@@ -884,7 +723,8 @@ function useVersionCheckCore() {
     setAutoUpdateEnabled,
     triggerUpdate,
     cancelUpdate,
-    setUpdateProgress }
+    setUpdateProgress,
+    clearLastCheckResult }
 }
 
 // ---------------------------------------------------------------------------
@@ -898,10 +738,55 @@ const VersionCheckContext = createContext<VersionCheckValue | null>(null)
 /**
  * Provider that creates a single version-check instance shared by all consumers.
  * Mount once near the app root (e.g. in Layout).
+ *
+ * IMPORTANT (#9769): The context value is memoized against every state/action
+ * field returned by useVersionCheckCore(). Without memoization, every internal
+ * state change (e.g. isChecking toggle, auto-update poll result) creates a new
+ * object reference, forcing ALL consumers (Navbar, Sidebar, UpdateIndicator,
+ * every card in the enterprise portal) to re-render. The cascade amplifies
+ * through hooks like useClusters() / useDashboardHealth() and can trip React
+ * error #185 on pages with many hook subscribers (e.g. /enterprise/frameworks).
  */
 export function VersionCheckProvider({ children }: { children: ReactNode }) {
   const value = useVersionCheckCore()
-  return <VersionCheckContext.Provider value={value}>{children}</VersionCheckContext.Provider>
+
+  // Memoize against individual fields so consumers only re-render when a
+  // value they might read actually changes. Actions (useCallback) are stable
+  // across renders, so they don't contribute to unnecessary invalidations.
+  const memoized = useMemo(() => value, [
+    value.currentVersion,
+    value.commitHash,
+    value.channel,
+    value.latestRelease,
+    value.hasUpdate,
+    value.isChecking,
+    value.error,
+    value.lastChecked,
+    value.skippedVersions,
+    value.releases,
+    value.lastCheckResult,
+    value.autoUpdateEnabled,
+    value.installMethod,
+    value.autoUpdateStatus,
+    value.updateProgress,
+    value.agentConnected,
+    value.hasCodingAgent,
+    value.latestMainSHA,
+    value.recentCommits,
+    // Actions — stable useCallback references, included for completeness
+    value.setChannel,
+    value.checkForUpdates,
+    value.forceCheck,
+    value.skipVersion,
+    value.clearSkippedVersions,
+    value.setAutoUpdateEnabled,
+    value.triggerUpdate,
+    value.cancelUpdate,
+    value.setUpdateProgress,
+    value.clearLastCheckResult,
+  ])
+
+  return <VersionCheckContext.Provider value={memoized}>{children}</VersionCheckContext.Provider>
 }
 
 /**

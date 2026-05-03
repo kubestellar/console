@@ -9,9 +9,10 @@ This file is read by Claude Code, Copilot, Codex, and other coding agents workin
 ./startup-oauth.sh      # With GitHub OAuth (requires .env with GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET)
 ```
 
-Build and lint before creating PRs:
+Do NOT run build or lint locally — CI handles both. Commit, push, open a PR with `Fixes #NNN`, and wait for CI to pass (ignore `tide` — it stays pending without lgtm/approved labels; bypass with `--admin`).
 ```bash
-cd web && npm run build && npm run lint
+# NEVER run these locally — CI validates on the PR
+# cd web && npm run build && npm run lint
 ```
 
 ## Project Layout
@@ -63,6 +64,39 @@ deploy/helm/       Helm chart
 - [ ] No console errors
 - [ ] API endpoints return expected data
 - [ ] WebSocket connections establish properly
+
+---
+
+## Visual Verification Protocol (UI Changes)
+
+Any PR that modifies UI (components, styles, layouts, pages) MUST follow this protocol:
+
+### Before coding
+1. Extract a **visual checklist** from the issue/request — numbered list of visible outcomes.
+   Example: "1. Clusters page shows new GPU column. 2. Column header uses muted text. 3. GPU values render with ProgressRing."
+   If the issue doesn't describe visual outcomes, ask for clarification before starting.
+
+### After implementing
+2. Start the app in demo mode and **screenshot every affected page** via CDP or Playwright.
+3. **Verify each checklist item** is visible in the screenshot. If anything is missing, fix it. Do not proceed until all items are confirmed.
+
+### Write the visual regression test
+4. Create or update a test file in `web/e2e/visual/` named `app-{page-name}-visual.spec.ts`.
+5. The test MUST:
+   - Import `setupDemoMode` from `../helpers/setup.ts` (NEVER copy setup logic inline)
+   - Use `app-visual.config.ts` (NOT the Storybook config)
+   - Navigate to the affected route in demo mode
+   - Wait for content with `getByTestId` or locators (NEVER use `waitForTimeout`)
+   - Call `expect(page).toHaveScreenshot('{descriptive-name}.png')` for each visual state
+6. Generate baselines: `cd web && npm run test:visual:update`
+7. Verify baselines pass: `cd web && npm run test:visual`
+8. **Commit the test file AND the snapshot baselines** alongside the code change.
+
+### Definition of done
+Do NOT report a UI task as complete until:
+- All visual checklist items are confirmed in screenshots
+- Playwright visual test passes without `--update-snapshots`
+- Test + baselines are committed in the PR
 
 ---
 
@@ -202,6 +236,59 @@ Before adding a new workflow or handler that calls an LLM, read [`docs/security/
 ### Netlify Functions
 The production site (console.kubestellar.io) uses Netlify Functions, NOT the Go backend. API routes are proxied to `web/netlify/functions/*.mts`. When adding Go API handlers, update Netlify Functions separately. See `netlify.toml` for redirect mapping.
 
+#### Route Parity Categories
+
+Not every Go API route needs a Netlify Function. Routes fall into two categories:
+
+**Routes WITH Netlify parity** (public/stateless data served on console.kubestellar.io):
+| Go route | Netlify function | Purpose |
+|----------|-----------------|---------|
+| `/api/youtube/playlist` | `youtube-playlist` | YouTube content feed |
+| `/api/youtube/thumbnail/*` | `youtube-thumbnail` | Thumbnail proxy |
+| `/api/medium/blog` | `medium-blog` | Blog feed |
+| `/api/rewards/github` | `github-rewards` | GitHub contributor rewards |
+| `/api/rewards/badge/*` | `rewards-badge` | Reward badge images |
+| `/api/rewards/bonus` | `bonus-points` | Bonus point claims |
+| `/api/missions/browse` | `missions-browse` | Mission catalog |
+| `/api/missions/file` | `missions-file` | Mission YAML files |
+| `/api/missions/scores` | `missions-scores` | Mission leaderboard |
+| `/api/issue-stats` | `issue-stats` | GitHub issue statistics |
+| `/api/github-pipelines` | `github-pipelines` | CI/CD pipeline status |
+| `/api/nightly-e2e/runs` | `nightly-e2e` | E2E test run history |
+| `/api/acmm/scan` | `acmm-scan` | ACMM compliance scan |
+| `/api/acmm/badge/*` | `acmm-badge` | ACMM badge images |
+| `/api/nps` | `nps` | Net Promoter Score |
+| `/api/feedback-app` | `feedback-app` | Feedback submissions |
+| `/api/active-users` | `presence` | Online user count |
+| `/api/analytics-dashboard` | `analytics-dashboard` | Analytics overview |
+| `/api/analytics-accm` | `analytics-accm` | ACCM analytics |
+| `/api/identity/oidc/*` | `identity-oidc-*` | OIDC identity summary |
+| `/api/identity/rbac/*` | `identity-rbac-*` | RBAC findings/summary |
+| `/api/identity/sessions/*` | `identity-sessions-*` | Session analytics |
+| `/api/affiliate/clicks` | `affiliate-clicks` | Affiliate link tracking |
+| `/api/gtag`, `/api/m`, `/api/send`, `/api/ksc` | `gtag-proxy`, `analytics-collect`, `umami-collect`, `umami-script` | Analytics collection proxies |
+
+**Routes WITHOUT Netlify parity** (backend-only, require K8s/DB/agent access):
+- **Settings & Persistence**: `/api/settings`, `/api/persistence/*` — SQLite database
+- **Dashboards & Cards**: `/api/dashboards/*`, `/api/cards/*` — SQLite CRUD
+- **K8s Proxying**: `/api/namespaces`, `/api/rbac/*`, `/api/openshift/*` — live cluster access
+- **Agent Integration**: `/api/agent/*`, `/api/kagent/*`, `/api/kagenti-provider/*` — local agent bridge
+- **GPU Management**: `/api/gpu/*` — GPU reservation system
+- **Observability Tools**: `/api/gadget/*` — Inspektor Gadget traces
+- **User Management**: `/api/users/*`, `/api/admin/*` — console RBAC
+- **Onboarding**: `/api/onboarding/*` — setup wizard state
+- **Notifications**: `/api/notifications/*` — alert delivery
+- **Card Proxy**: `/api/card-proxy` — arbitrary URL proxy for card data
+- **Token Usage**: `/api/token-usage/*` — LLM token accounting
+- **Kubara Catalog**: `/api/kubara/*` — plugin catalog
+- **Benchmarks**: `/api/benchmarks/*` — benchmark reports
+- **Swaps**: `/api/swaps/*` — card swap suggestions
+- **Feedback Queue**: `/api/feedback/requests/*` — feature request management
+- **Events & Timeline**: `/api/events`, `/api/timeline` — activity log
+- **GitHub Token**: `/api/github/token/*` — OAuth token management
+
+**Rule of thumb**: If a route only reads from external public APIs (GitHub, YouTube, Medium) or writes to stateless services (analytics), it needs Netlify parity. If it touches K8s clusters, SQLite, the local agent, or user sessions, it's backend-only.
+
 ### MSW Passthrough
 New Netlify Functions MUST have MSW (Mock Service Worker) passthrough rules so demo mode works correctly.
 
@@ -277,6 +364,56 @@ All card data hooks MUST use `useCache()` from `lib/cache/index.ts`. This provid
 - **New hook:** New data source, new API endpoint, or new domain concept
 - **Extend existing:** Adding a field to an existing API response or a filter to existing data
 - **Never:** Don't create a hook that wraps a single `useState` — just use `useState` directly
+
+### createCachedHook Factory (Preferred for Simple Hooks)
+
+For hooks that are pure passthroughs to `useCache()` — no parameters, no post-processing, no extra return fields — use the `createCachedHook` factory instead of writing the hook by hand. It eliminates ~200 lines of boilerplate per hook.
+
+**Location:** `lib/cache/createCachedHook.ts` (re-exported from `lib/cache/index.ts`)
+
+**Usage:**
+```tsx
+import { createCachedHook } from '@/lib/cache'
+
+// 1. Define your types and demo data
+interface FooStatus { healthy: boolean; count: number }
+const INITIAL: FooStatus = { healthy: false, count: 0 }
+const DEMO: FooStatus = { healthy: true, count: 42 }
+
+// 2. Define your fetcher
+async function fetchFoo(): Promise<FooStatus> {
+  const resp = await fetch('/api/foo/status', { signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+  return resp.json()
+}
+
+// 3. Export the hook (one line!)
+export const useCachedFoo = createCachedHook<FooStatus>({
+  key: 'foo-status',
+  initialData: INITIAL,
+  demoData: DEMO,
+  fetcher: fetchFoo,
+})
+```
+
+**Config options:**
+| Option | Required | Default | Purpose |
+|--------|----------|---------|---------|
+| `key` | ✅ | — | Unique cache key |
+| `initialData` | ✅ | — | Data before first fetch |
+| `fetcher` | ✅ | — | Async function returning `T` |
+| `demoData` | — | — | Static demo fallback |
+| `getDemoData` | — | — | Dynamic demo data factory (e.g., fresh timestamps) |
+| `category` | — | `'default'` | Refresh interval category |
+| `persist` | — | `true` | Whether to persist to SQLite/IndexedDB |
+
+**When NOT to use the factory:**
+- Hook needs parameters (e.g., cluster name, namespace)
+- Hook post-processes data after fetch (aggregation, filtering)
+- Hook returns extra fields beyond the standard `CachedHookResult<T>`
+- Hook composes multiple `useCache` calls
+
+**Existing hooks using the factory:** `useCachedThanosStatus`, `useCachedVitess`, `useCachedLonghorn`, `useCachedOtel`.
 
 ---
 

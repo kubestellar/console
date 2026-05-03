@@ -24,7 +24,7 @@ export function PersistenceSection() {
     isActive,
   } = usePersistence()
 
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const [localConfig, setLocalConfig] = useState<PersistenceConfig>(config)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ cluster: string; success: boolean } | null>(null)

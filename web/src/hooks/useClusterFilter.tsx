@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { useClusters } from './useMCP'
 
 interface ClusterFilterContextType {
@@ -17,7 +17,7 @@ const ClusterFilterContext = createContext<ClusterFilterContextType | null>(null
 const STORAGE_KEY = 'clusterFilter'
 
 export function ClusterFilterProvider({ children }: { children: ReactNode }) {
-  const { clusters } = useClusters()
+  const { deduplicatedClusters: clusters } = useClusters()
   const availableClusters = clusters.map(c => c.name)
 
   // Initialize from localStorage or default to all clusters (empty array means all)
@@ -42,11 +42,11 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
     }
   }, [selectedClusters])
 
-  const setSelectedClusters = (clusters: string[]) => {
+  const setSelectedClusters = useCallback((clusters: string[]) => {
     setSelectedClustersState(clusters)
-  }
+  }, [])
 
-  const toggleCluster = (cluster: string) => {
+  const toggleCluster = useCallback((cluster: string) => {
     setSelectedClustersState(prev => {
       // If currently "all" (empty), switch to all except this one
       if (prev.length === 0) {
@@ -68,35 +68,38 @@ export function ClusterFilterProvider({ children }: { children: ReactNode }) {
         return newSelection
       }
     })
-  }
+  }, [availableClusters])
 
-  const selectAll = () => {
+  const selectAll = useCallback(() => {
     setSelectedClustersState([])
-  }
+  }, [])
 
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     // Select just the first cluster if available
     if (availableClusters.length > 0) {
       setSelectedClustersState([availableClusters[0]])
     }
-  }
+  }, [availableClusters])
 
   // Empty array means all clusters are selected
   const isAllSelected = selectedClusters.length === 0
   const isFiltered = !isAllSelected
 
+  const effectiveSelectedClusters = isAllSelected ? availableClusters : selectedClusters
+
+  const contextValue = useMemo(() => ({
+    selectedClusters: effectiveSelectedClusters,
+    setSelectedClusters,
+    toggleCluster,
+    selectAll,
+    clearAll,
+    isAllSelected,
+    isFiltered,
+    availableClusters,
+  }), [effectiveSelectedClusters, setSelectedClusters, toggleCluster, selectAll, clearAll, isAllSelected, isFiltered, availableClusters])
+
   return (
-    <ClusterFilterContext.Provider
-      value={{
-        selectedClusters: isAllSelected ? availableClusters : selectedClusters,
-        setSelectedClusters,
-        toggleCluster,
-        selectAll,
-        clearAll,
-        isAllSelected,
-        isFiltered,
-        availableClusters }}
-    >
+    <ClusterFilterContext.Provider value={contextValue}>
       {children}
     </ClusterFilterContext.Provider>
   )

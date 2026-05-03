@@ -6,28 +6,12 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
-import { useCache, type RefreshCategory } from '../lib/cache'
+import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 import { clusterCacheRef } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
-
-// ============================================================================
-// Shared Types
-// ============================================================================
-
-interface CachedHookResult<T> {
-  data: T
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
-  error: string | null
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
-}
 
 // ============================================================================
 // ISO 27001 Audit Types
@@ -272,7 +256,7 @@ async function fetchISO27001AuditViaKubectl(
     .map(({ name, context }) => async () => {
       try {
         return await runISO27001ChecksForCluster(name, context || name)
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(`[ISO27001] Audit failed for cluster ${name}:`, err)
         return []
       }
@@ -324,11 +308,11 @@ export function useCachedISO27001Audit(
     data: result.data,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch,
+    refetch: result.refetch, retryFetch: result.retryFetch,
   }
 }

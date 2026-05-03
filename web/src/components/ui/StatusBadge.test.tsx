@@ -21,7 +21,7 @@ describe('StatusBadge Component', () => {
     expect(badge.className).toContain('bg-red-500/20')
   })
 
-  it('applies outline variant with border', () => {
+  it('applies outline-solid variant with border', () => {
     const { container } = render(
       <StatusBadge color="blue" variant="outline">Info</StatusBadge>
     )

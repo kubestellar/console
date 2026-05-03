@@ -23,6 +23,7 @@ import { argocdSyncStatusConfig } from './argocd-sync-status'
 import { certManagerConfig } from './cert-manager'
 import { chartVersionsConfig } from './chart-versions'
 import { checkersConfig } from './checkers'
+import { ciliumStatusConfig } from './cilium-status'
 import { clusterComparisonConfig } from './cluster-comparison'
 import { clusterCostsConfig } from './cluster-costs'
 import { clusterFocusConfig } from './cluster-focus'
@@ -33,9 +34,11 @@ import { clusterLocationsConfig } from './cluster-locations'
 import { clusterMetricsConfig } from './cluster-metrics'
 import { clusterNetworkConfig } from './cluster-network'
 import { clusterResourceTreeConfig } from './cluster-resource-tree'
+import { cniStatusConfig } from './cni-status'
 import { complianceScoreConfig } from './compliance-score'
 import { computeOverviewConfig } from './compute-overview'
 import { configMapStatusConfig } from './configmap-status'
+import { cubefsStatusConfig } from './cubefs-status'
 import { consoleAiHealthCheckConfig } from './console-ai-health-check'
 import { consoleAiIssuesConfig } from './console-ai-issues'
 import { consoleAiKubeconfigAuditConfig } from './console-ai-kubeconfig-audit'
@@ -55,10 +58,32 @@ import { eventsTimelineConfig } from './events-timeline'
 import { externalSecretsConfig } from './external-secrets'
 import { falcoAlertsConfig } from './falco-alerts'
 import { flappyPodConfig } from './flappy-pod'
+import { flatcarStatusConfig } from './flatcar-status'
 import { game2048Config } from './game-2048'
 import { gatewayStatusConfig } from './gateway-status'
 import { githubActivityConfig } from './github-activity'
 import { githubCiMonitorConfig } from './github-ci-monitor'
+import { fluxStatusConfig } from './flux-status'
+import { backstageStatusConfig } from './backstage-status'
+import { contourStatusConfig } from './contour-status'
+import { cloudCustodianStatusConfig } from './cloud-custodian-status'
+import { containerdStatusConfig } from './containerd-status'
+import { cortexStatusConfig } from './cortex-status'
+import { daprStatusConfig } from './dapr-status'
+import { dragonflyStatusConfig } from './dragonfly-status'
+import { envoyStatusConfig } from './envoy-status'
+import { grpcStatusConfig } from './grpc-status'
+import { kedaStatusConfig } from './keda-status'
+import { kserveStatusConfig } from './kserve-status'
+import { linkerdStatusConfig } from './linkerd-status'
+import { longhornStatusConfig } from './longhorn-status'
+import { openfgaStatusConfig } from './openfga-status'
+import { otelStatusConfig } from './otel-status'
+import { rookStatusConfig } from './rook-status'
+import { spireStatusConfig } from './spire-status'
+import { tikvStatusConfig } from './tikv-status'
+import { tufStatusConfig } from './tuf-status'
+import { vitessStatusConfig } from './vitess-status'
 import { nightlyReleasePulseConfig } from './nightly-release-pulse'
 import { workflowMatrixConfig } from './workflow-matrix'
 import { pipelineFlowConfig } from './pipeline-flow'
@@ -93,6 +118,7 @@ import { kubecostOverviewConfig } from './kubecost-overview'
 import { kubectlConfig } from './kubectl'
 import { kubedleConfig } from './kubedle'
 import { kubescapeScanConfig } from './kubescape-scan'
+import { kubeVelaStatusConfig } from './kubevela-status'
 import { kubevirtStatusConfig } from './kubevirt-status'
 import { kustomizationStatusConfig } from './kustomization-status'
 import { keycloakStatusConfig } from './keycloak-status'
@@ -119,6 +145,7 @@ import { nodeInvadersConfig } from './node-invaders'
 import { missileCommandConfig } from './missile-command'
 import { nodeStatusConfig } from './node-status'
 import { opaPoliciesConfig } from './opa-policies'
+import { openfeatureStatusConfig } from './openfeature-status'
 import { opencostOverviewConfig } from './opencost-overview'
 import { operatorStatusConfig } from './operator-status'
 import { operatorSubscriptionStatusConfig } from './operator-subscription-status'
@@ -135,6 +162,8 @@ import { providerHealthConfig } from './provider-health'
 import { prowCiMonitorConfig } from './prow-ci-monitor'
 import { prowHistoryConfig } from './prow-history'
 import { prowJobsConfig } from './prow-jobs'
+import harborStatusConfig from './harbor-status'
+import deploymentRiskScoreConfig from './deployment-risk-score'
 import { prowStatusConfig } from './prow-status'
 import { pvStatusConfig } from './pv-status'
 import { pvcStatusConfig } from './pvc-status'
@@ -156,9 +185,11 @@ import { serviceImportsConfig } from './service-imports'
 import { serviceStatusConfig } from './service-status'
 import { serviceTopologyConfig } from './service-topology'
 import { solitaireConfig } from './solitaire'
+import { spiffeStatusConfig } from './spiffe-status'
 import { statefulSetStatusConfig } from './statefulset-status'
 import { stockMarketTickerConfig } from './stock-market-ticker'
 import { storageOverviewConfig } from './storage-overview'
+import { strimziStatusConfig } from './strimzi-status'
 import { sudokuGameConfig } from './sudoku-game'
 import { topPodsConfig } from './top-pods'
 import { trestleScanConfig } from './trestle-scan'
@@ -167,7 +198,9 @@ import { upgradeStatusConfig } from './upgrade-status'
 import { userManagementConfig } from './user-management'
 import { vaultSecretsConfig } from './vault-secrets'
 import { vclusterStatusConfig } from './vcluster-status'
+import { volcanoStatusConfig } from './volcano-status'
 import { warningEventsConfig } from './warning-events'
+import { wasmcloudStatusConfig } from './wasmcloud-status'
 import { weatherConfig } from './weather'
 import { workloadDeploymentConfig } from './workload-deployment'
 import { workloadMonitorConfig } from './workload-monitor'
@@ -176,6 +209,8 @@ import { clusterDeltaDetectorConfig } from './cluster-delta-detector'
 import { cascadeImpactMapConfig } from './cascade-impact-map'
 import { configDriftHeatmapConfig } from './config-drift-heatmap'
 import { resourceImbalanceDetectorConfig } from './resource-imbalance-detector'
+import { rightSizeAdvisorConfig } from './right-size-advisor'
+import { chaosMeshStatusConfig } from './chaos-mesh-status'
 import { restartCorrelationMatrixConfig } from './restart-correlation-matrix'
 import { deploymentRolloutTrackerConfig } from './deployment-rollout-tracker'
 import { fleetComplianceHeatmapConfig } from './fleet-compliance-heatmap'
@@ -200,6 +235,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   cert_manager: certManagerConfig,
   chart_versions: chartVersionsConfig,
   checkers: checkersConfig,
+  cilium_status: ciliumStatusConfig,
   cluster_comparison: clusterComparisonConfig,
   cluster_costs: clusterCostsConfig,
   cluster_focus: clusterFocusConfig,
@@ -210,9 +246,11 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   cluster_metrics: clusterMetricsConfig,
   cluster_network: clusterNetworkConfig,
   cluster_resource_tree: clusterResourceTreeConfig,
+  cni_status: cniStatusConfig,
   compliance_score: complianceScoreConfig,
   compute_overview: computeOverviewConfig,
   configmap_status: configMapStatusConfig,
+  cubefs_status: cubefsStatusConfig,
   console_ai_health_check: consoleAiHealthCheckConfig,
   console_ai_issues: consoleAiIssuesConfig,
   console_ai_kubeconfig_audit: consoleAiKubeconfigAuditConfig,
@@ -232,10 +270,32 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   external_secrets: externalSecretsConfig,
   falco_alerts: falcoAlertsConfig,
   flappy_pod: flappyPodConfig,
+  flatcar_status: flatcarStatusConfig,
   game_2048: game2048Config,
   gateway_status: gatewayStatusConfig,
   github_activity: githubActivityConfig,
   github_ci_monitor: githubCiMonitorConfig,
+  flux_status: fluxStatusConfig,
+  backstage_status: backstageStatusConfig,
+  contour_status: contourStatusConfig,
+  cloud_custodian_status: cloudCustodianStatusConfig,
+  containerd_status: containerdStatusConfig,
+  cortex_status: cortexStatusConfig,
+  dapr_status: daprStatusConfig,
+  dragonfly_status: dragonflyStatusConfig,
+  envoy_status: envoyStatusConfig,
+  grpc_status: grpcStatusConfig,
+  keda_status: kedaStatusConfig,
+  kserve_status: kserveStatusConfig,
+  linkerd_status: linkerdStatusConfig,
+  longhorn_status: longhornStatusConfig,
+  openfga_status: openfgaStatusConfig,
+  otel_status: otelStatusConfig,
+  rook_status: rookStatusConfig,
+  spire_status: spireStatusConfig,
+  tikv_status: tikvStatusConfig,
+  tuf_status: tufStatusConfig,
+  vitess_status: vitessStatusConfig,
   nightly_release_pulse: nightlyReleasePulseConfig,
   workflow_matrix: workflowMatrixConfig,
   pipeline_flow: pipelineFlowConfig,
@@ -270,6 +330,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   kubectl: kubectlConfig,
   kubedle: kubedleConfig,
   kubescape_scan: kubescapeScanConfig,
+  kubevela_status: kubeVelaStatusConfig,
   kubevirt_status: kubevirtStatusConfig,
   kustomization_status: kustomizationStatusConfig,
   keycloak_status: keycloakStatusConfig,
@@ -296,6 +357,7 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   missile_command: missileCommandConfig,
   node_status: nodeStatusConfig,
   opa_policies: opaPoliciesConfig,
+  openfeature_status: openfeatureStatusConfig,
   opencost_overview: opencostOverviewConfig,
   operator_status: operatorStatusConfig,
   operator_subscription_status: operatorSubscriptionStatusConfig,
@@ -322,6 +384,10 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   resource_quota_status: resourceQuotaStatusConfig,
   resource_trend: resourceTrendConfig,
   resource_usage: resourceUsageConfig,
+  // Harbor registry
+  harbor_status: harborStatusConfig,
+  // Deployment Risk Score — correlates Argo CD + Kyverno + pod restarts (#9827)
+  deployment_risk_score: deploymentRiskScoreConfig,
   role_binding_status: roleBindingStatusConfig,
   role_status: roleStatusConfig,
   rss_feed: rssFeedConfig,
@@ -333,9 +399,11 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   service_status: serviceStatusConfig,
   service_topology: serviceTopologyConfig,
   solitaire: solitaireConfig,
+  spiffe_status: spiffeStatusConfig,
   statefulset_status: statefulSetStatusConfig,
   stock_market_ticker: stockMarketTickerConfig,
   storage_overview: storageOverviewConfig,
+  strimzi_status: strimziStatusConfig,
   sudoku_game: sudokuGameConfig,
   top_pods: topPodsConfig,
   trestle_scan: trestleScanConfig,
@@ -344,7 +412,9 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   user_management: userManagementConfig,
   vault_secrets: vaultSecretsConfig,
   vcluster_status: vclusterStatusConfig,
+  volcano_status: volcanoStatusConfig,
   warning_events: warningEventsConfig,
+  wasmcloud_status: wasmcloudStatusConfig,
   weather: weatherConfig,
   workload_deployment: workloadDeploymentConfig,
   workload_monitor: workloadMonitorConfig,
@@ -354,6 +424,8 @@ export const CARD_CONFIGS: CardConfigRegistry = {
   cascade_impact_map: cascadeImpactMapConfig,
   config_drift_heatmap: configDriftHeatmapConfig,
   resource_imbalance_detector: resourceImbalanceDetectorConfig,
+  right_size_advisor: rightSizeAdvisorConfig,
+  chaos_mesh_status: chaosMeshStatusConfig,
   restart_correlation_matrix: restartCorrelationMatrixConfig,
   deployment_rollout_tracker: deploymentRolloutTrackerConfig,
   // Cross-cluster compliance cards
@@ -466,6 +538,7 @@ export {
   certManagerConfig,
   chartVersionsConfig,
   checkersConfig,
+  ciliumStatusConfig,
   clusterComparisonConfig,
   clusterCostsConfig,
   clusterFocusConfig,
@@ -476,9 +549,11 @@ export {
   clusterMetricsConfig,
   clusterNetworkConfig,
   clusterResourceTreeConfig,
+  cniStatusConfig,
   complianceScoreConfig,
   computeOverviewConfig,
   configMapStatusConfig,
+  cubefsStatusConfig,
   consoleAiHealthCheckConfig,
   consoleAiIssuesConfig,
   consoleAiKubeconfigAuditConfig,
@@ -491,6 +566,7 @@ export {
   deploymentMissionsConfig,
   deploymentProgressConfig,
   deploymentStatusConfig,
+  chaosMeshStatusConfig,
   dynamicCardConfig,
   eventStreamConfig,
   eventSummaryConfig,
@@ -498,6 +574,7 @@ export {
   externalSecretsConfig,
   falcoAlertsConfig,
   flappyPodConfig,
+  flatcarStatusConfig,
   game2048Config,
   gatewayStatusConfig,
   githubActivityConfig,
@@ -535,6 +612,7 @@ export {
   kubectlConfig,
   kubedleConfig,
   kubescapeScanConfig,
+  kubeVelaStatusConfig,
   kubevirtStatusConfig,
   kustomizationStatusConfig,
   kyvernoPoliciesConfig,
@@ -559,7 +637,9 @@ export {
   missileCommandConfig,
   nodeStatusConfig,
   opaPoliciesConfig,
+  openfeatureStatusConfig,
   opencostOverviewConfig,
+  openfgaStatusConfig,
   operatorStatusConfig,
   operatorSubscriptionStatusConfig,
   overlayComparisonConfig,
@@ -596,9 +676,11 @@ export {
   serviceStatusConfig,
   serviceTopologyConfig,
   solitaireConfig,
+  spiffeStatusConfig,
   statefulSetStatusConfig,
   stockMarketTickerConfig,
   storageOverviewConfig,
+  strimziStatusConfig,
   sudokuGameConfig,
   topPodsConfig,
   trestleScanConfig,
@@ -607,7 +689,9 @@ export {
   userManagementConfig,
   vaultSecretsConfig,
   vclusterStatusConfig,
+  volcanoStatusConfig,
   warningEventsConfig,
+  wasmcloudStatusConfig,
   weatherConfig,
   workloadDeploymentConfig,
   workloadMonitorConfig,

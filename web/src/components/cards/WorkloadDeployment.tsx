@@ -8,6 +8,9 @@ import {
   AlertTriangle,
   Layers,
   Plus,
+} from 'lucide-react'
+import { MS_PER_DAY, MS_PER_HOUR } from '../../lib/constants/time'
+import {
   Server,
   Database,
   Gauge,
@@ -28,7 +31,7 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
 import { isAgentUnavailable } from '../../hooks/useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants'
-import { clusterCacheRef } from '../../hooks/mcp/shared'
+import { clusterCacheRef, agentFetch } from '../../hooks/mcp/shared'
 import { WorkloadImportDialog } from './WorkloadImportDialog'
 
 // Workload types
@@ -78,7 +81,7 @@ const DEMO_WORKLOADS: Workload[] = [
       { cluster: 'us-west-2', status: 'Running', replicas: 3, readyReplicas: 3, lastUpdated: new Date().toISOString() },
       { cluster: 'eu-central-1', status: 'Running', replicas: 3, readyReplicas: 3, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 30 * MS_PER_DAY).toISOString() },
   {
     name: 'api-gateway',
     namespace: 'production',
@@ -93,7 +96,7 @@ const DEMO_WORKLOADS: Workload[] = [
       { cluster: 'us-east-1', status: 'Running', replicas: 3, readyReplicas: 3, lastUpdated: new Date().toISOString() },
       { cluster: 'us-west-2', status: 'Degraded', replicas: 2, readyReplicas: 0, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 14 * MS_PER_DAY).toISOString() },
   {
     name: 'postgres-primary',
     namespace: 'databases',
@@ -107,7 +110,7 @@ const DEMO_WORKLOADS: Workload[] = [
     deployments: [
       { cluster: 'us-east-1', status: 'Running', replicas: 1, readyReplicas: 1, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 60 * MS_PER_DAY).toISOString() },
   {
     name: 'fluentd',
     namespace: 'logging',
@@ -123,7 +126,7 @@ const DEMO_WORKLOADS: Workload[] = [
       { cluster: 'us-west-2', status: 'Running', replicas: 4, readyReplicas: 4, lastUpdated: new Date().toISOString() },
       { cluster: 'eu-central-1', status: 'Running', replicas: 3, readyReplicas: 3, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 45 * MS_PER_DAY).toISOString() },
   {
     name: 'ml-training',
     namespace: 'ml-workloads',
@@ -137,7 +140,7 @@ const DEMO_WORKLOADS: Workload[] = [
     deployments: [
       { cluster: 'gpu-cluster-1', status: 'Pending', replicas: 1, readyReplicas: 0, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 1 * MS_PER_HOUR).toISOString() },
   {
     name: 'payment-service',
     namespace: 'payments',
@@ -151,7 +154,7 @@ const DEMO_WORKLOADS: Workload[] = [
     deployments: [
       { cluster: 'us-east-1', status: 'Failed', replicas: 2, readyReplicas: 0, lastUpdated: new Date().toISOString() },
     ],
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+    createdAt: new Date(Date.now() - 2 * MS_PER_DAY).toISOString() },
 ]
 
 const DEMO_STATS = {
@@ -218,9 +221,9 @@ async function scaleViaAgent(
   const ctrl = new AbortController()
   const tid = setTimeout(() => ctrl.abort(), MCP_HOOK_TIMEOUT_MS)
   try {
-    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
+    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/scale`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       signal: ctrl.signal,
       body: JSON.stringify({ cluster: context, namespace, name, replicas }) })
     if (!res.ok) throw new Error(`Agent ${res.status}`)
@@ -277,7 +280,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
       await scaleWorkload({
         workloadName: workload.name,
         namespace: workload.namespace,
-        targetClusters: workload.targetClusters,
+        targetClusters: workload.targetClusters || [],
         replicas: desiredReplicas })
       setScaleSuccess(true)
       onScaled?.()
@@ -285,7 +288,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
     } catch {
       // Backend failed — try agent fallback for all target clusters
       try {
-        const clusters = workload.targetClusters.length > 0 ? workload.targetClusters : ['unknown']
+        const clusters = (workload.targetClusters || []).length > 0 ? workload.targetClusters : ['unknown']
         const results = await Promise.all(
           clusters.map(async c => {
             const r = await scaleViaAgent(c, workload.namespace, workload.name, desiredReplicas)
@@ -300,7 +303,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
         } else {
           setScaleError(failures.map(r => `${r.cluster}: ${r.message || 'Scale failed'}`).join('; '))
         }
-      } catch (agentErr) {
+      } catch (agentErr: unknown) {
         if (
           agentErr &&
           typeof agentErr === 'object' &&
@@ -324,7 +327,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
     }
   }
   // Source cluster is the first cluster in the list (where we'll copy from)
-  const sourceCluster = workload.targetClusters[0] || 'unknown'
+  const sourceCluster = (workload.targetClusters || [])[0] || 'unknown'
 
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `workload-${sourceCluster}-${workload.namespace}-${workload.name}`,
@@ -335,7 +338,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
         namespace: workload.namespace,
         type: workload.type,
         sourceCluster,
-        currentClusters: workload.targetClusters } } })
+        currentClusters: workload.targetClusters || [] } } })
 
   // When dragging, fade the original — the DragOverlay renders the floating preview as a portal
   const style: React.CSSProperties = isDragging
@@ -417,7 +420,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
           <div className="flex flex-wrap items-center justify-between gap-y-2">
             <span className="text-xs text-muted-foreground">Target Clusters</span>
             <div className="flex gap-1">
-              {workload.targetClusters.map((c) => (
+              {(workload.targetClusters || []).map((c) => (
                 <ClusterBadge key={c} cluster={c} size="sm" />
               ))}
             </div>
@@ -460,7 +463,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
                   value={desiredReplicas}
                   onChange={(e) => setDesiredReplicas(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
                   disabled={isScaling}
-                  className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-none focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
+                  className="w-12 h-7 text-center text-xs rounded border border-border bg-secondary/30 focus:outline-hidden focus:ring-1 focus:ring-primary/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
                 />
                 <button
                   onClick={() => setDesiredReplicas((r) => Math.min(100, r + 1))}
@@ -669,7 +672,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
       degradedCount: workloads.filter(w => w.status === 'Degraded').length,
       pendingCount: workloads.filter(w => w.status === 'Pending').length,
       failedCount: workloads.filter(w => w.status === 'Failed').length,
-      totalClusters: new Set(workloads.flatMap(w => w.targetClusters)).size }
+      totalClusters: new Set(workloads.flatMap(w => w.targetClusters || [])).size }
   })()
 
   // Pre-filter by type, status, and cluster before passing to useCardData
@@ -687,7 +690,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     const validClusterFilter = localClusterFilter.filter(c => availableClusterNames.has(c))
     if (validClusterFilter.length > 0) {
       result = result.filter(w =>
-        w.targetClusters.some(c => validClusterFilter.includes(c)),
+        (w.targetClusters || []).some(c => validClusterFilter.includes(c)),
       )
     }
     return result
@@ -715,7 +718,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
     filter: {
       searchFields: ['name', 'namespace', 'image'] as (keyof Workload)[],
       customPredicate: (w, query) =>
-        w.targetClusters.some(c => c.toLowerCase().includes(query)),
+        (w.targetClusters || []).some(c => c.toLowerCase().includes(query)),
       storageKey: 'workload-deployment' },
     sort: {
       defaultField: 'status',
@@ -750,7 +753,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0 px-3 pt-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0 px-3 pt-3">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {stats.totalWorkloads} total &middot; {stats.uniqueWorkloads} unique
@@ -786,7 +789,7 @@ export function WorkloadDeployment(_props: WorkloadDeploymentProps) {
           value={search}
           onChange={setSearch}
           placeholder="Search workloads..."
-          className="!mb-0 flex-1"
+          className="mb-0! flex-1"
         />
         <button
           onClick={() => setShowImportDialog(true)}

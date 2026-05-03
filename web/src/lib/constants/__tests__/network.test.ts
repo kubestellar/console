@@ -44,6 +44,11 @@ describe('network constants', () => {
     expect(network.MAX_MESSAGE_SIZE_CHARS).toBeGreaterThan(0)
   })
 
+  it('exports suppressLocalAgent and isLocalAgentSuppressed functions', () => {
+    expect(typeof network.suppressLocalAgent).toBe('function')
+    expect(typeof network.isLocalAgentSuppressed).toBe('function')
+  })
+
   it('all numeric exports are positive numbers', () => {
     const numericKeys = Object.entries(network).filter(
       ([, v]) => typeof v === 'number'

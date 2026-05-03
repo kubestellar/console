@@ -19,6 +19,7 @@ import { useOvnStatus } from './useOvnStatus'
 import { OVN_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
 import { OvnDetailModal } from './OvnDetailModal'
+import { createCardSyncFormatter } from '../../../../lib/formatters'
 
 // ============================================================================
 // Constants
@@ -34,25 +35,6 @@ const SKELETON_UDN_ROWS = 2
 // Relative time formatting
 // ============================================================================
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('ovnStatus.syncedJustNow')
-
-    /** Milliseconds in one minute */
-    const MINUTE_MS = 60_000
-    /** Milliseconds in one hour */
-    const HOUR_MS = 60 * MINUTE_MS
-    /** Milliseconds in one day */
-    const DAY_MS = 24 * HOUR_MS
-
-    if (diff < MINUTE_MS) return t('ovnStatus.syncedJustNow')
-    if (diff < HOUR_MS) return t('ovnStatus.syncedMinutesAgo', { count: Math.floor(diff / MINUTE_MS) })
-    if (diff < DAY_MS) return t('ovnStatus.syncedHoursAgo', { count: Math.floor(diff / HOUR_MS) })
-    return t('ovnStatus.syncedDaysAgo', { count: Math.floor(diff / DAY_MS) })
-  }
-}
 
 // ============================================================================
 // Component
@@ -60,7 +42,7 @@ function useFormatRelativeTime() {
 
 export function OvnStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'ovnStatus')
   const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useOvnStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()

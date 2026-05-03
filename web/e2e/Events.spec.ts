@@ -1,9 +1,13 @@
 import { test, expect, Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 
 /**
  * Sets up authentication and MCP mocks for events tests
  */
 async function setupEventsTest(page: Page) {
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  await mockApiFallback(page)
+
   // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -50,7 +54,14 @@ async function setupEventsTest(page: Page) {
   // page.addInitScript() injects the snippet ahead of any page code (#9096).
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 
   await page.goto('/events')
@@ -90,9 +101,11 @@ test.describe('Events Page', () => {
     test('shows event reasons from mock data', async ({ page }) => {
       await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: 10000 })
 
-      // Reasons from our mock data
+      // Reasons from our mock data — Firefox renders card content later,
+      // so use a generous timeout for cross-browser reliability. #10134
+      const EVENT_REASON_TIMEOUT_MS = 10_000
       const backoffText = page.getByText(/BackOff|FailedScheduling|Scheduled/i).first()
-      await expect(backoffText).toBeVisible({ timeout: 5000 })
+      await expect(backoffText).toBeVisible({ timeout: EVENT_REASON_TIMEOUT_MS })
     })
   })
 

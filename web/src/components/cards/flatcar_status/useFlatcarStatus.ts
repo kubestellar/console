@@ -110,6 +110,7 @@ function toDemoStatus(demo: FlatcarDemoData): FlatcarStatus {
 export interface UseFlatcarStatusResult {
   data: FlatcarStatus
   loading: boolean
+  isRefreshing: boolean
   error: boolean
   consecutiveFailures: number
   showSkeleton: boolean
@@ -117,7 +118,7 @@ export interface UseFlatcarStatusResult {
 }
 
 export function useFlatcarStatus(): UseFlatcarStatusResult {
-  const { data, isLoading, isFailed, consecutiveFailures, isDemoFallback } =
+  const { data, isLoading, isRefreshing, isFailed, consecutiveFailures, isDemoFallback } =
     useCache<FlatcarStatus>({
       key: CACHE_KEY,
       category: 'default',
@@ -130,16 +131,18 @@ export function useFlatcarStatus(): UseFlatcarStatusResult {
   const hasAnyData = data.totalNodes > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
+    isRefreshing,
     hasAnyData,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoFallback,
+    isDemoData: isDemoFallback && !isLoading,
   })
 
   return {
     data,
     loading: isLoading,
+    isRefreshing,
     error: isFailed && !hasAnyData,
     consecutiveFailures,
     showSkeleton,

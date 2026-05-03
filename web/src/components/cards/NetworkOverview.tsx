@@ -10,8 +10,10 @@ import { useChartFilters } from '../../lib/cards/cardHooks'
 import { ClusterStatusDot } from '../ui/ClusterStatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { Skeleton, SkeletonStats, SkeletonList } from '../ui/Skeleton'
+import { useTranslation } from 'react-i18next'
 
 export function NetworkOverview() {
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: clusters, isLoading, isRefreshing: clustersRefreshing, lastRefresh: clustersLastRefreshDate } = useClusters()
   // #6271: useClusters returns lastRefresh as `Date | null`, but the
   // freshness merge below expects a numeric epoch. Normalize once.
@@ -29,11 +31,12 @@ export function NetworkOverview() {
   // cluster cache refresh would tick the indicator without ticking the
   // CardWrapper refresh animation.
   const combinedLoading = isLoading || servicesLoading
+  const hasData = services.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: combinedLoading,
+    isLoading: combinedLoading && !hasData,
     isRefreshing: isRefreshing || clustersRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: services.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures })
 
@@ -127,8 +130,8 @@ export function NetworkOverview() {
   if (showEmptyState) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
-        <p className="text-sm">No network services</p>
-        <p className="text-xs mt-1">Services will appear when deployed</p>
+        <p className="text-sm">{t('cards:networkOverview.noNetworkServices')}</p>
+        <p className="text-xs mt-1">{t('cards:networkOverview.servicesWillAppear')}</p>
       </div>
     )
   }
@@ -139,23 +142,23 @@ export function NetworkOverview() {
       {filteredClusters.length > 0 && (
         <div className="flex items-center gap-2 mb-3 px-2 py-1.5 bg-secondary/30 rounded-lg">
           <Activity className="w-3 h-3 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">Cluster Health:</span>
+          <span className="text-xs text-muted-foreground">{t('cards:networkOverview.clusterHealth')}</span>
           {stats.healthyClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="healthy" size="sm" />
-              <span className="text-green-400">{stats.healthyClusters} healthy</span>
+              <span className="text-green-400">{stats.healthyClusters} {t('cards:networkOverview.healthy')}</span>
             </span>
           )}
           {stats.degradedClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="degraded" size="sm" />
-              <span className="text-orange-400">{stats.degradedClusters} degraded</span>
+              <span className="text-orange-400">{stats.degradedClusters} {t('cards:networkOverview.degraded')}</span>
             </span>
           )}
           {stats.offlineClusters > 0 && (
             <span className="flex items-center gap-1 text-xs">
               <ClusterStatusDot state="unreachable-timeout" size="sm" />
-              <span className="text-yellow-400">{stats.offlineClusters} offline</span>
+              <span className="text-yellow-400">{stats.offlineClusters} {t('cards:networkOverview.offline')}</span>
             </span>
           )}
         </div>
@@ -213,41 +216,35 @@ export function NetworkOverview() {
       {/* Issue 8883: roving-tabindex stat tiles — Enter/Space activates; only
           focusable when the tile is interactive (totalServices > 0). */}
       <div
-        className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+        className={`p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-4 ${stats.totalServices > 0 ? 'cursor-pointer hover:bg-cyan-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
         {...(stats.totalServices > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
         onClick={() => {
-          if (stats.totalServices > 0 && filteredServices[0]) {
-            const svc = filteredServices[0]
-            if (svc.cluster && svc.namespace) {
-              drillToService(svc.cluster, svc.namespace, svc.name)
-            }
+          if (stats.totalServices > 0) {
+            drillToAllServices(undefined, { services: filteredServices })
           }
         }}
         onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && stats.totalServices > 0 && filteredServices[0]) {
+          if ((e.key === 'Enter' || e.key === ' ') && stats.totalServices > 0) {
             e.preventDefault()
-            const svc = filteredServices[0]
-            if (svc.cluster && svc.namespace) {
-              drillToService(svc.cluster, svc.namespace, svc.name)
-            }
+            drillToAllServices(undefined, { services: filteredServices })
           }
         }}
         title={stats.totalServices > 0 ? `${stats.totalServices} total services across ${stats.clustersWithServices} cluster${stats.clustersWithServices !== 1 ? 's' : ''} - Click to view details` : 'No services found'}
       >
         <div className="flex items-center gap-2 mb-1">
           <Layers className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs text-cyan-400">Total Services</span>
+          <span className="text-xs text-cyan-400">{t('cards:networkOverview.totalServices')}</span>
         </div>
         <span className="text-2xl font-bold text-foreground">{stats.totalServices}</span>
         <div className="text-xs text-muted-foreground mt-1">
-          across {stats.clustersWithServices} cluster{stats.clustersWithServices !== 1 ? 's' : ''}
+          {t('cards:networkOverview.acrossClusters', { count: stats.clustersWithServices })}
         </div>
       </div>
 
       {/* Service Types */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <div
-          className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 ${stats.loadBalancers > 0 ? 'cursor-pointer hover:bg-blue-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
           {...(stats.loadBalancers > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.loadBalancers > 0) {
@@ -273,7 +270,7 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.loadBalancers}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-purple-500/10 border border-purple-500/20 ${stats.nodePort > 0 ? 'cursor-pointer hover:bg-purple-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
           {...(stats.nodePort > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.nodePort > 0) {
@@ -299,7 +296,7 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.nodePort}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-green-500/10 border border-green-500/20 ${stats.clusterIP > 0 ? 'cursor-pointer hover:bg-green-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
           {...(stats.clusterIP > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.clusterIP > 0) {
@@ -325,7 +322,7 @@ export function NetworkOverview() {
           <span className="text-lg font-bold text-foreground">{stats.clusterIP}</span>
         </div>
         <div
-          className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
+          className={`p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 ${stats.externalName > 0 ? 'cursor-pointer hover:bg-orange-500/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400' : 'cursor-default'} transition-colors`}
           {...(stats.externalName > 0 ? { role: 'button' as const, tabIndex: 0 } : {})}
           onClick={() => {
             if (stats.externalName > 0) {
@@ -355,7 +352,7 @@ export function NetworkOverview() {
       {/* Top Namespaces */}
       {stats.namespaces.length > 0 && (
         <div className="flex-1">
-          <div className="text-xs text-muted-foreground mb-2">Top Namespaces</div>
+          <div className="text-xs text-muted-foreground mb-2">{t('cards:networkOverview.topNamespaces')}</div>
           {/* Issue 8883: Top Namespaces is a roving-tabindex list; arrow keys
               traverse siblings, Home/End jump to ends, Enter/Space activate. */}
           <div className="space-y-1.5" role="list">
@@ -392,14 +389,14 @@ export function NetworkOverview() {
                 <div
                   key={name}
                   data-keynav-item="namespace"
-                  className={`flex flex-wrap items-center justify-between gap-y-2 gap-2 p-2 rounded bg-secondary/30 ${isInteractive ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400`}
+                  className={`flex flex-wrap items-center justify-between gap-y-2 gap-2 p-2 rounded bg-secondary/30 ${isInteractive ? 'cursor-pointer hover:bg-secondary/50' : 'cursor-default'} transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400`}
                   onClick={activate}
                   onKeyDown={handleKeyDown}
                   {...(isInteractive ? { role: 'button' as const, tabIndex: 0 } : { role: 'listitem' as const })}
                   title={`${count} service${count !== 1 ? 's' : ''} in namespace ${name}${isInteractive ? ' - Click or press Enter to view' : ''}`}
                 >
                   <span className="text-sm text-foreground truncate min-w-0 flex-1">{name}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">{count} services</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{t('cards:networkOverview.servicesCount', { count })}</span>
                 </div>
               )
             })}
@@ -409,7 +406,7 @@ export function NetworkOverview() {
 
       {/* Footer */}
       <div className="mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
-        {`${stats.totalServices} services across ${filteredClusters.length} clusters`}
+        {t('cards:networkOverview.footerSummary', { services: stats.totalServices, clusters: filteredClusters.length })}
       </div>
     </div>
   )

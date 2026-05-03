@@ -57,7 +57,7 @@ describe('scrollToCard', () => {
     querySpy.mockRestore()
   })
 
-  it('adds highlight ring classes when element is found', () => {
+  it('adds highlight ring-3 classes when element is found', () => {
     const mockElement = {
       scrollIntoView: vi.fn(),
       classList: {
@@ -77,7 +77,7 @@ describe('scrollToCard', () => {
     querySpy.mockRestore()
   })
 
-  it('removes highlight ring classes after 2000ms', () => {
+  it('removes highlight ring-3 classes after 2000ms', () => {
     const SCROLL_HIGHLIGHT_MS = 2000
     const mockElement = {
       scrollIntoView: vi.fn(),

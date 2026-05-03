@@ -291,6 +291,17 @@ async function setupHTTPMocks(page: Page, overrides?: {
     }
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
+
+  // Mock the local kc-agent HTTP endpoint. The cluster cache probes
+  // http://127.0.0.1:8585/clusters before falling back to demo data.
+  // Without this mock, the probe hangs in CI (#11179).
+  await page.route('http://127.0.0.1:8585/**', (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Service unavailable (test mock)' }),
+    })
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -300,9 +311,10 @@ async function setupHTTPMocks(page: Page, overrides?: {
 async function seedAuth(page: Page) {
   await page.evaluate(() => {
     localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc_demo_mode', 'true')
+    localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('kc_onboarded', 'true')
     localStorage.setItem('kc_tour_completed', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc_user_cache', JSON.stringify({
       id: 'demo-user', github_id: '99999', github_login: 'journey-tester',
       email: 'journey@test.dev', role: 'admin', onboarded: true,
@@ -335,15 +347,23 @@ async function navigateToDashboard(page: Page) {
 
 async function openMissionSidebar(page: Page) {
   const clicked = await page.evaluate(() => {
+    // Prefer the dedicated sidebar toggle button
+    const toggle = document.querySelector('[data-testid="mission-sidebar-toggle"]') as HTMLElement
+      || document.querySelector('[data-tour="ai-missions-toggle"]') as HTMLElement
+    if (toggle) { toggle.click(); return true }
+    // Fallback: any button with "Mission" in its title
     const btn = document.querySelector('button[title*="Mission"]') as HTMLElement
     if (btn) { btn.click(); return true }
+    // Fallback: any button with "Mission" in its text
     const buttons = Array.from(document.querySelectorAll('button'))
     const mcBtn = buttons.find(b => b.textContent?.includes('Mission'))
     if (mcBtn) { (mcBtn as HTMLElement).click(); return true }
     return false
   })
   if (!clicked) {
-    await page.locator('button', { hasText: /Mission/i }).first().click({ force: true, timeout: 5000 }).catch(() => {})
+    await page.locator('[data-testid="mission-sidebar-toggle"]')
+      .or(page.locator('button', { hasText: /Mission/i }))
+      .first().click({ force: true, timeout: 5000 }).catch(() => {})
   }
   // Wait for sidebar to appear
   await page.waitForTimeout(UI_ANIMATION_SETTLE_MS)

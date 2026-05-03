@@ -26,9 +26,13 @@ const (
 	// GitHub Contents API to prevent unbounded memory consumption.
 	kubaraCatalogMaxResponseBytes = 5 * 1024 * 1024 // 5 MB
 
-	// kubaraCatalogUpstreamURL is the GitHub Contents API endpoint for the
-	// kubara-io/kubara repository's helm directory.
-	kubaraCatalogUpstreamURL = "https://api.github.com/repos/kubara-io/kubara/contents/helm"
+	// kubaraCatalogDefaultRepo is the fallback GitHub repo (owner/name) when
+	// KUBARA_CATALOG_REPO is not set.
+	kubaraCatalogDefaultRepo = "kubara-io/kubara"
+
+	// kubaraCatalogDefaultPath is the fallback path inside the repo when
+	// KUBARA_CATALOG_PATH is not set.
+	kubaraCatalogDefaultPath = "go-binary/templates/embedded/managed-service-catalog/helm"
 )
 
 // KubaraCatalogEntry represents a single chart directory in the Kubara repo.
@@ -41,8 +45,12 @@ type KubaraCatalogEntry struct {
 
 // KubaraCatalogHandler serves the Kubara platform catalog with an in-process
 // cache so that multiple users share a single upstream fetch (#8487).
+// The upstream repo and path are configurable via KUBARA_CATALOG_REPO and
+// KUBARA_CATALOG_PATH env vars, enabling private or self-hosted catalogs.
 type KubaraCatalogHandler struct {
 	githubToken string
+	catalogRepo string // owner/name, e.g. "kubara-io/kubara" or "my-org/my-catalog"
+	catalogPath string // path inside repo, e.g. "helm"
 	httpClient  *http.Client
 
 	mu       sync.RWMutex
@@ -51,11 +59,30 @@ type KubaraCatalogHandler struct {
 }
 
 // NewKubaraCatalogHandler creates a new handler for the Kubara catalog endpoint.
-func NewKubaraCatalogHandler(githubToken string) *KubaraCatalogHandler {
+// catalogRepo is the GitHub owner/name (e.g. "kubara-io/kubara"); pass "" to use
+// the default. catalogPath is the directory path inside the repo; pass "" for default.
+func NewKubaraCatalogHandler(githubToken, catalogRepo, catalogPath string) *KubaraCatalogHandler {
+	if catalogRepo == "" {
+		catalogRepo = kubaraCatalogDefaultRepo
+	}
+	if catalogPath == "" {
+		catalogPath = kubaraCatalogDefaultPath
+	}
 	return &KubaraCatalogHandler{
 		githubToken: githubToken,
+		catalogRepo: catalogRepo,
+		catalogPath: catalogPath,
 		httpClient:  &http.Client{Timeout: kubaraCatalogTimeout},
 	}
+}
+
+// GetConfig handles GET /api/kubara/config — returns the configured catalog
+// repo and path so the frontend can construct per-chart URLs dynamically.
+func (h *KubaraCatalogHandler) GetConfig(c *fiber.Ctx) error {
+	return c.JSON(fiber.Map{
+		"repo": h.catalogRepo,
+		"path": h.catalogPath,
+	})
 }
 
 // GetCatalog handles GET /api/kubara/catalog — returns the cached Kubara
@@ -117,9 +144,10 @@ func (h *KubaraCatalogHandler) GetCatalog(c *fiber.Ctx) error {
 	})
 }
 
-// fetchUpstream calls the GitHub Contents API for the kubara-io/kubara repo.
+// fetchUpstream calls the GitHub Contents API for the configured catalog repo.
 func (h *KubaraCatalogHandler) fetchUpstream() ([]KubaraCatalogEntry, error) {
-	req, err := http.NewRequest(http.MethodGet, kubaraCatalogUpstreamURL, nil)
+	upstreamURL := "https://api.github.com/repos/" + h.catalogRepo + "/contents/" + h.catalogPath
+	req, err := http.NewRequest(http.MethodGet, upstreamURL, nil)
 	if err != nil {
 		return nil, err
 	}

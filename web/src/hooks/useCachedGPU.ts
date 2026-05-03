@@ -6,10 +6,12 @@
  */
 
 import { useState } from 'react'
-import { useCache, type RefreshCategory } from '../lib/cache'
-import { fetchAPI, fetchFromAllClusters, fetchViaSSE, getToken, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
+import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
+import { fetchBackendAPI, fetchFromAllClustersViaBackend, fetchViaSSE, fetchViaBackendSSE, getToken, getClusterFetcher, AGENT_HTTP_TIMEOUT_MS } from '../lib/cache/fetcherUtils'
+import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS } from '../lib/constants/network'
+import { clusterCacheRef, deduplicateClustersByServer, agentFetch } from './mcp/shared'
 import {
   getDemoGPUNodes,
   getDemoCachedGPUNodeHealth,
@@ -27,19 +29,6 @@ import type { GPUNode, GPUNodeHealthStatus, ClusterEvent, GPUHealthCronJobStatus
 // ============================================================================
 // Shared types
 // ============================================================================
-
-/** Shared result shape for all useCached* hooks */
-interface CachedHookResult<T> {
-  data: T
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoFallback: boolean
-  error: string | null
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  refetch: () => Promise<void>
-}
 
 // ============================================================================
 // Hardware health types (canonical definitions)
@@ -108,11 +97,11 @@ async function fetchHardwareHealth(): Promise<HardwareHealthData> {
 
   try {
     const [alertsRes, inventoryRes] = await Promise.all([
-      fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts`, {
+      agentFetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: controller.signal }).catch(() => null),
-      fetch(`${LOCAL_AGENT_HTTP_URL}/devices/inventory`, {
+      agentFetch(`${LOCAL_AGENT_HTTP_URL}/devices/inventory`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: controller.signal }).catch(() => null),
@@ -149,7 +138,7 @@ async function fetchHardwareHealth(): Promise<HardwareHealthData> {
     }
 
     return result
-  } catch (e) {
+  } catch (e: unknown) {
     clearTimeout(timeoutId)
     throw e
   }
@@ -185,18 +174,57 @@ export function useCachedGPUNodes(
     demoData: getDemoGPUNodes(),
     fetcher: async () => {
       if (cluster) {
-        const raw = await fetchAPI<unknown>('gpu-nodes', { cluster })
+        const raw = await getClusterFetcher()<unknown>('gpu-nodes', { cluster })
         const data = validateArrayResponse<{ nodes: GPUNode[] }>(GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
-      return await fetchFromAllClusters<GPUNode>(
-        'gpu-nodes',
-        'nodes',
-        undefined,
-        true,
-        undefined,
-        gpuFetchOptions,
+
+      // Deduplicate clusters before fan-out (#9502). Multiple kubeconfig
+      // contexts can point to the same physical cluster. Without dedup,
+      // fetchFromAllClusters queries every raw context — if two contexts
+      // share a server, one cluster's GPUs appear twice while the other
+      // GPU-bearing cluster's data may be lost due to name collisions in
+      // the accumulated results. See MEMORY.md: "ALWAYS use
+      // DeduplicatedClusters() when iterating clusters".
+      const allClusters = clusterCacheRef.clusters || []
+      const deduped = deduplicateClustersByServer(allClusters)
+      const reachable = deduped.filter(
+        (c) => c.reachable !== false && !c.name.includes('/'),
       )
+      if (reachable.length === 0) {
+        throw new Error(
+          'No reachable clusters (agent connecting or backend not authenticated)',
+        )
+      }
+
+      const tasks = reachable.map((cl) => async () => {
+        const raw = await getClusterFetcher()<unknown>('gpu-nodes', { cluster: cl.name })
+        const data = validateArrayResponse<{ nodes: GPUNode[] }>(
+          GPUNodesResponseSchema, raw, '/api/mcp/gpu-nodes', 'nodes',
+        )
+        return (data.nodes || []).map(n => ({ ...n, cluster: cl.name }))
+      })
+
+      const accumulated: GPUNode[] = []
+      let failedCount = 0
+      function handleSettled(result: PromiseSettledResult<GPUNode[]>) {
+        if (result.status === 'fulfilled') {
+          accumulated.push(...result.value)
+        } else {
+          failedCount++
+        }
+      }
+      await settledWithConcurrency(tasks, undefined, handleSettled)
+
+      // Partial-failure protection (#8080, #8081): if any cluster errored
+      // and the accumulated result is empty, preserve stale cache.
+      if (accumulated.length === 0 && failedCount > 0) {
+        throw new Error(
+          `Partial cluster failure yielded empty GPU result (${failedCount}/${reachable.length} clusters errored) — preserving existing cache`,
+        )
+      }
+
+      return accumulated
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
       return await fetchViaSSE<GPUNode>('gpu-nodes', 'nodes', {}, onProgress, gpuFetchOptions)
@@ -206,13 +234,13 @@ export function useCachedGPUNodes(
     nodes: result.data,
     data: result.data,
     isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isRefreshing: result.isDemoFallback ? false : result.isRefreshing,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -230,28 +258,29 @@ export function useCachedGPUNodeHealth(
     demoData: getDemoCachedGPUNodeHealth(),
     persist: true,
     fetcher: async () => {
+      // gpu-nodes/health is a backend-only endpoint (#9996)
       if (cluster) {
-        const raw = await fetchAPI<unknown>('gpu-nodes/health', { cluster })
+        const raw = await fetchBackendAPI<unknown>('gpu-nodes/health', { cluster })
         const data = validateArrayResponse<{ nodes: GPUNodeHealthStatus[] }>(GPUNodeHealthResponseSchema, raw, '/api/mcp/gpu-nodes/health', 'nodes')
         return (data.nodes || []).map(n => ({ ...n, cluster }))
       }
-      return fetchFromAllClusters<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {})
+      return fetchFromAllClustersViaBackend<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {})
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      return fetchViaSSE<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {}, onProgress)
+      return fetchViaBackendSSE<GPUNodeHealthStatus>('gpu-nodes/health', 'nodes', {}, onProgress)
     } })
 
   return {
     nodes: result.data,
     data: result.data,
     isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isRefreshing: result.isDemoFallback ? false : result.isRefreshing,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
@@ -272,7 +301,8 @@ export function useGPUHealthCronJob(cluster?: string) {
     enabled: !!cluster,
     fetcher: async () => {
       if (!cluster) return null
-      return fetchAPI<GPUHealthCronJobStatus>('gpu-nodes/health/cronjob', { cluster })
+      // GET gpu-nodes/health/cronjob is a backend-only endpoint (#9996)
+      return fetchBackendAPI<GPUHealthCronJobStatus>('gpu-nodes/health/cronjob', { cluster })
     } })
 
   const install = async (opts?: { namespace?: string; schedule?: string; tier?: number }) => {
@@ -285,10 +315,11 @@ export function useGPUHealthCronJob(cluster?: string) {
       // #7993 Phase 3e: GPU health cronjob install is a user-initiated
       // tooling install. It runs through kc-agent under the user's own
       // kubeconfig instead of the backend pod ServiceAccount.
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           cluster,
@@ -301,7 +332,7 @@ export function useGPUHealthCronJob(cluster?: string) {
         throw new Error(text || `Install failed: ${response.status}`)
       }
       await result.refetch()
-    } catch (err) {
+    } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Failed to install CronJob')
     } finally {
       setActionInProgress(null)
@@ -317,10 +348,11 @@ export function useGPUHealthCronJob(cluster?: string) {
       if (!token) throw new Error('No authentication token')
       // #7993 Phase 3e: GPU health cronjob uninstall goes through kc-agent
       // under the user's own kubeconfig.
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/gpu-health-cronjob`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
           Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           cluster,
@@ -331,7 +363,7 @@ export function useGPUHealthCronJob(cluster?: string) {
         throw new Error(text || `Uninstall failed: ${response.status}`)
       }
       await result.refetch()
-    } catch (err) {
+    } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Failed to uninstall CronJob')
     } finally {
       setActionInProgress(null)
@@ -345,14 +377,14 @@ export function useGPUHealthCronJob(cluster?: string) {
     actionInProgress,
     install,
     uninstall,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 /**
  * Hook for fetching hardware health data (device alerts + inventory) with caching.
  * Uses IndexedDB persistence so data survives navigation.
  */
-export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> {
+export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> & { retryFetch: () => Promise<void> } {
   const result = useCache({
     key: 'hardware-health',
     category: 'pods', // 30-second refresh
@@ -367,13 +399,14 @@ export function useCachedHardwareHealth(): CachedHookResult<HardwareHealthData> 
   return {
     data: result.data,
     isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isRefreshing: result.isDemoFallback ? false : result.isRefreshing,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch,
+    retryFetch: result.retryFetch }
 }
 
 /**
@@ -394,15 +427,16 @@ export function useCachedWarningEvents(
     initialData: [] as ClusterEvent[],
     demoData: getDemoCachedWarningEvents(),
     fetcher: async () => {
+      // events/warnings is a backend-only endpoint (#9996)
       if (cluster) {
-        const data = await fetchAPI<{ events: ClusterEvent[] }>('events/warnings', { cluster, namespace, limit })
+        const data = await fetchBackendAPI<{ events: ClusterEvent[] }>('events/warnings', { cluster, namespace, limit })
         return (data.events || []).map(e => ({ ...e, cluster }))
       }
-      const events = await fetchFromAllClusters<ClusterEvent>('events/warnings', 'events', { namespace, limit })
+      const events = await fetchFromAllClustersViaBackend<ClusterEvent>('events/warnings', 'events', { namespace, limit })
       return events.slice(0, limit)
     },
     progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      const events = await fetchViaSSE<ClusterEvent>('events/warnings', 'events', { namespace, limit }, (partial) => {
+      const events = await fetchViaBackendSSE<ClusterEvent>('events/warnings', 'events', { namespace, limit }, (partial) => {
         onProgress(partial.slice(0, limit))
       })
       return events.slice(0, limit)
@@ -412,13 +446,13 @@ export function useCachedWarningEvents(
     events: result.data,
     data: result.data,
     isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback,
+    isRefreshing: result.isDemoFallback ? false : result.isRefreshing,
+    isDemoFallback: result.isDemoFallback && !result.isLoading,
     error: result.error,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
-    refetch: result.refetch }
+    refetch: result.refetch, retryFetch: result.retryFetch }
 }
 
 // Re-export AGENT_HTTP_TIMEOUT_MS for use in the workaround in useCachedCoreWorkloads

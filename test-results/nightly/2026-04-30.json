@@ -1,0 +1,172 @@
+{
+  "timestamp": "2026-04-30T07:46:03Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 32,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 5
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "unit-test",
+      "status": "pass",
+      "duration": 744
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "pass",
+      "duration": 33
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 60
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "gosec-test",
+      "status": "pass",
+      "duration": 37
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 12
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 11
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 149
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 115
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 551
+    },
+    {
+      "suite": "perf-test",
+      "status": "pass",
+      "duration": 985
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "pass",
+      "duration": 104
+    },
+    {
+      "suite": "deploy-test",
+      "status": "pass",
+      "duration": 75
+    },
+    {
+      "suite": "cache-test",
+      "status": "pass",
+      "duration": 138
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 76
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "pass",
+      "duration": 32
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 67
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 29
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 38
+    }
+  ]
+}

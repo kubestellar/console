@@ -59,8 +59,11 @@ func (e *EmailNotifier) Send(alert Alert) error {
 	if e.SMTPHost == "" {
 		return fmt.Errorf("SMTP host not configured")
 	}
+	if e.From == "" {
+		return fmt.Errorf("from address not configured")
+	}
 	if len(e.To) == 0 {
-		return fmt.Errorf("no email recipients configured")
+		return fmt.Errorf("no recipients configured")
 	}
 
 	subject := fmt.Sprintf("[%s] %s - %s", alert.Severity, alert.RuleName, alert.Cluster)

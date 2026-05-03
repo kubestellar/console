@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { AlertTriangle, ChevronRight, Server, Cpu, MemoryStick, Zap } from 'lucide-react'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { useCachedPods } from '../../hooks/useCachedData'
@@ -166,10 +167,12 @@ function TopPodsInternal({ config }: TopPodsProps) {
   }
 
   // Find max values for visual scaling based on current sort
-  const maxRestarts = Math.max(...pods.map(p => p.restarts), 1)
-  const maxCpu = Math.max(...pods.map(p => getEffectiveCpu(p)), 1)
-  const maxMemory = Math.max(...pods.map(p => getEffectiveMemory(p)), 1)
-  const maxGpu = Math.max(...pods.map(p => p.gpuRequest || 0), 1)
+  const { maxRestarts, maxCpu, maxMemory, maxGpu } = useMemo(() => ({
+    maxRestarts: Math.max(...pods.map(p => p.restarts), 1),
+    maxCpu: Math.max(...pods.map(p => getEffectiveCpu(p)), 1),
+    maxMemory: Math.max(...pods.map(p => getEffectiveMemory(p)), 1),
+    maxGpu: Math.max(...pods.map(p => p.gpuRequest || 0), 1),
+  }), [pods])
 
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
@@ -250,7 +253,7 @@ function TopPodsInternal({ config }: TopPodsProps) {
                   </span>
                 </div>
                 {/* Metric badge based on sort */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 shrink-0">
                   {sortBy === 'restarts' && (
                     <>
                       {pod.restarts > 0 ? (
@@ -394,9 +397,9 @@ function TopPodsInternal({ config }: TopPodsProps) {
               {/* Details row */}
               <div className="flex flex-wrap items-center justify-between gap-y-2 text-xs text-muted-foreground">
                 <div className="flex items-center gap-3">
-                  <span className="flex-shrink-0">{pod.status}</span>
-                  <span className="flex-shrink-0">{pod.ready}</span>
-                  <span className="flex-shrink-0">{pod.age}</span>
+                  <span className="shrink-0">{pod.status}</span>
+                  <span className="shrink-0">{pod.ready}</span>
+                  <span className="shrink-0">{pod.age}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {(pod.restarts >= 1 || (pod.status !== 'Running' && pod.status !== 'Succeeded' && pod.status !== 'Completed')) && (
@@ -433,10 +436,10 @@ function TopPodsInternal({ config }: TopPodsProps) {
   )
 }
 
-export function TopPods(props: TopPodsProps) {
+export const TopPods = memo(function TopPods(props: TopPodsProps) {
   return (
     <DynamicCardErrorBoundary cardId="TopPods">
       <TopPodsInternal {...props} />
     </DynamicCardErrorBoundary>
   )
-}
+})

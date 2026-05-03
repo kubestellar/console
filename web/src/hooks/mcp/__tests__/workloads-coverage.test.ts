@@ -37,6 +37,13 @@ const {
   },
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
 }))
@@ -74,8 +81,11 @@ vi.mock('../shared', () => ({
   REFRESH_INTERVAL_MS: 120_000,
   MIN_REFRESH_INDICATOR_MS: 500,
   getEffectiveInterval: (ms: number) => ms,
-  LOCAL_AGENT_URL: 'http://localhost:8585',
   clusterCacheRef: mockClusterCacheRef,
+  agentFetch: vi.fn().mockImplementation(async (...args: unknown[]) => {
+    const result = await mockApiGet(...args)
+    return { ok: true, status: 200, json: async () => result?.data ?? result }
+  }),
   fetchWithRetry: (url: string, opts: Record<string, unknown> = {}) => {
     const { timeoutMs, maxRetries, initialBackoffMs, ...rest } = opts
     void timeoutMs; void maxRetries; void initialBackoffMs
@@ -85,7 +95,7 @@ vi.mock('../shared', () => ({
 
 vi.mock('../../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
-  return { ...actual, MCP_HOOK_TIMEOUT_MS: 5_000 }
+  return { ...actual, MCP_HOOK_TIMEOUT_MS: 5_000, LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585' }
 })
 
 vi.mock('../../../lib/constants', async (importOriginal) => {
@@ -690,7 +700,7 @@ describe('useReplicaSets — uncovered branches', () => {
     const { result } = renderHook(() => useReplicaSets('c1'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.replicasets).toEqual(fakeRS)
+    expect(result.current.replicaSets).toEqual(fakeRS)
   })
 
   it('handles UnauthenticatedError from API', async () => {
@@ -719,7 +729,7 @@ describe('useStatefulSets — uncovered branches', () => {
     const { result } = renderHook(() => useStatefulSets('c1'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.statefulsets).toEqual(fakeSS)
+    expect(result.current.statefulSets).toEqual(fakeSS)
   })
 
   it('handles UnauthenticatedError from API', async () => {
@@ -748,7 +758,7 @@ describe('useDaemonSets — uncovered branches', () => {
     const { result } = renderHook(() => useDaemonSets('c1'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.daemonsets).toEqual(fakeDS)
+    expect(result.current.daemonSets).toEqual(fakeDS)
   })
 
   it('handles UnauthenticatedError from API', async () => {
@@ -777,7 +787,7 @@ describe('useCronJobs — uncovered branches', () => {
     const { result } = renderHook(() => useCronJobs('c1'))
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.cronjobs).toEqual(fakeCJ)
+    expect(result.current.cronJobs).toEqual(fakeCJ)
   })
 
   it('handles UnauthenticatedError from API', async () => {

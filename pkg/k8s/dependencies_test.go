@@ -168,6 +168,54 @@ func TestWalkContainerRefs(t *testing.T) {
 	}
 }
 
+func TestWalkContainerRefs_EphemeralContainers(t *testing.T) {
+	// Ephemeral containers should have their refs detected just like regular containers
+	allContainers := []interface{}{
+		// Regular container
+		map[string]interface{}{
+			"name": "app",
+			"env": []interface{}{
+				map[string]interface{}{
+					"valueFrom": map[string]interface{}{
+						"configMapKeyRef": map[string]interface{}{
+							"name": "app-config",
+						},
+					},
+				},
+			},
+		},
+		// Ephemeral debug container referencing a secret
+		map[string]interface{}{
+			"name": "debugger",
+			"env": []interface{}{
+				map[string]interface{}{
+					"valueFrom": map[string]interface{}{
+						"secretKeyRef": map[string]interface{}{
+							"name": "debug-secret",
+						},
+					},
+				},
+			},
+			"envFrom": []interface{}{
+				map[string]interface{}{
+					"configMapRef": map[string]interface{}{
+						"name": "debug-config",
+					},
+				},
+			},
+		},
+	}
+
+	cms, secrets := walkContainerRefs(allContainers)
+
+	if len(cms) != 2 { // app-config, debug-config
+		t.Errorf("Expected 2 ConfigMaps, got %d: %v", len(cms), cms)
+	}
+	if len(secrets) != 1 { // debug-secret
+		t.Errorf("Expected 1 Secret, got %d: %v", len(secrets), secrets)
+	}
+}
+
 func TestWalkVolumeRefs(t *testing.T) {
 	volumes := []interface{}{
 		map[string]interface{}{

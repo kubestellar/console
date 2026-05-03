@@ -16,7 +16,7 @@
 const DEMO_LAST_CHECK_OFFSET_MS = 30_000
 
 /** Number of demo member cluster entries */
-export type KarmadaHealth = 'healthy' | 'degraded' | 'not-installed'
+export type KarmadaHealth = 'healthy' | 'degraded' | 'not-installed' | 'unknown'
 
 export type KarmadaClusterStatus = 'Ready' | 'NotReady' | 'Unknown'
 

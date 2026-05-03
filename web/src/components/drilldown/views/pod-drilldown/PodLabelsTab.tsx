@@ -159,7 +159,7 @@ export function PodLabelsTab({
                           isRemoved ? 'bg-red-500/10 border-red-500/20 opacity-50' : 'bg-card/50 border-border'
                         )}
                       >
-                        <span className="text-xs text-primary font-mono flex-shrink-0">{key}</span>
+                        <span className="text-xs text-primary font-mono shrink-0">{key}</span>
                         <span className="text-muted-foreground">=</span>
                         {isRemoved ? (
                           <span className="text-xs text-red-400 line-through flex-1">{value}</span>
@@ -171,7 +171,7 @@ export function PodLabelsTab({
                             className="flex-1 text-xs font-mono bg-secondary/50 border border-border rounded px-2 py-1 text-foreground min-w-0"
                           />
                         )}
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           {isModified && (
                             <button
                               onClick={() => undoLabelChange(key)}
@@ -198,7 +198,7 @@ export function PodLabelsTab({
 
                 {/* Add new label */}
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                  <Plus className="w-4 h-4 text-green-400 flex-shrink-0" />
+                  <Plus className="w-4 h-4 text-green-400 shrink-0" />
                   <input
                     type="text"
                     placeholder={t('common.key')}
@@ -251,7 +251,7 @@ export function PodLabelsTab({
                     </div>
                     <button
                       onClick={() => handleCopy(`label-${key}`, `${key}=${value}`)}
-                      className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground flex-shrink-0 ml-2"
+                      className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground shrink-0 ml-2"
                     >
                       {copiedField === `label-${key}` ? (
                         <Check className="w-3 h-3 text-green-400" />
@@ -336,7 +336,7 @@ export function PodLabelsTab({
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs text-primary font-mono truncate">{key}</span>
-                          <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center gap-1 shrink-0">
                             {isModified && (
                               <button
                                 onClick={() => undoAnnotationChange(key)}
@@ -375,7 +375,7 @@ export function PodLabelsTab({
                 {/* Add new annotation */}
                 <div className="p-2 rounded-lg bg-green-500/10 border border-green-500/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Plus className="w-4 h-4 text-green-400 flex-shrink-0" />
+                    <Plus className="w-4 h-4 text-green-400 shrink-0" />
                     <input
                       type="text"
                       placeholder="annotation-key"
@@ -425,7 +425,7 @@ export function PodLabelsTab({
                       <span className="text-xs text-primary font-mono truncate">{key}</span>
                       <button
                         onClick={() => handleCopy(`annot-${key}`, value)}
-                        className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground flex-shrink-0"
+                        className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground shrink-0"
                       >
                         {copiedField === `annot-${key}` ? (
                           <Check className="w-3 h-3 text-green-400" />

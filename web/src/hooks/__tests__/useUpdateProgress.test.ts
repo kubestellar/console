@@ -55,6 +55,13 @@ class MockWebSocket implements MockWebSocketInstance {
 // Mocks — before module import
 // ---------------------------------------------------------------------------
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return { ...actual,
@@ -64,6 +71,11 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
 
 vi.mock('../../lib/demoMode', () => ({
   isNetlifyDeployment: false,
+  isDemoMode: () => false,
+}))
+
+vi.mock('../../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => url,
 }))
 
 // Assign mock to global before importing the hook

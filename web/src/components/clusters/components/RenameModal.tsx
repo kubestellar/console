@@ -46,7 +46,7 @@ export function RenameModal({ isOpen = true, clusterName, currentDisplayName, on
       // the label does not flip back to "Rename" while the modal fades out.
       setPhase('success')
       onClose()
-    } catch (err) {
+    } catch (err: unknown) {
       setPhase('idle')
       setError(err instanceof Error ? err.message : t('cluster.renameContext.errorFailed'))
     }

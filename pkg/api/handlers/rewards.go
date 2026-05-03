@@ -1,13 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,10 +20,13 @@ import (
 
 // Point values for GitHub contributions
 const (
-	rewardsCacheTTL   = 10 * time.Minute
-	rewardsAPITimeout = 30 * time.Second
-	rewardsPerPage    = 100 // GitHub max per page
-	rewardsMaxPages   = 10  // GitHub search max 1000 results
+	rewardsCacheTTL         = 10 * time.Minute
+	rewardsAPITimeout       = 30 * time.Second
+	rewardsPerPage          = 100              // GitHub max per page
+	rewardsMaxPages         = 100              // REST Issues API supports up to 10,000 per repo
+	rewardsMaxItems         = 10_000           // Hard cap on total items across all pages
+	maxRewardsResponseBytes = 10 * 1024 * 1024 // 10 MiB cap on GitHub API responses
+	maxRewardsTotalItems    = 10_000           // Hard cap on total items across all repos
 )
 
 // RewardsConfig holds configuration for the rewards handler.
@@ -68,18 +72,36 @@ type rewardsCacheEntry struct {
 // RewardsHandler serves GitHub-sourced reward data.
 type RewardsHandler struct {
 	githubToken string
-	orgs        string
+	repos       []string // e.g. ["kubestellar/console", "kubestellar/console-kb"]
 	httpClient  *http.Client
 
 	mu    sync.RWMutex
 	cache map[string]*rewardsCacheEntry // keyed by github_login
+
+	evictMu  sync.Mutex
+	evictCtx context.Context
+	evictFn  context.CancelFunc
+}
+
+// parseRepos extracts "owner/repo" pairs from the org filter string.
+// Accepts both "repo:owner/name" and "org:owner" tokens.
+// Org-level tokens are not expanded (no API call); only explicit repo
+// tokens are used.
+func parseRepos(orgs string) []string {
+	var repos []string
+	for _, token := range strings.Fields(orgs) {
+		if strings.HasPrefix(token, "repo:") {
+			repos = append(repos, strings.TrimPrefix(token, "repo:"))
+		}
+	}
+	return repos
 }
 
 // NewRewardsHandler creates a handler for GitHub activity rewards.
 func NewRewardsHandler(cfg RewardsConfig) *RewardsHandler {
 	return &RewardsHandler{
 		githubToken: cfg.GitHubToken,
-		orgs:        cfg.Orgs,
+		repos:       parseRepos(cfg.Orgs),
 		httpClient:  &http.Client{Timeout: rewardsAPITimeout},
 		cache:       make(map[string]*rewardsCacheEntry),
 	}
@@ -88,6 +110,8 @@ func NewRewardsHandler(cfg RewardsConfig) *RewardsHandler {
 // GetGitHubRewards returns the logged-in user's GitHub contribution rewards.
 // GET /api/rewards/github
 func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
+	h.startEviction()
+
 	githubLogin := middleware.GetGitHubLogin(c)
 	if githubLogin == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "GitHub login not available"})
@@ -95,7 +119,7 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 
 	// Check cache
 	h.mu.RLock()
-	if entry, ok := h.cache[githubLogin]; ok && time.Since(entry.fetchedAt) < rewardsCacheTTL {
+	if entry, ok := h.cache[githubLogin]; ok && time.Since(entry.fetchedAt) < rewardsCacheTTL && entry.response != nil {
 		h.mu.RUnlock()
 		resp := *entry.response
 		resp.FromCache = true
@@ -113,7 +137,7 @@ func (h *RewardsHandler) GetGitHubRewards(c *fiber.Ctx) error {
 
 		// Return stale cache if available
 		h.mu.RLock()
-		if entry, ok := h.cache[githubLogin]; ok {
+		if entry, ok := h.cache[githubLogin]; ok && entry.response != nil {
 			h.mu.RUnlock()
 			stale := *entry.response
 			stale.FromCache = true
@@ -147,40 +171,31 @@ func (h *RewardsHandler) resolveToken() string {
 }
 
 func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsResponse, error) {
+	yearStart := fmt.Sprintf("%d-01-01T00:00:00Z", time.Now().Year())
+
 	contributions := make([]GitHubContribution, 0)
 	var fetchErr error
 
-	// 1. Fetch issues authored by user
-	issues, err := h.searchItems(login, "issue", token)
-	if err != nil {
-		slog.Error("[rewards] failed to search issues", "user", login, "error", err)
-		fetchErr = fmt.Errorf("issue search failed: %w", err)
-	} else {
-		for _, item := range issues {
-			c := classifyIssue(item)
-			contributions = append(contributions, c)
+	for _, repo := range h.repos {
+		items, err := h.listRepoItems(repo, login, yearStart, token)
+		if err != nil {
+			slog.Error("[rewards] failed to list items", "repo", repo, "user", login, "error", err)
+			fetchErr = fmt.Errorf("list %s failed: %w", repo, err)
+			continue
+		}
+		for _, item := range items {
+			if item.PullRequest != nil {
+				contributions = append(contributions, classifyPR(item)...)
+			} else {
+				contributions = append(contributions, classifyIssue(item))
+			}
 		}
 	}
 
-	// 2. Fetch PRs authored by user
-	prs, err := h.searchItems(login, "pr", token)
-	if err != nil {
-		slog.Error("[rewards] failed to search PRs", "user", login, "error", err)
-		fetchErr = fmt.Errorf("PR search failed: %w", err)
-	} else {
-		for _, item := range prs {
-			cs := classifyPR(item)
-			contributions = append(contributions, cs...)
-		}
-	}
-
-	// If either search failed, return error so caller falls back to stale cache
-	// instead of caching partial results
-	if fetchErr != nil {
+	if fetchErr != nil && len(contributions) == 0 {
 		return nil, fetchErr
 	}
 
-	// Compute totals
 	total := 0
 	breakdown := RewardsBreakdown{}
 	for _, c := range contributions {
@@ -207,7 +222,7 @@ func (h *RewardsHandler) fetchUserRewards(login, token string) (*GitHubRewardsRe
 	}, nil
 }
 
-// searchItem is the subset of GitHub Search issue/PR item we care about.
+// searchItem is the subset of GitHub REST issue/PR item we care about.
 type searchItem struct {
 	Title   string `json:"title"`
 	HTMLURL string `json:"html_url"`
@@ -227,6 +242,13 @@ type searchItem struct {
 	// DefaultConsoleAppSlug (see github_app_auth.go). For issues opened
 	// directly on github.com, this field is nil.
 	PerformedViaGitHubApp *searchApp `json:"performed_via_github_app,omitempty"`
+	// User is the issue/PR author — used to filter results from the REST
+	// Issues API which returns all issues, not just those by a given author.
+	User *searchUser `json:"user,omitempty"`
+}
+
+type searchUser struct {
+	Login string `json:"login"`
 }
 
 type searchApp struct {
@@ -241,22 +263,17 @@ type searchPRRef struct {
 	MergedAt *string `json:"merged_at,omitempty"`
 }
 
-type searchResponse struct {
-	TotalCount int          `json:"total_count"`
-	Items      []searchItem `json:"items"`
-}
-
-// searchItems queries GitHub Search API with pagination.
-// itemType is "issue" or "pr".
-func (h *RewardsHandler) searchItems(login, itemType, token string) ([]searchItem, error) {
-	// Scope to current year only — matches the leaderboard at kubestellar.io/leaderboard
-	yearStart := fmt.Sprintf("%d-01-01", time.Now().Year())
-	query := fmt.Sprintf("author:%s %s type:%s created:>=%s", login, h.orgs, itemType, yearStart)
-	allItems := make([]searchItem, 0)
+// listRepoItems fetches all issues+PRs by a user in a single repo using
+// the REST Issues API (no 1,000-result cap like the Search API).
+// sinceISO is an ISO-8601 timestamp; only items updated on or after this
+// time are returned. Items created before sinceISO are filtered out
+// client-side (the API's `since` param filters by updated_at, not created_at).
+func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]searchItem, error) {
+	allItems := make([]searchItem, 0, rewardsPerPage)
 
 	for page := 1; page <= rewardsMaxPages; page++ {
-		apiURL := fmt.Sprintf("https://api.github.com/search/issues?q=%s&per_page=%d&page=%d&sort=created&order=desc",
-			url.QueryEscape(query), rewardsPerPage, page)
+		apiURL := fmt.Sprintf("https://api.github.com/repos/%s/issues?state=all&per_page=%d&page=%d&sort=created&direction=desc&since=%s",
+			repo, rewardsPerPage, page, sinceISO)
 
 		req, err := http.NewRequest("GET", apiURL, nil)
 		if err != nil {
@@ -272,7 +289,7 @@ func (h *RewardsHandler) searchItems(login, itemType, token string) ([]searchIte
 			return allItems, fmt.Errorf("execute request: %w", err)
 		}
 
-		body, err := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxRewardsResponseBytes))
 		resp.Body.Close()
 
 		if err != nil {
@@ -283,15 +300,32 @@ func (h *RewardsHandler) searchItems(login, itemType, token string) ([]searchIte
 			return allItems, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body[:min(len(body), 200)]))
 		}
 
-		var sr searchResponse
-		if err := json.Unmarshal(body, &sr); err != nil {
+		var pageItems []searchItem
+		if err := json.Unmarshal(body, &pageItems); err != nil {
 			return allItems, fmt.Errorf("unmarshal: %w", err)
 		}
 
-		allItems = append(allItems, sr.Items...)
+		for i := range pageItems {
+			item := &pageItems[i]
+			if item.User == nil || !strings.EqualFold(item.User.Login, login) {
+				continue
+			}
+			if item.CreatedAt < sinceISO {
+				continue
+			}
+			item.RepoURL = "https://api.github.com/repos/" + repo
+			allItems = append(allItems, *item)
+			if len(allItems) >= maxRewardsTotalItems {
+				slog.Warn("[rewards] total items cap reached", "repo", repo, "login", login, "cap", maxRewardsTotalItems)
+				return allItems, nil
+			}
+		}
 
-		// Stop if we've fetched all results or hit the page limit
-		if len(allItems) >= sr.TotalCount || len(sr.Items) < rewardsPerPage {
+		if len(pageItems) < rewardsPerPage {
+			break
+		}
+		if len(allItems) >= rewardsMaxItems {
+			slog.Warn("[rewards] hit max items cap", "repo", repo, "user", login, "count", len(allItems))
 			break
 		}
 	}
@@ -432,3 +466,57 @@ func extractRepo(repoURL string) string {
 
 // Leaderboard data is now generated by a daily GitHub Action in the docs repo
 // (kubestellar/docs) and served as a static page at kubestellar.io/leaderboard.
+
+// startEviction begins a background goroutine that evicts expired cache entries
+// every 5 minutes. Must be called exactly once, typically from GetGitHubRewards().
+func (h *RewardsHandler) startEviction() {
+	h.evictMu.Lock()
+	defer h.evictMu.Unlock()
+
+	if h.evictCtx != nil {
+		return // Already running
+	}
+
+	h.evictCtx, h.evictFn = context.WithCancel(context.Background())
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				h.mu.RLock()
+				now := time.Now()
+				var staleKeys []string
+				for login, entry := range h.cache {
+					if now.Sub(entry.fetchedAt) > rewardsCacheTTL {
+						staleKeys = append(staleKeys, login)
+					}
+				}
+				h.mu.RUnlock()
+				if len(staleKeys) > 0 {
+					h.mu.Lock()
+					for _, login := range staleKeys {
+						if entry, ok := h.cache[login]; ok && now.Sub(entry.fetchedAt) > rewardsCacheTTL {
+							delete(h.cache, login)
+						}
+					}
+					h.mu.Unlock()
+				}
+			case <-h.evictCtx.Done():
+				return
+			}
+		}
+	}()
+}
+
+// StopEviction stops the background eviction goroutine. Call during graceful shutdown.
+func (h *RewardsHandler) StopEviction() {
+	h.evictMu.Lock()
+	defer h.evictMu.Unlock()
+
+	if h.evictFn != nil {
+		h.evictFn()
+		h.evictCtx = nil
+	}
+}

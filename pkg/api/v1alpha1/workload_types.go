@@ -110,6 +110,7 @@ type DeployedDep struct {
 	Kind   string `json:"kind"`
 	Name   string `json:"name"`
 	Action string `json:"action"` // "created", "updated", "skipped", "failed"
+	Error  string `json:"error,omitempty"`
 }
 
 // DeployResponse represents the response from a deploy request

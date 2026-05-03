@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -53,6 +55,47 @@ var depApplyOrder = map[DependencyKind]int{
 	DepCRD:                      14,
 	DepValidatingWebhook:        15,
 	DepMutatingWebhook:          16,
+}
+
+// rbacCacheTTL is how long cached RBAC binding lists remain valid before re-fetch.
+const rbacCacheTTL = 30 * time.Second
+
+// maxParallelFetches limits concurrent API calls when fetching dependency resources.
+const maxParallelFetches = 10
+
+// rbacCacheEntry stores a cached list of RBAC bindings for a cluster+namespace.
+type rbacCacheEntry struct {
+	items     []unstructured.Unstructured
+	fetchedAt time.Time
+}
+
+// rbacCache provides a TTL-based in-memory cache for RBAC binding List() calls
+// so that resolveRBACForSA does not perform a full-cluster scan on every invocation.
+type rbacCache struct {
+	mu    sync.RWMutex
+	store map[string]rbacCacheEntry // key: "cluster/gvr/namespace"
+}
+
+var globalRBACCache = &rbacCache{
+	store: make(map[string]rbacCacheEntry),
+}
+
+// get returns cached items if the entry exists and has not expired.
+func (c *rbacCache) get(key string) ([]unstructured.Unstructured, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	entry, ok := c.store[key]
+	if !ok || time.Since(entry.fetchedAt) > rbacCacheTTL {
+		return nil, false
+	}
+	return entry.items, true
+}
+
+// set stores items in the cache with the current timestamp.
+func (c *rbacCache) set(key string, items []unstructured.Unstructured) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.store[key] = rbacCacheEntry{items: items, fetchedAt: time.Now()}
 }
 
 // GVRs for dependency resource types
@@ -200,10 +243,12 @@ func (m *MultiClusterClient) ResolveDependencies(
 		})
 	}
 
-	// 1. Walk containers + initContainers for ConfigMap and Secret refs
+	// 1. Walk containers + initContainers + ephemeralContainers for ConfigMap and Secret refs
 	containers := getSlice(podSpec, "containers")
 	initContainers := getSlice(podSpec, "initContainers")
+	ephemeralContainers := getSlice(podSpec, "ephemeralContainers")
 	allContainers := append(containers, initContainers...)
+	allContainers = append(allContainers, ephemeralContainers...)
 
 	configMaps, secrets := walkContainerRefs(allContainers)
 	for _, name := range configMaps {
@@ -348,51 +393,79 @@ func (m *MultiClusterClient) ResolveDependencies(
 		}
 	}
 
-	// 14. Fetch each dependency from the source cluster
-	var fetchedDeps []Dependency
-	for _, dep := range bundle.Dependencies {
-		var obj *unstructured.Unstructured
-		var fetchErr error
-
-		if dep.Namespace != "" {
-			obj, fetchErr = dynClient.Resource(dep.GVR).Namespace(dep.Namespace).Get(ctx, dep.Name, metav1.GetOptions{})
-		} else {
-			obj, fetchErr = dynClient.Resource(dep.GVR).Get(ctx, dep.Name, metav1.GetOptions{})
-		}
-
-		if fetchErr != nil {
-			if dep.Optional {
-				bundle.Warnings = append(bundle.Warnings,
-					fmt.Sprintf("%s %s not found on source (optional, skipping)", dep.Kind, dep.Name))
-				continue
-			}
-			bundle.Warnings = append(bundle.Warnings,
-				fmt.Sprintf("%s %s not found on source cluster %s", dep.Kind, dep.Name, sourceCluster))
-			continue
-		}
-		if obj == nil {
-			bundle.Warnings = append(bundle.Warnings,
-				fmt.Sprintf("%s %s returned nil object from source cluster %s", dep.Kind, dep.Name, sourceCluster))
-			continue
-		}
-
-		// Clean the manifest for cross-cluster deploy
-		dep.Object = cleanManifestForDeploy(obj, sourceCluster, opts)
-
-		// For Secrets: strip service-account-token type secrets (auto-generated, cluster-specific)
-		if dep.Kind == DepSecret {
-			secretType, _, _ := unstructured.NestedString(obj.Object, "type")
-			if secretType == "kubernetes.io/service-account-token" {
-				bundle.Warnings = append(bundle.Warnings,
-					fmt.Sprintf("Secret %s is a service-account-token (auto-generated, skipping)", dep.Name))
-				continue
-			}
-		}
-
-		fetchedDeps = append(fetchedDeps, dep)
+	// 14. Fetch each dependency from the source cluster (in parallel)
+	type fetchResult struct {
+		index int
+		dep   Dependency
+		warn  string // non-empty means skip this dep and add warning
 	}
 
-	// 8. Sort by apply order
+	results := make([]fetchResult, len(bundle.Dependencies))
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxParallelFetches) // concurrency limiter
+
+	for i, dep := range bundle.Dependencies {
+		wg.Add(1)
+		go func(idx int, d Dependency) {
+			defer wg.Done()
+			sem <- struct{}{}        // acquire slot
+			defer func() { <-sem }() // release slot
+
+			var obj *unstructured.Unstructured
+			var fetchErr error
+
+			if d.Namespace != "" {
+				obj, fetchErr = dynClient.Resource(d.GVR).Namespace(d.Namespace).Get(ctx, d.Name, metav1.GetOptions{})
+			} else {
+				obj, fetchErr = dynClient.Resource(d.GVR).Get(ctx, d.Name, metav1.GetOptions{})
+			}
+
+			if fetchErr != nil {
+				if d.Optional {
+					results[idx] = fetchResult{index: idx, warn: fmt.Sprintf(
+						"%s %s not found on source (optional, skipping)", d.Kind, d.Name)}
+				} else {
+					results[idx] = fetchResult{index: idx, warn: fmt.Sprintf(
+						"%s %s not found on source cluster %s", d.Kind, d.Name, sourceCluster)}
+				}
+				return
+			}
+			if obj == nil {
+				results[idx] = fetchResult{index: idx, warn: fmt.Sprintf(
+					"%s %s returned nil object from source cluster %s", d.Kind, d.Name, sourceCluster)}
+				return
+			}
+
+			// For Secrets: strip service-account-token type secrets (auto-generated, cluster-specific)
+			if d.Kind == DepSecret {
+				secretType, _, _ := unstructured.NestedString(obj.Object, "type")
+				if secretType == "kubernetes.io/service-account-token" {
+					results[idx] = fetchResult{index: idx, warn: fmt.Sprintf(
+						"Secret %s is a service-account-token (auto-generated, skipping)", d.Name)}
+					return
+				}
+			}
+
+			// Clean the manifest for cross-cluster deploy
+			d.Object = cleanManifestForDeploy(obj, sourceCluster, opts)
+			results[idx] = fetchResult{index: idx, dep: d}
+		}(i, dep)
+	}
+	wg.Wait()
+
+	// Collect results preserving order
+	var fetchedDeps []Dependency
+	for _, r := range results {
+		if r.warn != "" {
+			bundle.Warnings = append(bundle.Warnings, r.warn)
+			continue
+		}
+		if r.dep.Object != nil {
+			fetchedDeps = append(fetchedDeps, r.dep)
+		}
+	}
+
+	// Sort by apply order
 	sort.Slice(fetchedDeps, func(i, j int) bool {
 		return fetchedDeps[i].Order < fetchedDeps[j].Order
 	})
@@ -568,10 +641,18 @@ func (m *MultiClusterClient) resolveRBACForSA(
 		return deps, warnings
 	}
 
-	// Check namespace-scoped RoleBindings
-	rbList, err := dynClient.Resource(gvrRoleBindings).Namespace(namespace).List(ctx, metav1.ListOptions{})
-	if err == nil {
-		for _, rb := range rbList.Items {
+	// Check namespace-scoped RoleBindings (with caching to avoid full-cluster scans)
+	rbCacheKey := fmt.Sprintf("%s/%s/%s", cluster, "rolebindings", namespace)
+	rbItems, cached := globalRBACCache.get(rbCacheKey)
+	if !cached {
+		rbList, listErr := dynClient.Resource(gvrRoleBindings).Namespace(namespace).List(ctx, metav1.ListOptions{})
+		if listErr == nil {
+			rbItems = rbList.Items
+			globalRBACCache.set(rbCacheKey, rbItems)
+		}
+	}
+	if rbItems != nil {
+		for _, rb := range rbItems {
 			if bindingReferencesSA(rb.Object, saName, namespace) {
 				deps = append(deps, Dependency{
 					Kind:      DepRoleBinding,
@@ -597,10 +678,18 @@ func (m *MultiClusterClient) resolveRBACForSA(
 		}
 	}
 
-	// Check cluster-scoped ClusterRoleBindings
-	crbList, err := dynClient.Resource(gvrClusterRoleBindings).List(ctx, metav1.ListOptions{})
-	if err == nil {
-		for _, crb := range crbList.Items {
+	// Check cluster-scoped ClusterRoleBindings (with caching to avoid full-cluster scans)
+	crbCacheKey := fmt.Sprintf("%s/%s", cluster, "clusterrolebindings")
+	crbItems, cached := globalRBACCache.get(crbCacheKey)
+	if !cached {
+		crbList, listErr := dynClient.Resource(gvrClusterRoleBindings).List(ctx, metav1.ListOptions{})
+		if listErr == nil {
+			crbItems = crbList.Items
+			globalRBACCache.set(crbCacheKey, crbItems)
+		}
+	}
+	if crbItems != nil {
+		for _, crb := range crbItems {
 			if bindingReferencesSA(crb.Object, saName, namespace) {
 				deps = append(deps, Dependency{
 					Kind:  DepClusterRoleBinding,

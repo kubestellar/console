@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
+import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { Globe, Server, Info, Tag, Loader2, Copy, Check, ExternalLink, Activity } from 'lucide-react'
@@ -52,7 +53,7 @@ export default function ServiceDrillDown({ data }: Props) {
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
     return new Promise((resolve) => {
-      const ws = new WebSocket(LOCAL_AGENT_WS_URL)
+      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
       const timeout = setTimeout(() => {
@@ -477,7 +478,7 @@ function InfoField({ label, value, icon, onCopy, copied }: {
       <div className="flex items-center gap-2">
         <span className="text-sm text-foreground truncate" title={value}>{value}</span>
         {onCopy && (
-          <button onClick={onCopy} className="p-0.5 rounded hover:bg-secondary shrink-0" title="Copy">
+          <button onClick={onCopy} className="p-2 min-h-11 min-w-11 flex items-center justify-center rounded hover:bg-secondary shrink-0" title="Copy">
             {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
           </button>
         )}

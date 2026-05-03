@@ -256,71 +256,22 @@ export const VALUE_COLORS: Record<string, string> = {
 // Format Helpers
 // ============================================================================
 
-/**
- * Format a number with K/M suffix
- */
-export function formatStatNumber(value: number): string {
-  if (value >= 1000000) {
-    return `${(value / 1000000).toFixed(1)}M`
-  }
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`
-  }
-  return value.toString()
-}
-
-/**
- * Format memory/storage values
- */
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
-  if (bytes >= 1024 * 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024 * 1024 * 1024)).toFixed(1)} TB`
-  }
-  if (bytes >= 1024 * 1024 * 1024) {
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`
-  }
-  if (bytes >= 1024 * 1024) {
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
-  if (bytes >= 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`
-  }
-  return `${bytes} B`
-}
-
-/**
- * Format percentage values
- */
-export function formatPercent(value: number): string {
-  return `${Math.round(value)}%`
-}
-
-/**
- * Format currency values
- */
-export function formatCurrency(value: number): string {
-  if (value >= 1000000) {
-    return `$${(value / 1000000).toFixed(1)}M`
-  }
-  if (value >= 1000) {
-    return `$${(value / 1000).toFixed(1)}K`
-  }
-  return `$${value.toFixed(2)}`
-}
+import { formatBytes, formatStatNumber, formatPercent, formatCurrency } from '../formatters'
+import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../constants/time'
+export { formatBytes, formatStatNumber, formatPercent, formatCurrency }
 
 /**
  * Format duration values
  */
 export function formatDuration(seconds: number): string {
-  if (seconds >= 86400) {
-    return `${Math.floor(seconds / 86400)}d`
+  if (seconds >= SECONDS_PER_DAY) {
+    return `${Math.floor(seconds / SECONDS_PER_DAY)}d`
   }
-  if (seconds >= 3600) {
-    return `${Math.floor(seconds / 3600)}h`
+  if (seconds >= SECONDS_PER_HOUR) {
+    return `${Math.floor(seconds / SECONDS_PER_HOUR)}h`
   }
-  if (seconds >= 60) {
-    return `${Math.floor(seconds / 60)}m`
+  if (seconds >= SECONDS_PER_MINUTE) {
+    return `${Math.floor(seconds / SECONDS_PER_MINUTE)}m`
   }
   return `${seconds}s`
 }

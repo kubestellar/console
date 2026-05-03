@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../../lib/api'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
 import { triggerAggressiveDetection } from '../useLocalAgent'
@@ -27,6 +26,7 @@ import {
 import type { ClusterInfo } from './types'
 import { subscribePolling } from './pollingManager'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { agentFetch } from './shared'
 
 /** Data slice returned by useClusters — heavy, arrives via startTransition. */
 interface ClusterDataSlice {
@@ -49,16 +49,21 @@ export function useMCPStatus() {
   const [status, setStatus] = useState<MCPStatus | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const { data } = await api.get<MCPStatus>(`${LOCAL_AGENT_HTTP_URL}/status`)
+        const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/status`)
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+        const data = await resp.json()
         setStatus(data)
         setError(null)
+        setConsecutiveFailures(0)
       } catch {
         setError('MCP bridge not available')
         setStatus(null)
+        setConsecutiveFailures(prev => prev + 1)
       } finally {
         setIsLoading(false)
       }
@@ -68,11 +73,11 @@ export function useMCPStatus() {
     // Poll MCP status (shared interval prevents duplicates across components)
     const unsubscribePolling = subscribePolling(
       'mcpStatus',
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailures),
       fetchStatus,
     )
     return () => unsubscribePolling()
-  }, [])
+  }, [consecutiveFailures])
 
   return { status, isLoading, error }
 }
@@ -183,14 +188,14 @@ export function useClusters() {
   useEffect(() => {
     const unsubscribePolling = subscribePolling(
       'clusters',
-      getEffectiveInterval(CLUSTER_POLL_INTERVAL_MS),
+      getEffectiveInterval(CLUSTER_POLL_INTERVAL_MS, dataState.consecutiveFailures),
       () => fullFetchClusters(),
     )
 
     return () => {
       unsubscribePolling()
     }
-  }, [])
+  }, [dataState.consecutiveFailures])
 
   // Refetch function that consumers can call
   const refetch = useCallback(() => {
@@ -199,13 +204,13 @@ export function useClusters() {
 
   // Deduplicated clusters (single cluster per server, with aliases)
   // Use this for metrics, stats, and counts to avoid double-counting
-  const deduplicatedClusters = (() => {
+  const deduplicatedClusters = useMemo(() => {
     // First share metrics between clusters with same server (so short names get metrics from long names)
     const sharedMetricsClusters = shareMetricsBetweenSameServerClusters(dataState.clusters)
     const result = deduplicateClustersByServer(sharedMetricsClusters)
 
     return result
-  })()
+  }, [dataState.clusters])
 
   // Completeness metadata for aggregated metrics (issue #6114). A cluster is
   // "contributing" when it is reachable and has reported capacity data
@@ -214,7 +219,7 @@ export function useClusters() {
   // aggregate like "totalCPUs" is authoritative or partial. This is the v1
   // seed for per-card completeness badges; a fuller rollout is tracked as
   // follow-up work.
-  const metricsCompleteness = (() => {
+  const metricsCompleteness = useMemo(() => {
     const contributingClusters: string[] = []
     const missingClusters: string[] = []
     for (const c of deduplicatedClusters) {
@@ -229,7 +234,7 @@ export function useClusters() {
       contributingClusters,
       missingClusters,
       isComplete: missingClusters.length === 0 && contributingClusters.length > 0 }
-  })()
+  }, [deduplicatedClusters])
 
   return {
     // Raw clusters - all contexts including duplicates pointing to same server

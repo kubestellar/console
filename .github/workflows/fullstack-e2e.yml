@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -47,7 +47,7 @@ jobs:
           cache: true
 
       - name: Set up Node.js
-        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: '22'
           cache: 'npm'
@@ -68,14 +68,21 @@ jobs:
         env:
           JWT_SECRET: ${{ env.DEV_JWT_SECRET }}
           PORT: ${{ env.BACKEND_PORT }}
+          # Provide non-empty placeholder OAuth credentials so the server does NOT
+          # auto-activate dev mode (pkg/api/server.go: auto-activates when both are
+          # absent, introduced in #10925). In dev mode the root route 307-redirects
+          # to the Vite dev server (localhost:5174) which is not running in CI,
+          # causing ERR_CONNECTION_REFUSED on page.goto('/') (#10970).
+          # These values are intentionally fake — the smoke test never exercises OAuth.
+          GITHUB_CLIENT_ID: ci-fullstack-smoke-placeholder
+          GITHUB_CLIENT_SECRET: ci-fullstack-smoke-placeholder
         run: |
           # Intentionally NOT setting DEV_MODE=true — the whole point of
           # fullstack-smoke is to exercise the production serving path where
           # the Go binary serves ./web/dist/index.html directly (see
-          # pkg/api/server.go:1221-1240). With DEV_MODE=true the root route
-          # 307-redirects to FrontendURL (Vite), which isn't running in CI,
-          # so the Playwright page.goto on '/' sees ERR_CONNECTION_REFUSED
-          # while the /healthz + /api/version tests still pass (#6362).
+          # pkg/api/server.go). With DEV_MODE=true (or auto-activated dev mode)
+          # the root route 307-redirects to FrontendURL (Vite), which isn't
+          # running in CI, so Playwright page.goto on '/' gets ERR_CONNECTION_REFUSED.
           /tmp/console-binary > /tmp/console.log 2>&1 &
           echo $! > /tmp/console.pid
           echo "Backend PID: $(cat /tmp/console.pid)"

@@ -137,7 +137,7 @@ export function ProfileSection({ initialEmail, initialSlackId, githubLogin, refr
       setIsRefreshing(false)
       setProfileSaved(true)
       timeoutRef.current = window.setTimeout(() => setProfileSaved(false), UI_FEEDBACK_TIMEOUT_MS)
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : t('settings.profile.saveFailed')
       setError(message)
       setIsRefreshing(false)

@@ -63,7 +63,7 @@ async function initDatabase(): Promise<void> {
     } catch {
       // WAL may not be supported on all VFS backends
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.warn('[CacheWorker] SQLite OPFS unavailable, falling back to IndexedDB:', e)
     throw e
   }
@@ -218,7 +218,7 @@ function handleMigrate(data: {
     }
 
     db.exec('COMMIT')
-  } catch (e) {
+  } catch (e: unknown) {
     db.exec('ROLLBACK')
     throw e
   }
@@ -237,7 +237,7 @@ function handleSeedCache(entries: Array<{ key: string; entry: CacheEntry }>): vo
       )
     }
     db.exec('COMMIT')
-  } catch (e) {
+  } catch (e: unknown) {
     db.exec('ROLLBACK')
     throw e
   }
@@ -336,7 +336,7 @@ function processMessage(msg: WorkerRequest): void {
         respondError(unknown.id, `Unknown message type: ${unknown.type}`)
       }
     }
-  } catch (e) {
+  } catch (e: unknown) {
     respondError(msg.id, e instanceof Error ? e.message : String(e))
   }
 }

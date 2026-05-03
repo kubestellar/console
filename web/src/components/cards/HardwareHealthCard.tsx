@@ -12,6 +12,7 @@ import { useCachedHardwareHealth, type DeviceAlert, type NodeDeviceInventory, ty
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { agentFetch } from '../../hooks/mcp/shared'
 
 // Sort field options — separated by view so only applicable fields are shown
 type SortField = 'severity' | 'nodeName' | 'cluster' | 'deviceType' | 'totalDevices'
@@ -75,6 +76,26 @@ function getDeviceLabel(deviceType: string): string {
 
 type ViewMode = 'alerts' | 'inventory'
 
+const NODE_HOSTNAME_PATTERN = /([a-z0-9-]+-worker-[a-z0-9-]+|[a-z0-9-]+-gpu-[a-z0-9-]+|[a-z0-9-]+-compute-[a-z0-9-]+)/i
+const MIN_HOSTNAME_LENGTH = 5
+
+/** Extract canonical hostname from node name.
+ * Handles both short names and long API/SA paths. */
+function extractHostname(nodeName: string): string {
+  if (nodeName.includes(':6443/') || nodeName.includes('/system:serviceaccount:')) {
+    const parts = nodeName.split('/')
+    const lastPart = parts[parts.length - 1]
+    if (lastPart && !lastPart.includes(':') && lastPart.length > MIN_HOSTNAME_LENGTH) {
+      return lastPart
+    }
+    const match = nodeName.match(NODE_HOSTNAME_PATTERN)
+    if (match) {
+      return match[1]
+    }
+  }
+  return nodeName
+}
+
 export function HardwareHealthCard() {
   const { t } = useTranslation(['cards', 'common'])
   // Use cached hook — persists to IndexedDB, survives navigation, handles demo mode
@@ -86,7 +107,8 @@ export function HardwareHealthCard() {
     consecutiveFailures,
     isDemoFallback,
     error: fetchError,
-    refetch } = useCachedHardwareHealth()
+    refetch,
+    retryFetch } = useCachedHardwareHealth()
 
   const alerts = hwData.alerts
   const inventory = hwData.inventory
@@ -108,7 +130,7 @@ export function HardwareHealthCard() {
   const snoozeAllMenuRef = useRef<HTMLDivElement>(null)
 
   // Build a map of raw cluster names to deduplicated primary names (same as ClusterDetailModal)
-  const clusterNameMap = (() => {
+  const clusterNameMap = useMemo(() => {
     const map: Record<string, string> = {}
     deduplicatedClusters.forEach(c => {
       map[c.name] = c.name // Primary maps to itself
@@ -117,7 +139,7 @@ export function HardwareHealthCard() {
       })
     })
     return map
-  })()
+  }, [deduplicatedClusters])
 
   // Card controls state
   const [search, setSearch] = useState('')
@@ -161,49 +183,26 @@ export function HardwareHealthCard() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Extract canonical hostname from node name
-  // Handles both short names (fmaas-vllm-d-wv25b-worker-h100-3-89pkb) and
-  // long API/SA paths (api-fmaas-...:6443/system:serviceaccount:.../fmaas-vllm-d-wv25b-...)
-  const extractHostname = (nodeName: string): string => {
-    // If name contains API path indicators, try to extract the actual hostname
-    if (nodeName.includes(':6443/') || nodeName.includes('/system:serviceaccount:')) {
-      // Try to extract hostname from end of path (after last /)
-      const parts = nodeName.split('/')
-      const lastPart = parts[parts.length - 1]
-      // If the last part looks like a hostname (not a path component), use it
-      if (lastPart && !lastPart.includes(':') && lastPart.length > 5) {
-        return lastPart
-      }
-      // Otherwise try to find a worker/gpu/compute node pattern anywhere in the string
-      const nodePattern = /([a-z0-9-]+-worker-[a-z0-9-]+|[a-z0-9-]+-gpu-[a-z0-9-]+|[a-z0-9-]+-compute-[a-z0-9-]+)/i
-      const match = nodeName.match(nodePattern)
-      if (match) {
-        return match[1]
-      }
-    }
-    return nodeName
-  }
-
   // Deduplicate alerts by canonical hostname (same node may appear with different names/cluster contexts)
   // Uses clusterNameMap to map raw cluster names to deduplicated primary names (same as ClusterDetailModal)
-  const deduplicatedAlerts = (() => {
+  const deduplicatedAlerts = useMemo(() => {
     const byHostnameAndDevice = new Map<string, DeviceAlert>()
     alerts.forEach(alert => {
       const hostname = extractHostname(alert.nodeName)
       const mappedCluster = clusterNameMap[alert.cluster] || alert.cluster
       const key = `${hostname}-${alert.deviceType}`
       const existing = byHostnameAndDevice.get(key)
-      // Keep first occurrence (or update if this one has better data)
+      // Keep first occurrence, skip duplicates
       if (!existing) {
         byHostnameAndDevice.set(key, { ...alert, nodeName: hostname, cluster: mappedCluster })
       }
     })
     return Array.from(byHostnameAndDevice.values())
-  })()
+  }, [alerts, clusterNameMap])
 
   // Deduplicate inventory by canonical hostname
   // Uses clusterNameMap to map raw cluster names to deduplicated primary names (same as ClusterDetailModal)
-  const deduplicatedInventory = (() => {
+  const deduplicatedInventory = useMemo(() => {
     const byHostname = new Map<string, NodeDeviceInventory>()
     inventory.forEach(node => {
       const hostname = extractHostname(node.nodeName)
@@ -214,21 +213,21 @@ export function HardwareHealthCard() {
       }
     })
     return Array.from(byHostname.values())
-  })()
+  }, [inventory, clusterNameMap])
 
   // Node count should use deduplicated inventory count for consistency
   const deduplicatedNodeCount = deduplicatedInventory.length || nodeCount
 
   // Available clusters for filtering (from deduplicated data)
-  const availableClustersForFilter = (() => {
+  const availableClustersForFilter = useMemo(() => {
     const clusterSet = new Set<string>()
     deduplicatedAlerts.forEach(alert => clusterSet.add(alert.cluster))
     deduplicatedInventory.forEach(node => clusterSet.add(node.cluster))
     return Array.from(clusterSet).sort()
-  })()
+  }, [deduplicatedAlerts, deduplicatedInventory])
 
   // Filter alerts (using deduplicated data)
-  const filteredAlerts = (() => {
+  const filteredAlerts = useMemo(() => {
     let result = deduplicatedAlerts
 
     // Filter out snoozed alerts unless showSnoozed is true
@@ -252,7 +251,7 @@ export function HardwareHealthCard() {
     }
 
     return result
-  })()
+  }, [deduplicatedAlerts, showSnoozed, isSnoozed, search, localClusterFilter])
 
   // Count of active (non-snoozed) alerts
   const activeAlertCount = useMemo(() => {
@@ -316,11 +315,11 @@ export function HardwareHealthCard() {
   const totalPages = Math.ceil(sortedAlerts.length / effectivePerPage) || 1
   const needsPagination = itemsPerPage !== 'unlimited' && sortedAlerts.length > effectivePerPage
 
-  const paginatedAlerts = (() => {
+  const paginatedAlerts = useMemo(() => {
     if (itemsPerPage === 'unlimited') return sortedAlerts
     const start = (currentPage - 1) * effectivePerPage
     return sortedAlerts.slice(start, start + effectivePerPage)
-  })()
+  }, [sortedAlerts, itemsPerPage, currentPage, effectivePerPage])
 
   // Reset page when filters or view mode change
   useEffect(() => {
@@ -341,9 +340,9 @@ export function HardwareHealthCard() {
   const clearAlert = async (alertId: string) => {
     setClearAlertError(null)
     try {
-      const response = await fetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts/clear`, {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/devices/alerts/clear`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ alertId }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (!response.ok) {
@@ -358,7 +357,7 @@ export function HardwareHealthCard() {
   }
 
   // Filter inventory (using deduplicated data)
-  const filteredInventory = (() => {
+  const filteredInventory = useMemo(() => {
     let result = deduplicatedInventory
 
     // Apply search
@@ -376,7 +375,7 @@ export function HardwareHealthCard() {
     }
 
     return result
-  })()
+  }, [deduplicatedInventory, search, localClusterFilter])
 
   // Get total devices for a node (defined before sortedInventory which uses it)
   const getTotalDevices = (devices: DeviceCounts): number => {
@@ -413,11 +412,11 @@ export function HardwareHealthCard() {
   const inventoryTotalPages = Math.ceil(sortedInventory.length / effectivePerPage) || 1
   const inventoryNeedsPagination = itemsPerPage !== 'unlimited' && sortedInventory.length > effectivePerPage
 
-  const paginatedInventory = (() => {
+  const paginatedInventory = useMemo(() => {
     if (itemsPerPage === 'unlimited') return sortedInventory
     const start = (currentPage - 1) * effectivePerPage
     return sortedInventory.slice(start, start + effectivePerPage)
-  })()
+  }, [sortedInventory, itemsPerPage, currentPage, effectivePerPage])
 
   // Count active (non-snoozed) alerts by severity
   const criticalCount = deduplicatedAlerts.filter(a => a.severity === 'critical' && !isSnoozed(a.id)).length
@@ -450,17 +449,18 @@ export function HardwareHealthCard() {
       {/* Clear alert error feedback */}
       {clearAlertError && (
         <div className="mb-2 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
-          <XCircle className="w-4 h-4 flex-shrink-0" />
+          <XCircle className="w-4 h-4 shrink-0" />
           <span>{clearAlertError}</span>
         </div>
       )}
       {/* Status Summary */}
+      {/* #9881 — Normalize tile backgrounds to the design-system pattern (bg-*-500/10 + border-*-500/20). */}
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-1.5 @md:gap-2 mb-4">
         <div className={cn(
           'p-2 rounded-lg border',
           criticalCount > 0
-            ? 'bg-red-500/20 border-red-500/20'
-            : 'bg-green-500/20 border-green-500/20'
+            ? 'bg-red-500/10 border-red-500/20'
+            : 'bg-green-500/10 border-green-500/20'
         )}>
           <div className="text-xl font-bold text-foreground">{criticalCount}</div>
           <div className={cn('text-2xs', criticalCount > 0 ? 'text-red-400' : 'text-green-400')}>
@@ -470,8 +470,8 @@ export function HardwareHealthCard() {
         <div className={cn(
           'p-2 rounded-lg border',
           warningCount > 0
-            ? 'bg-yellow-500/20 border-yellow-500/20'
-            : 'bg-green-500/20 border-green-500/20'
+            ? 'bg-yellow-500/10 border-yellow-500/20'
+            : 'bg-green-500/10 border-green-500/20'
         )}>
           <div className="text-xl font-bold text-foreground">{warningCount}</div>
           <div className={cn('text-2xs', warningCount > 0 ? 'text-yellow-400' : 'text-green-400')}>
@@ -481,6 +481,7 @@ export function HardwareHealthCard() {
         <button
           onClick={() => { userSelectedView.current = true; setViewMode('inventory') }}
           className="p-2 rounded-lg border bg-muted/20 border-muted/30 hover:bg-muted/40 transition-colors cursor-pointer text-left"
+          aria-label={t('cards:hardwareHealth.viewNodesInventoryAria')}
         >
           <div className="text-xl font-bold text-foreground">{deduplicatedNodeCount}</div>
           <div className="text-2xs text-muted-foreground">
@@ -497,9 +498,11 @@ export function HardwareHealthCard() {
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
               viewMode === 'inventory'
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             )}
+            aria-label={t('cards:hardwareHealth.switchToInventoryAria')}
+            aria-pressed={viewMode === 'inventory'}
           >
             <List className="w-3.5 h-3.5" />
             Inventory
@@ -514,9 +517,11 @@ export function HardwareHealthCard() {
             className={cn(
               'flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors',
               viewMode === 'alerts'
-                ? 'bg-background text-foreground shadow-sm'
+                ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             )}
+            aria-label={t('cards:hardwareHealth.switchToAlertsAria')}
+            aria-pressed={viewMode === 'alerts'}
           >
             <AlertCircle className="w-3.5 h-3.5" />
             Alerts
@@ -581,6 +586,7 @@ export function HardwareHealthCard() {
                           setSnoozeAllMenuOpen(false)
                         }}
                         className="w-full px-3 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors flex items-center gap-2"
+                        aria-label={t('cards:hardwareHealth.snoozeAllForAria', { duration })}
                       >
                         <Clock className="w-3 h-3 text-muted-foreground" />
                         {duration}
@@ -595,6 +601,7 @@ export function HardwareHealthCard() {
                             setSnoozeAllMenuOpen(false)
                           }}
                           className="w-full px-3 py-1.5 text-xs text-left text-yellow-400 hover:bg-muted/50 transition-colors"
+                          aria-label={t('cards:hardwareHealth.clearAllSnoozesAria')}
                         >
                           Clear all snoozes
                         </button>
@@ -644,15 +651,16 @@ export function HardwareHealthCard() {
         <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{fetchError}</span>
             </div>
             <button
-              onClick={() => refetch()}
+              onClick={() => retryFetch()}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors whitespace-nowrap"
+              aria-label={t('cards:hardwareHealth.retryFetchAria')}
             >
-              <RefreshCw className="w-3 h-3" />
-              Retry
+              <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
+              {t('common:common.retry', 'Retry')}
             </button>
           </div>
         </div>
@@ -675,9 +683,14 @@ export function HardwareHealthCard() {
               >
                 <div className="flex items-start justify-between gap-1">
                   <div
-                    className="min-w-0 flex items-start gap-2 flex-1 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
+                    className="min-w-0 flex items-start gap-2 flex-1 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400 rounded"
                     role="button"
                     tabIndex={0}
+                    aria-label={t('cards:hardwareHealth.viewAlertAria', { 
+                      nodeName: extractHostname(alert.nodeName),
+                      cluster: alert.cluster,
+                      device: getDeviceLabel(alert.deviceType)
+                    })}
                     onClick={() => drillToNode(alert.cluster, alert.nodeName, {
                       issue: `${getDeviceLabel(alert.deviceType)} disappeared: ${alert.previousCount} → ${alert.currentCount}`
                     })}
@@ -694,7 +707,7 @@ export function HardwareHealthCard() {
                     <DeviceIcon
                       deviceType={alert.deviceType}
                       className={cn(
-                        'w-4 h-4 flex-shrink-0 mt-0.5',
+                        'w-4 h-4 shrink-0 mt-0.5',
                         alert.severity === 'critical' ? 'text-red-400' : 'text-yellow-400'
                       )}
                     />
@@ -702,7 +715,7 @@ export function HardwareHealthCard() {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-medium text-foreground break-all">{extractHostname(alert.nodeName)}</span>
                         <span className={cn(
-                          'flex-shrink-0 px-1 py-0.5 text-[9px] font-medium rounded',
+                          'shrink-0 px-1 py-0.5 text-[9px] font-medium rounded',
                           alert.severity === 'critical'
                             ? 'bg-red-500/20 text-red-400'
                             : 'bg-yellow-500/20 text-yellow-400'
@@ -721,7 +734,7 @@ export function HardwareHealthCard() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
                     <CardAIActions
                       resource={{ kind: 'HardwareDevice', name: alert.nodeName, cluster: alert.cluster, status: alert.severity }}
                       issues={[{ name: `${getDeviceLabel(alert.deviceType)} disappeared`, message: `${alert.previousCount} → ${alert.currentCount} (${alert.droppedCount} disappeared)` }]}
@@ -735,6 +748,7 @@ export function HardwareHealthCard() {
                         }}
                         className="flex items-center gap-1 px-1.5 py-0.5 rounded text-yellow-400 bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors"
                         title="Click to unsnooze"
+                        aria-label={t('cards:hardwareHealth.unsnoozeAlertAria')}
                       >
                         <BellOff className="w-3 h-3" />
                         <span className="text-2xs font-medium">
@@ -750,6 +764,7 @@ export function HardwareHealthCard() {
                           }}
                           className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                           title="Snooze alert"
+                          aria-label={t('cards:hardwareHealth.snoozeAlertAria')}
                         >
                           <BellOff className="w-3 h-3" />
                         </button>
@@ -764,6 +779,7 @@ export function HardwareHealthCard() {
                                   setSnoozeMenuOpen(null)
                                 }}
                                 className="w-full px-3 py-1.5 text-xs text-left hover:bg-muted/50 transition-colors"
+                                aria-label={t('cards:hardwareHealth.snoozeForAria', { duration })}
                               >
                                 {duration}
                               </button>
@@ -779,6 +795,7 @@ export function HardwareHealthCard() {
                       }}
                       className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                       title="Clear alert (after power cycle)"
+                      aria-label={t('cards:hardwareHealth.clearAlertAria')}
                     >
                       <XCircle className="w-3 h-3" />
                     </button>
@@ -806,9 +823,13 @@ export function HardwareHealthCard() {
             {paginatedInventory.map((node) => (
               <div
                 key={`${node.cluster}/${node.nodeName}`}
-                className="p-2 rounded text-xs transition-colors group bg-muted/20 hover:bg-muted/40 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                className="p-2 rounded text-xs transition-colors group bg-muted/20 hover:bg-muted/40 cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-cyan-400"
                 role="button"
                 tabIndex={0}
+                aria-label={t('cards:hardwareHealth.viewNodeAria', {
+                  nodeName: extractHostname(node.nodeName),
+                  cluster: node.cluster
+                })}
                 onClick={() => drillToNode(node.cluster, node.nodeName)}
                 onKeyDown={(e) => {
                   // Issue #8837: keyboard activation for inventory node drill-down
@@ -820,7 +841,7 @@ export function HardwareHealthCard() {
               >
                 <div className="flex items-start justify-between gap-1">
                   <div className="min-w-0 flex items-start gap-2 flex-1">
-                    <Server className="w-4 h-4 flex-shrink-0 text-blue-400 mt-0.5" />
+                    <Server className="w-4 h-4 shrink-0 text-blue-400 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-medium text-foreground break-all">{extractHostname(node.nodeName)}</span>
@@ -869,12 +890,15 @@ export function HardwareHealthCard() {
                           <StatusBadge color="green" size="xs">GPU Driver</StatusBadge>
                         )}
                         {getTotalDevices(node.devices) === 0 && (
-                          <span className="text-2xs text-muted-foreground italic">{t('hardwareHealth.noDevicesDetected')}</span>
+                          <span className="text-2xs text-muted-foreground italic" title={t('hardwareHealth.noDevicesExplanation')}>
+                            {t('hardwareHealth.noDevicesDetected')}
+                            <span className="block text-muted-foreground/60 mt-0.5">{t('hardwareHealth.noDevicesExplanation')}</span>
+                          </span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+                  <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
                 </div>
               </div>
             ))}

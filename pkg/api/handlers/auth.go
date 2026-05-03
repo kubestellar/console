@@ -55,8 +55,8 @@ const (
 // flow and surface as `csrf_validation_failed` to users (issue #6028). The
 // persistent store makes OAuth flows resilient across restarts, as long as
 // the user completes the flow within oauthStateExpiration.
-func (h *AuthHandler) storeOAuthState(state string) error {
-	return h.store.StoreOAuthState(state, oauthStateExpiration)
+func (h *AuthHandler) storeOAuthState(ctx context.Context, state string) error {
+	return h.store.StoreOAuthState(ctx, state, oauthStateExpiration)
 }
 
 // validateAndConsumeOAuthState atomically looks up and deletes an OAuth state
@@ -240,7 +240,7 @@ func (h *AuthHandler) runOAuthStateCleanup() {
 		case <-h.cleanupCtx.Done():
 			return
 		case <-ticker.C:
-			if _, err := h.store.CleanupExpiredOAuthStates(); err != nil {
+			if _, err := h.store.CleanupExpiredOAuthStates(h.cleanupCtx); err != nil {
 				slog.Warn("[Auth] OAuth state cleanup failed", "error", err)
 			}
 		}
@@ -281,7 +281,7 @@ func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
 
 	// Persist state in the backing store (Safari blocks cookies in OAuth
 	// redirect flows, and an in-memory map would be lost on restart — #6028).
-	if err := h.storeOAuthState(state); err != nil {
+	if err := h.storeOAuthState(c.UserContext(), state); err != nil {
 		slog.Error("[Auth] failed to store OAuth state", "error", err)
 		return h.oauthErrorRedirect(c, "oauth_state_store_failed", "")
 	}
@@ -300,7 +300,7 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 
 	// If we have a GitHub token, fetch real user info
 	if h.githubToken != "" {
-		ghUser, err := h.getGitHubUser(h.githubToken)
+		ghUser, err := h.getGitHubUser(c.UserContext(), h.githubToken)
 		if err == nil && ghUser != nil {
 			devLogin = ghUser.Login
 			devEmail = ghUser.Email
@@ -319,7 +319,7 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 	}
 
 	// Find or create dev user
-	user, err := h.store.GetUserByGitHubID(devGitHubID)
+	user, err := h.store.GetUserByGitHubID(c.UserContext(), devGitHubID)
 	if err != nil {
 		return c.Redirect(h.frontendURL+"/login?error=db_error", fiber.StatusTemporaryRedirect)
 	}
@@ -355,7 +355,7 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 			Role:        models.UserRoleAdmin,
 			Onboarded:   true, // Skip onboarding in dev mode
 		}
-		if err := h.store.CreateUser(user); err != nil {
+		if err := h.store.CreateUser(c.UserContext(), user); err != nil {
 			return c.Redirect(h.frontendURL+"/login?error=create_user_failed", fiber.StatusTemporaryRedirect)
 		}
 	} else {
@@ -366,7 +366,7 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 		user.Email = devEmail
 		user.AvatarURL = avatarURL
 		user.Role = models.UserRoleAdmin
-		if err := h.store.UpdateUser(user); err != nil {
+		if err := h.store.UpdateUser(c.UserContext(), user); err != nil {
 			slog.Warn("[Auth] failed to update dev user", "user", devLogin, "error", err)
 			return c.Redirect(h.frontendURL+"/login?error=db_error", fiber.StatusTemporaryRedirect)
 		}
@@ -374,7 +374,7 @@ func (h *AuthHandler) devModeLogin(c *fiber.Ctx) error {
 
 	// Update last login. Failures here are non-fatal — login should succeed
 	// even if the last-login timestamp can't be written.
-	if err := h.store.UpdateLastLogin(user.ID); err != nil {
+	if err := h.store.UpdateLastLogin(c.UserContext(), user.ID); err != nil {
 		slog.Warn("[Auth] failed to update last-login timestamp (devMode)",
 			"user", user.ID, "error", err)
 	}
@@ -580,7 +580,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	}
 
 	// Get user info from GitHub
-	ghUser, err := h.getGitHubUser(token.AccessToken)
+	ghUser, err := h.getGitHubUser(c.UserContext(), token.AccessToken)
 	if err != nil {
 		slog.Error("[Auth] failed to get GitHub user", "error", err)
 		detail := err.Error()
@@ -588,7 +588,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	}
 
 	// Find or create user
-	user, err := h.store.GetUserByGitHubID(fmt.Sprintf("%d", ghUser.ID))
+	user, err := h.store.GetUserByGitHubID(c.UserContext(), fmt.Sprintf("%d", ghUser.ID))
 	if err != nil {
 		slog.Error("[Auth] database error getting user", "error", err)
 		return h.oauthErrorRedirect(c, "db_error", "")
@@ -603,7 +603,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 			AvatarURL:   ghUser.AvatarURL,
 			Onboarded:   h.skipOnboarding, // Skip questionnaire if SKIP_ONBOARDING=true
 		}
-		if err := h.store.CreateUser(user); err != nil {
+		if err := h.store.CreateUser(c.UserContext(), user); err != nil {
 			slog.Error("[Auth] failed to create user", "error", err)
 			return h.oauthErrorRedirect(c, "create_user_failed", "")
 		}
@@ -612,7 +612,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		user.GitHubLogin = ghUser.Login
 		user.Email = ghUser.Email
 		user.AvatarURL = ghUser.AvatarURL
-		if err := h.store.UpdateUser(user); err != nil {
+		if err := h.store.UpdateUser(c.UserContext(), user); err != nil {
 			slog.Warn("[Auth] failed to update user", "user", ghUser.Login, "error", err)
 			return h.oauthErrorRedirect(c, "db_error", "")
 		}
@@ -620,7 +620,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 
 	// Update last login. Failures here are non-fatal — login should succeed
 	// even if the last-login timestamp can't be persisted.
-	if err := h.store.UpdateLastLogin(user.ID); err != nil {
+	if err := h.store.UpdateLastLogin(c.UserContext(), user.ID); err != nil {
 		slog.Warn("[Auth] failed to update last-login timestamp (oauth)",
 			"user", user.ID, "error", err)
 	}
@@ -798,7 +798,7 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	}
 
 	// Get fresh user data
-	user, err := h.store.GetUser(claims.UserID)
+	user, err := h.store.GetUser(c.UserContext(), claims.UserID)
 	if err != nil || user == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "User not found")
 	}
@@ -833,8 +833,8 @@ type GitHubUser struct {
 	AvatarURL string `json:"avatar_url"`
 }
 
-func (h *AuthHandler) getGitHubUser(accessToken string) (*GitHubUser, error) {
-	req, err := http.NewRequest("GET", h.githubAPIBase+"/user", nil)
+func (h *AuthHandler) getGitHubUser(ctx context.Context, accessToken string) (*GitHubUser, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", h.githubAPIBase+"/user", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -864,7 +864,7 @@ func (h *AuthHandler) getGitHubUser(accessToken string) (*GitHubUser, error) {
 	// Fall back to GET /user/emails (requires user:email scope) to find
 	// the primary verified email address.
 	if user.Email == "" {
-		if email, err := h.getGitHubPrimaryEmail(accessToken); err == nil {
+		if email, err := h.getGitHubPrimaryEmail(ctx, accessToken); err == nil {
 			user.Email = email
 		}
 	}
@@ -881,8 +881,8 @@ type gitHubEmail struct {
 
 // getGitHubPrimaryEmail fetches the user's primary verified email via
 // GET /user/emails (requires the user:email OAuth scope).
-func (h *AuthHandler) getGitHubPrimaryEmail(accessToken string) (string, error) {
-	req, err := http.NewRequest("GET", h.githubAPIBase+"/user/emails", nil)
+func (h *AuthHandler) getGitHubPrimaryEmail(ctx context.Context, accessToken string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", h.githubAPIBase+"/user/emails", nil)
 	if err != nil {
 		return "", err
 	}

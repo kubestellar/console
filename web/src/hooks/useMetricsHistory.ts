@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import type { MetricsSnapshot, TrendDirection } from '../types/predictions'
 import { useClusters, usePodIssues, useGPUNodes } from './useMCP'
 import { getPredictionSettings } from './usePredictionSettings'
+import { MS_PER_DAY, MS_PER_MINUTE } from '../lib/constants/time'
 
 const STORAGE_KEY = 'kubestellar-metrics-history'
 const HISTORY_CHANGED_EVENT = 'kubestellar-metrics-history-changed'
 const MAX_SNAPSHOTS = 1008 // 7 days at 10-min intervals (6 per hour * 24 hours * 7 days)
 /** Cache TTL: 7 days — remove snapshots older than this */
-const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const CACHE_TTL_MS = 7 * MS_PER_DAY
 /** Maximum number of increasing-restart pods to include in AI context */
 const MAX_INCREASING_RESTART_PODS = 10
 /**
@@ -41,10 +42,13 @@ if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored) {
     try {
-      snapshots = JSON.parse(stored)
-      // Remove snapshots older than 7 days
-      const cutoff = Date.now() - CACHE_TTL_MS
-      snapshots = snapshots.filter(s => new Date(s.timestamp).getTime() > cutoff)
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed)) {
+        snapshots = parsed
+        // Remove snapshots older than 7 days
+        const cutoff = Date.now() - CACHE_TTL_MS
+        snapshots = snapshots.filter(s => new Date(s.timestamp).getTime() > cutoff)
+      }
     } catch {
       // Invalid JSON, use empty array
     }
@@ -66,7 +70,7 @@ function persistSnapshots() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots))
     window.dispatchEvent(new Event(HISTORY_CHANGED_EVENT))
-  } catch (e) {
+  } catch (e: unknown) {
     // QuotaExceededError - try to free up space
     if (e instanceof DOMException && (e.name === 'QuotaExceededError' || e.code === 22)) {
       console.warn('[MetricsHistory] Storage quota exceeded, cleaning up old data...')
@@ -263,7 +267,7 @@ export function useMetricsHistory() {
   // Reads volatile data from refs so the interval stays stable across MCP polls (#5781).
   useEffect(() => {
     const settings = getPredictionSettings()
-    const interval = settings.interval * 60 * 1000 // Convert minutes to ms
+    const interval = settings.interval * MS_PER_MINUTE // Convert minutes to ms
 
     const captureSnapshot = () => {
       const now = Date.now()

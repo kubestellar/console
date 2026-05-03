@@ -21,5 +21,17 @@ export const TOOLTIP_HEADER_MARGIN_PX = 4
 // 6px — inline gap between color swatch and label
 export const TOOLTIP_INLINE_GAP_PX = 6
 
-// 8px — color swatch (dot) diameter
+// 8px — color swatch (dot) diameter; also used for badge horizontal padding
 export const TOOLTIP_SWATCH_SIZE_PX = 8
+
+// ── Badge & grid spacing (used by ParetoFrontier and similar charts) ──
+
+// 2px — badge vertical padding
+export const TOOLTIP_BADGE_PAD_V_PX = 2
+
+// 4px — grid row gap; badge border-radius
+export const TOOLTIP_GRID_GAP_ROW_PX = 4
+export const TOOLTIP_BADGE_RADIUS_PX = 4
+
+// 16px — grid column gap
+export const TOOLTIP_GRID_GAP_COL_PX = 16

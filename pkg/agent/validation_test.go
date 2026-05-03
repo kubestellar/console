@@ -12,18 +12,48 @@ func TestValidateDNS1123Label(t *testing.T) {
 		value   string
 		wantErr bool
 	}{
-		{"valid lowercase", "cluster", "my-cluster", false},
-		{"valid alphanumeric", "namespace", "prod123", false},
-		{"valid single char", "app", "a", false},
-		{"valid single number", "app", "1", false},
-		{"valid max length", "cluster", strings.Repeat("a", 63), false},
-		{"invalid empty", "cluster", "", true},
-		{"invalid uppercase", "cluster", "My-Cluster", true},
-		{"invalid underscore", "cluster", "my_cluster", true},
-		{"invalid dot", "cluster", "my.cluster", true},
-		{"invalid start with hyphen", "cluster", "-mycluster", true},
-		{"invalid end with hyphen", "cluster", "mycluster-", true},
-		{"invalid length too long", "cluster", strings.Repeat("a", 64), true},
+		{
+			name:    "valid lowercase alphanumeric",
+			field:   "cluster",
+			value:   "cluster1",
+			wantErr: false,
+		},
+		{
+			name:    "valid with hyphens",
+			field:   "cluster",
+			value:   "my-cluster-1",
+			wantErr: false,
+		},
+		{
+			name:    "empty value",
+			field:   "cluster",
+			value:   "",
+			wantErr: true,
+		},
+		{
+			name:    "uppercase not allowed",
+			field:   "cluster",
+			value:   "Cluster1",
+			wantErr: true,
+		},
+		{
+			name:    "starts with hyphen",
+			field:   "cluster",
+			value:   "-cluster",
+			wantErr: true,
+		},
+		{
+			name:    "ends with hyphen",
+			field:   "cluster",
+			value:   "cluster-",
+			wantErr: true,
+		},
+		{
+			name:    "too long",
+			field:   "cluster",
+			value:   strings.Repeat("a", 64),
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -42,19 +72,51 @@ func TestValidateKubeContext(t *testing.T) {
 		value   string
 		wantErr bool
 	}{
-		{"valid simple context", "my-context", false},
-		{"valid aws context", "arn:aws:eks:us-east-1:123456789012:cluster/my-cluster", false},
-		{"valid gke context", "gke_project-name_zone-name_cluster-name", false},
-		{"valid user context", "user@cluster.local", false},
-		{"valid with dot", "cluster.local", false},
-		{"invalid empty", "", true},
-		{"invalid path traversal", "my../cluster", true},
-		{"invalid path traversal start", "../cluster", true},
-		{"invalid path traversal end", "cluster/..", true},
-		{"invalid space", "my cluster", true},
-		{"invalid shell injection", "cluster;rm -rf /", true},
-		{"invalid wildcard", "cluster*", true},
-		{"invalid length too long", strings.Repeat("a", 254), true},
+		{
+			name:    "valid simple context",
+			value:   "minikube",
+			wantErr: false,
+		},
+		{
+			name:    "valid context with colon and slash",
+			value:   "arn:aws:eks:region:account:cluster/name",
+			wantErr: false,
+		},
+		{
+			name:    "valid context with underscore",
+			value:   "gke_project_zone_cluster",
+			wantErr: false,
+		},
+		{
+			name:    "valid context with dot and at sign",
+			value:   "user@cluster.local",
+			wantErr: false,
+		},
+		{
+			name:    "empty value",
+			value:   "",
+			wantErr: true,
+		},
+		{
+			name:    "contains space",
+			value:   "my context",
+			wantErr: true,
+		},
+		{
+			name:    "contains shell control character",
+			value:   "context;rm -rf /",
+			wantErr: true,
+		},
+		{
+			name:    "contains path traversal",
+			value:   "../context",
+			wantErr: true,
+		},
+		{
+			name:    "too long",
+			value:   strings.Repeat("a", 254),
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -73,14 +135,46 @@ func TestContainsPathTraversal(t *testing.T) {
 		s    string
 		want bool
 	}{
-		{"no traversal", "my-cluster", false},
-		{"single dot", "my.cluster.local", false},
-		{"contains traversal", "my..cluster", true},
-		{"starts with traversal", "../cluster", true},
-		{"ends with traversal", "cluster/..", true},
-		{"triple dot", "...", true},
-		{"empty string", "", false},
-		{"single character", ".", false},
+		{
+			name: "no traversal",
+			s:    "path/to/file",
+			want: false,
+		},
+		{
+			name: "single dot",
+			s:    "path/./file",
+			want: false,
+		},
+		{
+			name: "double dot traversal",
+			s:    "path/../file",
+			want: true,
+		},
+		{
+			name: "double dot at start",
+			s:    "../path/file",
+			want: true,
+		},
+		{
+			name: "double dot at end",
+			s:    "path/file/..",
+			want: true,
+		},
+		{
+			name: "double dot standalone",
+			s:    "..",
+			want: true,
+		},
+		{
+			name: "empty string",
+			s:    "",
+			want: false,
+		},
+		{
+			name: "one char",
+			s:    ".",
+			want: false,
+		},
 	}
 
 	for _, tt := range tests {

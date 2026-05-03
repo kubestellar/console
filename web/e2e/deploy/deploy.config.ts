@@ -30,7 +30,7 @@ function getWebServer() {
     command: `npm run build && npx vite preview --port ${PREVIEW_PORT} --host`,
     url: `http://127.0.0.1:${PREVIEW_PORT}`,
     reuseExistingServer: true,
-    timeout: 180_000,
+    timeout: 240_000, // Increased to 4 minutes for build stability
   }
 }
 
@@ -38,9 +38,9 @@ const port = useDevServer ? DEV_PORT : PREVIEW_PORT
 
 export default defineConfig({
   testDir: '.',
-  timeout: 300_000, // 5 minutes — covers multi-step deploy + polling
-  expect: { timeout: 15_000 },
-  retries: 0,
+  timeout: 120_000, // 2 min — tests use fully-mocked APIs, no real network I/O
+  expect: { timeout: 20_000 },
+  retries: 1, // 1 retry sufficient for flakes; avoids tripling wall-clock budget
   workers: 1,
   reporter: [
     ['json', { outputFile: '../test-results/deploy-results.json' }],
@@ -52,6 +52,8 @@ export default defineConfig({
     viewport: { width: 1280, height: 900 },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
   },
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },

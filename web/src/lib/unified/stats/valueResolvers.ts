@@ -9,6 +9,9 @@ import type {
   StatValueSource,
   StatValueFormat,
 } from '../types'
+import { formatBytes, formatCurrency } from '../../formatters'
+import { SECONDS_PER_MINUTE, SECONDS_PER_HOUR, SECONDS_PER_DAY } from '../../constants/time'
+export { formatBytes, formatCurrency }
 
 /**
  * Resolved stat value with metadata
@@ -339,48 +342,17 @@ export function formatNumber(value: number): string | number {
 }
 
 /**
- * Format bytes to human-readable
- */
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
-
-  const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
-  const exp = Math.floor(Math.log(bytes) / Math.log(1024))
-  const size = bytes / Math.pow(1024, exp)
-
-  return `${size.toFixed(1)} ${units[exp]}`
-}
-
-/**
- * Format currency
- */
-export function formatCurrency(value: number): string {
-  if (value >= 1_000_000) {
-    return `$${(value / 1_000_000).toFixed(1)}M`
-  }
-  if (value >= 1_000) {
-    return `$${(value / 1_000).toFixed(1)}K`
-  }
-  return `$${value.toFixed(2)}`
-}
-
-// Time boundary constants (in seconds) for duration formatting
-const SECS_PER_MINUTE = 60
-const SECS_PER_HOUR = 3_600
-const SECS_PER_DAY = 86_400
-
-/**
  * Format duration in seconds to human-readable
  */
 export function formatDuration(seconds: number): string {
-  if (seconds < SECS_PER_MINUTE) {
+  if (seconds < SECONDS_PER_MINUTE) {
     return `${Math.round(seconds)}s`
   }
-  if (seconds < SECS_PER_HOUR) {
-    return `${Math.round(seconds / SECS_PER_MINUTE)}m`
+  if (seconds < SECONDS_PER_HOUR) {
+    return `${Math.round(seconds / SECONDS_PER_MINUTE)}m`
   }
-  if (seconds < SECS_PER_DAY) {
-    return `${(seconds / SECS_PER_HOUR).toFixed(1)}h`
+  if (seconds < SECONDS_PER_DAY) {
+    return `${(seconds / SECONDS_PER_HOUR).toFixed(1)}h`
   }
-  return `${(seconds / SECS_PER_DAY).toFixed(1)}d`
+  return `${(seconds / SECONDS_PER_DAY).toFixed(1)}d`
 }

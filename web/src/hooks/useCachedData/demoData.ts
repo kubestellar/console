@@ -41,6 +41,8 @@ import type {
   K8sServiceAccountInfo,
 } from '../useMCP'
 import type { Workload } from '../useWorkloads'
+import type { CiliumStatus } from '../../types/cilium'
+import type { JaegerStatus } from '../../types/jaeger'
 
 // ---------------------------------------------------------------------------
 // Local type stubs used only by demo data — avoid circular import with
@@ -194,7 +196,8 @@ export const getDemoCoreDNSStatus = (): _CoreDNSClusterStatus[] => [
       { name: 'coredns-7db6d8ff4d-n9wq3', status: 'Running', ready: '1/1', restarts: 0, version: '1.11.1' },
     ],
     healthy: true,
-    totalRestarts: 0 },
+    totalRestarts: 0
+  },
   {
     cluster: 'gke-staging',
     pods: [
@@ -202,14 +205,16 @@ export const getDemoCoreDNSStatus = (): _CoreDNSClusterStatus[] => [
       { name: 'coredns-6d4b75cb6d-fghij', status: 'Running', ready: '1/1', restarts: 0, version: '1.10.1' },
     ],
     healthy: true,
-    totalRestarts: 2 },
+    totalRestarts: 2
+  },
   {
     cluster: 'aks-dev-westeu',
     pods: [
       { name: 'coredns-abc123-xyz99', status: 'CrashLoopBackOff', ready: '0/1', restarts: 7, version: '1.9.3' },
     ],
     healthy: false,
-    totalRestarts: 7 },
+    totalRestarts: 7
+  },
 ]
 
 // ============================================================================
@@ -235,7 +240,8 @@ export const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
       { name: 'stuck_pods', passed: true },
       { name: 'gpu_events', passed: true },
     ],
-    issues: [], stuckPods: 0, checkedAt: new Date().toISOString() },
+    issues: [], stuckPods: 0, checkedAt: new Date().toISOString()
+  },
   {
     nodeName: 'gpu-node-2', cluster: 'vllm-gpu-cluster', status: 'degraded',
     gpuCount: 8, gpuType: 'NVIDIA A100-SXM4-80GB',
@@ -248,7 +254,8 @@ export const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
       { name: 'stuck_pods', passed: true },
       { name: 'gpu_events', passed: true },
     ],
-    issues: ['gpu-feature-discovery: CrashLoopBackOff (12 restarts)'], stuckPods: 0, checkedAt: new Date().toISOString() },
+    issues: ['gpu-feature-discovery: CrashLoopBackOff (12 restarts)'], stuckPods: 0, checkedAt: new Date().toISOString()
+  },
   {
     nodeName: 'gpu-node-3', cluster: 'eks-prod-us-east-1', status: 'unhealthy',
     gpuCount: 4, gpuType: 'NVIDIA V100',
@@ -262,7 +269,8 @@ export const getDemoCachedGPUNodeHealth = (): GPUNodeHealthStatus[] => [
       { name: 'gpu_events', passed: false, message: '3 GPU warning events in last hour' },
     ],
     issues: ['Node is NotReady', 'Node is cordoned', 'gpu-feature-discovery: CrashLoopBackOff (128 restarts)', '54 pods stuck'],
-    stuckPods: 54, checkedAt: new Date().toISOString() },
+    stuckPods: 54, checkedAt: new Date().toISOString()
+  },
 ]
 
 export const getDemoCachedWarningEvents = (): ClusterEvent[] => [
@@ -286,7 +294,8 @@ const DEMO_HW_ALERTS: _DeviceAlert[] = [
     droppedCount: 2,
     firstSeen: new Date().toISOString(),
     lastSeen: new Date().toISOString(),
-    severity: 'critical' },
+    severity: 'critical'
+  },
   {
     id: 'demo-2',
     nodeName: 'gpu-node-2',
@@ -297,7 +306,8 @@ const DEMO_HW_ALERTS: _DeviceAlert[] = [
     droppedCount: 1,
     firstSeen: new Date().toISOString(),
     lastSeen: new Date().toISOString(),
-    severity: 'warning' },
+    severity: 'warning'
+  },
 ]
 
 const DEMO_HW_INVENTORY: _NodeDeviceInventory[] = [
@@ -305,30 +315,35 @@ const DEMO_HW_INVENTORY: _NodeDeviceInventory[] = [
     nodeName: 'gpu-node-1',
     cluster: 'production',
     devices: { gpuCount: 8, nicCount: 2, nvmeCount: 4, infinibandCount: 2, sriovCapable: true, rdmaAvailable: true, mellanoxPresent: true, nvidiaNicPresent: false, spectrumScale: false, mofedReady: true, gpuDriverReady: true },
-    lastSeen: new Date().toISOString() },
+    lastSeen: new Date().toISOString()
+  },
   {
     nodeName: 'gpu-node-2',
     cluster: 'production',
     devices: { gpuCount: 8, nicCount: 2, nvmeCount: 4, infinibandCount: 2, sriovCapable: true, rdmaAvailable: true, mellanoxPresent: true, nvidiaNicPresent: false, spectrumScale: false, mofedReady: true, gpuDriverReady: true },
-    lastSeen: new Date().toISOString() },
+    lastSeen: new Date().toISOString()
+  },
   {
     nodeName: 'compute-node-1',
     cluster: 'staging',
     devices: { gpuCount: 0, nicCount: 1, nvmeCount: 2, infinibandCount: 0, sriovCapable: false, rdmaAvailable: false, mellanoxPresent: false, nvidiaNicPresent: false, spectrumScale: false, mofedReady: false, gpuDriverReady: false },
-    lastSeen: new Date().toISOString() },
+    lastSeen: new Date().toISOString()
+  },
 ]
 
 export const HW_INITIAL_DATA: _HardwareHealthData = {
   alerts: [],
   inventory: [],
   nodeCount: 0,
-  lastUpdate: null }
+  lastUpdate: null
+}
 
 export const HW_DEMO_DATA: _HardwareHealthData = {
   alerts: DEMO_HW_ALERTS,
   inventory: DEMO_HW_INVENTORY,
   nodeCount: DEMO_HW_INVENTORY.length,
-  lastUpdate: new Date().toISOString() }
+  lastUpdate: new Date().toISOString()
+}
 
 // ============================================================================
 // K8s resources demo data
@@ -420,7 +435,8 @@ export const getDemoHelmValues = (): Record<string, unknown> => ({
   replicaCount: 2,
   image: { repository: 'prom/prometheus', tag: 'v2.48.1', pullPolicy: 'IfNotPresent' },
   service: { type: 'ClusterIP', port: 9090 },
-  resources: { limits: { cpu: '500m', memory: '512Mi' }, requests: { cpu: '200m', memory: '256Mi' } } })
+  resources: { limits: { cpu: '500m', memory: '512Mi' }, requests: { cpu: '200m', memory: '256Mi' } }
+})
 
 export const getDemoOperators = (): Operator[] => [
   { name: 'prometheus-operator', namespace: 'monitoring', version: '0.72.0', status: 'Succeeded', cluster: 'eks-prod-us-east-1' },
@@ -461,3 +477,57 @@ export const getDemoK8sServiceAccountsRbac = (): K8sServiceAccountInfo[] => [
   { name: 'default', namespace: 'production', cluster: 'eks-prod-us-east-1', createdAt: new Date(Date.now() - 90 * 86400000).toISOString() },
   { name: 'prometheus', namespace: 'monitoring', cluster: 'eks-prod-us-east-1', roles: ['prometheus-reader'], createdAt: new Date(Date.now() - 30 * 86400000).toISOString() },
 ]
+
+// ============================================================================
+// Cilium demo data
+// ============================================================================
+
+export const getDemoCiliumStatus = (): CiliumStatus => ({
+  status: 'Healthy',
+  nodes: [
+    { name: 'node-1', status: 'Healthy', version: '1.14.4' },
+    { name: 'node-2', status: 'Healthy', version: '1.14.4' },
+    { name: 'node-3', status: 'Healthy', version: '1.14.4' },
+  ],
+  networkPolicies: 42,
+  endpoints: 156,
+  hubble: {
+    enabled: true,
+    flowsPerSecond: 1250,
+    metrics: {
+      forwarded: 1245000,
+      dropped: 1500,
+    },
+  },
+})
+// ============================================================================
+// Jaeger demo data
+// ============================================================================
+
+export const getDemoJaegerStatus = (): JaegerStatus => ({
+  status: 'Healthy',
+  version: '1.57.0',
+  collectors: {
+    count: 4,
+    status: 'Healthy',
+    items: [
+      { name: 'jaeger-collector-1', status: 'Healthy', version: '1.57.0', cluster: 'cluster-1' },
+      { name: 'jaeger-collector-2', status: 'Healthy', version: '1.57.0', cluster: 'cluster-2' },
+      { name: 'jaeger-collector-3', status: 'Healthy', version: '1.57.0', cluster: 'cluster-3' },
+      { name: 'jaeger-collector-4', status: 'Healthy', version: '1.57.0', cluster: 'cluster-4' },
+    ],
+  },
+  query: {
+    status: 'Healthy',
+  },
+  metrics: {
+    servicesCount: 32,
+    tracesLastHour: 2450,
+    dependenciesCount: 128,
+    avgLatencyMs: 38,
+    p95LatencyMs: 142,
+    p99LatencyMs: 385,
+    spansDroppedLastHour: 15, // Realistic small number of dropped spans
+    avgQueueLength: 42,
+  },
+})

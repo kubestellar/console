@@ -16,6 +16,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -61,6 +62,13 @@ const (
 	// GitHub returns a rate-limit error (403/429). This prevents complete outages
 	// when the unauthenticated rate limit (60 req/hr) is exhausted.
 	missionsCacheStaleTTL = 1 * time.Hour
+
+	// missionsMaxFetchRetries is the number of retry attempts for transient
+	// upstream errors (5xx, network timeouts) before falling back to stale
+	// cache or returning 502. Retries use exponential backoff starting at
+	// missionsFetchRetryBaseDelay. (#10966)
+	missionsMaxFetchRetries     = 2
+	missionsFetchRetryBaseDelay = 500 * time.Millisecond
 
 	// missionsCacheMaxEntries is the maximum number of entries in the response cache.
 	// Each entry stores a directory listing or file body.
@@ -456,12 +464,14 @@ func (h *MissionsHandler) githubGet(url string, clientToken string) (*http.Respo
 		if err != nil {
 			return nil, err
 		}
+		// Note: Caller is responsible for closing retryResp.Body
 		if retryResp.StatusCode == http.StatusForbidden || retryResp.StatusCode == http.StatusTooManyRequests {
 			slog.Error("[missions] unauthenticated retry also failed, likely rate-limited", "status", retryResp.StatusCode, "url", url)
 		}
 		return retryResp, nil
 	}
 
+	// Note: Caller is responsible for closing resp.Body
 	return resp, nil
 }
 
@@ -496,33 +506,61 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 		}, nil
 	}
 
-	resp, err := h.githubGet(url, c.Get("X-GitHub-Token"))
-	if err != nil {
-		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
-			slog.Error("[missions] upstream error, serving stale cache "+logContext, append(logArgs, "error", err)...)
-			return &githubFetchResult{
-				Body:        stale.body,
-				StatusCode:  stale.statusCode,
-				ContentType: stale.contentType,
-				CacheStatus: cacheStatusStale,
-			}, nil
+	// Retry loop for transient upstream errors (#10966).
+	// Network failures and 5xx responses are retried with exponential backoff
+	// before falling back to stale cache or returning 502.
+	var (
+		resp *http.Response
+		err  error
+		body []byte
+	)
+	for attempt := 0; attempt <= missionsMaxFetchRetries; attempt++ {
+		if attempt > 0 {
+			delay := missionsFetchRetryBaseDelay * time.Duration(1<<(attempt-1))
+			slog.Info("[missions] retrying upstream fetch "+logContext, append(logArgs, "attempt", attempt+1, "delay", delay)...)
+			// Monitor context cancellation to avoid orphaned goroutines on client disconnect
+			select {
+			case <-c.Context().Done():
+				return &githubFetchResult{StatusCode: http.StatusServiceUnavailable}, c.Context().Err()
+			case <-time.After(delay):
+				// Continue to retry
+			}
 		}
-		var statusCode = http.StatusBadGateway
-		if resp != nil && resp.StatusCode > 0 {
-			statusCode = resp.StatusCode
+
+		resp, err = h.githubGet(url, c.Get("X-GitHub-Token"))
+		if err != nil {
+			continue
 		}
-		return &githubFetchResult{StatusCode: statusCode}, fmt.Errorf("upstream request failed")
-	}
-	defer resp.Body.Close()
 
-	limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
-	body, ioErr := io.ReadAll(limitedBody)
-	if ioErr != nil {
-		slog.Error("[missions] failed to read response body "+logContext, append(logArgs, "error", ioErr)...)
-		return &githubFetchResult{StatusCode: http.StatusInternalServerError}, fmt.Errorf("failed to read response body")
+		limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
+		body, err = io.ReadAll(limitedBody)
+		resp.Body.Close()
+		if err != nil {
+			slog.Error("[missions] failed to read response body "+logContext, append(logArgs, "error", err, "attempt", attempt+1)...)
+			continue
+		}
+
+		// Rate-limited — don't retry, fall through to stale cache
+		if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+			break
+		}
+
+		// 5xx — retry if attempts remain
+		if resp.StatusCode >= 500 {
+			slog.Warn("[missions] upstream 5xx "+logContext, append(logArgs, "status", resp.StatusCode, "attempt", attempt+1)...)
+			continue
+		}
+
+		// Success or 4xx client error — return immediately
+		return &githubFetchResult{
+			Body:        body,
+			StatusCode:  resp.StatusCode,
+			CacheStatus: cacheStatusMiss,
+		}, nil
 	}
 
-	if resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests {
+	// All retries exhausted — try stale cache before failing
+	if resp != nil && (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests) {
 		if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
 			slog.Info("[missions] rate-limited, serving stale cache "+logContext, append(logArgs, "status", resp.StatusCode)...)
 			return &githubFetchResult{
@@ -535,11 +573,20 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 		return &githubFetchResult{StatusCode: resp.StatusCode}, fmt.Errorf("GitHub API rate limit exceeded — no cached data available")
 	}
 
-	return &githubFetchResult{
-		Body:        body,
-		StatusCode:  resp.StatusCode,
-		CacheStatus: cacheStatusMiss,
-	}, nil
+	if stale := h.cache.getStale(cacheKey, missionsCacheStaleTTL); stale != nil {
+		slog.Error("[missions] upstream error after retries, serving stale cache "+logContext, append(logArgs, "error", err)...)
+		return &githubFetchResult{
+			Body:        stale.body,
+			StatusCode:  stale.statusCode,
+			ContentType: stale.contentType,
+			CacheStatus: cacheStatusStale,
+		}, nil
+	}
+	var statusCode = http.StatusBadGateway
+	if resp != nil && resp.StatusCode > 0 {
+		statusCode = resp.StatusCode
+	}
+	return &githubFetchResult{StatusCode: statusCode}, fmt.Errorf("upstream request failed")
 }
 
 // ---------- Browse knowledge base ----------
@@ -561,6 +608,9 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(browse)", "path", path)
 	if err != nil {
+		if res == nil {
+			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		}
 		if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests {
 			return c.Status(res.StatusCode).JSON(fiber.Map{
 				"error":  err.Error(),
@@ -568,7 +618,11 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 				"code":   "rate_limited",
 			})
 		}
-		return c.Status(res.StatusCode).JSON(fiber.Map{"error": err.Error()})
+		status := http.StatusBadGateway
+		if res != nil && res.StatusCode > 0 {
+			status = res.StatusCode
+		}
+		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	if res.CacheStatus != cacheStatusMiss {
@@ -695,6 +749,9 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(file)", "ref", ref, "path", path)
 	if err != nil {
+		if res == nil {
+			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		}
 		if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests {
 			return c.Status(res.StatusCode).JSON(fiber.Map{
 				"error":  err.Error(),
@@ -702,7 +759,11 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 				"code":   "rate_limited",
 			})
 		}
-		return c.Status(res.StatusCode).JSON(fiber.Map{"error": err.Error()})
+		status := http.StatusBadGateway
+		if res != nil && res.StatusCode > 0 {
+			status = res.StatusCode
+		}
+		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
 	}
 
 	if res.CacheStatus != cacheStatusMiss {
@@ -1353,6 +1414,10 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 	if prHTMLURL == "" {
 		return c.Status(502).JSON(fiber.Map{"error": "GitHub PR response missing html_url"})
 	}
+
+	// #9890: persist audit entry after successful external PR creation.
+	audit.Log(c, audit.ActionShareMissionGitHub, "mission", req.FilePath,
+		fmt.Sprintf("repo=%s branch=%s fork=%s pr=%s", req.Repo, req.Branch, forkFullName, prHTMLURL))
 
 	return c.JSON(fiber.Map{
 		"success": true,

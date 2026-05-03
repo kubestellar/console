@@ -10,10 +10,12 @@ import {
   rectIntersection,
   DragOverlay,
   type DragEndEvent,
-  type CollisionDetection } from '@dnd-kit/core'
+  type CollisionDetection
+} from '@dnd-kit/core'
 import {
   SortableContext,
-  rectSortingStrategy } from '@dnd-kit/sortable'
+  rectSortingStrategy
+} from '@dnd-kit/sortable'
 import { useDashboard } from './dashboardHooks'
 import type { DashboardCard, DashboardCardPlacement } from './types'
 import { SortableDashboardCard, DragPreviewCard } from './DashboardComponents'
@@ -74,7 +76,7 @@ export interface DashboardPageProps {
    *  and `secondaryAction` surface next-step guidance — see issue 6392. */
   emptyState?: {
     title: string
-    description: string
+    description: ReactNode
     action?: EmptyStateAction
     secondaryAction?: EmptyStateAction
   }
@@ -163,9 +165,10 @@ export function DashboardPage({
     redo,
     canUndo,
     canRedo } = useDashboard({
-    storageKey,
-    defaultCards,
-    onRefresh })
+      storageKey,
+      defaultCards,
+      onRefresh
+    })
 
   // Workload-aware collision detection: when dragging a workload, prefer
   // cluster-group droppables over the larger sortable card containers.
@@ -266,7 +269,8 @@ export function DashboardPage({
         id: `card-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         card_type: c.type,
         config: c.config || {},
-        title: c.title }))
+        title: c.title
+      }))
       setCards(prev => [...prev.slice(0, idx), ...cardsToAdd, ...prev.slice(idx)])
       setInsertAtIndex(null)
     } else {
@@ -304,7 +308,8 @@ export function DashboardPage({
       id: `card-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
       card_type: card.card_type,
       config: card.config || {},
-      title: card.title }))
+      title: card.title
+    }))
     setCards(newCards)
     expandCards()
     // Close DashboardCustomizer after applying template
@@ -315,18 +320,19 @@ export function DashboardPage({
 
   // Merged stat value getter: dashboard-specific first, then universal fallback
   const getStatValue = (blockId: string): StatBlockValue => {
-      if (customGetStatValue) {
-        return createMergedStatValueGetter(customGetStatValue, getUniversalStatValue)(blockId)
-      }
-      return getUniversalStatValue(blockId) ?? { value: '-', sublabel: '' }
+    if (customGetStatValue) {
+      return createMergedStatValueGetter(customGetStatValue, getUniversalStatValue)(blockId)
     }
+    return getUniversalStatValue(blockId) ?? { value: '-', sublabel: '' }
+  }
 
   // Transform card for ConfigureCardModal
   const configureCardData = configuringCard ? {
     id: configuringCard.id,
     card_type: configuringCard.card_type,
     config: configuringCard.config,
-    title: configuringCard.title } : null
+    title: configuringCard.title
+  } : null
 
   // Default empty state text
   const emptyTitle = emptyState?.title || `${title} Dashboard`
@@ -338,164 +344,164 @@ export function DashboardPage({
     // fixed-position children (FAB, customizer, modals) must live OUTSIDE it
     // to avoid clipping when ancestors create a new containing block (issue 8464).
     <>
-    <div className="pt-16 min-w-0 max-w-full overflow-x-hidden" data-testid={testId}>
-      {/* Header */}
-      <DashboardHeader
-        title={title}
-        subtitle={subtitle}
-        icon={<Icon className="w-6 h-6 text-purple-400" />}
-        isFetching={isFetching}
-        onRefresh={() => triggerRefresh()}
-        autoRefresh={autoRefresh}
-        onAutoRefreshChange={setAutoRefresh}
-        autoRefreshId={`${storageKey}-auto-refresh`}
-        lastUpdated={lastUpdated}
-        error={error}
-        afterTitle={<DashboardHealthIndicator />}
-        rightExtra={rightExtra}
-      />
+      <div className="pt-4 min-w-0 max-w-full overflow-x-hidden" data-testid={testId}>
+        {/* Header */}
+        <DashboardHeader
+          title={title}
+          subtitle={subtitle}
+          icon={<Icon className="w-6 h-6 text-purple-400" />}
+          isFetching={isFetching}
+          onRefresh={() => triggerRefresh()}
+          autoRefresh={autoRefresh}
+          onAutoRefreshChange={setAutoRefresh}
+          autoRefreshId={`${storageKey}-auto-refresh`}
+          lastUpdated={lastUpdated}
+          error={error}
+          afterTitle={<DashboardHealthIndicator />}
+          rightExtra={rightExtra}
+        />
 
-      {/* Extra header content (e.g., stack selector) */}
-      {headerExtra && (
-        <div className="flex items-center gap-3 px-6 py-2 border-b border-border/50 bg-card/30">
-          {headerExtra}
-        </div>
-      )}
-
-      {/* Stats Overview */}
-      <StatsOverview
-        dashboardType={statsType}
-        getStatValue={getStatValue}
-        hasData={hasData}
-        isLoading={isLoading && !hasData}
-        lastUpdated={lastUpdated}
-        collapsedStorageKey={`${storageKey}-stats-collapsed`}
-        isDemoData={isDemoData}
-      />
-
-      {/* Content before cards (tabs, filters, etc.) */}
-      {beforeCards}
-
-      {/* Dashboard Cards Section */}
-      <div className="mb-6">
-        {/* Card section header with toggle */}
-        <div className="flex items-center justify-between mb-3">
-          <button
-            onClick={() => setShowCards(!showCards)}
-            className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <LayoutGrid className="w-4 h-4" />
-            <span>{title} Cards ({cards.length})</span>
-            {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-        </div>
-
-        {/* Cards grid */}
-        {showCards && (
-          <>
-            {cards.length === 0 ? (
-              <EmptyState
-                icon={<Icon className="w-12 h-12 text-muted-foreground" />}
-                title={emptyTitle}
-                description={emptyDescription}
-                action={emptyState?.action ?? {
-                  label: 'Add Cards',
-                  onClick: () => setShowAddCard(true),
-                }}
-                secondaryAction={emptyState?.secondaryAction}
-                data-testid="dashboard-empty-state"
-              />
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={collisionDetection}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                    {cards.map((card, index) => (
-                      <SortableDashboardCard
-                        key={card.id}
-                        card={card}
-                        onConfigure={() => handleConfigureCard(card.id)}
-                        onRemove={() => handleRemoveCard(card.id)}
-                        onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
-                        onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
-                        isDragging={activeId === card.id}
-                        isRefreshing={isRefreshing}
-                        onRefresh={triggerRefresh}
-                        lastUpdated={lastUpdated}
-                        onInsertBefore={() => { setInsertAtIndex(index); setShowAddCard(true) }}
-                        onInsertAfter={() => { setInsertAtIndex(index + 1); setShowAddCard(true) }}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-                <DragOverlay dropAnimation={null} zIndex={9999}>
-                  {activeId && cards.find(c => c.id === activeId) ? (
-                    <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
-                  ) : activeId && activeDragData?.type === 'workload' ? (
-                    <div className="bg-blue-100 dark:bg-blue-900/60 shadow-xl rounded-lg px-4 py-2 border-2 border-blue-400 max-w-xs pointer-events-none">
-                      <div className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
-                        {(activeDragData.workload as { name?: string })?.name || 'Workload'}
-                      </div>
-                      <div className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
-                        Drop on a cluster group to deploy
-                      </div>
-                    </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            )}
-          </>
+        {/* Extra header content (e.g., stack selector) */}
+        {headerExtra && (
+          <div className="flex items-center gap-3 px-6 py-2 border-b border-border/50 bg-card/30">
+            {headerExtra}
+          </div>
         )}
+
+        {/* Stats Overview */}
+        <StatsOverview
+          dashboardType={statsType}
+          getStatValue={getStatValue}
+          hasData={hasData}
+          isLoading={isLoading && !hasData}
+          lastUpdated={lastUpdated}
+          collapsedStorageKey={`${storageKey}-stats-collapsed`}
+          isDemoData={isDemoData}
+        />
+
+        {/* Content before cards (tabs, filters, etc.) */}
+        {beforeCards}
+
+        {/* Dashboard Cards Section */}
+        <div className="mb-6">
+          {/* Card section header with toggle */}
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => setShowCards(!showCards)}
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>{title} Cards ({cards.length})</span>
+              {showCards ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {/* Cards grid */}
+          {showCards && (
+            <>
+              {cards.length === 0 ? (
+                <EmptyState
+                  icon={<Icon className="w-12 h-12 text-muted-foreground" />}
+                  title={emptyTitle}
+                  description={emptyDescription}
+                  action={emptyState?.action ?? {
+                    label: 'Add Cards',
+                    onClick: () => setShowAddCard(true),
+                  }}
+                  secondaryAction={emptyState?.secondaryAction}
+                  data-testid="dashboard-empty-state"
+                />
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={collisionDetection}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={cards.map(c => c.id)} strategy={rectSortingStrategy}>
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-2" data-testid="dashboard-cards-grid">
+                      {cards.map((card, index) => (
+                        <SortableDashboardCard
+                          key={card.id}
+                          card={card}
+                          onConfigure={() => handleConfigureCard(card.id)}
+                          onRemove={() => handleRemoveCard(card.id)}
+                          onWidthChange={(newWidth) => handleWidthChange(card.id, newWidth)}
+                          onHeightChange={(newHeight) => handleHeightChange(card.id, newHeight)}
+                          isDragging={activeId === card.id}
+                          isRefreshing={isRefreshing}
+                          onRefresh={triggerRefresh}
+                          lastUpdated={lastUpdated}
+                          onInsertBefore={() => { setInsertAtIndex(index); setShowAddCard(true) }}
+                          onInsertAfter={() => { setInsertAtIndex(index + 1); setShowAddCard(true) }}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                  <DragOverlay dropAnimation={null} zIndex={9999}>
+                    {activeId && cards.find(c => c.id === activeId) ? (
+                      <DragPreviewCard card={cards.find(c => c.id === activeId)!} />
+                    ) : activeId && activeDragData?.type === 'workload' ? (
+                      <div className="bg-blue-100 dark:bg-blue-900/60 shadow-xl rounded-lg px-4 py-2 border-2 border-blue-400 max-w-xs pointer-events-none">
+                        <div className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+                          {(activeDragData.workload as { name?: string })?.name || 'Workload'}
+                        </div>
+                        <div className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                          Drop on a cluster group to deploy
+                        </div>
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Dashboard-specific content */}
+        {children}
       </div>
 
-      {/* Dashboard-specific content */}
-      {children}
-    </div>
-
-    {/* Fixed-position elements rendered outside overflow-x-hidden to prevent
+      {/* Fixed-position elements rendered outside overflow-x-hidden to prevent
         viewport clipping (issue 8464). Parent overflow + ancestor transforms
         can create a new containing block that clips position:fixed children. */}
 
-    {/* Floating action button — opens Dashboard Studio */}
-    <FloatingDashboardActions
-      onOpenCustomizer={() => setShowAddCard(true)}
-      onUndo={undo}
-      onRedo={redo}
-      canUndo={canUndo}
-      canRedo={canRedo}
-    />
+      {/* Floating action button — opens Dashboard Studio */}
+      <FloatingDashboardActions
+        onOpenCustomizer={() => setShowAddCard(true)}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
 
-    {/* Dashboard Studio — unified customization panel */}
-    <DashboardCustomizer
-      isOpen={showAddCard}
-      onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null); setCustomizerInitialSection(undefined); setWidgetCardType(undefined) }}
-      dashboardName={title}
-      onAddCards={handleAddCards}
-      existingCardTypes={cards.map(c => c.card_type)}
-      initialSection={customizerInitialSection}
-      initialSearch={addCardSearch}
-      initialWidgetCardType={widgetCardType}
-      onApplyTemplate={applyTemplate}
-      /* onExport not available on generic DashboardPage — only on Dashboard.tsx */
-      onReset={reset}
-      isCustomized={isCustomized}
-      onUndo={undo}
-      onRedo={redo}
-      canUndo={canUndo}
-      canRedo={canRedo}
-    />
+      {/* Dashboard Studio — unified customization panel */}
+      <DashboardCustomizer
+        isOpen={showAddCard}
+        onClose={() => { setShowAddCard(false); setAddCardSearch(''); setInsertAtIndex(null); setCustomizerInitialSection(undefined); setWidgetCardType(undefined) }}
+        dashboardName={title}
+        onAddCards={handleAddCards}
+        existingCardTypes={cards.map(c => c.card_type)}
+        initialSection={customizerInitialSection}
+        initialSearch={addCardSearch}
+        initialWidgetCardType={widgetCardType}
+        onApplyTemplate={applyTemplate}
+        /* onExport not available on generic DashboardPage — only on Dashboard.tsx */
+        onReset={reset}
+        isCustomized={isCustomized}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
 
-    {/* Configure Card Modal */}
-    <ConfigureCardModal
-      isOpen={!!configuringCard}
-      card={configureCardData}
-      onClose={() => setConfiguringCard(null)}
-      onSave={handleSaveCardConfig}
-    />
+      {/* Configure Card Modal */}
+      <ConfigureCardModal
+        isOpen={!!configuringCard}
+        card={configureCardData}
+        onClose={() => setConfiguringCard(null)}
+        onSave={handleSaveCardConfig}
+      />
     </>
   )
 }

@@ -190,10 +190,16 @@ interface HistoryDay {
 
 function corsOrigin(origin: string | null): string {
   if (!origin) return ALLOWED_ORIGINS[0];
-  if (ALLOWED_ORIGINS.some((o) => origin === o) || origin.endsWith(".kubestellar.io")) {
-    return origin;
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  try {
+    const host = new URL(origin).hostname.toLowerCase();
+    if (host === "kubestellar.io" || host.endsWith(".kubestellar.io")) {
+      return origin;
+    }
+    if (host === "localhost") return origin;
+  } catch {
+    // Malformed origin — fall through to default
   }
-  if (origin.startsWith("http://localhost:")) return origin;
   return ALLOWED_ORIGINS[0];
 }
 
@@ -211,16 +217,27 @@ function jsonResponse(
 }
 
 /** GitHub API fetch with auth + typed error */
+const GH_RETRY_MAX_ATTEMPTS = 3;
+const GH_RETRY_BASE_DELAY_MS = 1_000;
+
 async function gh(path: string, token: string, init: RequestInit = {}): Promise<Response> {
   const url = path.startsWith("http") ? path : `${GITHUB_API}${path}`;
-  return fetch(url, {
-    ...init,
-    headers: {
-      Accept: "application/vnd.github.v3+json",
-      Authorization: `Bearer ${token}`,
-      ...(init.headers ?? {}),
-    },
-  });
+  const headers = {
+    Accept: "application/vnd.github.v3+json",
+    Authorization: `Bearer ${token}`,
+    ...(init.headers ?? {}),
+  };
+  for (let attempt = 0; attempt < GH_RETRY_MAX_ATTEMPTS; attempt++) {
+    const resp = await fetch(url, { ...init, headers });
+    if (resp.status !== 429 && resp.status !== 403) return resp;
+    if (attempt === GH_RETRY_MAX_ATTEMPTS - 1) return resp;
+    const retryAfter = resp.headers.get("Retry-After");
+    const waitMs = retryAfter
+      ? Math.min(parseInt(retryAfter, 10) * 1000, 10_000)
+      : GH_RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+  return fetch(url, { ...init, headers });
 }
 
 /** Matches `owner/repo` format — allows any valid GitHub repo, not just

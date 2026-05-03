@@ -1,10 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { collectConsoleErrors } from '../helpers/ux-assertions'
 import { setMode } from '../mocks/liveMocks'
-
-const BASE_URL =
-  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
-    ?.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5174'
+import { mockApiFallback } from '../helpers/setup'
 
 const DASHBOARD_LOAD_TIMEOUT_MS = 20_000
 const ROUTE_LOAD_TIMEOUT_MS = 20_000
@@ -23,12 +20,15 @@ function routeMatcher(path: string): RegExp {
 }
 
 async function loginAndOpenInitialDashboard(page: Page) {
-  await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' })
+  // Catch-all API mock prevents hangs on unmocked endpoints
+  await mockApiFallback(page)
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' })
 
   // Simulate post-login auth state in a backend-independent way.
   await setMode(page, 'demo')
 
-  await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
 
   await expect(page).toHaveURL(routeMatcher('/'), { timeout: DASHBOARD_LOAD_TIMEOUT_MS })
   await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: DASHBOARD_LOAD_TIMEOUT_MS })
@@ -45,10 +45,25 @@ async function assertRouteLoaded(page: Page, expectedPath: string) {
 }
 
 async function clickSidebarRoute(page: Page, href: string) {
-  const link = page.locator(`[data-testid="sidebar"] a[href="${href}"]`).first()
-  await expect(link).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+  // After navigating, sidebar sections may re-render / collapse. Wait for
+  // the sidebar to stabilize before looking for the target link.
+  const sidebar = page.getByTestId('sidebar')
+  await expect(sidebar).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+
+  const link = sidebar.locator(`a[href="${href}"]`).first()
+  // The link may be inside a collapsed section — scroll it into view which
+  // also triggers any lazy section expansion.
+  const isVisible = await link.isVisible({ timeout: 3000 }).catch(() => false)
+  if (!isVisible) {
+    // Section may need expanding; try clicking the section header to reveal it.
+    // If the link still doesn't appear, the test will fail with a clear message.
+    await expect(link).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+  }
   await link.scrollIntoViewIfNeeded()
-  await link.click()
+  // Use force:true to bypass Playwright's stability check — sidebar CSS
+  // transitions can cause the element to appear "in motion" even when visually
+  // settled (see #11521).
+  await link.click({ force: true })
   await assertRouteLoaded(page, href)
 }
 
@@ -63,6 +78,7 @@ async function getVisibleSidebarRoutes(page: Page): Promise<string[]> {
         const href = node.getAttribute('href')
         if (!href || !href.startsWith('/')) continue
         if (href.startsWith('/custom-dashboard/')) continue
+        if (href.startsWith('/enterprise')) continue
 
         if (!seen.has(href)) {
           seen.add(href)

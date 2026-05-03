@@ -1,9 +1,12 @@
-import { useState, useMemo, useEffect, useCallback, useImperativeHandle, type Ref } from 'react'
+import { useState, useMemo, useImperativeHandle, memo, type Ref } from 'react'
 import { GitPullRequest, GitBranch, Star, Users, Package, TrendingUp, AlertCircle, Clock, CheckCircle, XCircle, GitMerge, Settings, X, Plus, Check } from 'lucide-react'
-import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
+import { MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
+import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants/network'
+import { formatTimeAgo } from '../../lib/formatters'
 import { Button } from '../ui/Button'
 import { Skeleton } from '../ui/Skeleton'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { useCache } from '../../lib/cache'
 import { cn } from '../../lib/cn'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter } from '../../lib/cards/CardComponents'
 import { useCardData } from '../../lib/cards/cardHooks'
@@ -106,22 +109,6 @@ const TIME_RANGES = [
   { value: '1y' as const, label: '1 Year' },
 ]
 
-// Utility functions
-function formatTimeAgo(date: string): string {
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (seconds < 60) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `${days}d ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  const years = Math.floor(months / 12)
-  return `${years}y ago`
-}
-
 function isStale(date: string, days: number = 30): boolean {
   const ageInDays = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24)
   return ageInDays > days
@@ -134,51 +121,6 @@ const DEFAULT_REPO = 'kubestellar/console'
 // LocalStorage key for saved repos
 const SAVED_REPOS_KEY = 'github_activity_saved_repos'
 const CURRENT_REPO_KEY = 'github_activity_repo'
-const CACHE_KEY_PREFIX = 'github_activity_cache_v2_' // v2: fixed PR fetching
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache TTL - shorter for fresher data
-
-// Cache data structure
-interface CachedGitHubData {
-  timestamp: number
-  repoInfo: GitHubRepo | null
-  prs: GitHubPR[]
-  issues: GitHubIssue[]
-  releases: GitHubRelease[]
-  contributors: GitHubContributor[]
-  openPRCount: number
-  openIssueCount: number
-}
-
-// Get cached data for a repo
-function getCachedData(repo: string): CachedGitHubData | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const cached = localStorage.getItem(CACHE_KEY_PREFIX + repo.replace('/', '_'))
-    if (!cached) return null
-    const data = JSON.parse(cached) as CachedGitHubData
-    // Check if cache is still fresh
-    if (Date.now() - data.timestamp < CACHE_TTL_MS) {
-      return data
-    }
-    return null // Cache expired
-  } catch {
-    return null
-  }
-}
-
-// Save data to cache
-function setCachedData(repo: string, data: Omit<CachedGitHubData, 'timestamp'>) {
-  try {
-    const cached: CachedGitHubData = {
-      ...data,
-      timestamp: Date.now()
-    }
-    localStorage.setItem(CACHE_KEY_PREFIX + repo.replace('/', '_'), JSON.stringify(cached))
-  } catch (e) {
-    // Storage might be full, ignore
-    console.error('Failed to cache GitHub data:', e)
-  }
-}
 
 // Get saved repos from localStorage
 function getSavedRepos(): string[] {
@@ -221,8 +163,8 @@ async function githubFetchError(response: Response, label: string): Promise<Erro
 
 function getDemoGitHubData(repoName: string) {
   const now = new Date()
-  const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString()
-  const hoursAgo = (h: number) => new Date(now.getTime() - h * 3600000).toISOString()
+  const daysAgo = (d: number) => new Date(now.getTime() - d * MS_PER_DAY).toISOString()
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * MS_PER_HOUR).toISOString()
   const demoUser = { login: 'demo-user', avatar_url: 'https://github.com/ghost.png' }
   const prs: GitHubPR[] = [
     { number: 842, title: 'feat: Add multi-cluster GPU scheduling', state: 'open', merged_at: null, created_at: hoursAgo(2), updated_at: hoursAgo(1), user: demoUser, html_url: '#', draft: false, labels: [{ name: 'enhancement', color: 'a2eeef' }] },
@@ -255,109 +197,65 @@ function getDemoGitHubData(repoName: string) {
   return { prs, issues, releases, contributors, repoInfo, openPRCount: 2, openIssueCount: 2 }
 }
 
-// Custom hook for GitHub data fetching
+// Custom hook for GitHub data fetching via useCache (SWR, demo fallback, persistence)
+interface GitHubActivityData {
+  repoInfo: GitHubRepo | null
+  prs: GitHubPR[]
+  issues: GitHubIssue[]
+  releases: GitHubRelease[]
+  contributors: GitHubContributor[]
+  openPRCount: number
+  openIssueCount: number
+}
+
+const INITIAL_GITHUB_DATA: GitHubActivityData = {
+  repoInfo: null,
+  prs: [],
+  issues: [],
+  releases: [],
+  contributors: [],
+  openPRCount: 0,
+  openIssueCount: 0,
+}
+
 function useGitHubActivity(config?: GitHubActivityConfig) {
-  const [prs, setPRs] = useState<GitHubPR[]>([])
-  const [issues, setIssues] = useState<GitHubIssue[]>([])
-  const [releases, setReleases] = useState<GitHubRelease[]>([])
-  const [contributors, setContributors] = useState<GitHubContributor[]>([])
-  const [repoInfo, setRepoInfo] = useState<GitHubRepo | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
-  const [openPRCount, setOpenPRCount] = useState(0)
-  const [openIssueCount, setOpenIssueCount] = useState(0)
-  const { isDemoMode } = useDemoMode()
 
   // Use configured repos or default to kubestellar/console
   const repos = config?.repos?.length ? config.repos : [DEFAULT_REPO]
-  const org = config?.org
-  // Note: Token stored in localStorage base64 encoded - decode before use
-  // Token is injected server-side by the GitHub proxy — no client-side token needed
-  const reposKey = useMemo(() => repos.join(','), [repos])
+  const targetRepo = repos[0] || DEFAULT_REPO
 
-  const fetchGitHubData = useCallback(async (isManualRefresh = false, signal?: AbortSignal) => {
-    if (isDemoMode) {
-      const targetRepo = repos[0] || DEFAULT_REPO
-      const demo = getDemoGitHubData(targetRepo)
-      if (signal?.aborted) return
-      setRepoInfo(demo.repoInfo)
-      setPRs(demo.prs)
-      setIssues(demo.issues)
-      setReleases(demo.releases)
-      setContributors(demo.contributors)
-      setOpenPRCount(demo.openPRCount)
-      setOpenIssueCount(demo.openIssueCount)
-      setIsLoading(false)
-      setLastRefresh(new Date())
-      setError(null)
-      return
-    }
+  const demoData = useMemo(() => getDemoGitHubData(targetRepo), [targetRepo])
 
-    if (repos.length === 0 && !org) {
-      setIsLoading(false)
-      setError('No repositories or organization configured')
-      return
-    }
-
-    // For simplicity, fetch data for the first repo
-    const targetRepo = repos[0]
-
-    if (!targetRepo) {
-      setIsLoading(false)
-      setError('No valid repository specified. Please configure at least one repository in the format "owner/repo".')
-      return
-    }
-
-    // Check cache first (unless manual refresh)
-    if (!isManualRefresh) {
-      const cached = getCachedData(targetRepo)
-      // Use cached data only if it has valid PR data (not empty from old buggy cache)
-      if (cached && cached.prs && cached.prs.length > 0) {
-        if (signal?.aborted) return
-        setRepoInfo(cached.repoInfo)
-        setPRs(cached.prs)
-        setIssues(cached.issues)
-        setReleases(cached.releases)
-        setContributors(cached.contributors)
-        setOpenPRCount(cached.openPRCount)
-        setOpenIssueCount(cached.openIssueCount)
-        setLastRefresh(new Date(cached.timestamp))
-        setIsLoading(false)
-        setError(null)
-        return
-      }
-    }
-
-    if (isManualRefresh) {
-      setIsRefreshing(true)
-    } else {
-      setIsLoading(true)
-    }
-    setError(null)
-
-    try {
+  const {
+    data,
+    isLoading,
+    isRefreshing,
+    error,
+    isDemoFallback,
+    refetch,
+  } = useCache<GitHubActivityData>({
+    key: `github-activity-${targetRepo}`,
+    category: 'default',
+    initialData: INITIAL_GITHUB_DATA,
+    demoData: demoData,
+    persist: true,
+    demoWhenEmpty: true,
+    isEmpty: (d) => !d.repoInfo && d.prs.length === 0,
+    fetcher: async () => {
       const headers: HeadersInit = {
         'Accept': 'application/vnd.github.v3+json' }
-      // Use the provided signal for all fetch calls to support cancellation
-      const fetchOptions = { headers, signal }
+      const fetchOptions = { headers }
 
       // Fetch repository info
-      const repoResponse = await fetch(`/api/github/repos/${targetRepo}`, fetchOptions)
+      const repoResponse = await fetch(`/api/github/repos/${targetRepo}`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!repoResponse.ok) throw await githubFetchError(repoResponse, 'Failed to fetch repo')
-      // Use .catch() directly on .json() to prevent Firefox from firing unhandledrejection
-      // before the outer try/catch processes the rejection (Firefox-specific microtask timing).
       const repoData = await repoResponse.json().catch(() => null)
       if (!repoData) throw new Error('Failed to parse GitHub repo response: invalid JSON')
-      if (signal?.aborted) return
-      setRepoInfo(repoData)
 
-      // Fetch open PRs and closed/merged PRs separately to ensure we get merged PRs
-      // For active repos, all "recently updated" PRs might be open ones
+      // Fetch open PRs and closed/merged PRs separately
       const [openPRsResponse, closedPRsResponse] = await Promise.all([
-        fetch(`/api/github/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, fetchOptions),
-        fetch(`/api/github/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, fetchOptions)
+        fetch(`/api/github/repos/${targetRepo}/pulls?state=open&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
+        fetch(`/api/github/repos/${targetRepo}/pulls?state=closed&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       ])
 
       if (!openPRsResponse.ok) throw await githubFetchError(openPRsResponse, 'Failed to fetch open PRs')
@@ -367,22 +265,16 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
       const closedPRsData = await closedPRsResponse.json().catch(() => null)
       if (!openPRsData || !closedPRsData) throw new Error('Failed to parse GitHub PR response: invalid JSON')
 
-      // Combine and sort by updated_at (most recent first)
-      const allPRs = [...openPRsData, ...closedPRsData]
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-        .slice(0, 100) // Keep top 100 for display
-
-      if (signal?.aborted) return
-      setPRs(allPRs)
-      setOpenPRCount(openPRsData.length)
+      const allPRs = [...(openPRsData || []), ...(closedPRsData || [])]
+        .sort((a: GitHubPR, b: GitHubPR) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 100)
 
       // Fetch open Issues count and recent issues
       const [openIssuesResponse, recentIssuesResponse] = await Promise.all([
-        fetch(`/api/github/repos/${targetRepo}/issues?state=open&per_page=1`, fetchOptions),
-        fetch(`/api/github/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, fetchOptions)
+        fetch(`/api/github/repos/${targetRepo}/issues?state=open&per_page=1`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) }),
+        fetch(`/api/github/repos/${targetRepo}/issues?state=all&per_page=50&sort=updated`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       ])
 
-      // Get open issue count from Link header or response body
       let calculatedOpenIssueCount = 0
       if (openIssuesResponse.ok) {
         const linkHeader = openIssuesResponse.headers.get('Link')
@@ -393,111 +285,50 @@ function useGitHubActivity(config?: GitHubActivityConfig) {
           const openIssues = await openIssuesResponse.json().catch(() => null)
           calculatedOpenIssueCount = (openIssues || []).filter((i: GitHubIssue & { pull_request?: unknown }) => !i.pull_request).length
         }
-        if (signal?.aborted) return
-        setOpenIssueCount(calculatedOpenIssueCount)
       }
 
       if (!recentIssuesResponse.ok) throw await githubFetchError(recentIssuesResponse, 'Failed to fetch issues')
       const issuesData: GitHubIssue[] = await recentIssuesResponse.json().catch(() => null) ?? []
-      // Filter out pull requests (they come with issues endpoint but have pull_request field)
       const filteredIssues = issuesData.filter((issue: GitHubIssue & { pull_request?: unknown }) => !issue.pull_request)
-      if (signal?.aborted) return
-      setIssues(filteredIssues)
 
       // Fetch Releases
-      const releasesResponse = await fetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, fetchOptions)
+      const releasesResponse = await fetch(`/api/github/repos/${targetRepo}/releases?per_page=10`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!releasesResponse.ok) throw await githubFetchError(releasesResponse, 'Failed to fetch releases')
       const releasesData = await releasesResponse.json().catch(() => null)
       if (!releasesData) throw new Error('Failed to parse GitHub releases response: invalid JSON')
-      if (signal?.aborted) return
-      setReleases(releasesData)
 
       // Fetch Contributors
-      const contributorsResponse = await fetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, fetchOptions)
+      const contributorsResponse = await fetch(`/api/github/repos/${targetRepo}/contributors?per_page=20`, { ...fetchOptions, signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
       if (!contributorsResponse.ok) throw await githubFetchError(contributorsResponse, 'Failed to fetch contributors')
       const contributorsData = await contributorsResponse.json().catch(() => null)
       if (!contributorsData) throw new Error('Failed to parse GitHub contributors response: invalid JSON')
-      if (signal?.aborted) return
-      setContributors(contributorsData)
 
-      // Cache the fetched data using the calculated counts
-      setCachedData(targetRepo, {
+      return {
         repoInfo: repoData,
         prs: allPRs,
         issues: filteredIssues,
         releases: releasesData,
         contributors: contributorsData,
-        openPRCount: openPRsData.length,
-        openIssueCount: calculatedOpenIssueCount })
-
-      setLastRefresh(new Date())
-    } catch (err) {
-      // Abort errors are expected during cleanup — do not treat as failures
-      if (err instanceof DOMException && err.name === 'AbortError') return
-      if (signal?.aborted) return
-
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch GitHub data'
-      console.error('GitHub API error:', err)
-
-      // Try to use stale cache as fallback (ignore TTL)
-      try {
-        const cachedStr = localStorage.getItem(CACHE_KEY_PREFIX + targetRepo.replace('/', '_'))
-        if (cachedStr) {
-          const cached = JSON.parse(cachedStr) as CachedGitHubData
-          setRepoInfo(cached.repoInfo)
-          setPRs(cached.prs)
-          setIssues(cached.issues)
-          setReleases(cached.releases)
-          setContributors(cached.contributors)
-          setOpenPRCount(cached.openPRCount)
-          setOpenIssueCount(cached.openIssueCount)
-          setLastRefresh(new Date(cached.timestamp))
-          // Show warning that we're using cached data
-          setError(`Using cached data (${formatTimeAgo(new Date(cached.timestamp).toISOString())}). ${errorMessage}`)
-          return
-        }
-      } catch {
-        // Cache read failed, show original error
+        openPRCount: (openPRsData || []).length,
+        openIssueCount: calculatedOpenIssueCount,
       }
-
-      setError(errorMessage)
-    } finally {
-      if (!signal?.aborted) {
-        setIsLoading(false)
-        setIsRefreshing(false)
-      }
-    }
-  }, [isDemoMode, repos, org])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetchGitHubData(false, controller.signal).catch(() => { /* errors handled inside fetchGitHubData */ })
-    // Auto-refresh every 60 seconds (bypasses cache for fresh data) — skip in demo mode
-    let interval: ReturnType<typeof setInterval> | undefined
-    if (!isDemoMode) {
-      interval = setInterval(() => fetchGitHubData(true, controller.signal).catch(() => { /* errors handled inside fetchGitHubData */ }), POLL_INTERVAL_SLOW_MS)
-    }
-    return () => {
-      controller.abort()
-      if (interval) clearInterval(interval)
-    }
-     
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reposKey, org, isDemoMode])
+    },
+  })
 
   return {
-    prs,
-    issues,
-    releases,
-    contributors,
-    repoInfo,
+    prs: data.prs,
+    issues: data.issues,
+    releases: data.releases,
+    contributors: data.contributors,
+    repoInfo: data.repoInfo,
     isLoading,
     isRefreshing,
     error,
-    lastRefresh,
-    openPRCount,
-    openIssueCount,
-    refetch: () => fetchGitHubData(true) }
+    lastRefresh: new Date(),
+    openPRCount: data.openPRCount,
+    openIssueCount: data.openIssueCount,
+    isDemoData: isDemoFallback && !isLoading,
+    refetch: () => refetch() }
 }
 
 // Sort comparators for GitHub items (open-first sorting applied separately after)
@@ -575,12 +406,14 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
     contributors,
     repoInfo,
     isLoading,
+    isRefreshing,
     error,
+    isDemoData,
     refetch } = useGitHubActivity(effectiveConfig)
   const { isDemoMode } = useDemoMode()
 
   const hasData = !!repoInfo
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode || isDemoData })
 
   // Expose refresh method via ref for CardWrapper refresh button
   useImperativeHandle(ref, () => ({
@@ -627,10 +460,10 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   const preFilteredData = useMemo(() => {
     const now = Date.now()
     const rangeMs = {
-      '7d': 7 * 24 * 60 * 60 * 1000,
-      '30d': 30 * 24 * 60 * 60 * 1000,
-      '90d': 90 * 24 * 60 * 60 * 1000,
-      '1y': 365 * 24 * 60 * 60 * 1000 }[timeRange]
+      '7d': 7 * MS_PER_DAY,
+      '30d': 30 * MS_PER_DAY,
+      '90d': 90 * MS_PER_DAY,
+      '1y': 365 * MS_PER_DAY }[timeRange]
 
     if (viewMode === 'prs') {
       // Sort PRs: open first, then by date within each group
@@ -878,7 +711,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   return (
     <div className="h-full flex flex-col content-loaded">
       {/* Row 1: Header with repo selector and controls - inline CRUD style */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('common:common.itemCount', { count: totalItems, item: viewMode })}
@@ -909,7 +742,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
 
       {/* Inline repo editor (matching GitHubCIMonitor pattern) */}
       {isEditingRepos && (
-        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2 flex-shrink-0">
+        <div className="rounded-lg bg-purple-500/10 border border-purple-500/20 p-3 mb-3 space-y-2 shrink-0">
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -968,11 +801,11 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
         value={searchQuery}
         onChange={setSearchQuery}
         placeholder={`Search ${viewMode}...`}
-        className="mb-2 flex-shrink-0"
+        className="mb-2 shrink-0"
       />
 
       {/* Row 3: View Mode Tabs (act as filter pills) */}
-      <div className="flex items-center gap-1 mb-3 overflow-x-auto flex-shrink-0">
+      <div className="flex items-center gap-1 mb-3 overflow-x-auto shrink-0">
         <button
           onClick={() => setViewMode('prs')}
           className={cn(
@@ -1024,7 +857,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3 flex-shrink-0">
+      <div className="grid grid-cols-2 @md:grid-cols-4 gap-2 mb-3 shrink-0">
         <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
           <div className="flex items-center gap-2 mb-1">
             <GitPullRequest className="w-4 h-4 text-blue-400" />
@@ -1062,7 +895,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
       </div>
 
       {/* Time Range Controls */}
-      <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+      <div className="flex items-center gap-2 mb-3 shrink-0">
         <span className="text-xs text-muted-foreground">{t('cards:github.timeRange')}:</span>
         {TIME_RANGES.map(range => (
           <button
@@ -1117,7 +950,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
 }
 
 // Sub-components for rendering different item types
-function PRItem({ pr }: { pr: GitHubPR }) {
+const PRItem = memo(function PRItem({ pr }: { pr: GitHubPR }) {
   const { t } = useTranslation(['cards', 'common'])
   const isOpen = pr.state === 'open'
   const isMerged = pr.merged_at != null
@@ -1176,18 +1009,18 @@ function PRItem({ pr }: { pr: GitHubPR }) {
               <img src={pr.user.avatar_url} alt={pr.user.login} className="w-4 h-4 rounded-full" />
               {pr.user.login}
             </span>
-            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at)}`}>
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at, { extended: true })}`}>
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(pr.updated_at)}
+              {formatTimeAgo(pr.updated_at, { extended: true })}
             </span>
           </div>
         </div>
       </div>
     </a>
   )
-}
+})
 
-function IssueItem({ issue }: { issue: GitHubIssue }) {
+const IssueItem = memo(function IssueItem({ issue }: { issue: GitHubIssue }) {
   const { t } = useTranslation(['cards', 'common'])
   const isOpen = issue.state === 'open'
   const isStaleItem = isOpen && isStale(issue.updated_at)
@@ -1233,9 +1066,9 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
               <img src={issue.user.avatar_url} alt={issue.user.login} className="w-4 h-4 rounded-full" />
               {issue.user.login}
             </span>
-            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at)}`}>
+            <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at, { extended: true })}`}>
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(issue.updated_at)}
+              {formatTimeAgo(issue.updated_at, { extended: true })}
             </span>
             {issue.comments > 0 && (
               <span title={`${issue.comments} ${t('cards:github.comments')}`}>{issue.comments} {t('cards:github.comments')}</span>
@@ -1245,9 +1078,9 @@ function IssueItem({ issue }: { issue: GitHubIssue }) {
       </div>
     </a>
   )
-}
+})
 
-function ReleaseItem({ release }: { release: GitHubRelease }) {
+const ReleaseItem = memo(function ReleaseItem({ release }: { release: GitHubRelease }) {
   const { t } = useTranslation(['cards'])
   return (
     <a
@@ -1271,16 +1104,16 @@ function ReleaseItem({ release }: { release: GitHubRelease }) {
             <span>{release.author.login}</span>
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              {formatTimeAgo(release.published_at)}
+              {formatTimeAgo(release.published_at, { extended: true })}
             </span>
           </div>
         </div>
       </div>
     </a>
   )
-}
+})
 
-function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
+const ContributorItem = memo(function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
   const { t } = useTranslation(['cards'])
   return (
     <a
@@ -1301,4 +1134,4 @@ function ContributorItem({ contributor }: { contributor: GitHubContributor }) {
       </div>
     </a>
   )
-}
+})

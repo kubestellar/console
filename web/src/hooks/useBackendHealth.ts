@@ -1,7 +1,21 @@
 import { useState, useEffect } from 'react'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
+import { triggerAllRefetches } from '../lib/modeTransition'
 
 export type BackendStatus = 'connected' | 'disconnected' | 'connecting'
+
+/** sessionStorage key to persist in-cluster detection across page reloads. */
+const SS_IN_CLUSTER_KEY = 'kc-in-cluster'
+
+/** Read in-cluster flag from sessionStorage synchronously (survives reload, not new tabs). */
+function readInClusterFromSession(): boolean {
+  try { return sessionStorage.getItem(SS_IN_CLUSTER_KEY) === 'true' } catch { return false }
+}
+
+/** Persist in-cluster detection so next page load doesn't need to wait for health check. */
+function writeInClusterToSession(): void {
+  try { sessionStorage.setItem(SS_IN_CLUSTER_KEY, 'true') } catch { /* ignore */ }
+}
 
 const POLL_INTERVAL = 15000 // Check every 15 seconds
 const FAILURE_THRESHOLD = 4 // Require 4 consecutive failures before showing "Connection lost"
@@ -22,7 +36,10 @@ class BackendHealthManager {
     status: 'connecting',
     lastCheck: null,
     versionChanged: false,
-    inCluster: false,
+    // Initialize from sessionStorage so isInClusterMode() is true synchronously
+    // on page reload — avoids the timing race where first data fetch fires before
+    // the async /health response comes back.
+    inCluster: readInClusterFromSession(),
   }
   private listeners: Set<(state: BackendState) => void> = new Set()
   private pollInterval: ReturnType<typeof setInterval> | null = null
@@ -72,6 +89,11 @@ class BackendHealthManager {
     if (prevStatus !== this.state.status || prevVersionChanged !== this.state.versionChanged || prevInCluster !== this.state.inCluster) {
       this.notify()
     }
+    // When inCluster transitions false→true (first /health response on fresh session),
+    // trigger an immediate refetch so cards don't wait for the next 60s cycle.
+    if (!prevInCluster && this.state.inCluster) {
+      triggerAllRefetches()
+    }
   }
 
   async checkBackend() {
@@ -109,11 +131,13 @@ class BackendHealthManager {
             version !== this.initialVersion
           )
 
+          const inCluster = data.in_cluster === true
+          if (inCluster) writeInClusterToSession()
           this.setState({
             status: 'connected',
             lastCheck: new Date(),
             versionChanged,
-            inCluster: data.in_cluster === true,
+            inCluster,
           })
         } catch {
           // JSON parse failed — still mark as connected
@@ -151,11 +175,14 @@ class BackendHealthManager {
   }
 
   /** Probe kc-agent on a separate origin to disambiguate real backend
-   *  downtime from browser connection-pool exhaustion on the main origin. */
+   *  downtime from browser connection-pool exhaustion on the main origin.
+   *  Uses plain fetch instead of agentFetch — the /health endpoint does not
+   *  require auth, and plain fetch avoids CORS preflight failures (#10459). */
   private async checkAgentHealth(): Promise<boolean> {
     try {
       const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/health`, {
         method: 'GET',
+        headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT_MS),
       })
       return res.ok
@@ -196,5 +223,9 @@ export function isBackendConnected(): boolean {
 /** Returns true only when backend is connected AND running in-cluster (not localhost) */
 export function isInClusterMode(): boolean {
   const state = backendHealthManager.getState()
-  return state.status === 'connected' && state.inCluster
+  // Fast path: confirmed by live health check
+  if (state.status === 'connected' && state.inCluster) return true
+  // Synchronous fallback: use value persisted from a previous health check this session.
+  // This avoids the timing race on page reload where data fetches fire before /health responds.
+  return readInClusterFromSession()
 }

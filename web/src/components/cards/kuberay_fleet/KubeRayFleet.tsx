@@ -100,7 +100,7 @@ export function KubeRayFleet() {
                   <span className="truncate font-mono">{c.name}</span>
                   <span className="text-muted-foreground truncate">@{c.cluster}</span>
                 </div>
-                <div className="flex items-center gap-3 text-muted-foreground flex-shrink-0">
+                <div className="flex items-center gap-3 text-muted-foreground shrink-0">
                   <span>{c.availableWorkers}/{c.desiredWorkers} workers</span>
                   {c.gpuCount > 0 && <span className="text-green-400">{c.gpuCount} GPU</span>}
                   <span className={CLUSTER_STATE_COLORS[c.state]}>{c.state}</span>
@@ -116,11 +116,11 @@ export function KubeRayFleet() {
             {rayServices.map(s => (
               <div key={`${s.cluster}/${s.namespace}/${s.name}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs">
                 <div className="flex items-center gap-2 min-w-0">
-                  <ArrowUpCircle className={`w-3 h-3 flex-shrink-0 ${SERVICE_STATUS_COLORS[s.status]}`} />
+                  <ArrowUpCircle className={`w-3 h-3 shrink-0 ${SERVICE_STATUS_COLORS[s.status]}`} />
                   <span className="truncate font-mono">{s.name}</span>
                   <span className="text-muted-foreground truncate">@{s.cluster}</span>
                 </div>
-                <div className="flex items-center gap-2 text-muted-foreground flex-shrink-0">
+                <div className="flex items-center gap-2 text-muted-foreground shrink-0">
                   {s.pendingUpgrade && (
                     <span className="text-yellow-400 flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" /> upgrade pending
@@ -141,11 +141,11 @@ export function KubeRayFleet() {
               return (
                 <div key={`${j.cluster}/${j.namespace}/${j.name}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Icon className={`w-3 h-3 flex-shrink-0 ${color}`} />
+                    <Icon className={`w-3 h-3 shrink-0 ${color}`} />
                     <span className="truncate font-mono">{j.name}</span>
                     <span className="text-muted-foreground truncate">@{j.cluster}</span>
                   </div>
-                  <span className={`flex-shrink-0 ${color}`}>{j.jobStatus}</span>
+                  <span className={`shrink-0 ${color}`}>{j.jobStatus}</span>
                 </div>
               )
             })}

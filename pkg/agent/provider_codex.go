@@ -105,6 +105,7 @@ func (c *CodexProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 	// --full-auto: allow tool execution without confirmation
 	cmd := exec.CommandContext(execCtx, c.cliPath, "exec", "--full-auto", prompt)
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
+	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

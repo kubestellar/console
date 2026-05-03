@@ -14,7 +14,7 @@ import type { MissionControlState, PayloadProject } from './types'
 import type { Mission } from '../../hooks/useMissions'
 import { fetchMissionContent } from '../missions/browser/missionCache'
 import type { MissionExport } from '../../lib/missions/types'
-import ReactMarkdown from 'react-markdown'
+import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import rehypeSanitize from 'rehype-sanitize'
 import { cn } from '../../lib/cn'
@@ -220,7 +220,7 @@ export function FixerDefinitionPanel({
             value={state.title}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="e.g., Production Security Compliance"
-            className="w-full mt-1 px-4 py-2 rounded-lg border border-border bg-secondary/30 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="w-full mt-1 px-4 py-2 rounded-lg border border-border bg-secondary/30 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/50"
           />
         </div>
 
@@ -236,7 +236,7 @@ export function FixerDefinitionPanel({
               onChange={(e) => onDescriptionChange(e.target.value)}
               placeholder={PLACEHOLDER_EXAMPLES[placeholderIdx]}
               rows={4}
-              className="w-full px-4 py-3 rounded-lg border border-border bg-secondary/30 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/40 transition-colors"
+              className="w-full px-4 py-3 rounded-lg border border-border bg-secondary/30 text-sm resize-none focus:outline-hidden focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/40 transition-colors"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                   e.preventDefault()
@@ -327,7 +327,7 @@ export function FixerDefinitionPanel({
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
                   placeholder="Project name (e.g., Falco, Prometheus, Cilium)"
-                  className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-secondary/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full pl-9 pr-3 py-1.5 text-sm rounded-lg border border-border bg-secondary/50 focus:outline-hidden focus:ring-1 focus:ring-primary"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleManualAdd()
                   }}
@@ -351,7 +351,7 @@ export function FixerDefinitionPanel({
       </div>
 
       {/* Right: Info panel */}
-      <div className="w-[26rem] border-l border-border bg-card flex flex-col overflow-y-auto shrink-0">
+      <div className="w-104 border-l border-border bg-card flex flex-col overflow-y-auto shrink-0">
         <AnimatePresence mode="wait">
           {stickyProject ? (
             <motion.div
@@ -551,7 +551,7 @@ function ExecutiveAnalysis({
               <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Shared Dependencies</h4>
               <div className="flex flex-wrap gap-1">
                 {Array.from(allDeps).map((dep) => (
-                  <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                  <span key={dep} className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
                     {dep}
                   </span>
                 ))}
@@ -755,7 +755,7 @@ function ProjectDetailPanel({
           <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">Dependencies</h4>
           <div className="flex flex-wrap gap-1">
             {project.dependencies.map((dep) => (
-              <span key={dep} className="text-xs px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-400 border border-violet-500/20">
+              <span key={dep} className="text-xs px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
                 {dep}
               </span>
             ))}
@@ -866,8 +866,8 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Network Security': <Network className="w-3 h-3 text-sky-400" />,
   'Service Mesh': <Network className="w-3 h-3 text-cyan-400" />,
   'Observability': <Eye className="w-3 h-3 text-blue-400" />,
-  'Identity & Encryption': <Lock className="w-3 h-3 text-violet-400" />,
-  'Authentication & IAM': <Lock className="w-3 h-3 text-violet-400" />,
+  'Identity & Encryption': <Lock className="w-3 h-3 text-purple-400" />,
+  'Authentication & IAM': <Lock className="w-3 h-3 text-purple-400" />,
   'Secrets Management': <Lock className="w-3 h-3 text-emerald-400" />,
   'Storage': <Box className="w-3 h-3 text-green-400" />,
   'Custom': <Layers className="w-3 h-3 text-slate-400" />

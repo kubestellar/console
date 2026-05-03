@@ -118,15 +118,17 @@ declare -A SUITE_STATUS=()  # Tracks actual pass/fail/skip per suite name
 extract_failure_reason() {
   local log_file="$1"
   local reason
-  # Strip ANSI codes, grab last 5 non-empty lines, join with \n
+  # Strip ANSI codes, grab last 5 non-empty lines, join with newlines,
+  # then use jq to produce a properly JSON-escaped string (handles
+  # backslashes, tabs, control chars, quotes — all of which broke the
+  # hand-rolled sed escaping and caused jq parse errors in the nightly
+  # comparison step, see #9346).
   reason=$(sed 's/\x1b\[[0-9;]*m//g' "$log_file" 2>/dev/null \
     | grep -v '^\s*$' \
     | tail -5 \
-    | tr '\n' '|' \
-    | sed 's/|$//' \
-    | sed 's/|/\\n/g' \
-    | sed 's/"/\\"/g' \
-    | cut -c1-500) || true
+    | head -c 500 \
+    | jq -Rs '.' 2>/dev/null \
+    | sed 's/^"//;s/"$//') || true
   echo "$reason"
 }
 
@@ -148,11 +150,14 @@ for script in "${ALL_SCRIPTS[@]}"; do
 
   echo -e "  ${BOLD}▶ ${SUITE_NAME}${NC}"
 
-  # Run the script and capture output + exit code + duration
+  # Run the script and capture output + exit code + duration.
+  # Cap at 1200s (20 min): unit-test routinely takes ~800s; other non-Playwright
+  # suites are well under 5 minutes. This guard prevents a truly hung suite from
+  # blocking the entire run while still allowing healthy suites to complete.
   SUITE_START=$(date +%s)
   SUITE_OUTPUT="/tmp/suite-${SUITE_NAME}.log"
   SUITE_EXIT=0
-  bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
+  timeout 1200s bash "$script" > "$SUITE_OUTPUT" 2>&1 || SUITE_EXIT=$?
   SUITE_END=$(date +%s)
   SUITE_DURATION=$((SUITE_END - SUITE_START))
 
@@ -161,6 +166,12 @@ for script in "${ALL_SCRIPTS[@]}"; do
     PASSED_SUITES=$((PASSED_SUITES + 1))
     SUITE_STATUS["$SUITE_NAME"]="pass"
     RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"pass\",\"duration\":${SUITE_DURATION}},"
+  elif [ "$SUITE_EXIT" -eq 124 ]; then
+    echo -e "    ${YELLOW}⏰ TIMEOUT${NC}  (${SUITE_DURATION}s) — 20 minute limit exceeded"
+    FAILED_SUITES=$((FAILED_SUITES + 1))
+    FAILED_NAMES+=("$SUITE_NAME")
+    SUITE_STATUS["$SUITE_NAME"]="fail"
+    RESULTS="${RESULTS}{\"suite\":\"${SUITE_NAME}\",\"status\":\"fail\",\"duration\":${SUITE_DURATION},\"failure_reason\":\"Test timed out after 20 minutes\"},"
   else
     echo -e "    ${RED}❌ FAIL${NC}  (${SUITE_DURATION}s)"
     # Show last few lines of output for failed suites
@@ -309,14 +320,28 @@ if [ -z "$FAST_MODE" ]; then
         #     from-clusters/rapid-nav) × ~60-120s each ≈ 480-720s total.
         #     Default 300s cap killed it mid-run after warm-nav completed.
         #   #9099 perf-test: same serial scenario structure as nav-test.
+        #   #9346 nav-test, perf-test, ai-ml-test: 600s not enough — all 3
+        #     consistently hit the cap mid-run with work remaining (nav-test
+        #     completes 5/6 scenarios, perf-test still iterating dashboards,
+        #     ai-ml-test retries consuming budget). 900s matches their
+        #     Playwright-level timeout (900_000ms) and fits within the 120m
+        #     workflow backstop. perf-test bumped to 1200s — 29 dashboard
+        #     variants all pass but exceed 900s wall-clock (#nightly-fix).
+        #   deploy-test: 11 serial tests (workers=1) with build/preview startup.
+        #     Suite killed after 300s wall-clock timeout — default cap too tight
+        #     for the combined vite build + 11-test run. 600s gives headroom.
         declare -A PLAYWRIGHT_SUITE_TIMEOUT_OVERRIDES=(
           ["console-error-scan"]=600
           ["ui-compliance-test"]=600
           ["cache-test"]=600
           ["benchmark-test"]=600
-          ["ai-ml-test"]=600
-          ["nav-test"]=600
-          ["perf-test"]=600
+          # deploy-test: npm run build (~2m) + vite preview start (up to 3m) + 11 tests
+          #   running serially with 6-minute per-test timeout. Default 300s cap kills
+          #   the suite mid-run. 900s matches the Playwright per-test ceiling (#11461, #11464).
+          ["deploy-test"]=900
+          ["ai-ml-test"]=900
+          ["nav-test"]=900
+          ["perf-test"]=1200
         )
 
         for script in "${PLAYWRIGHT_SCRIPTS[@]}"; do
@@ -391,19 +416,34 @@ echo ""
 
 RESULTS="${RESULTS%,}"
 
-cat > "$REPORT_JSON" << EOF
-{
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "fastMode": $([ -n "$FAST_MODE" ] && echo "true" || echo "false"),
-  "summary": {
-    "total": ${TOTAL},
-    "passed": ${PASSED_SUITES},
-    "failed": ${FAILED_SUITES},
-    "skipped": ${SKIPPED_SUITES}
+# Build JSON report, validating with jq to catch malformed failure_reason
+# strings (unescaped chars, shell-expanded $variables, etc.)
+CANDIDATE_JSON="{
+  \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
+  \"fastMode\": $([ -n "$FAST_MODE" ] && echo "true" || echo "false"),
+  \"summary\": {
+    \"total\": ${TOTAL},
+    \"passed\": ${PASSED_SUITES},
+    \"failed\": ${FAILED_SUITES},
+    \"skipped\": ${SKIPPED_SUITES}
   },
-  "results": [${RESULTS}]
-}
-EOF
+  \"results\": [${RESULTS}]
+}"
+
+if echo "$CANDIDATE_JSON" | jq . > "$REPORT_JSON" 2>/dev/null; then
+  : # valid JSON written
+else
+  echo "WARNING: Generated JSON was malformed — writing minimal report" >&2
+  jq -n \
+    --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --argjson fm "$([ -n "$FAST_MODE" ] && echo "true" || echo "false")" \
+    --argjson total "$TOTAL" \
+    --argjson passed "$PASSED_SUITES" \
+    --argjson failed "$FAILED_SUITES" \
+    --argjson skipped "$SKIPPED_SUITES" \
+    '{timestamp: $ts, fastMode: $fm, summary: {total: $total, passed: $passed, failed: $failed, skipped: $skipped}, results: []}' \
+    > "$REPORT_JSON"
+fi
 
 cat > "$REPORT_MD" << EOF
 # KubeStellar Console — Full Test Suite

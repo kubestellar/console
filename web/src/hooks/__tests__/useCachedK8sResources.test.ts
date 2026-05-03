@@ -10,10 +10,12 @@ const { mockUseCache } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
 vi.mock('../../lib/cache/fetcherUtils', () => ({
+    createCachedHook: vi.fn(),
   fetchAPI: vi.fn(),
   fetchFromAllClusters: vi.fn(),
   fetchViaSSE: vi.fn(),
@@ -21,10 +23,12 @@ vi.mock('../../lib/cache/fetcherUtils', () => ({
 }))
 
 vi.mock('../../lib/constants/network', () => ({
+    createCachedHook: vi.fn(),
   FETCH_DEFAULT_TIMEOUT_MS: 5000,
 }))
 
 vi.mock('../useCachedData/demoData', () => ({
+    createCachedHook: vi.fn(),
   getDemoPVCs: () => [],
   getDemoNamespaces: () => [],
   getDemoJobs: () => [],

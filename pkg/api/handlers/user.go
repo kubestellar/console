@@ -28,7 +28,7 @@ func NewUserHandler(s store.Store) *UserHandler {
 // GetCurrentUser returns the current user
 func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	user, err := h.store.GetUser(userID)
+	user, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
 	}
@@ -41,7 +41,7 @@ func (h *UserHandler) GetCurrentUser(c *fiber.Ctx) error {
 // UpdateCurrentUser updates the current user
 func (h *UserHandler) UpdateCurrentUser(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	user, err := h.store.GetUser(userID)
+	user, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get user")
 	}
@@ -73,7 +73,7 @@ func (h *UserHandler) UpdateCurrentUser(c *fiber.Ctx) error {
 		user.SlackID = updates.SlackID
 	}
 
-	if err := h.store.UpdateUser(user); err != nil {
+	if err := h.store.UpdateUser(c.UserContext(), user); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update user")
 	}
 

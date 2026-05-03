@@ -70,12 +70,47 @@ vi.mock('../../lib/modals', () => ({
   ),
 }))
 
-vi.mock('react-markdown', () => ({
-  default: ({ children }: { children: string }) => <div data-testid="markdown">{children}</div>,
+vi.mock('../ui/LazyMarkdown', () => ({
+  LazyMarkdown: ({ children }: { children: string }) => <div data-testid="markdown">{children}</div>,
 }))
 
 vi.mock('remark-gfm', () => ({ default: () => {} }))
 vi.mock('remark-breaks', () => ({ default: () => {} }))
+
+vi.mock('../../hooks/useSelfUpgrade', () => ({
+  useSelfUpgrade: () => ({ triggerUpgrade: vi.fn().mockResolvedValue({ success: true }) }),
+}))
+
+vi.mock('../../lib/markdown/releaseNotesComponents', () => ({
+  buildReleaseNotesComponents: () => ({}),
+}))
+
+vi.mock('../../lib/clipboard', () => ({
+  copyToClipboard: vi.fn(),
+}))
+
+vi.mock('../../lib/api', () => ({
+  api: { get: vi.fn().mockResolvedValue({ data: [] }) },
+  RateLimitError: class RateLimitError extends Error {},
+}))
+
+vi.mock('../../lib/constants', () => ({
+  COPY_FEEDBACK_TIMEOUT_MS: 2000,
+  FETCH_DEFAULT_TIMEOUT_MS: 10000,
+}))
+
+vi.mock('../../lib/constants/time', () => ({
+  MS_PER_HOUR: 3600000,
+  MS_PER_DAY: 86400000,
+}))
+
+vi.mock('../../lib/formatters', () => ({
+  formatTimeAgo: (d: Date) => d.toISOString(),
+}))
+
+vi.mock('../../lib/cn', () => ({
+  cn: (...args: unknown[]) => args.filter(Boolean).join(' '),
+}))
 
 describe('WhatsNewModal', () => {
   const onClose = vi.fn()

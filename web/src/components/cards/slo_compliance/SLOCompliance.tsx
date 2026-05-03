@@ -128,7 +128,7 @@ export function SLOCompliance() {
 
       {/* Overall budget remaining bar */}
       <div className="flex items-center gap-2 px-2 py-1.5 rounded bg-secondary/30">
-        <Shield className={`w-4 h-4 flex-shrink-0 ${getBudgetColor(overallBudgetRemaining)}`} />
+        <Shield className={`w-4 h-4 shrink-0 ${getBudgetColor(overallBudgetRemaining)}`} />
         <span className="text-xs text-muted-foreground">Overall Error Budget</span>
         <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
           <div
@@ -158,10 +158,10 @@ export function SLOCompliance() {
               className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded bg-secondary/30 text-xs"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <Target className={`w-3 h-3 flex-shrink-0 ${getBudgetColor(target.currentCompliance)}`} />
+                <Target className={`w-3 h-3 shrink-0 ${getBudgetColor(target.currentCompliance)}`} />
                 <span className="truncate font-medium">{target.name}</span>
               </div>
-              <div className="flex items-center gap-3 text-muted-foreground flex-shrink-0">
+              <div className="flex items-center gap-3 text-muted-foreground shrink-0">
                 <span className="text-2xs">
                   {target.unit === 'ms' ? `< ${target.threshold}${target.unit}` : `${target.threshold}${target.unit}`}
                 </span>

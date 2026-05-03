@@ -29,7 +29,9 @@ const DEEP_LINK_RENDER_DELAY_MS = 300
 /** Build JWT auth headers for backend proxy requests */
 function authHeaders(): Record<string, string> {
   const token = safeGetItem(STORAGE_KEY_TOKEN)
-  return token ? { Authorization: `Bearer ${token}` } : {}
+  const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  return headers
 }
 
 export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProps) {
@@ -148,7 +150,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         reset: new Date(data.rate.reset * 1000),
       })
       return true
-    } catch (err) {
+    } catch (err: unknown) {
       setTokenError(err instanceof Error ? err.message : 'Failed to validate token')
       setRateLimit(null)
       return false
@@ -201,7 +203,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         // Trigger system updates check with the new token
         forceVersionCheck()
       }
-    } catch (err) {
+    } catch (err: unknown) {
       setTokenError(err instanceof Error ? err.message : 'Failed to save token')
     } finally {
       setTokenTesting(false)

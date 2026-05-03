@@ -14,7 +14,8 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
 
   const { data, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures } = useCachedProcessTraces(cluster, namespace)
 
-  const hasData = data.length > 0
+  const safeData = Array.isArray(data) ? data : []
+  const hasData = safeData.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing: isDemoMode ? false : isRefreshing && hasData,
@@ -23,7 +24,7 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
     isFailed,
     consecutiveFailures })
 
-  const processes = [...data].slice(0, 20)
+  const processes = safeData.slice(0, 20)
 
   if (showSkeleton) {
     return (
@@ -55,7 +56,7 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
           key={i}
           className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
         >
-          <Terminal className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          <Terminal className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="font-mono font-medium text-foreground truncate">
               {proc.binary} <span className="text-muted-foreground font-normal">{proc.args}</span>
@@ -64,7 +65,7 @@ export function ProcessTraceCard({ config }: ProcessTraceCardProps) {
               {proc.pod} / {proc.container} ({proc.namespace})
             </div>
           </div>
-          <div className="text-muted-foreground flex-shrink-0">uid:{proc.uid}</div>
+          <div className="text-muted-foreground shrink-0">uid:{proc.uid}</div>
           <ClusterBadge cluster={proc.cluster} />
         </div>
       ))}

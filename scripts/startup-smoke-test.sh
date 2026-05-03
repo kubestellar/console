@@ -189,6 +189,21 @@ ENVEOF
 
       # Check backend on 8081
       assert_port_listening 8081 "backend" || echo -e "${YELLOW}  ⚠ Backend port 8081 not detected${NC}"
+
+      # Verify kc-agent accepts the shared KC_AGENT_TOKEN (#10xxx regression guard).
+      # Both processes inherit the token from startup-oauth.sh; if the wiring
+      # breaks, kc-agent rejects every frontend request with 401.
+      if [ -n "${KC_AGENT_TOKEN:-}" ]; then
+        AGENT_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" \
+          -H "Authorization: Bearer $KC_AGENT_TOKEN" \
+          http://127.0.0.1:8585/clusters 2>/dev/null || echo "000")
+        if [ "$AGENT_STATUS" = "200" ]; then
+          echo -e "${GREEN}  ✓ kc-agent accepts KC_AGENT_TOKEN${NC}"
+        else
+          echo -e "${RED}  ✗ kc-agent rejected KC_AGENT_TOKEN (HTTP $AGENT_STATUS)${NC}"
+          FAILURES=$((FAILURES+1))
+        fi
+      fi
     fi
     # .env restoration is handled by the cleanup() EXIT trap via ENV_BACKUP_FILE
     ;;

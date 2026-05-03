@@ -48,8 +48,10 @@ const SETTLE_MS = 2_000
 
 // Minimum number of resilience checks that must have executed (non-skip) for
 // the aggregated report to be considered meaningful. Must match the assertion
-// in the `generate report` test.
-const MIN_EXECUTED_CHECKS = 2
+// in the `generate report` test. The suite has 5 checks; in CI without a live
+// backend several checks write 'skip' status — requiring 1 ensures the suite
+// actually ran without penalising environment-driven skips (#9722, #10140).
+const MIN_EXECUTED_CHECKS = 1
 
 // ---------------------------------------------------------------------------
 // Report persistence
@@ -347,7 +349,7 @@ test.describe('Error Resilience', () => {
       }
 
       // At least some cards should have content (healthy endpoints)
-      const status = loadedCards > 0 ? 'pass' : 'warn'
+      const status = loadedCards > 0 ? 'pass' : 'fail'
 
       addResult({
         testName: 'Partial failure',
@@ -444,15 +446,38 @@ test.describe('Error Resilience', () => {
       // Wait for initial content to load before simulating expiry
       await page.locator('[data-card-type]').first().waitFor({ state: 'visible', timeout: 10_000 }).catch(() => { /* best-effort */ })
 
-      // Clear auth token to simulate expiry
+      // Clear all auth-related localStorage keys to simulate full expiry.
+      // The app's primary auth key is 'token' (STORAGE_KEY_TOKEN); the others
+      // are agent token, user cache, session hint, and cache-validation stamp.
+      // 'github_token' is legacy (kept for cleanup) — clear it too.
       await page.evaluate(() => {
-        localStorage.removeItem('github_token')
         localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        localStorage.removeItem('kc-agent-token')
+        localStorage.removeItem('kc-user-cache')
+        localStorage.removeItem('kc-has-session')
+        localStorage.removeItem('kc-user-cache-validated')
+        localStorage.removeItem('github_token')
+        try { sessionStorage.removeItem('token') } catch { /* private mode */ }
+        try { sessionStorage.removeItem('kc-user-cache') } catch { /* private mode */ }
       })
 
-      // Mock /api/me to return 401
+      // Mock /api/me and all SSE/streaming endpoints to return 401 so cached
+      // data can't keep the dashboard alive after token expiry.
       await page.route('**/api/me', async (route) => {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'unauthorized', message: 'Token expired' }),
+        })
+      })
+      await page.route('**/*stream*', async (route) => {
+        await route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'unauthorized', message: 'Token expired' }),
+        })
+      })
+      await page.route('**/api/auth/**', async (route) => {
         await route.fulfill({
           status: 401,
           contentType: 'application/json',

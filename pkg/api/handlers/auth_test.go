@@ -501,7 +501,7 @@ func TestOAuthStatePersistence_RoundTrip(t *testing.T) {
 	h, _ := newRealStoreAuthHandler(t)
 
 	const state = "round-trip-state"
-	require.NoError(t, h.storeOAuthState(state))
+	require.NoError(t, h.storeOAuthState(context.Background(), state))
 
 	ok := h.validateAndConsumeOAuthState(context.Background(), state)
 	assert.True(t, ok, "freshly stored state should validate")
@@ -530,7 +530,7 @@ func TestOAuthStatePersistence_SurvivesRestart(t *testing.T) {
 		BackendURL:     "http://backend",
 	})
 	const state = "state-across-restart"
-	require.NoError(t, h1.storeOAuthState(state))
+	require.NoError(t, h1.storeOAuthState(context.Background(), state))
 	require.NoError(t, s1.Close())
 
 	// Second "process" — /auth/callback consumes the state after restart.

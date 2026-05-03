@@ -120,4 +120,148 @@ describe('useDashboards', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.dashboards).toEqual([])
   })
+
+  it('moveCardToDashboard calls API with correct params', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(api.post).mockResolvedValue({ data: { success: true } })
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.moveCardToDashboard('card-1', 'target-dash')
+    })
+    expect(api.post).toHaveBeenCalledWith('/api/cards/card-1/move', {
+      target_dashboard_id: 'target-dash',
+    })
+  })
+
+  it('getDashboardWithCards returns dashboard data on success', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const dashData = { id: 'd1', name: 'Test', cards: [{ id: 'c1', card_type: 'health' }] }
+    vi.mocked(api.get).mockResolvedValueOnce({ data: dashData })
+
+    let dashboard: unknown = undefined
+    await act(async () => {
+      dashboard = await result.current.getDashboardWithCards('d1')
+    })
+    expect(dashboard).toEqual(dashData)
+  })
+
+  it('getAllDashboardsWithCards returns dashboards with their cards', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const dashList = [
+      { id: 'd1', name: 'Dashboard 1' },
+      { id: 'd2', name: 'Dashboard 2' },
+    ]
+    const d1Full = { id: 'd1', name: 'Dashboard 1', cards: [{ id: 'c1', card_type: 'health' }] }
+    const d2Full = { id: 'd2', name: 'Dashboard 2', cards: [] }
+
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: dashList })
+      .mockResolvedValueOnce({ data: d1Full })
+      .mockResolvedValueOnce({ data: d2Full })
+
+    let dashboards: unknown[] = []
+    await act(async () => {
+      dashboards = await result.current.getAllDashboardsWithCards()
+    })
+    expect(dashboards).toHaveLength(2)
+  })
+
+  it('getAllDashboardsWithCards returns empty when dashboardList is empty', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    vi.mocked(api.get).mockResolvedValueOnce({ data: [] })
+
+    let dashboards: unknown[] = []
+    await act(async () => {
+      dashboards = await result.current.getAllDashboardsWithCards()
+    })
+    expect(dashboards).toEqual([])
+  })
+
+  it('getAllDashboardsWithCards falls back to dashboard when getDashboardWithCards fails', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const dashList = [{ id: 'd1', name: 'Dash 1' }]
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: dashList })   // getAllDashboardsWithCards list fetch
+      .mockRejectedValueOnce(new Error('fail'))     // getDashboardWithCards for d1
+
+    let dashboards: unknown[] = []
+    await act(async () => {
+      dashboards = await result.current.getAllDashboardsWithCards()
+    })
+    expect(dashboards).toHaveLength(1)
+    expect((dashboards[0] as { name: string }).name).toBe('Dash 1')
+  })
+
+  it('exportDashboard calls API and emits analytics', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    const { emitDashboardExported } = await import('../../lib/analytics')
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const exportData = { name: 'Exported', cards: [] }
+    vi.mocked(api.get).mockResolvedValueOnce({ data: exportData })
+
+    let exportResult: unknown
+    await act(async () => {
+      exportResult = await result.current.exportDashboard('d1')
+    })
+    expect(exportResult).toEqual(exportData)
+    expect(emitDashboardExported).toHaveBeenCalled()
+  })
+
+  it('importDashboard adds to state and emits analytics', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    const { emitDashboardImported } = await import('../../lib/analytics')
+    const newDash = { id: 'd-imported', name: 'Imported Dashboard' }
+    vi.mocked(api.post).mockResolvedValue({ data: newDash })
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.importDashboard({ name: 'Imported Dashboard', cards: [] })
+    })
+    expect(result.current.dashboards).toHaveLength(1)
+    expect(result.current.dashboards[0].name).toBe('Imported Dashboard')
+    expect(emitDashboardImported).toHaveBeenCalled()
+  })
+
+  it('importDashboard handles null data response', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [] })
+    vi.mocked(api.post).mockResolvedValue({ data: null })
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.importDashboard({ name: 'Test' })
+    })
+    // Should not add null to the list
+    expect(result.current.dashboards).toHaveLength(0)
+  })
+
+  it('loadDashboards can be called manually to refresh', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: [{ id: 'd1', name: 'Initial' }] })
+    const { result } = renderHook(() => useDashboards())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.dashboards).toHaveLength(1)
+
+    vi.mocked(api.get).mockResolvedValue({ data: [{ id: 'd1', name: 'Initial' }, { id: 'd2', name: 'New' }] })
+    await act(async () => {
+      await result.current.loadDashboards()
+    })
+    expect(result.current.dashboards).toHaveLength(2)
+  })
 })

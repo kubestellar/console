@@ -71,6 +71,18 @@ export function ClusterFilterDropdown({
     }
   }, [showClusterFilter, calculatePosition])
 
+  // Close dropdown on Escape key (document-level so it works regardless of focus)
+  useEffect(() => {
+    if (!showClusterFilter) return
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowClusterFilter(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [showClusterFilter, setShowClusterFilter])
+
   if (availableClusters.length < minClusters) {
     return null
   }
@@ -116,6 +128,10 @@ export function ClusterFilterDropdown({
               right: dropdownStyle.right,
             }}
             onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setShowClusterFilter(false)
+                return
+              }
               if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
               e.preventDefault()
               const items = e.currentTarget.querySelectorAll<HTMLElement>('[role="option"]:not([disabled])')

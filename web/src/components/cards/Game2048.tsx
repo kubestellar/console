@@ -8,6 +8,8 @@ import { useGameKeys } from '../../hooks/useGameKeys'
 
 type Grid = (number | null)[][]
 
+const GRID_SIZE = 4
+
 // Tile colors based on value - Kubernetes themed
 const TILE_COLORS: Record<number, { bg: string; text: string }> = {
   2: { bg: 'bg-blue-500/80', text: 'text-white' },
@@ -26,7 +28,7 @@ const TILE_COLORS: Record<number, { bg: string; text: string }> = {
 
 // Create empty 4x4 grid
 function createEmptyGrid(): Grid {
-  return Array(4).fill(null).map(() => Array(4).fill(null))
+  return Array(GRID_SIZE).fill(null).map(() => Array(GRID_SIZE).fill(null))
 }
 
 // Add random tile (2 or 4) to empty cell
@@ -34,8 +36,8 @@ function addRandomTile(grid: Grid): Grid {
   const newGrid = grid.map(row => [...row])
   const emptyCells: [number, number][] = []
 
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
+  for (let r = 0; r < GRID_SIZE; r++) {
+    for (let c = 0; c < GRID_SIZE; c++) {
       if (newGrid[r][c] === null) {
         emptyCells.push([r, c])
       }
@@ -81,12 +83,12 @@ function slideLine(line: (number | null)[]): [(number | null)[], number, boolean
   }
 
   // Pad with nulls
-  while (newLine.length < 4) {
+  while (newLine.length < GRID_SIZE) {
     newLine.push(null)
   }
 
   // Check if moved
-  for (let j = 0; j < 4; j++) {
+  for (let j = 0; j < GRID_SIZE; j++) {
     if (line[j] !== newLine[j]) {
       moved = true
       break
@@ -203,7 +205,11 @@ export function Game2048(_props: CardComponentProps) {
 
       if (newScore > bestScore) {
         setBestScore(newScore)
-        localStorage.setItem('kube2048-best', String(newScore))
+        try {
+          localStorage.setItem('kube2048-best', String(newScore))
+        } catch {
+          // Ignore storage errors (e.g. private browsing, quota exceeded)
+        }
       }
 
       // Check win
@@ -354,25 +360,21 @@ export function Game2048(_props: CardComponentProps) {
             )}
           </div>
 
-          {/* Win overlay.
-           * Issue 9071: Auto-QA flagged `bg-white/20 text-white` as light-only.
-           * Intentional: buttons sit on a yellow (`bg-yellow-500/80`) overlay
-           * whose backdrop is theme-independent, so white-on-yellow reads
-           * correctly in both light and dark modes. No theme-switching needed. */}
+          {/* Win overlay — buttons sit on yellow so we use semantic foreground/muted. */}
           {won && !keepPlaying && (
             <div className="absolute inset-0 bg-yellow-500/80 rounded-lg flex flex-col items-center justify-center">
-              <Trophy className="w-12 h-12 text-white mb-2" />
-              <div className="text-2xl font-bold text-white mb-4">You Win!</div>
+              <Trophy className="w-12 h-12 text-foreground mb-2" />
+              <div className="text-2xl font-bold text-foreground mb-4">You Win!</div>
               <div className="flex gap-2">
                 <button
                   onClick={continueGame}
-                  className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30"
+                  className="px-4 py-2 bg-muted/30 text-foreground rounded-lg hover:bg-muted/50"
                 >
                   Keep Playing
                 </button>
                 <button
                   onClick={newGame}
-                  className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30"
+                  className="px-4 py-2 bg-muted/30 text-foreground rounded-lg hover:bg-muted/50"
                 >
                   New Game
                 </button>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
@@ -13,8 +13,8 @@ import {
   Play,
 } from 'lucide-react'
 import { emitWelcomeViewed, emitWelcomeActioned } from '../lib/analytics'
-import { getRegisteredCardTypes } from '../components/cards/cardRegistry'
 import { DEFAULT_PRIMARY_NAV, DISCOVERABLE_DASHBOARDS } from '../hooks/useSidebarConfig'
+import { ROUTES } from '../config/routes'
 
 /* ------------------------------------------------------------------ */
 /*  SEO / meta constants                                               */
@@ -30,18 +30,24 @@ const META_DESCRIPTION =
 /*  so they stay in sync as the codebase evolves.                      */
 /* ------------------------------------------------------------------ */
 
-/** Total unique dashboards = default sidebar + discoverable dashboards */
+/** Total unique dashboards = default sidebar + discoverable dashboards.
+ * Guard against undefined imports (e.g. a malformed chunk during HMR) per
+ * CLAUDE.md array safety rule (#9889). */
 const TOTAL_DASHBOARDS = new Set([
-  ...DEFAULT_PRIMARY_NAV.map(d => d.id),
-  ...DISCOVERABLE_DASHBOARDS.map(d => d.id),
+  ...(DEFAULT_PRIMARY_NAV || []).map(d => d.id),
+  ...(DISCOVERABLE_DASHBOARDS || []).map(d => d.id),
 ]).size
 
-const HERO_STATS = [
-  { value: '250+', label: 'CNCF tools' },
-  { value: String(TOTAL_DASHBOARDS), label: 'Dashboards' },
-  { value: String(getRegisteredCardTypes().length), label: 'Cards' },
-  { value: '0', label: 'Paywalls' },
-]
+const HERO_STATS_PLACEHOLDER = '…'
+
+function buildHeroStats(cardCount: string) {
+  return [
+    { value: '250+', label: 'CNCF tools' },
+    { value: String(TOTAL_DASHBOARDS), label: 'Dashboards' },
+    { value: cardCount, label: 'Cards' },
+    { value: '0', label: 'Paywalls' },
+  ]
+}
 
 /* ------------------------------------------------------------------ */
 /*  "See it in action" scenarios — the 30-second aha moments           */
@@ -66,7 +72,7 @@ const SCENARIOS: Scenario[] = [
     icon: <Layers className="w-6 h-6 text-purple-400" />,
     title: 'Multi-cluster at a glance',
     description: 'See cluster health, node status, and pod issues across every cluster in a single view.',
-    link: '/clusters',
+    link: ROUTES.CLUSTERS,
   },
   {
     icon: <Cpu className="w-6 h-6 text-purple-400" />,
@@ -146,6 +152,21 @@ function sanitizeRef(raw: string | null): string {
 export function Welcome() {
   const [searchParams] = useSearchParams()
   const ref = sanitizeRef(searchParams.get('ref'))
+  const [cardCount, setCardCount] = useState(HERO_STATS_PLACEHOLDER)
+  useEffect(() => {
+    let cancelled = false
+    import('../components/cards/cardRegistry')
+      .then(m => {
+        if (cancelled) return
+        setCardCount(String(m.getRegisteredCardTypes().length))
+      })
+      .catch((err: unknown) => {
+        console.warn('Welcome: failed to load cardRegistry chunk', err)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const prevTitle = document.title
@@ -185,7 +206,7 @@ export function Welcome() {
     <div className="min-h-screen bg-[#0f172a] text-white">
       {/* ---- Hero ---- */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />
+        <div className="absolute inset-0 bg-linear-to-br from-purple-900/20 via-transparent to-blue-900/20 pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-5xl mx-auto px-6 pt-20 pb-12 text-center">
@@ -196,7 +217,7 @@ export function Welcome() {
 
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold tracking-tight mb-6">
             Your Kubernetes clusters.{' '}
-            <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
               One&nbsp;console.
             </span>
           </h1>
@@ -234,7 +255,7 @@ export function Welcome() {
 
           {/* Stats strip */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto">
-            {HERO_STATS.map((stat) => (
+            {buildHeroStats(cardCount).map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-3xl font-bold text-purple-400">{stat.value}</div>
                 <div className="text-xs text-slate-400 mt-1 uppercase tracking-wider">{stat.label}</div>
@@ -291,7 +312,7 @@ export function Welcome() {
       </section>
 
       {/* ---- Footer CTA ---- */}
-      <section className="border-t border-slate-700/50 bg-gradient-to-b from-slate-900/50 to-[#0f172a]">
+      <section className="border-t border-slate-700/50 bg-linear-to-b from-slate-900/50 to-[#0f172a]">
         <div className="max-w-5xl mx-auto px-6 py-20 text-center">
           <h2 className="text-4xl font-bold mb-4">Ready to try it?</h2>
           <p className="text-slate-400 mb-10 text-lg">

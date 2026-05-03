@@ -25,6 +25,9 @@ const VIEW_MODE_KEY = 'kc-marketplace-view-mode'
 const CONTRIBUTE_URL = 'https://github.com/kubestellar/console-marketplace'
 const ISSUES_URL = 'https://github.com/kubestellar/console-marketplace/issues?q=is%3Aissue%20is%3Aopen%20field.label%3Ahelp%20wanted'
 const BANNER_COLLAPSED_KEY = 'kc-cncf-banner-collapsed'
+const MAX_SKILLS = 3
+const MAX_TAGS = 3
+const MAX_THEME_COLORS = 5
 
 const TYPE_LABELS: Record<MarketplaceItemType, { label: string; icon: typeof LayoutGrid }> = {
   dashboard: { label: 'Dashboards', icon: LayoutGrid },
@@ -33,7 +36,7 @@ const TYPE_LABELS: Record<MarketplaceItemType, { label: string; icon: typeof Lay
 
 const DIFFICULTY_CONFIG = {
   beginner: { label: 'Beginner', color: 'text-green-400 bg-green-950', stars: 1 },
-  intermediate: { label: 'Intermediate', color: 'text-yellow-400 bg-yellow-950', stars: 2 },
+  intermediate: { label: 'Intermediate', color: 'text-yellow-600 dark:text-yellow-400 bg-yellow-500/10', stars: 2 },
   advanced: { label: 'Advanced', color: 'text-red-400 bg-red-950', stars: 3 } } as const
 
 const MATURITY_CONFIG = {
@@ -76,7 +79,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
         className="w-full flex items-center justify-between px-5 py-3 hover:bg-muted/30 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-900 to-cyan-900 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-linear-to-br from-blue-900 to-cyan-900 flex items-center justify-center">
             <GraduationCap className="w-4 h-4 text-blue-400" />
           </div>
           <div className="text-left">
@@ -97,7 +100,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
           {/* Progress bar */}
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-green-500 to-cyan-500 rounded-full transition-all duration-500"
+              className="h-full bg-linear-to-r from-green-500 to-cyan-500 rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>
@@ -124,7 +127,7 @@ function CNCFProgressBanner({ stats }: { stats: CNCFStats }) {
               href={ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-950 hover:bg-yellow-900 text-yellow-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-md transition-colors"
             >
               <HandHelping className="w-3 h-3" />
               Browse Issues
@@ -204,7 +207,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
         )}
         {/* Help Wanted badge */}
         {isHelpWanted && (
-          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 text-2xs font-semibold bg-yellow-950 text-yellow-300 border border-yellow-800 rounded-md">
+          <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 text-2xs font-semibold bg-yellow-500/10 text-yellow-600 dark:text-yellow-300 border border-yellow-500/20 rounded-md">
             <HandHelping className="w-3 h-3" />
             Help Wanted
           </div>
@@ -247,13 +250,13 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
         {/* Tags / Skills */}
         <div className="flex flex-wrap gap-1 mb-3">
           {isHelpWanted && item.skills ? (
-            item.skills.slice(0, 3).map(skill => (
+            (item.skills || []).slice(0, MAX_SKILLS).map(skill => (
               <span key={skill} className="text-2xs px-1.5 py-0.5 bg-muted text-muted-foreground rounded">
                 {skill}
               </span>
             ))
           ) : (
-            (item.tags || []).slice(0, 3).map(tag => (
+            (item.tags || []).slice(0, MAX_TAGS).map(tag => (
               <span key={tag} className="text-2xs px-1.5 py-0.5 bg-primary/80 text-primary-foreground rounded">
                 {tag}
               </span>
@@ -272,7 +275,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
                 <span>&middot;</span>
                 {item.type === 'theme' && item.themeColors ? (
                   <div className="flex gap-0.5">
-                    {item.themeColors.slice(0, 5).map((color, i) => (
+                    {(item.themeColors || []).slice(0, MAX_THEME_COLORS).map((color, i) => (
                       <div key={i} className="w-3 h-3 rounded-full border border-border/50" style={{ backgroundColor: color }} />
                     ))}
                   </div>
@@ -294,7 +297,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
               href={item.issueUrl || ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-950 hover:bg-yellow-900 text-yellow-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-md transition-colors"
             >
               <Sparkles className="w-3 h-3" />
               Contribute
@@ -399,7 +402,7 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
               className="fixed z-dropdown pointer-events-none"
               style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' }}
             >
-              <div className="px-4 py-3 bg-background border border-border rounded-lg shadow-xl backdrop-blur-sm min-w-[200px]">
+              <div className="px-4 py-3 bg-background border border-border rounded-lg shadow-xl backdrop-blur-xs min-w-[200px]">
                 <div className="flex items-center gap-3 mb-2">
                   <img
                     src={`https://github.com/${github}.png?size=80`}
@@ -487,7 +490,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
             </span>
           )}
           {isHelpWanted && (
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-yellow-950 text-yellow-300 border border-yellow-800 rounded">
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 bg-yellow-500/10 text-yellow-600 dark:text-yellow-300 border border-yellow-500/20 rounded">
               Help Wanted
             </span>
           )}
@@ -521,7 +524,7 @@ function MarketplaceRow({ item, onInstall, onRemove, isInstalled }: {
             href={item.issueUrl || ISSUES_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-yellow-950 hover:bg-yellow-900 text-yellow-400 rounded transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
           >
             <Sparkles className="w-3 h-3" />
             Contribute
@@ -717,7 +720,7 @@ export function Marketplace() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('common.searchMarketplace')}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-card border border-border rounded-md focus:outline-hidden focus:ring-1 focus:ring-primary/50 text-foreground placeholder:text-muted-foreground"
           />
         </div>
 
@@ -831,14 +834,14 @@ export function Marketplace() {
           <div className="flex items-center gap-0.5 bg-muted rounded-md p-0.5">
             <button
               onClick={() => toggleViewMode('grid')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'grid' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
               title="Grid view"
             >
               <Grid3X3 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => toggleViewMode('list')}
-              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`p-1.5 rounded transition-colors ${viewMode === 'list' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'}`}
               title="List view"
             >
               <List className="w-3.5 h-3.5" />
@@ -902,7 +905,7 @@ export function Marketplace() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                   {categoryItems.map(item => (
                     <MarketplaceCard
                       key={item.id}
@@ -930,7 +933,7 @@ export function Marketplace() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           {sortedItems.map(item => (
             <MarketplaceCard
               key={item.id}
@@ -966,7 +969,7 @@ export function Marketplace() {
               href={ISSUES_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-950 hover:bg-yellow-900 text-yellow-400 rounded-md transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded-md transition-colors"
             >
               <HandHelping className="w-3 h-3" />
               Browse Issues

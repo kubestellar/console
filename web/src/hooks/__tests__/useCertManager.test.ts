@@ -17,6 +17,7 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 const mockUseDemoMode = vi.fn(() => ({ isDemoMode: false }))
 const mockUseClusters = vi.fn(() => ({
   clusters: [],
+  deduplicatedClusters: [],
   isLoading: false,
 }))
 const mockKubectlProxy = { exec: vi.fn() }
@@ -120,6 +121,7 @@ function mockExecJson(items: unknown[], exitCode = 0) {
 function setClusters(...names: string[]) {
   mockUseClusters.mockReturnValue({
     clusters: names.map(name => ({ name, reachable: true })),
+    deduplicatedClusters: names.map(name => ({ name, reachable: true })),
     isLoading: false,
   })
 }
@@ -245,7 +247,7 @@ describe('useCertManager', () => {
 
   describe('no clusters', () => {
     it('stops loading when clusters list is empty', async () => {
-      mockUseClusters.mockReturnValue({ clusters: [], isLoading: false })
+      mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false })
 
       const { useCertManager } = await loadModule()
       const { result } = renderHook(() => useCertManager())
@@ -1020,6 +1022,11 @@ describe('useCertManager', () => {
     it('filters out non-reachable clusters', async () => {
       mockUseClusters.mockReturnValue({
         clusters: [
+          { name: 'reachable-1', reachable: true },
+          { name: 'unreachable-1', reachable: false },
+          { name: 'reachable-2', reachable: true },
+        ],
+        deduplicatedClusters: [
           { name: 'reachable-1', reachable: true },
           { name: 'unreachable-1', reachable: false },
           { name: 'reachable-2', reachable: true },

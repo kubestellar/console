@@ -47,7 +47,7 @@ export function loadDynamicStats(): void {
         )
       }
     })
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[DynamicStatsStore] Failed to load from localStorage:', err)
   }
 }
@@ -57,7 +57,7 @@ export function saveDynamicStats(): void {
   try {
     const defs = getAllDynamicStats().map(toRecord)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defs))
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[DynamicStatsStore] Failed to save to localStorage:', err)
   }
 }
@@ -107,7 +107,7 @@ export function importDynamicStats(json: string): ImportResult {
     })
     saveDynamicStats()
     return result
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[DynamicStatsStore] Failed to import:', err)
     const message = err instanceof Error ? err.message : String(err)
     result.invalid.push({ index: -1, error: `Parse error: ${message}` })

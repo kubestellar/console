@@ -101,12 +101,30 @@ export function AuthCallback() {
         emitGitHubConnected()
         tokenExchangeSucceeded = true
 
-        // Bootstrap the user via /api/me using the cookie. refreshUser()
-        // will fall through to the cookie-only path because no JS-readable
-        // token exists.
-        const _isOnboarded = data.onboarded ?? onboarded
-        void _isOnboarded // reserved for future onboarding routing
-        return refreshUser()
+        // Fetch the kc-agent shared secret so agentFetch() and WebSocket
+        // connections can authenticate with the local agent.
+        const agentController = new AbortController()
+        const agentTimeoutId = setTimeout(() => agentController.abort(), AUTH_REFRESH_TIMEOUT_MS)
+        return fetch('/api/agent/token', {
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          signal: agentController.signal,
+        })
+          .then((agentRes) => {
+            clearTimeout(agentTimeoutId)
+            return agentRes.ok ? agentRes.json() : null
+          })
+          .then((agentData: { token?: string } | null) => {
+            if (agentData?.token) safeSetItem('kc-agent-token', agentData.token)
+          })
+          .catch(() => {
+            // Non-fatal — agent auth will fail but OAuth session is intact
+          })
+          .then(() => {
+            const _isOnboarded = data.onboarded ?? onboarded
+            void _isOnboarded // reserved for future onboarding routing
+            return refreshUser()
+          })
       })
       .then(() => {
         if (cancelled) return
@@ -140,7 +158,7 @@ export function AuthCallback() {
   }, [searchParams, refreshUser, navigate, showToast, t])
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+    <div className="min-h-screen flex items-center justify-center bg-terminal">
       <div className="text-center">
         <div className="spinner w-12 h-12 mx-auto mb-4" role="status" />
         <p className="text-muted-foreground">{status}</p>

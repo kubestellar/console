@@ -122,6 +122,9 @@ func checkWebhookHostAllowed(host string) error {
 
 // Send POSTs the alert as JSON to the configured webhook URL.
 func (w *WebhookNotifier) Send(alert Alert) error {
+	if w == nil {
+		return fmt.Errorf("nil webhook notifier")
+	}
 	payload := webhookPayload{
 		Alert:     alert.RuleName,
 		Severity:  string(alert.Severity),
@@ -147,6 +150,9 @@ func (w *WebhookNotifier) Send(alert Alert) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "KubeStellar-Console-Webhook/1.0")
 
+	if w.HTTPClient == nil {
+		return fmt.Errorf("webhook notifier HTTP client is not initialized")
+	}
 	resp, err := w.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send webhook: %w", err)

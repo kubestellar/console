@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { mockApiFallback } from '../helpers/setup'
+import { fetchWithRetry } from '../helpers/fetchWithRetry'
 
 /**
  * Nightly Mission Deep Link Health Check
@@ -36,6 +38,31 @@ const INDEX_SAMPLE_SIZE = 3
 test.describe('Mission Deep Links', () => {
   for (const slug of MISSION_SLUGS) {
     test(`/missions/${slug} loads mission content`, async ({ page }) => {
+      await mockApiFallback(page)
+
+      await page.route('**/api/me', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: '1', github_id: '12345', github_login: 'testuser',
+            email: 'test@example.com', onboarded: true,
+          }),
+        })
+      )
+
+      await page.addInitScript(() => {
+        localStorage.setItem('token', 'demo-token')
+        localStorage.setItem('kc-demo-mode', 'true')
+        localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kc-has-session', 'true')
+        localStorage.setItem('kc-agent-setup-dismissed', 'true')
+        localStorage.setItem('kc-backend-status', JSON.stringify({
+          available: true,
+          timestamp: Date.now(),
+        }))
+      })
+
       await page.goto(`/missions/${slug}`, { waitUntil: 'networkidle' })
 
       // The "Mission not found" error text should NOT be visible
@@ -54,11 +81,36 @@ test.describe('Mission Deep Links', () => {
   }
 
   test('random missions from index resolve correctly', async ({ page }) => {
-    // Fetch the missions index to get real paths
-    const response = await page.request.get('/api/missions/file?path=fixes/index.json')
+    await mockApiFallback(page)
 
-    // If the index itself fails, that's also a passthrough bug
-    expect(response.ok(), 'missions index should be accessible').toBe(true)
+    await page.route('**/api/me', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: '1', github_id: '12345', github_login: 'testuser',
+          email: 'test@example.com', onboarded: true,
+        }),
+      })
+    )
+
+    await page.addInitScript(() => {
+      localStorage.setItem('token', 'demo-token')
+      localStorage.setItem('kc-demo-mode', 'true')
+      localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-has-session', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
+      localStorage.setItem('kc-backend-status', JSON.stringify({
+        available: true,
+        timestamp: Date.now(),
+      }))
+    })
+
+    // Fetch the missions index to get real paths (retry on transient 502s — #10966)
+    const response = await fetchWithRetry(page.request, '/api/missions/file?path=fixes/index.json')
+
+    // If the index still fails after retries, that's a real problem
+    expect(response.ok(), `missions index should be accessible (got ${response.status()})`).toBe(true)
 
     const index = await response.json() as { missions?: Array<{ path: string; title?: string }> }
     const missions = (index.missions ?? []).filter((m) =>

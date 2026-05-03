@@ -11,8 +11,8 @@ import { useCardLoadingState } from '../CardDataContext'
 // Card 1: AI Issues Overview - Shows issues AI can help fix
 export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
   const { startMission, missions } = useMissions()
-  const { issues: allPodIssues, isLoading: podIssuesLoading, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
-  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
+  const { issues: allPodIssues, isLoading: podIssuesLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
+  const { issues: allDeploymentIssues, isLoading: deployIssuesLoading, isRefreshing: deploysRefreshing, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures } = useCachedDeploymentIssues()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
 
@@ -20,9 +20,13 @@ export function ConsoleIssuesCard(_props: ConsoleMissionCardProps) {
 
   const isLoading = podIssuesLoading || deployIssuesLoading
 
+  const isRefreshing = podsRefreshing || deploysRefreshing
+
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: allPodIssues.length > 0 || allDeploymentIssues.length > 0 || missions.length > 0,
     isDemoData: podsDemoFallback || deploysDemoFallback,
     isFailed: podsFailed || deploysFailed,
@@ -173,7 +177,7 @@ Please:
               <div className="font-medium text-foreground truncate">{issue.name}</div>
               <div className="text-orange-400">{issue.status}</div>
             </div>
-            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 flex-shrink-0" />
+            <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
           </div>
         ))}
         {totalIssues > 3 && (

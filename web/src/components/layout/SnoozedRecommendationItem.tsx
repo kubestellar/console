@@ -46,7 +46,7 @@ export function SnoozedRecommendationItem({ rec, onApply, onDismiss }: SnoozedRe
 
       {/* Recommendation info */}
       <div className="flex items-center gap-2 pr-4 mb-1">
-        <Lightbulb className={cn('w-3 h-3 flex-shrink-0', priorityTextColor)} />
+        <Lightbulb className={cn('w-3 h-3 shrink-0', priorityTextColor)} />
         <span className="text-foreground truncate font-medium">{rec.recommendation.title}</span>
       </div>
 

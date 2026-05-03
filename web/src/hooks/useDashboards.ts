@@ -28,7 +28,7 @@ export function useDashboards() {
     try {
       setIsLoading(true)
       const { data } = await api.get<Dashboard[]>('/api/dashboards')
-      setDashboards(data || [])
+      setDashboards(Array.isArray(data) ? data : [])
       setError(null)
     } catch {
       // Silently fail - backend unavailability is expected in demo mode

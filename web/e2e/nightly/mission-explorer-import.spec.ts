@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { fetchWithRetry } from '../helpers/fetchWithRetry'
 
 /**
  * Nightly Mission Explorer Import Check
@@ -50,9 +51,26 @@ const EXPECTED_ERROR_PATTERNS = [
   /AbortError/i,
   /signal is aborted/i,
   /Cross-Origin Request Blocked/i,
+  /blocked by CORS policy/i,
+  /Access to fetch.*has been blocked by CORS/i,
+  /Origin .* is not allowed by Access-Control-Allow-Origin/i, // WebKit/Safari CORS wording
+  /Access-Control-Allow-Origin.*localhost/i,
+  /Access-Control-Allow-Origin.*127\.0\.0\.1/i,
   /Notification permission/i,
+  /Notification prompting can only be done from a user gesture/i, // WebKit notification block
+  /Could not connect to [0-9.]+/i, // WebKit connection refused wording
+  /Connection refused/i,
   /502.*Bad Gateway/i,
   /Failed to load resource/i,
+  /127\.0\.0\.1:8585/i,
+  /wasm streaming compile failed.*sqlite/i,
+  /failed to asynchronously prepare wasm.*sqlite/i,
+  /Aborted\(NetworkError.*sqlite/i,
+  /Exception loading sqlite3 module/i,
+  /\[kc\.cache\] sqlite/i,
+  /NS_BINDING_ABORTED/i,
+  /NS_ERROR_FAILURE/i,
+  /can[\u2018\u2019']t establish a connection/i, // Firefox WebSocket curly apostrophes
 ]
 
 // ---------------------------------------------------------------------------
@@ -91,6 +109,18 @@ interface MissionResult {
 // ---------------------------------------------------------------------------
 
 async function setupDemoMode(page: Page) {
+  // Catch-all for any /api/** route not explicitly mocked below.
+  // Registered FIRST (lowest priority in Playwright's reverse-order matching)
+  // so specific mocks below override it. Without this, unmocked API calls
+  // hit the real network and fail with ERR_FAILED in CI (#11179).
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+
   // Mock authentication — same pattern as mission-import.spec.ts
   await page.route('**/api/me', (route) =>
     route.fulfill({
@@ -128,21 +158,26 @@ async function setupDemoMode(page: Page) {
     }
   })
 
-  // Mock local agent
-  await page.route('**/127.0.0.1:8585/**', (route) =>
+  // Mock local agent HTTP endpoint
+  await page.route('http://127.0.0.1:8585/**', (route) =>
     route.fulfill({
-      status: 200,
+      status: 503,
       contentType: 'application/json',
-      body: JSON.stringify({ events: [], health: { hasClaude: true, hasBob: false } }),
+      body: JSON.stringify({ error: 'Service unavailable (test mock)' }),
     })
   )
 
-  // Set up demo mode auth
-  await page.goto('/login')
-  await page.evaluate(() => {
+  // Set up demo mode auth via localStorage before page scripts run
+  await page.addInitScript(() => {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
+    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
+    localStorage.setItem('kc-backend-status', JSON.stringify({
+      available: true,
+      timestamp: Date.now(),
+    }))
   })
 }
 
@@ -151,9 +186,11 @@ async function setupDemoMode(page: Page) {
  * Returns the full list of index entries.
  */
 async function fetchFixesIndex(page: Page): Promise<IndexEntry[]> {
-  const resp = await page.request.get(
+  // Retry on transient 502s from GitHub raw content CDN (#10966)
+  const resp = await fetchWithRetry(
+    page.request,
     '/api/missions/file?path=fixes%2Findex.json',
-    { timeout: 30_000 }
+    { timeout: MISSION_FETCH_TIMEOUT },
   )
   expect(resp.ok(), `Index fetch failed: ${resp.status()}`).toBeTruthy()
   const body = await resp.json()
@@ -232,9 +269,10 @@ test.describe('Mission Explorer Import (Nightly)', () => {
     for (const entry of selected) {
       const path = entry.path
       try {
-        const fileResp = await page.request.get(
+        const fileResp = await fetchWithRetry(
+          page.request,
           `/api/missions/file?path=${encodeURIComponent(path)}`,
-          { timeout: MISSION_FETCH_TIMEOUT }
+          { timeout: MISSION_FETCH_TIMEOUT },
         )
 
         if (!fileResp.ok()) {
@@ -336,9 +374,10 @@ test.describe('Mission Explorer Import (Nightly)', () => {
 
     for (const entry of selected) {
       const path = entry.path
-      const fileResp = await page.request.get(
+      const fileResp = await fetchWithRetry(
+        page.request,
         `/api/missions/file?path=${encodeURIComponent(path)}`,
-        { timeout: MISSION_FETCH_TIMEOUT }
+        { timeout: MISSION_FETCH_TIMEOUT },
       )
       if (!fileResp.ok()) continue
 

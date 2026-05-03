@@ -32,15 +32,15 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // ── Named constants ──────────────────────────────────────────────────────────
 
 /** Root directory for card components */
-const CARDS_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
+const CARDS_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
   '../components/cards',
 )
 
@@ -51,7 +51,7 @@ const CARDS_DIR = path.resolve(
  * If the count increased, you introduced a new magic number — extract it
  * into a named constant (e.g., `const TOOLTIP_DELAY_MS = 300`).
  */
-const EXPECTED_MAGIC_NUMBER_COUNT = 54
+const EXPECTED_MAGIC_NUMBER_COUNT = 0
 
 /** Numeric values that are universally understood and not "magic" */
 const SAFE_VALUES = new Set([0, 1, -1, 2, 100])
@@ -77,10 +77,10 @@ interface Violation {
 /** Recursively find all .tsx/.ts files under a directory, excluding tests */
 function findCardFiles(dir: string): string[] {
   const results: string[] = []
-  if (!fs.existsSync(dir)) return results
+  if (!existsSync(dir)) return results
 
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name)
     if (entry.isDirectory()) {
       // Skip __tests__ directories and node_modules
       if (entry.name === '__tests__' || entry.name === 'node_modules') continue
@@ -100,7 +100,7 @@ function findCardFiles(dir: string): string[] {
 
 /** Get relative path from CARDS_DIR for readable output */
 function relPath(filePath: string): string {
-  return path.relative(CARDS_DIR, filePath).replace(/\\/g, '/')
+  return relative(CARDS_DIR, filePath).replace(/\\/g, '/')
 }
 
 // ── Line-level filters (lines to skip entirely) ─────────────────────────────
@@ -230,7 +230,7 @@ function scanForMagicNumbers(): Violation[] {
 
   for (const filePath of allFiles) {
     const rel = relPath(filePath)
-    const src = fs.readFileSync(filePath, 'utf-8')
+    const src = readFileSync(filePath, 'utf-8')
     const lines = src.split('\n')
 
     for (let i = 0; i < lines.length; i++) {
@@ -317,21 +317,21 @@ describe('Magic Numbers Ratchet (P4-A)', () => {
   it('timer magic numbers must not increase', () => {
     const timerViolations = violations.filter(v => v.category === 'timer')
     /** Current count of timer-related magic number violations */
-    const EXPECTED_TIMER_VIOLATIONS = 5
+    const EXPECTED_TIMER_VIOLATIONS = 0
     expect(timerViolations.length).toBeLessThanOrEqual(EXPECTED_TIMER_VIOLATIONS)
   })
 
   it('style-prop magic numbers must not increase', () => {
     const styleViolations = violations.filter(v => v.category === 'style-prop')
     /** Current count of inline style magic number violations */
-    const EXPECTED_STYLE_VIOLATIONS = 13
+    const EXPECTED_STYLE_VIOLATIONS = 0
     expect(styleViolations.length).toBeLessThanOrEqual(EXPECTED_STYLE_VIOLATIONS)
   })
 
   it('comparison magic numbers must not increase', () => {
     const compViolations = violations.filter(v => v.category === 'comparison')
     /** Current count of comparison threshold magic number violations */
-    const EXPECTED_COMPARISON_VIOLATIONS = 36
+    const EXPECTED_COMPARISON_VIOLATIONS = 0
     expect(compViolations.length).toBeLessThanOrEqual(EXPECTED_COMPARISON_VIOLATIONS)
   })
 

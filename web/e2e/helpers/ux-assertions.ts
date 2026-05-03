@@ -186,6 +186,8 @@ export function collectConsoleErrors(page: Page): () => void {
     // -- Firefox navigation cleanup noise
     /NS_BINDING_ABORTED/i,
     /NS_ERROR_FAILURE/i,
+    // -- Hook fetch failures when catch-all mock returns non-JSON-array
+    /Fetch failed: Invalid JSON response/i,
   ]
 
   const unexpected: string[] = []

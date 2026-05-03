@@ -10,7 +10,8 @@
  *   <UnifiedCard config={clusterHealthConfig} title="Custom Title" />
  */
 
-import { ReactNode, useMemo } from 'react'
+import { ReactNode, useMemo, Suspense } from 'react'
+import { safeLazy } from '../../safeLazy'
 import {
   AlertTriangle,
   Info,
@@ -29,7 +30,9 @@ import { useDataSource } from './hooks/useDataSource'
 import { useCardFiltering } from './hooks/useCardFiltering'
 import { ListVisualization } from './visualizations/ListVisualization'
 import { TableVisualization } from './visualizations/TableVisualization'
-import { ChartVisualization } from './visualizations/ChartVisualization'
+// Lazy-load ChartVisualization to defer the echarts vendor chunk from the
+// critical loading path — it is only needed for cards with chartType content.
+const LazyChartVisualization = safeLazy(() => import('./visualizations/ChartVisualization'), 'ChartVisualization')
 import { StatusGridVisualization } from './visualizations/StatusGridVisualization'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { useReportCardDataState } from '../../../components/cards/CardDataContext'
@@ -151,7 +154,7 @@ export function UnifiedCard({
     }
 
     // Empty state
-    if (!filteredData || filteredData.length === 0) {
+    if (!filteredData || (Array.isArray(filteredData) && filteredData.length === 0)) {
       return <EmptyState config={mergedConfig.emptyState} />
     }
 
@@ -185,7 +188,7 @@ export function UnifiedCard({
  */
 function renderContent(
   content: CardContent,
-  data: unknown[],
+  data: unknown[] | unknown,
   config: UnifiedCardConfig,
   onDrillDown?: (item: Record<string, unknown>) => void
 ): ReactNode {
@@ -194,7 +197,7 @@ function renderContent(
       return (
         <ListVisualization
           content={content}
-          data={data}
+          data={data as unknown[]}
           drillDown={config.drillDown}
           onDrillDown={onDrillDown}
         />
@@ -204,7 +207,7 @@ function renderContent(
       return (
         <TableVisualization
           content={content}
-          data={data}
+          data={data as unknown[]}
           drillDown={config.drillDown}
           onDrillDown={onDrillDown}
         />
@@ -212,10 +215,12 @@ function renderContent(
 
     case 'chart':
       return (
-        <ChartVisualization
-          content={content}
-          data={data}
-        />
+        <Suspense fallback={<div className="animate-pulse bg-secondary/30 rounded" style={{ height: content.height ?? 200 }} />}>
+          <LazyChartVisualization
+            content={content}
+            data={data as unknown[]}
+          />
+        </Suspense>
       )
 
     case 'status-grid':
@@ -231,7 +236,7 @@ function renderContent(
       return (
         <PlaceholderVisualization
           type={`custom: ${content.componentName}`}
-          itemCount={data.length}
+          itemCount={Array.isArray(data) ? data.length : data ? 1 : 0}
         />
       )
 
@@ -399,7 +404,7 @@ function InlineStats({
   stats,
   data: _data }: {
   stats: NonNullable<UnifiedCardConfig['stats']>
-  data: unknown[] | undefined
+  data: unknown[] | unknown | undefined
 }) {
   return (
     <div className="flex items-center gap-3 px-2 py-1.5 border-b border-border">
@@ -421,12 +426,12 @@ function CardFooter({
   config,
   data }: {
   config: NonNullable<UnifiedCardConfig['footer']>
-  data: unknown[] | undefined
+  data: unknown[] | unknown | undefined
 }) {
   return (
     <div className="flex items-center justify-between px-2 py-1.5 text-xs text-muted-foreground border-t border-border">
-      {config.showTotal && data && (
-        <span>{data.length} items</span>
+      {config.showTotal && !!data && (
+        <span>{Array.isArray(data) ? data.length : 1} items</span>
       )}
       {config.text && <span>{config.text}</span>}
       {config.pagination && (

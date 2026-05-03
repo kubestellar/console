@@ -32,6 +32,7 @@ import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'
 import { useTranslation } from 'react-i18next'
 import { useOpenKruiseStatus } from './useOpenKruiseStatus'
+import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../../lib/constants/time'
 
 interface OpenKruiseStatusProps {
   config?: {
@@ -110,10 +111,6 @@ const BADGE_COLOR_CLASS: Record<string, string> = {
 }
 
 // Named constants for relative-time formatting (previously magic numbers).
-const MS_PER_SECOND = 1000
-const MS_PER_MINUTE = 60 * MS_PER_SECOND
-const MS_PER_HOUR = 60 * MS_PER_MINUTE
-const MS_PER_DAY = 24 * MS_PER_HOUR
 
 const SORT_OPTIONS_KEYS: ReadonlyArray<{
   value: SortByOption

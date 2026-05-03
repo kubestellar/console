@@ -2,6 +2,8 @@ package k8s
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -528,5 +530,104 @@ func TestDeployWorkload(t *testing.T) {
 	_, srcErr := sourceClient.Resource(gvr).Namespace("default").Get(context.Background(), "dep1", metav1.GetOptions{})
 	if srcErr != nil {
 		t.Errorf("Source should still have dep1: %v", srcErr)
+	}
+}
+
+func TestDeployWorkloadWithFailingDependency(t *testing.T) {
+	deployObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "apps/v1",
+			"kind":       "Deployment",
+			"metadata": map[string]interface{}{
+				"name":      "dep1",
+				"namespace": "default",
+				"labels":    map[string]interface{}{"app": "nginx"},
+			},
+			"spec": map[string]interface{}{
+				"replicas": int64(1),
+				"template": map[string]interface{}{
+					"spec": map[string]interface{}{
+						"containers": []interface{}{
+							map[string]interface{}{
+								"name":  "c1",
+								"image": "nginx",
+							},
+						},
+						"volumes": []interface{}{
+							map[string]interface{}{
+								"name": "vol1",
+								"secret": map[string]interface{}{
+									"secretName": "sec1",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	secObj := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Secret",
+			"metadata": map[string]interface{}{
+				"name":      "sec1",
+				"namespace": "default",
+			},
+			"data": map[string]interface{}{},
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	gvrMap := buildTestGVRMap()
+
+	sourceClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrMap, deployObj, secObj)
+	sourceClient.PrependReactor("list", "deployments", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, &unstructured.UnstructuredList{
+			Object: map[string]interface{}{"kind": "DeploymentList", "apiVersion": "apps/v1"},
+			Items:  []unstructured.Unstructured{*deployObj},
+		}, nil
+	})
+
+	sourceClient.PrependReactor("get", "secrets", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, secObj, nil
+	})
+
+	targetClient := fake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrMap)
+
+	// Make sure target client fails when creating the secret
+	targetClient.PrependReactor("create", "secrets", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, fmt.Errorf("simulated admission webhook failure for secret")
+	})
+
+	m, _ := NewMultiClusterClient("")
+	m.rawConfig = &api.Config{Contexts: map[string]*api.Context{
+		"src": {Cluster: "source"},
+		"tgt": {Cluster: "target"},
+	}}
+	m.dynamicClients["src"] = sourceClient
+	m.dynamicClients["tgt"] = targetClient
+
+	opts := &DeployOptions{DeployedBy: "test-user"}
+	resp, err := m.DeployWorkload(context.Background(), "src", "default", "dep1", []string{"tgt"}, 5, opts)
+	if err != nil {
+		t.Fatalf("DeployWorkload returned an error instead of handling partial failure: %v", err)
+	}
+
+	if resp.Success {
+		t.Errorf("Expected failure because the dependency failed to deploy, got Success=true")
+	}
+
+	if len(resp.DeployedTo) > 0 {
+		t.Errorf("Expected no successful deployment to target cluster, got %v", resp.DeployedTo)
+	}
+
+	if len(resp.FailedClusters) != 1 || resp.FailedClusters[0] != "tgt" {
+		t.Errorf("Expected target cluster to be in FailedClusters, got %v", resp.FailedClusters)
+	}
+
+	if !strings.Contains(resp.Message, "simulated admission webhook failure for secret") {
+		t.Errorf("Expected error message to contain %q, got: %s", "simulated admission webhook failure for secret", resp.Message)
 	}
 }

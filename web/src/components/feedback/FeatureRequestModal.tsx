@@ -33,19 +33,15 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
   const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: isInDemoMode } = useFeatureRequests(currentGitHubLogin)
-  const { notifications, isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
+  const { isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
-  const { drafts, draftCount, saveDraft, deleteDraft, clearAllDrafts } = useFeedbackDrafts()
+  const { drafts, draftCount, recentlyDeletedDrafts, recentlyDeletedCount, saveDraft, deleteDraft, permanentlyDeleteDraft, restoreDeletedDraft, clearAllDrafts, emptyRecentlyDeleted } = useFeedbackDrafts()
   const [isGitHubRefreshing, setIsGitHubRefreshing] = useState(false)
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
   const [confirmDeleteDraft, setConfirmDeleteDraft] = useState<string | null>(null)
   const [showClearAllDrafts, setShowClearAllDrafts] = useState(false)
   const isRefreshing = requestsRefreshing || notificationsRefreshing
 
-  // Exclude notifications for closed requests from the unread count
-  const closedRequestIds = new Set((requests || []).filter(r => r.status === 'closed').map(r => r.id))
-  const activeNotifications = (notifications || []).filter(n => !closedRequestIds.has(n.feature_request_id || ''))
-  const unreadCount = activeNotifications.filter(n => !n.read).length
   // User can't perform actions if not authenticated or if using demo token
   const canPerformActions = isAuthenticated && token !== DEMO_TOKEN_VALUE
   const [activeTab, setActiveTab] = useState<TabType>(initialTab || 'submit')
@@ -256,7 +252,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   }, [forceClose])
 
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={false} closeOnEscape={true} className="!h-[80vh]">
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={true} closeOnEscape={true} className="h-[80vh]!">
       {/* Discard/Save Draft confirmation */}
       {showDiscardConfirm && (
         <DiscardConfirmDialog
@@ -285,7 +281,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       />
 
       {/* Header */}
-      <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
+      <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <div>
             <h2 className="text-lg font-semibold text-foreground">
@@ -309,7 +305,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border flex-shrink-0">
+      <div className="flex border-b border-border shrink-0">
             <button
               onClick={() => setActiveTab('submit')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
@@ -344,9 +340,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
               }`}
             >
               {t('feedback.updates')}
-              {unreadCount > 0 && (
+              {(requests || []).length > 0 && (
                 <span className="min-w-5 h-5 px-1 text-xs rounded-full bg-purple-500 text-white flex items-center justify-center">
-                  {unreadCount}
+                  {(requests || []).length}
                 </span>
               )}
             </button>
@@ -356,7 +352,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       {!canPerformActions && (
         <button
           onClick={() => setShowLoginPrompt(true)}
-          className="w-full px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center justify-between hover:bg-yellow-500/20 transition-colors cursor-pointer flex-shrink-0"
+          className="w-full px-4 py-2 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center justify-between hover:bg-yellow-500/20 transition-colors cursor-pointer shrink-0"
         >
               <span className="text-xs text-yellow-400">
                 {isDemoModeForced
@@ -373,12 +369,17 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
           <DraftsTab
             drafts={drafts}
             draftCount={draftCount}
+            recentlyDeletedDrafts={recentlyDeletedDrafts}
+            recentlyDeletedCount={recentlyDeletedCount}
             editingDraftId={editingDraftId}
             confirmDeleteDraft={confirmDeleteDraft}
             showClearAllDrafts={showClearAllDrafts}
             onSetActiveTab={setActiveTab}
             onRestoreDraft={handleRestoreDraft}
             onDeleteDraft={handleDeleteDraft}
+            onPermanentlyDeleteDraft={permanentlyDeleteDraft}
+            onRestoreDeletedDraft={restoreDeletedDraft}
+            onEmptyRecentlyDeleted={emptyRecentlyDeleted}
             onSetConfirmDeleteDraft={setConfirmDeleteDraft}
             onSetShowClearAllDrafts={setShowClearAllDrafts}
             onClearAllDrafts={clearAllDrafts}
@@ -446,10 +447,9 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
       </div>
 
       {/* Footer - always visible */}
-      <div className="p-4 border-t border-border flex items-center justify-between flex-shrink-0">
+      <div className="p-4 border-t border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 text-2xs text-muted-foreground/50">
           <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Esc</kbd> close</span>
-          <span><kbd className="px-1 py-0.5 rounded bg-secondary/50 text-[9px]">Space</kbd> close</span>
         </div>
         <SubmitFooter
           activeTab={activeTab}

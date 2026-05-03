@@ -1,12 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 
-vi.mock('../../lib/api', () => ({
-  api: {
-    get: vi.fn(),
-    post: vi.fn(),
-  },
-}))
+vi.mock('../../lib/api', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    api: {
+      get: vi.fn(),
+      post: vi.fn(),
+    },
+  }
+})
 
 vi.mock('../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>

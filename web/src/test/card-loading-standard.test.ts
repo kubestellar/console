@@ -22,14 +22,14 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { basename, dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // ── Configuration ──────────────────────────────────────────────────────────
 
-const CARDS_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
+const CARDS_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
   '../components/cards',
 )
 
@@ -86,59 +86,6 @@ const NO_CACHED_HOOK_EXEMPT = new Set([
  * Format: relative path from CARDS_DIR → list of violated checks
  */
 const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
-  // ── bare isLoading violations ──
-  'AppStatus.tsx': new Set(['bare-isLoading']),
-  'cloudevents_status/useCloudEventsStatus.ts': new Set(['bare-isLoading']),
-  'ClusterChangelog.tsx': new Set(['bare-isLoading']),
-  'ClusterDropZone.tsx': new Set(['bare-isLoading']),
-  'ClusterNetwork.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'console-missions/ConsoleHealthCheckCard.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'console-missions/ConsoleIssuesCard.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'console-missions/ConsoleKubeconfigAuditCard.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'coredns_status/CoreDNSStatus.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'CRDHealth.tsx': new Set(['bare-isLoading']),
-  'crio_status/useCrioStatus.ts': new Set(['bare-isLoading']),
-  'crossplane-status/CrossplaneManagedResources.tsx': new Set(['bare-isLoading']),
-  'DeploymentStatus.tsx': new Set(['bare-isLoading']),
-  'EtcdStatus.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'EventsTimeline.tsx': new Set(['bare-isLoading']),
-  'EventStream.tsx': new Set(['bare-isLoading']),
-  'flatcar_status/useFlatcarStatus.ts': new Set(['bare-isLoading']),
-  'fluentd_status/useFluentdStatus.ts': new Set(['bare-isLoading']),
-  'GatewayStatus.tsx': new Set(['bare-isLoading']),
-  'GPUStatus.tsx': new Set(['bare-isLoading']),
-  'HelmHistory.tsx': new Set(['bare-isLoading']),
-  'insights/CrossClusterEventCorrelation.tsx': new Set(['missing-isRefreshing']),
-  'kagenti/KagentiAgentDiscovery.tsx': new Set(['bare-isLoading']),
-  'kagenti/KagentiAgentFleet.tsx': new Set(['bare-isLoading']),
-  'kagenti/KagentiBuildPipeline.tsx': new Set(['bare-isLoading']),
-  'kagenti/KagentiSecurityPosture.tsx': new Set(['bare-isLoading']),
-  'kagenti/KagentiToolRegistry.tsx': new Set(['bare-isLoading']),
-  'karmada_status/useKarmadaStatus.ts': new Set(['bare-isLoading']),
-  'keda_status/useKedaStatus.ts': new Set(['bare-isLoading']),
-  'Kubectl.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'kubevela_status/useKubeVelaStatus.ts': new Set(['bare-isLoading']),
-  'KustomizationStatus.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'llmd/NightlyE2EStatus.tsx': new Set(['bare-isLoading']),
-  'NamespaceMonitor.tsx': new Set(['bare-isLoading']),
-  'NamespaceRBAC.tsx': new Set(['missing-isRefreshing']),
-  'NetworkOverview.tsx': new Set(['bare-isLoading']),
-  'NetworkPolicyCoverage.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'NodeDebug.tsx': new Set(['bare-isLoading']),
-  'openfeature_status/useOpenFeatureStatus.ts': new Set(['bare-isLoading']),
-  'OverlayComparison.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'PodHealthTrend.tsx': new Set(['bare-isLoading']),
-  'PredictiveHealth.tsx': new Set(['bare-isLoading', 'missing-isRefreshing']),
-  'RBACExplorer.tsx': new Set(['bare-isLoading']),
-  'RecommendedPolicies.tsx': new Set(['missing-isRefreshing']),
-  'ResourceMarshall.tsx': new Set(['bare-isLoading']),
-  'ServiceExports.tsx': new Set(['bare-isLoading']),
-  'ServiceImports.tsx': new Set(['bare-isLoading']),
-  'strimzi_status/useStrimziStatus.ts': new Set(['bare-isLoading']),
-  'thanos_status/useThanosStatus.ts': new Set(['bare-isLoading']),
-  'UserManagement.tsx': new Set(['missing-isRefreshing']),
-  'weather/Weather.tsx': new Set(['bare-isLoading']),
-  'WorkloadDeployment.tsx': new Set(['missing-isRefreshing']),
 }
 
 /**
@@ -148,23 +95,6 @@ const KNOWN_VIOLATIONS: Record<string, Set<string>> = {
  * Same ratchet rules as KNOWN_VIOLATIONS: this list MUST ONLY SHRINK.
  */
 const KNOWN_FAILURE_VIOLATIONS: Record<string, Set<string>> = {
-  'ClusterComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ClusterGroups.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ClusterLocations.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ClusterNetwork.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'console-missions/ConsoleKubeconfigAuditCard.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'FleetComplianceHeatmap.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'insights/CrossClusterEventCorrelation.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'Kubectl.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'KustomizationStatus.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'Missions.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'NamespaceMonitor.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'NamespaceRBAC.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'OPAPolicies.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'OverlayComparison.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'RecommendedPolicies.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ResourceTrend.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
-  'ResourceUsage.tsx': new Set(['missing-isFailed', 'missing-consecutiveFailures']),
 }
 
 /** Check if a violation is known (grandfathered in) */
@@ -178,10 +108,10 @@ function isKnownViolation(rel: string, check: string): boolean {
 /** Recursively find all .tsx/.ts files under a directory */
 function findCardFiles(dir: string): string[] {
   const results: string[] = []
-  if (!fs.existsSync(dir)) return results
+  if (!existsSync(dir)) return results
 
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name)
     if (entry.isDirectory()) {
       results.push(...findCardFiles(fullPath))
     } else if (/\.(tsx?)$/.test(entry.name) && !entry.name.endsWith('.test.ts') && !entry.name.endsWith('.test.tsx')) {
@@ -193,15 +123,15 @@ function findCardFiles(dir: string): string[] {
 
 /** Get relative path from CARDS_DIR for readable test names */
 function relPath(filePath: string): string {
-  const rel = path.relative(CARDS_DIR, filePath)
+  const rel = relative(CARDS_DIR, filePath)
   // Normalize to POSIX-style separators so this matches KNOWN_VIOLATIONS keys
   return rel.replace(/\\/g, '/')
 }
 
 /** Check if a file is exempt from all checks */
 function isExempt(filePath: string): boolean {
-  const basename = path.basename(filePath)
-  return !!EXEMPT_CARDS[basename]
+  const base = basename(filePath)
+  return !!EXEMPT_CARDS[base]
 }
 
 /** Check if file uses useCardLoadingState */
@@ -227,7 +157,7 @@ describe('Card Loading State Gold Standard', () => {
 
   // Files that use useCardLoadingState or useReportCardDataState
   const filesWithLoadingHook = cardFiles.filter(f => {
-    const src = fs.readFileSync(f, 'utf-8')
+    const src = readFileSync(f, 'utf-8')
     return usesLoadingStateHook(src)
   })
 
@@ -243,7 +173,7 @@ describe('Card Loading State Gold Standard', () => {
       it(`${rel}: no bare isLoading in useCardLoadingState`, () => {
         if (isKnownViolation(rel, 'bare-isLoading')) return // grandfathered
 
-        const src = fs.readFileSync(filePath, 'utf-8')
+        const src = readFileSync(filePath, 'utf-8')
         const calls = extractLoadingStateCalls(src)
         for (const call of calls) {
           const barePattern = /isLoading:\s*(?!false\b)(\w+)\s*[,}]/
@@ -272,11 +202,11 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isRefreshing must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = path.basename(filePath)
-      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+      const base = basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(base)) continue
 
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (!usesCachedHook(src) && !usesClustersHook(src)) continue
 
@@ -294,11 +224,11 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isDemoData must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = path.basename(filePath)
-      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+      const base = basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(base)) continue
 
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (!usesCachedHook(src) && !usesClustersHook(src)) continue
 
@@ -318,11 +248,11 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('isFailed must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = path.basename(filePath)
-      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+      const base = basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(base)) continue
 
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (!usesCachedHook(src) && !usesClustersHook(src)) continue
 
@@ -340,11 +270,11 @@ describe('Card Loading State Gold Standard', () => {
 
   describe('consecutiveFailures must be wired', () => {
     for (const filePath of filesWithLoadingHook) {
-      const basename = path.basename(filePath)
-      if (NO_CACHED_HOOK_EXEMPT.has(basename)) continue
+      const base = basename(filePath)
+      if (NO_CACHED_HOOK_EXEMPT.has(base)) continue
 
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (!usesCachedHook(src) && !usesClustersHook(src)) continue
 
@@ -363,7 +293,7 @@ describe('Card Loading State Gold Standard', () => {
   describe('No hardcoded isLoading: false', () => {
     for (const filePath of filesWithLoadingHook) {
       const rel = relPath(filePath)
-      const src = fs.readFileSync(filePath, 'utf-8')
+      const src = readFileSync(filePath, 'utf-8')
 
       if (src.includes('DEMO_DATA_CARDS') || (!usesCachedHook(src) && !usesClustersHook(src))) continue
 
@@ -394,7 +324,7 @@ describe('Card Loading State Gold Standard', () => {
       // This number MUST ONLY DECREASE. If you fix a card, remove it from
       // KNOWN_VIOLATIONS and decrease this count. If this test fails because
       // the count dropped, that's great — update the expected count!
-      const EXPECTED_KNOWN_VIOLATION_COUNT = 65
+      const EXPECTED_KNOWN_VIOLATION_COUNT = 0
       expect(totalKnown).toBeLessThanOrEqual(EXPECTED_KNOWN_VIOLATION_COUNT)
     })
 
@@ -405,7 +335,7 @@ describe('Card Loading State Gold Standard', () => {
       }
 
       // Separate ratchet for isRefreshing violations. MUST ONLY DECREASE.
-      const EXPECTED_REFRESH_VIOLATION_COUNT = 17
+      const EXPECTED_REFRESH_VIOLATION_COUNT = 0
       expect(refreshCount).toBeLessThanOrEqual(EXPECTED_REFRESH_VIOLATION_COUNT)
     })
 
@@ -417,7 +347,7 @@ describe('Card Loading State Gold Standard', () => {
 
       // Separate ratchet for failure-wiring violations. MUST ONLY DECREASE.
       // Each card entry has 2 violations (missing-isFailed + missing-consecutiveFailures).
-      const EXPECTED_FAILURE_VIOLATION_COUNT = 34
+      const EXPECTED_FAILURE_VIOLATION_COUNT = 0
       expect(failureCount).toBeLessThanOrEqual(EXPECTED_FAILURE_VIOLATION_COUNT)
     })
   })

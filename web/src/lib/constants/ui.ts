@@ -10,25 +10,23 @@ import type React from 'react'
 // ── Chart dimensions ────────────────────────────────────────────────────
 export const CHART_HEIGHT_STANDARD = 160
 export const CHART_HEIGHT_COMPACT = 100
+export const CHART_HEIGHT_SM = 128
+export const CHART_HEIGHT_LG = 192
+export const CHART_MIN_HEIGHT_PX = 200
+export const CHART_MIN_HEIGHT_TALL_PX = 250
 
 // ── Recharts shared styles ──────────────────────────────────────────────
 export const CHART_TOOLTIP_BG = '#1a1a2e'
 export const CHART_TOOLTIP_BORDER = '#333'
-/** Standard border-radius for chart tooltip containers (Tailwind rounded-lg equivalent) */
-export const CHART_TOOLTIP_BORDER_RADIUS = '8px'
 /** Standard font size for chart tooltip text */
 export const CHART_TOOLTIP_FONT_SIZE = '12px'
 /** Compact font size for insight-card tooltips */
 export const CHART_TOOLTIP_FONT_SIZE_COMPACT = '11px'
-/** Compact legend font size (10px) — kept for backward compat with callers */
-export const CHART_LEGEND_WRAPPER_STYLE: React.CSSProperties = { fontSize: '10px' }
-/** Standard legend font size (12px) — kept for backward compat with callers */
-export const CHART_LEGEND_WRAPPER_STYLE_SM: React.CSSProperties = { fontSize: '12px' }
 /** Shared tooltip content style — used to extract bg/border for echarts tooltip config */
 export const CHART_TOOLTIP_CONTENT_STYLE: React.CSSProperties = {
   backgroundColor: CHART_TOOLTIP_BG,
   border: `1px solid ${CHART_TOOLTIP_BORDER}`,
-  borderRadius: CHART_TOOLTIP_BORDER_RADIUS,
+  borderRadius: '8px',
   fontSize: CHART_TOOLTIP_FONT_SIZE,
 }
 /** Tailwind-gray tooltip style for unified card system charts */
@@ -43,10 +41,44 @@ export const CHART_TOOLTIP_CONTENT_STYLE_GRAY: React.CSSProperties = {
 export const CHART_GRID_STROKE = '#333'
 export const CHART_AXIS_STROKE = '#333'
 export const CHART_TICK_COLOR = '#888'
+/** DataZoom slider border color */
+export const CHART_DATAZOOM_BORDER = '#444'
+/** DataZoom slider background overlay */
+export const CHART_DATAZOOM_BG = 'rgba(50,50,50,0.3)'
+/** DataZoom slider selected-range filler */
+export const CHART_DATAZOOM_FILLER = 'rgba(68,114,196,0.15)'
+/** DataZoom slider handle color */
+export const CHART_DATAZOOM_HANDLE = '#666'
+/** DataZoom label text color */
+export const CHART_DATAZOOM_TEXT = '#888'
+/** DataZoom data-background line color */
+export const CHART_DATAZOOM_DATA_LINE = '#555'
+/** DataZoom data-background area color */
+export const CHART_DATAZOOM_DATA_AREA = 'rgba(100,100,100,0.2)'
+/** Chart mark-line label color (secondary text on dark background) */
+export const CHART_MARK_LINE_LABEL = '#888'
+/** Chart mark-line stroke color (dashed guide lines) */
+export const CHART_MARK_LINE_STROKE = '#666'
 /** Tooltip item/content text — verified 13:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */
 export const CHART_TOOLTIP_TEXT_COLOR = '#e0e0e0'
 /** Tooltip label text — verified 11:1 contrast on CHART_TOOLTIP_BG (#1a1a2e) */
 export const CHART_TOOLTIP_LABEL_COLOR = '#ccc'
+/** White text for high-contrast labels on dark chart elements (treemap tiles, legends) */
+export const CHART_TEXT_WHITE = '#fff'
+/** Muted secondary text for chart labels and axis names */
+export const CHART_TEXT_MUTED = '#aaa'
+
+// ── ECharts numeric font sizes (number, not string — ECharts API) ──────
+/** Axis tick label font size (ECharts numeric) */
+export const CHART_AXIS_FONT_SIZE = 10
+/** Small axis label font size for dense charts (ECharts numeric) */
+export const CHART_AXIS_FONT_SIZE_SM = 9
+/** Standard tooltip / legend font size (ECharts numeric) */
+export const CHART_BODY_FONT_SIZE = 12
+/** Legend text font size for chart legends (ECharts numeric) */
+export const CHART_LEGEND_FONT_SIZE = 11
+/** Tiny marker label font size for map cluster markers (DOM px) */
+export const CLUSTER_MARKER_FONT_SIZE = 8
 
 // ── Kubectl proxy thresholds ────────────────────────────────────────────
 export const MAX_CONCURRENT_KUBECTL_REQUESTS = 4
@@ -64,8 +96,6 @@ export const DEFAULT_PAGE_SIZE = 5
 export const NAVBAR_HEIGHT_PX = 64
 /** Height of each status banner (network, demo, offline) in pixels */
 export const BANNER_HEIGHT_PX = 36
-/** Height of the green dev-mode indicator bar in pixels (h-5 = 20px) */
-export const DEV_BAR_HEIGHT_PX = 20
 /**
  * Horizontal offset (in pixels) from the sidebar's right edge at which the
  * floating collapse + pin control container is anchored (see Sidebar.tsx).

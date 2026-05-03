@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+// maxLLMResponseBytes caps io.ReadAll on LLM API responses to prevent
+// an unbounded allocation if an upstream server sends an oversized body.
+const maxLLMResponseBytes = 10 * 1024 * 1024 // 10 MiB
+
 var (
 	claudeAPIURL       = "https://api.anthropic.com/v1/messages"
 	claudeAPIVersion   = "2023-06-01"
@@ -89,7 +93,7 @@ func (c *ClaudeProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatRespo
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, readErr := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseBytes))
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
@@ -157,7 +161,7 @@ func (c *ClaudeProvider) StreamChat(ctx context.Context, req *ChatRequest, onChu
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, readErr := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseBytes))
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}

@@ -33,8 +33,19 @@ jq_or_fail() {
 }
 
 # ============================================================================
-# Load current results
+# Load current results (bail early if JSON is malformed)
 # ============================================================================
+
+if ! jq empty "$CURRENT_FILE" 2>/dev/null; then
+  echo "## :warning: Nightly Test Results"
+  echo ""
+  echo "_The test results JSON is malformed and cannot be parsed._"
+  echo "_Check the [workflow run](https://github.com/kubestellar/console/actions) for details._"
+  echo ""
+  echo "**Date:** $(date -u +%Y-%m-%d)"
+  echo "**File:** \`$CURRENT_FILE\`"
+  exit 1
+fi
 
 CUR_TOTAL=$(jq_or_fail -r '.summary.total' "$CURRENT_FILE")
 CUR_PASSED=$(jq_or_fail -r '.summary.passed' "$CURRENT_FILE")

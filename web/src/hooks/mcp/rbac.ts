@@ -3,6 +3,7 @@ import { api } from '../../lib/api'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
 import { registerRefetch } from '../../lib/modeTransition'
+import { RBAC_QUERY_TIMEOUT_MS } from '../../lib/constants/network'
 import type { K8sRole, K8sRoleBinding, K8sServiceAccountInfo } from './types'
 
 // Demo RBAC data for when demo mode is enabled
@@ -123,7 +124,7 @@ export function useK8sRoles(cluster?: string, namespace?: string, includeSystem 
       if (namespace) params.append('namespace', namespace)
       if (includeSystem) params.append('includeSystem', 'true')
 
-      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sRole[]>(`/api/rbac/roles?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
       setRoles(data || [])
       setError(null)
     } catch {
@@ -186,7 +187,7 @@ export function useK8sRoleBindings(cluster?: string, namespace?: string, include
       if (namespace) params.append('namespace', namespace)
       if (includeSystem) params.append('includeSystem', 'true')
 
-      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sRoleBinding[]>(`/api/rbac/bindings?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
       setBindings(data || [])
       setError(null)
     } catch {
@@ -242,7 +243,7 @@ export function useK8sServiceAccounts(cluster?: string, namespace?: string) {
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
 
-      const { data } = await api.get<K8sServiceAccountInfo[]>(`/api/rbac/service-accounts?${params}`, { timeout: 60000 })
+      const { data } = await api.get<K8sServiceAccountInfo[]>(`/api/rbac/service-accounts?${params}`, { timeout: RBAC_QUERY_TIMEOUT_MS })
       setServiceAccounts(data || [])
       setError(null)
     } catch {

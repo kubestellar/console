@@ -1,23 +1,29 @@
 import { vi } from 'vitest'
 
-// Mock the cache module using the same alias as the hook
+// vi.hoisted ensures mockUseCacheFn is available when vi.mock() is hoisted
+const { mockUseCacheFn } = vi.hoisted(() => {
+    const mockUseCacheFn = vi.fn().mockImplementation(
+        (options: { demoData?: unknown; getDemoData?: () => unknown }) => ({
+            data: typeof options.getDemoData === 'function' ? options.getDemoData() : options.demoData,
+            isLoading: false,
+            isRefreshing: false,
+            isDemoFallback: true,
+            error: null,
+            isFailed: false,
+            consecutiveFailures: 0,
+            lastRefresh: Date.now(),
+            refetch: vi.fn(),
+        })
+    )
+    return { mockUseCacheFn }
+})
+
 vi.mock('@/lib/cache', async (importOriginal) => {
-    const actual = await importOriginal() as any
+    const actual = await importOriginal() as Record<string, unknown>
     return {
         ...actual,
-        useCache: vi.fn().mockImplementation((options) => {
-            return {
-                data: options.demoData,
-                isLoading: false,
-                isRefreshing: false,
-                isDemoFallback: true,
-                error: null,
-                isFailed: false,
-                consecutiveFailures: 0,
-                lastRefresh: Date.now(),
-                refetch: vi.fn(),
-            }
-        }),
+        useCache: mockUseCacheFn,
+        createCachedHook: (_config: unknown) => () => mockUseCacheFn(_config),
     }
 })
 

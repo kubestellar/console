@@ -1,7 +1,7 @@
 /**
  * AISuggestionsSection — AI-powered card suggestion tab extracted from AddCardModal.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sparkles, Plus, Loader2 } from 'lucide-react'
 import { RETRY_DELAY_MS } from '../../../../lib/constants/network'
@@ -33,6 +33,13 @@ export function AISuggestionsSection({
   const [suggestions, setSuggestions] = useState<CardSuggestion[]>([])
   const [selectedCards, setSelectedCards] = useState<Set<number>>(new Set())
   const [isGenerating, setIsGenerating] = useState(false)
+  const delayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (delayTimerRef.current) clearTimeout(delayTimerRef.current)
+    }
+  }, [])
 
   /** Generate suggestions for a given query string */
   const handleGenerateWithQuery = async (q: string) => {
@@ -40,7 +47,9 @@ export function AISuggestionsSection({
     setIsGenerating(true)
     setSuggestions([])
     setSelectedCards(new Set())
-    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+    await new Promise<void>((resolve) => {
+      delayTimerRef.current = setTimeout(resolve, RETRY_DELAY_MS)
+    })
     const results = generateCardSuggestions(q)
     setSuggestions(results)
     setSelectedCards(new Set(results.map((card, i) => existingCardTypes.includes(card.type) ? -1 : i).filter(i => i !== -1)))
@@ -82,7 +91,7 @@ export function AISuggestionsSection({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
               placeholder={t('dashboard.addCard.aiPlaceholder')}
-              className="flex-1 px-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+              className="flex-1 px-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
             />
             <button
               onClick={handleGenerate}

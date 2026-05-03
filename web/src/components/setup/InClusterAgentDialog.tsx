@@ -65,7 +65,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
           {/* Architecture note */}
           <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">
             <div className="flex items-start gap-2.5">
-              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
+              <div className="shrink-0 w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center mt-0.5">
                 <span className="text-blue-400 text-xs font-bold">i</span>
               </div>
               <div className="text-xs text-muted-foreground space-y-1.5">
@@ -89,7 +89,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
           {/* Section 1: Install the agent */}
           <div className="rounded-lg border border-border/50 bg-secondary/30 p-3">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center">
+              <div className="shrink-0 w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center">
                 <Terminal className="w-4 h-4 text-purple-400" />
               </div>
               <div className="flex-1 min-w-0">
@@ -204,7 +204,7 @@ export function InClusterAgentDialog({ isOpen, onClose }: InClusterAgentDialogPr
           {/* Section 2: Configure CORS */}
           <div className="rounded-lg border border-border/50 bg-secondary/30 p-3">
             <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-500/20 flex items-center justify-center">
+              <div className="shrink-0 w-7 h-7 rounded-full bg-orange-500/20 flex items-center justify-center">
                 <Shield className="w-4 h-4 text-orange-400" />
               </div>
               <div className="flex-1 min-w-0">

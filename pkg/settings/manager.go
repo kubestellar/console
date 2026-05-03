@@ -103,7 +103,11 @@ func (sm *SettingsManager) Load() error {
 
 	var sf SettingsFile
 	if err := json.Unmarshal(data, &sf); err != nil {
-		return fmt.Errorf("failed to parse settings: %w", err)
+		backupPath := sm.settingsPath + ".corrupt." + time.Now().UTC().Format("20060102T150405Z")
+		os.Rename(sm.settingsPath, backupPath)
+		slog.Error("[settings] corrupt settings file, resetting to defaults", "error", err, "path", sm.settingsPath, "backup", backupPath)
+		sm.settings = DefaultSettings()
+		return nil
 	}
 
 	// Detect missing boolean fields in older settings files (#7572).
@@ -206,8 +210,37 @@ func (sm *SettingsManager) saveLocked() error {
 		return fmt.Errorf("failed to create settings directory: %w", err)
 	}
 
-	if err := os.WriteFile(sm.settingsPath, data, settingsFileMode); err != nil {
-		return fmt.Errorf("failed to write settings: %w", err)
+	// Atomic write: temp file → fsync → rename to prevent corruption if the
+	// process is killed mid-write (same pattern as ensureKeyFile in crypto.go).
+	tmpFile, err := os.CreateTemp(dir, ".settings-*.tmp")
+	if err != nil {
+		return fmt.Errorf("failed to create temp settings file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to write temp settings file: %w", err)
+	}
+	if err := tmpFile.Chmod(settingsFileMode); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to chmod temp settings file: %w", err)
+	}
+	if err := tmpFile.Sync(); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to fsync temp settings file: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to close temp settings file: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, sm.settingsPath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to rename temp settings file: %w", err)
 	}
 
 	return nil

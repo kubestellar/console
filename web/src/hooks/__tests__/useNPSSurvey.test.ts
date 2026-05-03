@@ -17,6 +17,13 @@ const {
   store: new Map<string, string>(),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../useRewards', () => ({
   useRewards: () => ({ awardCoins: mockAwardCoins }),
 }))
@@ -119,7 +126,7 @@ describe('useNPSSurvey', () => {
     await act(async () => {
       try {
         await result.current.submitResponse(3)
-      } catch (err) {
+      } catch (err: unknown) {
         caught = err
       }
     })

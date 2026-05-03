@@ -1,34 +1,17 @@
-import { test, expect, Page } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
+import { setupDemoMode } from './helpers/setup'
 
 /**
- * Sets up authentication and mocks for custom dashboard tests
+ * Sets up authentication and mocks for custom dashboard tests.
+ * Uses canonical setupDemoMode helper from helpers/setup.ts which handles
+ * localStorage seeding, /api/me mock, and catch-all API fallback.
+ * Then registers test-specific dashboard mocks before navigating.
  */
 async function setupCustomDashboardTest(page: Page) {
-  // Mock authentication
-  await page.route('**/api/me', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: '1',
-        github_id: '12345',
-        github_login: 'testuser',
-        email: 'test@example.com',
-        onboarded: true,
-      }),
-    })
-  )
+  await setupDemoMode(page)
 
-  // Mock MCP endpoints
-  await page.route('**/api/mcp/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [] }),
-    })
-  )
-
-  // Mock dashboards API
+  // Mock dashboards API (test-specific — must be registered before navigation
+  // so page-load requests are intercepted ahead of the catch-all fallback)
   await page.route('**/api/dashboards', (route) => {
     if (route.request().method() === 'POST') {
       route.fulfill({
@@ -49,18 +32,7 @@ async function setupCustomDashboardTest(page: Page) {
     }
   })
 
-  // Seed localStorage BEFORE any page script runs so the auth guard sees
-  // the token on first execution. page.evaluate() runs after the page has
-  // already parsed and executed scripts, which is too late for webkit/Safari
-  // where the auth redirect fires synchronously on script evaluation.
-  // page.addInitScript() injects the snippet ahead of any page code (#9096).
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('demo-user-onboarded', 'true')
-  })
-
   await page.goto('/')
-  await page.waitForLoadState('domcontentloaded')
 }
 
 test.describe('Custom Dashboard Creation', () => {
@@ -87,10 +59,13 @@ test.describe('Custom Dashboard Creation', () => {
   test.describe('Sidebar Functionality', () => {
     test('sidebar has customize button', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
-      await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 5000 })
+      // WebKit renders sidebar content slightly later than Chromium/Firefox —
+      // the "Add more" button depends on navSections being mounted. #10200
+      await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
     })
 
     test('customize button is clickable', async ({ page }) => {
+      // WebKit renders sidebar content slower — use a longer timeout. #10200
       await expect(page.getByTestId('sidebar-customize')).toBeVisible({ timeout: 10000 })
 
       await page.getByTestId('sidebar-customize').click()

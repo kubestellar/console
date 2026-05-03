@@ -141,7 +141,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
   return (
     <div className="h-full flex flex-col min-h-card content-loaded">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3 shrink-0">
         <div className="flex items-center gap-2">
           <StatusBadge color="purple">
             {totalItems} AppSet{totalItems !== 1 ? 's' : ''}
@@ -191,7 +191,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
       {/* Integration notice — only shown in demo/fallback mode */}
       {isDemoData && (
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
-          <AlertCircle className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-purple-400 font-medium">{t('argoCDApplicationSets.demoNotice', 'ArgoCD ApplicationSet Integration')}</p>
             <p className="text-muted-foreground">

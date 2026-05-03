@@ -37,6 +37,8 @@ if [[ ${#EXTRA_ENV[@]} -eq 0 ]]; then
   echo "Running deploy dashboard tests against production build..."
 fi
 
+# NOTE: Do NOT pass --timeout here. The per-test timeout (360_000ms) is set in
+# e2e/deploy/deploy.config.ts and must not be overridden by a CLI flag (#11509).
 env "${EXTRA_ENV[@]}" npx playwright test \
   --config e2e/deploy/deploy.config.ts \
   e2e/deploy/deploy-dashboard.spec.ts

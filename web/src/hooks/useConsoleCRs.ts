@@ -234,7 +234,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
       } else {
         throw new Error('Failed to fetch')
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`[useConsoleCR] Failed to fetch ${resourceType}:`, err)
       if (isMounted.current) {
         setError(`Failed to load ${resourceType}`)
@@ -256,7 +256,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
       if (response.ok) {
         return await response.json()
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`[useConsoleCR] Failed to get ${resourceType} ${name}:`, err)
     }
     return null
@@ -273,7 +273,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     try {
       const response = await fetch(agentWriteURL(), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify(item),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
@@ -282,7 +282,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         setItems(prev => [...prev, created])
         return created
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`[useConsoleCR] Failed to create ${resourceType}:`, err)
     }
     return null
@@ -299,7 +299,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     try {
       const response = await fetch(agentWriteURL('', { name }), {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify(item),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
@@ -308,7 +308,7 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
         setItems(prev => prev.map(i => i.metadata.name === name ? updated : i))
         return updated
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`[useConsoleCR] Failed to update ${resourceType} ${name}:`, err)
     }
     return null
@@ -325,13 +325,14 @@ function useConsoleCR<T extends { metadata: { name: string } }>(
     try {
       const response = await fetch(agentWriteURL('', { name }), {
         method: 'DELETE',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok || response.status === 204) {
         // Optimistic update
         setItems(prev => prev.filter(i => i.metadata.name !== name))
         return true
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`[useConsoleCR] Failed to delete ${resourceType} ${name}:`, err)
     }
     return false
@@ -394,13 +395,13 @@ export function useWorkloadDeployments() {
       const url = `${LOCAL_AGENT_HTTP_URL}/console-cr/deployments/status?${params.toString()}`
       const response = await fetch(url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify(status),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         return await response.json()
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`[useWorkloadDeployments] Failed to update status for ${name}:`, err)
     }
     return null

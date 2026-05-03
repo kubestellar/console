@@ -75,6 +75,14 @@ export default {
          * Usage: text-status-success, bg-status-error, border-status-warning
          * Note: opacity modifiers (e.g., /20) are not supported with var() values.
          */
+        /** LinkedIn brand blue (#0A66C2) — used for LinkedIn share buttons */
+        linkedin: {
+          DEFAULT: '#0A66C2',
+          dark: '#004182',
+        },
+        /** Near-black backgrounds for terminal/console UIs */
+        terminal: '#0d0d0d',
+        'near-black': '#0a0a0a',
         status: {
           success: "var(--color-success)",
           warning: "var(--color-warning)",
@@ -83,17 +91,24 @@ export default {
           neutral: "var(--color-neutral)",
           pending: "var(--color-pending)",
         },
+        linkedin: {
+          DEFAULT: '#0A66C2',
+          dark: '#004182',
+        },
+        terminal: '#0d0d0d',
+        'glass-overlay': 'rgba(10,15,25,0.98)',
       },
       /**
        * Z-Index Scale — semantic layers for global stacking.
        * Use these instead of arbitrary z-[N] values on fixed/sticky elements.
        *
        * z-dropdown (100) — Popovers, dropdowns, tooltips, floating panels
+       * z-sidebar  (150) — Docked sidebars (desktop mission sidebar, left nav)
        * z-sticky   (200) — Sticky headers, floating action buttons
        * z-floating (250) — Portaled floating menus that must sit above sticky headers
        *                    but below non-modal overlays (e.g. agent selector dropdown)
        * z-overlay  (300) — Non-modal backdrops (mobile sidebar, notification dimmer)
-       * z-modal    (400) — All modals and dialogs
+       * z-modal    (400) — All modals and dialogs (mobile mission sheet, MissionBrowser)
        * z-toast    (500) — Toast notifications (always on top of modals)
        * z-critical (600) — Confirmation dialogs stacked on top of modals
        *
@@ -101,6 +116,7 @@ export default {
        */
       zIndex: {
         dropdown: '100',
+        sidebar: '150',
         sticky: '200',
         floating: '250',
         overlay: '300',

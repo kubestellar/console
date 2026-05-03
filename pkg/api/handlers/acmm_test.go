@@ -52,10 +52,10 @@ func setupMockGitHub(t *testing.T) *mockRoundTripper {
 		delays:    make(map[string]time.Duration),
 		calls:     make(map[string]int),
 	}
-	oldClient := http.DefaultClient
-	http.DefaultClient = &http.Client{Transport: m}
+	oldClient := acmmHTTPClient
+	acmmHTTPClient = &http.Client{Transport: m}
 	t.Cleanup(func() {
-		http.DefaultClient = oldClient
+		acmmHTTPClient = oldClient
 	})
 	return m
 }

@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useCardSubscribe } from '../lib/cardEvents'
-import { clusterCacheRef } from './mcp/shared'
+import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
+import { isInClusterMode } from './useBackendHealth'
+import { api } from '../lib/api'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, KUBECTL_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
 /** HTTP status codes that indicate authentication/authorization failure */
 const HTTP_UNAUTHORIZED = 401
@@ -48,7 +51,7 @@ async function fetchDeployEventsViaProxy(
   const response = await kubectlProxy.exec(
     ['get', 'events', '-n', namespace,
      '--sort-by=.lastTimestamp', '-o', 'json'],
-    { context, timeout: 10000 },
+    { context, timeout: KUBECTL_DEFAULT_TIMEOUT_MS },
   )
   if (response.exitCode !== 0) return []
   interface KubeEvent {
@@ -141,7 +144,7 @@ const MISSIONS_STORAGE_KEY = 'kubestellar-missions'
 const POLL_INTERVAL_MS = 5000
 const MAX_MISSIONS = 50
 /** Cache TTL: 5 minutes — stop polling completed missions after this duration */
-const CACHE_TTL_MS = 5 * 60 * 1000
+const CACHE_TTL_MS = 5 * MS_PER_MINUTE
 /** After this many consecutive HTTP error responses (4xx/5xx) a cluster is marked failed (#6412) */
 const MAX_STATUS_FAILURES = 6
 /**
@@ -206,7 +209,15 @@ async function runWithConcurrency<T>(
 function loadMissions(): DeployMission[] {
   try {
     const stored = localStorage.getItem(MISSIONS_STORAGE_KEY)
-    if (stored) return JSON.parse(stored)
+    if (stored) {
+      const parsed: DeployMission[] = JSON.parse(stored)
+      // Ensure required arrays exist — older stored data or corruption may omit them
+      return (parsed || []).map(m => ({
+        ...m,
+        targetClusters: m.targetClusters || [],
+        clusterStatuses: m.clusterStatuses || [],
+      }))
+    }
     // Migrate from old split keys
     const oldActive = localStorage.getItem(STORAGE_KEY_MISSIONS_ACTIVE)
     const oldHistory = localStorage.getItem(STORAGE_KEY_MISSIONS_HISTORY)
@@ -232,7 +243,7 @@ function saveMissions(missions: DeployMission[]) {
   // Strip logs for active missions (transient data, re-fetched on each poll cycle).
   const clean = missions.slice(0, MAX_MISSIONS).map(m => ({
     ...m,
-    clusterStatuses: m.clusterStatuses.map(cs => ({
+    clusterStatuses: (m.clusterStatuses || []).map(cs => ({
       ...cs,
       logs: isTerminalStatus(m.status) ? cs.logs : undefined })) }))
   localStorage.setItem(MISSIONS_STORAGE_KEY, JSON.stringify(clean))
@@ -274,7 +285,7 @@ export function useDeployMissions() {
         groupName: p.groupName,
         deployedBy: p.deployedBy,
         status: 'launching',
-        clusterStatuses: p.targetClusters.map(c => ({
+        clusterStatuses: (p.targetClusters || []).map(c => ({
           cluster: c,
           status: 'pending',
           replicas: 0,
@@ -327,7 +338,7 @@ export function useDeployMissions() {
       const allTerminal = current.every(m => isTerminalStatus(m.status))
       const anyNeedsRecovery = allTerminal && current.some(m => {
         if (!m.completedAt || (Date.now() - m.completedAt) <= CACHE_TTL_MS) return false
-        const hasAnyLogs = m.clusterStatuses.some(cs => cs.logs && cs.logs.length > 0)
+        const hasAnyLogs = (m.clusterStatuses || []).some(cs => cs.logs && cs.logs.length > 0)
         const recoveryPolls = m.logRecoveryPolls ?? 0
         // Still needs recovery if: has logs but under budget, OR has no logs at all
         return !hasAnyLogs || recoveryPolls < LOG_RECOVERY_EXTRA_POLLS
@@ -359,7 +370,7 @@ export function useDeployMissions() {
           let inRecoveryWindow = false
           if (isCompleted && mission.completedAt &&
               (Date.now() - mission.completedAt) > CACHE_TTL_MS) {
-            const hasAnyLogs = mission.clusterStatuses.some(cs => cs.logs && cs.logs.length > 0)
+            const hasAnyLogs = (mission.clusterStatuses || []).some(cs => cs.logs && cs.logs.length > 0)
             const recoveryPolls = mission.logRecoveryPolls ?? 0
             if (hasAnyLogs) {
               if (recoveryPolls >= LOG_RECOVERY_EXTRA_POLLS) {
@@ -379,9 +390,9 @@ export function useDeployMissions() {
           // #6640 — Bounded concurrency over clusters. Each cluster task is
           // wrapped in a thunk so runWithConcurrency can schedule them.
           const clusterTasks: Array<() => Promise<DeployClusterStatus>> =
-            mission.targetClusters.map((cluster) => async (): Promise<DeployClusterStatus> => {
+            (mission.targetClusters || []).map((cluster) => async (): Promise<DeployClusterStatus> => {
               // Track consecutive failures from previous poll cycle
-              const prevStatus = mission.clusterStatuses.find(cs => cs.cluster === cluster)
+              const prevStatus = (mission.clusterStatuses || []).find(cs => cs.cluster === cluster)
               const prevFailures = prevStatus?.consecutiveFailures ?? 0
               const prevNetworkFailures = prevStatus?.networkFailureCount ?? 0
 
@@ -420,6 +431,40 @@ export function useDeployMissions() {
                   networkFailureCount: networkFailures }
               }
 
+              // In-cluster mode: use backend API instead of local agent (#11686)
+              if (isInClusterMode()) {
+                try {
+                  const params = new URLSearchParams()
+                  params.append('cluster', cluster)
+                  params.append('namespace', mission.namespace)
+                  const { data } = await api.get<{ deployments: Array<Record<string, unknown>> }>(
+                    `/api/mcp/deployments?${params}`
+                  )
+                  const deployments = (data?.deployments || []) as Array<Record<string, unknown>>
+                  const match = deployments.find(
+                    (d) => String(d.name) === mission.workload
+                  )
+                  if (match) {
+                    const replicas = safeReplicaCount(match.replicas)
+                    const readyReplicas = safeReplicaCount(match.readyReplicas)
+                    const updatedRaw = match.updatedReplicas
+                    const updated = updatedRaw === undefined ? replicas : safeReplicaCount(updatedRaw)
+                    let status: DeployClusterStatus['status'] = 'applying'
+                    if (String(match.status) === 'running'
+                        && readyReplicas >= replicas
+                        && updated >= replicas) {
+                      status = 'running'
+                    } else if (String(match.status) === 'failed' || String(match.status) === 'Failed') {
+                      status = 'failed'
+                    }
+                    return { cluster, status, replicas, readyReplicas }
+                  }
+                  return pendingOrFailed()
+                } catch {
+                  return networkPending()
+                }
+              }
+
               // Try agent first (works when backend is down)
               try {
                 const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
@@ -430,7 +475,7 @@ export function useDeployMissions() {
                   const ctrl = new AbortController()
                   const tid = setTimeout(() => ctrl.abort(), DEPLOY_ABORT_TIMEOUT_MS)
                   try {
-                    const res = await fetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
+                    const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
                       signal: ctrl.signal,
                       headers: { Accept: 'application/json' } })
                     // #6816 — If the agent returns a non-OK response (4xx/5xx
@@ -463,12 +508,21 @@ export function useDeployMissions() {
                       // Fall back to 0 for non-finite values.
                       const replicas = safeReplicaCount(match.replicas)
                       const readyReplicas = safeReplicaCount(match.readyReplicas)
+                      // #5955 — Mirror the REST path: require updatedReplicas >= replicas
+                      // so a partial rollout (old generation still serving) is not marked
+                      // "running" just because readyReplicas reached desired count.
+                      const agentUpdatedRaw = match.updatedReplicas
+                      const agentUpdated = agentUpdatedRaw === undefined
+                        ? replicas
+                        : safeReplicaCount(agentUpdatedRaw)
                       let status: DeployClusterStatus['status'] = 'applying'
                       // Zero-replica workloads are valid (e.g. scale-to-zero) — treat
                       // readyReplicas >= replicas as success even when both are zero.
-                      if (readyReplicas >= replicas) {
+                      if (String(match.status) === 'running'
+                          && readyReplicas >= replicas
+                          && agentUpdated >= replicas) {
                         status = 'running'
-                      } else if (String(match.status) === 'failed') {
+                      } else if (String(match.status) === 'failed' || String(match.status) === 'Failed') {
                         status = 'failed'
                       }
                       // Fetch K8s events via kubectlProxy
@@ -596,9 +650,9 @@ export function useDeployMissions() {
                   : safeReplicaCount(restUpdatedRaw)
                 // Zero-replica workloads are valid — treat readyReplicas >= replicas
                 // as success even when both are zero.
-                if (data.status === 'Running' && restReady >= restReplicas && restUpdated >= restReplicas) {
+                if (String(data.status).toLowerCase() === 'running' && restReady >= restReplicas && restUpdated >= restReplicas) {
                   status = 'running'
-                } else if (data.status === 'Failed') {
+                } else if (String(data.status).toLowerCase() === 'failed') {
                   // #5956 — Surface the failure reason in the mission logs
                   // instead of leaving the mission in a generic degraded state.
                   status = 'failed'
@@ -816,4 +870,20 @@ export function useDeployMissions() {
     completedMissions,
     hasActive: activeMissions.length > 0,
     clearCompleted }
+}
+
+export const __testables = {
+  safeReplicaCount,
+  isTerminalStatus,
+  authHeaders,
+  loadMissions,
+  saveMissions,
+  runWithConcurrency,
+  MISSIONS_STORAGE_KEY,
+  MAX_MISSIONS,
+  MAX_STATUS_FAILURES,
+  MAX_NETWORK_FAILURES,
+  MIN_ACTIVE_MS,
+  LOG_RECOVERY_EXTRA_POLLS,
+  DEPLOY_POLL_MAX_CONCURRENCY,
 }

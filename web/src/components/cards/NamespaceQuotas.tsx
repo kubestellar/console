@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import { useDropdownKeyNav } from '../../hooks/useDropdownKeyNav'
 import { Gauge, Cpu, HardDrive, Box, ChevronRight, Plus, Pencil, Trash2, Zap } from 'lucide-react'
 import { BaseModal, useModalState } from '../../lib/modals'
 import { Button } from '../ui/Button'
@@ -111,6 +112,7 @@ function QuotaModal({
   )
   const [showGpuPresets, setShowGpuPresets] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const gpuDropdownKeyNav = useDropdownKeyNav(() => setShowGpuPresets(false))
 
   const { namespaces: clusterNamespaces } = useCachedNamespaces(cluster || undefined)
   const availableNamespaces = cluster ? clusterNamespaces : namespaces
@@ -154,7 +156,7 @@ function QuotaModal({
     try {
       await onSave({ cluster, namespace, name, hard })
       onClose()
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save quota')
     }
   }
@@ -240,7 +242,7 @@ function QuotaModal({
                     GPU
                   </Button>
                   {showGpuPresets && (
-                    <div className="absolute right-0 top-full mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-10">
+                    <div role="menu" onKeyDown={gpuDropdownKeyNav} className="absolute right-0 top-full mt-1 w-56 bg-popover border border-border rounded-lg shadow-lg z-10">
                       {GPU_RESOURCE_TYPES.map(rt => (
                         <button
                           key={rt.key}
@@ -400,10 +402,10 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
   }
 
   // Open edit modal for a quota
-  const openEditModal = (quota: ResourceQuota) => {
+  const openEditModal = useCallback((quota: ResourceQuota) => {
     setEditingQuota(quota)
     openModal()
-  }
+  }, [openModal])
 
   // Transform ResourceQuotas to QuotaUsage format for display (pre-filter by selectors only)
   const quotaUsages = useMemo(() => {
@@ -726,7 +728,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                     {showScope && (
                       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
                         <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 overflow-hidden">
-                          {quota.cluster && <span className="flex-shrink-0"><ClusterBadge cluster={quota.cluster} size="sm" /></span>}
+                          {quota.cluster && <span className="shrink-0"><ClusterBadge cluster={quota.cluster} size="sm" /></span>}
                           {quota.namespace && (
                             <span className="flex items-center gap-1 truncate">
                               <span>/</span>
@@ -794,7 +796,7 @@ export function NamespaceQuotas({ config }: NamespaceQuotasProps) {
                   >
                     {showScope && (
                       <div className="flex items-center gap-1 mb-2 text-xs text-muted-foreground min-w-0 overflow-hidden">
-                        {item.cluster && <span className="flex-shrink-0"><ClusterBadge cluster={item.cluster} size="sm" /></span>}
+                        {item.cluster && <span className="shrink-0"><ClusterBadge cluster={item.cluster} size="sm" /></span>}
                         {item.namespace && (
                           <span className="flex items-center gap-1 truncate">
                             <span>/</span>

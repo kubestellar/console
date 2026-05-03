@@ -4,7 +4,7 @@ import { Github } from '@/lib/icons'
 import { Button } from '../ui/Button'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { useTranslation } from 'react-i18next'
-import ReactMarkdown from 'react-markdown'
+import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { useRef, useEffect } from 'react'
@@ -24,10 +24,10 @@ export function DiscardConfirmDialog({
 }: DiscardConfirmDialogProps) {
   const { t } = useTranslation()
   return (
-    <div className="fixed inset-0 z-critical flex items-center justify-center bg-black/60 backdrop-blur-sm" role="presentation">
+    <div className="fixed inset-0 z-critical flex items-center justify-center bg-black/60 backdrop-blur-xs" role="presentation">
       <div className="bg-background border border-border rounded-lg shadow-xl p-6 max-w-sm w-full mx-4" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
             <AlertTriangle className="w-5 h-5 text-yellow-400" />
           </div>
           <h3 className="text-lg font-semibold text-foreground">
@@ -82,7 +82,7 @@ export function LoginPromptDialog({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-critical"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs z-critical"
         onClick={onClose}
       />
       <div className="fixed inset-0 z-critical flex items-center justify-center p-4 pointer-events-none">
@@ -221,7 +221,7 @@ export function FullscreenPreview({ description, onClose }: FullscreenPreviewPro
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-xs"
       onClick={(e) => {
         if (e.target === overlayRef.current) {
           onClose()
@@ -265,6 +265,7 @@ interface ScreenshotPreviewOverlayProps {
 
 export function ScreenshotPreviewOverlay({ src, onClose }: ScreenshotPreviewOverlayProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
+  const isVideo = src.startsWith('data:video/')
 
   // Auto-focus the overlay so it can receive keyboard events (e.g. Escape)
   useEffect(() => {
@@ -275,7 +276,7 @@ export function ScreenshotPreviewOverlay({ src, onClose }: ScreenshotPreviewOver
     <div
       ref={overlayRef}
       tabIndex={-1}
-      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-sm outline-none"
+      className="fixed inset-0 z-overlay flex items-center justify-center bg-black/60 backdrop-blur-xs outline-hidden"
       onClick={(e) => {
         if (e.target === overlayRef.current) {
           onClose()
@@ -288,29 +289,37 @@ export function ScreenshotPreviewOverlay({ src, onClose }: ScreenshotPreviewOver
       }}
       role="dialog"
       aria-modal="true"
-      aria-label="Screenshot preview"
+      aria-label={isVideo ? 'Video preview' : 'Screenshot preview'}
     >
       <div className="relative max-w-[90vw] max-h-[85vh] bg-background border border-border rounded-xl shadow-2xl flex flex-col">
         <div className="flex items-center justify-between px-5 py-3 border-b border-border">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
             <Maximize2 className="w-4 h-4" />
-            Screenshot Preview
+            {isVideo ? 'Video Preview' : 'Screenshot Preview'}
           </div>
           <button
             type="button"
             onClick={onClose}
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-colors"
-            aria-label="Close screenshot preview"
+            aria-label="Close preview"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
         <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-          <img
-            src={src}
-            alt="Screenshot preview"
-            className="max-w-full max-h-[75vh] object-contain rounded-lg"
-          />
+          {isVideo ? (
+            <video
+              src={src}
+              controls
+              className="max-w-full max-h-[75vh] rounded-lg"
+            />
+          ) : (
+            <img
+              src={src}
+              alt="Screenshot preview"
+              className="max-w-full max-h-[75vh] object-contain rounded-lg"
+            />
+          )}
         </div>
       </div>
     </div>

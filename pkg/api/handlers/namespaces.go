@@ -41,7 +41,7 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")
@@ -66,7 +66,7 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 // enumerating namespace access and binding subjects (#5466).
 func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(userID)
+	currentUser, err := h.store.GetUser(c.UserContext(), userID)
 	if err != nil || currentUser == nil {
 		return fiber.NewError(fiber.StatusUnauthorized, "Unauthorized")
 	}
@@ -79,7 +79,7 @@ func (h *NamespaceHandler) GetNamespaceAccess(c *fiber.Ctx) error {
 	}
 
 	if h.k8sClient == nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, "Kubernetes client not available")
+		return errNoClusterAccess(c)
 	}
 
 	cluster := c.Query("cluster")

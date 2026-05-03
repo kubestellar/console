@@ -17,6 +17,9 @@ const TETRIS_HIGHSCORE_KEY = 'highscore-containerTetris'
 const ROWS = 20
 const COLS = 10
 
+// Game timing (milliseconds)
+const TETRIS_NEXT_TICK_MS = 10
+
 // Tetromino shapes (I, O, T, S, Z, J, L)
 const TETROMINOES = {
   I: {
@@ -253,7 +256,7 @@ function ContainerTetrisInternal(_props: CardComponentProps) {
     }
     setPiece(newPiece)
     // Force immediate landing on next tick
-    setTimeout(moveDown, 10)
+    setTimeout(moveDown, TETRIS_NEXT_TICK_MS)
   }
 
   // Keyboard controls — scoped to visible game container (KeepAlive-safe)

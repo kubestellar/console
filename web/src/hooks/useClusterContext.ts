@@ -35,7 +35,7 @@ export function useClusterContext(): {
   const isLoading = clustersLoading || operatorsLoading || helmLoading || podLoading || securityLoading
 
   const clusterContext = useMemo(() => {
-    const healthyClusters = deduplicatedClusters.filter(c => c.healthy)
+    const healthyClusters = (deduplicatedClusters || []).filter(c => c.healthy)
     if (healthyClusters.length === 0) return null
 
     // Pick primary cluster (current context or first healthy)
@@ -104,7 +104,7 @@ export function useClusterContext(): {
 }
 
 /** Derive cloud provider from distribution string or cluster name */
-function deriveProvider(distribution?: string, name?: string): string | undefined {
+export function deriveProvider(distribution?: string, name?: string): string | undefined {
   const d = (distribution ?? '').toLowerCase()
   const n = (name ?? '').toLowerCase()
   if (d.includes('eks') || n.includes('eks')) return 'eks'

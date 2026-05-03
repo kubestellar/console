@@ -3,9 +3,9 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import type { TreeNodeProps } from './types'
 
 /** Pixels of horizontal indent per tree nesting level */
-const INDENT_PER_LEVEL_PX = 16
+export const INDENT_PER_LEVEL_PX = 16
 /** Base left padding for tree nodes */
-const BASE_PADDING_LEFT_PX = 8
+export const BASE_PADDING_LEFT_PX = 8
 
 interface TreeNodeInternalProps extends TreeNodeProps {
   expandedNodes: Set<string>
@@ -46,7 +46,7 @@ export function TreeNode({
               toggleNode(id)
               onToggle?.(willExpand)
             }}
-            className="flex items-center gap-1 p-1 -m-0.5 rounded hover:bg-secondary flex-shrink-0"
+            className="flex items-center gap-1 p-1 -m-0.5 rounded hover:bg-secondary shrink-0"
           >
             {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
             <Icon className={`w-3.5 h-3.5 ${iconColor}`} />

@@ -207,7 +207,9 @@ export function ClusterStatusBadge({
 
   // Build tooltip
   const tooltipParts: string[] = [config.label]
-  if (state === 'degraded' && nodeCount !== undefined && readyNodes !== undefined) {
+  if (state === 'degraded' && 
+      typeof nodeCount === 'number' && nodeCount >= 0 && 
+      typeof readyNodes === 'number' && readyNodes >= 0) {
     tooltipParts.push(`${readyNodes}/${nodeCount} nodes ready`)
   }
   if (config.suggestion) {
@@ -218,9 +220,11 @@ export function ClusterStatusBadge({
   }
   const tooltip = tooltipParts.join('\n')
 
-  // Dynamic label for degraded state
+  // Dynamic label for degraded state with proper validation
   let displayLabel = config.label
-  if (state === 'degraded' && nodeCount !== undefined && readyNodes !== undefined) {
+  if (state === 'degraded' && 
+      typeof nodeCount === 'number' && nodeCount >= 0 && 
+      typeof readyNodes === 'number' && readyNodes >= 0) {
     displayLabel = `${readyNodes}/${nodeCount} ready`
   }
 

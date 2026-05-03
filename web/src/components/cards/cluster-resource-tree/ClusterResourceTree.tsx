@@ -8,7 +8,7 @@ import { useCardLoadingState } from '../CardDataContext'
 import { CardControls, SortDirection } from '../../ui/CardControls'
 import { CardClusterFilter, CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useChartFilters } from '../../../lib/cards/cardHooks'
-import { TreeNode } from './TreeRenderer'
+import { TreeNode, INDENT_PER_LEVEL_PX, BASE_PADDING_LEFT_PX } from './TreeRenderer'
 import { ResourceIcon, SORT_OPTIONS } from './types'
 import { buildNamespaceResources, getVisibleNamespaces, getIssueCounts, getPodsForDeployment } from './TreeBuilder'
 import type { ClusterResourceTreeProps, TreeLens, SortByOption, NamespaceResources, ClusterDataCache } from './types'
@@ -24,7 +24,7 @@ function TruncatedIndicator({ total, shown, indent }: { total: number; shown: nu
   return (
     <div
       className="text-xs text-muted-foreground py-1 px-2"
-      style={{ paddingLeft: `${indent * 16 + 8}px` }}
+      style={{ paddingLeft: `${indent * INDENT_PER_LEVEL_PX + BASE_PADDING_LEFT_PX}px` }}
     >
       +{total - shown} more
     </div>
@@ -327,7 +327,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
   return (
     <div className="h-full flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-3 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {t('resourceTree.clustersCount', { count: filteredClusters.length })}
@@ -364,7 +364,7 @@ export function ClusterResourceTree({ config: _config }: ClusterResourceTreeProp
       </div>
 
       {/* Search and Lens Filters */}
-      <div className="flex flex-col gap-2 mb-3 flex-shrink-0">
+      <div className="flex flex-col gap-2 mb-3 shrink-0">
         <CardSearchInput
           value={searchFilter}
           onChange={setSearchFilter}

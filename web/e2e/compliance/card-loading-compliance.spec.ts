@@ -806,6 +806,7 @@ async function runColdBatch(page: Page, batch: number): Promise<BatchResult | nu
     // Ensure live mode
     localStorage.setItem('kc-demo-mode', 'false')
     localStorage.setItem('token', 'test-token')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
 
   mockControl.sseRequestLog.length = 0
@@ -1056,23 +1057,40 @@ test.describe('card loading compliance (per-batch split — Issue 9088)', () => 
     }
 
     // ── Assertions ──────────────────────────────────────────────────────────
+    // --- Release gate thresholds (strict) ---
     // CI runners have slower CPUs — the 50ms polling monitor can miss fast state
     // transitions, causing a few cards to fail criteria that pass locally.
     // Use relaxed thresholds in CI to account for timing jitter.
-    const CRITERION_A_THRESHOLD = IS_CI ? 0.97 : 1.0
-    const CRITICAL_CRITERION_THRESHOLD = IS_CI ? 0.90 : 0.95
-    const MAX_NON_CRITERION_I_FAILS = IS_CI ? 5 : 2
-    // Criterion i (no initial demo flash) — ~42 of 178 cards use demo data as initialData by design.
+    const CRITERION_A_THRESHOLD = IS_CI ? 0.99 : 1.0         // No demo badge during loading — max 1-2 cards
+    const CRITICAL_CRITERION_THRESHOLD = IS_CI ? 0.97 : 1.0  // Skeleton→content, persistent cache — max ~5 cards
+    const MAX_NON_CRITERION_I_FAILS = IS_CI ? 3 : 1          // Tighter non-I failure budget
+    // Criterion i (no initial demo flash) — some cards use demo data as initialData by design.
     // These cards show a demo badge immediately on cold start because initialData is pre-set.
-    // This is a card design choice, not a bug. The exact count fluctuates as cards are added/removed,
-    // so use a generous threshold. Observed range: 69-76%.
-    const CRITERION_I_THRESHOLD = 0.65
+    // This is a card design choice, not a bug. The exact count fluctuates as cards are added/removed.
+    const CRITERION_I_THRESHOLD = IS_CI ? 0.80 : 0.90        // No initial demo flash — max ~36 cards (was 62)
+
+    /** Cards with documented exceptions to specific criteria (must link to issue) */
+    const KNOWN_EXCEPTIONS: Record<string, string[]> = {
+      // Example: 'some-card': ['i'],  // Uses demo initialData by design — #NNNN
+    }
 
     // Criterion a (no demo badge during loading) — must be 100% locally, >= 97% in CI
     expect(criterionPassRates['a'], `Criterion a pass rate ${Math.round(criterionPassRates['a'] * 100)}% should be >= ${Math.round(CRITERION_A_THRESHOLD * 100)}%`).toBeGreaterThanOrEqual(CRITERION_A_THRESHOLD)
     expect(criterionPassRates['i'], `Criterion i pass rate ${Math.round(criterionPassRates['i'] * 100)}% should be >= ${Math.round(CRITERION_I_THRESHOLD * 100)}%`).toBeGreaterThanOrEqual(CRITERION_I_THRESHOLD)
     // Critical criteria (c: SSE streaming, d: skeleton→content transition, f: persistent cache)
-    for (const criterion of ['c', 'd', 'f'] as const) {
+    // Criterion c (SSE streaming) requires a live backend — when the backend is
+    // down or tests ran with resource exhaustion (503s), cards fall back to demo
+    // data which never triggers SSE, so pass-rate drops to 0%.
+    // If not enough cards attempted SSE, warn but still check the ones that did.
+    const cResults = allCards.map((c) => c.criteria['c']).filter(Boolean)
+    const cTestable = cResults.filter((r) => r.status !== 'skip')
+    const cRelevant = cTestable.length > allCards.length * 0.5
+    if (!cRelevant) {
+      console.warn(`[Compliance] Only ${cTestable.length}/${allCards.length} cards attempted SSE — criterion C evaluated on available subset only`)
+    }
+    // Always include C in critical criteria if ANY cards are testable
+    const criticalCriteria = cTestable.length > 0 ? ['c', 'd', 'f'] as const : ['d', 'f'] as const
+    for (const criterion of criticalCriteria) {
       const rate = criterionPassRates[criterion]
       expect(rate, `Criterion ${criterion} pass rate ${Math.round(rate * 100)}% should be >= ${Math.round(CRITICAL_CRITERION_THRESHOLD * 100)}%`).toBeGreaterThanOrEqual(CRITICAL_CRITERION_THRESHOLD)
     }

@@ -77,7 +77,7 @@ export function TemplateGallerySection({ onReplaceWithTemplate, onAddTemplate, d
             value={searchText}
             onChange={(e) => { setSearchText(e.target.value); if (!e.target.value) setSelectedCategory('all') }}
             placeholder="Search collections..."
-            className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
           />
         </div>
         {/* Category quick-filter pills */}

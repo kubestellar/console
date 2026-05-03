@@ -1,4 +1,5 @@
 import { Shield, AlertTriangle, User, Network, Server, ChevronRight } from 'lucide-react'
+import { VULN_SEVERITY_ORDER } from '../../types/alerts'
 import type { SecurityIssue } from '../../hooks/useMCP'
 import { useCachedSecurityIssues } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -13,6 +14,8 @@ import { CardClusterFilter, CardSearchInput, CardAIActions } from '../../lib/car
 import { SEVERITY_COLORS, SeverityLevel } from '../../lib/accessibility'
 import { useCardLoadingState, useCardDemoState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+/** Loose translation function type for helper functions that use dynamic keys */
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string
 
 // Demo security issues data for demo mode
 function getDemoSecurityIssues(): SecurityIssue[] {
@@ -74,7 +77,7 @@ interface SecurityIssuesProps {
   config?: Record<string, unknown>
 }
 
-const getIssueIcon = (issue: string | undefined, t: (key: string) => string): { icon: typeof Shield; tooltip: string } => {
+const getIssueIcon = (issue: string | undefined, t: TranslateFn): { icon: typeof Shield; tooltip: string } => {
   const s = issue || ''
   if (s.includes('Privileged')) return { icon: Shield, tooltip: t('securityIssues.privilegedContainer') }
   if (s.includes('root')) return { icon: User, tooltip: t('securityIssues.runningAsRoot') }
@@ -120,7 +123,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
     consecutiveFailures,
     lastRefresh: isDemoMode ? null : lastRefresh })
 
-  const severityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, info: 4 }
+  const severityOrder = VULN_SEVERITY_ORDER
 
   // Use shared card data hook for filtering, sorting, and pagination
   const {
@@ -299,7 +302,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
           card within standard card height when rendered at lg grid size. */}
       <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
         {issues.map((issue: SecurityIssue, idx: number) => {
-          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.issue, t as unknown as (key: string) => string)
+          const { icon: Icon, tooltip: iconTooltip } = getIssueIcon(issue.issue, t as unknown as TranslateFn)
           const colors = getSeverityColor(issue.severity)
 
           return (
@@ -310,7 +313,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
               title={t('securityIssues.clickViewPod', { name: issue.name, issue: issue.issue })}
             >
               <div className="flex items-start gap-2 group">
-                <div className={`p-1.5 rounded-lg ${colors.badge} flex-shrink-0`} title={iconTooltip}>
+                <div className={`p-1.5 rounded-lg ${colors.badge} shrink-0`} title={iconTooltip}>
                   <Icon className={`w-4 h-4 ${colors.text}`} />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -344,7 +347,7 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
                   issues={[{ name: issue.issue, message: issue.details || issue.issue }]}
                   additionalContext={{ severity: issue.severity, securityIssue: issue.issue }}
                 />
-                <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" /></span>
+                <span title="Click to view details"><ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-1" /></span>
               </div>
             </div>
           )

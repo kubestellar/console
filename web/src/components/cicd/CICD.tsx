@@ -29,7 +29,7 @@ function CICDDashboard() {
     <DashboardPage
       title="CI/CD"
       subtitle="Monitor continuous integration and deployment pipelines"
-      icon="GitPullRequest"
+      icon="GitMerge"
       rightExtra={<RotatingTip page="ci-cd" />}
       headerExtra={<PipelineFilterBar />}
       storageKey={CICD_CARDS_KEY}

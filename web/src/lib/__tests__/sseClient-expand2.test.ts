@@ -64,6 +64,13 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
+vi.mock('../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 describe('fetchSSE — expanded edge cases', () => {
   // 1. Non-ok response with no accumulated data retries
   it('retries on non-ok response status', async () => {
@@ -340,12 +347,15 @@ describe('fetchSSE — expanded edge cases', () => {
       itemsKey: 'pods',
     })
 
+    // Attach catch handler BEFORE advancing timers to prevent unhandled rejection
+    const assertion = expect(promise).rejects.toThrow('SSE stream error')
+
     // Advance past all retries (5 attempts with exponential backoff)
     for (let i = 0; i < 6; i++) {
       await vi.advanceTimersByTimeAsync(35_000)
     }
 
-    await expect(promise).rejects.toThrow('SSE stream error')
+    await assertion
   })
 
   // 14. Stream ending without done event resolves with accumulated data

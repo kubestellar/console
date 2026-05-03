@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { MS_PER_HOUR } from '../lib/constants/time'
 
 const STORAGE_KEY = 'kc_dnd'
 
@@ -139,8 +140,7 @@ export function useDoNotDisturb() {
 
   const setTimedDND = useCallback((duration: TimedDuration) => {
     const now = Date.now()
-    /** Milliseconds per hour */
-    const MS_PER_HOUR = 60 * 60 * 1000
+    /** Milliseconds per hour — imported from lib/constants/time */
     let until: number
     switch (duration) {
       case '1h': until = now + MS_PER_HOUR; break

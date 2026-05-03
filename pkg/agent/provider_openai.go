@@ -82,7 +82,7 @@ func (o *OpenAIProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatRespo
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, readErr := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseBytes))
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
@@ -147,7 +147,7 @@ func (o *OpenAIProvider) StreamChat(ctx context.Context, req *ChatRequest, onChu
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, readErr := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseBytes))
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}

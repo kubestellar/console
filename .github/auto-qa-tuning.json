@@ -64,43 +64,23 @@
     "best_pr_size": "S",
     "size_acceptance": {},
     "type_acceptance": {},
-    "common_rejection_reasons": [
-      "- PR #6849: Superseded by PR #6971 (merged) which fixes all 32 nilaway findings. This PR also has DCO and do-not-merge/work-in-progress issues."
-    ],
+    "common_rejection_reasons": [],
     "best_change_type": "bug_fix",
-    "last_report_date": "2026-04-19"
+    "last_report_date": "2026-05-03"
   },
   "cncf_insights": {
-    "last_scan_date": "2026-04-15",
+    "last_scan_date": "2026-04-29",
     "suggested_checks": [
       {
-        "pattern": "accessibility",
-        "count": 6,
-        "added": "2026-04-15",
-        "priority": "medium"
-      },
-      {
         "pattern": "navigation_ux",
-        "count": 6,
-        "added": "2026-04-15",
-        "priority": "medium"
-      },
-      {
-        "pattern": "data_viz",
-        "count": 6,
-        "added": "2026-04-15",
+        "count": 5,
+        "added": "2026-04-29",
         "priority": "medium"
       },
       {
         "pattern": "form_ux",
-        "count": 17,
-        "added": "2026-04-15",
-        "priority": "medium"
-      },
-      {
-        "pattern": "realtime_ux",
-        "count": 12,
-        "added": "2026-04-15",
+        "count": 5,
+        "added": "2026-04-29",
         "priority": "medium"
       }
     ]

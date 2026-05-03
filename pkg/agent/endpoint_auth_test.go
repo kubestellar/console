@@ -236,6 +236,7 @@ func newAuthTestServerWithToken() *Server {
 		kubectl:        &KubectlProxy{config: config},
 		allowedOrigins: []string{testAllowedOrigin},
 		agentToken:     testTokenValue,
+		tokenExplicit:  true, // treat test token as explicitly set so origin bypass doesn't fire
 		registry:       &Registry{providers: make(map[string]AIProvider)},
 	}
 }
@@ -462,6 +463,11 @@ func TestEndpointAuth_HealthDoesNotLeakSecrets(t *testing.T) {
 	allowedFields := map[string]bool{
 		"status":             true,
 		"version":            true,
+		"commitSHA":          true,
+		"buildTime":          true,
+		"goVersion":          true,
+		"os":                 true,
+		"arch":               true,
 		"clusters":           true,
 		"hasClaude":          true,
 		"claude":             true,

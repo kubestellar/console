@@ -1,5 +1,22 @@
 import { cn } from '../../lib/cn'
 
+const DEFAULT_PROGRESS_COLOR = '#9333ea'
+const THRESHOLD_CRITICAL_COLOR = '#ef4444'
+const THRESHOLD_WARNING_COLOR = '#eab308'
+const THRESHOLD_OK_COLOR = '#22c55e'
+
+function resolveThresholdColor(
+  percentage: number,
+  color: string | undefined,
+  thresholds: { warning: number; critical: number } | undefined,
+): string {
+  if (color) return color
+  if (!thresholds) return DEFAULT_PROGRESS_COLOR
+  if (percentage >= thresholds.critical) return THRESHOLD_CRITICAL_COLOR
+  if (percentage >= thresholds.warning) return THRESHOLD_WARNING_COLOR
+  return THRESHOLD_OK_COLOR
+}
+
 interface ProgressBarProps {
   value: number
   max?: number
@@ -25,16 +42,7 @@ export function ProgressBar({
   thresholds,
 }: ProgressBarProps) {
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
-
-  const getColor = () => {
-    if (color) return color
-    if (!thresholds) return '#9333ea'
-    if (percentage >= thresholds.critical) return '#ef4444'
-    if (percentage >= thresholds.warning) return '#eab308'
-    return '#22c55e'
-  }
-
-  const currentColor = getColor()
+  const currentColor = resolveThresholdColor(percentage, color, thresholds)
 
   const sizeClasses = {
     sm: 'h-1.5',
@@ -156,6 +164,7 @@ interface CircularProgressProps {
   color?: string
   showValue?: boolean
   label?: string
+  formatValue?: (percentage: number) => string
   thresholds?: {
     warning: number
     critical: number
@@ -170,22 +179,14 @@ export function CircularProgress({
   color,
   showValue = true,
   label,
+  formatValue,
   thresholds,
 }: CircularProgressProps) {
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
   const radius = (size - strokeWidth) / 2
   const circumference = radius * 2 * Math.PI
   const offset = circumference - (percentage / 100) * circumference
-
-  const getColor = () => {
-    if (color) return color
-    if (!thresholds) return '#9333ea'
-    if (percentage >= thresholds.critical) return '#ef4444'
-    if (percentage >= thresholds.warning) return '#eab308'
-    return '#22c55e'
-  }
-
-  const currentColor = getColor()
+  const currentColor = resolveThresholdColor(percentage, color, thresholds)
 
   return (
     <div className="flex flex-col items-center">
@@ -221,7 +222,7 @@ export function CircularProgress({
         {showValue && (
           <div className="absolute inset-0 flex items-center justify-center">
             <span className="text-lg font-bold text-foreground">
-              {Math.round(percentage)}%
+              {formatValue ? formatValue(percentage) : `${Math.round(percentage)}%`}
             </span>
           </div>
         )}

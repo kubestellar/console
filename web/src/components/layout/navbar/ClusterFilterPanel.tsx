@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff } from 'lucide-react'
+import { Search, Server, Activity, Filter, Check, AlertTriangle, Save, X, Trash2, WifiOff, Globe } from 'lucide-react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STATUS_CONFIG } from '../../../hooks/useGlobalFilters'
 import { useModalState } from '../../../lib/modals'
@@ -79,7 +79,12 @@ function FilterSection<T extends string>({
   )
 }
 
-export function ClusterFilterPanel() {
+interface ClusterFilterPanelProps {
+  /** Force label text to be visible (used in overflow menu) */
+  showLabel?: boolean
+}
+
+export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProps) {
   const { t } = useTranslation()
   const {
     selectedClusters,
@@ -105,6 +110,12 @@ export function ClusterFilterPanel() {
     hasCustomFilter,
     isFiltered,
     clearAllFilters,
+    selectedDistributions,
+    toggleDistribution,
+    selectAllDistributions,
+    deselectAllDistributions,
+    isAllDistributionsSelected,
+    availableDistributions,
     savedFilterSets,
     saveCurrentFilters,
     applySavedFilterSet,
@@ -170,14 +181,18 @@ export function ClusterFilterPanel() {
           <button
             onClick={() => toggleDropdown()}
             className={cn(
-              'relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors',
+              'relative flex items-center rounded-lg transition-colors',
+              showLabel ? 'gap-2 px-3 py-1.5 h-9' : 'justify-center w-9 h-9',
               isFiltered
                 ? 'bg-purple-500/20 text-purple-400 shadow-[0_0_6px_rgba(139,92,246,0.2)]'
                 : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
             )}
             aria-label={isFiltered ? t('layout.navbar.filtersActive') : t('layout.navbar.noFilters')}
           >
-            <Filter className="w-4 h-4" />
+            <Filter className="w-4 h-4 shrink-0" />
+            {showLabel && (
+              <span className="text-sm font-medium">{t('navbar.clusterFilter')}</span>
+            )}
             {/* Color dot from active filter set, or generic purple dot */}
             {isFiltered && (
               <span
@@ -190,7 +205,7 @@ export function ClusterFilterPanel() {
 
         {/* Filter dropdown */}
         {showDropdown && (
-          <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+          <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-dropdown max-h-[80vh] overflow-y-auto">
 
             {/* Clear All — shown at top when filters are active */}
             {isFiltered && (
@@ -231,7 +246,7 @@ export function ClusterFilterPanel() {
                           )}
                         >
                           <span
-                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            className="w-2 h-2 rounded-full shrink-0"
                             style={{ backgroundColor: fs.color }}
                           />
                           <span className="max-w-[100px] truncate">{fs.name}</span>
@@ -268,7 +283,7 @@ export function ClusterFilterPanel() {
                   value={customFilter}
                   onChange={(e) => setCustomFilter(e.target.value)}
                   placeholder={t('common:filters.customFilterPlaceholder', 'Filter by name, namespace...')}
-                  className="flex-1 px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="flex-1 px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                 />
                 {hasCustomFilter && (
                   <button
@@ -306,6 +321,46 @@ export function ClusterFilterPanel() {
               onSelectAll={selectAllStatuses}
               onDeselectAll={deselectAllStatuses}
             />
+
+            {/* Distribution Filter Section */}
+            {availableDistributions.length > 0 && (
+              <div className="p-3 border-b border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm font-medium text-foreground">{t('common:filters.distribution', 'Distribution')}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={selectAllDistributions} className="text-xs text-purple-400 hover:text-purple-300">
+                      {t('common.all')}
+                    </button>
+                    <button onClick={deselectAllDistributions} className="text-xs text-muted-foreground hover:text-foreground">
+                      {t('common.none')}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableDistributions.map((dist) => {
+                    const isSelected = isAllDistributionsSelected || selectedDistributions.includes(dist)
+                    return (
+                      <button
+                        key={dist}
+                        onClick={() => toggleDistribution(dist)}
+                        className={cn(
+                          'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors capitalize',
+                          isSelected
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {isSelected && <Check className="w-3 h-3" />}
+                        {dist}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Cluster Filter Section */}
             <div className="p-3 border-b border-border">
@@ -359,7 +414,7 @@ export function ClusterFilterPanel() {
                         title={statusTooltip}
                       >
                         <div className={cn(
-                          'w-4 h-4 rounded border flex items-center justify-center flex-shrink-0',
+                          'w-4 h-4 rounded border flex items-center justify-center shrink-0',
                           isSelected
                             ? 'bg-purple-500 border-purple-500'
                             : 'border-muted-foreground'
@@ -367,13 +422,13 @@ export function ClusterFilterPanel() {
                           {isSelected && <Check className="w-3 h-3 text-white" />}
                         </div>
                         {isLoading ? (
-                          <div className="w-3 h-3 border border-muted-foreground/50 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                          <div className="w-3 h-3 border border-muted-foreground/50 border-t-transparent rounded-full animate-spin shrink-0" />
                         ) : isUnreachable ? (
-                          <WifiOff className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+                          <WifiOff className="w-3 h-3 text-yellow-400 shrink-0" />
                         ) : isHealthy ? (
-                          <CheckCircle2 className="w-3 h-3 text-green-400 flex-shrink-0" />
+                          <CheckCircle2 className="w-3 h-3 text-green-400 shrink-0" />
                         ) : (
-                          <AlertCircle className="w-3 h-3 text-orange-400 flex-shrink-0" />
+                          <AlertCircle className="w-3 h-3 text-orange-400 shrink-0" />
                         )}
                         <span className={cn('text-sm truncate', isUnreachable ? 'text-yellow-400' : !isHealthy && !isLoading && 'text-orange-400')}>{cluster}</span>
                       </button>
@@ -392,7 +447,7 @@ export function ClusterFilterPanel() {
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder={t('common:filters.filterSetName', 'Filter set name...')}
-                    className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                     autoFocus
                     onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
                   />

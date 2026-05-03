@@ -12,6 +12,7 @@
  */
 import { useState, useRef, useEffect, useMemo, memo, useCallback } from 'react'
 import { ChevronDown, ChevronUp, Server, Layers, RefreshCw, Cpu, Search, X } from 'lucide-react'
+import { useDropdownKeyNav } from '../../../hooks/useDropdownKeyNav'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import type { LLMdStack } from '../../../hooks/useStackDiscovery'
 import { useTranslation } from 'react-i18next'
@@ -209,6 +210,7 @@ export function StackSelector() {
   const { t } = useTranslation()
   const stackContext = useOptionalStack()
   const { isOpen, close: closeDropdown, toggle } = useModalState()
+  const stackListKeyNav = useDropdownKeyNav(closeDropdown)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('status')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
@@ -309,7 +311,7 @@ export function StackSelector() {
     setFetchError(null)
     try {
       await refetch?.()
-    } catch (err) {
+    } catch (err: unknown) {
       setFetchError(err instanceof Error ? err.message : 'Failed to refresh stacks')
     }
   }
@@ -413,7 +415,7 @@ export function StackSelector() {
       {/* Dropdown menu - use CSS transitions instead of framer-motion for better scroll performance */}
       {isOpen && (
         <div
-          className="absolute top-full left-0 mt-1 w-[36rem] bg-secondary border border-border rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+          className="absolute top-full left-0 mt-1 w-144 bg-secondary border border-border rounded-lg shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
         >
             {/* Header with search */}
             <div className="border-b border-border">
@@ -468,7 +470,7 @@ export function StackSelector() {
                     placeholder={t('common.searchStacks')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-8 pr-8 py-1.5 text-sm bg-background/50 border border-border rounded focus:outline-none focus:border-border text-white placeholder-muted-foreground"
+                    className="w-full pl-8 pr-8 py-1.5 text-sm bg-background/50 border border-border rounded focus:outline-hidden focus:border-border text-white placeholder-muted-foreground"
                   />
                   {searchQuery && (
                     <button
@@ -504,7 +506,7 @@ export function StackSelector() {
             </div>
 
             {/* Stack list */}
-            <div className="max-h-[28rem] min-h-[100px] overflow-y-auto overscroll-contain scroll-enhanced">
+            <div role="listbox" onKeyDown={stackListKeyNav} className="max-h-112 min-h-[100px] overflow-y-auto overscroll-contain scroll-enhanced">
               {filteredAndSortedStacks.length > 0 ? (
                 Object.entries(stacksByCluster).sort(([a], [b]) => a.localeCompare(b)).map(([cluster, clusterStacks]) => (
                   <div key={cluster}>

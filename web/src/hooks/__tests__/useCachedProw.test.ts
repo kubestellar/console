@@ -8,11 +8,13 @@ import { renderHook } from '@testing-library/react'
 const mockUseCache = vi.fn()
 
 vi.mock('../../lib/cache', () => ({
+    createCachedHook: vi.fn(),
   useCache: (...args: unknown[]) => mockUseCache(...args),
 }))
 
 const mockExec = vi.fn()
 vi.mock('../../lib/kubectlProxy', () => ({
+    createCachedHook: vi.fn(),
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
 }))
 
@@ -322,9 +324,9 @@ describe('fetchProwJobs', () => {
 // ============================================================================
 
 describe('formatTimeAgo', () => {
-  it('returns seconds ago for recent timestamps', () => {
+  it('returns just now for recent timestamps', () => {
     const tenSecsAgo = new Date(Date.now() - 10_000).toISOString()
-    expect(formatTimeAgo(tenSecsAgo)).toBe('10s ago')
+    expect(formatTimeAgo(tenSecsAgo)).toBe('just now')
   })
 
   it('returns minutes ago for timestamps within the hour', () => {

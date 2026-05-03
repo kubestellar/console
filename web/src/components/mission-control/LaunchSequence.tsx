@@ -248,7 +248,7 @@ export function LaunchSequence({
               : p
           )
         )
-      } catch (err) {
+      } catch (err: unknown) {
         // #7143 — Capture the full error message. When `err` is an array
         // (e.g. from Promise.all rejections or grouped validation errors),
         // stringify each element individually to avoid losing detail.
@@ -471,7 +471,7 @@ export function LaunchSequence({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          className="inline-flex p-3 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/20 mb-3"
+          className="inline-flex p-3 rounded-2xl bg-linear-to-br from-purple-500/20 to-indigo-500/20 mb-3"
         >
           {allComplete ? (
             allSuccess ? (
@@ -480,7 +480,7 @@ export function LaunchSequence({
               <AlertTriangle className="w-8 h-8 text-amber-400" />
             )
           ) : (
-            <Rocket className="w-8 h-8 text-violet-400" />
+            <Rocket className="w-8 h-8 text-purple-400" />
           )}
         </motion.div>
         <h2 className="text-2xl font-bold">
@@ -592,7 +592,7 @@ export function LaunchSequence({
                       animate={{ opacity: 1, x: 0 }}
                       className="flex items-center gap-2 text-xs"
                     >
-                      <span className="flex-shrink-0">{STATUS_ICONS[proj.status]}</span>
+                      <span className="shrink-0">{STATUS_ICONS[proj.status]}</span>
                       <span
                         className={cn(
                           'flex-1',

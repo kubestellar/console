@@ -120,15 +120,17 @@ export function PipelineFilterBar() {
               >
                 {short}
               </button>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); isDemo ? showInstallGate() : removeRepo(repo) }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
-                title={LABEL_REMOVE_REPO}
-                aria-label={`${LABEL_REMOVE_REPO}: ${repo}`}
-              >
-                <X className="w-2.5 h-2.5" />
-              </button>
+              {!isDemo && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); removeRepo(repo) }}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-full hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
+                  title={LABEL_REMOVE_REPO}
+                  aria-label={`${LABEL_REMOVE_REPO}: ${repo}`}
+                >
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              )}
             </span>
           )
         })}
@@ -144,7 +146,7 @@ export function PipelineFilterBar() {
               onKeyDown={handleKeyDown}
               placeholder={PLACEHOLDER_REPO}
               className={cn(
-                'w-40 px-2 py-1 text-xs rounded-full border bg-secondary/30 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50',
+                'w-40 px-2 py-1 text-xs rounded-full border bg-secondary/30 text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/50',
                 addError ? 'border-red-500/50' : 'border-border',
               )}
               aria-label={LABEL_ADD_REPO}

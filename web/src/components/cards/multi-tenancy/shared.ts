@@ -22,6 +22,16 @@ export interface IsolationLevel {
   provider: string
 }
 
+/** Isolation readiness state (alias for IsolationLevel['status']) */
+export type IsolationStatus = 'ready' | 'missing' | 'degraded'
+
+/** Text-color classes for isolation status badges */
+export const ISOLATION_STATUS_COLORS: Record<IsolationStatus, string> = {
+  ready: 'text-green-400',
+  degraded: 'text-orange-400',
+  missing: 'text-zinc-500',
+}
+
 // ============================================================================
 // Cache Keys
 // ============================================================================

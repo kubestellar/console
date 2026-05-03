@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	developerCheckInterval = 5 * time.Minute
+	developerCheckInterval = 15 * time.Minute
 	releaseCheckInterval   = 60 * time.Minute
 	healthCheckRetries     = 15
 	healthCheckDelay       = 2 * time.Second
@@ -581,9 +581,13 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	})
 
 	stepStart = time.Now()
+	// Ensure bin/ directory exists (matches Makefile mkdir -p bin)
+	if err := os.MkdirAll(filepath.Join(repoPath, "bin"), 0o755); err != nil {
+		slog.Error("[AutoUpdate] failed to create bin directory", "error", err)
+	}
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
-		consolePath = filepath.Join(repoPath, "console")
+		consolePath = filepath.Join(repoPath, "bin", "console")
 	}
 	// Build to a temp file first, then atomically rename to the final path.
 	// This prevents a half-written binary if the build is killed or times out.
@@ -638,7 +642,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 	stepStart = time.Now()
 	agentPath, err := exec.LookPath("kc-agent")
 	if err != nil {
-		agentPath = filepath.Join(repoPath, "kc-agent")
+		agentPath = filepath.Join(repoPath, "bin", "kc-agent")
 	}
 	// Build to a temp file first, then atomically rename.
 	agentTmp := agentPath + ".update-tmp"
@@ -737,7 +741,7 @@ func (uc *UpdateChecker) restartViaStartupScript(repoPath string) {
 	}
 
 	// Spawn the script in a new process group so it survives our exit
-	cmd := exec.Command("bash", scriptPath)
+	cmd := exec.Command("bash", scriptPath) // #nosec G204 -- scriptPath is repoPath+"/startup-oauth.sh", not user input
 	cmd.Dir = repoPath
 	if logFile != nil {
 		cmd.Stdout = logFile
@@ -959,8 +963,8 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	// Find current binary location
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
-		// Try relative path
-		consolePath = "./console"
+		// Try relative path under bin/
+		consolePath = "./bin/console"
 	}
 
 	// Backup current binary. On Windows, os.Rename on a running executable
@@ -980,10 +984,12 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 	// Set permissions on the staged binary *before* moving it to the final
 	// location. This prevents a window where power loss leaves a non-executable
 	// binary at consolePath (#7445).
+	// On Windows, chmod is a no-op — Windows does not use POSIX permission
+	// bits and attempting to set them can return "Permission denied" (#11075).
 	stagedBinary := filepath.Join(stagingDir, "console")
 	// fileModeBinary is the permission bits for the installed console binary.
 	const fileModeBinary = 0755
-	if err := os.Chmod(stagedBinary, fileModeBinary); err != nil {
+	if err := chmodIfSupported(stagedBinary, fileModeBinary); err != nil {
 		if rbErr := renameOrCopy(backupPath, consolePath); rbErr != nil {
 			slog.Error("[AutoUpdate] backup restore failed after chmod error", "error", rbErr)
 		}
@@ -1536,10 +1542,15 @@ func rebuildGoBinaries(repoPath string) error {
 
 // rebuildGoBinariesCtx rebuilds Go binaries with context support for cancellation (#7442).
 func rebuildGoBinariesCtx(ctx context.Context, repoPath string) error {
+	// Ensure bin/ directory exists (matches Makefile mkdir -p bin)
+	if err := os.MkdirAll(filepath.Join(repoPath, "bin"), 0o755); err != nil {
+		return fmt.Errorf("mkdir bin: %w", err)
+	}
+
 	// Build console binary
 	consolePath, err := exec.LookPath("console")
 	if err != nil {
-		consolePath = filepath.Join(repoPath, "console")
+		consolePath = filepath.Join(repoPath, "bin", "console")
 	}
 	consoleBuild := exec.CommandContext(ctx, "go", "build", "-o", consolePath, "./cmd/console")
 	consoleBuild.Dir = repoPath
@@ -1553,7 +1564,7 @@ func rebuildGoBinariesCtx(ctx context.Context, repoPath string) error {
 	// Build kc-agent binary
 	agentPath, err := exec.LookPath("kc-agent")
 	if err != nil {
-		agentPath = filepath.Join(repoPath, "kc-agent")
+		agentPath = filepath.Join(repoPath, "bin", "kc-agent")
 	}
 	agentBuild := exec.CommandContext(ctx, "go", "build", "-o", agentPath, "./cmd/kc-agent")
 	agentBuild.Dir = repoPath

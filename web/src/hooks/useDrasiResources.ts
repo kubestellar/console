@@ -375,7 +375,7 @@ export function useDrasiResources(): UseDrasiResourcesResult {
       }
       setData(next)
       setError(null)
-    } catch (e) {
+    } catch (e: unknown) {
       if ((e as Error).name !== 'AbortError') {
         setError((e as Error).message || 'Failed to fetch Drasi resources')
         setData(null)

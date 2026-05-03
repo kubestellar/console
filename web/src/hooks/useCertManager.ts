@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { useDemoMode } from './useDemoMode'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { KUBECTL_DEFAULT_TIMEOUT_MS, KUBECTL_MEDIUM_TIMEOUT_MS, METRICS_SERVER_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_DAY } from '../lib/constants/time'
 
-// Refresh interval for automatic polling (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
 
 // Days before expiration to consider "expiring soon"
 const EXPIRING_SOON_DAYS = 30
@@ -207,7 +208,7 @@ function getDemoIssuers(): Issuer[] {
 
 export function useCertManager() {
   const { isDemoMode: demoMode } = useDemoMode()
-  const { clusters: allClusters } = useClusters()
+  const { deduplicatedClusters: allClusters } = useClusters()
 
   // Initialize state from cache — snapshot ref value to avoid reading ref during render
   const cachedData = useRef(loadFromCache())
@@ -256,7 +257,7 @@ export function useCertManager() {
           // First check if cert-manager CRD exists
           const crdCheck = await kubectlProxy.exec(
             ['get', 'crd', 'certificates.cert-manager.io', '-o', 'name'],
-            { context: cluster, timeout: 5000 }
+            { context: cluster, timeout: METRICS_SERVER_TIMEOUT_MS }
           )
 
           if (crdCheck.exitCode !== 0) {
@@ -269,7 +270,7 @@ export function useCertManager() {
           // Fetch Certificates
           const certResponse = await kubectlProxy.exec(
             ['get', 'certificates', '-A', '-o', 'json'],
-            { context: cluster, timeout: 15000 }
+            { context: cluster, timeout: KUBECTL_MEDIUM_TIMEOUT_MS }
           )
 
           if (certResponse.exitCode === 0 && certResponse.output) {
@@ -298,7 +299,7 @@ export function useCertManager() {
           // Fetch Issuers
           const issuerResponse = await kubectlProxy.exec(
             ['get', 'issuers', '-A', '-o', 'json'],
-            { context: cluster, timeout: 10000 }
+            { context: cluster, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
           )
 
           if (issuerResponse.exitCode === 0 && issuerResponse.output) {
@@ -322,7 +323,7 @@ export function useCertManager() {
           // Fetch ClusterIssuers
           const clusterIssuerResponse = await kubectlProxy.exec(
             ['get', 'clusterissuers', '-o', 'json'],
-            { context: cluster, timeout: 10000 }
+            { context: cluster, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
           )
 
           if (clusterIssuerResponse.exitCode === 0 && clusterIssuerResponse.output) {
@@ -341,7 +342,7 @@ export function useCertManager() {
                 certificateCount: 0 })
             }
           }
-        } catch (err) {
+        } catch (err: unknown) {
           // Silence expected errors in demo mode (agent unavailable)
           const isDemoError = err instanceof Error && err.message.includes('demo mode')
           if (!isDemoError) {
@@ -369,7 +370,7 @@ export function useCertManager() {
 
       // Save to localStorage cache
       saveToCache(allCertificates, allIssuers, certManagerFound)
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[useCertManager] Error:', err)
       setError(err instanceof Error ? err.message : 'Failed to fetch cert-manager data')
       setConsecutiveFailures(prev => prev + 1)
@@ -423,7 +424,7 @@ export function useCertManager() {
     const failed = certificates.filter(c => c.status === 'failed')
 
     // Count recent renewals (certificates with renewalTime in last 24h)
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    const oneDayAgo = new Date(Date.now() - MS_PER_DAY)
     const recentRenewals = certificates.filter(c =>
       c.renewalTime && c.renewalTime > oneDayAgo
     ).length

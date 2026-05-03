@@ -4,7 +4,7 @@ import { Button } from '../ui/Button'
 import { BaseModal, ConfirmDialog } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL } from '../../lib/constants'
-import { authFetch } from '../../lib/api'
+import { agentFetch } from '../../hooks/mcp/shared'
 
 interface CreateNamespaceModalProps {
   clusters: string[]
@@ -36,10 +36,10 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
       // #7993 Phase 2: POST to kc-agent so the operation runs under the
       // user's kubeconfig. kc-agent does not accept an initialAccess field —
       // grants flow through GrantAccessModal's POST /rolebindings call once
-      // the namespace exists. #8034 Copilot followup: switched the hand-rolled
-      // agentAuthHeaders() helper to authFetch() which handles token injection
-      // and the default fetch timeout.
-      const res = await authFetch(`${LOCAL_AGENT_HTTP_URL}/namespaces`, {
+      // the namespace exists. #10699: switched from authFetch (backend JWT)
+      // to agentFetch (kc-agent token) so the request authenticates correctly
+      // against kc-agent and carries the right CORS headers.
+      const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/namespaces`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -54,7 +54,14 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
       }
       onCreated(cluster)
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create namespace'
+      let errorMessage: string
+      if (err instanceof TypeError) {
+        errorMessage = t('namespaces.errors.agentNotReachable')
+      } else if (err instanceof Error) {
+        errorMessage = err.message
+      } else {
+        errorMessage = t('namespaces.errors.createFailed')
+      }
       setError(errorMessage)
     } finally {
       setCreating(false)
@@ -106,7 +113,7 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
             <select
               value={cluster}
               onChange={(e) => setCluster(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
             >
               {clusters.map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -121,7 +128,7 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
               value={name}
               onChange={(e) => setName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
               placeholder="my-namespace"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
             />
             <p className="text-xs text-muted-foreground mt-1">
               Lowercase letters, numbers, and hyphens only
@@ -135,7 +142,7 @@ export function CreateNamespaceModal({ clusters, onClose, onCreated }: CreateNam
               value={teamLabel}
               onChange={(e) => setTeamLabel(e.target.value)}
               placeholder="platform-team"
-              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-white placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-blue-500/50"
             />
           </div>
 

@@ -1,9 +1,10 @@
 import type { FeedConfig, CorsProxy } from './types'
+import { MS_PER_MINUTE } from '../../../lib/constants/time'
 
 // Storage keys
 export const FEEDS_STORAGE_KEY = 'rss_feed_configs'
 export const CACHE_KEY_PREFIX = 'rss_feed_cache_'
-export const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+export const CACHE_TTL_MS = 5 * MS_PER_MINUTE // 5 minutes
 
 // Popular feed presets organized by category.
 // Each entry carries an explicit `category` field so the UI can group presets

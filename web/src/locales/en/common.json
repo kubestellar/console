@@ -24,6 +24,11 @@
     "cancel": "Cancel",
     "close": "Close",
     "clear": "Clear",
+    "clearAll": "Clear All",
+    "deleteSelected": "Delete Selected",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "selectItem": "Select {{title}}",
     "refresh": "Refresh",
     "configure": "Configure",
     "replace": "Replace",
@@ -71,7 +76,8 @@
     "offline": "Offline",
     "warning": "Warning",
     "critical": "Critical",
-    "swappingTo": "Swapping to \"{{cardName}}\" in 30s"
+    "swappingTo": "Swapping to \"{{cardName}}\" in 30s",
+    "noClusters": "No clusters available"
   },
   "time": {
     "justNow": "just now",
@@ -93,8 +99,16 @@
     "snoozedCards": "Snoozed Cards",
     "noSnoozedCards": "No snoozed card swaps",
     "snoozeExpires": "Expires {{time}}",
-    "addMore": "Add more...",
+    "addMore": "Add dashboard cards…",
     "removeFromSidebar": "Remove from sidebar",
+    "cardCount_one": "{{count}} card on this dashboard",
+    "cardCount_other": "{{count}} cards on this dashboard",
+    "healthyClusters_one": "{{count}} cluster reporting healthy status",
+    "healthyClusters_other": "{{count}} clusters reporting healthy status",
+    "unhealthyClusters_one": "{{count}} cluster reporting issues",
+    "unhealthyClusters_other": "{{count}} clusters reporting issues",
+    "unreachableClusters_one": "{{count}} cluster currently unreachable",
+    "unreachableClusters_other": "{{count}} clusters currently unreachable",
     "doubleClickRename": "Double-click to rename",
     "snoozedItems": "Snoozed Items",
     "noSnoozedItems": "No snoozed items",
@@ -185,6 +199,29 @@
       "privacyNote": "We collect anonymous data solely for the purpose of improving the product's user experience, using Google Analytics. No personal information is ever collected or shared."
     },
     "restoredFromBackup": "Settings restored from backup file",
+    "agentBackend": {
+      "title": "Agent Backend",
+      "subtitle": "Choose how AI missions connect to your clusters",
+      "refreshStatus": "Refresh status",
+      "localAgent": "Local Agent",
+      "localAgentDesc": "kc-agent on your machine",
+      "kagent": "Kagent",
+      "kagentDesc": "In-cluster AI agents",
+      "kagentNotDetected": "Not detected in cluster",
+      "kagenti": "Kagenti",
+      "kagentiDesc": "In-cluster agent platform",
+      "kagentiNotDetected": "Not detected in cluster",
+      "install": "Install",
+      "activeLabel": "Active:",
+      "kagentiInCluster": "Kagenti (in-cluster)",
+      "kagentInCluster": "Kagent (in-cluster)",
+      "localAgentKcAgent": "Local Agent (kc-agent)",
+      "kagentAgents": "Kagent Agents",
+      "kagentiAgents": "Kagenti Agents",
+      "noKagentAgents": "No kagent agents found. Agents may not be deployed yet.",
+      "noKagentiAgents": "No kagenti agents found. Agents may not be deployed yet."
+    },
+    "localAgent": "Local Agent",
     "groups": {
       "aiIntelligence": "AI & Intelligence",
       "integrations": "Integrations",
@@ -258,7 +295,9 @@
       "thisSession": "This Session",
       "today": "Today",
       "thisMonth": "This Month",
-      "tokens": "tokens"
+      "tokens": "tokens",
+      "unavailableInCluster": "AI missions require the local kc-agent and are not available in-cluster deployments.",
+      "kubectlUnavailableInCluster": "The kubectl terminal requires the local kc-agent and is not available in-cluster deployments."
     },
     "tokens": {
       "title": "Token Usage",
@@ -590,7 +629,7 @@
     },
     "updates": {
       "title": "System Updates",
-      "subtitle": "Check for and install console updates",
+      "subtitle": "Manage updates for the console and Marketplace components",
       "checkNow": "Check Now",
       "updateChannel": "Update Channel",
       "stable": "Stable (Weekly releases)",
@@ -700,13 +739,16 @@
       "prereqGitCleanFail": "Uncommitted changes",
       "allPrereqsMet": "All prerequisites met — update notifications active",
       "prereqsMissing": "{{count}} prerequisite(s) not met — some features unavailable",
+      "errorHint": "Try clicking \"Check Now\" to retry, or verify that kc-agent is running and network is available.",
       "scopeInfoToggle": "What do these settings control?",
-      "scopeSystemTitle": "System Updates",
-      "scopeSystemDesc": "Updates the entire console application to a new version. Controlled by the Update Channel and Auto-Update settings on this page.",
-      "scopeReloadTitle": "Auto-Reload",
-      "scopeReloadDesc": "When a new build is deployed, your browser automatically detects the change and prompts you to reload. This happens independently of System Updates.",
-      "scopeCardDataTitle": "Card Data",
-      "scopeCardDataDesc": "Individual dashboard cards refresh their data on their own schedules. Card refreshes are not controlled by System Updates."
+      "scopeSystemTitle": "Console Version Updates",
+      "scopeSystemDesc": "Checks for new console releases on the selected Update Channel and lets you apply them. For self-hosted installs with kc-agent, enabling Automatic Updates will pull and apply new versions in the background. Without kc-agent, you will see a notification with manual upgrade instructions (Helm command, brew command, or git pull).",
+      "scopeReloadTitle": "Post-Deploy Page Reload",
+      "scopeReloadDesc": "After a new version is deployed (whether via auto-update or manual upgrade), the browser detects the updated build and shows a banner prompting you to reload the page. This happens automatically and has no settings on this page.",
+      "scopeCardDataTitle": "Dashboard Card Data",
+      "scopeCardDataDesc": "Dashboard cards fetch live data (cluster health, pod status, metrics) on their own schedules, independent of console version updates. Card refresh intervals are not controlled by these settings.",
+      "scopeMarketplaceTitle": "Marketplace Components",
+      "scopeMarketplaceDesc": "Cards, themes, and integrations installed from the Marketplace are updated independently by their publishers. These items are not covered by the console version update channel above. Check the Marketplace page for available updates to installed components, or enable per-item auto-update from each item's settings."
     },
     "theme": {
       "title": "Appearance",
@@ -731,6 +773,7 @@
     "slack": "Slack:",
     "role": "Role:",
     "coins": "Coins:",
+    "coinsUpdateHint": "Coins update periodically with the leaderboard (approximately every 4 hours), not in real-time.",
     "language": "Language:",
     "noEmail": "No email set",
     "notSet": "Not set",
@@ -1422,7 +1465,8 @@
     "cookiesEnabled": "Cookies Enabled",
     "yes": "Yes",
     "no": "No",
-    "diagnosticsNote": "Full network diagnostics (traceroute, DNS lookup, port scanning) require backend API support due to browser security restrictions."
+    "diagnosticsNote": "Full network diagnostics (traceroute, DNS lookup, port scanning) require backend API support due to browser security restrictions.",
+    "noHostsWarning": "Add at least one host before starting"
   },
   "cardFactory": {
     "formatText": "Text",
@@ -1873,7 +1917,8 @@
     "goHome": "Go to home dashboard",
     "themeToggle": "Theme: {{theme}} (click to toggle)",
     "moreOptions": "More options",
-    "viewDocs": "View documentation"
+    "viewDocs": "View documentation",
+    "clusterFilter": "Cluster Filter"
   },
   "missionSidebar": {
     "expandSidebar": "Expand sidebar",
@@ -1905,7 +1950,16 @@
     "missions": "missions",
     "missionCount_one": "{{count}} mission",
     "missionCount_other": "{{count}} missions",
-    "resizeHandleTooltip": "Drag to resize"
+    "resizeHandleTooltip": "Drag to resize",
+    "toggleHistory": "Toggle mission history",
+    "showHistory": "Show History",
+    "hideHistory": "Hide History",
+    "readyToHelp": "Ready to help",
+    "viewHistory": "View {{count}} previous missions",
+    "viewHistory_one": "View {{count}} previous mission",
+    "viewHistory_other": "View {{count}} previous missions",
+    "missionHistory": "Mission History",
+    "headerActions": "Mission sidebar actions"
   },
   "feedback": {
     "share": "Share",
@@ -1976,7 +2030,11 @@
     "requestTypeLabel": "Request Type",
     "createdBy": "Created by",
     "upvote": "Upvote",
-    "upvoted": "Upvoted"
+    "upvoted": "Upvoted",
+    "couldNotLoadStatus": "Couldn't load feedback status: {{error}}",
+    "yourRequestsCount_one": "{{count}} request",
+    "yourRequestsCount_other": "{{count}} requests",
+    "reportBugOrFeature": "Report a bug or request a feature"
   },
   "nps": {
     "title": "How's your experience with KubeStellar Console?",
@@ -2028,7 +2086,7 @@
     "cardRequestAction": "Request Card",
     "cardRequestRequested": "Requested",
     "cardRequestRetry": "Retry",
-    "cardRequestSending": "Sending\u2026",
+    "cardRequestSending": "Sending…",
     "reminderTitle": "Orbital maintenance due",
     "reminderDismiss": "Dismiss",
     "standaloneTitle": "New Orbit Mission",
@@ -2105,7 +2163,8 @@
       "more": "+{{count}} more",
       "more_one": "+{{count}} more",
       "more_other": "+{{count}} more",
-      "manifest": "Manifest"
+      "manifest": "Manifest",
+      "issues": "Issues"
     },
     "ai": {
       "title": "AI Analysis",
@@ -2458,6 +2517,19 @@
       "optimizationRecommendations": "Optimization recommendations",
       "clickAnalyze": "Click \"Analyze Buildpack\" to get AI-powered insights",
       "analyzeHint": "AI will analyze the buildpack and suggest improvements"
+    },
+    "namespace": {
+      "deploymentIssues": "Deployment Issues",
+      "podIssues": "Pod Issues",
+      "deploymentsWithIssues": "Deployments with Issues",
+      "podsWithIssues": "Pods with Issues"
+    },
+    "events": {
+      "failedToLoad": "Failed to load events",
+      "noEventsFound": "No events found",
+      "totalEvents": "Total Events",
+      "noEventsFoundFor": "No events found for {{name}}",
+      "eventsExpiredHint": "Events may have expired or require authentication"
     }
   },
   "pagination": {
@@ -3031,7 +3103,17 @@
     "subjectUser": "User",
     "subjectGroup": "Group",
     "subjectServiceAccount": "Service Account",
-    "rolesNamespaceScoped": "These roles are scoped to this namespace only - not cluster-wide."
+    "rolesNamespaceScoped": "These roles are scoped to this namespace only - not cluster-wide.",
+    "accessManagement": "Access Management",
+    "adminAccessRequired": "Admin access required to view namespace details",
+    "fetchAccessFailed": "Failed to fetch namespace access",
+    "adminRequiredForAccess": "Admin access required to view role bindings",
+    "noRoleBindings": "No role bindings found",
+    "errors": {
+      "agentNotReachable": "Local agent is not reachable. Make sure kc-agent is running on port 8585.",
+      "requestTimedOut": "Request timed out. The cluster may be slow to respond.",
+      "createFailed": "Failed to create namespace"
+    }
   },
   "cluster": {
     "subtitle": "Manage your Kubernetes clusters",
@@ -3139,6 +3221,10 @@
     "importImporting": "Importing...",
     "noClusterTitle": "No clusters found",
     "noClusterDesc": "Add a cluster to your kubeconfig to get started.",
+    "agentConnectedNoDataTitle": "Agent connected — no cluster data available",
+    "agentConnectedNoDataDesc": "The agent is connected but no cluster data was returned. The agent may still be initializing, or the connected clusters may not be reporting inventory yet.",
+    "clusterModeNoDataTitle": "Running in cluster mode — no data available",
+    "clusterModeNoDataDesc": "The console is running in cluster mode but no cluster data is available. This may happen when the service account has limited RBAC scope.",
     "connectStep1": "Server",
     "connectStep2": "Authentication",
     "connectStep3": "Context",
@@ -3449,10 +3535,15 @@
     "signInDescription": "Sign in to manage your multi-cluster deployments",
     "continueWithGitHub": "Continue with GitHub",
     "setupGitHubSignIn": "Set up GitHub Sign-In",
+    "signInToGitHubFirst": "Make sure you're signed into GitHub first",
+    "manifestSuccess": "GitHub Sign-In configured!",
+    "manifestSuccessDetail": "Click \"Continue with GitHub\" below to sign in with your GitHub account.",
     "continueInDemoMode": "Continue in Demo Mode",
     "oauthNotConfigured": "GitHub sign-in is not configured",
-    "oauthNotConfiguredDescription": "Set up a GitHub OAuth App to sign in with your GitHub identity. This takes about 2 minutes. You can also explore in demo mode first.",
+    "oauthNotConfiguredDescription": "Click below to create a GitHub OAuth App automatically — it takes one click. You can also explore in demo mode first.",
     "showSetupSteps": "Show setup instructions",
+    "showManualSetup": "Or set up manually",
+    "hideManualSetup": "Hide manual setup",
     "openGitHubSettings": "GitHub OAuth Settings",
     "fullSetupGuide": "Full Setup Guide",
     "termsOfServicePrefix": "By signing in, you agree to our",
@@ -3469,7 +3560,8 @@
     "subtitle": "Kagenti agent platform — deploy, secure, and manage AI agents",
     "emptyStateTitle": "AI Agents Dashboard",
     "emptyStateDescription": "Add cards to monitor kagenti agents, MCP tools, build pipelines, and security posture across your clusters.",
-    "errorLoading": "Error loading kagenti data"
+    "errorLoading": "Error loading kagenti data",
+    "notConnectedHint": "Install Kagenti or connect your agent to see live data. Demo data is shown below."
   },
   "aiml": {
     "title": "AI/ML",
@@ -3600,12 +3692,12 @@
     "connectionLost": "Connection lost",
     "connectionLostHint": "Could not reach the backend — restart the server to reconnect",
     "copiedRestartCommand": "Copied — run this in your project root terminal",
-    "restarting": "Restarting\u2026",
-    "restartedWaiting": "Restarted, waiting for connection\u2026",
+    "restarting": "Restarting…",
+    "restartedWaiting": "Restarted, waiting for connection…",
     "restartBackendServer": "Restart the backend server",
     "restart": "Restart",
     "reconnected": "Reconnected",
-    "startingUp": "Starting up\u2026",
+    "startingUp": "Starting up…",
     "newVersionAvailable": "A new version is available",
     "reload": "Reload",
     "sidebar": {
@@ -3630,7 +3722,7 @@
       "noResultsFor": "No results for \"{{query}}\"",
       "askAIInstead": "Ask AI instead",
       "startMission": "Start a mission: \"{{query}}\"",
-      "searchPlaceholder": "Search or ask AI anything...",
+      "searchPlaceholder": "Search cards, clusters, dashboards…  (or /ai to ask AI)",
       "tokenUsageTitle": "Token usage: {{percentage}}%{{suffix}}",
       "tokenUsage": "Token Usage",
       "demoData": "Demo Data",
@@ -3702,7 +3794,8 @@
       "autoRefreshTitle": "Auto-refresh every 30s",
       "auto": "Auto",
       "clickToRetry": "Click to retry",
-      "updated": "Updated {{time}}"
+      "updated": "Updated {{time}}",
+      "toolbarLabel": "Dashboard toolbar"
     },
     "issueItem": {
       "issues": "Issues",
@@ -3772,20 +3865,103 @@
     "practiceBody": "ACMM isn't a one-time audit. It tracks the progression from ad-hoc AI usage to structured, repeatable workflows. The criteria make best practices visible so teams can adopt them incrementally.",
     "traceabilityTitle": "Traceability",
     "traceabilityBody": "Every criterion links back to its source framework, and every detected signal is tied to a concrete file or workflow in your repo. This citation trail lets you trace any score to evidence and any feedback loop to its origin.",
-    "sourcesTitle": "Source frameworks",
-    "sourcesBody": "Criteria are aggregated from four frameworks. Each is tagged with its source so you can follow the citation trail.",
-    "sourceACMM": "the 6-level model (L1-L6 + prerequisites)",
-    "sourceFullsend": "readiness + autonomy criteria (test coverage, CI/CD, auto-merge policy)",
-    "sourceAEF": "Agentic Engineering Framework: governance criteria (task traceability, structural gates)",
-    "sourceReflect": "Claude Reflect: self-tuning criteria (correction capture, CLAUDE.md auto-sync)",
+    "sourcesTitle": "Assessment criteria sources",
+    "sourcesBody": "The ACMM score draws on criteria from four open-source plugin registries. Each criterion is tagged with its source so you can trace any score back to the framework that defined it.",
+    "sourceACMM": "the core 6-level maturity model (L1-L6 levels + prerequisite checks)",
+    "sourceFullsend": "adds criteria for deployment readiness and autonomy (test coverage, CI/CD pipelines, auto-merge policies)",
+    "sourceAEF": "adds governance criteria for agentic workflows (task traceability, structural gates)",
+    "sourceReflect": "adds self-tuning criteria for agent learning loops (correction capture, CLAUDE.md auto-sync)",
     "actionsTitle": "What you can do here",
     "actionScan": "Type any {{ownerRepo}} in the picker to scan it.",
     "actionRole": "See your role and the next transition trigger on the Your Role card.",
     "actionInventory": "Browse detected vs missing criteria on the Feedback Loops Inventory card.",
     "actionAgent": "Click Ask agent for help on any missing criterion to launch an agent that adds it.",
     "actionBadge": "Generate a shields.io badge for your README — it updates as your score changes.",
-    "paperLink": "Read the paper on arXiv (2604.09388)",
+    "paperLink": "Read the paper on arXiv (2604.09388v2)",
+    "docsLink": "Read the full ACMM documentation",
     "dontShowAgain": "Don't show this again",
     "gotIt": "Got it — let's go"
+  },
+  "resourceBadges": {
+    "viewClusterAria": "View cluster {{cluster}}",
+    "viewNamespaceAria": "View namespace {{namespace}}",
+    "viewResourceAria": "View {{kind}} resources"
+  },
+  "deployments": {
+    "errorLoading": "Error loading deployment data"
+  },
+  "workloads": {
+    "deleteDeployment": "Delete Deployment",
+    "confirmDelete": "Are you sure you want to delete deployment {{name}}? This action cannot be undone.",
+    "deleting": "Deleting deployment...",
+    "deleteSuccess": "Deployment deleted",
+    "deleteError": "Failed to delete deployment",
+    "restarting": "Restarting deployment...",
+    "restartSuccess": "Restart triggered",
+    "restartError": "Failed to restart deployment"
+  },
+  "nodeDetail": {
+    "showAll": "Show all",
+    "showLess": "Show less",
+    "repair": "Repair",
+    "healthy": "Healthy"
+  },
+  "pods": {
+    "noPodIssues": "No Pod Issues",
+    "restarts": "Restarts"
+  },
+  "drafts": {
+    "noSavedDrafts": "No saved drafts",
+    "editing": "Editing",
+    "savedDrafts": "Saved Drafts",
+    "deleteAllConfirm": "Delete all?",
+    "allDraftsDeleted": "All drafts deleted",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "clearAll": "Clear All",
+    "saveWorkInProgress": "Save your work-in-progress bug reports and feature requests here",
+    "startNewReport": "Start writing a new report",
+    "typeBug": "Bug",
+    "typeFeature": "Feature",
+    "repoDocs": "Docs",
+    "repoConsole": "Console",
+    "saved": "Saved",
+    "deleteThisDraft": "Delete this draft?",
+    "reload": "Reload",
+    "edit": "Edit",
+    "delete": "Delete",
+    "recentlyDeleted": "Recently Deleted",
+    "emptyAllConfirm": "Remove all?",
+    "permanentlyDeletedAll": "All deleted drafts removed",
+    "emptyAll": "Empty All",
+    "lastEdited": "Last edited",
+    "deletedTime": "Deleted",
+    "permanentDeleteConfirm": "Delete permanently?",
+    "permanentlyDeleted": "Draft permanently deleted",
+    "restore": "Restore",
+    "deletePermanently": "Delete Permanently",
+    "draftRestored": "Draft restored"
+  },
+  "pipelines": {
+    "allRepos": "All repos"
+  },
+  "rightSizeAdvisor": {
+    "memory": "Memory"
+  },
+  "errors": {
+    "storagePersistFailed": "Failed to save your selection. Browser storage may be full.",
+    "cacheWriteFailed": "Failed to cache data. Browser storage may be full.",
+    "cardRegistryLoadFailed": "Failed to load card catalog.",
+    "cacheResetFailed": "Failed to reset some caches during mode switch."
+  },
+  "serviceStatus": {
+    "emptyTitle": "No services found",
+    "emptyMessage": "Services will appear here once they are deployed to your clusters."
+  },
+  "sortBy": {
+    "status": "Status",
+    "workload": "Workload",
+    "time": "Time",
+    "clusters": "Clusters"
   }
 }

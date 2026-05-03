@@ -11,6 +11,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
+import { useToast } from '../ui/Toast'
 import { STORAGE_KEY_NS_OVERVIEW_CLUSTER, STORAGE_KEY_NS_OVERVIEW_NAMESPACE } from '../../lib/constants/storage'
 
 interface NamespaceOverviewProps {
@@ -22,6 +23,7 @@ interface NamespaceOverviewProps {
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
+  const { showToast } = useToast()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
 
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
@@ -61,13 +63,13 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   // Persist cluster selection so it survives page navigation (#3115)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster) } catch {}
-  }, [selectedCluster])
+    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster) } catch (e: unknown) { console.warn('[NamespaceOverview] failed to persist cluster selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
+  }, [selectedCluster, showToast, t])
 
   // Persist namespace selection so it survives page navigation (#3115)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace) } catch {}
-  }, [selectedNamespace])
+    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace) } catch (e: unknown) { console.warn('[NamespaceOverview] failed to persist namespace selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
+  }, [selectedNamespace, showToast, t])
 
   // Auto-select first available cluster when none is selected (#3113 — works in both demo and live mode)
   useEffect(() => {
@@ -91,15 +93,18 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
     }
   }, [selectedCluster, selectedNamespace, namespaces])
 
-  // Filter by namespace
+  // Filter by namespace. Guard hook return values against undefined
+  // (malformed API response) per CLAUDE.md array safety rule (#9889).
   const podIssues = (() => {
-    if (!selectedNamespace) return allPodIssues
-    return allPodIssues.filter(p => p.namespace === selectedNamespace)
+    const safeAllPodIssues = allPodIssues || []
+    if (!selectedNamespace) return safeAllPodIssues
+    return safeAllPodIssues.filter(p => p.namespace === selectedNamespace)
   })()
 
   const deploymentIssues = (() => {
-    if (!selectedNamespace) return allDeploymentIssues
-    return allDeploymentIssues.filter(d => d.namespace === selectedNamespace)
+    const safeAllDeploymentIssues = allDeploymentIssues || []
+    if (!selectedNamespace) return safeAllDeploymentIssues
+    return safeAllDeploymentIssues.filter(d => d.namespace === selectedNamespace)
   })()
 
   const cluster = clusters.find(c => c.name === selectedCluster)
@@ -178,7 +183,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           title={t('cards:namespaceOverview.selectClusterTitle')}
         >
           <option value="">{t('selectors.selectCluster')}</option>
-          {clusters.map(c => (
+          {(clusters || []).map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
         </select>
@@ -190,7 +195,7 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
           title={selectedCluster ? t('cards:namespaceOverview.selectNamespaceTitle') : t('cards:namespaceOverview.selectClusterFirst')}
         >
           <option value="">{t('selectors.selectNamespace')}</option>
-          {namespaces.map(ns => (
+          {(namespaces || []).map(ns => (
             <option key={ns} value={ns}>{ns}</option>
           ))}
         </select>

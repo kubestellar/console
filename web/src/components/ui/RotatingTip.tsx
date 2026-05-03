@@ -173,6 +173,14 @@ const TIPS: Record<string, string[]> = {
     'Click an agent to see its recent operations and permission scope.',
     'Agent actions are logged for audit and can be replayed as missions.',
   ],
+  enterprise: [
+    'Pin your most-used dashboards to the sidebar for one-click access.',
+    'The Enterprise Portal covers 7 compliance verticals across 24 dashboards.',
+    'Use Console Studio (gear icon) to add cards, dashboards, and widgets.',
+    'Each vertical has its own compliance score based on automated checks.',
+    'AI Missions can detect and remediate compliance gaps automatically.',
+    'Export compliance reports as PDF for your next audit cycle.',
+  ],
   'ci-cd': [
     'CI/CD cards aggregate pipeline status from GitHub Actions and more.',
     'Failed workflows are highlighted with links to the failing job.',
@@ -267,7 +275,7 @@ export function RotatingTip({ page }: RotatingTipProps) {
 
   return (
     <div role="status" aria-label="Page tip" className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300">
-      <Lightbulb className="w-3.5 h-3.5 flex-shrink-0 text-purple-400" aria-hidden="true" />
+      <Lightbulb className="w-3.5 h-3.5 shrink-0 text-purple-400" aria-hidden="true" />
       <span><span className="font-medium">Tip:</span> {tip}</span>
     </div>
   )

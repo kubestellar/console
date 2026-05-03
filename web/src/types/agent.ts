@@ -90,7 +90,8 @@ export interface ChatStreamPayload {
   agent: string
   sessionId: string
   done: boolean
-  model?: string // Model name used for this response
+  isError?: boolean
+  model?: string
   usage?: ChatTokenUsage
 }
 

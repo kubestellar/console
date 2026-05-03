@@ -5,15 +5,24 @@ import { useRef, useState, useEffect, useLayoutEffect } from 'react'
  * Tracks the max observed scrollHeight and applies it as minHeight
  * so partial pages (last page with fewer items) don't shrink the card.
  * Resets when pageSize changes or when pagination is no longer needed.
+ *
+ * FIX (#185): Previous implementation used useLayoutEffect with no deps
+ * and called setState on every render, which caused "Maximum update depth
+ * exceeded" when scrollHeight oscillated due to minHeight changes.
+ * Now uses a measured flag to ensure only one setState per measurement
+ * cycle and compares against the ref (not stale state) to break loops.
  */
 export function useStablePageHeight(pageSize: number | string, totalItems: number) {
   const containerRef = useRef<HTMLDivElement>(null)
   const maxHeightRef = useRef(0)
   const [stableMinHeight, setStableMinHeight] = useState(0)
+  // Track whether we've completed initial measurement to avoid re-measuring loops
+  const hasMeasuredRef = useRef(false)
 
   // Reset when pageSize changes
   useEffect(() => {
     maxHeightRef.current = 0
+    hasMeasuredRef.current = false
     setStableMinHeight(0)
   }, [pageSize])
 
@@ -22,57 +31,41 @@ export function useStablePageHeight(pageSize: number | string, totalItems: numbe
     const effectivePageSize = typeof pageSize === 'number' ? pageSize : Infinity
     if (totalItems <= effectivePageSize) {
       maxHeightRef.current = 0
+      hasMeasuredRef.current = false
       setStableMinHeight(0)
     }
   }, [totalItems, pageSize])
 
-  // Measure after each render and track max height.
-  // Uses a post-render effect to read scrollHeight and update minHeight
-  // when a taller page is observed. The guard prevents calling setState
-  // when the height hasn't actually changed (avoiding re-render loops).
-  //
-  // CLS fix (#5255): Only temporarily remove minHeight for measurement when
-  // no max height has been tracked yet. Once we have a max height from a full
-  // page, we compare scrollHeight directly — if the content grew beyond our
-  // tracked max, we update. Otherwise we skip the measurement entirely to
-  // avoid the brief layout flicker caused by clearing and restoring minHeight.
+  // Measure after render and track max height.
+  // Only measures ONCE per reset cycle to avoid oscillation loops where
+  // setting minHeight causes scrollHeight to change, which triggers another
+  // setState, ad infinitum (React #185).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
     const effectivePageSize = typeof pageSize === 'number' ? pageSize : Infinity
-    if (totalItems <= effectivePageSize) return // no pagination active
+    if (totalItems <= effectivePageSize) return
 
-    if (maxHeightRef.current > 0) {
-      // We already have a tracked max height. Check if content grew beyond it
-      // WITHOUT clearing minHeight (avoids CLS flicker on partial pages).
-      const height = el.scrollHeight
-      if (height > maxHeightRef.current) {
-        maxHeightRef.current = height
-        if (height !== stableMinHeight) {
-          setStableMinHeight(height)
-        }
-      }
-      return
-    }
+    // Once we've measured and set the height, stop re-measuring.
+    // This breaks the oscillation loop entirely.
+    if (hasMeasuredRef.current) return
 
-    // First measurement: temporarily clear minHeight so we measure the
-    // natural content height, not an inflated height from a prior setting.
+    // Temporarily clear minHeight so we measure natural content height
     const prevMinHeight = el.style.minHeight
     el.style.minHeight = ''
     const height = el.scrollHeight
     el.style.minHeight = prevMinHeight
 
-    if (height > maxHeightRef.current) {
+    if (height > 0 && height > maxHeightRef.current) {
       maxHeightRef.current = height
-      // Only call setState if the value actually changed — prevents
-      // infinite useLayoutEffect → setState → re-render → useLayoutEffect
-      // loops that cause "Maximum update depth exceeded".
-      if (height !== stableMinHeight) {
-        setStableMinHeight(height)
-      }
+      hasMeasuredRef.current = true
+      setStableMinHeight(height)
+    } else if (height > 0) {
+      // Height didn't grow but we still have a valid measurement — mark done
+      hasMeasuredRef.current = true
     }
-  }) // no deps: must measure on every render
+  }) // no deps: must run after every render until measured
 
   const containerStyle = stableMinHeight > 0
     ? { minHeight: `${stableMinHeight}px` }

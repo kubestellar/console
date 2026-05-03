@@ -10,17 +10,16 @@ import { useCallback } from 'react'
 import type { StatBlockValue } from '../ui/StatsOverview'
 import { useACMM } from './ACMMProvider'
 import { ALL_CRITERIA } from '../../lib/acmm/sources'
+import { MAX_LEVEL } from '../../lib/acmm/computeLevel'
 import type { SourceId } from '../../lib/acmm/sources/types'
-
-const MAX_LEVEL = 5
 
 /** Source IDs in display order. */
 const SOURCE_IDS: SourceId[] = ['acmm', 'fullsend', 'agentic-engineering-framework', 'claude-reflect']
-const SOURCE_SHORT_NAMES: Record<SourceId, string> = {
+const SOURCE_NAMES: Record<SourceId, string> = {
   acmm: 'ACMM',
-  fullsend: 'FS',
+  fullsend: 'Fullsend',
   'agentic-engineering-framework': 'AEF',
-  'claude-reflect': 'Refl',
+  'claude-reflect': 'Claude Reflect',
 }
 
 export function useACMMStats() {
@@ -29,7 +28,6 @@ export function useACMMStats() {
   const detectedIds = data.detectedIds
 
   const totalCriteria = ALL_CRITERIA.length
-  const detectedCount = detectedIds instanceof Set ? detectedIds.size : (detectedIds as string[] || []).length // ai-quality-ignore
 
   const nextLevel = level.level < MAX_LEVEL ? level.level + 1 : null
   const nextRequired = nextLevel ? level.requiredByLevel[nextLevel] ?? 0 : 0
@@ -37,50 +35,54 @@ export function useACMMStats() {
   const nextRemaining = nextRequired - nextDetected
 
   const getStatValue = useCallback((blockId: string): StatBlockValue => {
+    // Derive detectedSet inside the callback so it is always consistent with
+    // the detectedIds captured in this closure (avoids stale-closure bugs
+    // where detectedSet derived outside would reference an earlier render).
+    const detectedSet = detectedIds instanceof Set ? detectedIds : new Set(detectedIds as string[] || [])
+    const detectedCount = detectedSet.size
+
     switch (blockId) {
       case 'acmm_level':
         return {
           value: level.level,
           sublabel: level.levelName,
           max: MAX_LEVEL,
+          format: (v: number) => `L${v}`,
         }
       case 'acmm_detected':
         return {
           value: detectedCount,
-          sublabel: `of ${totalCriteria}`,
+          sublabel: `${detectedCount} of ${totalCriteria} criteria`,
           max: totalCriteria,
         }
       case 'acmm_next_level':
         if (!nextLevel) {
-          return { value: MAX_LEVEL, sublabel: 'Max level', max: MAX_LEVEL }
+          return { value: MAX_LEVEL, sublabel: `L${MAX_LEVEL} reached`, max: MAX_LEVEL, format: (v: number) => `L${v}` }
         }
         return {
           value: nextDetected,
-          sublabel: `${nextRemaining} to L${nextLevel}`,
+          sublabel: `${nextRemaining} more for L${nextLevel}`,
           max: nextRequired,
         }
       case 'acmm_by_source': {
-        // Build per-source detection ratios for the mini-bar visualization
         const segments = SOURCE_IDS.map((sid) => {
           const srcCriteria = ALL_CRITERIA.filter((c) => c.source === sid)
-          const srcDetected = srcCriteria.filter((c) =>
-            detectedIds instanceof Set ? detectedIds.has(c.id) : (detectedIds as string[] || []).includes(c.id), // ai-quality-ignore
-          ).length
+          const srcDetected = srcCriteria.filter((c) => detectedSet.has(c.id)).length
           return {
-            label: SOURCE_SHORT_NAMES[sid],
+            label: SOURCE_NAMES[sid],
             value: srcCriteria.length > 0 ? Math.round((srcDetected / srcCriteria.length) * 100) : 0, // ai-quality-ignore
           }
         })
         const bestSource = segments.reduce((a, b) => (b.value > a.value ? b : a), segments[0])
         return {
           value: `${bestSource?.value ?? 0}%`, // ai-quality-ignore
-          sublabel: `Best: ${bestSource?.label ?? '-'}`,
+          sublabel: `${bestSource?.label ?? '-'} (${segments.length} sources)`,
         }
       }
       default:
         return { value: '-' }
     }
-  }, [level, detectedCount, totalCriteria, nextLevel, nextDetected, nextRemaining, nextRequired, detectedIds])
+  }, [level, totalCriteria, nextLevel, nextDetected, nextRemaining, nextRequired, detectedIds])
 
   return { getStatValue }
 }

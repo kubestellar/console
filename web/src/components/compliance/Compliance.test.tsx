@@ -99,6 +99,10 @@ function defaultClustersReturn() {
       { name: 'cluster-a', reachable: true },
       { name: 'cluster-b', reachable: true },
     ],
+    deduplicatedClusters: [
+      { name: 'cluster-a', reachable: true },
+      { name: 'cluster-b', reachable: true },
+    ],
     isLoading: false,
     refetch: vi.fn(),
     lastUpdated: Date.now(),
@@ -240,7 +244,7 @@ describe('Compliance dashboard component', () => {
     setupDefaults()
     render(<Compliance />)
     const props = getLastDashboardProps()
-    expect(props.title).toBe('Security Posture')
+    expect(props.title).toBe('Compliance')
     expect(props.statsType).toBe('compliance')
     expect(props.storageKey).toBe('compliance-dashboard-cards')
     expect(props.emptyState).toEqual({
@@ -270,7 +274,7 @@ describe('Compliance dashboard component', () => {
 
   it('hasData reflects tool installation', () => {
     setupDefaults({
-      clusters: { ...defaultClustersReturn(), clusters: [] },
+      clusters: { ...defaultClustersReturn(), clusters: [], deduplicatedClusters: [] },
     })
     render(<Compliance />)
     const props = getLastDashboardProps()
@@ -300,10 +304,10 @@ describe('Compliance dashboard component', () => {
     const totalChecks = getStatValue('total_checks')
     expect(totalChecks.value).toBe(215)
 
-    const passing = getStatValue('passing')
+    const passing = getStatValue('checks_passing')
     expect(passing.value).toBe(165)
 
-    const failing = getStatValue('failing')
+    const failing = getStatValue('checks_failing')
     expect(failing.value).toBe(42)
 
     const warning = getStatValue('warning')

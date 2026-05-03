@@ -92,7 +92,7 @@ export function FeatureKagent() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-b from-purple-500/5 via-transparent to-transparent" />
         <div className="relative max-w-4xl mx-auto px-6 py-20 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm mb-6">
             <Sparkles className="w-4 h-4" />
@@ -100,7 +100,7 @@ export function FeatureKagent() {
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Kagent{' '}
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               Integration
             </span>
           </h1>
@@ -142,7 +142,7 @@ export function FeatureKagent() {
         <div className="space-y-6">
           {HOW_IT_WORKS.map(({ number, title, description }) => (
             <div key={number} className="flex gap-4 p-5 rounded-xl border border-slate-700/50 bg-slate-900/30">
-              <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 font-bold text-sm flex items-center justify-center flex-shrink-0">
+              <span className="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 font-bold text-sm flex items-center justify-center shrink-0">
                 {number}
               </span>
               <div>

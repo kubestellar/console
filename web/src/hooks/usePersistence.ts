@@ -84,7 +84,7 @@ export function usePersistence() {
         setConfig(data)
       }
       // Silently ignore 401 - user needs to re-authenticate
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[usePersistence] Failed to fetch config:', err)
       setError('Failed to load persistence config')
     } finally {
@@ -105,7 +105,7 @@ export function usePersistence() {
         setStatus(data)
       }
       // Silently ignore 401 - user needs to re-authenticate
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[usePersistence] Failed to fetch status:', err)
     }
   }, [isBackendAvailable, hasRealToken, token])
@@ -137,7 +137,7 @@ export function usePersistence() {
         setError(errorData.error || 'Failed to update config')
         return false
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[usePersistence] Failed to update config:', err)
       setError('Failed to update config')
       return false
@@ -172,14 +172,14 @@ export function usePersistence() {
     try {
       const response = await fetch('/api/persistence/test', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ cluster }),
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
 
       if (response.ok) {
         return await response.json()
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[usePersistence] Failed to test connection:', err)
     }
 
@@ -192,12 +192,12 @@ export function usePersistence() {
 
     setSyncing(true)
     try {
-      const response = await fetch('/api/persistence/sync', { method: 'POST', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      const response = await fetch('/api/persistence/sync', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         await fetchStatus()
         return true
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[usePersistence] Failed to sync:', err)
     } finally {
       setSyncing(false)

@@ -58,7 +58,7 @@ export function loadDynamicCards(): void {
         )
       }
     })
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[DynamicCardStore] Failed to load from localStorage:', err)
   }
 }
@@ -68,7 +68,7 @@ export function saveDynamicCards(): void {
   try {
     const defs = getAllDynamicCards()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defs))
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[DynamicCardStore] Failed to save to localStorage:', err)
   }
 }
@@ -118,7 +118,7 @@ export function importDynamicCards(json: string): ImportResult {
     })
     saveDynamicCards()
     return result
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[DynamicCardStore] Failed to import:', err)
     const message = err instanceof Error ? err.message : String(err)
     result.invalid.push({ index: -1, error: `Parse error: ${message}` })

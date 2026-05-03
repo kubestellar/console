@@ -9,13 +9,25 @@ const { mockUseClusters } = vi.hoisted(() => ({
   mockUseClusters: vi.fn(),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
 
-vi.mock('../../lib/constants', () => ({
-  STORAGE_KEY_TOKEN: 'kc-auth-token',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    STORAGE_KEY_TOKEN: 'kc-auth-token',
+    DEFAULT_REFRESH_INTERVAL_MS: 120_000,
+  }
+})
 
 vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 5000,

@@ -70,6 +70,7 @@ export function TrivyDetailModal({
 
   const handleFixImage = (img: { image: string; tag: string; namespace: string; critical: number; high: number; medium: number; low: number }) => {
     emitActionClicked('fix_vulns', 'trivy_scan', 'compliance')
+    onClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Fix vulns: ${img.image}:${img.tag}`,
       description: `${img.critical}C/${img.high}H vulnerabilities in ${img.image}:${img.tag} (ns: ${img.namespace}) on ${clusterName}`,
@@ -96,7 +97,6 @@ Please proceed step by step.`,
         critical: img.critical,
         high: img.high } })
     openSidebar()
-    onClose()
   }
 
   const handleTriageCritical = () => {
@@ -109,6 +109,7 @@ Please proceed step by step.`,
       .map(img => `- ${img.image}:${img.tag} (ns: ${img.namespace}) — ${img.critical} critical`)
       .join('\n')
 
+    onClose() // Close modal so mission sidebar is visible
     startMission({
       title: `Triage: ${critical} critical vulns on ${clusterName}`,
       description: `${criticalImages.length} images with critical vulnerabilities on ${clusterName}`,
@@ -132,7 +133,6 @@ Please proceed step by step.`,
         totalCritical: critical,
         imageCount: criticalImages.length } })
     openSidebar()
-    onClose()
   }
 
   return (
@@ -207,7 +207,7 @@ Please proceed step by step.`,
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search images..."
-              className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500"
+              className="w-full pl-9 pr-3 py-2 bg-secondary/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
             />
           </div>
 

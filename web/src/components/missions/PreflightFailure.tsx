@@ -1,3 +1,4 @@
+import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 /**
  * PreflightFailure — Renders a structured preflight error with remediation actions.
  *
@@ -7,7 +8,6 @@
 
 import { useState, useRef, useEffect } from 'react'
 
-const COPY_FEEDBACK_MS = 2000
 import {
   ShieldAlert,
   KeyRound,
@@ -20,7 +20,8 @@ import {
   Check,
   RotateCcw,
   ExternalLink,
-  Info } from 'lucide-react'
+  Info,
+  Wrench } from 'lucide-react'
 import type { PreflightError, PreflightErrorCode, RemediationAction } from '../../lib/missions/preflightCheck'
 import { getRemediationActions } from '../../lib/missions/preflightCheck'
 import { cn } from '../../lib/cn'
@@ -56,6 +57,11 @@ const ERROR_DISPLAY: Record<PreflightErrorCode, { icon: typeof ShieldAlert; colo
     color: 'text-blue-400',
     bgColor: 'bg-blue-500/10',
     title: 'Cluster Unreachable' },
+  MISSING_TOOLS: {
+    icon: Wrench,
+    color: 'text-yellow-400',
+    bgColor: 'bg-yellow-500/10',
+    title: 'Missing Tools' },
   UNKNOWN_EXECUTION_FAILURE: {
     icon: AlertTriangle,
     color: 'text-gray-400',
@@ -102,7 +108,7 @@ function ActionButton({
       copyTimeoutRef.current = setTimeout(() => {
         setCopied(false)
         copyTimeoutRef.current = null
-      }, COPY_FEEDBACK_MS)
+      }, COPY_FEEDBACK_TIMEOUT_MS)
     }
   }
 
@@ -116,7 +122,7 @@ function ActionButton({
   if (action.actionType === 'info') {
     return (
       <div className="flex items-start gap-2 text-xs text-muted-foreground">
-        <Icon size={14} className="mt-0.5 shrink-0 text-gray-400" />
+        <Icon size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
         <span>{action.description}</span>
       </div>
     )
@@ -156,16 +162,16 @@ function ActionButton({
         {action.codeSnippet && (
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-gray-400 transition-colors hover:bg-gray-700 hover:text-foreground"
+            className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <Icon size={12} />
             {copied ? 'Copied' : 'Copy'}
           </button>
         )}
       </div>
-      <p className="text-xs text-gray-400">{action.description}</p>
+      <p className="text-xs text-muted-foreground">{action.description}</p>
       {action.codeSnippet && (
-        <pre className="mt-1 overflow-x-auto rounded-md bg-gray-900/70 p-2 text-xs text-muted-foreground">
+        <pre className="mt-1 overflow-x-auto rounded-md bg-secondary/70 p-2 text-xs text-muted-foreground">
           <code>{action.codeSnippet}</code>
         </pre>
       )}
@@ -191,7 +197,7 @@ export function PreflightFailure({ error, context, onRetry }: PreflightFailurePr
   return (
     <div
       className={cn(
-        'rounded-lg border border-gray-700/50 p-4',
+        'rounded-lg border border-border p-4',
         display.bgColor,
       )}
       data-testid="preflight-failure"
@@ -200,10 +206,10 @@ export function PreflightFailure({ error, context, onRetry }: PreflightFailurePr
       {/* Header */}
       <div className="mb-3 flex items-center gap-2">
         <Icon size={18} className={display.color} />
-        <h4 className="text-sm font-semibold text-gray-100">
+        <h4 className="text-sm font-semibold text-foreground">
           {display.title}
         </h4>
-        <span className="ml-auto rounded bg-gray-800/80 px-2 py-0.5 text-[10px] font-mono text-gray-500">
+        <span className="ml-auto rounded bg-secondary/80 px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
           {error.code}
         </span>
       </div>
@@ -215,15 +221,15 @@ export function PreflightFailure({ error, context, onRetry }: PreflightFailurePr
 
       {/* Context info */}
       {context && (
-        <p className="mb-3 text-xs text-gray-500">
-          Cluster context: <code className="rounded bg-gray-800 px-1 py-0.5 text-gray-400">{context}</code>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Cluster context: <code className="rounded bg-secondary px-1 py-0.5 text-muted-foreground">{context}</code>
         </p>
       )}
 
       {/* Remediation actions */}
       {actions.length > 0 && (
-        <div className="space-y-3 border-t border-gray-700/30 pt-3">
-          <p className="text-xs font-medium text-gray-400">How to fix:</p>
+        <div className="space-y-3 border-t border-border pt-3">
+          <p className="text-xs font-medium text-muted-foreground">How to fix:</p>
           {actions.map((action, i) => (
             <ActionButton key={i} action={action} onRetry={onRetry} />
           ))}

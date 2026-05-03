@@ -7,7 +7,7 @@ import {
   Pencil,
 } from 'lucide-react'
 import { useAlertRules } from '../../hooks/useAlerts'
-import { formatCondition } from '../../types/alerts'
+import { formatCondition, ALERT_SEVERITY_ORDER } from '../../types/alerts'
 import type { AlertRule, AlertSeverity } from '../../types/alerts'
 import { Button } from '../ui/Button'
 import { AlertRuleEditor } from '../alerts/AlertRuleEditor'
@@ -27,11 +27,9 @@ const SORT_OPTIONS_KEYS: ReadonlyArray<{ value: SortField; labelKey: SortTransla
   { value: 'enabled' as const, labelKey: 'alertRules.sortStatus' },
 ]
 
-const SEVERITY_ORDER: Record<AlertSeverity, number> = { critical: 0, warning: 1, info: 2 }
-
 const ALERT_SORT_COMPARATORS = {
   name: commonComparators.string<AlertRule>('name'),
-  severity: (a: AlertRule, b: AlertRule) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity],
+  severity: (a: AlertRule, b: AlertRule) => ALERT_SEVERITY_ORDER[a.severity] - ALERT_SEVERITY_ORDER[b.severity],
   enabled: (a: AlertRule, b: AlertRule) => (b.enabled ? 1 : 0) - (a.enabled ? 1 : 0),
 }
 
@@ -166,7 +164,7 @@ export function AlertRulesCard() {
   return (
     <div className="h-full flex flex-col">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="px-1.5 py-0.5 text-xs rounded bg-secondary text-muted-foreground">
             {t('alertRules.activeCount', { count: enabledCount })}
@@ -193,7 +191,7 @@ export function AlertRulesCard() {
               sortDirection,
               onSortDirectionChange: setSortDirection,
             }}
-            className="!mb-0"
+            className="mb-0!"
           />
         </div>
       </div>

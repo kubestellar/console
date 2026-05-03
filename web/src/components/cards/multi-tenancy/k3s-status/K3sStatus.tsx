@@ -19,6 +19,7 @@ import { useK3sStatus } from './useK3sStatus'
 import { K3S_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
 import { K3sDetailModal } from './K3sDetailModal'
+import { createCardSyncFormatter } from '../../../../lib/formatters'
 
 // ============================================================================
 // Constants
@@ -34,25 +35,6 @@ const SKELETON_POD_ROWS = 3
 // Relative time formatting
 // ============================================================================
 
-function useFormatRelativeTime() {
-  const { t } = useTranslation('cards')
-  return (isoString: string): string => {
-    const diff = Date.now() - new Date(isoString).getTime()
-    if (isNaN(diff) || diff < 0) return t('k3sStatus.syncedJustNow')
-
-    /** Milliseconds in one minute */
-    const MINUTE_MS = 60_000
-    /** Milliseconds in one hour */
-    const HOUR_MS = 60 * MINUTE_MS
-    /** Milliseconds in one day */
-    const DAY_MS = 24 * HOUR_MS
-
-    if (diff < MINUTE_MS) return t('k3sStatus.syncedJustNow')
-    if (diff < HOUR_MS) return t('k3sStatus.syncedMinutesAgo', { count: Math.floor(diff / MINUTE_MS) })
-    if (diff < DAY_MS) return t('k3sStatus.syncedHoursAgo', { count: Math.floor(diff / HOUR_MS) })
-    return t('k3sStatus.syncedDaysAgo', { count: Math.floor(diff / DAY_MS) })
-  }
-}
 
 // ============================================================================
 // Component
@@ -60,7 +42,7 @@ function useFormatRelativeTime() {
 
 export function K3sStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = useFormatRelativeTime()
+  const formatRelativeTime = createCardSyncFormatter(t, 'k3sStatus')
   const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useK3sStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()

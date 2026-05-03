@@ -29,7 +29,7 @@ export function ActiveUsersWidget() {
           : t('sidebar.activeViewers', { count: viewerCount })
       }
     >
-      <Users className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+      <Users className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
       <span className="text-xs font-medium tabular-nums">
         {hasError ? '—' : viewerCount}
       </span>

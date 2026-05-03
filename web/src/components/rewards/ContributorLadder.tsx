@@ -2,7 +2,7 @@
  * ContributorLadder — shows current level, progress to next, and the full ladder
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Telescope, Compass, Map, Rocket, Shield, Star, Crown, Sparkles,
   Coins, ChevronDown, ChevronUp, Copy, Check,
@@ -65,7 +65,7 @@ export function ContributorBanner() {
             {totalCoins > 0 && (
               <button
                 onClick={handleLinkedInShare}
-                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-[#0A66C2] transition-colors"
+                className="p-1 rounded hover:bg-secondary/50 text-muted-foreground hover:text-linkedin transition-colors"
                 title={`Share your ${current.name} status on LinkedIn`}
               >
                 <Linkedin className="w-3.5 h-3.5" />
@@ -137,7 +137,7 @@ export function ContributorBanner() {
                         : 'opacity-40'
                   }`}
                 >
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                     isUnlocked ? level.bgClass : 'bg-secondary'
                   }`}>
                     <LevelIcon
@@ -184,13 +184,21 @@ const BADGE_LOGIN_PLACEHOLDER = 'YOUR-LOGIN'
  */
 function BadgeSnippet() {
   const [copied, setCopied] = useState(false)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const snippet = `![Contributor Badge](${BADGE_URL_BASE}${BADGE_LOGIN_PLACEHOLDER})`
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(snippet)
       setCopied(true)
-      setTimeout(() => setCopied(false), COPY_CONFIRM_MS)
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+      copyTimerRef.current = setTimeout(() => setCopied(false), COPY_CONFIRM_MS)
     } catch {
       // Clipboard API can fail in insecure contexts; fail silently.
     }

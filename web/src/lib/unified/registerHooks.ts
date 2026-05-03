@@ -8,12 +8,15 @@
  * IMPORTANT: These hooks are called inside the useDataSource hook,
  * which is a React hook. The registered functions must follow React's
  * rules of hooks - they are called consistently on every render.
+ *
+ * Time constants imported from lib/constants/time.
  */
 
 import { useState, useEffect } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { registerDataHook } from './card/hooks/useDataSource'
 import { SHORT_DELAY_MS } from '../constants/network'
+import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../constants/time'
 import {
   useCachedPodIssues,
   useCachedEvents,
@@ -47,6 +50,50 @@ import {
 import {
   useServiceExports,
   useServiceImports } from '../../hooks/useMCS'
+import { useFluxStatus } from '../../components/cards/flux_status/useFluxStatus'
+import { useCachedBackstage } from '../../hooks/useCachedBackstage'
+import { useContourStatus } from '../../components/cards/contour_status/useContourStatus'
+import { useChaosMeshStatus } from '../../components/cards/chaos_mesh_status/useChaosMeshStatus'
+import { useCachedContainerd } from '../../hooks/useCachedContainerd'
+import { useCachedCortex } from '../../hooks/useCachedCortex'
+import { useCachedDapr } from '../../hooks/useCachedDapr'
+import { useCachedDragonfly } from '../../hooks/useCachedDragonfly'
+import { useCachedEnvoy } from '../../components/cards/envoy_status/useCachedEnvoy'
+import { useCachedGrpc } from '../../hooks/useCachedGrpc'
+import { useCachedKeda } from '../../hooks/useCachedKeda'
+import { useCachedKserve } from '../../hooks/useCachedKserve'
+import { useCachedKubevela } from '../../hooks/useCachedKubevela'
+import { useCachedLinkerd } from '../../hooks/useCachedLinkerd'
+import { useCachedOpenfeature } from '../../hooks/useCachedOpenfeature'
+import { useCachedLonghorn } from '../../hooks/useCachedLonghorn'
+import { useCachedOpenfga } from '../../hooks/useCachedOpenfga'
+import { useCachedOtel } from '../../hooks/useCachedOtel'
+import { useCachedRook } from '../../hooks/useCachedRook'
+import { useCachedSpiffe } from '../../hooks/useCachedSpiffe'
+import { useCachedCni } from '../../hooks/useCachedCni'
+import { useCachedSpire } from '../../hooks/useCachedSpire'
+import { useCachedStrimzi } from '../../hooks/useCachedStrimzi'
+import { useCachedFlatcar } from '../../hooks/useCachedFlatcar'
+import { useCachedTikv } from '../../hooks/useCachedTikv'
+import { useCachedTuf } from '../../hooks/useCachedTuf'
+import { useCachedCloudCustodian } from '../../hooks/useCachedCloudCustodian'
+import { useCachedVitess } from '../../hooks/useCachedVitess'
+import { useCachedWasmcloud } from '../../hooks/useCachedWasmcloud'
+import { useCachedVolcano } from '../../hooks/useCachedVolcano'
+
+const THIRTY_SECONDS_MS = 30 * MS_PER_SECOND
+const TWO_MINUTES_MS = 2 * MS_PER_MINUTE
+const THREE_MINUTES_MS = 3 * MS_PER_MINUTE
+const FOUR_MINUTES_MS = 4 * MS_PER_MINUTE
+const FIVE_MINUTES_MS = 5 * MS_PER_MINUTE
+const TEN_MINUTES_MS = 10 * MS_PER_MINUTE
+const FIFTEEN_MINUTES_MS = 15 * MS_PER_MINUTE
+const THIRTY_MINUTES_MS = 30 * MS_PER_MINUTE
+const FORTY_FIVE_MINUTES_MS = 45 * MS_PER_MINUTE
+const TWO_HOURS_MS = 2 * MS_PER_HOUR
+const THREE_HOURS_MS = 3 * MS_PER_HOUR
+const TWO_DAYS_MS = 2 * MS_PER_DAY
+const THREE_DAYS_MS = 3 * MS_PER_DAY
 
 // ============================================================================
 // Wrapper hooks that convert params object to positional args
@@ -210,7 +257,7 @@ function useUnifiedCronJobs(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useCronJobs(cluster, namespace)
   return {
-    data: result.cronjobs,
+    data: result.cronJobs,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch }
@@ -221,7 +268,7 @@ function useUnifiedStatefulSets(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useStatefulSets(cluster, namespace)
   return {
-    data: result.statefulsets,
+    data: result.statefulSets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch }
@@ -232,7 +279,7 @@ function useUnifiedDaemonSets(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useDaemonSets(cluster, namespace)
   return {
-    data: result.daemonsets,
+    data: result.daemonSets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch }
@@ -254,7 +301,7 @@ function useUnifiedReplicaSets(params?: Record<string, unknown>) {
   const namespace = params?.namespace as string | undefined
   const result = useReplicaSets(cluster, namespace)
   return {
-    data: result.replicasets,
+    data: result.replicaSets,
     isLoading: result.isLoading,
     error: result.error ? new Error(result.error) : null,
     refetch: result.refetch }
@@ -409,11 +456,11 @@ function useDemoDataHook<T>(demoData: T[]) {
 
 // Cluster metrics demo data
 const DEMO_CLUSTER_METRICS = [
-  { timestamp: Date.now() - 300000, cpu: 45, memory: 62, pods: 156 },
-  { timestamp: Date.now() - 240000, cpu: 48, memory: 64, pods: 158 },
-  { timestamp: Date.now() - 180000, cpu: 42, memory: 61, pods: 155 },
-  { timestamp: Date.now() - 120000, cpu: 51, memory: 67, pods: 162 },
-  { timestamp: Date.now() - 60000, cpu: 47, memory: 65, pods: 159 },
+  { timestamp: Date.now() - FIVE_MINUTES_MS, cpu: 45, memory: 62, pods: 156 },
+  { timestamp: Date.now() - FOUR_MINUTES_MS, cpu: 48, memory: 64, pods: 158 },
+  { timestamp: Date.now() - THREE_MINUTES_MS, cpu: 42, memory: 61, pods: 155 },
+  { timestamp: Date.now() - TWO_MINUTES_MS, cpu: 51, memory: 67, pods: 162 },
+  { timestamp: Date.now() - MS_PER_MINUTE, cpu: 47, memory: 65, pods: 159 },
   { timestamp: Date.now(), cpu: 49, memory: 66, pods: 161 },
 ]
 
@@ -426,11 +473,11 @@ const DEMO_RESOURCE_USAGE = [
 
 // Events timeline demo data
 const DEMO_EVENTS_TIMELINE = [
-  { timestamp: Date.now() - 300000, count: 12, type: 'Normal' },
-  { timestamp: Date.now() - 240000, count: 8, type: 'Warning' },
-  { timestamp: Date.now() - 180000, count: 15, type: 'Normal' },
-  { timestamp: Date.now() - 120000, count: 5, type: 'Warning' },
-  { timestamp: Date.now() - 60000, count: 10, type: 'Normal' },
+  { timestamp: Date.now() - FIVE_MINUTES_MS, count: 12, type: 'Normal' },
+  { timestamp: Date.now() - FOUR_MINUTES_MS, count: 8, type: 'Warning' },
+  { timestamp: Date.now() - THREE_MINUTES_MS, count: 15, type: 'Normal' },
+  { timestamp: Date.now() - TWO_MINUTES_MS, count: 5, type: 'Warning' },
+  { timestamp: Date.now() - MS_PER_MINUTE, count: 10, type: 'Normal' },
   { timestamp: Date.now(), count: 7, type: 'Warning' },
 ]
 
@@ -470,28 +517,28 @@ const DEMO_TOP_PODS = [
 
 // GitOps drift demo data
 const DEMO_GITOPS_DRIFT = [
-  { app: 'frontend', status: 'synced', cluster: 'prod-east', lastSync: Date.now() - 60000 },
-  { app: 'backend', status: 'drifted', cluster: 'staging', lastSync: Date.now() - 300000 },
-  { app: 'monitoring', status: 'synced', cluster: 'dev', lastSync: Date.now() - 120000 },
+  { app: 'frontend', status: 'synced', cluster: 'prod-east', lastSync: Date.now() - MS_PER_MINUTE },
+  { app: 'backend', status: 'drifted', cluster: 'staging', lastSync: Date.now() - FIVE_MINUTES_MS },
+  { app: 'monitoring', status: 'synced', cluster: 'dev', lastSync: Date.now() - TWO_MINUTES_MS },
 ]
 
 // Pod health trend demo data
 const DEMO_POD_HEALTH_TREND = [
-  { timestamp: Date.now() - 300000, healthy: 145, unhealthy: 3 },
-  { timestamp: Date.now() - 240000, healthy: 148, unhealthy: 2 },
-  { timestamp: Date.now() - 180000, healthy: 142, unhealthy: 5 },
-  { timestamp: Date.now() - 120000, healthy: 150, unhealthy: 1 },
-  { timestamp: Date.now() - 60000, healthy: 147, unhealthy: 4 },
+  { timestamp: Date.now() - FIVE_MINUTES_MS, healthy: 145, unhealthy: 3 },
+  { timestamp: Date.now() - FOUR_MINUTES_MS, healthy: 148, unhealthy: 2 },
+  { timestamp: Date.now() - THREE_MINUTES_MS, healthy: 142, unhealthy: 5 },
+  { timestamp: Date.now() - TWO_MINUTES_MS, healthy: 150, unhealthy: 1 },
+  { timestamp: Date.now() - MS_PER_MINUTE, healthy: 147, unhealthy: 4 },
   { timestamp: Date.now(), healthy: 149, unhealthy: 2 },
 ]
 
 // Resource trend demo data
 const DEMO_RESOURCE_TREND = [
-  { timestamp: Date.now() - 300000, cpu: 45, memory: 62 },
-  { timestamp: Date.now() - 240000, cpu: 52, memory: 65 },
-  { timestamp: Date.now() - 180000, cpu: 48, memory: 58 },
-  { timestamp: Date.now() - 120000, cpu: 55, memory: 70 },
-  { timestamp: Date.now() - 60000, cpu: 50, memory: 67 },
+  { timestamp: Date.now() - FIVE_MINUTES_MS, cpu: 45, memory: 62 },
+  { timestamp: Date.now() - FOUR_MINUTES_MS, cpu: 52, memory: 65 },
+  { timestamp: Date.now() - THREE_MINUTES_MS, cpu: 48, memory: 58 },
+  { timestamp: Date.now() - TWO_MINUTES_MS, cpu: 55, memory: 70 },
+  { timestamp: Date.now() - MS_PER_MINUTE, cpu: 50, memory: 67 },
   { timestamp: Date.now(), cpu: 53, memory: 64 },
 ]
 
@@ -522,9 +569,9 @@ const DEMO_GPU_INVENTORY = [
 
 // Prow jobs demo data
 const DEMO_PROW_JOBS = [
-  { name: 'pull-kubestellar-verify', type: 'presubmit', state: 'success', startTime: Date.now() - 120000 },
-  { name: 'periodic-e2e-tests', type: 'periodic', state: 'pending', startTime: Date.now() - 60000 },
-  { name: 'post-kubestellar-deploy', type: 'postsubmit', state: 'failure', startTime: Date.now() - 300000 },
+  { name: 'pull-kubestellar-verify', type: 'presubmit', state: 'success', startTime: Date.now() - TWO_MINUTES_MS },
+  { name: 'periodic-e2e-tests', type: 'periodic', state: 'pending', startTime: Date.now() - MS_PER_MINUTE },
+  { name: 'post-kubestellar-deploy', type: 'postsubmit', state: 'failure', startTime: Date.now() - FIVE_MINUTES_MS },
 ]
 
 // ML jobs demo data
@@ -585,8 +632,8 @@ const DEMO_COMPLIANCE_SCORE = {
 
 // Namespace events demo data
 const DEMO_NAMESPACE_EVENTS = [
-  { type: 'Normal', reason: 'Scheduled', message: 'Pod scheduled', object: 'pod/api-7d8f', namespace: 'production', count: 1, lastSeen: Date.now() - 30000 },
-  { type: 'Warning', reason: 'BackOff', message: 'Container restarting', object: 'pod/worker-5c6d', namespace: 'production', count: 5, lastSeen: Date.now() - 60000 },
+  { type: 'Normal', reason: 'Scheduled', message: 'Pod scheduled', object: 'pod/api-7d8f', namespace: 'production', count: 1, lastSeen: Date.now() - THIRTY_SECONDS_MS },
+  { type: 'Warning', reason: 'BackOff', message: 'Container restarting', object: 'pod/worker-5c6d', namespace: 'production', count: 5, lastSeen: Date.now() - MS_PER_MINUTE },
 ]
 
 // GPU workloads demo data
@@ -626,9 +673,9 @@ const DEMO_GATEWAY_STATUS = [
 
 // Kustomization status demo data
 const DEMO_KUSTOMIZATION_STATUS = [
-  { name: 'apps', namespace: 'flux-system', ready: true, lastApplied: Date.now() - 120000 },
-  { name: 'infra', namespace: 'flux-system', ready: true, lastApplied: Date.now() - 300000 },
-  { name: 'monitoring', namespace: 'flux-system', ready: false, lastApplied: Date.now() - 600000 },
+  { name: 'apps', namespace: 'flux-system', ready: true, lastApplied: Date.now() - TWO_MINUTES_MS },
+  { name: 'infra', namespace: 'flux-system', ready: true, lastApplied: Date.now() - FIVE_MINUTES_MS },
+  { name: 'monitoring', namespace: 'flux-system', ready: false, lastApplied: Date.now() - TEN_MINUTES_MS },
 ]
 
 // Provider health demo data
@@ -654,15 +701,15 @@ const DEMO_PROW_STATUS = {
 
 // Prow history demo data
 const DEMO_PROW_HISTORY = [
-  { job: 'e2e-tests', result: 'success', duration: 1200, finishedAt: Date.now() - 3600000 },
-  { job: 'unit-tests', result: 'success', duration: 300, finishedAt: Date.now() - 7200000 },
-  { job: 'lint', result: 'failure', duration: 60, finishedAt: Date.now() - 10800000 },
+  { job: 'e2e-tests', result: 'success', duration: 1200, finishedAt: Date.now() - MS_PER_HOUR },
+  { job: 'unit-tests', result: 'success', duration: 300, finishedAt: Date.now() - TWO_HOURS_MS },
+  { job: 'lint', result: 'failure', duration: 60, finishedAt: Date.now() - THREE_HOURS_MS },
 ]
 
 // Helm history demo data
 const DEMO_HELM_HISTORY = [
-  { revision: 5, chart: 'nginx-ingress-4.6.0', appVersion: '1.9.0', status: 'deployed', updated: Date.now() - 86400000 },
-  { revision: 4, chart: 'nginx-ingress-4.5.2', appVersion: '1.8.0', status: 'superseded', updated: Date.now() - 172800000 },
+  { revision: 5, chart: 'nginx-ingress-4.6.0', appVersion: '1.9.0', status: 'deployed', updated: Date.now() - MS_PER_DAY },
+  { revision: 4, chart: 'nginx-ingress-4.5.2', appVersion: '1.8.0', status: 'superseded', updated: Date.now() - TWO_DAYS_MS },
 ]
 
 // External secrets demo data (stats-grid)
@@ -680,14 +727,14 @@ const DEMO_CERT_MANAGER = {
 
 // Vault secrets demo data
 const DEMO_VAULT_SECRETS = [
-  { path: 'secret/data/api-keys', status: 'synced', lastSync: Date.now() - 60000 },
-  { path: 'secret/data/db-creds', status: 'synced', lastSync: Date.now() - 120000 },
+  { path: 'secret/data/api-keys', status: 'synced', lastSync: Date.now() - MS_PER_MINUTE },
+  { path: 'secret/data/db-creds', status: 'synced', lastSync: Date.now() - TWO_MINUTES_MS },
 ]
 
 // Falco alerts demo data
 const DEMO_FALCO_ALERTS = [
-  { rule: 'Terminal shell in container', severity: 'Warning', count: 3, lastSeen: Date.now() - 300000 },
-  { rule: 'Sensitive file read', severity: 'Notice', count: 12, lastSeen: Date.now() - 600000 },
+  { rule: 'Terminal shell in container', severity: 'Warning', count: 3, lastSeen: Date.now() - FIVE_MINUTES_MS },
+  { rule: 'Sensitive file read', severity: 'Notice', count: 12, lastSeen: Date.now() - TEN_MINUTES_MS },
 ]
 
 // Kubescape scan demo data (stats-grid)
@@ -725,20 +772,20 @@ const DEMO_GPU_STATUS = {
 
 // GPU utilization demo data (chart)
 const DEMO_GPU_UTILIZATION = [
-  { timestamp: Date.now() - 300000, utilization: 72, memory: 68 },
-  { timestamp: Date.now() - 240000, utilization: 78, memory: 72 },
-  { timestamp: Date.now() - 180000, utilization: 65, memory: 60 },
-  { timestamp: Date.now() - 120000, utilization: 82, memory: 78 },
-  { timestamp: Date.now() - 60000, utilization: 75, memory: 70 },
+  { timestamp: Date.now() - FIVE_MINUTES_MS, utilization: 72, memory: 68 },
+  { timestamp: Date.now() - FOUR_MINUTES_MS, utilization: 78, memory: 72 },
+  { timestamp: Date.now() - THREE_MINUTES_MS, utilization: 65, memory: 60 },
+  { timestamp: Date.now() - TWO_MINUTES_MS, utilization: 82, memory: 78 },
+  { timestamp: Date.now() - MS_PER_MINUTE, utilization: 75, memory: 70 },
   { timestamp: Date.now(), utilization: 80, memory: 74 },
 ]
 
 // GPU usage trend demo data (chart)
 const DEMO_GPU_USAGE_TREND = [
-  { timestamp: Date.now() - 3600000, avgUtilization: 68 },
-  { timestamp: Date.now() - 2700000, avgUtilization: 72 },
-  { timestamp: Date.now() - 1800000, avgUtilization: 78 },
-  { timestamp: Date.now() - 900000, avgUtilization: 74 },
+  { timestamp: Date.now() - MS_PER_HOUR, avgUtilization: 68 },
+  { timestamp: Date.now() - FORTY_FIVE_MINUTES_MS, avgUtilization: 72 },
+  { timestamp: Date.now() - THIRTY_MINUTES_MS, avgUtilization: 78 },
+  { timestamp: Date.now() - FIFTEEN_MINUTES_MS, avgUtilization: 74 },
   { timestamp: Date.now(), avgUtilization: 76 },
 ]
 
@@ -780,16 +827,16 @@ const DEMO_RESOURCE_CAPACITY = {
 
 // GitHub activity demo data
 const DEMO_GITHUB_ACTIVITY = [
-  { type: 'PushEvent', repo: 'kubestellar/console', actor: 'developer1', timestamp: Date.now() - 3600000 },
-  { type: 'PullRequestEvent', repo: 'kubestellar/console', actor: 'developer2', timestamp: Date.now() - 7200000 },
-  { type: 'IssuesEvent', repo: 'kubestellar/kubestellar', actor: 'contributor', timestamp: Date.now() - 10800000 },
+  { type: 'PushEvent', repo: 'kubestellar/console', actor: 'developer1', timestamp: Date.now() - MS_PER_HOUR },
+  { type: 'PullRequestEvent', repo: 'kubestellar/console', actor: 'developer2', timestamp: Date.now() - TWO_HOURS_MS },
+  { type: 'IssuesEvent', repo: 'kubestellar/kubestellar', actor: 'contributor', timestamp: Date.now() - THREE_HOURS_MS },
 ]
 
 // RSS feed demo data
 const DEMO_RSS_FEED = [
-  { title: 'Kubernetes 1.30 Released', source: 'k8s.io', pubDate: Date.now() - 86400000 },
-  { title: 'New CNCF Project Announcement', source: 'cncf.io', pubDate: Date.now() - 172800000 },
-  { title: 'Cloud Native Best Practices', source: 'blog.k8s.io', pubDate: Date.now() - 259200000 },
+  { title: 'Kubernetes 1.30 Released', source: 'k8s.io', pubDate: Date.now() - MS_PER_DAY },
+  { title: 'New CNCF Project Announcement', source: 'cncf.io', pubDate: Date.now() - TWO_DAYS_MS },
+  { title: 'Cloud Native Best Practices', source: 'blog.k8s.io', pubDate: Date.now() - THREE_DAYS_MS },
 ]
 
 // Kubecost overview demo data (chart/donut)
@@ -850,7 +897,7 @@ function useRecentEvents(params?: Record<string, unknown>) {
   // Filter to events within the last hour
   const recentEvents = (() => {
     if (!result.data) return []
-    const oneHourAgo = Date.now() - 60 * 60 * 1000
+    const oneHourAgo = Date.now() - MS_PER_HOUR
     return result.data.filter(e => {
       if (!e.lastSeen) return false
       return new Date(e.lastSeen).getTime() >= oneHourAgo
@@ -1010,6 +1057,344 @@ function useGatewayStatus() {
 function useKustomizationStatus() {
   return useDemoDataHook(DEMO_KUSTOMIZATION_STATUS)
 }
+
+function useUnifiedFluxStatus() {
+  const result = useFluxStatus()
+  const data = [
+    ...result.data.resources.sources,
+    ...result.data.resources.kustomizations,
+    ...result.data.resources.helmReleases,
+  ]
+
+  return {
+    data,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Flux status') : null,
+    refetch: () => {},
+  }
+}
+
+function useUnifiedContourStatus() {
+  const result = useContourStatus()
+  return {
+    data: result.data.proxies,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Contour status') : null,
+    refetch: () => {},
+  }
+}
+
+function useUnifiedChaosMeshStatus() {
+  const result = useChaosMeshStatus()
+  return {
+    data: result.data,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Chaos Mesh status') : null,
+    refetch: () => {},
+  }
+}
+
+function useUnifiedContainerdStatus() {
+  const result = useCachedContainerd()
+  return {
+    data: result.data.containers,
+    isLoading: result.isLoading,
+    error: result.isFailed ? new Error('Failed to fetch containerd status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedCortexStatus() {
+  const result = useCachedCortex()
+  // Surface the component list as the primary row set for generic list renderers.
+  return {
+    data: result.data.components,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Cortex status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedDragonflyStatus() {
+  const result = useCachedDragonfly()
+  // Surface the component list as the primary row set for generic list renderers.
+  return {
+    data: result.data.components,
+    isLoading: result.isLoading,
+    error: result.isFailed ? new Error('Failed to fetch Dragonfly status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedEnvoyStatus() {
+  const result = useCachedEnvoy()
+  // Surface the listener list as the primary row set for generic list renderers.
+  return {
+    data: result.data.listeners,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Envoy status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedDaprStatus() {
+  const result = useCachedDapr()
+  // Surface the component list as the primary row set for generic list renderers.
+  return {
+    data: result.data.components,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Dapr status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedGrpcStatus() {
+  const result = useCachedGrpc()
+  // Surface the service list as the primary row set for generic list renderers.
+  return {
+    data: result.data.services,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch gRPC status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedKedaStatus() {
+  const result = useCachedKeda()
+  // Surface the ScaledObject list as the primary row set for generic list
+  // renderers. `data.scaledObjects` can be undefined while the cache is
+  // hydrating, so guard defensively per CLAUDE.md array-safety rule.
+  return {
+    data: (result.data?.scaledObjects ?? []),
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch KEDA status') : null,
+    refetch: async () => {
+      // useKedaStatus doesn't expose refetch directly; the cache layer
+      // refreshes on its own schedule. This is a no-op placeholder that
+      // preserves the expected unified-hook shape.
+    },
+  }
+}
+
+function useUnifiedBackstageStatus() {
+  const result = useCachedBackstage()
+  // Surface the plugin list as the primary row set for generic list renderers.
+  return {
+    data: result.data.plugins,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedLinkerdStatus() {
+  const result = useCachedLinkerd()
+  // Surface the meshed deployment list as the primary row set for generic list renderers.
+  return {
+    data: result.data.deployments,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Linkerd status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedKserveStatus() {
+  const result = useCachedKserve()
+  // Surface the InferenceService list as the primary row set for generic list renderers.
+  // `services` can be undefined while the cache is hydrating — guard per CLAUDE.md.
+  return {
+    data: result.data.services ?? [],
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch KServe status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedLonghornStatus() {
+  const result = useCachedLonghorn()
+  // Surface the volume list as the primary row set for generic list renderers.
+  return {
+    data: result.data.volumes,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedOtelStatus() {
+  const result = useCachedOtel()
+  return {
+    data: result.data.collectors,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedTikvStatus() {
+  const result = useCachedTikv()
+  return {
+    data: result.data.stores,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedTufStatus() {
+  const result = useCachedTuf()
+  // Surface the TUF role list as the primary row set for generic list renderers.
+  return {
+    data: result.data.roles,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedCloudCustodianStatus() {
+  const result = useCachedCloudCustodian()
+  // Surface the policy list as the primary row set for generic list renderers.
+  return {
+    data: result.data.policies,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedRookStatus() {
+  const result = useCachedRook()
+  return {
+    data: result.data.clusters,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedSpiffeStatus() {
+  const result = useCachedSpiffe()
+  // Surface the registration entry list as the primary row set for generic list renderers.
+  return {
+    data: result.data.entries,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch SPIFFE status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedCniStatus() {
+  const result = useCachedCni()
+  // Surface the node list as the primary row set for generic list renderers.
+  return {
+    data: result.data.nodes,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch CNI status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedOpenfeatureStatus() {
+  const result = useCachedOpenfeature()
+  // Surface the feature-flag list as the primary row set for generic list renderers.
+  return {
+    data: result.data.flags,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch OpenFeature status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedStrimziStatus() {
+  const result = useCachedStrimzi()
+  // Surface the Kafka cluster list as the primary row set for generic list renderers.
+  return {
+    data: result.data.clusters,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Strimzi status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedSpireStatus() {
+  const result = useCachedSpire()
+  // Surface the SPIRE server pod list as the primary row set for generic
+  // list renderers.
+  return {
+    data: result.data.serverPods,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedOpenfgaStatus() {
+  const result = useCachedOpenfga()
+  // Surface the store list as the primary row set for generic list renderers.
+  return {
+    data: result.data.stores,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch OpenFGA status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedKubeVelaStatus() {
+  const result = useCachedKubevela()
+  // Surface the Application CR list as the primary row set for generic list renderers.
+  return {
+    data: result.data.applications,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch KubeVela status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedFlatcarStatus() {
+  const result = useCachedFlatcar()
+  // Surface the node list as the primary row set for generic list renderers.
+  return {
+    data: result.data.nodes,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Flatcar status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedVitessStatus() {
+  const result = useCachedVitess()
+  // Surface the keyspace list as the primary row set for generic list renderers.
+  return {
+    data: result.data.keyspaces,
+    isLoading: result.isLoading,
+    error: result.error ? new Error(result.error) : null,
+    refetch: result.refetch,
+  }
+}
+
+function useUnifiedWasmcloudStatus() {
+  const result = useCachedWasmcloud()
+  // Surface the host list as the primary row set for generic list renderers.
+  return {
+    data: result.data.hosts,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch wasmCloud status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
+function useUnifiedVolcanoStatus() {
+  const result = useCachedVolcano()
+  // Surface the job list as the primary row set for generic list renderers.
+  return {
+    data: result.data.jobs,
+    isLoading: result.showSkeleton,
+    error: result.error ? new Error('Failed to fetch Volcano status') : null,
+    refetch: () => { result.refetch() },
+  }
+}
+
 
 function useProviderHealth() {
   return useDemoDataHook(DEMO_PROVIDER_HEALTH)
@@ -1196,6 +1581,36 @@ export function registerUnifiedHooks(): void {
   registerDataHook('useArgoCDSyncStatus', useArgoCDSyncStatus)
   registerDataHook('useGatewayStatus', useGatewayStatus)
   registerDataHook('useKustomizationStatus', useKustomizationStatus)
+  registerDataHook('useFluxStatus', useUnifiedFluxStatus)
+  registerDataHook('useContourStatus', useUnifiedContourStatus)
+  registerDataHook('useChaosMeshStatus', useUnifiedChaosMeshStatus)
+  registerDataHook('useCachedBackstage', useUnifiedBackstageStatus)
+  registerDataHook('useCachedContainerd', useUnifiedContainerdStatus)
+  registerDataHook('useCachedCortex', useUnifiedCortexStatus)
+  registerDataHook('useCachedDapr', useUnifiedDaprStatus)
+  registerDataHook('useCachedDragonfly', useUnifiedDragonflyStatus)
+  registerDataHook('useCachedEnvoy', useUnifiedEnvoyStatus)
+  registerDataHook('useCachedGrpc', useUnifiedGrpcStatus)
+  registerDataHook('useCachedKeda', useUnifiedKedaStatus)
+  registerDataHook('useCachedKserve', useUnifiedKserveStatus)
+  registerDataHook('useCachedLinkerd', useUnifiedLinkerdStatus)
+  registerDataHook('useCachedLonghorn', useUnifiedLonghornStatus)
+  registerDataHook('useCachedOtel', useUnifiedOtelStatus)
+  registerDataHook('useCachedRook', useUnifiedRookStatus)
+  registerDataHook('useCachedSpiffe', useUnifiedSpiffeStatus)
+  registerDataHook('useCachedCni', useUnifiedCniStatus)
+  registerDataHook('useCachedOpenfeature', useUnifiedOpenfeatureStatus)
+  registerDataHook('useCachedSpire', useUnifiedSpireStatus)
+  registerDataHook('useCachedKubevela', useUnifiedKubeVelaStatus)
+  registerDataHook('useCachedStrimzi', useUnifiedStrimziStatus)
+  registerDataHook('useCachedOpenfga', useUnifiedOpenfgaStatus)
+  registerDataHook('useCachedFlatcar', useUnifiedFlatcarStatus)
+  registerDataHook('useCachedTikv', useUnifiedTikvStatus)
+  registerDataHook('useCachedTuf', useUnifiedTufStatus)
+  registerDataHook('useCachedCloudCustodian', useUnifiedCloudCustodianStatus)
+  registerDataHook('useCachedVitess', useUnifiedVitessStatus)
+  registerDataHook('useCachedWasmcloud', useUnifiedWasmcloudStatus)
+  registerDataHook('useCachedVolcano', useUnifiedVolcanoStatus)
   registerDataHook('useProviderHealth', useProviderHealth)
   registerDataHook('useUpgradeStatus', useUpgradeStatus)
   registerDataHook('useProwStatus', useProwStatus)

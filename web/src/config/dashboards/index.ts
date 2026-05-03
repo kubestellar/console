@@ -22,6 +22,18 @@ import { workloadsDashboardConfig } from './workloads'
 import { operatorsDashboardConfig } from './operators'
 import { clustersDashboardConfig } from './clusters'
 import { complianceDashboardConfig } from './compliance'
+import { complianceFrameworksDashboardConfig } from './compliance-frameworks'
+import { changeControlDashboardConfig } from './change-control'
+import { sodDashboardConfig } from './segregation-of-duties'
+import { complianceReportsDashboardConfig } from './compliance-reports'
+import { dataResidencyDashboardConfig } from './data-residency'
+import { baaDashboardConfig } from './baa'
+import { hipaaDashboardConfig } from './hipaa'
+import { gxpDashboardConfig } from './gxp'
+import { nistDashboardConfig } from './nist'
+import { stigDashboardConfig } from './stig'
+import { airgapDashboardConfig } from './airgap'
+import { fedrampDashboardConfig } from './fedramp'
 import { costDashboardConfig } from './cost'
 import { gpuDashboardConfig } from './gpu'
 import { nodesDashboardConfig } from './nodes'
@@ -44,6 +56,18 @@ import { insightsDashboardConfig } from './insights'
 import { multiTenancyDashboardConfig } from './multi-tenancy'
 import { drasiDashboardConfig } from './drasi'
 import { acmmDashboardConfig } from './acmm'
+import { oidcDashboardConfig } from './oidc'
+import { rbacAuditDashboardConfig } from './rbac-audit'
+import { sessionManagementDashboardConfig } from './session-management'
+import { siemDashboardConfig } from './siem'
+import { incidentResponseDashboardConfig } from './incident-response'
+import { threatIntelDashboardConfig } from './threat-intel'
+import { sbomDashboardConfig } from './sbom'
+import { sigstoreDashboardConfig } from './sigstore'
+import { slsaDashboardConfig } from './slsa'
+import { riskMatrixDashboardConfig } from './risk-matrix'
+import { riskRegisterDashboardConfig } from './risk-register'
+import { riskAppetiteDashboardConfig } from './risk-appetite'
 
 /**
  * Registry of all unified dashboard configurations
@@ -60,6 +84,18 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   operators: operatorsDashboardConfig,
   clusters: clustersDashboardConfig,
   compliance: complianceDashboardConfig,
+  'compliance-frameworks': complianceFrameworksDashboardConfig,
+  'change-control': changeControlDashboardConfig,
+  'segregation-of-duties': sodDashboardConfig,
+  'compliance-reports': complianceReportsDashboardConfig,
+  'data-residency': dataResidencyDashboardConfig,
+  baa: baaDashboardConfig,
+  hipaa: hipaaDashboardConfig,
+  gxp: gxpDashboardConfig,
+  nist: nistDashboardConfig,
+  stig: stigDashboardConfig,
+  airgap: airgapDashboardConfig,
+  fedramp: fedrampDashboardConfig,
   cost: costDashboardConfig,
   gpu: gpuDashboardConfig,
   nodes: nodesDashboardConfig,
@@ -82,6 +118,18 @@ export const DASHBOARD_CONFIGS: DashboardConfigRegistry = {
   'multi-tenancy': multiTenancyDashboardConfig,
   drasi: drasiDashboardConfig,
   acmm: acmmDashboardConfig,
+  oidc: oidcDashboardConfig,
+  'rbac-audit': rbacAuditDashboardConfig,
+  'session-management': sessionManagementDashboardConfig,
+  siem: siemDashboardConfig,
+  'incident-response': incidentResponseDashboardConfig,
+  'threat-intel': threatIntelDashboardConfig,
+  sbom: sbomDashboardConfig,
+  sigstore: sigstoreDashboardConfig,
+  slsa: slsaDashboardConfig,
+  'risk-matrix': riskMatrixDashboardConfig,
+  'risk-register': riskRegisterDashboardConfig,
+  'risk-appetite': riskAppetiteDashboardConfig,
 }
 
 /**
@@ -168,6 +216,18 @@ export {
   operatorsDashboardConfig,
   clustersDashboardConfig,
   complianceDashboardConfig,
+  complianceFrameworksDashboardConfig,
+  changeControlDashboardConfig,
+  sodDashboardConfig,
+  complianceReportsDashboardConfig,
+  dataResidencyDashboardConfig,
+  baaDashboardConfig,
+  hipaaDashboardConfig,
+  gxpDashboardConfig,
+  nistDashboardConfig,
+  stigDashboardConfig,
+  airgapDashboardConfig,
+  fedrampDashboardConfig,
   costDashboardConfig,
   gpuDashboardConfig,
   nodesDashboardConfig,
@@ -189,4 +249,16 @@ export {
   insightsDashboardConfig,
   multiTenancyDashboardConfig,
   drasiDashboardConfig,
+  oidcDashboardConfig,
+  rbacAuditDashboardConfig,
+  sessionManagementDashboardConfig,
+  siemDashboardConfig,
+  incidentResponseDashboardConfig,
+  threatIntelDashboardConfig,
+  sbomDashboardConfig,
+  sigstoreDashboardConfig,
+  slsaDashboardConfig,
+  riskMatrixDashboardConfig,
+  riskRegisterDashboardConfig,
+  riskAppetiteDashboardConfig,
 }

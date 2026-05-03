@@ -1,7 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useDataCompliance } from '../../hooks/useDataCompliance'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
@@ -20,7 +19,6 @@ const DEFAULT_DATA_COMPLIANCE_CARDS = [
 export function DataCompliance() {
   const { isLoading: clustersLoading, refetch, lastUpdated, isRefreshing: dataRefreshing, error } = useClusters()
   useGlobalFilters() // Keep hook for potential future use
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { posture, scores, isLoading: complianceLoading, isDemoData, isRefreshing: complianceRefreshing, failedClusters } = useDataCompliance()
 
   const isLoading = clustersLoading || complianceLoading
@@ -75,7 +73,7 @@ export function DataCompliance() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage

@@ -4,15 +4,18 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
 	"sync"
+	"time"
 )
 
 // Registry manages available AI providers
 type Registry struct {
-	mu            sync.RWMutex
-	providers     map[string]AIProvider
-	defaultAgent  string
-	selectedAgent map[string]string // sessionID -> agentName
+	mu               sync.RWMutex
+	providers        map[string]AIProvider
+	defaultAgent     string
+	selectedAgent    map[string]string    // sessionID -> agentName
+	selectedAgentLRU map[string]time.Time // sessionID -> last access time
 }
 
 // Global registry instance
@@ -25,8 +28,9 @@ var (
 func GetRegistry() *Registry {
 	registryOnce.Do(func() {
 		globalRegistry = &Registry{
-			providers:     make(map[string]AIProvider),
-			selectedAgent: make(map[string]string),
+			providers:        make(map[string]AIProvider),
+			selectedAgent:    make(map[string]string),
+			selectedAgentLRU: make(map[string]time.Time),
 		}
 	})
 	return globalRegistry
@@ -127,10 +131,18 @@ func (r *Registry) GetSelectedAgent(sessionID string) string {
 	if r == nil {
 		return ""
 	}
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.selectedAgent == nil {
+		r.selectedAgent = make(map[string]string)
+	}
+	if r.selectedAgentLRU == nil {
+		r.selectedAgentLRU = make(map[string]time.Time)
+	}
 
 	if agent, ok := r.selectedAgent[sessionID]; ok {
+		r.selectedAgentLRU[sessionID] = time.Now()
 		return agent
 	}
 	return r.defaultAgent
@@ -152,18 +164,44 @@ func (r *Registry) SetSelectedAgent(sessionID, agentName string) error {
 		return fmt.Errorf("provider %s is not available", agentName)
 	}
 
-	// Evict oldest entries when map exceeds a safety cap to prevent unbounded
-	// growth from sessions that never call RemoveSelectedAgent (#7209).
+	// Batch-evict the oldest entries when map exceeds a safety cap to
+	// prevent unbounded growth from sessions that never call
+	// RemoveSelectedAgent (#7209, #10063, #10163).
+	//
+	// Instead of evicting one entry per insert (O(N) scan every time),
+	// we evict the oldest 5% in a single pass. The O(N) cost is amortized
+	// across ~evictBatchSize subsequent inserts.
 	const maxSelectedAgentEntries = 10000
+	const evictBatchDivisor = 20 // 1/20 = 5%
 	if len(r.selectedAgent) >= maxSelectedAgentEntries {
-		// Delete an arbitrary entry (map iteration order is random in Go).
-		for k := range r.selectedAgent {
-			delete(r.selectedAgent, k)
-			break
+		evictBatchSize := maxSelectedAgentEntries / evictBatchDivisor
+		if evictBatchSize < 1 {
+			evictBatchSize = 1
 		}
+
+		timestamps := make([]time.Time, 0, len(r.selectedAgentLRU))
+		for _, ts := range r.selectedAgentLRU {
+			timestamps = append(timestamps, ts)
+		}
+		sort.Slice(timestamps, func(i, j int) bool {
+			return timestamps[i].Before(timestamps[j])
+		})
+
+		cutoff := timestamps[evictBatchSize-1]
+		evicted := 0
+		for k, ts := range r.selectedAgentLRU {
+			if !ts.After(cutoff) {
+				delete(r.selectedAgent, k)
+				delete(r.selectedAgentLRU, k)
+				evicted++
+			}
+		}
+		slog.Debug("[Registry] batch-evicted stale sessions",
+			"evicted", evicted, "remaining", len(r.selectedAgent))
 	}
 
 	r.selectedAgent[sessionID] = agentName
+	r.selectedAgentLRU[sessionID] = time.Now()
 	return nil
 }
 
@@ -176,6 +214,7 @@ func (r *Registry) RemoveSelectedAgent(sessionID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.selectedAgent, sessionID)
+	delete(r.selectedAgentLRU, sessionID)
 }
 
 // List returns all registered providers

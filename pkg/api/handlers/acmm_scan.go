@@ -34,6 +34,12 @@ const (
 	acmmUserAgent = "kubestellar-console/1.0"
 )
 
+// acmmHTTPClient is a dedicated client for ACMM GitHub API calls.
+// Using http.DefaultClient would race under concurrent requests and
+// lacks a timeout, risking indefinite hangs on unresponsive upstreams.
+var acmmHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
+
 var (
 	repoSlugRE = regexp.MustCompile(`^[\w.\-]+/[\w.\-]+$`)
 	aiAuthors  = map[string]bool{
@@ -195,13 +201,16 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 	}
 
 	// We are the primary scanner.
+	// Use a detached context so the scan continues even if the primary
+	// requester disconnects — other concurrent waiters should still
+	// receive the result (#9527).
 	defer func() {
 		acmmScanInFlight.Delete(repo)
 		close(waiter.done)
 	}()
 
 	token := settings.ResolveGitHubTokenEnv()
-	ctx, cancel := context.WithTimeout(c.Context(), time.Duration(acmmAPITimeoutMS)*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(acmmAPITimeoutMS)*time.Millisecond)
 	defer cancel()
 
 	// Fetch repo tree
@@ -327,7 +336,7 @@ func fetchACMMWeeklyActivity(ctx context.Context, repo, token string) []acmmWeek
 		buckets[w] = &acmmWeeklyActivity{Week: w}
 	}
 
-	since := time.Now().AddDate(0, 0, -weeksOfHistory*7).Format("2006-01-02")
+	since := time.Now().UTC().AddDate(0, 0, -weeksOfHistory*7).Format("2006-01-02")
 
 	// PRs
 	prURL := fmt.Sprintf("%s/search/issues?q=repo:%s+type:pr+created:>=%s", acmmGitHubAPI, repo, since)
@@ -383,8 +392,8 @@ func fetchACMMWeeklyActivity(ctx context.Context, repo, token string) []acmmWeek
 
 func lastNWeeks(n int) []string {
 	seen := make(map[string]bool)
-	var weeks []string
-	now := time.Now()
+	weeks := make([]string, 0)
+	now := time.Now().UTC()
 	for i := n - 1; i >= 0; i-- {
 		d := now.AddDate(0, 0, -i*7)
 		w := isoWeek(d)
@@ -460,7 +469,7 @@ func githubGet(ctx context.Context, url, token string) ([]byte, error) {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := acmmHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("GitHub API request failed: %w", err)
 	}

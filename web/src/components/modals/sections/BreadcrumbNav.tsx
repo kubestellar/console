@@ -84,7 +84,7 @@ export function BreadcrumbNav({
       {showBackButton && breadcrumbs.length > 1 && (
         <button
           onClick={handleBackClick}
-          className="p-1.5 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+          className="p-1.5 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
           title="Go back (Backspace)"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -110,7 +110,7 @@ export function BreadcrumbNav({
           return (
             <div key={breadcrumb.id} className="flex items-center gap-0.5 shrink-0">
               {index > 0 && (
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               )}
               <button
                 onClick={() => handleBreadcrumbClick(breadcrumb)}
@@ -121,7 +121,7 @@ export function BreadcrumbNav({
                 }`}
                 title={breadcrumb.label}
               >
-                {Icon && <Icon className="w-3.5 h-3.5 flex-shrink-0" />}
+                {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
                 <span className="truncate">{breadcrumb.label}</span>
               </button>
 
@@ -162,7 +162,7 @@ export function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {
  * Simple breadcrumb separator
  */
 export function BreadcrumbSeparator() {
-  return <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+  return <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
 }
 
 /**

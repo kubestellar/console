@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -377,6 +378,12 @@ const (
 	driveMaxRetries     = 3
 	driveRetryBaseDelay = 2 * time.Second
 	driveUserAgent      = "KubeStellarConsole/1.0"
+
+	// driveFetchConcurrency bounds how many experiment/run folders are
+	// processed in parallel.  The throttle() mutex still enforces per-request
+	// rate-limiting, so increasing this number speeds up folder listing and
+	// file downloads without exceeding the Drive API rate limit.
+	driveFetchConcurrency = 8
 )
 
 // BenchmarkHandlers provides endpoints for llm-d benchmark data from Google Drive.
@@ -406,24 +413,41 @@ func NewBenchmarkHandlers(apiKey, folderID string) *BenchmarkHandlers {
 // The lock is only held briefly to read/update timestamps; the actual
 // sleep (if needed) happens outside the lock so concurrent goroutines
 // are not blocked for the full delay.
-func (h *BenchmarkHandlers) throttle() {
+// The context is checked so that cancellation is not blocked by sleep.
+func (h *BenchmarkHandlers) throttle(ctx context.Context) error {
 	h.reqMu.Lock()
 	elapsed := time.Since(h.lastReq)
 	if elapsed >= driveRequestDelay {
 		h.lastReq = time.Now()
 		h.reqMu.Unlock()
-		return
+		return ctx.Err()
 	}
 	delay := driveRequestDelay - elapsed
 	h.lastReq = time.Now().Add(delay) // reserve a future slot
 	h.reqMu.Unlock()
-	time.Sleep(delay)
+	select {
+	case <-time.After(delay):
+		return nil
+	case <-ctx.Done():
+		// Restore lastReq so the cancelled reservation does not block future
+		// requests: the slot was never used, so we clear it to zero time.
+		h.reqMu.Lock()
+		h.lastReq = time.Time{}
+		h.reqMu.Unlock()
+		return ctx.Err()
+	}
 }
 
 // driveGet performs a throttled HTTP GET with the proper User-Agent header.
-func (h *BenchmarkHandlers) driveGet(url string) (*http.Response, error) {
-	h.throttle()
-	req, err := http.NewRequest("GET", url, nil)
+// The context is used to cancel in-flight requests when the client disconnects.
+func (h *BenchmarkHandlers) driveGet(ctx context.Context, url string) (*http.Response, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := h.throttle(ctx); err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -432,21 +456,28 @@ func (h *BenchmarkHandlers) driveGet(url string) (*http.Response, error) {
 }
 
 // driveGetWithRetry performs an HTTP GET with throttling and retry on 403 errors.
-func (h *BenchmarkHandlers) driveGetWithRetry(url string) (*http.Response, error) {
+func (h *BenchmarkHandlers) driveGetWithRetry(ctx context.Context, url string) (*http.Response, error) {
 	var lastErr error
 	for attempt := 0; attempt <= driveMaxRetries; attempt++ {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		if attempt > 0 {
 			backoff := driveRetryBaseDelay * time.Duration(1<<(attempt-1))
 			slog.Info("[benchmarks] retrying", "backoff", backoff, "attempt", attempt, "maxRetries", driveMaxRetries)
-			time.Sleep(backoff)
+			select {
+			case <-time.After(backoff):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
 		}
-		resp, err := h.driveGet(url)
+		resp, err := h.driveGet(ctx, url)
 		if err != nil {
 			lastErr = fmt.Errorf("HTTP error: %w", err)
 			continue
 		}
 		if resp.StatusCode == 403 || resp.StatusCode == 429 {
-			body, readErr := io.ReadAll(resp.Body)
+			body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes))
 			if readErr != nil {
 				body = []byte("(failed to read response body)")
 			}
@@ -486,7 +517,7 @@ func (h *BenchmarkHandlers) GetReports(c *fiber.Ctx) error {
 	}
 
 	// Fetch from Google Drive
-	reports, parseFailures, err := h.fetchAllReports(cutoff)
+	reports, parseFailures, err := h.fetchAllReports(c.UserContext(), cutoff)
 	if err != nil {
 		slog.Error("[benchmarks] Google Drive fetch error", "error", err)
 		h.cache.mu.RLock()
@@ -549,7 +580,17 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
 
+	// Capture the request context before entering the stream writer callback
+	// so cancellation propagates from the HTTP request to all Drive API calls (#9732).
+	reqCtx := c.UserContext()
+
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		// Create a cancellable context derived from the request context so all
+		// goroutines and Drive API calls abort promptly when the client
+		// disconnects (#9517, #9732).
+		ctx, cancel := context.WithCancel(reqCtx)
+		defer cancel()
+
 		allReports := make([]BenchmarkReport, 0)
 		totalSent := 0
 		skippedFolders := 0
@@ -559,8 +600,20 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		const batchSize = 8
 		var pendingBatch []BenchmarkReport
 
+		// safeFlush writes pending data and cancels the context on write error
+		// (which signals that the client has disconnected).
+		safeFlush := func() {
+			if err := w.Flush(); err != nil {
+				slog.Info("[benchmarks] client disconnected, cancelling stream", "error", err)
+				cancel()
+			}
+		}
+
 		flushBatch := func() {
 			if len(pendingBatch) == 0 {
+				return
+			}
+			if ctx.Err() != nil {
 				return
 			}
 			batch, err := json.Marshal(pendingBatch)
@@ -569,14 +622,21 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 				return
 			}
 			fmt.Fprintf(w, "event: batch\ndata: %s\n\n", batch)
-			w.Flush()
+			safeFlush()
 			slog.Info("[benchmarks] flushed batch", "batchSize", len(pendingBatch), "totalSent", totalSent)
 			pendingBatch = pendingBatch[:0]
 		}
 
 		// Send immediate progress event so the client knows we're connected
 		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"connecting\",\"total\":0}\n\n")
-		w.Flush()
+		safeFlush()
+		if ctx.Err() != nil {
+			return
+		}
+
+		// streamMu protects shared state (allReports, pendingBatch, counters, w)
+		// across concurrent goroutines, including the keepalive ticker.
+		var streamMu sync.Mutex
 
 		// Start keepalive ticker — send comment heartbeats every 5s
 		keepaliveDone := make(chan struct{})
@@ -586,20 +646,28 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			for {
 				select {
 				case <-ticker.C:
+					streamMu.Lock()
 					fmt.Fprintf(w, ": keepalive\n\n")
-					w.Flush()
+					safeFlush()
+					streamMu.Unlock()
 				case <-keepaliveDone:
+					return
+				case <-ctx.Done():
 					return
 				}
 			}
 		}()
 		defer close(keepaliveDone)
 
-		topLevel, err := h.listDriveFolder(h.folderID)
+		topLevel, err := h.listDriveFolder(ctx, h.folderID)
 		if err != nil {
+			if ctx.Err() != nil {
+				slog.Info("[benchmarks] stream cancelled during folder listing")
+				return
+			}
 			slog.Info("[benchmarks] error listing drive folder", "error", err)
 			fmt.Fprintf(w, "event: error\ndata: {\"error\":\"failed to fetch benchmark data\"}\n\n")
-			w.Flush()
+			safeFlush()
 			return
 		}
 
@@ -620,53 +688,118 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 			slog.Info("[benchmarks] skipped old experiment folders", "skipped", skippedFolders, "since", since)
 		}
 		fmt.Fprintf(w, "event: progress\ndata: {\"status\":\"fetching\",\"experiments\":%d,\"total\":0,\"skipped\":%d}\n\n", len(experiments), skippedFolders)
-		w.Flush()
+		safeFlush()
+
+		var streamWg sync.WaitGroup
+		streamSem := make(chan struct{}, driveFetchConcurrency)
+		// Separate semaphore for inner run goroutines to prevent deadlock when
+		// all outer slots are held while inner goroutines wait for the same pool.
+		innerSem := make(chan struct{}, driveFetchConcurrency)
 
 		for _, item := range experiments {
-			runFolders, err := h.listDriveFolder(item.ID)
-			if err != nil {
-				slog.Error("[benchmarks] error listing experiment", "experiment", item.Name, "error", err)
+			if ctx.Err() != nil {
+				break
+			}
+			item := item // capture
+			streamWg.Add(1)
+			// Use select for semaphore acquisition so we can bail on cancellation.
+			select {
+			case streamSem <- struct{}{}:
+			case <-ctx.Done():
+				streamWg.Done()
 				continue
 			}
-			for _, runItem := range runFolders {
-				if runItem.MimeType != driveFolderMIME {
-					continue
+			go func() {
+				defer streamWg.Done()
+				defer func() { <-streamSem }()
+
+				if ctx.Err() != nil {
+					return
 				}
-				// Skip run folders older than cutoff
-				if !isAfterCutoff(runItem, cutoff) {
-					skippedFolders++
-					continue
-				}
-				reports, failures, err := h.fetchRunFolderStreaming(runItem.ID, item.Name, runItem.Name, func(report BenchmarkReport) {
-					allReports = append(allReports, report)
-					totalSent++
-					pendingBatch = append(pendingBatch, report)
-					if len(pendingBatch) >= batchSize {
-						flushBatch()
+				runFolders, listErr := h.listDriveFolder(ctx, item.ID)
+				if listErr != nil {
+					if ctx.Err() == nil {
+						slog.Error("[benchmarks] error listing experiment", "experiment", item.Name, "error", listErr)
 					}
-				})
-				totalParseFailures += failures
-				if err != nil {
-					slog.Error("[benchmarks] error in experiment run", "experiment", item.Name, "run", runItem.Name, "error", err)
-					continue
+					return
 				}
-				// Flush any remaining reports after each run folder for timely delivery
-				if len(pendingBatch) > 0 {
-					flushBatch()
+
+				var innerWg sync.WaitGroup
+				for _, runItem := range runFolders {
+					if ctx.Err() != nil {
+						break
+					}
+					if runItem.MimeType != driveFolderMIME {
+						continue
+					}
+					if !isAfterCutoff(runItem, cutoff) {
+						streamMu.Lock()
+						skippedFolders++
+						streamMu.Unlock()
+						continue
+					}
+					runItem := runItem // capture
+					innerWg.Add(1)
+					select {
+					case innerSem <- struct{}{}:
+					case <-ctx.Done():
+						innerWg.Done()
+						continue
+					}
+					go func() {
+						defer innerWg.Done()
+						defer func() { <-innerSem }()
+
+						if ctx.Err() != nil {
+							return
+						}
+						reports, failures, runErr := h.fetchRunFolderStreaming(ctx, runItem.ID, item.Name, runItem.Name, func(report BenchmarkReport) {
+							streamMu.Lock()
+							allReports = append(allReports, report)
+							totalSent++
+							pendingBatch = append(pendingBatch, report)
+							if len(pendingBatch) >= batchSize {
+								flushBatch()
+							}
+							streamMu.Unlock()
+						})
+						streamMu.Lock()
+						totalParseFailures += failures
+						streamMu.Unlock()
+						if runErr != nil {
+							if ctx.Err() == nil {
+								slog.Error("[benchmarks] error in experiment run", "experiment", item.Name, "run", runItem.Name, "error", runErr)
+							}
+							return
+						}
+						streamMu.Lock()
+						if len(pendingBatch) > 0 {
+							flushBatch()
+						}
+						sentSnapshot := totalSent
+						streamMu.Unlock()
+						if len(reports) > 0 {
+							slog.Info("[benchmarks] streamed reports", "count", len(reports), "experiment", item.Name, "run", runItem.Name, "totalSent", sentSnapshot)
+						}
+					}()
 				}
-				if len(reports) > 0 {
-					slog.Info("[benchmarks] streamed reports", "count", len(reports), "experiment", item.Name, "run", runItem.Name, "totalSent", totalSent)
-				}
-			}
+				innerWg.Wait()
+			}()
 		}
+		streamWg.Wait()
 
 		// Flush any final remaining reports
 		flushBatch()
 
+		if ctx.Err() != nil {
+			slog.Info("[benchmarks] stream cancelled, skipping cache update", "totalSent", totalSent)
+			return
+		}
+
 		h.cache.set(allReports, since)
 		slog.Info("[benchmarks] stream complete", "totalSent", totalSent, "skipped", skippedFolders, "parseFailures", totalParseFailures, "since", since)
 		fmt.Fprintf(w, "event: done\ndata: {\"total\":%d,\"source\":\"live\",\"parse_failures\":%d}\n\n", totalSent, totalParseFailures)
-		w.Flush()
+		safeFlush()
 	})
 
 	return nil
@@ -674,8 +807,8 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 
 // fetchRunFolderStreaming delegates to fetchRunFolder and calls onReport for each
 // parsed report, ensuring the streaming and non-streaming paths never diverge.
-func (h *BenchmarkHandlers) fetchRunFolderStreaming(folderID, experimentName, runName string, onReport func(BenchmarkReport)) ([]BenchmarkReport, int, error) {
-	reports, parseFailures, err := h.fetchRunFolder(folderID, experimentName, runName)
+func (h *BenchmarkHandlers) fetchRunFolderStreaming(ctx context.Context, folderID, experimentName, runName string, onReport func(BenchmarkReport)) ([]BenchmarkReport, int, error) {
+	reports, parseFailures, err := h.fetchRunFolder(ctx, folderID, experimentName, runName)
 	if err != nil {
 		return nil, parseFailures, err
 	}
@@ -688,14 +821,18 @@ func (h *BenchmarkHandlers) fetchRunFolderStreaming(folderID, experimentName, ru
 // fetchAllReports is the non-streaming version for the standard endpoint.
 // cutoff filters out folders older than the given time; zero means no filter.
 // Returns reports and a count of files that failed to download or parse.
-func (h *BenchmarkHandlers) fetchAllReports(cutoff time.Time) ([]BenchmarkReport, int, error) {
-	topLevel, err := h.listDriveFolder(h.folderID)
+//
+// Experiment and run folders are processed concurrently (bounded by
+// driveFetchConcurrency).  The per-request throttle() still serialises
+// actual HTTP calls so the Drive API rate limit is respected.
+func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Time) ([]BenchmarkReport, int, error) {
+	topLevel, err := h.listDriveFolder(ctx, h.folderID)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing top-level folder: %w", err)
 	}
 
-	allReports := make([]BenchmarkReport, 0)
-	totalParseFailures := 0
+	// Filter experiments up-front so we know the work set.
+	var experiments []driveFile
 	for _, item := range topLevel {
 		if item.MimeType != driveFolderMIME {
 			continue
@@ -703,35 +840,72 @@ func (h *BenchmarkHandlers) fetchAllReports(cutoff time.Time) ([]BenchmarkReport
 		if !isAfterCutoff(item, cutoff) {
 			continue
 		}
-		runFolders, err := h.listDriveFolder(item.ID)
-		if err != nil {
-			slog.Error("[benchmarks] error listing experiment", "experiment", item.Name, "error", err)
-			continue
-		}
-		for _, runItem := range runFolders {
-			if runItem.MimeType != driveFolderMIME {
-				continue
-			}
-			if !isAfterCutoff(runItem, cutoff) {
-				continue
-			}
-			reports, failures, err := h.fetchRunFolder(runItem.ID, item.Name, runItem.Name)
-			if err != nil {
-				slog.Error("[benchmarks] error in experiment run", "experiment", item.Name, "run", runItem.Name, "error", err)
-				continue
-			}
-			allReports = append(allReports, reports...)
-			totalParseFailures += failures
-		}
+		experiments = append(experiments, item)
 	}
-	return allReports, totalParseFailures, nil
+
+	var (
+		mu             sync.Mutex
+		allReports     []BenchmarkReport
+		totalFailures  int
+		wg             sync.WaitGroup
+		sem            = make(chan struct{}, driveFetchConcurrency)
+		innerSem       = make(chan struct{}, driveFetchConcurrency)
+	)
+
+	for _, item := range experiments {
+		item := item // capture loop var
+		wg.Add(1)
+		sem <- struct{}{} // acquire semaphore slot
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }() // release slot
+
+			runFolders, listErr := h.listDriveFolder(ctx, item.ID)
+			if listErr != nil {
+				slog.Error("[benchmarks] error listing experiment", "experiment", item.Name, "error", listErr)
+				return
+			}
+
+			// Process run folders within this experiment concurrently too.
+			var innerWg sync.WaitGroup
+			for _, runItem := range runFolders {
+				if runItem.MimeType != driveFolderMIME {
+					continue
+				}
+				if !isAfterCutoff(runItem, cutoff) {
+					continue
+				}
+				runItem := runItem // capture
+				innerWg.Add(1)
+				innerSem <- struct{}{} // separate semaphore for inner work
+				go func() {
+					defer innerWg.Done()
+					defer func() { <-innerSem }()
+
+					reports, failures, runErr := h.fetchRunFolder(ctx, runItem.ID, item.Name, runItem.Name)
+					if runErr != nil {
+						slog.Error("[benchmarks] error in experiment run", "experiment", item.Name, "run", runItem.Name, "error", runErr)
+						return
+					}
+					mu.Lock()
+					allReports = append(allReports, reports...)
+					totalFailures += failures
+					mu.Unlock()
+				}()
+			}
+			innerWg.Wait()
+		}()
+	}
+	wg.Wait()
+
+	return allReports, totalFailures, nil
 }
 
 // fetchRunFolder downloads benchmark YAML files from a run folder.
 // Handles nested layouts: run → results → individual-result → benchmark_report*.yaml
 // Returns reports and a count of files that failed to download or parse.
-func (h *BenchmarkHandlers) fetchRunFolder(folderID, experimentName, runName string) ([]BenchmarkReport, int, error) {
-	items, err := h.listDriveFolder(folderID)
+func (h *BenchmarkHandlers) fetchRunFolder(ctx context.Context, folderID, experimentName, runName string) ([]BenchmarkReport, int, error) {
+	items, err := h.listDriveFolder(ctx, folderID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -746,7 +920,7 @@ func (h *BenchmarkHandlers) fetchRunFolder(folderID, experimentName, runName str
 			continue
 		}
 		if strings.HasPrefix(f.Name, benchmarkFilePrefix) && strings.HasSuffix(f.Name, benchmarkFileSuffix) {
-			report, err := h.downloadAndParseReport(f, experimentName, runName)
+			report, err := h.downloadAndParseReport(ctx, f, experimentName, runName)
 			if err != nil {
 				parseFailures++
 				continue
@@ -763,7 +937,7 @@ func (h *BenchmarkHandlers) fetchRunFolder(folderID, experimentName, runName str
 		if !strings.EqualFold(sub.Name, "results") {
 			continue
 		}
-		resultFolders, err := h.listDriveFolder(sub.ID)
+		resultFolders, err := h.listDriveFolder(ctx, sub.ID)
 		if err != nil {
 			slog.Error("[benchmarks] error listing results", "experiment", experimentName, "run", runName, "error", err)
 			continue
@@ -772,7 +946,7 @@ func (h *BenchmarkHandlers) fetchRunFolder(folderID, experimentName, runName str
 			if rf.MimeType != driveFolderMIME {
 				continue
 			}
-			r, failures, err := h.collectBenchmarkFiles(rf.ID, experimentName, runName)
+			r, failures, err := h.collectBenchmarkFiles(ctx, rf.ID, experimentName, runName)
 			if err != nil {
 				continue
 			}
@@ -785,8 +959,8 @@ func (h *BenchmarkHandlers) fetchRunFolder(folderID, experimentName, runName str
 
 // collectBenchmarkFiles finds and parses benchmark YAML files in a single folder.
 // Returns the parsed reports and a count of files that failed to parse.
-func (h *BenchmarkHandlers) collectBenchmarkFiles(folderID, experimentName, runName string) ([]BenchmarkReport, int, error) {
-	files, err := h.listDriveFolder(folderID)
+func (h *BenchmarkHandlers) collectBenchmarkFiles(ctx context.Context, folderID, experimentName, runName string) ([]BenchmarkReport, int, error) {
+	files, err := h.listDriveFolder(ctx, folderID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -797,7 +971,7 @@ func (h *BenchmarkHandlers) collectBenchmarkFiles(folderID, experimentName, runN
 			continue
 		}
 		if strings.HasPrefix(f.Name, benchmarkFilePrefix) && strings.HasSuffix(f.Name, benchmarkFileSuffix) {
-			report, err := h.downloadAndParseReport(f, experimentName, runName)
+			report, err := h.downloadAndParseReport(ctx, f, experimentName, runName)
 			if err != nil {
 				parseFailures++
 				continue
@@ -809,8 +983,8 @@ func (h *BenchmarkHandlers) collectBenchmarkFiles(folderID, experimentName, runN
 }
 
 // downloadAndParseReport downloads a single benchmark YAML file and parses it.
-func (h *BenchmarkHandlers) downloadAndParseReport(f driveFile, experimentName, runName string) (BenchmarkReport, error) {
-	data, err := h.downloadDriveFile(f.ID)
+func (h *BenchmarkHandlers) downloadAndParseReport(ctx context.Context, f driveFile, experimentName, runName string) (BenchmarkReport, error) {
+	data, err := h.downloadDriveFile(ctx, f.ID)
 	if err != nil {
 		slog.Error("[benchmarks] error downloading file", "file", f.Name, "error", err)
 		return BenchmarkReport{}, err
@@ -825,7 +999,7 @@ func (h *BenchmarkHandlers) downloadAndParseReport(f driveFile, experimentName, 
 
 // listDriveFolder lists all files in a Google Drive folder, handling pagination
 // so that folders with more than 1000 items are not silently truncated.
-func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error) {
+func (h *BenchmarkHandlers) listDriveFolder(ctx context.Context, folderID string) ([]driveFile, error) {
 	var allFiles []driveFile
 	pageToken := ""
 
@@ -836,7 +1010,7 @@ func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error
 			reqURL += "&pageToken=" + pageToken
 		}
 
-		resp, err := h.driveGetWithRetry(reqURL)
+		resp, err := h.driveGetWithRetry(ctx, reqURL)
 		if err != nil {
 			return nil, err
 		}
@@ -846,7 +1020,7 @@ func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error
 
 		if resp.StatusCode != 200 {
 			var bodyStr string
-			if body, readErr := io.ReadAll(resp.Body); readErr == nil {
+			if body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes)); readErr == nil {
 				bodyStr = string(body)
 			}
 			resp.Body.Close()
@@ -874,10 +1048,10 @@ func (h *BenchmarkHandlers) listDriveFolder(folderID string) ([]driveFile, error
 // downloadDriveFile downloads file content from Google Drive.
 // Uses webContentLink (drive.google.com/uc?id=...&export=download) which is more
 // resilient to Google's anti-bot protection than the API's alt=media endpoint.
-func (h *BenchmarkHandlers) downloadDriveFile(fileID string) ([]byte, error) {
+func (h *BenchmarkHandlers) downloadDriveFile(ctx context.Context, fileID string) ([]byte, error) {
 	downloadURL := fmt.Sprintf("https://drive.google.com/uc?id=%s&export=download", fileID)
 
-	resp, err := h.driveGet(downloadURL)
+	resp, err := h.driveGet(ctx, downloadURL)
 	if err != nil {
 		return nil, fmt.Errorf("HTTP error: %w", err)
 	}

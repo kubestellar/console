@@ -214,6 +214,7 @@ async function setupClusterResourceTreeTest(page: Page, options: SetupOptions = 
   await page.evaluate(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')

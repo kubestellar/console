@@ -31,7 +31,7 @@ func (h *SwapHandler) ListPendingSwaps(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	swaps, err := h.store.GetUserPendingSwaps(userID, limit, offset)
+	swaps, err := h.store.GetUserPendingSwaps(c.UserContext(), userID, limit, offset)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to list swaps")
 	}
@@ -46,7 +46,7 @@ func (h *SwapHandler) SnoozeSwap(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid swap ID")
 	}
 
-	swap, err := h.store.GetPendingSwap(swapID)
+	swap, err := h.store.GetPendingSwap(c.UserContext(), swapID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get swap")
 	}
@@ -75,7 +75,7 @@ func (h *SwapHandler) SnoozeSwap(c *fiber.Ctx) error {
 	}
 
 	newSwapAt := time.Now().Add(duration)
-	if err := h.store.SnoozeSwap(swapID, newSwapAt); err != nil {
+	if err := h.store.SnoozeSwap(c.UserContext(), swapID, newSwapAt); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to snooze swap")
 	}
 
@@ -102,7 +102,7 @@ func (h *SwapHandler) ExecuteSwap(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid swap ID")
 	}
 
-	swap, err := h.store.GetPendingSwap(swapID)
+	swap, err := h.store.GetPendingSwap(c.UserContext(), swapID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get swap")
 	}
@@ -114,7 +114,7 @@ func (h *SwapHandler) ExecuteSwap(c *fiber.Ctx) error {
 	}
 
 	// Get the original card
-	originalCard, err := h.store.GetCard(swap.CardID)
+	originalCard, err := h.store.GetCard(c.UserContext(), swap.CardID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get card")
 	}
@@ -130,19 +130,19 @@ func (h *SwapHandler) ExecuteSwap(c *fiber.Ctx) error {
 		Config:         originalCard.Config,
 		Reason:         swap.Reason,
 	}
-	if err := h.store.AddCardHistory(history); err != nil {
+	if err := h.store.AddCardHistory(c.UserContext(), history); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to save history")
 	}
 
 	// Update the card with new type
 	originalCard.CardType = swap.NewCardType
 	originalCard.Config = swap.NewCardConfig
-	if err := h.store.UpdateCard(originalCard); err != nil {
+	if err := h.store.UpdateCard(c.UserContext(), originalCard); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to update card")
 	}
 
 	// Mark swap as completed
-	if err := h.store.UpdateSwapStatus(swapID, models.SwapStatusCompleted); err != nil {
+	if err := h.store.UpdateSwapStatus(c.UserContext(), swapID, models.SwapStatusCompleted); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to complete swap")
 	}
 
@@ -170,7 +170,7 @@ func (h *SwapHandler) CancelSwap(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, "Invalid swap ID")
 	}
 
-	swap, err := h.store.GetPendingSwap(swapID)
+	swap, err := h.store.GetPendingSwap(c.UserContext(), swapID)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to get swap")
 	}
@@ -181,7 +181,7 @@ func (h *SwapHandler) CancelSwap(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusForbidden, "Access denied")
 	}
 
-	if err := h.store.UpdateSwapStatus(swapID, models.SwapStatusCancelled); err != nil {
+	if err := h.store.UpdateSwapStatus(c.UserContext(), swapID, models.SwapStatusCancelled); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to cancel swap")
 	}
 

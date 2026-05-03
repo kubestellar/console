@@ -11,6 +11,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { CardClusterFilter, CardSearchInput, CardAIActions, CardEmptyState } from '../../lib/cards/CardComponents'
 import { useCardData, useCardFilters, useStatusFilter, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import { useTranslation } from 'react-i18next'
+import { extractImageTag } from '../../lib/gpu'
 
 type StatusFilter = 'all' | 'running' | 'deploying' | 'failed'
 type SortByOption = 'status' | 'name' | 'cluster'
@@ -42,18 +43,6 @@ const statusConfig = {
     bg: 'bg-red-500/20',
     barColor: 'bg-red-500',
     label: 'Failed' } }
-
-// Extract version from container image
-function extractVersion(image?: string): string {
-  if (!image) return 'unknown'
-  const parts = image.split(':')
-  if (parts.length > 1) {
-    const tag = parts[parts.length - 1]
-    if (tag.length > 20) return tag.substring(0, 12)
-    return tag
-  }
-  return 'latest'
-}
 
 // Shared filter config for counting and display
 const FILTER_CONFIG = {
@@ -95,11 +84,12 @@ export function DeploymentStatus() {
     consecutiveFailures } = useCachedDeployments()
 
   // Report data state to CardWrapper for failure badge rendering
+  const hasData = allDeployments.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: hookLoading,
+    isLoading: hookLoading && !hasData,
     isRefreshing,
     isDemoData: isDemoFallback,
-    hasAnyData: allDeployments.length > 0,
+    hasAnyData: hasData,
     isFailed,
     consecutiveFailures })
   const isLoading = showSkeleton
@@ -179,7 +169,7 @@ export function DeploymentStatus() {
     const clusterName = deployment.cluster || 'unknown'
     drillToDeployment(clusterName, deployment.namespace, deployment.name, {
       status: deployment.status,
-      version: extractVersion(deployment.image),
+      version: extractImageTag(deployment.image),
       replicas: deployment.replicas,
       readyReplicas: deployment.readyReplicas,
       progress: deployment.progress })
@@ -215,7 +205,7 @@ export function DeploymentStatus() {
   return (
     <div className="h-full flex flex-col min-h-0 content-loaded">
       {/* Header with controls */}
-      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 flex-shrink-0">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-muted-foreground">
             {statusCounts.all} deployments
@@ -255,7 +245,7 @@ export function DeploymentStatus() {
       </div>
 
       {/* Search and Status Filter Pills */}
-      <div className="flex flex-col gap-2 mb-3 flex-shrink-0">
+      <div className="flex flex-col gap-2 mb-3 shrink-0">
         <CardSearchInput
           value={searchQuery}
           onChange={handleSearchChange}
@@ -301,7 +291,7 @@ export function DeploymentStatus() {
             const config = statusConfig[deployment.status as keyof typeof statusConfig] || statusConfig.running
             const StatusIcon = config.icon
             const clusterName = deployment.cluster || 'unknown'
-            const version = extractVersion(deployment.image)
+            const version = extractImageTag(deployment.image)
 
             return (
               <div
@@ -362,7 +352,7 @@ export function DeploymentStatus() {
 
       {/* Pagination */}
       {needsPagination && itemsPerPage !== 'unlimited' && (
-        <div className="pt-2 border-t border-border/50 mt-2 flex-shrink-0">
+        <div className="pt-2 border-t border-border/50 mt-2 shrink-0">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

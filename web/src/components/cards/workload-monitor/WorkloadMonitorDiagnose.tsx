@@ -10,10 +10,12 @@ import {
   Ban,
   ChevronDown,
   ChevronRight,
+  SearchX,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
+import { useTranslation } from 'react-i18next'
 import type { MonitoredResource, MonitorIssue, DiagnoseRepairPhase, RepairRisk } from '../../../types/workloadMonitor'
 
 interface DiagnoseProps {
@@ -55,8 +57,10 @@ export function WorkloadMonitorDiagnose({
   repairable,
   workloadContext,
 }: DiagnoseProps) {
+  const { t } = useTranslation('cards')
   const [expanded, setExpanded] = useState(false)
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const prevPhaseRef = useRef<DiagnoseRepairPhase>('idle')
 
   const {
     state,
@@ -70,6 +74,19 @@ export function WorkloadMonitorDiagnose({
     monitorType,
     repairable,
   })
+
+  // #11407 — Auto-collapse the panel after repair completes or fails
+  const AUTO_COLLAPSE_DELAY_MS = 3000
+  useEffect(() => {
+    const wasActive = prevPhaseRef.current !== 'complete' && prevPhaseRef.current !== 'failed' && prevPhaseRef.current !== 'idle'
+    const isTerminal = state.phase === 'complete' || state.phase === 'failed'
+    prevPhaseRef.current = state.phase
+
+    if (wasActive && isTerminal && expanded) {
+      const timer = setTimeout(() => setExpanded(false), AUTO_COLLAPSE_DELAY_MS)
+      return () => clearTimeout(timer)
+    }
+  }, [state.phase, expanded])
 
   if (!diagnosable) return null
 
@@ -180,6 +197,13 @@ export function WorkloadMonitorDiagnose({
           )}
 
           {/* Proposed repairs */}
+          {(state.phase === 'proposing-repair' || state.phase === 'awaiting-approval') && state.proposedRepairs.length === 0 && (
+            <div className="flex flex-col items-center gap-2 py-3 text-center">
+              <SearchX className="w-5 h-5 text-muted-foreground opacity-60" />
+              <p className="text-sm text-muted-foreground">{t('workloadMonitor.diagnoseNoResults')}</p>
+            </div>
+          )}
+
           {(state.phase === 'proposing-repair' || state.phase === 'awaiting-approval') && state.proposedRepairs.length > 0 && (
             <div className="space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-y-2">
@@ -254,31 +278,58 @@ export function WorkloadMonitorDiagnose({
 
           {/* Complete */}
           {state.phase === 'complete' && (
-            <div className="rounded-md bg-green-500/10 border border-green-500/20 p-3 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
-              <div>
-                <p className="text-sm text-green-400 font-medium">
-                  {repairable ? 'Diagnosis & repair complete' : 'Diagnosis complete'}
-                </p>
-                {state.completedRepairs.length > 0 && (
-                  <p className="text-xs text-green-400/70 mt-0.5">
-                    {state.completedRepairs.length} repair{state.completedRepairs.length !== 1 ? 's' : ''} executed
-                    {state.loopCount > 0 && ` over ${state.loopCount + 1} iteration${state.loopCount > 0 ? 's' : ''}`}
-                  </p>
-                )}
+            <div className="rounded-md bg-green-500/10 border border-green-500/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                  <div>
+                    <p className="text-sm text-green-400 font-medium">
+                      {repairable ? t('workloadMonitor.repairComplete', 'Diagnosis & repair complete') : t('workloadMonitor.diagnoseComplete', 'Diagnosis complete')}
+                    </p>
+                    {state.completedRepairs.length > 0 && (
+                      <p className="text-xs text-green-400/70 mt-0.5">
+                        {state.completedRepairs.length} repair{state.completedRepairs.length !== 1 ? 's' : ''} executed
+                        {state.loopCount > 0 && ` over ${state.loopCount + 1} iteration${state.loopCount > 0 ? 's' : ''}`}
+                      </p>
+                    )}
+                    {state.completedRepairs.length === 0 && state.issuesFound.length === 0 && (
+                      <p className="text-xs text-green-400/70 mt-0.5">
+                        {t('workloadMonitor.diagnoseNoResults')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setExpanded(false)}
+                  className="text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                >
+                  {t('workloadMonitor.close', 'Close')}
+                </button>
               </div>
             </div>
           )}
 
           {/* Failed */}
           {state.phase === 'failed' && (
-            <div className="rounded-md bg-red-500/10 border border-red-500/20 p-3 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-              <div>
-                <p className="text-sm text-red-400 font-medium">Diagnosis failed</p>
-                {state.error && (
-                  <p className="text-xs text-red-400/70 mt-0.5">{state.error}</p>
-                )}
+            <div className="rounded-md bg-red-500/10 border border-red-500/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                  <div>
+                    <p className="text-sm text-red-400 font-medium">
+                      {t('workloadMonitor.diagnoseFailed', 'Diagnosis failed')}
+                    </p>
+                    <p className="text-xs text-red-400/70 mt-0.5">
+                      {state.error || t('workloadMonitor.diagnoseRequiresCluster')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setExpanded(false)}
+                  className="text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                >
+                  {t('workloadMonitor.close', 'Close')}
+                </button>
               </div>
             </div>
           )}

@@ -79,7 +79,7 @@ export function CardEventProvider({ children }: { children: ReactNode }) {
     for (const cb of callbacks) {
       try {
         cb(event as never)
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(`[CardEvents] Error in ${event.type} handler:`, err)
       }
     }

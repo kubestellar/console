@@ -30,7 +30,7 @@ export function RecommendationCard({
         <h4 className="text-sm font-medium text-foreground line-clamp-1 group-hover:text-purple-400 transition-colors">
           {mission.title}
         </h4>
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {onCopyLink && (
             <button
               onClick={(e) => {
@@ -48,7 +48,7 @@ export function RecommendationCard({
           )}
         </div>
         <span className={cn(
-          'flex items-center gap-1 px-1.5 py-0.5 text-2xs rounded-full flex-shrink-0 font-medium tabular-nums',
+          'flex items-center gap-1 px-1.5 py-0.5 text-2xs rounded-full shrink-0 font-medium tabular-nums',
           matchPercent >= 80
             ? 'bg-green-500/15 text-green-400 border border-green-500/20'
             : matchPercent >= 50

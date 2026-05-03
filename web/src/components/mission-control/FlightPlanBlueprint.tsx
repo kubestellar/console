@@ -138,7 +138,7 @@ export function FlightPlanBlueprint({
   onMoveProject,
   installedProjects = new Set() }: FlightPlanBlueprintProps) {
   const svgId = useId().replace(/:/g, '')
-  const { clusters, error: clustersError } = useClusters()
+  const { deduplicatedClusters: clusters, error: clustersError } = useClusters()
 
   // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones.
   // Also scope to state.targetClusters when set — without this, assignments from
@@ -465,7 +465,7 @@ export function FlightPlanBlueprint({
                 'px-3 py-1.5 text-xs font-medium transition-all duration-150 border',
                 'rounded-l-lg',
                 state.deployMode === 'phased'
-                  ? 'bg-violet-500/20 text-violet-300 border-violet-500/40 shadow-inner'
+                  ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-inner'
                   : 'bg-secondary/30 text-muted-foreground border-border hover:text-foreground hover:bg-secondary/50'
               )}
             >
@@ -495,10 +495,9 @@ export function FlightPlanBlueprint({
       </div>
 
       {/* Error banner when cluster data fails to load (issue 6772) */}
-      {/* TODO: error banner will activate once useClusters() propagates fetch errors */}
       {clustersError && (
         <div className="mx-6 mt-2 p-2 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center gap-2 text-xs text-red-400">
-          <Shield className="w-3.5 h-3.5 flex-shrink-0" />
+          <Shield className="w-3.5 h-3.5 shrink-0" />
           <span>Cluster data unavailable: {clustersError}</span>
         </div>
       )}
@@ -851,7 +850,7 @@ export function FlightPlanBlueprint({
       {/* Mission preview modal */}
       {(previewMission || previewLoading) && (
         <div
-          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
           onClick={(e) => { if (e.target === e.currentTarget) { setPreviewMission(null); setPreviewRaw(false) } }}
           onKeyDownCapture={(e) => {
             if (e.key === 'Escape') {

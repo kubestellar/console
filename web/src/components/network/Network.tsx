@@ -1,7 +1,6 @@
 import { AlertCircle } from 'lucide-react'
 import { useServices } from '../../hooks/useMCP'
 import { useIngresses } from '../../hooks/mcp/networking'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useIsModeSwitching } from '../../lib/unified/demo'
@@ -16,14 +15,13 @@ const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 const DEFAULT_NETWORK_CARDS = getDefaultCards('network')
 
 export function Network() {
-  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error } = useServices()
+  const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error, isFailed } = useServices()
   const { ingresses } = useIngresses()
 
   const {
     selectedClusters: globalSelectedClusters,
     isAllClustersSelected } = useGlobalFilters()
   const { drillToService } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const isModeSwitching = useIsModeSwitching()
 
   // Filter services based on global cluster selection
@@ -93,7 +91,7 @@ export function Network() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   // Show skeleton during mode switching for smooth transitions
   const showSkeletons = (services.length === 0 && servicesLoading) || isModeSwitching
@@ -117,13 +115,15 @@ export function Network() {
         title: 'Network Dashboard',
         description: 'Add cards to monitor Ingresses, NetworkPolicies, and service mesh configurations across your clusters.' }}
     >
-      {/* Error Display */}
-      {error && (
+      {/* Error Display — show when fetch has persistently failed (#11541) */}
+      {(error || isFailed) && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-400">Error loading network data</p>
-            <p className="text-xs text-muted-foreground mt-1">{error}</p>
+            <p className="text-sm font-medium text-red-400">
+              {services.length > 0 ? 'Refresh failed — showing cached data' : 'Error loading network data'}
+            </p>
+            {error && <p className="text-xs text-muted-foreground mt-1">{error}</p>}
           </div>
         </div>
       )}

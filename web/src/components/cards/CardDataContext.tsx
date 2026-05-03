@@ -41,7 +41,7 @@
 
 import { createContext, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useDemoMode } from '../../hooks/useDemoMode'
-import { isAgentUnavailable } from '../../hooks/useLocalAgent'
+import { isAgentUnavailable, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useOptionalStack } from '../../contexts/StackContext'
 import { CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
@@ -344,8 +344,10 @@ export function useCardDemoState(options: CardDemoStateOptions = {}): CardDemoSt
     }
 
     // 4. Agent-dependent card but agent is offline AND backend is also unavailable
-    //    When backend is connected (cluster mode), allow live data via backend API
-    if (requires === 'agent' && isAgentUnavailable() && !isInClusterMode()) {
+    //    When backend is connected (cluster mode), allow live data via backend API.
+    //    If the agent was previously connected this session, cached data is still
+    //    available — don't force demo mode, let cards show stale cached data (#10470).
+    if (requires === 'agent' && isAgentUnavailable() && !isInClusterMode() && !wasAgentEverConnected()) {
       return { shouldUseDemoData: true, reason: 'agent-offline' as DemoReason, showDemoBadge: true }
     }
 

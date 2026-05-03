@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api } from '../../lib/api'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
 import { isDemoMode } from '../../lib/demoMode'
 import { useDemoMode } from '../useDemoMode'
@@ -30,7 +29,7 @@ type NetworkingSubscriber = (state: NetworkingSharedState) => void
 const networkingSubscribers = new Set<NetworkingSubscriber>()
 
 function notifyNetworkingSubscribers() {
-  networkingSubscribers.forEach(subscriber => subscriber(networkingSharedState))
+  Array.from(networkingSubscribers).forEach(subscriber => subscriber(networkingSharedState))
 }
 
 export function subscribeNetworkingCache(callback: NetworkingSubscriber): () => void {
@@ -239,7 +238,7 @@ export function useServices(cluster?: string, namespace?: string) {
           }
           return
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error(`[useServices] kubectl proxy failed for ${cluster}:`, err)
       }
     }
@@ -276,14 +275,13 @@ export function useServices(cluster?: string, namespace?: string) {
       setLastUpdated(now)
       setConsecutiveFailures(0)
       setLastRefresh(now)
-    } catch {
+    } catch (err: unknown) {
       setConsecutiveFailures(prev => prev + 1)
       setLastRefresh(new Date())
-      if (!silent) {
-        // Don't show error at dashboard level - services are optional
-        setError(null)
-      }
-      // Don't clear services on error - keep stale data
+      // Surface error so cards can distinguish "fetch failed" from "no data"
+      // (#11541). Keep stale data intact (#11540).
+      const message = err instanceof Error ? err.message : 'Network request failed'
+      setError(message)
     } finally {
       setIsLoading(false)
       // Keep isRefreshing true for minimum time so user can see it, then reset
@@ -297,15 +295,23 @@ export function useServices(cluster?: string, namespace?: string) {
     }
   }, [cluster, namespace, cacheKey])
 
+  // Track consecutiveFailures in a ref so the polling effect doesn't
+  // re-subscribe on every failure tick (which caused the flickering loop
+  // described in #11542).
+  const consecutiveFailuresRef = useRef(consecutiveFailures)
+  consecutiveFailuresRef.current = consecutiveFailures
+
   useEffect(() => {
     // If we have cached data, still refresh in background but don't show loading
     const hasCachedData = servicesCache && servicesCache.key === cacheKey
     refetch(!!hasCachedData) // silent=true if we have cached data
 
     // Poll for service updates (shared interval prevents duplicates across components)
+    // Use a stable base interval; getEffectiveInterval inside the callback reads the
+    // ref so back-off still works without causing effect re-runs.
     const unsubscribePolling = subscribePolling(
       `services:${cacheKey}`,
-      getEffectiveInterval(REFRESH_INTERVAL_MS),
+      getEffectiveInterval(REFRESH_INTERVAL_MS, consecutiveFailuresRef.current),
       () => refetch(true),
     )
 
@@ -366,6 +372,10 @@ export function useIngresses(cluster?: string, namespace?: string) {
   const [isDemoFallback, setIsDemoFallback] = useState(false)
   const { isDemoMode: demoMode } = useDemoMode()
   const initialMountRef = useRef(true)
+  // Track data presence in a ref so the useCallback doesn't need ingresses in deps
+  const hasDataRef = useRef(false)
+  hasDataRef.current = ingresses.length > 0
+  const hasReceivedLiveDataRef = useRef(false)
 
   const refetch = useCallback(async () => {
     // If demo mode is enabled, use demo data so the Demo badge correctly
@@ -384,7 +394,12 @@ export function useIngresses(cluster?: string, namespace?: string) {
       setIsRefreshing(false)
       return
     }
-    setIsLoading(true)
+    // Only show loading skeleton when we have no data yet; otherwise just
+    // show refreshing indicator to prevent flickering (#11542).
+    const hasExistingData = hasDataRef.current || hasReceivedLiveDataRef.current
+    if (!hasExistingData) {
+      setIsLoading(true)
+    }
     setIsRefreshing(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -401,6 +416,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
         if (response.ok) {
           const data = await response.json()
           setIngresses(data.ingresses || [])
+          hasReceivedLiveDataRef.current = true
           setIsDemoFallback(false)
           setError(null)
           setConsecutiveFailures(0)
@@ -413,21 +429,36 @@ export function useIngresses(cluster?: string, namespace?: string) {
         // Fall through to API
       }
     }
+    // Skip REST fallback when no token to prevent GA4 auth errors (#9957)
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN)
+    if (!token) {
+      // Only clear data if we never had any; preserve stale data otherwise (#11540)
+      if (!hasReceivedLiveDataRef.current) {
+        setIngresses([])
+      }
+      setIsLoading(false)
+      setIsRefreshing(false)
+      return
+    }
     try {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ ingresses: Ingress[] }>(`${LOCAL_AGENT_HTTP_URL}/ingresses?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/ingresses?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setIngresses(data.ingresses || [])
+      hasReceivedLiveDataRef.current = true
       setIsDemoFallback(false)
       setError(null)
       setConsecutiveFailures(0)
-    } catch {
-      // Don't show error - Ingresses are optional
-      setError(null)
+    } catch (err: unknown) {
+      // Surface error so UI can distinguish failure from empty (#11541).
+      // Keep stale data intact to prevent empty state on transient failures (#11540).
+      const message = err instanceof Error ? err.message : 'Network request failed'
+      setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setIngresses([])
-      setIsDemoFallback(false)
+      // Don't flip isDemoFallback on error — preserve demo badge if no live data received (#11640)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -466,9 +497,18 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const { isDemoMode: demoMode } = useDemoMode()
   const initialMountRef = useRef(true)
+  // Track data presence in a ref so the useCallback doesn't need networkpolicies in deps
+  const hasDataRef = useRef(false)
+  hasDataRef.current = networkpolicies.length > 0
+  const hasReceivedLiveDataRef = useRef(false)
 
   const refetch = useCallback(async () => {
-    setIsLoading(true)
+    // Only show loading skeleton when we have no data yet; otherwise just
+    // show refreshing indicator to prevent flickering (#11542).
+    const hasExistingData = hasDataRef.current || hasReceivedLiveDataRef.current
+    if (!hasExistingData) {
+      setIsLoading(true)
+    }
     setIsRefreshing(true)
     if (cluster && !isAgentUnavailable()) {
       try {
@@ -485,6 +525,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
         if (response.ok) {
           const data = await response.json()
           setNetworkPolicies(data.networkpolicies || [])
+          hasReceivedLiveDataRef.current = true
           setError(null)
           setConsecutiveFailures(0)
           setIsLoading(false)
@@ -500,15 +541,20 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const { data } = await api.get<{ networkpolicies: NetworkPolicy[] }>(`${LOCAL_AGENT_HTTP_URL}/networkpolicies?${params}`)
+      const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/networkpolicies?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      const data = await resp.json()
       setNetworkPolicies(data.networkpolicies || [])
+      hasReceivedLiveDataRef.current = true
       setError(null)
       setConsecutiveFailures(0)
-    } catch {
-      // Don't show error - NetworkPolicies are optional
-      setError(null)
+    } catch (err: unknown) {
+      // Surface error so UI can distinguish failure from empty (#11541).
+      // Keep stale data intact to prevent empty state on transient failures (#11540).
+      const message = err instanceof Error ? err.message : 'Network request failed'
+      setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      setNetworkPolicies([])
+      // Don't clear stale data on error — preserve last-known state for UI continuity
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -584,4 +630,9 @@ if (typeof window !== 'undefined') {
       notifyNetworkingSubscribers()
     }, 0)
   })
+}
+
+export const __networkingTestables = {
+  loadServicesCacheFromStorage,
+  getDemoServices,
 }

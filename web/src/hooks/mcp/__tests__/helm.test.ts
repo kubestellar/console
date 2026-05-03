@@ -23,6 +23,13 @@ const {
   mockSubscribePolling: vi.fn(() => vi.fn()),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => mockIsDemoMode(),
   get isNetlifyDeployment() { return mockIsNetlifyDeployment.value },
@@ -43,7 +50,12 @@ vi.mock('../../../lib/modeTransition', () => ({
 
 vi.mock('../shared', () => ({
   MIN_REFRESH_INDICATOR_MS: 500,
-  getEffectiveInterval: (ms: number) => ms,
+  getEffectiveInterval: (ms: number, consecutiveFailures = 0) => {
+    if (consecutiveFailures <= 0) return ms
+    const multiplier = Math.pow(2, Math.min(consecutiveFailures, 5))
+    return Math.min(ms * multiplier, 600_000)
+  },
+  agentFetch: vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({}), { status: 200 }))),
 }))
 
 vi.mock('../pollingManager', () => ({
@@ -290,15 +302,20 @@ describe('useHelmReleases', () => {
 
     await waitFor(() => expect(result.current.releases).toEqual(fakeReleases))
 
-    // Second fetch fails
-    mockFetchSSE.mockRejectedValue(new Error('now failing'))
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('now failing'))
+    // Second fetch fails — both SSE and REST must reject to trigger outer catch.
+    // After the single failure, hang subsequent calls to prevent cascade.
+    mockFetchSSE
+      .mockRejectedValueOnce(new Error('now failing'))
+      .mockImplementation(() => new Promise(() => {}))
+    globalThis.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('now failing'))
+      .mockImplementation(() => new Promise(() => {}))
 
     await act(async () => { await result.current.refetch() })
 
     // Original data should be preserved despite the error
+    await waitFor(() => expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1))
     expect(result.current.releases).toEqual(fakeReleases)
-    expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
   })
 
   it('registers for polling and mode-transition refetch on mount', async () => {

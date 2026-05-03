@@ -151,11 +151,10 @@ The Auto-QA workflow uses this file to verify component consistency.
 | CrioStatus | web/src/components/cards/crio_status/index.ts | `crio_status` |
 | LimaStatus | web/src/components/cards/lima_status/index.ts | `lima_status` |
 | CloudEventsStatus | web/src/components/cards/cloudevents_status/index.ts | `cloudevents_status` |
-| StrimziStatus | web/src/components/cards/strimzi_status/index.ts | `strimzi_status` |
-| KubeVelaStatus | web/src/components/cards/kubevela_status/index.ts | `kubevela_status` |
+| StrimziStatus | web/src/components/cards/strimzi_status/index.tsx | `strimzi_status` |
+| KubeVelaStatus | web/src/components/cards/kubevela_status/index.tsx | `kubevela_status` |
 | KarmadaStatus | web/src/components/cards/karmada_status/index.ts | `karmada_status` |
 | ThanosStatus | web/src/components/cards/thanos_status/index.tsx | `thanos_status` |
-| OpenFeatureStatus | web/src/components/cards/openfeature_status/index.ts | `openfeature_status` |
 | CrossplaneManagedResources | web/src/components/cards/crossplane-status/CrossplaneManagedResources.tsx | `crossplane_managed_resources` |
 
 ## Multi-Tenancy Cards

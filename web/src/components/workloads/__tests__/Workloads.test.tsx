@@ -49,7 +49,7 @@ vi.mock('../../../hooks/useMCP', () => ({
     usePodIssues: () => ({ issues: mockPodIssues, isLoading: false, isRefreshing: false, refetch: vi.fn() }),
     useDeploymentIssues: () => ({ issues: mockDeploymentIssues, isLoading: false, isRefreshing: false, refetch: vi.fn() }),
     useDeployments: () => ({ deployments: mockDeployments, isLoading: false, isRefreshing: false, refetch: vi.fn() }),
-    useClusters: () => ({ clusters: mockClusters, isLoading: false, lastUpdated: null, refetch: vi.fn() }),
+    useClusters: () => ({ clusters: mockClusters, deduplicatedClusters: mockClusters, isLoading: false, lastUpdated: null, refetch: vi.fn() }),
 }))
 
 import { useGlobalFilters } from '../../../hooks/useGlobalFilters'

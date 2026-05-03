@@ -14,7 +14,7 @@
  */
 
 import { useMemo } from 'react'
-import ReactECharts from 'echarts-for-react'
+import { LazyEChart } from '../charts/LazyEChart'
 import {
   CHART_TOOLTIP_BG,
   CHART_TOOLTIP_BORDER,
@@ -148,7 +148,7 @@ export function TargetBalanceCharts({ level }: TargetBalanceChartsProps) {
   return (
     <div className="grid grid-cols-2 gap-2">
       <div>
-        <ReactECharts
+        <LazyEChart
           option={prOption}
           notMerge={false}
           style={{ height: CHART_HEIGHT_PX, width: '100%' }}
@@ -159,7 +159,7 @@ export function TargetBalanceCharts({ level }: TargetBalanceChartsProps) {
         </div>
       </div>
       <div>
-        <ReactECharts
+        <LazyEChart
           option={issueOption}
           notMerge={false}
           style={{ height: CHART_HEIGHT_PX, width: '100%' }}

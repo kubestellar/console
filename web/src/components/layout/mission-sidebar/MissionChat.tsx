@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Send,
@@ -20,7 +20,8 @@ import {
   RotateCcw,
   StopCircle,
   ListChecks,
-  Loader2 } from 'lucide-react'
+  Loader2,
+  ArrowDown } from 'lucide-react'
 import { useMissions, type Mission } from '../../../hooks/useMissions'
 import { useAuth } from '../../../lib/auth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
@@ -38,6 +39,13 @@ import { SetupInstructionsDialog } from '../../setup/SetupInstructionsDialog'
 import { OrbitSetupOffer } from '../../missions/OrbitSetupOffer'
 import { OrbitMonitorOffer } from '../../missions/OrbitMonitorOffer'
 import type { OrbitResourceFilter } from '../../../lib/missions/types'
+import { MicrophoneButton } from '../../ui/MicrophoneButton'
+import { FileAttachmentButton } from '../../ui/FileAttachmentButton'
+/** Pixels from the bottom edge within which the chat is considered "at bottom" */
+const SCROLL_BOTTOM_THRESHOLD_PX = 50
+/** Duration in ms for the scroll-to-bottom button fade animation */
+const SCROLL_BTN_FADE_MS = 200
+
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
@@ -48,7 +56,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   // #6226: useToast for download error feedback (replaces an unhandled
   // exception path that could white-screen the dialog).
   const { showToast } = useToast()
-  const { sendMessage, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, updateSavedMission } = useMissions()
+  const { sendMessage, editAndResend, retryPreflight, cancelMission, rateMission, setActiveMission, dismissMission, renameMission, runSavedMission, updateSavedMission } = useMissions()
   const { user } = useAuth()
   const { isDemoMode } = useDemoMode()
   const { findSimilarResolutions, recordUsage } = useResolutions()
@@ -190,14 +198,19 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const isAtBottom = () => {
     const container = messagesContainerRef.current
     if (!container) return true
-    const threshold = 50 // pixels from bottom to consider "at bottom"
-    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+    return container.scrollHeight - container.scrollTop - container.clientHeight < SCROLL_BOTTOM_THRESHOLD_PX
   }
 
   // Handle scroll events to detect user scrolling
   const handleScroll = () => {
     setShouldAutoScroll(isAtBottom())
   }
+
+  /** Smoothly scroll the chat to the most recent message */
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    setShouldAutoScroll(true)
+  }, [])
 
   // Auto-scroll to bottom only when new messages are added (not on every render)
   useEffect(() => {
@@ -341,6 +354,20 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     sendMessage(mission.id, prompt)
   }
 
+  const handleMicrophoneTranscript = useCallback((text: string) => {
+    setInput((prev) => (prev ? prev + ' ' + text : text))
+    inputRef.current?.focus()
+  }, [])
+
+  const handleEditMessage = useCallback((messageId: string) => {
+    const content = editAndResend(mission.id, messageId)
+    if (content) {
+      setInput(content)
+      setInputError(null)
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+  }, [mission.id, editAndResend])
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -382,7 +409,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       {/* Main chat area */}
       <div className="flex flex-col flex-1 min-h-0 min-w-0">
       {/* Header */}
-      <div className="p-4 border-b border-border flex-shrink-0">
+      <div className="p-4 border-b border-border shrink-0">
         <div className="flex flex-wrap items-center gap-2 mb-2">
           <TypeIcon className="w-5 h-5 text-primary" />
           {isEditingTitle ? (
@@ -395,7 +422,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onKeyDown={handleTitleKeyDown}
                 onBlur={saveTitle}
                 maxLength={MAX_TITLE_LENGTH}
-                className="flex-1 min-w-0 px-2 py-0.5 text-sm font-semibold bg-secondary/50 border border-border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 min-w-0 px-2 py-0.5 text-sm font-semibold bg-secondary/50 border border-border rounded text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
                 data-testid="mission-title-input"
               />
               <button
@@ -420,7 +447,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <h3 className="font-semibold text-foreground flex-1 truncate">{mission.title}</h3>
               <button
                 onClick={startEditingTitle}
-                className="p-0.5 rounded transition-colors opacity-0 group-hover:opacity-100 hover:bg-secondary"
+                className="p-0.5 rounded transition-colors text-muted-foreground hover:bg-secondary"
                 title={t('missionChat.renameTitle', { defaultValue: 'Rename mission' })}
                 data-testid="mission-title-edit-btn"
               >
@@ -503,7 +530,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
       {/* Related Knowledge Banner (non-fullscreen only) */}
       {!isFullScreen && relatedResolutions.length > 0 && (
-        <div className="px-4 py-2 bg-purple-500/10 border-b border-purple-500/20 flex-shrink-0">
+        <div className="px-4 py-2 bg-purple-500/10 border-b border-purple-500/20 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs">
               <BookOpen className="w-3.5 h-3.5 text-purple-400" />
@@ -527,6 +554,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       {/* Messages - using memoized component for better scroll performance */}
       {/* issue 6740 — role=log + aria-live=polite so screen readers announce streaming AI
           tokens as they arrive. aria-atomic=false keeps announcements incremental. */}
+      <div className="relative flex-1 min-h-[150px] min-w-0">
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
@@ -535,7 +563,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         aria-atomic="false"
         aria-relevant="additions text"
         aria-label="Mission chat messages"
-        className="flex-1 overflow-y-auto scroll-enhanced p-4 space-y-4 min-h-[150px] min-w-0"
+        className="absolute inset-0 overflow-y-auto scroll-enhanced p-4 space-y-4"
       >
         {/* Inline Run button + editable mission description/steps for saved missions (#3917, #4273) */}
         {isSavedPreRun && (
@@ -658,7 +686,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                         cancelEdits()
                       }
                     }}
-                    className="w-full min-h-[60px] p-2 text-sm bg-background border border-border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary/50 text-foreground"
+                    className="w-full min-h-[60px] p-2 text-sm bg-background border border-border rounded-md resize-y focus:outline-hidden focus:ring-1 focus:ring-primary/50 text-foreground"
                     placeholder={t('missionChat.descriptionPlaceholder', { defaultValue: 'Describe what this mission should do...' })}
                     data-testid="edit-mission-description"
                   />
@@ -698,7 +726,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                           key={idx}
                           className="flex gap-2.5 p-2.5 rounded-md bg-background/50 border border-primary/20"
                         >
-                          <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xs font-bold mt-1">
+                          <span className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xs font-bold mt-1">
                             {idx + 1}
                           </span>
                           <div className="flex-1 min-w-0 space-y-1">
@@ -716,7 +744,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                                   cancelEdits()
                                 }
                               }}
-                              className="w-full px-2 py-1 text-sm font-medium bg-background border border-border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                              className="w-full px-2 py-1 text-sm font-medium bg-background border border-border rounded text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary/50"
                               placeholder={t('missionChat.stepTitlePlaceholder', { defaultValue: 'Step title...' })}
                               data-testid={`edit-step-title-${idx}`}
                             />
@@ -733,7 +761,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                                   cancelEdits()
                                 }
                               }}
-                              className="w-full px-2 py-1 text-xs bg-background border border-border rounded text-muted-foreground resize-y min-h-[40px] focus:outline-none focus:ring-1 focus:ring-primary/50"
+                              className="w-full px-2 py-1 text-xs bg-background border border-border rounded text-muted-foreground resize-y min-h-[40px] focus:outline-hidden focus:ring-1 focus:ring-primary/50"
                               placeholder={t('missionChat.stepDescPlaceholder', { defaultValue: 'Step description...' })}
                               data-testid={`edit-step-desc-${idx}`}
                             />
@@ -745,7 +773,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                           key={idx}
                           className="flex gap-2.5 p-2.5 rounded-md bg-background/50 border border-border/50"
                         >
-                          <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xs font-bold">
+                          <span className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xs font-bold">
                             {idx + 1}
                           </span>
                           <div className="flex-1 min-w-0">
@@ -777,6 +805,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               isLastAssistantMessage={isLastAssistantMessage}
               missionStatus={mission.status}
               userAvatarUrl={user?.avatar_url}
+              onEdit={handleEditMessage}
             />
           )
         })}
@@ -796,7 +825,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             the mission was started with, not the current global selection (#5480) */}
         {mission.status === 'running' && (
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-purple-500/20">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-purple-500/20">
               <AgentIcon
                 provider={
                   (mission.agent || 'anthropic') === 'claude' ? 'anthropic' :
@@ -827,9 +856,29 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Floating scroll-to-bottom button — appears when user scrolls up (#10452) */}
+      <button
+        onClick={scrollToBottom}
+        className={cn(
+          'absolute bottom-4 right-4 z-10 p-2 rounded-full',
+          'bg-primary/90 text-primary-foreground shadow-lg',
+          'hover:bg-primary transition-all',
+          'focus:outline-hidden focus:ring-2 focus:ring-primary/50',
+          shouldAutoScroll
+            ? 'opacity-0 pointer-events-none scale-90'
+            : 'opacity-100 scale-100',
+        )}
+        style={{ transitionDuration: `${SCROLL_BTN_FADE_MS}ms` }}
+        aria-label={t('missionChat.scrollToBottom', { defaultValue: 'Scroll to latest message' })}
+        data-testid="scroll-to-bottom-btn"
+      >
+        <ArrowDown className="w-4 h-4" />
+      </button>
+      </div>
+
       {/* Input / Actions — hidden when Run button is inline above */}
       {!isSavedPreRun && (
-      <div className="p-4 border-t border-border flex-shrink-0 bg-card min-w-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="p-4 border-t border-border shrink-0 bg-card min-w-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {mission.status === 'cancelling' ? (
           <div className="flex items-center justify-center gap-2 py-3">
             <Loader2 className="w-4 h-4 animate-spin text-orange-400" />
@@ -848,7 +897,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               />
               <button
                 disabled
-                className="flex-shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 title={t('missionChat.sendWillQueue')}
               >
                 <Send className="w-4 h-4" />
@@ -861,7 +910,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
             {/* Slim inline feedback bar — dismissable, non-obtrusive */}
             {!mission.feedback && !feedbackDismissed.has(mission.id) && (
               <div className="flex items-center gap-2 px-2.5 py-1.5 bg-secondary/30 border border-border rounded-md text-xs">
-                <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
                 <span className="text-muted-foreground">{t('missionChat.wasHelpful', { defaultValue: 'Helpful?' })}</span>
                 <button
                   onClick={() => {
@@ -948,8 +997,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onChange={(e) => { setInput(e.target.value); setInputError(null) }}
                 onKeyDown={handleKeyDown}
                 placeholder={t('missionChat.askFollowUp', { defaultValue: 'Ask a follow-up question...' })}
-                className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-border bg-secondary/50 focus:bg-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 min-w-0 px-3 py-2 text-sm rounded-lg border border-border bg-secondary/50 focus:bg-secondary focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <FileAttachmentButton compact />
+              <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
@@ -958,14 +1009,6 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 <Send className="w-4 h-4" />
               </button>
             </div>
-
-            <button
-              onClick={() => setActiveMission(null)}
-              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="w-3 h-3" />
-              {t('missionChat.backToMissions')}
-            </button>
           </div>
         ) : mission.status === 'blocked' ? (
           <div className="flex flex-col gap-2">
@@ -1011,23 +1054,18 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onChange={(e) => { setInput(e.target.value); setInputError(null) }}
                 onKeyDown={handleKeyDown}
                 placeholder={t('missionChat.retryWithMessage')}
-                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <FileAttachmentButton compact />
+              <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="flex-shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <button
-              onClick={() => setActiveMission(null)}
-              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="w-3 h-3" />
-              {t('missionChat.backToMissions')}
-            </button>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -1039,23 +1077,18 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
                 onChange={(e) => { setInput(e.target.value); setInputError(null) }}
                 onKeyDown={handleKeyDown}
                 placeholder={t('missionChat.typeMessage')}
-                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 min-w-0 px-3 py-2 text-sm bg-secondary/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
               />
+              <FileAttachmentButton compact />
+              <MicrophoneButton onTranscript={handleMicrophoneTranscript} compact />
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="flex-shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
-            <button
-              onClick={() => setActiveMission(null)}
-              className="flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="w-3 h-3" />
-              {t('missionChat.backToMissions')}
-            </button>
           </div>
         )}
 
@@ -1071,7 +1104,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
       {/* Right sidebar for full screen mode */}
       {isFullScreen && (
-        <div className="w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
+        <div className="w-80 shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
           {/* Original Ask */}
           <div className="bg-card border border-border rounded-lg p-4">
             <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">

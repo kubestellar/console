@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, AlertTriangle, XCircle, Clock, ChevronRight, Server, Package } from 'lucide-react'
+import { formatTimeAgo } from '../../../lib/formatters'
 import { useClusters, BuildpackImage } from '../../../hooks/useMCP'
 import { useCachedBuildpackImages } from '../../../hooks/useCachedData'
 import { Skeleton } from '../../ui/Skeleton'
@@ -52,24 +53,6 @@ const STATUS_ORDER: Record<string, number> = {
   unknown: 2,
   succeeded: 3 }
 
-const formatTime = (timestamp: string | number | Date): string => {
-  const time = new Date(timestamp).getTime()
-  if (isNaN(time)) return ''
-
-  const diff = Date.now() - time
-
-  if (diff <= 0) return 'just now'
-
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
-
-  if (diff < minute) return 'just now'
-  if (diff < hour) return `${Math.floor(diff / minute)}m ago`
-  if (diff < day) return `${Math.floor(diff / hour)}h ago`
-
-  return `${Math.floor(diff / day)}d ago`
-}
 
 export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
   const { t } = useTranslation('cards')
@@ -343,7 +326,7 @@ export function BuildpacksStatus({ config }: BuildpacksStatusProps) {
                 )}
                 <span>{build.builder}</span>
                 <span className="ml-auto">
-                  {formatTime(build.updated)}
+                  {formatTimeAgo(build.updated)}
                 </span>
               </div>
             </div>

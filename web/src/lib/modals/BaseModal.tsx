@@ -38,7 +38,7 @@
  * ```
  */
 
-import { ReactNode, createContext, useContext, useId, useRef } from 'react'
+import { ReactNode, createContext, useContext, useId, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, ChevronLeft } from 'lucide-react'
 import { useModalNavigation, useModalFocusTrap } from './useModalNavigation'
@@ -124,6 +124,8 @@ export function BaseModal({
   // Trap focus within modal so Tab cannot escape to background content
   useModalFocusTrap(modalRef, isOpen)
 
+  const escapeContextValue = useMemo(() => ({ escapeEnabled: closeOnEscape }), [closeOnEscape])
+
   if (!isOpen) return null
 
   // #9165 — Outside-click detection.
@@ -170,7 +172,7 @@ export function BaseModal({
   return createPortal(
     <div
       ref={backdropRef}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-modal isolate p-4 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 bg-black/60 backdrop-blur-xs z-modal isolate p-4 overflow-y-auto overscroll-contain"
       onMouseDown={handleBackdropMouseDown}
       onClick={handleBackdropClick}
     >
@@ -190,7 +192,7 @@ export function BaseModal({
           onClick={(e) => e.stopPropagation()}
         >
           <ModalTitleIdContext.Provider value={titleId}>
-            <ModalEscapeContext.Provider value={{ escapeEnabled: closeOnEscape }}>
+            <ModalEscapeContext.Provider value={escapeContextValue}>
               {children}
             </ModalEscapeContext.Provider>
           </ModalTitleIdContext.Provider>
@@ -216,6 +218,8 @@ function ModalHeader({
   extra,
   children,
   closeTestId,
+  backTestId,
+  tabsTestId,
 }: ModalHeaderProps) {
   const titleId = useContext(ModalTitleIdContext)
   const { escapeEnabled } = useContext(ModalEscapeContext)
@@ -223,7 +227,7 @@ function ModalHeader({
   const closeAriaLabel = escapeEnabled ? CLOSE_WITH_ESC_ARIA : CLOSE_ARIA
 
   return (
-    <div className="flex flex-col border-b border-border">
+    <div className="flex flex-col border-b border-border" data-testid={tabsTestId}>
       {/* Main header row */}
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -231,9 +235,10 @@ function ModalHeader({
           {showBack && onBack && (
             <button
               onClick={onBack}
-              className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+              className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors shrink-0"
               title="Go back (Backspace)"
               aria-label="Go back"
+              data-testid={backTestId}
             >
               <ChevronLeft className="w-5 h-5" aria-hidden="true" />
             </button>
@@ -241,7 +246,7 @@ function ModalHeader({
 
           {/* Icon */}
           {Icon && (
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <Icon className="w-6 h-6 text-purple-400" />
             </div>
           )}
@@ -260,7 +265,7 @@ function ModalHeader({
 
           {/* Badges */}
           {badges && (
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {badges}
             </div>
           )}

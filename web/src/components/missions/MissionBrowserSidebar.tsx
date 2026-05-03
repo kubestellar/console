@@ -14,6 +14,7 @@ import { cn } from '../../lib/cn'
 import { SIDEBAR_WIDTH, MISSION_FILE_ACCEPT } from './missionBrowserConstants'
 import { TreeNodeItem, updateNodeInTree } from './browser'
 import type { TreeNode } from './browser'
+import { useToast } from '../ui/Toast'
 
 interface MissionBrowserSidebarProps {
   treeNodes: TreeNode[]
@@ -81,6 +82,7 @@ export function MissionBrowserSidebar({
   setExpandedNodes,
 }: MissionBrowserSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { showToast } = useToast()
 
   return (
     <div
@@ -146,6 +148,7 @@ export function MissionBrowserSidebar({
                     const val = newRepoValue.trim()
                     if (val && !watchedRepos.includes(val)) {
                       onAddRepo(val)
+                      showToast(`Repository "${val}" added`, 'success')
                     }
                     setNewRepoValue('')
                     setAddingRepo(false)
@@ -157,7 +160,7 @@ export function MissionBrowserSidebar({
                     value={newRepoValue}
                     onChange={(e) => setNewRepoValue(e.target.value)}
                     placeholder="owner/repo (e.g., kubara-io/kubara or your-org/runbooks)"
-                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {
@@ -195,6 +198,7 @@ export function MissionBrowserSidebar({
                     const val = newPathValue.trim()
                     if (val && !watchedPaths.includes(val)) {
                       onAddPath(val)
+                      showToast(`Path "${val}" added`, 'success')
                     }
                     setNewPathValue('')
                     setAddingPath(false)
@@ -206,7 +210,7 @@ export function MissionBrowserSidebar({
                     value={newPathValue}
                     onChange={(e) => setNewPathValue(e.target.value)}
                     placeholder="/path/to/missions"
-                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+                    className="flex-1 px-2 py-1 text-xs bg-secondary border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/40"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {

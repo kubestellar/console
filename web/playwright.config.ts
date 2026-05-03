@@ -17,6 +17,10 @@ const isCI = Boolean(env.CI)
 export default defineConfig({
   testDir: './e2e',
 
+  // #11296 — Register the coverage teardown. It is a no-op unless
+  // VITE_COVERAGE=true, so registering it unconditionally is safe.
+  globalTeardown: './e2e/global-teardown.ts',
+
   // Skip flaky tests until they are stabilized
   // Re-enable these incrementally as they are fixed
   //
@@ -24,7 +28,21 @@ export default defineConfig({
   // with the file itself. No project declared `dependencies: ['setup']`, so
   // the file was dead code. All tests handle auth mocking inline via
   // `helpers/setup.ts::setupDemoMode`.
-  testIgnore: [],
+  // Visual regression tests require Storybook to be built and served
+  // separately. They have their own configs (visual.config.ts,
+  // app-visual.config.ts) and must not run in the main chromium shards.
+  //
+  // Mission tests (deeplink, explorer-import) use Playwright's `page.request`
+  // (Node.js-level HTTP) to hit real backend endpoints — they cannot run when
+  // PLAYWRIGHT_BASE_URL points at a standalone Vite preview (CI default).
+  // When PLAYWRIGHT_BASE_URL is unset, Playwright starts the Go backend itself
+  // (see webServer config below), so mission tests can run locally.
+  testIgnore: [
+    '**/visual/**',
+    ...(env.PLAYWRIGHT_BASE_URL
+      ? ['**/nightly/mission-deeplink.spec.ts', '**/nightly/mission-explorer-import.spec.ts']
+      : []),
+  ],
 
   // Run tests in parallel
   fullyParallel: true,
@@ -35,8 +53,8 @@ export default defineConfig({
   // Retry failed tests once in CI (balances flake detection vs run time)
   retries: isCI ? 1 : 0,
 
-  // Workers — CI gets 4 workers per shard, local uses half of available cores
-  workers: isCI ? 4 : '50%',
+  // Workers — CI gets 2 workers per shard for better stability, local uses half of available cores
+  workers: isCI ? 2 : '50%',
 
   // Reporter configuration
   reporter: isCI
@@ -49,12 +67,12 @@ export default defineConfig({
       ]
     : [['html', { open: 'never' }], ['./e2e/helpers/ux-reporter.ts']],
 
-  // Global timeout per test
-  timeout: 60000,
+  // Global timeout per test (increased for nightly stability)
+  timeout: isCI ? 75000 : 60000,
 
-  // Expect timeout
+  // Expect timeout (increased for slower CI environments)
   expect: {
-    timeout: 10000,
+    timeout: isCI ? 15000 : 10000,
   },
 
   // Shared settings for all projects
@@ -100,6 +118,8 @@ export default defineConfig({
       use: {
         ...devices['Desktop Firefox'],
       },
+      // Firefox is consistently slower than Chromium — increase timeout buffer
+      timeout: 90000,
     },
 
     // Webkit tests
@@ -108,6 +128,8 @@ export default defineConfig({
       use: {
         ...devices['Desktop Safari'],
       },
+      // WebKit is consistently slower than Chromium — increase timeout buffer
+      timeout: 90000,
     },
 
     // Mobile Chrome
@@ -116,6 +138,8 @@ export default defineConfig({
       use: {
         ...devices['Pixel 5'],
       },
+      // Mobile emulation can be slower — increase timeout
+      timeout: 90000,
     },
 
     // Mobile Safari
@@ -124,6 +148,8 @@ export default defineConfig({
       use: {
         ...devices['iPhone 12'],
       },
+      // Mobile Safari (WebKit) is consistently slower — increase timeout
+      timeout: 90000,
     },
   ],
 

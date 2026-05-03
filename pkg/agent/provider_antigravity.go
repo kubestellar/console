@@ -172,6 +172,7 @@ func (a *AntigravityProvider) StreamChat(ctx context.Context, req *ChatRequest, 
 
 	cmd := exec.CommandContext(execCtx, a.cliPath, "-p", prompt)
 	cmd.Env = append(os.Environ(), "NO_COLOR=1")
+	configureProcessGroup(cmd) // #9442: kill entire process tree on timeout
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {

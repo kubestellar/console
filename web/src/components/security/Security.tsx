@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { Shield, ShieldAlert, ShieldCheck, ShieldX, Users, Key, Lock, Eye, Clock, AlertTriangle, CheckCircle2, XCircle, ChevronRight } from 'lucide-react'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatusIndicator } from '../charts/StatusIndicator'
 import { DonutChart } from '../charts/PieChart'
 import { ProgressBar } from '../charts/ProgressBar'
@@ -51,7 +50,6 @@ export function Security() {
     isAllClustersSelected,
     filterBySeverity,
     customFilter } = useGlobalFilters()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
 
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [activeTab, setActiveTab] = useState<ViewTab>('overview')
@@ -82,7 +80,7 @@ export function Security() {
       // For now, just simulate a refresh
       await new Promise(resolve => setTimeout(resolve, SHORT_DELAY_MS))
       setLastUpdated(new Date())
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to refresh security data'
       setRefreshError(message)
     } finally {
@@ -322,135 +320,63 @@ export function Security() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
-  // Tabs section (rendered between stats and cards)
-  const tabsSection = (
-    <>
-      {/* Error Banner */}
-      {refreshError && (
-        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="font-medium">{t('cards:security.refreshFailed')}</p>
-            <p className="text-sm text-red-300/80">{refreshError}</p>
+  // Per-tab content. Issue 9856: previously this lived in `children` of
+  // `DashboardPage`, which renders BELOW the dashboard cards section. The static
+  // "Security Cards" section between the tab buttons and this content made
+  // every tab look identical (the cards section never changed). Defined here
+  // and rendered inside `tabsSection` (via `beforeCards`) so the active tab's
+  // content appears immediately under the tab buttons.
+  const tabContent = forceSkeletonForOffline ? (
+    <div className="space-y-6">
+      {/* Quick Stats Skeleton */}
+      <div className="grid grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="glass p-4 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Skeleton variant="circular" width={40} height={40} />
+              <div>
+                <Skeleton variant="text" width={60} height={28} className="mb-1" />
+                <Skeleton variant="text" width={80} height={12} />
+              </div>
+            </div>
           </div>
-          <button
-            onClick={handleRefresh}
-            className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm font-medium transition-colors"
-          >
-            {t('common:common.retry')}
-          </button>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-border">
-        {[
-          { id: 'overview', label: t('cards:security.overview'), icon: Shield },
-          { id: 'issues', label: t('cards:security.issues'), icon: ShieldAlert, count: stats.total },
-          { id: 'rbac', label: t('cards:security.rbac'), icon: Users, count: stats.rbacTotal },
-          { id: 'compliance', label: t('cards:security.compliance'), icon: ShieldCheck },
-        ].map(tab => {
-          const Icon = tab.icon
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as ViewTab)}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-[2px] transition-colors',
-                activeTab === tab.id
-                  ? 'border-purple-500 text-purple-400'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {tab.label}
-              {tab.count !== undefined && tab.count > 0 && (
-                <span className={cn(
-                  'px-1.5 py-0.5 text-xs rounded-full',
-                  tab.id === 'issues' && stats.high > 0 ? 'bg-red-500/20 text-red-400' : 'bg-card text-muted-foreground'
-                )}>
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          )
-        })}
+        ))}
       </div>
-    </>
-  )
-
-  return (
-    <DashboardPage
-      title={t('common:navigation.security')}
-      subtitle={t('cards:security.subtitle')}
-      icon="Shield"
-      rightExtra={<RotatingTip page="security" />}
-      storageKey={SECURITY_CARDS_KEY}
-      defaultCards={DEFAULT_SECURITY_CARDS}
-      statsType="security"
-      getStatValue={getStatValue}
-      onRefresh={handleRefresh}
-      isLoading={false}
-      isRefreshing={securityLoading || dataRefreshing || securityRefreshing}
-      lastUpdated={lastUpdated}
-      hasData={stats.total > 0 || securityIssues.length > 0}
-      beforeCards={tabsSection}
-      emptyState={{
-        title: t('cards:security.securityDashboard'),
-        description: t('cards:security.emptyDescription') }}
-    >
-      {/* Show skeleton when agent is offline and demo mode is OFF */}
-      {forceSkeletonForOffline ? (
-        <div className="space-y-6">
-          {/* Quick Stats Skeleton */}
-          <div className="grid grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="glass p-4 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Skeleton variant="circular" width={40} height={40} />
-                  <div>
-                    <Skeleton variant="text" width={60} height={28} className="mb-1" />
+      {/* Charts Skeleton */}
+      <div className="grid grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="glass p-4 rounded-lg">
+            <Skeleton variant="text" width={100} height={16} className="mb-4" />
+            <div className="flex justify-center">
+              <Skeleton variant="circular" width={150} height={150} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* Lists Skeleton */}
+      <div className="grid grid-cols-2 gap-4">
+        {[1, 2].map((i) => (
+          <div key={i} className="glass p-4 rounded-lg">
+            <Skeleton variant="text" width={120} height={16} className="mb-4" />
+            <div className="space-y-2">
+              {[1, 2, 3].map((j) => (
+                <div key={j} className="flex items-center gap-3 p-2 rounded bg-secondary/20">
+                  <Skeleton variant="circular" width={16} height={16} />
+                  <div className="flex-1">
+                    <Skeleton variant="text" width={150} height={14} className="mb-1" />
                     <Skeleton variant="text" width={80} height={12} />
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-          {/* Charts Skeleton */}
-          <div className="grid grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass p-4 rounded-lg">
-                <Skeleton variant="text" width={100} height={16} className="mb-4" />
-                <div className="flex justify-center">
-                  <Skeleton variant="circular" width={150} height={150} />
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* Lists Skeleton */}
-          <div className="grid grid-cols-2 gap-4">
-            {[1, 2].map((i) => (
-              <div key={i} className="glass p-4 rounded-lg">
-                <Skeleton variant="text" width={120} height={16} className="mb-4" />
-                <div className="space-y-2">
-                  {[1, 2, 3].map((j) => (
-                    <div key={j} className="flex items-center gap-3 p-2 rounded bg-secondary/20">
-                      <Skeleton variant="circular" width={16} height={16} />
-                      <div className="flex-1">
-                        <Skeleton variant="text" width={150} height={14} className="mb-1" />
-                        <Skeleton variant="text" width={80} height={12} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-      <>
+        ))}
+      </div>
+    </div>
+  ) : (
+    <>
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
@@ -597,7 +523,7 @@ export function Security() {
                 <div className="space-y-2">
                   {globalFilteredIssues.filter(i => i.severity === 'high').slice(0, 3).map((issue, i) => (
                     <div key={i} className="flex items-center gap-3 p-2 rounded bg-red-500/10 border border-red-500/20">
-                      <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-foreground truncate">{issue.resource}</div>
                         <div className="text-xs text-muted-foreground">{getTypeLabel(issue.type)}</div>
@@ -628,7 +554,7 @@ export function Security() {
                 <div className="space-y-2">
                   {filteredRBAC.filter(r => r.riskLevel === 'high').slice(0, 3).map((binding, i) => (
                     <div key={i} className="flex items-center gap-3 p-2 rounded bg-red-500/10 border border-red-500/20">
-                      <Key className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      <Key className="w-4 h-4 text-red-400 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-foreground truncate">{binding.name}</div>
                         <div className="text-xs text-muted-foreground">
@@ -997,8 +923,98 @@ export function Security() {
           })}
         </div>
       )}
-      </>
+    </>
+  )
+
+  // Tabs + tab-specific content (rendered between stats and the dashboard cards
+  // section). Issue 9856: previously the tab buttons lived in `beforeCards` while
+  // the per-tab content was passed via `children` (which renders BELOW the
+  // dashboard cards section). The static "Security Cards" section between the
+  // tabs and the per-tab content made every tab look identical because users
+  // couldn't see the content change. Render tab content directly under the tab
+  // buttons so the active tab's content is the first thing the user sees after
+  // clicking.
+  const tabsSection = (
+    <>
+      {/* Error Banner */}
+      {refreshError && (
+        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <div className="flex-1">
+            <p className="font-medium">{t('cards:security.refreshFailed')}</p>
+            <p className="text-sm text-red-300/80">{refreshError}</p>
+          </div>
+          <button
+            onClick={handleRefresh}
+            className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm font-medium transition-colors"
+          >
+            {t('common:common.retry')}
+          </button>
+        </div>
       )}
-    </DashboardPage>
+
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 border-b border-border">
+        {[
+          { id: 'overview', label: t('cards:security.overview'), icon: Shield },
+          { id: 'issues', label: t('cards:security.issues'), icon: ShieldAlert, count: stats.total },
+          { id: 'rbac', label: t('cards:security.rbac'), icon: Users, count: stats.rbacTotal },
+          { id: 'compliance', label: t('cards:security.compliance'), icon: ShieldCheck },
+        ].map(tab => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as ViewTab)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 mb-[-2px] transition-colors',
+                activeTab === tab.id
+                  ? 'border-purple-500 text-purple-400'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+              {tab.count !== undefined && tab.count > 0 && (
+                <span className={cn(
+                  'px-1.5 py-0.5 text-xs rounded-full',
+                  tab.id === 'issues' && stats.high > 0 ? 'bg-red-500/20 text-red-400' : 'bg-card text-muted-foreground'
+                )}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Tab content rendered immediately below tab buttons so each tab shows
+          distinct content. */}
+      <div className="mb-6">
+        {tabContent}
+      </div>
+    </>
+  )
+
+  return (
+    <DashboardPage
+      title={t('common:navigation.security')}
+      subtitle={t('cards:security.subtitle')}
+      icon="Shield"
+      rightExtra={<RotatingTip page="security" />}
+      storageKey={SECURITY_CARDS_KEY}
+      defaultCards={DEFAULT_SECURITY_CARDS}
+      statsType="security"
+      getStatValue={getStatValue}
+      onRefresh={handleRefresh}
+      isLoading={false}
+      isRefreshing={securityLoading || dataRefreshing || securityRefreshing}
+      lastUpdated={lastUpdated}
+      hasData={stats.total > 0 || securityIssues.length > 0}
+      beforeCards={tabsSection}
+      emptyState={{
+        title: t('cards:security.securityDashboard'),
+        description: t('cards:security.emptyDescription') }}
+    />
   )
 }

@@ -271,7 +271,7 @@ function handleMigrate(
     }
 
     db.exec('COMMIT')
-  } catch (e) {
+  } catch (e: unknown) {
     db.exec('ROLLBACK')
     throw e
   }
@@ -290,7 +290,7 @@ function handleSeedCache(db: MockDb | null, entries: Array<{ key: string; entry:
       )
     }
     db.exec('COMMIT')
-  } catch (e) {
+  } catch (e: unknown) {
     db.exec('ROLLBACK')
     throw e
   }
@@ -380,7 +380,7 @@ function processMessage(
         postMessage(respondError(unknown.id, `Unknown message type: ${unknown.type}`))
       }
     }
-  } catch (e) {
+  } catch (e: unknown) {
     postMessage(respondError(msg.id, e instanceof Error ? e.message : String(e)))
   }
 }

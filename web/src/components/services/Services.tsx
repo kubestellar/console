@@ -5,7 +5,6 @@ import { useIngresses } from '../../hooks/mcp/networking'
 import { ROUTES } from '../../config/routes'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
-import { useUniversalStats, createMergedStatValueGetter } from '../../hooks/useUniversalStats'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -18,13 +17,12 @@ const DEFAULT_SERVICES_CARDS = getDefaultCards('services')
 
 export function Services() {
   const navigate = useNavigate()
-  const { clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
+  const { deduplicatedClusters: clusters, isLoading, isRefreshing: dataRefreshing, lastUpdated, refetch, error: clustersError } = useClusters()
   const { services, error: servicesError } = useServices()
   const { ingresses } = useIngresses()
   const error = clustersError || servicesError
 
   const { drillToAllServices, drillToAllClusters } = useDrillDownActions()
-  const { getStatValue: getUniversalStatValue } = useUniversalStats()
   const { selectedClusters: globalSelectedClusters, isAllClustersSelected } = useGlobalFilters()
 
   // Filter clusters based on global selection
@@ -82,7 +80,7 @@ export function Services() {
     }
   }
 
-  const getStatValue = (blockId: string) => createMergedStatValueGetter(getDashboardStatValue, getUniversalStatValue)(blockId)
+  const getStatValue = getDashboardStatValue
 
   return (
     <DashboardPage
@@ -120,7 +118,7 @@ export function Services() {
       {/* Error Display */}
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-400">Error loading service data</p>
             <p className="text-xs text-muted-foreground mt-1">{error}</p>

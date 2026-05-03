@@ -68,7 +68,7 @@ export async function settledWithConcurrency<T>(
         try {
           const value = await tasks[idx]()
           results[idx] = { status: 'fulfilled', value }
-        } catch (reason) {
+        } catch (reason: unknown) {
           results[idx] = { status: 'rejected', reason }
         }
         // Notify caller immediately so the UI can render partial data

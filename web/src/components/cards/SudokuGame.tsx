@@ -247,7 +247,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
               notes: new Set(Array.isArray(cell.notes) ? cell.notes : []) }))
           )
           setGameState(parsed)
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('Failed to load saved game:', e)
           showToast(t('sudoku.errors.loadFailed', 'Could not load saved game — starting fresh.'), 'warning')
         }
@@ -257,7 +257,7 @@ function SudokuGameInternal({ config: _config }: SudokuGameProps) {
       if (savedBestTimes) {
         try {
           setBestTimes(JSON.parse(savedBestTimes) as BestTimes)
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('Failed to load best times:', e)
           showToast(t('sudoku.errors.bestTimesFailed', 'Could not load best times.'), 'warning')
         }

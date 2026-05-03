@@ -99,7 +99,7 @@ export function AIActionBar({
   }
 
   return (
-    <div className={`p-4 rounded-lg bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 ${className}`}>
+    <div className={`p-4 rounded-lg bg-linear-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

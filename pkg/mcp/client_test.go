@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -134,6 +136,34 @@ func TestClient_RPC_Error(t *testing.T) {
 	case <-ctx.Done():
 		t.Fatal("timed out waiting for response")
 	}
+}
+
+type countingCloser struct {
+	closes atomic.Int32
+}
+
+func (c *countingCloser) Write(p []byte) (int, error) { return len(p), nil }
+func (c *countingCloser) Close() error                { c.closes.Add(1); return nil }
+
+func TestCloseStdin_CalledOnlyOnce(t *testing.T) {
+	stub := &countingCloser{}
+	c := &Client{
+		stdin: stub,
+		done:  make(chan struct{}),
+	}
+
+	const goroutines = 10
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			c.closeStdin()
+		}()
+	}
+	wg.Wait()
+
+	assert.Equal(t, int32(1), stub.closes.Load(), "Close() must be called exactly once")
 }
 
 func TestClient_Stop_FailsPending(t *testing.T) {

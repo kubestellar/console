@@ -6,6 +6,7 @@ import { useDemoMode } from '../useDemoMode'
 import { registerRefetch, registerCacheReset } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { clusterCacheRef, subscribeClusterCache } from './shared'
+import { deduplicateClustersByServer } from './dedup'
 import type { Operator, OperatorSubscription } from './types'
 
 // localStorage cache keys
@@ -116,7 +117,8 @@ export function useOperators(cluster?: string) {
 
     const doFetch = async () => {
       if (isDemoMode()) {
-        const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
+        const dedupClusters = deduplicateClustersByServer(clusterCacheRef.clusters)
+        const clusters = cluster ? [cluster] : dedupClusters.map(c => c.name)
         const allOperators = clusters.flatMap(c => getDemoOperators(c))
         setOperators(allOperators)
         setError(null)
@@ -180,7 +182,14 @@ export function useOperators(cluster?: string) {
         }
       }
 
-      // REST fallback
+      // REST fallback — skip entirely if no token to prevent GA4 auth errors (#9957)
+      if (!token) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        fetchInProgressRef.current = false
+        return
+      }
+
       const url = cluster
         ? `/api/gitops/operators?cluster=${encodeURIComponent(cluster)}`
         : '/api/gitops/operators'
@@ -199,7 +208,7 @@ export function useOperators(cluster?: string) {
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
         }
-      } catch (err) {
+      } catch (err: unknown) {
         if (!controller.signal.aborted) {
           // #7547: Surface the error message so the UI can show it instead
           // of silently displaying an empty state.
@@ -288,7 +297,8 @@ export function useOperatorSubscriptions(cluster?: string) {
 
     const doFetch = async () => {
       if (isDemoMode()) {
-        const clusters = cluster ? [cluster] : clusterCacheRef.clusters.map(c => c.name)
+        const dedupClusters = deduplicateClustersByServer(clusterCacheRef.clusters)
+        const clusters = cluster ? [cluster] : dedupClusters.map(c => c.name)
         const allSubscriptions = clusters.flatMap(c => getDemoOperatorSubscriptions(c))
         setSubscriptions(allSubscriptions)
         setError(null)
@@ -344,7 +354,14 @@ export function useOperatorSubscriptions(cluster?: string) {
         }
       }
 
-      // REST fallback
+      // REST fallback — skip entirely if no token to prevent GA4 auth errors (#9957)
+      if (!token) {
+        setIsLoading(false)
+        setIsRefreshing(false)
+        fetchInProgressRef.current = false
+        return
+      }
+
       const url = cluster
         ? `/api/gitops/operator-subscriptions?cluster=${encodeURIComponent(cluster)}`
         : '/api/gitops/operator-subscriptions'
@@ -360,7 +377,7 @@ export function useOperatorSubscriptions(cluster?: string) {
           setConsecutiveFailures(0)
           setLastRefresh(Date.now())
         }
-      } catch (err) {
+      } catch (err: unknown) {
         if (!controller.signal.aborted) {
           // #7547: Surface the error message so the UI can show it instead
           // of silently displaying an empty state.
@@ -472,4 +489,15 @@ function getDemoOperatorSubscriptions(cluster: string): OperatorSubscription[] {
   ]
 
   return baseSubscriptions.slice(0, subCount)
+}
+
+export const __operatorsTestables = {
+  loadOperatorsCacheFromStorage,
+  saveOperatorsCacheToStorage,
+  loadSubscriptionsCacheFromStorage,
+  saveSubscriptionsCacheToStorage,
+  getDemoOperators,
+  getDemoOperatorSubscriptions,
+  OPERATORS_CACHE_KEY,
+  SUBSCRIPTIONS_CACHE_KEY,
 }

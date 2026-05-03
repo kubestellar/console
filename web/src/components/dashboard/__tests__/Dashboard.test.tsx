@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { type ReactNode } from 'react'
+import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../../lib/constants'
 
 // ── Minimal mock surface ────────────────────────────────────────────
 const mockSafeGetItem = vi.fn().mockReturnValue(null)
@@ -52,6 +53,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
+const mockRefetch = vi.fn()
 const mockClusters = [
   { name: 'prod', healthy: true, podCount: 50, nodeCount: 3, namespaces: ['default', 'kube-system'] },
   { name: 'staging', healthy: false, podCount: 20, nodeCount: 1, namespaces: ['default'] },
@@ -62,7 +64,7 @@ vi.mock('../../../hooks/useMCP', () => ({
     clusters: mockClusters,
     isRefreshing: false,
     lastUpdated: new Date(),
-    refetch: vi.fn(),
+    refetch: (...args: unknown[]) => mockRefetch(...args),
     isLoading: false,
     error: null,
   }),
@@ -168,7 +170,7 @@ vi.mock('../../../hooks/useCardGridNavigation', () => ({
 vi.mock('../../../lib/modals', () => ({
   useModalState: () => ({ isOpen: false, open: vi.fn(), close: vi.fn() }),
 }))
-vi.mock('../../../lib/cache', () => ({ setAutoRefreshPaused: vi.fn() }))
+vi.mock('../../../lib/cache', () => ({ setAutoRefreshPaused: vi.fn(), createCachedHook: vi.fn((_config: unknown) => () => ({})) }))
 vi.mock('../../../hooks/useRefreshIndicator', () => ({
   useRefreshIndicator: (fn: () => void) => ({ showIndicator: false, triggerRefresh: fn }),
 }))
@@ -319,15 +321,15 @@ describe('Dashboard', () => {
 
   it('persists auto-refresh true by default', () => {
     render(<Dashboard />)
-    expect(mockSafeSetItem).toHaveBeenCalledWith('dashboard-auto-refresh', 'true')
+    expect(mockSafeSetItem).toHaveBeenCalledWith(STORAGE_KEY_DASHBOARD_AUTO_REFRESH, 'true')
   })
 
   it('reads auto-refresh=false from localStorage', () => {
     mockSafeGetItem.mockImplementation((key: string) =>
-      key === 'dashboard-auto-refresh' ? 'false' : null
+      key === STORAGE_KEY_DASHBOARD_AUTO_REFRESH ? 'false' : null
     )
     render(<Dashboard />)
-    expect(mockSafeSetItem).toHaveBeenCalledWith('dashboard-auto-refresh', 'false')
+    expect(mockSafeSetItem).toHaveBeenCalledWith(STORAGE_KEY_DASHBOARD_AUTO_REFRESH, 'false')
   })
 
   it('persists cards to localStorage', async () => {
@@ -395,6 +397,43 @@ describe('Dashboard', () => {
       expect(capturedGetStatValue!('clusters').value).toBe(0)
       expect(capturedGetStatValue!('pods').value).toBe(0)
       expect(capturedGetStatValue!('nodes').value).toBe(0)
+    })
+  })
+
+  describe('auto-refresh interval timer behavior', () => {
+    it('calls refetch after 30s interval when autoRefresh is enabled', async () => {
+      render(<Dashboard />)
+      await vi.advanceTimersByTimeAsync(100)
+      mockRefetch.mockClear()
+
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(mockRefetch).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(mockRefetch).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not call refetch when autoRefresh is disabled via localStorage', async () => {
+      mockSafeGetItem.mockImplementation((key: string) =>
+        key === STORAGE_KEY_DASHBOARD_AUTO_REFRESH ? 'false' : null
+      )
+      render(<Dashboard />)
+      await vi.advanceTimersByTimeAsync(100)
+      mockRefetch.mockClear()
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(mockRefetch).not.toHaveBeenCalled()
+    })
+
+    it('clears the interval on unmount to prevent memory leaks', async () => {
+      const { unmount } = render(<Dashboard />)
+      await vi.advanceTimersByTimeAsync(100)
+      mockRefetch.mockClear()
+
+      unmount()
+
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect(mockRefetch).not.toHaveBeenCalled()
     })
   })
 })

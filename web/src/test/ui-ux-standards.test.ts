@@ -29,15 +29,15 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import * as fs from 'node:fs'
-import * as path from 'node:path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // ── Named constants ──────────────────────────────────────────────────────────
 
 /** Root directory for all components */
-const COMPONENTS_DIR = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
+const COMPONENTS_DIR = resolve(
+  dirname(fileURLToPath(import.meta.url)),
   '../components',
 )
 
@@ -85,11 +85,18 @@ const COMPONENTS_DIR = path.resolve(
 //   271 → 269: PR #8546 — fixed comment continuation lines in Login.tsx
 //              that tripped false-positive hex detection (#6338, #3761 refs)
 //   269 → 273: PR #8635 — widget export modal card preview thumbnails
-const EXPECTED_RAW_HEX_COUNT = 273
+//   273 → 274: PR #9841 — DashboardHeader compliance pages added one new hex fallback
+//   274 → 275: PR #9941 — Flatcar card added one hex color
+//   275 → 282: PR #10047 — ChangeTimeline card ECharts event type palette (7 hex colors)
+//   282 → 262: PR #10260 — replaced 20 raw hex colors in chart files with shared constants
+//   262 → 256: PR #10266 — extracted Gauge status colors and ChangeTimeline fallback to constants
+const EXPECTED_RAW_HEX_COUNT = 257
 const EXPECTED_RAW_RGBA_COUNT = 104
 //   22 → 19: PR #8547 — replaced 3 arbitrary Tailwind hex colors in Login.tsx
 //            (bg-[#0a0a0a], from-[#0a0f1c]) with semantic bg-background/from-background
-const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 19
+//   19 →  0: PR #10271 — added linkedin/terminal/glass-overlay to Tailwind config,
+//            replaced all 9 remaining arbitrary hex colors across 6 files
+const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 0
 // Inline style color ratchet — bump history:
 //   213 → 215: Drasi reactive graph (PRs #7832, #7857) — two new
 //              echarts/flow-node inline colors not covered by theming utils.
@@ -97,7 +104,11 @@ const EXPECTED_ARBITRARY_TW_COLOR_COUNT = 19
 const EXPECTED_INLINE_STYLE_COLOR_COUNT = 229
 // 80 → 96: PR #8635 — widget export modal card preview thumbnails use inline
 //           fontSize for pixel-accurate static SVG-like renderings (not DOM text).
-const EXPECTED_RAW_FONT_SIZE_COUNT = 96
+//  96 → 3: PR #10260 — replaced 93 raw fontSize values in chart/card files with
+//          shared constants (CHART_AXIS_FONT_SIZE, CHART_BODY_FONT_SIZE, etc.)
+//   3 → 0: PR #10266 — extracted last 3 raw fontSize (CHART_LEGEND_FONT_SIZE,
+//          CLUSTER_MARKER_FONT_SIZE) to shared constants
+const EXPECTED_RAW_FONT_SIZE_COUNT = 0
 
 /** Max snippet length for readable output */
 const MAX_SNIPPET_LENGTH = 120
@@ -145,10 +156,10 @@ interface Violation {
 /** Recursively find all .tsx/.ts component files, excluding tests and design system files */
 function findComponentFiles(dir: string): string[] {
   const results: string[] = []
-  if (!fs.existsSync(dir)) return results
+  if (!existsSync(dir)) return results
 
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name)
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name)
     if (entry.isDirectory()) {
       if (entry.name === '__tests__' || entry.name === 'node_modules') continue
       results.push(...findComponentFiles(fullPath))
@@ -171,7 +182,7 @@ function findComponentFiles(dir: string): string[] {
 
 /** Get relative path from COMPONENTS_DIR for readable output */
 function relPath(filePath: string): string {
-  return path.relative(COMPONENTS_DIR, filePath).replace(/\\/g, '/')
+  return relative(COMPONENTS_DIR, filePath).replace(/\\/g, '/')
 }
 
 // ── Line-level filters ──────────────────────────────────────────────────────
@@ -366,7 +377,7 @@ function scanForViolations(): Violation[] {
 
   for (const filePath of allFiles) {
     const rel = relPath(filePath)
-    const src = fs.readFileSync(filePath, 'utf-8')
+    const src = readFileSync(filePath, 'utf-8')
     const lines = src.split('\n')
 
     for (let i = 0; i < lines.length; i++) {

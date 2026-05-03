@@ -116,7 +116,7 @@ export function useWorkloadMonitor(
       setConsecutiveFailures(0)
       setLastRefresh(new Date())
       hasLoadedOnce.current = true
-    } catch (err) {
+    } catch (err: unknown) {
       const fetchError = err instanceof Error ? err : new Error('Unknown error')
       setError(fetchError)
       setConsecutiveFailures(prev => prev + 1)

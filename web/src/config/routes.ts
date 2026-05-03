@@ -46,6 +46,18 @@ export const ROUTES = {
   SECURITY: '/security',
   SECURITY_POSTURE: '/security-posture',
   COMPLIANCE: '/compliance',
+  COMPLIANCE_FRAMEWORKS: '/compliance-frameworks',
+  CHANGE_CONTROL: '/change-control',
+  SEGREGATION_OF_DUTIES: '/segregation-of-duties',
+  COMPLIANCE_REPORTS: '/compliance-reports',
+  DATA_RESIDENCY: '/data-residency',
+  BAA: '/baa',
+  HIPAA: '/hipaa',
+  GXP: '/gxp',
+  NIST: '/nist',
+  STIG: '/stig',
+  AIR_GAP: '/air-gap',
+  FEDRAMP: '/fedramp',
   DATA_COMPLIANCE: '/data-compliance',
   
   // Advanced Features
@@ -63,6 +75,9 @@ export const ROUTES = {
 
   // Persona dashboards
   CLUSTER_ADMIN: '/cluster-admin',
+
+  // Enterprise Compliance Portal
+  ENTERPRISE: '/enterprise',
 
   // Marketplace
   MARKETPLACE: '/marketplace',

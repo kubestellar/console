@@ -79,6 +79,7 @@ async function setupScanTest(page: Page) {
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
+    localStorage.setItem('kc-agent-setup-dismissed', 'true')
   })
 
   await page.goto('/')

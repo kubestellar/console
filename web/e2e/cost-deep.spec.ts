@@ -93,9 +93,11 @@ test.describe('Cost Deep Tests (/cost)', () => {
       const isVisible = await stat.isVisible().catch(() => false)
       if (isVisible) {
         await expect(stat).toBeVisible()
-        // The value above the sublabel should contain a dollar sign
-        const statBlock = stat.locator('..')
-        const blockText = await statBlock.textContent()
+        // The value above the sublabel should contain a dollar sign.
+        // Walk up multiple levels to find the stat block container that
+        // includes both the value and sublabel elements.
+        const parentBlock = stat.locator('xpath=ancestor::*[contains(., "$")]').first()
+        const blockText = await parentBlock.textContent()
         expect(blockText).toContain(DOLLAR_PREFIX)
       }
     })

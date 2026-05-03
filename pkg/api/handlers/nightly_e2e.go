@@ -248,9 +248,9 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 	h.mu.RUnlock()
 
 	// #7053 — Use singleflight to coalesce concurrent cold-cache fetches
-	// into a single fetchAll call, preventing N × 17+ goroutine fan-out.
+	// into a single fetchAllWithContext call, preventing N × 17+ goroutine fan-out.
 	v, err, _ := h.fetchGroup.Do("runs", func() (interface{}, error) {
-		return h.fetchAll()
+		return h.fetchAllWithContext(c.Context())
 	})
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
@@ -294,6 +294,12 @@ func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2
 	ch := make(chan result, len(nightlyWorkflows))
 	for i, wf := range nightlyWorkflows {
 		go func(idx int, wf NightlyWorkflow) {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in nightly workflow fetch", "workflow", wf.WorkflowFile, "error", r)
+					ch <- result{idx: idx, err: fmt.Errorf("panic: %v", r)}
+				}
+			}()
 			select {
 			case <-ctx.Done():
 				ch <- result{idx: idx, err: ctx.Err()}
@@ -562,6 +568,12 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 
 	for _, gp := range guidePaths {
 		go func(guidePath string) {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in fetchAllGuideImages goroutine", "guide", guidePath, "error", r)
+					ch <- guideResult{path: guidePath, images: make(map[string]string)}
+				}
+			}()
 			prefix := "guides/" + guidePath + "/"
 			images := make(map[string]string)
 
@@ -712,6 +724,11 @@ func parseImagesFromYAML(content string) map[string]string {
 
 	// Pattern 1: direct image references
 	for _, match := range imageRe.FindAllStringSubmatch(content, -1) {
+		// Skip commented-out YAML lines
+		line := match[0]
+		if strings.HasPrefix(strings.TrimSpace(line), "#") {
+			continue
+		}
 		images[match[1]] = match[2]
 	}
 
@@ -856,6 +873,12 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 		sem <- struct{}{}
 		go func(idx int, jobID int64, name, conc string) {
 			defer func() { <-sem }()
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in fetchJobLogs goroutine", "jobID", jobID, "error", r)
+					ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: ""}}
+				}
+			}()
 			logText := h.fetchJobLog(repo, jobID)
 			ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: logText}}
 		}(i, job.ID, job.Name, conclusion)
@@ -1002,3 +1025,4 @@ func successRate(runs []NightlyRun) float64 {
 	}
 	return float64(passed) / float64(len(runs))
 }
+

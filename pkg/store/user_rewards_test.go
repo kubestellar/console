@@ -36,7 +36,7 @@ const (
 func TestGetUserRewards_ReturnsZeroForNewUser(t *testing.T) {
 	store := newTestStore(t)
 
-	got, err := store.GetUserRewards(testUserRewardsID)
+	got, err := store.GetUserRewards(ctx, testUserRewardsID)
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	require.Equal(t, testUserRewardsID, got.UserID)
@@ -49,7 +49,7 @@ func TestGetUserRewards_ReturnsZeroForNewUser(t *testing.T) {
 
 func TestGetUserRewards_EmptyUserIDReturnsError(t *testing.T) {
 	store := newTestStore(t)
-	_, err := store.GetUserRewards("")
+	_, err := store.GetUserRewards(ctx, "")
 	require.Error(t, err)
 }
 
@@ -70,9 +70,9 @@ func TestUpdateUserRewards_RoundTrip(t *testing.T) {
 		Level:       wantLevel,
 		BonusPoints: wantBonus,
 	}
-	require.NoError(t, store.UpdateUserRewards(r))
+	require.NoError(t, store.UpdateUserRewards(ctx, r))
 
-	got, err := store.GetUserRewards(testUserRewardsID)
+	got, err := store.GetUserRewards(ctx, testUserRewardsID)
 	require.NoError(t, err)
 	require.Equal(t, wantCoins, got.Coins)
 	require.Equal(t, wantPoints, got.Points)
@@ -88,9 +88,9 @@ func TestUpdateUserRewards_ClampsNegativeCoinsToFloor(t *testing.T) {
 		UserID: testUserRewardsID,
 		Coins:  -5,
 	}
-	require.NoError(t, store.UpdateUserRewards(r))
+	require.NoError(t, store.UpdateUserRewards(ctx, r))
 
-	got, err := store.GetUserRewards(testUserRewardsID)
+	got, err := store.GetUserRewards(ctx, testUserRewardsID)
 	require.NoError(t, err)
 	require.Equal(t, MinCoinBalance, got.Coins)
 }
@@ -100,11 +100,11 @@ func TestUpdateUserRewards_Idempotent(t *testing.T) {
 	const finalCoins = 42
 
 	// First call creates the row
-	require.NoError(t, store.UpdateUserRewards(&UserRewards{UserID: testUserRewardsID, Coins: finalCoins}))
+	require.NoError(t, store.UpdateUserRewards(ctx, &UserRewards{UserID: testUserRewardsID, Coins: finalCoins}))
 	// Second call with same state should succeed and not duplicate
-	require.NoError(t, store.UpdateUserRewards(&UserRewards{UserID: testUserRewardsID, Coins: finalCoins}))
+	require.NoError(t, store.UpdateUserRewards(ctx, &UserRewards{UserID: testUserRewardsID, Coins: finalCoins}))
 
-	got, err := store.GetUserRewards(testUserRewardsID)
+	got, err := store.GetUserRewards(ctx, testUserRewardsID)
 	require.NoError(t, err)
 	require.Equal(t, finalCoins, got.Coins)
 }
@@ -167,7 +167,7 @@ func TestClaimDailyBonus_WithinCooldownReturnsError(t *testing.T) {
 	require.True(t, errors.Is(err, ErrDailyBonusUnavailable))
 
 	// Bonus points should be unchanged after the rejection
-	got, err := store.GetUserRewards(testUserRewardsID)
+	got, err := store.GetUserRewards(ctx, testUserRewardsID)
 	require.NoError(t, err)
 	require.Equal(t, testDailyBonusAmount, got.BonusPoints)
 }
@@ -207,7 +207,7 @@ func TestIncrementUserCoins_ConcurrentIncrementsAreAtomic(t *testing.T) {
 	}
 	wg.Wait()
 
-	got, err := store.GetUserRewards(testUserRewardsID)
+	got, err := store.GetUserRewards(ctx, testUserRewardsID)
 	require.NoError(t, err)
 	wantTotal := testRewardsConcurrentWorkers * testRewardsConcurrentDelta
 	require.Equal(t, wantTotal, got.Coins, "concurrent deltas must sum without lost updates")
@@ -254,7 +254,7 @@ func TestClaimDailyBonus_ConcurrentClaimsOnlyOneWins(t *testing.T) {
 	require.Equal(t, int64(testRewardsConcurrentWorkers-1), atomic.LoadInt64(&cooldownCount), "all other claims must see ErrDailyBonusUnavailable")
 
 	// Final state — bonus awarded exactly once
-	got, err := store.GetUserRewards(testUserRewardsID)
+	got, err := store.GetUserRewards(ctx, testUserRewardsID)
 	require.NoError(t, err)
 	require.Equal(t, testDailyBonusAmount, got.BonusPoints, "bonus must be awarded exactly once")
 	require.NotNil(t, got.LastDailyBonusAt)

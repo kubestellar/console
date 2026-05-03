@@ -1,0 +1,46 @@
+name: KB Nightly Validation
+on:
+  schedule:
+    - cron: '0 4 * * *'  # 4 AM UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-kb:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.2.2
+
+      - name: Validate mission structure
+        run: |
+          chmod +x scripts/validate-missions.sh
+          ./scripts/validate-missions.sh 2>&1 | tee validation-results.txt
+          
+      - name: Run KB gap tracker
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x scripts/kb-query-gap-tracker.sh
+          ./scripts/kb-query-gap-tracker.sh kb-gap-report.md 2>&1 | tee gap-results.txt
+
+      - name: Check for regressions
+        run: |
+          # Fail if mission pass rate drops below 90%
+          if grep -q "PASS_RATE=" validation-results.txt; then
+            RATE=$(grep -oP 'PASS_RATE=\K\d+' validation-results.txt | head -1)
+            if [ "${RATE:-100}" -lt 90 ]; then
+              echo "::error::Mission validation pass rate dropped below 90% (currently ${RATE}%)"
+              exit 1
+            fi
+          fi
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: kb-validation-reports
+          path: |
+            validation-results.txt
+            kb-gap-report.md

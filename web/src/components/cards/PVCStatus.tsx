@@ -181,6 +181,16 @@ function PVCStatusInternal() {
   }
 
   if (showEmptyState) {
+    // Distinguish between "no data exists" and "failed to fetch data"
+    if (isFailed || error) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
+          <AlertTriangle className="w-8 h-8 mb-2 text-red-400 opacity-70" />
+          <p className="text-sm text-red-400">Failed to load PVC data</p>
+          <p className="text-xs mt-1">{error || 'Check cluster connectivity and try again'}</p>
+        </div>
+      )
+    }
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground">
         <p className="text-sm">No PVCs</p>

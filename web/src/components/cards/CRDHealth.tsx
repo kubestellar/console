@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { CheckCircle, AlertTriangle, XCircle, Database } from 'lucide-react'
+import { Database } from 'lucide-react'
 import { Skeleton } from '../ui/Skeleton'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
+import { crdStatusIcons, crdStatusColors } from '../../lib/cards/statusMappers'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import { useCRDs } from '../../hooks/useCRDs'
@@ -35,10 +36,11 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
   const [filterGroup, setFilterGroup] = useState<string>('')
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = allCRDs.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing,
-    hasAnyData: allCRDs.length > 0,
+    hasAnyData: hasData,
     isDemoData })
 
   // Apply group filter before passing to useCardData
@@ -94,21 +96,8 @@ export function CRDHealth({ config: _config }: CRDHealthProps) {
     return Array.from(groupSet).sort()
   })()
 
-  const getStatusIcon = (status: CRDData['status']) => {
-    switch (status) {
-      case 'Established': return CheckCircle
-      case 'NotEstablished': return XCircle
-      case 'Terminating': return AlertTriangle
-    }
-  }
-
-  const getStatusColor = (status: CRDData['status']) => {
-    switch (status) {
-      case 'Established': return 'green'
-      case 'NotEstablished': return 'red'
-      case 'Terminating': return 'orange'
-    }
-  }
+  const getStatusIcon = (status: CRDData['status']) => crdStatusIcons[status]
+  const getStatusColor = (status: CRDData['status']) => crdStatusColors[status]
 
   // Compute stats from the filtered set (pre-pagination) by approximating
   // the same filters useCardData applies: cluster filter + search

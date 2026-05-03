@@ -11,6 +11,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
+import { getLoadColors, getHorseshoeColor } from './shared/colorUtils'
 import { useOptionalStack } from '../../../contexts/StackContext'
 import { useCardDemoState, useReportCardDataState } from '../CardDataContext'
 import { usePrometheusMetrics } from '../../../hooks/usePrometheusMetrics'
@@ -58,14 +59,6 @@ const NODES: FlowNode[] = [
   { id: 'decode-0', label: 'Decode-0', x: 90, y: 34, type: 'decode', color: '#22c55e', load: 80 },
   { id: 'decode-1', label: 'Decode-1', x: 90, y: 66, type: 'decode', color: '#22c55e', load: 67 },
 ]
-
-// Get color based on load percentage
-const getLoadColors = (load: number) => {
-  if (load >= 90) return { start: '#ef4444', end: '#f87171', glow: '#ef4444' }
-  if (load >= 70) return { start: '#f59e0b', end: '#fbbf24', glow: '#f59e0b' }
-  if (load >= 50) return { start: '#eab308', end: '#facc15', glow: '#eab308' }
-  return { start: '#22c55e', end: '#4ade80', glow: '#22c55e' }
-}
 
 // Mini sparkline for time-series data
 function Sparkline({ data, color, width = 80, height = 24 }: { data: number[]; color: string; width?: number; height?: number }) {
@@ -351,14 +344,6 @@ interface HorseshoeNodeProps {
   uniqueId: string
   isSelected?: boolean
   onClick?: () => void
-}
-
-// Color based on percentage (green -> yellow -> orange -> red)
-const getHorseshoeColor = (pct: number) => {
-  if (pct >= 90) return '#ef4444' // red
-  if (pct >= 70) return '#f59e0b' // amber/orange
-  if (pct >= 50) return '#eab308' // yellow
-  return '#22c55e' // green
 }
 
 function HorseshoeNode({ node, uniqueId, isSelected, onClick }: HorseshoeNodeProps) {
@@ -877,10 +862,10 @@ function EPPRoutingInternal() {
   const showEmptyState = !selectedStack && !isDemoMode
 
   return (
-    <div className="p-4 h-full flex-1 flex flex-col bg-gradient-to-br from-background/50 to-secondary/30 relative">
+    <div className="p-4 h-full flex-1 flex flex-col bg-linear-to-br from-background/50 to-secondary/30 relative">
       {/* Empty state overlay */}
       {showEmptyState && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-sm rounded-lg">
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-background/60 backdrop-blur-xs rounded-lg">
           <div className="w-12 h-12 rounded-full border-2 border-border border-t-yellow-500 animate-spin mb-4" />
           <span className="text-muted-foreground text-sm">{t('llmd.selectStackRouting')}</span>
           <span className="text-muted-foreground text-xs mt-1">{t('llmd.useStackSelector')}</span>
@@ -1065,7 +1050,7 @@ function EPPRoutingInternal() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.2 }}
-              className="absolute left-2 top-2 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-xl max-w-[180px]"
+              className="absolute left-2 top-2 bg-background/95 backdrop-blur-xs rounded-lg border border-border p-3 shadow-xl max-w-[180px]"
             >
               {(() => {
                 const node = dynamicNodes.find(n => n.id === selectedNode)
@@ -1102,8 +1087,8 @@ function EPPRoutingInternal() {
                               className={`px-2 py-0.5 text-xs rounded transition-all ${
                                 selectedMetricTypes.includes(metric)
                                   ? metric === 'load'
-                                    ? 'bg-yellow-500/20 text-yellow-400 shadow-sm shadow-yellow-500/20'
-                                    : 'bg-cyan-500/20 text-cyan-400 shadow-sm shadow-cyan-500/20'
+                                    ? 'bg-yellow-500/20 text-yellow-400 shadow-xs shadow-yellow-500/20'
+                                    : 'bg-cyan-500/20 text-cyan-400 shadow-xs shadow-cyan-500/20'
                                   : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
                               }`}
                             >
@@ -1176,7 +1161,7 @@ function EPPRoutingInternal() {
         <motion.div
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-background/95 backdrop-blur-sm rounded-lg p-3 border border-border text-xs shadow-xl"
+          className="bg-background/95 backdrop-blur-xs rounded-lg p-3 border border-border text-xs shadow-xl"
         >
           {(() => {
             const link = links.find(l => `${l.source}-${l.target}` === hoveredLink)
@@ -1208,15 +1193,15 @@ function EPPRoutingInternal() {
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 mt-3 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-1 bg-gradient-to-r from-yellow-500/60 to-purple-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(147,51,234,0.4)' }} />
+          <div className="w-6 h-1 bg-linear-to-r from-yellow-500/60 to-purple-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(147,51,234,0.4)' }} />
           <span className="text-muted-foreground">{t('llmd.prefill')}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-1 bg-gradient-to-r from-yellow-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
+          <div className="w-6 h-1 bg-linear-to-r from-yellow-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
           <span className="text-muted-foreground">{t('llmd.decode')}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-1 bg-gradient-to-r from-purple-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
+          <div className="w-6 h-1 bg-linear-to-r from-purple-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
           <span className="text-muted-foreground">{t('llmd.handoff')}</span>
         </div>
       </div>

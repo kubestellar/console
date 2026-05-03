@@ -174,10 +174,10 @@ export function ComplianceDrillDown({ data }: Props) {
       : <ChevronDown className="w-3 h-3" />
   }
 
-  // Summary stats
-  const passCount = filteredRows.filter(r => r.status === 'pass').length
-  const failCount = filteredRows.filter(r => r.status === 'fail').length
-  const otherCount = filteredRows.filter(r => r.status === 'other' || r.status === 'not-applicable').length
+  // Summary stats — always computed from allRows so they are unaffected by filters
+  const passCount = allRows.filter(r => r.status === 'pass').length
+  const failCount = allRows.filter(r => r.status === 'fail').length
+  const otherCount = allRows.filter(r => r.status === 'other' || r.status === 'not-applicable').length
   const activeFilters = [statusFilter, severityFilter, clusterFilter, profileFilter, searchQuery].filter(Boolean).length
 
   return (
@@ -203,7 +203,7 @@ export function ComplianceDrillDown({ data }: Props) {
               !statusFilter ? 'border-teal-500/40 bg-teal-500/10' : 'border-border bg-card/50 hover:border-border/80'
             )}
           >
-            <div className="text-xl font-bold text-foreground">{filteredRows.length}</div>
+            <div className="text-xl font-bold text-foreground">{allRows.length}</div>
             <div className="text-xs text-muted-foreground">Total Controls</div>
           </button>
           <button
@@ -247,7 +247,7 @@ export function ComplianceDrillDown({ data }: Props) {
               placeholder="Search by control ID, title, or description..."
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); resetPage() }}
-              className="w-full pl-9 pr-8 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full pl-9 pr-8 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
             />
             {searchQuery && (
               <button
@@ -283,7 +283,7 @@ export function ComplianceDrillDown({ data }: Props) {
             <select
               value={statusFilter}
               onChange={e => { setStatusFilter(e.target.value); resetPage() }}
-              className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
             >
               <option value="">{t('drilldown.compliance.allStatuses')}</option>
               {uniqueStatuses.map(s => (
@@ -293,7 +293,7 @@ export function ComplianceDrillDown({ data }: Props) {
             <select
               value={severityFilter}
               onChange={e => { setSeverityFilter(e.target.value); resetPage() }}
-              className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
             >
               <option value="">{t('drilldown.compliance.allSeverities')}</option>
               <option value="critical">{t('drilldown.compliance.critical')}</option>
@@ -304,7 +304,7 @@ export function ComplianceDrillDown({ data }: Props) {
             <select
               value={clusterFilter}
               onChange={e => { setClusterFilter(e.target.value); resetPage() }}
-              className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
             >
               <option value="">{t('drilldown.compliance.allClusters')}</option>
               {uniqueClusters.map(c => (
@@ -314,7 +314,7 @@ export function ComplianceDrillDown({ data }: Props) {
             <select
               value={profileFilter}
               onChange={e => { setProfileFilter(e.target.value); resetPage() }}
-              className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="px-3 py-2 rounded-lg border border-border bg-card/50 text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
             >
               <option value="">{t('drilldown.compliance.allProfiles')}</option>
               {uniqueProfiles.map(p => (

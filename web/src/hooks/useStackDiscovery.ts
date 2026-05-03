@@ -11,11 +11,12 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { getDemoMode } from './useDemoMode'
 import type { LLMdServer } from './useLLMd'
+import { DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
+import { KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
+import { MS_PER_MINUTE } from '../lib/constants/time'
 
-// Refresh interval (2 minutes)
-const REFRESH_INTERVAL_MS = 120000
 const CACHE_KEY = 'kubestellar-stack-cache'
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL_MS = 5 * MS_PER_MINUTE // 5 minutes
 
 export interface LLMdStackComponent {
   name: string
@@ -358,8 +359,12 @@ export function useStackDiscovery(clusters: string[]) {
 
   // Stable key for cluster list — avoids complex expressions in dependency arrays
   const clustersKey = (clusters || []).join(',')
+  // Ref so refetch can read the latest clusters without making refetch unstable
+  const clustersRef = useRef(clusters)
+  clustersRef.current = clusters
 
   const refetch = useCallback(async (silent = false) => {
+    const clusters = clustersRef.current
     // Skip fetching in demo mode — no agent available
     if (getDemoMode()) {
       setIsLoading(false)
@@ -431,13 +436,13 @@ export function useStackDiscovery(clusters: string[]) {
           //          NO bulk deployment query — that's Phase 2.
           // ════════════════════════════════════════════════════════════════
           const [podsResponse, poolsResponse, svcResponse, gwResponse, hpaResponse, wvaResponse, vpaResponse] = await Promise.all([
-            kubectlProxy.exec(['get', 'pods', '-A', '-l', 'llm-d.ai/role', '-o', 'json'], { context: cluster, timeout: 30000 }),
-            kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
-            kubectlProxy.exec(['get', 'services', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
-            kubectlProxy.exec(['get', 'gateway', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
-            kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
-            kubectlProxy.exec(['get', 'variantautoscalings', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
-            kubectlProxy.exec(['get', 'vpa', '-A', '-o', 'json'], { context: cluster, timeout: 30000 }),
+            kubectlProxy.exec(['get', 'pods', '-A', '-l', 'llm-d.ai/role', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }),
+            kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }),
+            kubectlProxy.exec(['get', 'services', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }),
+            kubectlProxy.exec(['get', 'gateway', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }),
+            kubectlProxy.exec(['get', 'hpa', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }),
+            kubectlProxy.exec(['get', 'variantautoscalings', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }),
+            kubectlProxy.exec(['get', 'vpa', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS }),
           ])
 
           // Skip cluster entirely if it's unreachable (connection error or timeout)
@@ -625,7 +630,7 @@ export function useStackDiscovery(clusters: string[]) {
           // Get all namespaces in the cluster (lightweight query)
           const nsResponse = await kubectlProxy.exec(
             ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],
-            { context: cluster, timeout: 15000 },
+            { context: cluster, timeout: KUBECTL_MEDIUM_TIMEOUT_MS },
           )
           const allClusterNamespaces = nsResponse.exitCode === 0
             ? nsResponse.output.split(/\s+/).filter(Boolean)
@@ -641,7 +646,7 @@ export function useStackDiscovery(clusters: string[]) {
             const batch = candidateNamespaces.slice(i, i + DEPLOYMENT_BATCH_SIZE)
             const batchResults = await Promise.all(
               batch.map(ns =>
-                kubectlProxy.exec(['get', 'deployments', '-n', ns, '-o', 'json'], { context: cluster, timeout: 15000 })
+                kubectlProxy.exec(['get', 'deployments', '-n', ns, '-o', 'json'], { context: cluster, timeout: KUBECTL_MEDIUM_TIMEOUT_MS })
               ),
             )
 
@@ -677,7 +682,7 @@ export function useStackDiscovery(clusters: string[]) {
             mergeIntoState(cluster, batchStacks, false)
           }
 
-        } catch (err) {
+        } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err)
           if (!errMsg.includes('demo mode') && !errMsg.includes('timed out')) {
             console.error(`[useStackDiscovery] Error fetching from ${cluster}:`, err)
@@ -688,7 +693,7 @@ export function useStackDiscovery(clusters: string[]) {
       setError(null)
       setLastRefresh(new Date())
       initialLoadDone.current = true
-    } catch (err) {
+    } catch (err: unknown) {
       // Suppress demo mode errors
       const errMsg = err instanceof Error ? err.message : String(err)
       if (!errMsg.includes('demo mode')) {
@@ -699,11 +704,11 @@ export function useStackDiscovery(clusters: string[]) {
       setIsLoading(false)
       isRefetching.current = false
     }
-  }, [clusters, clustersKey])
+  }, [clustersKey])
 
   useEffect(() => {
     // Wait for clusters to be available
-    if (clusters.length === 0) {
+    if (clustersRef.current.length === 0) {
       return
     }
     // If we have any cached stacks (even stale), do a silent background refresh
@@ -712,7 +717,7 @@ export function useStackDiscovery(clusters: string[]) {
     const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refetch, clusters.length])
+  }, [refetch])
 
   return {
     stacks,

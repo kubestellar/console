@@ -1,49 +1,34 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from 'react'
+import { useEffect, useState, Suspense } from 'react'
+import { safeLazy } from '../../lib/safeLazy'
 import { Bug, Loader2 } from 'lucide-react'
-import { useFeatureRequests, useNotifications } from '../../hooks/useFeatureRequests'
+import { useFeatureRequests } from '../../hooks/useFeatureRequests'
 import type { RequestType } from '../../hooks/useFeatureRequests'
 import { useModalState } from '../../lib/modals'
+import { useTranslation } from 'react-i18next'
+import { cn } from '../../lib/cn'
 
 // Lazy-load the modal (~67 KB) — only needed when the user clicks the bug icon
-const FeatureRequestModal = lazy(() =>
-  import('./FeatureRequestModal').then(m => ({ default: m.FeatureRequestModal }))
-)
+const FeatureRequestModal = safeLazy(() => import('./FeatureRequestModal'), 'FeatureRequestModal')
 
-export function FeatureRequestButton() {
+/** Badge displays "99+" for counts above this threshold. */
+const MAX_BADGE_DISPLAY = 99
+
+interface FeatureRequestButtonProps {
+  /** Force label text to be visible (used in overflow menu) */
+  showLabel?: boolean
+}
+
+export function FeatureRequestButton({ showLabel = false }: FeatureRequestButtonProps) {
+  const { t } = useTranslation()
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useModalState()
   const [initialRequestType, setInitialRequestType] = useState<RequestType | undefined>()
-  const { notifications, isLoading: notificationsLoading } = useNotifications()
-  // PR #6518 item G — this navbar button only needs the closed-request IDs
-  // to filter notifications for the badge count; it does not render any
-  // queue items, titles, or descriptions. Pass { countOnly: true } so the
-  // hook fetches the lean `?count_only=true` payload ({id, status} pairs).
-  // Consumers that render the full queue (FeatureRequestModal, Updates tab)
-  // must NOT pass this flag.
-  // PR #6573 item B — use the lean `summaries` return (typed as
-  // FeatureRequestSummary[]) instead of `requests`. The count_only endpoint
-  // only sends {id, status}, so the full FeatureRequest[] type was a lie.
-  // Auto-QA #9036 — also pull the hook's `error` so a fetch failure surfaces
-  // to the user via the button tooltip instead of failing silently.
+  // issue #10681 — Sync the navbar badge with "Your Requests" count shown in
+  // the Updates tab. Previously the badge showed unread *notifications*
+  // (a different data source), so the two numbers never agreed. Now we use
+  // summaries.length — the total request count from the same endpoint that
+  // backs "Your Requests ({n})".
   const { summaries, isLoading: summariesLoading, error: summariesError } = useFeatureRequests(undefined, { countOnly: true })
-  const isLoadingFeedback = notificationsLoading || summariesLoading
-
-  // issue 6475 — Unify the navbar badge count with the Updates tab.
-  // Previously the navbar used the raw `unreadCount` returned by
-  // useNotifications(), which counts notifications for ALL feature requests
-  // including closed ones. The Updates tab (FeatureRequestModal) computes
-  // its own badge by excluding notifications whose `feature_request_id`
-  // points at a closed request. The two displays disagreed whenever the
-  // user had unread activity on a closed issue. Reuse the modal's filter
-  // here so the navbar matches.
-  const unreadCount = useMemo(() => {
-    const closedIds = new Set(
-      (summaries || []).filter(r => r.status === 'closed').map(r => r.id)
-    )
-    return (notifications || [])
-      .filter(n => !closedIds.has(n.feature_request_id || ''))
-      .filter(n => !n.read)
-      .length
-  }, [notifications, summaries])
+  const requestCount = (summaries || []).length
 
   // Auto-open modal when navigated from /issue, /feedback, /feature routes
   useEffect(() => {
@@ -62,21 +47,26 @@ export function FeatureRequestButton() {
       <button
         onClick={openModal}
         data-tour="feedback"
-        className={`relative p-2 w-9 h-9 flex items-center justify-center rounded-lg hover:bg-secondary/50 transition-colors ${
-          summariesError ? 'text-red-400' : unreadCount > 0 ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-        }`}
+        className={cn(
+          'relative flex items-center rounded-lg hover:bg-secondary/50 transition-colors',
+          showLabel ? 'gap-2 px-3 py-1.5 h-9' : 'p-2 w-9 h-9 justify-center',
+          summariesError ? 'text-red-400' : requestCount > 0 ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+        )}
         title={
           summariesError
-            ? `Couldn't load feedback status: ${summariesError}`
-            : unreadCount > 0
-              ? `${unreadCount} updates on your feedback`
-              : 'Report a bug or request a feature'
+            ? t('feedback.couldNotLoadStatus', { error: summariesError })
+            : requestCount > 0
+              ? t('feedback.yourRequestsCount', { count: requestCount })
+              : t('feedback.reportBugOrFeature')
         }
       >
-        {isLoadingFeedback ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bug className="w-5 h-5" />}
-        {!isLoadingFeedback && unreadCount > 0 && (
+        {summariesLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Bug className="w-5 h-5 shrink-0" />}
+        {showLabel && (
+          <span className="text-sm font-medium">{t('feedback.feedback')}</span>
+        )}
+        {!summariesLoading && requestCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-2xs font-bold text-white rounded-full bg-purple-500">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {requestCount > MAX_BADGE_DISPLAY ? `${MAX_BADGE_DISPLAY}+` : requestCount}
           </span>
         )}
       </button>

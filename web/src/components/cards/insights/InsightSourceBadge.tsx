@@ -15,11 +15,11 @@ export function InsightSourceBadge({ source, confidence }: InsightSourceBadgePro
   return (
     <span className="inline-flex items-center gap-1" aria-label={label} title={label}>
       {source === 'ai' ? (
-        <StatusBadge color="blue" size="xs" className="flex-shrink-0">
+        <StatusBadge color="blue" size="xs" className="shrink-0">
           AI
         </StatusBadge>
       ) : (
-        <StatusBadge color="gray" size="xs" className="flex-shrink-0">
+        <StatusBadge color="gray" size="xs" className="shrink-0">
           <Zap className="w-2 h-2" aria-hidden="true" />
         </StatusBadge>
       )}

@@ -51,10 +51,11 @@ export function ResourceMarshall() {
   const { namespaces, isLoading: nsLoading, isDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  const hasData = clusters.length > 0
   useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasData,
     isRefreshing: clustersRefreshing,
-    hasAnyData: clusters.length > 0,
+    hasAnyData: hasData,
     isDemoData: demoMode || isDemoFallback,
     isFailed: clustersFailed,
     consecutiveFailures: clustersFailures })
@@ -162,7 +163,7 @@ export function ResourceMarshall() {
             onChange={(e) => handleNamespaceChange(e.target.value)}
             disabled={!selectedCluster || nsLoading}
             className={cn(
-              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50',
+              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50',
               (!selectedCluster || nsLoading) && 'opacity-50 cursor-not-allowed',
             )}
           >
@@ -183,7 +184,7 @@ export function ResourceMarshall() {
             onChange={(e) => handleWorkloadChange(e.target.value)}
             disabled={!selectedNamespace || wlLoading}
             className={cn(
-              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/50',
+              'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50',
               (!selectedNamespace || wlLoading) && 'opacity-50 cursor-not-allowed',
             )}
           >

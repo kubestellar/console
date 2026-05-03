@@ -25,6 +25,13 @@ const {
   mockMapSettled: vi.fn(),
 }))
 
+vi.mock('../mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
+}))
+
 vi.mock('../../useLocalAgent', () => ({
   isAgentUnavailable: () => mockIsAgentUnavailable(),
   reportAgentDataSuccess: () => mockReportAgentDataSuccess(),
@@ -40,6 +47,7 @@ vi.mock('../shared', () => ({
 vi.mock('../../../lib/cache', () => ({
   useCache: (opts: { key: string; initialData: unknown; demoData: unknown; fetcher?: () => Promise<unknown>; enabled?: boolean }) => mockUseCache(opts),
   resetFailuresForCluster: vi.fn(),
+  createCachedHook: vi.fn((_config: unknown) => () => ({})),
 }))
 
 vi.mock('../../../lib/utils/concurrency', () => ({
@@ -439,7 +447,7 @@ describe('fetcher callback — agentFetchAllClusters', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -530,7 +538,7 @@ describe('fetcher callback — agentFetchAllClusters', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -574,7 +582,7 @@ describe('fetcher callback — agentFetchAllClusters', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -704,7 +712,7 @@ describe('fetcher callback — agentFetchAllClusters', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -755,7 +763,7 @@ describe('fetcher callback — agentFetchAllClusters', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -797,7 +805,7 @@ describe('fetcher callback — agentFetchAllClusters', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -945,7 +953,7 @@ describe('agentFetch — namespace parameter handling', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -997,7 +1005,7 @@ describe('agentFetch — namespace parameter handling', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -1047,7 +1055,7 @@ describe('agentFetch — missing data key fallback', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -1097,7 +1105,7 @@ describe('agentFetch — abort timeout behavior', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -1143,7 +1151,7 @@ describe('agentFetch — abort timeout behavior', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -1329,7 +1337,7 @@ describe('agentFetchAllClusters — cluster context fallback', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }
@@ -1379,7 +1387,7 @@ describe('agentFetchAllClusters — items annotated with cluster name', () => {
         try {
           const value = await fn(items[i], i)
           results.push({ status: 'fulfilled', value })
-        } catch (reason) {
+        } catch (reason: unknown) {
           results.push({ status: 'rejected', reason })
         }
       }

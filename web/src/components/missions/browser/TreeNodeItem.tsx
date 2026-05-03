@@ -1,9 +1,10 @@
-import { memo } from 'react'
+import { memo, useState, useRef, useEffect, useCallback } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
-  Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw } from 'lucide-react'
+  Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw, Info } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { cn } from '../../../lib/cn'
+import { TOOLTIP_SHOW_DELAY_MS } from '../../../lib/constants/network'
 import type { TreeNode } from './types'
 
 /**
@@ -48,6 +49,54 @@ function detectProjectOrg(filename: string): string | null {
   return null
 }
 
+/** Hover + click popover for the info (i) icon. */
+function InfoPopover({ tooltip }: { tooltip: string }) {
+  const [show, setShow] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearHoverTimer = useCallback(() => {
+    if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null }
+  }, [])
+
+  useEffect(() => {
+    if (!pinned) return
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setPinned(false)
+        setShow(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [pinned])
+
+  useEffect(() => clearHoverTimer, [clearHoverTimer])
+
+  return (
+    <div
+      ref={ref}
+      className="relative shrink-0"
+      onMouseEnter={() => { clearHoverTimer(); hoverTimer.current = setTimeout(() => setShow(true), TOOLTIP_SHOW_DELAY_MS) }}
+      onMouseLeave={() => { clearHoverTimer(); if (!pinned) setShow(false) }}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); setPinned(p => !p); setShow(true) }}
+        className="p-2 min-h-11 min-w-11 rounded text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="More information"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {show && (
+        <div className="absolute right-0 top-full mt-1 z-50 w-72 rounded-lg border border-border bg-background shadow-lg p-3 text-xs text-muted-foreground leading-relaxed">
+          {tooltip}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export const TreeNodeItem = memo(function TreeNodeItem({
   node,
   depth,
@@ -80,15 +129,15 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   const sourceIcon = () => {
     switch (node.source) {
       case 'community':
-        return <Globe className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+        return <Globe className="w-3.5 h-3.5 text-blue-400 shrink-0" />
       case 'github':
-        return <Github className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+        return <Github className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
       case 'local':
-        return <HardDrive className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+        return <HardDrive className="w-3.5 h-3.5 text-green-400 shrink-0" />
     }
   }
 
-  const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd)
+  const showHeaderActions = showRemoveButton || showRefreshButton || (depth === 0 && !!onAdd) || (depth === 0 && !!node.infoTooltip)
 
   // Memoize inline style objects to avoid creating new references on each render
   const paddingStyle = { paddingLeft: `${depth * 16 + 8}px` }
@@ -114,16 +163,16 @@ export const TreeNodeItem = memo(function TreeNodeItem({
           {isDir ? (
             <>
               {node.loading ? (
-                <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin flex-shrink-0" />
+                <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin shrink-0" />
               ) : isExpanded ? (
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               ) : (
-                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               )}
               {isExpanded ? (
-                <FolderOpen className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                <FolderOpen className="w-4 h-4 text-yellow-400 shrink-0" />
               ) : (
-                <Folder className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                <Folder className="w-4 h-4 text-yellow-400 shrink-0" />
               )}
             </>
           ) : (() => {
@@ -133,11 +182,11 @@ export const TreeNodeItem = memo(function TreeNodeItem({
               // Show CNCF project avatar
               return (
                 <>
-                  <span className="w-3.5 flex-shrink-0" />
+                  <span className="w-3.5 shrink-0" />
                   <img
                     src={`https://github.com/${projectOrg}.png?size=32`}
                     alt={projectOrg}
-                    className="w-4 h-4 rounded-sm flex-shrink-0"
+                    className="w-4 h-4 rounded-sm shrink-0"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                 </>
@@ -149,19 +198,23 @@ export const TreeNodeItem = memo(function TreeNodeItem({
             const color = isYaml ? 'text-orange-400' : isMd ? 'text-emerald-400' : 'text-blue-400'
             return (
               <>
-                <span className="w-3.5 flex-shrink-0" />
-                <Icon className={`w-4 h-4 ${color} flex-shrink-0`} />
+                <span className="w-3.5 shrink-0" />
+                <Icon className={`w-4 h-4 ${color} shrink-0`} />
               </>
             )
           })()}
           <span className="truncate flex-1" title={node.name}>{node.name}</span>
           {depth === 0 && sourceIcon()}
         </button>
+        {/* Root-level info button — shown when the node has an infoTooltip */}
+        {depth === 0 && node.infoTooltip && (
+          <InfoPopover tooltip={node.infoTooltip} />
+        )}
         {/* Root-level add button — rendered in the header row so it stays anchored to the header */}
         {depth === 0 && onAdd && (
           <button
             onClick={(e) => { e.stopPropagation(); onAdd() }}
-            className="p-2 min-h-11 min-w-11 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            className="p-2 min-h-11 min-w-11 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors shrink-0"
             title="Add"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -173,7 +226,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
               e.stopPropagation()
               onRefresh(node)
             }}
-            className="p-1.5 min-h-8 min-w-8 rounded hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400 transition-colors flex-shrink-0"
+            className="p-1.5 min-h-8 min-w-8 rounded hover:bg-blue-500/20 text-muted-foreground hover:text-blue-400 transition-colors shrink-0"
             title="Refresh contents"
           >
             <RefreshCw className={`w-3 h-3 ${node.loading ? 'animate-spin' : ''}`} />
@@ -185,7 +238,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
               e.stopPropagation()
               onRemove(node)
             }}
-            className="p-2 min-h-11 min-w-11 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors flex-shrink-0"
+            className="p-2 min-h-11 min-w-11 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors shrink-0"
             title="Remove from watched"
           >
             <Trash2 className="w-3 h-3" />

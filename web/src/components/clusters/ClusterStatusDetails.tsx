@@ -77,13 +77,13 @@ export function ClusterStatusDetails({ cluster, className }: ClusterStatusDetail
     >
       {hasUnreachableReason && (
         <div className="flex items-start gap-2 text-red-300">
-          {renderErrorIcon(errorType, 'w-4 h-4 mt-0.5 flex-shrink-0')}
+          {renderErrorIcon(errorType, 'w-4 h-4 mt-0.5 shrink-0')}
           <div className="flex-1 min-w-0">
             <div className="font-medium">
               Unreachable: {errorLabel}
             </div>
             {cluster.errorMessage && (
-              <div className="text-muted-foreground break-words">
+              <div className="text-muted-foreground wrap-break-word">
                 {cluster.errorMessage}
               </div>
             )}
@@ -98,7 +98,7 @@ export function ClusterStatusDetails({ cluster, className }: ClusterStatusDetail
 
       {isNeverConnected && !hasUnreachableReason && (
         <div className="flex items-start gap-2 text-yellow-300">
-          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <div className="flex-1 min-w-0">
             <div className="font-medium">Never connected</div>
             <div className="text-muted-foreground">
@@ -110,7 +110,7 @@ export function ClusterStatusDetails({ cluster, className }: ClusterStatusDetail
 
       {isUnknown && !hasUnreachableReason && !isNeverConnected && (
         <div className="flex items-start gap-2 text-muted-foreground">
-          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
           <div className="flex-1 min-w-0">
             <div className="font-medium text-foreground">Health unknown</div>
             <div>
@@ -124,7 +124,7 @@ export function ClusterStatusDetails({ cluster, className }: ClusterStatusDetail
         <div className="flex items-center gap-2">
           <Globe
             className={cn(
-              'w-4 h-4 flex-shrink-0',
+              'w-4 h-4 shrink-0',
               cluster.externallyReachable ? 'text-green-400' : 'text-yellow-400',
             )}
             aria-hidden="true"
@@ -145,7 +145,7 @@ export function ClusterStatusDetails({ cluster, className }: ClusterStatusDetail
 
       {hasFreshness && (
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Clock className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+          <Clock className="w-4 h-4 shrink-0" aria-hidden="true" />
           <div className="flex-1 min-w-0">
             <span>Last seen:</span>{' '}
             <span

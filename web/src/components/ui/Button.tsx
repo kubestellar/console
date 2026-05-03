@@ -55,7 +55,7 @@ export function Button({
       aria-label={effectiveAriaLabel}
       aria-busy={loading ? true : undefined}
       className={cn(
-        'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
+        'inline-flex items-center justify-center rounded-lg font-medium transition-colors cursor-pointer',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         SIZE_MAP[size],
         VARIANT_MAP[variant],

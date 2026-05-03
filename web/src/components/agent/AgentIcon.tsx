@@ -281,7 +281,7 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       return (
         <svg className={className} viewBox="0 0 24 24" fill="none">
           {/* vLLM - stylized vL with GPU dot */}
-          <rect x="0" y="0" width="24" height="24" rx="5" className="fill-violet-600" />
+          <rect x="0" y="0" width="24" height="24" rx="5" className="fill-purple-600" />
           <path d="M4 6 L8 16 L10 16 L6 6 Z" className="fill-white" />
           <path d="M11 6 L11 17 L19 17 L19 15 L13 15 L13 6 Z" className="fill-white" />
           <circle cx="20" cy="6" r="2.5" className="fill-yellow-300" />

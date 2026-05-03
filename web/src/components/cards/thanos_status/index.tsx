@@ -3,20 +3,15 @@ import { Skeleton } from '../../ui/Skeleton'
 import { useCachedThanosStatus } from '../../../hooks/useCachedThanosStatus'
 import { useTranslation } from 'react-i18next'
 import { useCardLoadingState } from '../CardDataContext'
+import { createCardSyncFormatter } from '../../../lib/formatters'
 
-function useFormatRelativeTime() {
-    const { t } = useTranslation('cards')
-    return (isoString: string): string => {
-        const diff = Date.now() - new Date(isoString).getTime()
-        if (isNaN(diff) || diff < 0) return t('thanosStatus.justNow')
-        const minute = 60_000
-        const hour = 60 * minute
-        const day = 24 * hour
-        if (diff < minute) return t('thanosStatus.justNow')
-        if (diff < hour) return t('thanosStatus.minutesAgo', { count: Math.floor(diff / minute) })
-        if (diff < day) return t('thanosStatus.hoursAgo', { count: Math.floor(diff / hour) })
-        return t('thanosStatus.daysAgo', { count: Math.floor(diff / day) })
-    }
+const MAX_VISIBLE_TARGETS = 5
+
+const THANOS_TIME_KEYS = {
+  justNow: 'thanosStatus.justNow',
+  minutesAgo: 'thanosStatus.minutesAgo',
+  hoursAgo: 'thanosStatus.hoursAgo',
+  daysAgo: 'thanosStatus.daysAgo',
 }
 
 interface MetricTileProps {
@@ -40,7 +35,7 @@ function MetricTile({ label, value, colorClass, icon }: MetricTileProps) {
 
 export function ThanosStatus() {
     const { t } = useTranslation('cards')
-    const formatRelativeTime = useFormatRelativeTime()
+    const formatRelativeTime = createCardSyncFormatter(t, THANOS_TIME_KEYS)
     const {
         data,
         isLoading,
@@ -51,11 +46,12 @@ export function ThanosStatus() {
         lastRefresh
     } = useCachedThanosStatus()
 
+    const hasData = (data?.targets?.length || 0) > 0
     const { showSkeleton, showEmptyState } = useCardLoadingState({
-        isLoading,
+        isLoading: isLoading && !hasData,
         isRefreshing,
         isDemoData,
-        hasAnyData: (data?.targets?.length || 0) > 0,
+        hasAnyData: hasData,
         isFailed,
         consecutiveFailures,
         lastRefresh
@@ -144,7 +140,7 @@ export function ThanosStatus() {
             <div className="flex-1 flex flex-col gap-2">
                 <p className="text-xs font-medium text-muted-foreground">{t('thanosStatus.targets')}</p>
                 <div className="space-y-1.5">
-                    {(data.targets || []).slice(0, 5).map((target) => (
+                    {(data.targets || []).slice(0, MAX_VISIBLE_TARGETS).map((target) => (
                         <div key={target.name} className="flex items-center gap-2 text-xs">
                             <span
                                 className={`w-2 h-2 rounded-full shrink-0 ${target.health === 'up' ? 'bg-green-400' : 'bg-red-400'
@@ -156,9 +152,9 @@ export function ThanosStatus() {
                             </span>
                         </div>
                     ))}
-                    {data.targets.length > 5 && (
+                    {data.targets.length > MAX_VISIBLE_TARGETS && (
                         <p className="text-[10px] text-muted-foreground italic">
-                            + {data.targets.length - 5} more targets
+                            + {data.targets.length - MAX_VISIBLE_TARGETS} more targets
                         </p>
                     )}
                 </div>

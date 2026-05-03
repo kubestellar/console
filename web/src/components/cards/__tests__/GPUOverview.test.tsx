@@ -147,7 +147,7 @@ describe('GPUOverview', () => {
     it('shows no GPU data when clusters reachable but no GPU nodes', () => {
       render(<GPUOverview />)
       // nodes=[], totalGPUs=0 → empty state
-      expect(screen.getByText('gpuStatus.noGPUData')).toBeTruthy()
+      expect(screen.getByText('gpuOverview.noGPUData')).toBeTruthy()
     })
   })
 

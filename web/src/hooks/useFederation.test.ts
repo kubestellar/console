@@ -4,16 +4,34 @@ import { renderHook, act } from '@testing-library/react'
 const mockIsDemoMode = vi.fn(() => false)
 
 vi.mock('./useDemoMode', () => ({
+  isDemoModeForced: false,
   useDemoMode: () => ({ isDemoMode: mockIsDemoMode() }),
 }))
 
-vi.mock('../lib/constants/network', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+vi.mock('../lib/demoMode', () => ({
+  isDemoModeForced: false,
+  isDemoMode: () => false,
+  isNetlifyDeployment: false,
+  isDemoToken: () => false,
+  getDemoMode: () => false,
+  subscribeDemoMode: () => () => {},
+  STORAGE_KEY_DEMO_MODE: 'kc-demo-mode',
 }))
 
-vi.mock('../lib/constants', () => ({
-  STORAGE_KEY_TOKEN: 'token',
+vi.mock('../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
+    FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+  }
+})
+
+vi.mock('./mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
+  clusterCacheRef: { clusters: [] },
+  REFRESH_INTERVAL_MS: 120_000,
+  CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
 
 describe('useFederation', () => {

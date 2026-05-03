@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, memo } from 'react'
 import { Server, Cpu, HardDrive, TrendingUp, Info, ExternalLink, ChevronDown, Sparkles, Settings2, ChevronRight } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
@@ -178,7 +178,7 @@ const SORT_COMPARATORS = {
   name: commonComparators.string<ClusterCostItem>('name'),
   cpus: commonComparators.number<ClusterCostItem>('cpus') }
 
-export function ClusterCosts({ config }: ClusterCostsProps) {
+export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsProps) {
   const { t } = useTranslation(['cards', 'common'])
 
   // Build sort options with translated labels
@@ -259,14 +259,14 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   const memoryCost = config?.memoryCostPerGBHour ?? pricing.memory
   const gpuCost = config?.gpuCostPerHour ?? pricing.gpu
 
-  const gpuByCluster = (() => {
+  const gpuByCluster = useMemo(() => {
     const map: Record<string, number> = {}
     gpuNodes.forEach(node => {
       const clusterKey = (node.cluster ?? '').split('/')[0]
       map[clusterKey] = (map[clusterKey] || 0) + node.gpuCount
     })
     return map
-  })()
+  }, [gpuNodes])
 
   // Get the provider for a specific cluster (memoized to prevent re-renders)
   const getClusterProvider = useCallback((clusterName: string, context?: string): CloudProvider => {
@@ -351,6 +351,20 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
   const totalMonthly = clusterCosts.reduce((sum, c) => sum + c.monthly, 0)
   const totalDaily = clusterCosts.reduce((sum, c) => sum + c.daily, 0)
 
+  // Memoize provider breakdown counts to avoid recomputing in render
+  const providerBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const c of clusterCosts) {
+      counts[c.provider] = (counts[c.provider] || 0) + 1
+    }
+    return counts
+  }, [clusterCosts])
+
+  const uniqueProviders = useMemo(() =>
+    Array.from(new Set(clusterCosts.map(c => c.provider))),
+    [clusterCosts]
+  )
+
   if (isLoading && allClusters.length === 0) {
     return (
       <div className="h-full flex flex-col min-h-card">
@@ -432,7 +446,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               <span className="hidden @sm:inline">{pricingMode === 'per-cluster' ? t('cards:clusterCosts.perCluster') : t('cards:clusterCosts.uniform')}</span>
             </button>
             {showSettingsMenu && (
-              <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2">
+              <div className="absolute top-full left-0 mt-1 w-52 bg-card border border-border rounded-lg shadow-lg z-20 py-2"
+                onKeyDown={(e) => {
+                  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                  e.preventDefault()
+                  const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                  const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                  if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                  else items[Math.max(idx - 1, 0)]?.focus()
+                }}
+              >
                 <div className="px-3 py-1.5 text-2xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('cards:clusterCosts.pricingMode')}
                 </div>
@@ -490,7 +513,16 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 <ChevronDown className={`w-3 h-3 text-muted-foreground transition-transform ${showProviderMenu ? 'rotate-180' : ''}`} />
               </button>
               {showProviderMenu && (
-                <div className="absolute top-full left-0 mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 py-1">
+                <div className="absolute top-full left-0 mt-1 w-44 bg-card border border-border rounded-lg shadow-lg z-10 py-1"
+                  onKeyDown={(e) => {
+                    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                    e.preventDefault()
+                    const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
+                    const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
+                    if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
+                    else items[Math.max(idx - 1, 0)]?.focus()
+                  }}
+                >
                   {(Object.keys(CLOUD_PRICING) as CloudProvider[]).map(provider => (
                     <button
                       key={provider}
@@ -590,7 +622,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                 {(Object.keys(CLOUD_PRICING) as CloudProvider[]).filter(p => p !== 'estimate').map(provider => {
                   const p = CLOUD_PRICING[provider]
                   const icon = PROVIDER_ICONS[provider]
-                  const count = clusterCosts.filter(c => c.provider === provider).length
+                  const count = providerBreakdown[provider] || 0
                   if (count === 0 && !showRatesInfo) return null
                   return (
                     <div key={provider} className={`flex items-center gap-2 p-1.5 rounded ${count > 0 ? 'bg-secondary/50' : 'opacity-50'}`}>
@@ -634,7 +666,7 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       />
 
       {/* Total costs */}
-      <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/20 to-green-500/20 border border-green-500/30 mb-4">
+      <div className="p-4 rounded-lg bg-linear-to-r from-green-500/20 to-green-500/20 border border-green-500/30 mb-4">
         <div className="flex flex-wrap items-center justify-between gap-y-2">
           <div>
             <p className="text-xs text-green-400 mb-1">{t('cards:clusterCosts.estimatedMonthly')}</p>
@@ -670,18 +702,18 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2 gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   {/* 1. Server icon */}
-                  <Server className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <Server className="w-4 h-4 text-muted-foreground shrink-0" />
                   {/* 2. Vendor logo icon */}
-                  <div className="flex-shrink-0" title={providerPricing.name}>
+                  <div className="shrink-0" title={providerPricing.name}>
                     <CloudProviderIcon provider={mapProviderToIconProvider(cluster.provider)} size={16} />
                   </div>
                   {/* 3. Text badge (clickable to change) - styled as obvious dropdown button */}
                   <button
-                    className={`group/badge px-1.5 py-0.5 text-[9px] font-medium rounded flex-shrink-0 flex items-center gap-0.5 ${providerIcon.bg} ${providerIcon.color} ${
+                    className={`group/badge px-1.5 py-0.5 text-[9px] font-medium rounded shrink-0 flex items-center gap-0.5 ${providerIcon.bg} ${providerIcon.color} ${
                       isOverridden
                         ? 'ring-1 ring-purple-500/50'
                         : ''
-                    } hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-sm hover:shadow`}
+                    } hover:brightness-110 active:scale-95 transition-all cursor-pointer shadow-xs hover:shadow-sm`}
                     title={`${providerPricing.name}${isOverridden ? ` (${t('cards:clusterCosts.manuallySet')})` : pricingMode === 'per-cluster' ? ` (${t('cards:clusterCosts.autoDetected')})` : ''}\n${t('cards:clusterCosts.clickToChange')}`}
                     aria-label={t('cards:clusterCosts.changeProviderPricing', { cluster: cluster.name, provider: providerPricing.name })}
                     onClick={(e) => {
@@ -713,20 +745,20 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
                   {/* 4. Cluster name */}
                   <span className="text-sm font-medium text-foreground truncate min-w-0">{cluster.name}</span>
                   {/* 5. Health dot */}
-                  <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${cluster.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-medium text-green-400 flex-shrink-0">
+                  <span className="text-sm font-medium text-green-400 shrink-0">
                     ${cluster.monthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
                   </span>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </div>
               </div>
 
               {/* Cost bar */}
               <div className="h-1.5 bg-secondary rounded-full overflow-hidden mb-2">
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-green-500 rounded-full transition-all"
+                  className="h-full bg-linear-to-r from-green-500 to-green-500 rounded-full transition-all"
                   style={{ width: `${percent}%` }}
                 />
               </div>
@@ -786,8 +818,8 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
               <>
                 <span>{t('cards:clusterCosts.mixedPricing')}</span>
                 {/* Show unique providers used */}
-                {Array.from(new Set(clusterCosts.map(c => c.provider))).map(provider => {
-                  const count = clusterCosts.filter(c => c.provider === provider).length
+                {uniqueProviders.map(provider => {
+                  const count = providerBreakdown[provider] || 0
                   const icon = PROVIDER_ICONS[provider]
                   return (
                     <span
@@ -842,4 +874,4 @@ export function ClusterCosts({ config }: ClusterCostsProps) {
       </div>
     </div>
   )
-}
+})

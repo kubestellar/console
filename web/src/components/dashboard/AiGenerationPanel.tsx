@@ -147,7 +147,7 @@ export function AiGenerationPanel<T>({
               }}
               placeholder={placeholder}
               rows={4}
-              className="w-full text-sm px-3 py-2 rounded-md bg-secondary border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
+              className="w-full text-sm px-3 py-2 rounded-md bg-secondary border border-border text-foreground placeholder:text-muted-foreground/50 focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
             />
             <p className="text-2xs text-muted-foreground/50 mt-1">
               Press Cmd+Enter to generate
@@ -159,7 +159,7 @@ export function AiGenerationPanel<T>({
             <div className="flex items-start gap-2 p-3 rounded-md bg-red-950 border border-red-900">
               <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-xs text-red-400 break-words">{parseError}</span>
+                <span className="text-xs text-red-400 wrap-break-word">{parseError}</span>
                 {streamingText && (
                   <details className="mt-2 text-xs">
                     <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
@@ -204,7 +204,7 @@ export function AiGenerationPanel<T>({
             readOnly
             value={streamingText || 'Waiting for AI response...'}
             rows={12}
-            className="w-full text-xs px-3 py-2 rounded-md bg-secondary border border-border text-foreground font-mono focus:outline-none leading-relaxed"
+            className="w-full text-xs px-3 py-2 rounded-md bg-secondary border border-border text-foreground font-mono focus:outline-hidden leading-relaxed"
           />
           <p className="text-2xs text-muted-foreground/50 text-center">
             The AI is generating your definition. This may take a moment.

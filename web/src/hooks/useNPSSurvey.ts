@@ -4,6 +4,7 @@ import { STORAGE_KEY_NPS_STATE, STORAGE_KEY_SESSION_COUNT } from '../lib/constan
 import { emitNPSSurveyShown, emitNPSResponse, emitNPSDismissed } from '../lib/analytics'
 import { api } from '../lib/api'
 import { useRewards } from './useRewards'
+import { MS_PER_DAY } from '../lib/constants/time'
 
 /** Minimum sessions before showing NPS for the first time */
 const MIN_SESSIONS_BEFORE_NPS = 2
@@ -15,8 +16,6 @@ const NPS_REPROMPT_DAYS = 30
 const NPS_DISMISS_RETRY_DAYS = 7
 /** Max dismissals before stopping for NPS_REPROMPT_DAYS */
 const NPS_MAX_DISMISSALS = 3
-/** Milliseconds per day */
-const MS_PER_DAY = 86_400_000
 /** Timeout for the NPS POST — keep short; the UI is blocked on this */
 const NPS_POST_TIMEOUT_MS = 5_000
 
@@ -116,7 +115,7 @@ export function useNPSSurvey(): NPSSurveyState {
     try {
       const resp = await fetch(`${apiBase}/api/nps`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({
           score,
           feedback: feedback?.trim() || undefined,
@@ -133,7 +132,7 @@ export function useNPSSurvey(): NPSSurveyState {
         // 5xx / 400 / 401 / 403 — real server failure, surface to the user.
         throw new Error(`NPS submit failed: ${resp.status} ${resp.statusText}`)
       }
-    } catch (err) {
+    } catch (err: unknown) {
       // Re-throw only if this wasn't a 404/405 we already swallowed above.
       // Network errors (DNS failure, connection refused, timeout) still
       // propagate so the user sees a failure toast and can retry.

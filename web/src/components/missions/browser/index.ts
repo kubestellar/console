@@ -4,7 +4,7 @@ export { TreeNodeItem } from './TreeNodeItem'
 export { DirectoryListing } from './DirectoryListing'
 export { RecommendationCard } from './RecommendationCard'
 export { EmptyState, MissionFetchErrorBanner } from './EmptyState'
-export { getMissionSlug, getMissionShareUrl, updateNodeInTree, removeNodeFromTree, formatBytes, normalizeMission } from './helpers'
+export { getMissionSlug, getMissionShareUrl, updateNodeInTree, removeNodeFromTree, normalizeMission } from './helpers'
 export {
   missionCache, notifyCacheListeners, startMissionCacheFetch, resetMissionCache,
   fetchMissionContent, MISSION_FILE_FETCH_TIMEOUT_MS,
@@ -12,4 +12,4 @@ export {
 } from './missionCache'
 export type { MissionCache } from './missionCache'
 export { VirtualizedMissionGrid } from './VirtualizedMissionGrid'
-export { fetchTreeChildren, fetchDirectoryEntries, fetchNodeFileContent } from './treeFetchers'
+export { fetchTreeChildren, fetchDirectoryEntries, fetchNodeFileContent, getKubaraConfig } from './treeFetchers'

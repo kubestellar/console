@@ -35,10 +35,9 @@ const EventsDrillDown = safeLazy(() => import('./views/EventsDrillDown'), 'Event
 const NamespaceDrillDown = safeLazy(() => import('./views/NamespaceDrillDown'), 'NamespaceDrillDown')
 const NodeDrillDown = safeLazy(() => import('./views/NodeDrillDown'), 'NodeDrillDown')
 const GPUNamespaceDrillDown = safeLazy(() => import('./views/GPUNamespaceDrillDown'), 'GPUNamespaceDrillDown')
-// Keep smaller components as direct imports for immediate loading
-import { LogsDrillDown } from './views/LogsDrillDown'
-import { GPUNodeDrillDown } from './views/GPUNodeDrillDown'
-import { YAMLDrillDown } from './views/YAMLDrillDown'
+const LogsDrillDown = safeLazy(() => import('./views/LogsDrillDown'), 'LogsDrillDown')
+const GPUNodeDrillDown = safeLazy(() => import('./views/GPUNodeDrillDown'), 'GPUNodeDrillDown')
+const YAMLDrillDown = safeLazy(() => import('./views/YAMLDrillDown'), 'YAMLDrillDown')
 
 // Loading fallback for lazy-loaded drilldown views
 function DrillDownLoading() {
@@ -317,7 +316,7 @@ export function DrillDownModal() {
   // chrome regardless of where the component is mounted in the tree.
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-modal p-2 md:p-4"
+      className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-modal p-2 md:p-4"
       onClick={close}
     >
       <div
@@ -330,6 +329,7 @@ export function DrillDownModal() {
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {/* Back button - always visible; closes modal at root level */}
             <button
+              data-testid="drilldown-back"
               onClick={state.stack.length > 1 ? pop : close}
               className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
               title={state.stack.length > 1 ? t('drilldown.goBack') : t('drilldown.close')}
@@ -356,6 +356,7 @@ export function DrillDownModal() {
                     )}
                     <button
                       onClick={() => goTo(index)}
+                      aria-label={t('drilldown.navigateTo', 'Navigate to {{title}}', { title: view.title })}
                       className={`px-2 py-1 rounded text-sm transition-colors flex items-center gap-1.5 ${
                         isLast
                           ? 'text-foreground font-medium'
@@ -382,6 +383,7 @@ export function DrillDownModal() {
             data-testid="drilldown-close"
             onClick={close}
             className="p-2 rounded-lg hover:bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={t('drilldown.close')}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -24,9 +24,10 @@ export function KagentiToolRegistry({ config }: KagentiToolRegistryProps) {
     consecutiveFailures,
   } = useKagentiTools({ cluster: config?.cluster })
 
+  const hasData = tools.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: tools.length > 0,
+    isLoading: isLoading && !hasData,
+    hasAnyData: hasData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
     isDemoData: isDemoFallback,
