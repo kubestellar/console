@@ -489,17 +489,17 @@ func TestHandleJobsStreamSSE_ClusterError(t *testing.T) {
 	}
 }
 
-// sseEvent represents a parsed SSE event.
-type sseEvent struct {
+// parsedSSEEvent represents a parsed SSE event.
+type parsedSSEEvent struct {
 	event string
 	data  string
 }
 
 // parseSSEEvents parses raw SSE text into structured events.
-func parseSSEEvents(t *testing.T, body string) []sseEvent {
+func parseSSEEvents(t *testing.T, body string) []parsedSSEEvent {
 	t.Helper()
 
-	var events []sseEvent
+	var events []parsedSSEEvent
 	scanner := bufio.NewScanner(strings.NewReader(body))
 
 	var currentEvent, currentData string
@@ -512,7 +512,7 @@ func parseSSEEvents(t *testing.T, body string) []sseEvent {
 			currentData = strings.TrimPrefix(line, "data: ")
 		case line == "":
 			if currentEvent != "" || currentData != "" {
-				events = append(events, sseEvent{event: currentEvent, data: currentData})
+				events = append(events, parsedSSEEvent{event: currentEvent, data: currentData})
 				currentEvent = ""
 				currentData = ""
 			}
@@ -520,7 +520,7 @@ func parseSSEEvents(t *testing.T, body string) []sseEvent {
 	}
 	// Catch trailing event without final blank line
 	if currentEvent != "" || currentData != "" {
-		events = append(events, sseEvent{event: currentEvent, data: currentData})
+		events = append(events, parsedSSEEvent{event: currentEvent, data: currentData})
 	}
 
 	return events
