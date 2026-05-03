@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -302,4 +303,87 @@ func TestCancelUserSSEStreams_NoSessions(t *testing.T) {
 	userID := uuid.New()
 	// Should not panic, should not block.
 	CancelUserSSEStreams(userID)
+}
+
+// seedJob returns a completed batchv1.Job that the fake client will return
+// when BatchV1().Jobs().List is called.
+func seedJob(name, namespace string) *batchv1.Job {
+	succeeded := int32(1)
+	return &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec:       batchv1.JobSpec{Completions: &succeeded},
+		Status:     batchv1.JobStatus{Succeeded: 1},
+	}
+}
+
+// TestGetJobsStream_AppliesClusterFilter verifies that ?cluster=<name> limits
+// the jobs stream to only the specified cluster.
+func TestGetJobsStream_AppliesClusterFilter(t *testing.T) {
+	env := setupTestEnv(t)
+
+	injectTypedCluster(env, "cluster-a", seedJob("job-a", "default"))
+	injectTypedCluster(env, "cluster-b", seedJob("job-b", "default"))
+
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
+	env.App.Get("/api/mcp/jobs/stream", handler.GetJobsStream)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/mcp/jobs/stream?cluster=cluster-a", nil)
+	require.NoError(t, err)
+
+	resp, err := env.App.Test(req, sseTestTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body := readSSEBody(t, resp)
+	assert.Contains(t, body, "\"cluster\":\"cluster-a\"", "cluster-a should appear in stream")
+	assert.NotContains(t, body, "\"cluster\":\"cluster-b\"", "cluster-b must be absent when filter=cluster-a")
+	assert.Contains(t, body, "job-a", "cluster-a's job should appear in stream")
+	assert.NotContains(t, body, "job-b", "cluster-b's job must be absent")
+}
+
+// TestGetJobsStream_UnknownClusterReturns404 verifies that supplying an
+// unknown cluster name returns 404 rather than a silent empty stream.
+func TestGetJobsStream_UnknownClusterReturns404(t *testing.T) {
+	env := setupTestEnv(t)
+	injectTypedCluster(env, "cluster-a")
+
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
+	env.App.Get("/api/mcp/jobs/stream", handler.GetJobsStream)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/mcp/jobs/stream?cluster=does-not-exist", nil)
+	require.NoError(t, err)
+
+	resp, err := env.App.Test(req, sseTestTimeoutMs)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+// TestGetJobsStream_EmitsClusterErrorOnFailure verifies that a per-cluster
+// fetch failure surfaces as a cluster_error SSE event rather than a silent gap.
+func TestGetJobsStream_EmitsClusterErrorOnFailure(t *testing.T) {
+	env := setupTestEnv(t)
+
+	injectTypedCluster(env, "cluster-ok", seedJob("ok-job", "default"))
+	failingClient := injectTypedCluster(env, "cluster-bad")
+	failingClient.PrependReactor("list", "jobs", func(action k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, errors.New("forced jobs list error")
+	})
+
+	handler := NewMCPHandlers(nil, env.K8sClient, nil)
+	env.App.Get("/api/mcp/jobs/stream", handler.GetJobsStream)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/mcp/jobs/stream", nil)
+	require.NoError(t, err)
+
+	resp, err := env.App.Test(req, sseTestTimeoutMs)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body := readSSEBody(t, resp)
+	assert.Contains(t, body, "event: "+sseEventClusterError, "failing cluster must emit cluster_error event")
+	assert.Contains(t, body, "\"cluster\":\"cluster-bad\"", "cluster_error payload must name the failing cluster")
+	assert.Contains(t, body, "forced jobs list error", "cluster_error payload must include the error message")
+	assert.Contains(t, body, "event: "+sseEventClusterData, "healthy cluster must still emit cluster_data")
+	assert.Contains(t, body, "\"cluster\":\"cluster-ok\"", "cluster-ok must appear in cluster_data")
+	assert.Contains(t, body, "event: "+sseEventDone, "stream must end with done event")
 }
