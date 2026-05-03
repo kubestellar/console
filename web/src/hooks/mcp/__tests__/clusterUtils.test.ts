@@ -174,6 +174,85 @@ describe('clusterUtils.deduplicateClustersByServer', () => {
     expect(result[0].cpuUsageCores).toBe(8)
   })
 
+  it('does not overwrite cpuUsage=0 (valid idle) from primary with alias non-zero value', () => {
+    // Tests the nullish-destination fix: the destination check must be `== null`,
+    // not `!value`, so that a valid 0 already set is never silently overwritten.
+    const primary = makeCluster({
+      name: 'primary',
+      server: 'https://api.test',
+      cpuCores: 16,
+      cpuUsageCores: 0,        // valid: cluster is idle
+      cpuUsageMillicores: 0,
+    })
+    const alias = makeCluster({
+      name: 'generated-context/api-server:6443/user',
+      server: 'https://api.test',
+      cpuUsageCores: 5,
+      cpuUsageMillicores: 5000,
+    })
+    const result = deduplicateClustersByServer([primary, alias])
+    // 0 is a real value; alias must NOT overwrite it
+    expect(result[0].cpuUsageCores).toBe(0)
+    expect(result[0].cpuUsageMillicores).toBe(0)
+  })
+
+  it('does not overwrite memoryUsage=0 from primary with alias non-zero value', () => {
+    const primary = makeCluster({
+      name: 'primary',
+      server: 'https://api.test',
+      memoryGB: 32,
+      memoryUsageGB: 0,
+      memoryUsageBytes: 0,
+    })
+    const alias = makeCluster({
+      name: 'generated-context/api-server:6443/user',
+      server: 'https://api.test',
+      memoryUsageGB: 10,
+      memoryUsageBytes: 10_737_418_240,
+    })
+    const result = deduplicateClustersByServer([primary, alias])
+    expect(result[0].memoryUsageGB).toBe(0)
+    expect(result[0].memoryUsageBytes).toBe(0)
+  })
+
+  it('does not overwrite cpuRequests=0 from primary with alias non-zero value', () => {
+    const primary = makeCluster({
+      name: 'primary',
+      server: 'https://api.test',
+      cpuCores: 8,
+      cpuRequestsCores: 0,
+      cpuRequestsMillicores: 0,
+    })
+    const alias = makeCluster({
+      name: 'generated-context/api-server:6443/user',
+      server: 'https://api.test',
+      cpuRequestsCores: 3,
+      cpuRequestsMillicores: 3000,
+    })
+    const result = deduplicateClustersByServer([primary, alias])
+    expect(result[0].cpuRequestsCores).toBe(0)
+    expect(result[0].cpuRequestsMillicores).toBe(0)
+  })
+
+  it('does not overwrite memoryRequests=0 from primary with alias non-zero value', () => {
+    const primary = makeCluster({
+      name: 'primary',
+      server: 'https://api.test',
+      memoryGB: 16,
+      memoryRequestsGB: 0,
+      memoryRequestsBytes: 0,
+    })
+    const alias = makeCluster({
+      name: 'generated-context/api-server:6443/user',
+      server: 'https://api.test',
+      memoryRequestsGB: 8,
+      memoryRequestsBytes: 8_589_934_592,
+    })
+    const result = deduplicateClustersByServer([primary, alias])
+    expect(result[0].memoryRequestsGB).toBe(0)
+    expect(result[0].memoryRequestsBytes).toBe(0)
+  })
+
   it('merges both request and usage metrics from same alias cluster', () => {
     const primary = makeCluster({
       name: 'primary',
