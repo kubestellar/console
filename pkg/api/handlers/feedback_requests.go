@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"runtime/debug"
 	"strconv"
@@ -740,7 +741,7 @@ func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(ctx context.Context, githubL
 	for page := 1; page <= maxIssuePages; page++ {
 		pageURL := fmt.Sprintf(
 			"%s/repos/%s/%s/issues?state=all&creator=%s&per_page=%d&sort=updated&direction=desc&page=%d",
-			apiBase, h.repoOwner, repoName, githubLogin, issuesPerPage, page)
+			apiBase, h.repoOwner, repoName, url.QueryEscape(githubLogin), issuesPerPage, page)
 
 		req, err := http.NewRequestWithContext(ctx, "GET", pageURL, nil)
 		if err != nil {
