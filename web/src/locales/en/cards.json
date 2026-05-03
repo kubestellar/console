@@ -2871,7 +2871,9 @@
     "footer": "{{pvcs}} PVCs across {{clusters}} clusters",
     "acrossClusters": "across {{count}} clusters",
     "acrossClusters_one": "across {{count}} cluster",
-    "acrossClusters_other": "across {{count}} clusters"
+    "acrossClusters_other": "across {{count}} clusters",
+    "allFetchesFailed": "All cluster fetches failed",
+    "allFetchesFailedHint": "Unable to reach any cluster. Check connectivity and try again."
   },
   "flatcar": {
     "healthy": "Healthy",
@@ -3446,7 +3448,9 @@
     "shardsCount_one": "{{count}} shard",
     "shardsCount_other": "{{count}} shards",
     "tabletsCount_one": "{{count}} tablet",
-    "tabletsCount_other": "{{count}} tablets"
+    "tabletsCount_other": "{{count}} tablets",
+    "allFetchesFailed": "All cluster fetches failed",
+    "allFetchesFailedHint": "Unable to reach any cluster. Check connectivity and try again."
   },
   "kubecostOverview": {
     "monthlyCost": "Monthly Cost",

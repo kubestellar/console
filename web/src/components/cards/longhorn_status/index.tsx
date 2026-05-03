@@ -240,6 +240,23 @@ export function LonghornStatus() {
     )
   }
 
+  // When all cluster fetches have failed, show unified error state instead of
+  // rendering misleading partial/empty data from stale cache (#11539).
+  if (isFailed && !isDemoData) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <EmptyState
+          icon={<AlertTriangle className="w-8 h-8 text-red-400/70" />}
+          title={t('longhornStatus.allFetchesFailed', 'All cluster fetches failed')}
+          description={t(
+            'longhornStatus.allFetchesFailedHint',
+            'Unable to reach any cluster. Check connectivity and try again.',
+          )}
+        />
+      </div>
+    )
+  }
+
   const isHealthy = data.health === 'healthy'
   const volumes = (data.volumes ?? []).slice(0, VOLUME_PAGE_SIZE)
   const nodes = (data.nodes ?? []).slice(0, NODE_PAGE_SIZE)
