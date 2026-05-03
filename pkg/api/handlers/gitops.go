@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -34,6 +35,15 @@ var subprocessSem = make(chan struct{}, maxConcurrentSubprocesses)
 
 // argoInsecureWarning ensures the TLS skip warning is logged only once per process.
 var argoInsecureWarning sync.Once
+
+// helmFailureCooldown tracks clusters where Helm listing has failed due to
+// RBAC (forbidden) errors. After a failure, retries are suppressed for 30s.
+var (
+	helmFailureMu       sync.RWMutex
+	helmFailureCooldown = make(map[string]time.Time)
+)
+
+const helmCooldownDuration = 30 * time.Second
 
 // GitOpsDrift represents a configuration drift between Git and cluster
 type GitOpsDrift struct {
@@ -358,6 +368,14 @@ type helmReleaseBody struct {
 // If the k8s client is unavailable for the requested cluster, it falls back
 // to shelling out to the helm binary.
 func (h *GitOpsHandlers) getHelmReleasesForCluster(ctx context.Context, cluster string) []HelmRelease {
+	// Check cooldown — if this cluster recently failed with RBAC error, skip
+	helmFailureMu.RLock()
+	if cooldownUntil, ok := helmFailureCooldown[cluster]; ok && time.Now().Before(cooldownUntil) {
+		helmFailureMu.RUnlock()
+		return nil
+	}
+	helmFailureMu.RUnlock()
+
 	// Try K8s API approach first when client is available.
 	if h.k8sClient != nil {
 		releases, err := h.getHelmReleasesViaK8sAPI(ctx, cluster)
@@ -366,9 +384,27 @@ func (h *GitOpsHandlers) getHelmReleasesForCluster(ctx context.Context, cluster 
 		}
 		slog.Warn("[GitOps] k8s API helm listing failed, falling back to helm CLI",
 			"cluster", cluster, "error", err)
+
+		// If the error is RBAC-related (forbidden), enter cooldown
+		if isRBACError(err) {
+			helmFailureMu.Lock()
+			helmFailureCooldown[cluster] = time.Now().Add(helmCooldownDuration)
+			helmFailureMu.Unlock()
+			return nil
+		}
 	}
 
 	return h.getHelmReleasesViaExec(ctx, cluster)
+}
+
+// isRBACError checks if an error indicates a Kubernetes RBAC denial.
+func isRBACError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "forbidden") || strings.Contains(msg, "Forbidden") ||
+		strings.Contains(msg, "cannot list") || strings.Contains(msg, "unauthorized")
 }
 
 // getHelmReleasesViaK8sAPI lists Helm releases by querying Kubernetes secrets
