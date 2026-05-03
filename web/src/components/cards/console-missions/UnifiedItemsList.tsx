@@ -44,7 +44,7 @@ export function UnifiedItemsList({
               key={item.id}
               item={item}
               drillToNode={drillToNode}
-              t={t}
+              t={t as (key: string) => string}
             />
           )
         }

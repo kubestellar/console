@@ -2,7 +2,7 @@
 // prompt that already guards its own close behavior; no form state on this
 // card can be lost to a backdrop click. Treat as closeOnBackdropClick={false}.
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react'
-import { CheckCircle, TrendingUp, RefreshCw, Info, Sparkles, Layers, List } from 'lucide-react'
+import { TrendingUp, RefreshCw, Info, Sparkles, Layers, List } from 'lucide-react'
 import { useCardDemoState } from '../CardDataContext'
 import { useMissions } from '../../../hooks/useMissions'
 import { useClusters } from '../../../hooks/useMCP'
@@ -821,7 +821,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
             localClusterFilter={localClusterFilter}
             drillToNode={drillToNode}
             drillToCluster={drillToCluster}
-            startMission={startMission}
+            startMission={startMission as (config: { title: string; description: string; type: string; initialPrompt: string; context: Record<string, unknown> }) => void}
           />
         ) : (
           <UnifiedItemsList
@@ -832,7 +832,7 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
             drillToNode={drillToNode}
             drillToCluster={drillToCluster}
             getFeedback={getFeedback}
-            submitFeedback={submitFeedback}
+            submitFeedback={submitFeedback as (id: string, feedback: string, type: string, provider?: string) => void}
           />
         )}
       </div>
