@@ -21,8 +21,10 @@ export const MAX_ALERTS = 500
 /** Maximum number of resolved alerts to keep after a quota-exceeded prune. */
 export const MAX_RESOLVED_ALERTS_AFTER_PRUNE = 50
 
-/** Maximum age (ms) for dedup entries — evict stale entries older than this */
-export const NOTIFICATION_DEDUP_MAX_AGE_MS = 86_400_000 // 24 hours
+/** Maximum age (ms) for dedup entries — evict stale entries older than this.
+ *  30 days: persistent-condition keys (certificate_error, cluster_unreachable)
+ *  must survive across sessions until the cluster recovers; 24 h was too short. */
+export const NOTIFICATION_DEDUP_MAX_AGE_MS = 30 * 24 * MS_PER_HOUR // 30 days
 
 /** Default temperature threshold for extreme-heat weather alerts (°F). */
 export const DEFAULT_TEMPERATURE_THRESHOLD_F = 100
@@ -88,7 +90,12 @@ export function saveAlerts(alerts: Alert[]): void {
   // Enforce a global cap before every write: keep all firing alerts and trim resolved by recency.
   let toSave = alerts
   if (toSave.length > MAX_ALERTS) {
-    const firing = toSave.filter(a => a.status === 'firing')
+    // Sort firing alerts by recency and cap at MAX_ALERTS so that when
+    // firing count alone exceeds the limit we still honour the hard cap.
+    const firing = toSave
+      .filter(a => a.status === 'firing')
+      .sort((a, b) => new Date(b.firedAt).getTime() - new Date(a.firedAt).getTime())
+      .slice(0, MAX_ALERTS)
     const resolved = toSave
       .filter(a => a.status === 'resolved')
       .sort((a, b) => new Date(b.resolvedAt ?? b.firedAt).getTime() - new Date(a.resolvedAt ?? a.firedAt).getTime())
