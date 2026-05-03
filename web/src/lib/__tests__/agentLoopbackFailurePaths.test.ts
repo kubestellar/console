@@ -243,6 +243,10 @@ describe('agentFetchers failure paths', () => {
         }
       },
     }))
+    // Mock AlertsContext service modules (added after #11559 refactor)
+    vi.mock('../../../contexts/notifications', () => ({}))
+    vi.mock('../../../contexts/alertStorage', () => ({}))
+    vi.mock('../../../contexts/alertRunbooks', () => ({}))
   })
 
   afterEach(() => {

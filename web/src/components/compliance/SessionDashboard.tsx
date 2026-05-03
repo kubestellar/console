@@ -30,7 +30,7 @@ interface SessionSummary {
 const STATUS_STYLES: Record<string, string> = {
   active: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   idle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  expired: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
+  expired: 'bg-gray-500/20 text-gray-200 border-gray-500/30',
   terminated: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
@@ -162,10 +162,10 @@ export const SessionDashboardContent = memo(function SessionDashboardContent() {
                       <span className="text-white font-medium">{s.user}</span>
                     </div>
                   </td>
-                  <td className="p-3 text-gray-300">{s.provider}</td>
+                  <td className="p-3 text-gray-200">{s.provider}</td>
                   <td className="p-3 text-gray-400 text-xs">{new Date(s.login_time).toLocaleString()}</td>
                   <td className="p-3 text-gray-400 text-xs">{new Date(s.last_activity).toLocaleString()}</td>
-                  <td className="p-3 text-gray-300 font-mono text-xs">{s.ip_address}</td>
+                  <td className="p-3 text-gray-200 font-mono text-xs">{s.ip_address}</td>
                   <td className="p-3 text-gray-400 text-xs truncate max-w-[150px]">
                     <div className="flex items-center gap-1">
                       <Monitor className="w-3 h-3 shrink-0" />
@@ -173,7 +173,7 @@ export const SessionDashboardContent = memo(function SessionDashboardContent() {
                     </div>
                   </td>
                   <td className="p-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[s.status] || 'bg-gray-500/20 text-gray-300 border-gray-500/30'}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_STYLES[s.status] || 'bg-gray-500/20 text-gray-200 border-gray-500/30'}`}>
                       {s.status}
                     </span>
                   </td>
@@ -197,7 +197,7 @@ export const SessionDashboardContent = memo(function SessionDashboardContent() {
                     <div className="text-sm text-gray-400">{p.description}</div>
                   </div>
                 </div>
-                <span className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-300">{p.scope}</span>
+                <span className="px-2 py-1 bg-gray-700/50 rounded text-xs text-gray-200">{p.scope}</span>
               </div>
               <div className="grid grid-cols-4 gap-4 mt-3">
                 <div>

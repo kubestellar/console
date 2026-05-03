@@ -58,6 +58,11 @@ vi.mock('../../lib/utils/localStorage', () => ({
   safeSetItem: vi.fn(),
 }))
 
+// Mock AlertsContext service modules (added after #11559 refactor)
+vi.mock('../../contexts/notifications', () => ({}))
+vi.mock('../../contexts/alertStorage', () => ({}))
+vi.mock('../../contexts/alertRunbooks', () => ({}))
+
 // Dynamically imported after each module reset
 let useLocalAgent: typeof import('../useLocalAgent').useLocalAgent
 let reportAgentDataError: typeof import('../useLocalAgent').reportAgentDataError
