@@ -3,6 +3,8 @@ import { useCardSubscribe } from '../lib/cardEvents'
 import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import type { DeployStartedPayload, DeployResultPayload, DeployedDep } from '../lib/cardEvents'
+import { isInClusterMode } from './useBackendHealth'
+import { api } from '../lib/api'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN, STORAGE_KEY_MISSIONS_ACTIVE, STORAGE_KEY_MISSIONS_HISTORY } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, KUBECTL_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { MS_PER_MINUTE } from '../lib/constants/time'
@@ -427,6 +429,40 @@ export function useDeployMissions() {
                 return { cluster, status: 'pending', replicas: 0, readyReplicas: 0,
                   consecutiveFailures: prevFailures,
                   networkFailureCount: networkFailures }
+              }
+
+              // In-cluster mode: use backend API instead of local agent (#11686)
+              if (isInClusterMode()) {
+                try {
+                  const params = new URLSearchParams()
+                  params.append('cluster', cluster)
+                  params.append('namespace', mission.namespace)
+                  const { data } = await api.get<{ deployments: Array<Record<string, unknown>> }>(
+                    `/api/mcp/deployments?${params}`
+                  )
+                  const deployments = (data?.deployments || []) as Array<Record<string, unknown>>
+                  const match = deployments.find(
+                    (d) => String(d.name) === mission.workload
+                  )
+                  if (match) {
+                    const replicas = safeReplicaCount(match.replicas)
+                    const readyReplicas = safeReplicaCount(match.readyReplicas)
+                    const updatedRaw = match.updatedReplicas
+                    const updated = updatedRaw === undefined ? replicas : safeReplicaCount(updatedRaw)
+                    let status: DeployClusterStatus['status'] = 'applying'
+                    if (String(match.status) === 'running'
+                        && readyReplicas >= replicas
+                        && updated >= replicas) {
+                      status = 'running'
+                    } else if (String(match.status) === 'failed' || String(match.status) === 'Failed') {
+                      status = 'failed'
+                    }
+                    return { cluster, status, replicas, readyReplicas }
+                  }
+                  return pendingOrFailed()
+                } catch {
+                  return networkPending()
+                }
               }
 
               // Try agent first (works when backend is down)

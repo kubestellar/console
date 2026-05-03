@@ -3,6 +3,8 @@ import { mapSettledWithConcurrency } from '../lib/utils/concurrency'
 import { isAgentUnavailable } from './useLocalAgent'
 import { clusterCacheRef, agentFetch } from './mcp/shared'
 import { isDemoMode } from '../lib/demoMode'
+import { isInClusterMode } from './useBackendHealth'
+import { api } from '../lib/api'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 
@@ -115,6 +117,40 @@ async function fetchWorkloadsViaAgent(opts?: {
   namespace?: string
   signal?: AbortSignal
 }): Promise<Workload[] | null> {
+  // In-cluster mode: route to backend API instead of local agent (#11686)
+  if (isInClusterMode()) {
+    try {
+      const params = new URLSearchParams()
+      if (opts?.cluster) params.append('cluster', opts.cluster)
+      if (opts?.namespace) params.append('namespace', opts.namespace)
+      const { data } = await api.get<{ deployments: Array<Record<string, unknown>> }>(
+        `/api/mcp/deployments?${params}`
+      )
+      const deployments = (data?.deployments || [])
+      return deployments.map(d => {
+        const st = String(d.status || 'running')
+        let ws: Workload['status'] = 'Running'
+        if (st === 'failed') ws = 'Failed'
+        else if (st === 'deploying') ws = 'Pending'
+        else if (Number(d.readyReplicas || 0) < Number(d.replicas || 1)) ws = 'Degraded'
+        return {
+          name: String(d.name || ''),
+          namespace: String(d.namespace || 'default'),
+          type: 'Deployment' as const,
+          cluster: String(d.cluster || opts?.cluster || ''),
+          targetClusters: [String(d.cluster || opts?.cluster || '')],
+          replicas: Number(d.replicas || 1),
+          readyReplicas: Number(d.readyReplicas || 0),
+          status: ws,
+          image: String(d.image || ''),
+          createdAt: new Date().toISOString(),
+        }
+      })
+    } catch {
+      return null
+    }
+  }
+
   // Skip agent requests when agent is unavailable (e.g. Netlify with no local agent)
   if (isAgentUnavailable()) return null
 

@@ -897,6 +897,22 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     return null
   }
 
+  // In-cluster mode: route to backend API instead of local agent endpoints (#11684)
+  if (isInClusterMode()) {
+    try {
+      const { data } = await api.get<ClusterHealth>(
+        `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`
+      )
+      if (data) {
+        healthCheckFailures = 0
+        return data
+      }
+    } catch {
+      healthCheckFailures++
+    }
+    return null
+  }
+
   // Fall back to backend API
   const agentToken = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)
   try {
@@ -931,6 +947,20 @@ const MAX_DISTRIBUTION_FAILURES = 2
 // Detect cluster distribution by checking for system namespaces
 // Uses kubectl via WebSocket when available, falls back to backend API
 async function detectClusterDistribution(clusterName: string, kubectlContext?: string): Promise<{ distribution?: string; namespaces?: string[] }> {
+  // In-cluster mode: use backend API for namespace list (#11685)
+  if (isInClusterMode()) {
+    try {
+      const { data } = await api.get<{ namespaces: string[] }>(
+        `/api/mcp/namespaces?cluster=${encodeURIComponent(clusterName)}`
+      )
+      const namespaces = (data?.namespaces || [])
+      const distribution = detectDistributionFromNamespaces(namespaces)
+      return { distribution, namespaces }
+    } catch {
+      return {}
+    }
+  }
+
   // Try kubectl via WebSocket first (if agent available)
   // Use the kubectl context (full path) if provided, otherwise fall back to name
   if (!isAgentUnavailable()) {
