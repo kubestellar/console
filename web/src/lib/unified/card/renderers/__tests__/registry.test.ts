@@ -225,22 +225,22 @@ describe('built-in renderers via renderCell', () => {
     }
   })
 
-  it('cluster-badge renderer wraps value in a purple badge', () => {
+  it('cluster-badge renderer wraps value in a muted badge', () => {
     const result = renderCell('my-cluster', {}, col({ render: 'cluster-badge' }))
     expect(result).toBeDefined()
     if (typeof result === 'object' && result !== null) {
       const el = result as { props: { className: string; children: string } }
-      expect(el.props.className).toContain('purple')
+      expect(el.props.className).toContain('bg-muted')
       expect(el.props.children).toBe('my-cluster')
     }
   })
 
-  it('namespace-badge renderer wraps value in a blue badge', () => {
+  it('namespace-badge renderer wraps value in a secondary badge', () => {
     const result = renderCell('kube-system', {}, col({ render: 'namespace-badge' }))
     expect(result).toBeDefined()
     if (typeof result === 'object' && result !== null) {
       const el = result as { props: { className: string; children: string } }
-      expect(el.props.className).toContain('blue')
+      expect(el.props.className).toContain('bg-secondary')
       expect(el.props.children).toBe('kube-system')
     }
   })
