@@ -206,6 +206,7 @@ type Server struct {
 	gpuUtilWorker       *GPUUtilizationWorker
 	workloadHandlers    *handlers.WorkloadHandlers // for cache refresh shutdown (#10007)
 	rewardsHandler      *handlers.RewardsHandler   // for eviction goroutine shutdown
+	failureTracker      *middleware.FailureTracker  // tracks auth failure counts for rate limiting
 	done                chan struct{}              // closed on Shutdown to stop background goroutines
 	shutdownOnce        sync.Once                  // ensures Shutdown is idempotent (#6478)
 }
