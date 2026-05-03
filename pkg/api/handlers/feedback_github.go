@@ -87,9 +87,12 @@ var pipelineLabels = map[string]struct {
 
 // handleIssueEvent processes issue events
 func (h *FeedbackHandler) handleIssueEvent(ctx context.Context, payload map[string]interface{}) error {
-	action, _ := payload["action"].(string)
-	issue, _ := payload["issue"].(map[string]interface{})
-	if issue == nil {
+	action, ok := payload["action"].(string)
+	if !ok || action == "" {
+		return nil
+	}
+	issue, ok := payload["issue"].(map[string]interface{})
+	if !ok || issue == nil {
 		return nil
 	}
 
@@ -98,17 +101,23 @@ func (h *FeedbackHandler) handleIssueEvent(ctx context.Context, payload map[stri
 		return fiber.NewError(fiber.StatusBadRequest, "missing or invalid issue number in webhook payload")
 	}
 	issueNumber := int(numF)
-	issueURL, _ := issue["html_url"].(string)
+	issueURL, ok := issue["html_url"].(string)
+	if !ok || issueURL == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "missing issue html_url in webhook payload")
+	}
 
 	slog.Info("[Webhook] issue event", "issue", issueNumber, "action", action)
 
 	// Handle label events — track pipeline progression
 	if action == "labeled" {
-		label, _ := payload["label"].(map[string]interface{})
-		if label == nil {
+		label, ok := payload["label"].(map[string]interface{})
+		if !ok || label == nil {
 			return nil
 		}
-		labelName, _ := label["name"].(string)
+		labelName, ok := label["name"].(string)
+		if !ok || labelName == "" {
+			return nil
+		}
 
 		// Special case: ai-processing-complete needs extra logic
 		if labelName == "ai-processing-complete" {
@@ -230,9 +239,9 @@ func (h *FeedbackHandler) handleIssueClosed(ctx context.Context, issueNumber int
 	}
 
 	// Get close reason from state_reason if available
-	stateReason, _ := issue["state_reason"].(string)
+	stateReason, ok := issue["state_reason"].(string)
 	message := "This issue has been closed."
-	if stateReason == "completed" {
+	if ok && stateReason == "completed" {
 		message = "This issue has been resolved and closed."
 	} else if stateReason == "not_planned" {
 		message = "This issue was closed as not planned."
@@ -314,9 +323,12 @@ func (h *FeedbackHandler) getLatestBotComment(ctx context.Context, issueNumber i
 
 // handlePREvent processes pull request events
 func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]interface{}) error {
-	action, _ := payload["action"].(string)
-	pr, _ := payload["pull_request"].(map[string]interface{})
-	if pr == nil {
+	action, ok := payload["action"].(string)
+	if !ok || action == "" {
+		return nil
+	}
+	pr, ok := payload["pull_request"].(map[string]interface{})
+	if !ok || pr == nil {
 		return nil
 	}
 
@@ -325,7 +337,10 @@ func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]
 		return fiber.NewError(fiber.StatusBadRequest, "missing or invalid PR number in webhook payload")
 	}
 	prNumber := int(prNumF)
-	prURL, _ := pr["html_url"].(string)
+	prURL, ok := pr["html_url"].(string)
+	if !ok || prURL == "" {
+		return fiber.NewError(fiber.StatusBadRequest, "missing PR html_url in webhook payload")
+	}
 	body, _ := pr["body"].(string)
 
 	// Try to find the associated feature request
@@ -358,13 +373,18 @@ func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]
 
 	// If we still don't have a feature request, check labels for ai-generated
 	if request == nil {
-		labels, _ := pr["labels"].([]interface{})
+		labels, ok := pr["labels"].([]interface{})
 		isAIGenerated := false
-		for _, l := range labels {
-			label, _ := l.(map[string]interface{})
-			if name, _ := label["name"].(string); name == "ai-generated" {
-				isAIGenerated = true
-				break
+		if ok {
+			for _, l := range labels {
+				label, ok := l.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if name, ok := label["name"].(string); ok && name == "ai-generated" {
+					isAIGenerated = true
+					break
+				}
 			}
 		}
 		if !isAIGenerated {
@@ -396,7 +416,10 @@ func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]
 		}
 
 	case "closed":
-		merged, _ := pr["merged"].(bool)
+		merged, ok := pr["merged"].(bool)
+		if !ok {
+			merged = false
+		}
 		if merged {
 			if err := h.store.UpdateFeatureRequestStatus(ctx, requestID, models.RequestStatusFixComplete); err != nil {
 				slog.Error("[Webhook] failed to update fix_complete status", "pr", prNumber, "error", err)
@@ -421,28 +444,31 @@ func (h *FeedbackHandler) handlePREvent(ctx context.Context, payload map[string]
 
 // handleDeploymentStatus processes deployment status events (for Netlify previews)
 func (h *FeedbackHandler) handleDeploymentStatus(ctx context.Context, payload map[string]interface{}) error {
-	deploymentStatus, _ := payload["deployment_status"].(map[string]interface{})
-	if deploymentStatus == nil {
+	deploymentStatus, ok := payload["deployment_status"].(map[string]interface{})
+	if !ok || deploymentStatus == nil {
 		return nil
 	}
 
-	state, _ := deploymentStatus["state"].(string)
-	if state != "success" {
+	state, ok := deploymentStatus["state"].(string)
+	if !ok || state != "success" {
 		return nil
 	}
 
-	targetURL, _ := deploymentStatus["target_url"].(string)
-	if targetURL == "" {
+	targetURL, ok := deploymentStatus["target_url"].(string)
+	if !ok || targetURL == "" {
 		return nil
 	}
 
-	deployment, _ := payload["deployment"].(map[string]interface{})
-	if deployment == nil {
+	deployment, ok := payload["deployment"].(map[string]interface{})
+	if !ok || deployment == nil {
 		return nil
 	}
 
 	// Extract PR number from deployment ref
-	ref, _ := deployment["ref"].(string)
+	ref, ok := deployment["ref"].(string)
+	if !ok || ref == "" {
+		return nil
+	}
 	prNumber := extractPRNumber(ref)
 	if prNumber == 0 {
 		return nil
@@ -1069,5 +1095,3 @@ func vcsRevision() string {
 	}
 	return strings.TrimSpace(string(out))
 }
-
-// extractFeatureRequestID extracts the feature request ID from a PR body
