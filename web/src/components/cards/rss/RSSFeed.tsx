@@ -14,7 +14,7 @@ import { loadSavedFeeds, saveFeeds, getCachedFeed, cacheFeed } from './storage'
 import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import {
   parseRSSFeed, stripHTML, decodeHTMLEntities,
-  isValidThumbnail, normalizeRedditLink } from './RSSParser'
+  isValidThumbnail } from './RSSParser'
 import { formatTimeAgo } from '../../../lib/formatters'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'

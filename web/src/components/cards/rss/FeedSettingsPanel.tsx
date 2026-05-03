@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { X, Star, Pencil, Plus } from 'lucide-react'
+import { X, Star, Pencil } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { Button } from '../../ui/Button'
 import { useTranslation } from 'react-i18next'
