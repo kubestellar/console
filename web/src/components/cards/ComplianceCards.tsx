@@ -317,6 +317,13 @@ Please proceed step by step.`,
       <div className="flex flex-col items-center justify-center h-full gap-2">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         {totalClusters > 0 && (
+          <span className="text-xs text-muted-foreground">
+            {t('cards:trivyScan.checkingClusters', { checked: clustersChecked, total: totalClusters })}
+          </span>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-3">
