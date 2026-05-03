@@ -7,7 +7,6 @@ import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
 import { clusterCacheRef, setClusterCacheRefClusters } from './clusterCacheRef'
-import { appendWsAuthToken } from '../../lib/utils/wsAuth'
 import { MS_PER_MINUTE } from '../../lib/constants/time'
 import {
   LOCAL_AGENT_HTTP_URL,
