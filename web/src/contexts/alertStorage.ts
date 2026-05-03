@@ -42,12 +42,20 @@ export const NOTIFICATION_COOLDOWN_BY_SEVERITY: Record<string, number> = {
 /** Fallback cooldown when severity is unknown */
 export const DEFAULT_NOTIFICATION_COOLDOWN_MS = 30 * MS_PER_MINUTE // 30 min
 
-/** Load persisted notification dedup map from localStorage (key → timestamp) */
+/** Load persisted notification dedup map from localStorage (key → timestamp).
+ *  Prunes stale entries (older than NOTIFICATION_DEDUP_MAX_AGE_MS) on load
+ *  and persists the cleaned map back to localStorage. */
 export function loadNotifiedAlertKeys(): Map<string, number> {
   try {
     const stored = safeGet(STORAGE_KEY_NOTIFIED_ALERT_KEYS)
     if (stored) {
-      return new Map(JSON.parse(stored) as [string, number][])
+      const entries = JSON.parse(stored) as [string, number][]
+      const now = Date.now()
+      const fresh = entries.filter(([, ts]) => now - ts <= NOTIFICATION_DEDUP_MAX_AGE_MS)
+      if (fresh.length < entries.length) {
+        safeSet(STORAGE_KEY_NOTIFIED_ALERT_KEYS, JSON.stringify(fresh))
+      }
+      return new Map(fresh)
     }
   } catch {
     // Ignore corrupt data
@@ -59,9 +67,12 @@ export function loadNotifiedAlertKeys(): Map<string, number> {
 export function saveNotifiedAlertKeys(keys: Map<string, number>): void {
   try {
     const now = Date.now()
+    // Collect stale keys first to avoid mutating Map during iteration
+    const staleKeys: string[] = []
     for (const [key, ts] of keys) {
-      if (now - ts > NOTIFICATION_DEDUP_MAX_AGE_MS) keys.delete(key)
+      if (now - ts > NOTIFICATION_DEDUP_MAX_AGE_MS) staleKeys.push(key)
     }
+    for (const key of staleKeys) keys.delete(key)
     safeSet(STORAGE_KEY_NOTIFIED_ALERT_KEYS, JSON.stringify([...keys.entries()]))
   } catch {
     // localStorage full or unavailable
