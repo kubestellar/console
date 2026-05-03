@@ -41,6 +41,28 @@ curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | 
 
 Deploy into a cluster instead with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`).
 
+### Local development
+
+If you cloned the repo and want to run the console locally for development, there are two scripts at the repo root:
+
+| Script | Auth mode | When to use |
+|---|---|---|
+| [`./start-dev.sh`](start-dev.sh) | Mock `dev-user` (no GitHub OAuth needed) | Quick development — no `.env` or OAuth setup required |
+| [`./startup-oauth.sh`](startup-oauth.sh) | GitHub OAuth (real login) | Testing authentication flows — `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in `.env` recommended for manual setup; the script also supports one-click setup from the login page if they are missing |
+
+`./start-dev.sh` runs the backend on port `8080`, the frontend Vite dev server on port `5174`, and `kc-agent` on port `8585`. `./startup-oauth.sh` serves the app on port `8080` by default (with the backend possibly listening on `8081` behind the watchdog) and only runs the frontend Vite dev server on port `5174` when you pass `--dev` for HMR (hot reload on code changes).
+
+```bash
+# Quick dev — mock user, no OAuth setup
+./start-dev.sh
+
+# OAuth dev — real GitHub sign-in (requires .env with OAuth credentials)
+./startup-oauth.sh
+
+# OAuth dev with Vite HMR
+./startup-oauth.sh --dev
+```
+
 ## kc-agent (bridge self-hosted console to your clusters)
 
 `kc-agent` is a small local HTTP/WS daemon that the **self-hosted** console talks to (default `http://127.0.0.1:8585`). It forwards requests from the browser to your kubeconfig contexts and to AI providers. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) cannot reach it (#6195) — kc-agent is only useful when you self-host.
