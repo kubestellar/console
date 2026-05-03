@@ -419,7 +419,9 @@ export function FedRAMPCard() {
             <MiniStat label="Satisfied" value={Number(data.satisfied_controls ?? 0)} color="text-green-400" />
             <MiniStat label="Partial" value={Number(data.partial_controls ?? 0)} color="text-yellow-400" />
             <MiniStat label="Open POAMs" value={Number(data.open_poams ?? 0)} color="text-red-400" />
-            <MiniStat label="Status" value={String(data.authorization_status ?? 'unknown').replace(/_/g, ' ')} />
+            <MiniStat label="Status" value={String(data.authorization_status ?? 'unknown').replace(/_/g, ' ')} color={
+              ({ authorized: 'text-green-400', in_process: 'text-orange-400', in_progress: 'text-orange-400', pending: 'text-yellow-400' } as Record<string, string>)[String(data.authorization_status ?? '')] ?? 'text-white'
+            } />
           </div>
         </div>
       ) : <p className="text-gray-500 text-sm">Loading…</p>}
