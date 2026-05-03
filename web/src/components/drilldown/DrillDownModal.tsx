@@ -356,6 +356,7 @@ export function DrillDownModal() {
                     )}
                     <button
                       onClick={() => goTo(index)}
+                      aria-label={t('drilldown.navigateTo', 'Navigate to {{title}}', { title: view.title })}
                       className={`px-2 py-1 rounded text-sm transition-colors flex items-center gap-1.5 ${
                         isLast
                           ? 'text-foreground font-medium'

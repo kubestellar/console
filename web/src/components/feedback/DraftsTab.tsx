@@ -112,6 +112,7 @@ export function DraftsTab({
                 key={draft.id}
                 role="button"
                 tabIndex={0}
+                aria-label={t('drafts.restoreDraft', 'Restore draft: {{title}}', { title })}
                 onClick={() => onRestoreDraft(draft)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRestoreDraft(draft) } }}
                 className={cn(
