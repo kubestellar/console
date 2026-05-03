@@ -9,7 +9,7 @@ KubeStellar Console publishes three release channels:
 | Channel | Frequency | Format | Stability |
 |---------|-----------|--------|-----------|
 | **Nightly** | Daily (5 AM UTC) | `v0.x.y-nightly.YYYYMMDD` | Pre-release; may contain breaking changes |
-| **Weekly** | Sundays (5 AM UTC) | `vX.Y.Z` (semver tag; GitHub Release name `<version>-weekly`) | Stable snapshot; suitable for dev/test |
+| **Weekly** | Sundays (5 AM UTC) | `v0.x.y-weekly.YYYYMMDD` | Stable snapshot; suitable for dev/test |
 | **Production** | Manual | `vX.Y.Z` (semver) | Fully tested; recommended for production use |
 
 ## Version Support Matrix
