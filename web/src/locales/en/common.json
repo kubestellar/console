@@ -50,8 +50,7 @@
     "dismiss": "Dismiss",
     "viewNamespaceCostAria": "View cost details for namespace {{namespace}}",
     "viewOperatorAria": "View operator {{name}}",
-    "toggleGPUNodeAria": "Toggle details for GPU node {{node}}",
-    "selectItem": "Select {{title}}"
+    "toggleGPUNodeAria": "Toggle details for GPU node {{node}}"
   },
   "buttons": {
     "addCard": "Add Card",
@@ -296,7 +295,9 @@
       "thisSession": "This Session",
       "today": "Today",
       "thisMonth": "This Month",
-      "tokens": "tokens"
+      "tokens": "tokens",
+      "unavailableInCluster": "AI missions require the local kc-agent and are not available in-cluster deployments.",
+      "kubectlUnavailableInCluster": "The kubectl terminal requires the local kc-agent and is not available in-cluster deployments."
     },
     "tokens": {
       "title": "Token Usage",

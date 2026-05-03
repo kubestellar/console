@@ -4,6 +4,7 @@ import { AgentCapabilityToolExec } from '../types/agent'
 import type { Mission, MissionMessage, MissionStatus, MissionFeedback, StartMissionParams, PendingReviewEntry, SaveMissionParams, SavedMissionUpdates } from './useMissionTypes'
 import { MissionContext, generateRequestId } from './useMissions.context'
 import { getDemoMode } from './useDemoMode'
+import { isInClusterMode } from './useBackendHealth'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { useLocalAgent } from './useLocalAgent'
@@ -632,6 +633,10 @@ export function MissionProvider({ children }: { children: ReactNode }) {
     // In demo mode, skip WebSocket connection to avoid console errors
     if (getDemoMode()) {
       return Promise.reject(new Error('Agent unavailable in demo mode'))
+    }
+    // In-cluster deployments have no local kc-agent — skip WebSocket connection
+    if (isInClusterMode()) {
+      return Promise.reject(new Error('Agent unavailable in-cluster — requires local kc-agent'))
     }
     // #6667 — Refuse to start a new connection if the provider has already
     // unmounted. Without this guard, a setAgentsLoading(true) call below
