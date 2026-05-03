@@ -115,7 +115,7 @@ export function Pods() {
       deleteConfirm.close()
       pendingDeleteRef.current = null
     }
-  }, [showToast, t, refetchPodIssues])
+  }, [showToast, t, refetchPodIssues, deleteConfirm.close])
 
   // Filter pod issues by global cluster selection
   const filteredPodIssues = (() => {

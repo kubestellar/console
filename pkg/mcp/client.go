@@ -181,11 +181,14 @@ func NewClient(name, binaryPath string, args ...string) (*Client, error) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		stdin.Close()
 		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
+		stdin.Close()
+		stdout.Close()
 		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
