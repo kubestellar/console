@@ -242,15 +242,14 @@ describe('useServices', () => {
     expect(result.current.services).toEqual([])
   })
 
-  it('does not surface an error on fetch failure (services are optional)', async () => {
+  it('surfaces an error string on fetch failure (services surface errors per #11541)', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => useServices())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
-    // useServices never surfaces an error string — services are optional
-    expect(result.current.error).toBeNull()
-    // The hook either shows stale cached data or demo services — no crash
+    // useServices surfaces an error so cards can distinguish "fetch failed" from "no data" (#11541)
+    expect(result.current.error).not.toBeNull()
     expect(result.current.isLoading).toBe(false)
   })
 
@@ -410,7 +409,7 @@ describe('useServices', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
-    expect(result.current.error).toBeNull() // services are optional, no error surfaced
+    expect(result.current.error).not.toBeNull() // services surface errors per #11541
   })
 
   it('sets isFailed to true after 3 consecutive failures', async () => {
@@ -592,14 +591,15 @@ describe('useIngresses', () => {
     await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
-  it('returns empty list with error: null on fetch failure', async () => {
+  it('returns empty list with error set on fetch failure (no prior data)', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => useIngresses())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.ingresses).toEqual([])
-    expect(result.current.error).toBeNull()
+    // Hook surfaces error so UI can distinguish failure from empty (#11541)
+    expect(result.current.error).not.toBeNull()
   })
 
   it('re-fetches when demo mode changes', async () => {
@@ -710,17 +710,18 @@ describe('useIngresses', () => {
     expect(result.current.isFailed).toBe(true)
   })
 
-  it('clears ingresses on API failure (unlike services which keep stale data)', async () => {
+  it('preserves stale ingresses on API failure (stale-data-on-error per #11540)', async () => {
     // First succeed with data
     const fakeIngresses = [{ name: 'ing-1', namespace: 'default', cluster: 'c1', hosts: ['a.com'] }]
     globalThis.fetch = vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ ingresses: fakeIngresses }), { status: 200 })))
     const { result } = renderHook(() => useIngresses())
     await waitFor(() => expect(result.current.ingresses).toHaveLength(1))
 
-    // Then fail
+    // Then fail — stale data is preserved to prevent empty state on transient failures
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
     await act(async () => { await result.current.refetch() })
-    await waitFor(() => expect(result.current.ingresses).toEqual([]))
+    await waitFor(() => expect(result.current.error).not.toBeNull())
+    expect(result.current.ingresses).toHaveLength(1)
   })
 })
 
@@ -769,14 +770,15 @@ describe('useNetworkPolicies', () => {
     await waitFor(() => expect((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore))
   })
 
-  it('returns empty list with error: null on fetch failure', async () => {
+  it('returns empty list with error set on fetch failure (no prior data)', async () => {
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
 
     const { result } = renderHook(() => useNetworkPolicies())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.networkpolicies).toEqual([])
-    expect(result.current.error).toBeNull()
+    // Hook surfaces error so UI can distinguish failure from empty (#11541)
+    expect(result.current.error).not.toBeNull()
   })
 
   it('re-fetches when demo mode changes', async () => {
@@ -878,7 +880,7 @@ describe('useNetworkPolicies', () => {
     expect(result.current.isFailed).toBe(true)
   })
 
-  it('clears network policies on API failure', async () => {
+  it('preserves stale network policies on API failure (stale-data-on-error per #11540)', async () => {
     const fakePolicies = [
       { name: 'np-1', namespace: 'default', cluster: 'c1', policyTypes: ['Ingress'], podSelector: '' },
     ]
@@ -888,7 +890,9 @@ describe('useNetworkPolicies', () => {
 
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('network error'))
     await act(async () => { await result.current.refetch() })
-    await waitFor(() => expect(result.current.networkpolicies).toEqual([]))
+    await waitFor(() => expect(result.current.error).not.toBeNull())
+    // Stale data preserved to prevent empty state on transient failures
+    expect(result.current.networkpolicies).toHaveLength(1)
   })
 
   it('registers for mode transition refetch with correct key pattern', async () => {
@@ -1192,7 +1196,8 @@ describe('useServices — API error status response', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(result.current.consecutiveFailures).toBeGreaterThanOrEqual(1)
-    expect(result.current.error).toBeNull()
+    // Hook surfaces error so UI can distinguish failure from empty (#11541)
+    expect(result.current.error).not.toBeNull()
   })
 })
 

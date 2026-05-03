@@ -389,11 +389,16 @@ describe('ClusterErrorType ↔ ApiErrorCategory alignment', () => {
     }
   })
 
-  it('getErrorTypeFromString and classifyHttpStatus cover the same auth errors', () => {
-    // Both 401 and 403 should be auth
-    expect(getErrorTypeFromString('auth')).toBe('auth')
-    expect(classifyHttpStatus(401)).toBe('auth')
-    expect(classifyHttpStatus(403)).toBe('auth')
+  it('classifyHttpStatus auth codes round-trip through getErrorTypeFromString', () => {
+    // 401 and 403 map to 'auth' via classifyHttpStatus
+    const type401 = classifyHttpStatus(401)
+    const type403 = classifyHttpStatus(403)
+    expect(type401).toBe('auth')
+    expect(type403).toBe('auth')
+    // The type string produced by classifyHttpStatus must be accepted by getErrorTypeFromString
+    // so both systems remain aligned: backend type strings and HTTP status codes agree
+    expect(getErrorTypeFromString(type401)).toBe('auth')
+    expect(getErrorTypeFromString(type403)).toBe('auth')
   })
 
   it('icon and suggestion are always available for classified errors', () => {
