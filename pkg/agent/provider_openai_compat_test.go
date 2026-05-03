@@ -84,8 +84,9 @@ func TestStreamViaOpenAICompatible(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		capturedAuth = r.Header.Get("Authorization")
+		auth := capturedAuth
 		mu.Unlock()
-		if capturedAuth != "Bearer test-key" {
+		if auth != "Bearer test-key" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}

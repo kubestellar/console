@@ -554,7 +554,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const message = err instanceof Error ? err.message : 'Network request failed'
       setError(message)
       setConsecutiveFailures(prev => prev + 1)
-      // Don't flip isDemoFallback on error — preserve demo badge if no live data received (#11640)
+      // Don't clear stale data on error — preserve last-known state for UI continuity
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
