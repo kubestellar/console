@@ -600,8 +600,12 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	var modelConfigCount, modelProviderConfigCount, memoryCount int
 	var mu sync.Mutex
 	byProvider := map[string]int{}
+
+	// numCRDQueries must be declared before any use (including the warnings
+	// slice capacity hint below). Moving it after `warnings` causes a build
+	// failure — see issue #11692.
 	const numCRDQueries = 6
-	var warnings = make([]string, 0, numCRDQueries)
+	warnings := make([]string, 0, numCRDQueries)
 
 	var wg sync.WaitGroup
 	wg.Add(numCRDQueries)
