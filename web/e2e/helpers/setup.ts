@@ -68,8 +68,8 @@ export const EXPECTED_ERROR_PATTERNS = [
   /Could not connect to [0-9.]+/i, // WebKit wording for connection refused (no net:: prefix)
   /Connection refused.*(:8585|:8080|127\.0\.0\.1|localhost)/i, // Backend/agent connection only (#11294)
   /502.*Bad Gateway/i, // Reverse proxy errors when backend not running
-  /Failed to load resource.*(:8585|:8080|\/api\/)/i, // Backend API resource failures only (#11294)
-  /the server responded with a status of 50[0-9]/i, // 5xx status errors in demo/CI mode (#11520)
+  /Failed to load resource.*(:8585|:8080|:4173|\/api\/)/i, // Backend/preview API resource failures (#11294, #11660)
+  /the server responded with a status of [45]\d{2}/i, // 4xx/5xx status errors in demo/CI mode (#11520, #11660)
   /console\.kubestellar\.io/i, // External origin fetch failures when hosted site is unavailable from CI (#11520)
   // SQLite WASM cache worker — webkit/Safari can't streaming-compile the
   // sqlite3 wasm, and the worker has a documented IndexedDB fallback path
@@ -88,6 +88,11 @@ export const EXPECTED_ERROR_PATTERNS = [
   /NS_BINDING_ABORTED/i,
   /NS_ERROR_FAILURE/i,
   /Fetch failed: Invalid JSON response/i,
+  /\[Cache\] Failed to/i, // Cache persistence errors in CI (no OPFS/IndexedDB support) (#11660)
+  /\[IndexedData\] Failed to/i, // IndexedDB fallback errors in CI (#11660)
+  /\[CacheWorkerRpc\] Worker error/i, // Cache worker failures in CI (#11660)
+  /\[mockApiFallback\]/i, // Test mock logging that leaks to browser console (#11660)
+  /Error fetching from cluster/i, // Cluster fetch errors when backend is unavailable (#11660)
 ]
 
 function isExpectedError(message: string): boolean {
@@ -208,6 +213,133 @@ export async function mockApiFallback(page: Page) {
       contentType: 'application/json',
       body: JSON.stringify([]),
     })
+  )
+
+  // Explicit mocks for endpoints that MSW marks as passthrough (#11660).
+  // Without these, requests reach vite preview (which returns 404) or the Go
+  // backend (which may return 503 when external services are unreachable).
+  // Registered AFTER the catch-all so they take priority.
+  await page.route('**/api/youtube/playlist*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [] }),
+    })
+  )
+  await page.route('**/api/youtube/thumbnail/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/png', body: '' })
+  )
+  await page.route('**/api/medium/blog*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [] }),
+    })
+  )
+  await page.route('**/api/missions/browse*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+  await page.route('**/api/missions/scores*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ topScores: [], userScore: null }),
+    })
+  )
+  await page.route('**/api/missions/file*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  await page.route('**/api/rewards/github*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ topContributors: [], recentActivity: [] }),
+    })
+  )
+  await page.route('**/api/rewards/badge/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '' })
+  )
+  await page.route('**/api/issue-stats*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ open: 0, closed: 0, totalComments: 0 }),
+    })
+  )
+  await page.route('**/api/github-pipelines*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ workflows: [] }),
+    })
+  )
+  await page.route('**/api/nightly-e2e/runs*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+  await page.route('**/api/public/nightly-e2e/runs*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([]),
+    })
+  )
+  await page.route('**/api/nps*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  await page.route('**/api/feedback-app*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  await page.route('**/api/analytics-dashboard*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  await page.route('**/api/acmm/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({}),
+    })
+  )
+  // Analytics collection endpoints — return 204 No Content
+  await page.route('**/api/gtag*', (route) =>
+    route.fulfill({ status: 204, body: '' })
+  )
+  await page.route('**/api/m*', (route) => {
+    // Only intercept the analytics /api/m endpoint, not other /api/m* routes
+    const url = new URL(route.request().url())
+    if (url.pathname === '/api/m') {
+      return route.fulfill({ status: 204, body: '' })
+    }
+    return route.fallback()
+  })
+  await page.route('**/api/send*', (route) =>
+    route.fulfill({ status: 204, body: '' })
+  )
+  await page.route('**/api/ksc*', (route) =>
+    route.fulfill({ status: 204, body: '' })
   )
 
   // Mock the local kc-agent HTTP endpoint. Even in demo mode, the cluster
