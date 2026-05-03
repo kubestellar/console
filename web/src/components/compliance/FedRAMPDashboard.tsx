@@ -73,7 +73,8 @@ const controlStatusColor = (status: string) => {
 const authorizationStatusStyle = (status: string) => {
   switch (status) {
     case 'authorized': return 'text-green-700 dark:text-green-400'
-    case 'in_progress': return 'text-orange-700 dark:text-orange-400'
+    case 'in_progress':
+    case 'in_process': return 'text-orange-700 dark:text-orange-400'
     case 'pending': return 'text-yellow-700 dark:text-yellow-400'
     default: return 'text-foreground'
   }

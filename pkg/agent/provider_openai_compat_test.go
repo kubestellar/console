@@ -78,8 +78,10 @@ func TestChatViaOpenAICompatible(t *testing.T) {
 }
 
 func TestStreamViaOpenAICompatible(t *testing.T) {
+	var capturedAuth string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "Bearer test-key" {
+		capturedAuth = r.Header.Get("Authorization")
+		if capturedAuth != "Bearer test-key" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
@@ -105,6 +107,9 @@ func TestStreamViaOpenAICompatible(t *testing.T) {
 		t.Fatalf("streamViaOpenAICompatible failed: %v", err)
 	}
 
+	if capturedAuth != "Bearer test-key" {
+		t.Errorf("Expected Authorization header %q, got %q", "Bearer test-key", capturedAuth)
+	}
 	if resp.Content != "Hello world" {
 		t.Errorf("Expected 'Hello world', got %q", resp.Content)
 	}

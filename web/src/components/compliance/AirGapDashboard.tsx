@@ -270,10 +270,10 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
                   <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-linear-to-r from-blue-500 to-green-500 rounded-full"
-                      style={{ width: `${summary.overall_readiness}%` }}
+                      style={{ width: `${summary.overall_readiness ?? 0}%` }}
                     />
                   </div>
-                  <span className="text-foreground font-bold">{summary.overall_readiness}%</span>
+                  <span className="text-foreground font-bold">{summary.overall_readiness ?? 0}%</span>
                 </div>
               </div>
               <div>

@@ -45,4 +45,19 @@ describe('AirGapDashboard', () => {
     render(<AirGapDashboard />)
     await waitFor(() => expect(screen.getByText('9')).toBeInTheDocument())
   })
+
+  it('shows overall_readiness as 0 when value is null/undefined', async () => {
+    const { authFetch } = await import('../../lib/api')
+    ;(authFetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.includes('/requirements')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockRequirements) })
+      if (url.includes('/clusters')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockClusters) })
+      if (url.includes('/summary')) return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...mockSummary, overall_readiness: null }) })
+      return Promise.resolve({ ok: false })
+    })
+    render(<AirGapDashboard />)
+    await waitFor(() => {
+      const zeros = screen.getAllByText('0%')
+      expect(zeros.length).toBeGreaterThan(0)
+    })
+  })
 })

@@ -628,6 +628,6 @@ func TestDeployWorkloadWithFailingDependency(t *testing.T) {
 	}
 
 	if !strings.Contains(resp.Message, "simulated admission webhook failure for secret") {
-		t.Errorf("Expected error message to contain simulated failure, got: %s", resp.Message)
+		t.Errorf("Expected error message to contain %q, got: %s", "simulated admission webhook failure for secret", resp.Message)
 	}
 }

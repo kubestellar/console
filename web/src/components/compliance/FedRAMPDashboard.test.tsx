@@ -45,4 +45,13 @@ describe('FedRAMPDashboard', () => {
     render(<FedRAMPDashboard />)
     await waitFor(() => expect(screen.getByText('142')).toBeInTheDocument())
   })
+
+  it('applies in_process authorization status style (orange)', async () => {
+    render(<FedRAMPDashboard />)
+    // in_process (from fixture) should display as "in process" with orange styling
+    await waitFor(() => {
+      const el = screen.getByText('in process')
+      expect(el.className).toContain('text-orange')
+    })
+  })
 })
