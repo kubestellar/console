@@ -78,3 +78,9 @@ web/e2e/user-flows/test-results/
 web/storybook-static/
 web/node_modules
 punkpeye-awesome-mcp-servers/
+
+# Local worktrees and fix branches (never commit these)
+fix-*/
+work-fix-*/
+worktrees/
+fix-11638-worktree/
