@@ -278,7 +278,9 @@ func (h *Hub) Close() {
 			close(client.send)
 			delete(h.clients, client)
 		}
-		h.userIndex = make(map[uuid.UUID][]*Client)
+		for uid := range h.userIndex {
+			delete(h.userIndex, uid)
+		}
 		h.mu.Unlock()
 	})
 }
