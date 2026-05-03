@@ -20,6 +20,15 @@ vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
   DEPLOY_ABORT_TIMEOUT_MS: 30_000,
   KUBECTL_DEFAULT_TIMEOUT_MS: 15_000,
+  MCP_HOOK_TIMEOUT_MS: 15_000,
+}))
+
+vi.mock('../useBackendHealth', () => ({
+  isInClusterMode: vi.fn().mockReturnValue(false),
+}))
+
+vi.mock('../../lib/api', () => ({
+  api: { get: vi.fn().mockResolvedValue({ data: null }) },
 }))
 vi.mock('../../lib/constants/time', () => ({
   MS_PER_MINUTE: 60_000,
