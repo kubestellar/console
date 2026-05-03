@@ -1,17 +1,23 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+// errTransport is an http.RoundTripper that always returns the configured error.
+type errTransport struct{ err error }
+
+func (e errTransport) RoundTrip(_ *http.Request) (*http.Response, error) { return nil, e.err }
 
 func TestPingHandler(t *testing.T) {
 	app := fiber.New()
@@ -65,16 +71,20 @@ func TestPingHandler(t *testing.T) {
 
 	t.Run("Target Timeout", func(t *testing.T) {
 		oldClient := pingClient
+		// Use a transport that immediately returns a timeout error, avoiding any
+		// real network dependency (8.8.8.7 may produce connection-refused instead of
+		// timeout in some CI environments, making the test flaky).
 		pingClient = &http.Client{
-			Timeout: 10 * time.Millisecond,
+			Transport: errTransport{err: context.DeadlineExceeded},
 		}
 		defer func() { pingClient = oldClient }()
 
-		req := httptest.NewRequest("GET", "/api/ping?url=http://8.8.8.7", nil)
-		resp, _ := app.Test(req, 1000)
+		req := httptest.NewRequest("GET", "/api/ping?url=https://example.com", nil)
+		resp, err := app.Test(req, 1000)
+		require.NoError(t, err)
 
 		assert.Equal(t, fiber.StatusGatewayTimeout, resp.StatusCode)
-		
+
 		var result map[string]interface{}
 		json.NewDecoder(resp.Body).Decode(&result)
 		assert.Equal(t, "timeout", result["status"])

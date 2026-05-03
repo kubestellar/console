@@ -40,7 +40,7 @@ func TestLocalOpenAICompatProvider_URLPrecedence(t *testing.T) {
 	}
 
 	// 2. Config override
-	cm := GetConfigManager()
+	cm := isolateConfigManager(t)
 	cm.SetBaseURL("test-local", "http://config:11434")
 	defer cm.RemoveBaseURL("test-local")
 
@@ -70,7 +70,7 @@ func TestLocalOpenAICompatProvider_IsAvailable(t *testing.T) {
 	}
 
 	// Config available
-	cm := GetConfigManager()
+	cm := isolateConfigManager(t)
 	cm.SetBaseURL("test-avail", "http://config:11434")
 	if !p.IsAvailable() {
 		t.Error("Expected available via config")
@@ -107,8 +107,8 @@ func TestLocalOpenAICompatProvider_Chat(t *testing.T) {
 	os.Setenv("TEST_CHAT_URL", server.URL)
 	defer os.Unsetenv("TEST_CHAT_URL")
 
-	// Ensure no key is set for this provider
-	cm := GetConfigManager()
+	// Ensure no key is set for this provider (isolated so real config is unaffected)
+	cm := isolateConfigManager(t)
 	cm.RemoveAPIKey("test-chat")
 
 	resp, err := p.Chat(context.Background(), &ChatRequest{Prompt: "Hi"})

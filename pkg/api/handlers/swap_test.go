@@ -70,7 +70,8 @@ func TestSwapHandlers(t *testing.T) {
 		body := `{"duration": "1h"}`
 		req := httptest.NewRequest("POST", "/api/swaps/"+swapID.String()+"/snooze", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, _ := app.Test(req)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -98,7 +99,8 @@ func TestSwapHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("POST", "/api/swaps/"+swapID.String()+"/execute", nil)
-		resp, _ := app.Test(req)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
@@ -118,7 +120,8 @@ func TestSwapHandlers(t *testing.T) {
 		})
 
 		req := httptest.NewRequest("POST", "/api/swaps/"+swapID.String()+"/cancel", nil)
-		resp, _ := app.Test(req)
+		resp, err := app.Test(req)
+		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
