@@ -216,12 +216,12 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
     }
     // Legacy merge loop preserved only for request metrics (below).
     for (const cluster of (group || [])) {
-      // Merge request metrics - these may come from a different cluster than capacity
-      if (cluster.cpuRequestsCores && !bestMetrics.cpuRequestsCores) {
+      // Merge request metrics - use nullish checks so 0 is preserved (#11727)
+      if (cluster.cpuRequestsCores != null && bestMetrics.cpuRequestsCores == null) {
         bestMetrics.cpuRequestsMillicores = cluster.cpuRequestsMillicores
         bestMetrics.cpuRequestsCores = cluster.cpuRequestsCores
       }
-      if (cluster.memoryRequestsGB && !bestMetrics.memoryRequestsGB) {
+      if (cluster.memoryRequestsGB != null && bestMetrics.memoryRequestsGB == null) {
         bestMetrics.memoryRequestsBytes = cluster.memoryRequestsBytes
         bestMetrics.memoryRequestsGB = cluster.memoryRequestsGB
       }
