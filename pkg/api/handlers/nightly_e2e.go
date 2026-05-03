@@ -868,6 +868,12 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 		sem <- struct{}{}
 		go func(idx int, jobID int64, name, conc string) {
 			defer func() { <-sem }()
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("panic in fetchJobLogs goroutine", "jobID", jobID, "error", r)
+					ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: ""}}
+				}
+			}()
 			logText := h.fetchJobLog(repo, jobID)
 			ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: logText}}
 		}(i, job.ID, job.Name, conclusion)
