@@ -59,9 +59,28 @@ vi.mock('../../lib/utils/localStorage', () => ({
 }))
 
 // Mock AlertsContext service modules (added after #11559 refactor)
-vi.mock('../../contexts/notifications', () => ({}))
-vi.mock('../../contexts/alertStorage', () => ({}))
-vi.mock('../../contexts/alertRunbooks', () => ({}))
+vi.mock('../../contexts/notifications', () => ({
+  shouldDispatchBrowserNotification: vi.fn(() => false),
+  isClusterUnreachable: vi.fn(() => false),
+  sendNotifications: vi.fn(),
+  sendBatchedNotifications: vi.fn(),
+}))
+vi.mock('../../contexts/alertStorage', () => ({
+  ALERTS_KEY: 'kc_alerts',
+  MAX_ALERTS: 500,
+  loadNotifiedAlertKeys: vi.fn(() => new Map()),
+  saveNotifiedAlertKeys: vi.fn(),
+  loadFromStorage: vi.fn(() => []),
+  saveToStorage: vi.fn(),
+  saveAlerts: vi.fn(),
+  STORAGE_KEY_AUTH_TOKEN: 'kc-token',
+  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+  DEFAULT_TEMPERATURE_THRESHOLD_F: 100,
+  DEFAULT_WIND_SPEED_THRESHOLD_MPH: 40,
+}))
+vi.mock('../../contexts/alertRunbooks', () => ({
+  findAndExecuteRunbook: vi.fn(() => Promise.resolve(null)),
+}))
 
 // Dynamically imported after each module reset
 let useLocalAgent: typeof import('../useLocalAgent').useLocalAgent
