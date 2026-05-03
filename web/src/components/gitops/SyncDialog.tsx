@@ -304,8 +304,10 @@ export function SyncDialog({
     execution: 3,
     complete: 4 }
 
+  const isSyncing = phase === 'plan' || phase === 'execution'
+
   return (
-    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg">
+    <BaseModal isOpen={isOpen} onClose={handleClose} size="lg" closeOnBackdrop={!isSyncing} closeOnEscape={!isSyncing}>
       <BaseModal.Header
         title={`GitOps Sync: ${appName}`}
         description={`${namespace} • ${cluster}`}

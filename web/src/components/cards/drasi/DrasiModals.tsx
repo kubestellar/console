@@ -38,11 +38,14 @@ export function ModalShell({
   onClose,
   panelClassName,
   children,
+  closeOnBackdrop = true,
 }: {
   labelledBy: string
   onClose: () => void
   panelClassName: string
   children: React.ReactNode
+  /** When false, clicking the backdrop does not close the modal. Defaults to true. */
+  closeOnBackdrop?: boolean
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -55,13 +58,17 @@ export function ModalShell({
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (closeOnBackdrop && e.target === e.currentTarget) onClose()
+  }
+
   return (
     <motion.div
       className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-xs flex items-center justify-center p-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onClick={onClose}
+      onClick={handleBackdropClick}
     >
       <motion.div
         role="dialog"
@@ -200,6 +207,7 @@ export function SourceConfigModal({
     <ModalShell
       labelledBy={titleId}
       onClose={onClose}
+      closeOnBackdrop={false}
       panelClassName="bg-slate-900 border border-slate-600/50 rounded-lg max-w-md w-full p-4"
     >
       <div className="flex items-start justify-between mb-3">
@@ -301,6 +309,7 @@ export function QueryConfigModal({
     <ModalShell
       labelledBy={titleId}
       onClose={onClose}
+      closeOnBackdrop={false}
       panelClassName="bg-slate-900 border border-slate-600/50 rounded-lg max-w-lg w-full p-4"
     >
       <div className="flex items-start justify-between mb-3">
@@ -441,6 +450,7 @@ export function ConnectionsModal({
     <ModalShell
       labelledBy="drasi-connections-title"
       onClose={onClose}
+      closeOnBackdrop={false}
       panelClassName="bg-slate-900 border border-slate-600/50 rounded-lg max-w-lg w-full p-4"
     >
       <div className="flex items-start justify-between mb-3">
