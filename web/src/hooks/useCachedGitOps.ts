@@ -74,7 +74,11 @@ function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
       progressiveFetcher: cluster ? undefined : async (onProgress) => {
         try {
           return await fetchViaGitOpsSSE<T>(apiEndpoint, responseKey, {}, onProgress)
-        } catch {
+        } catch (err: unknown) {
+          // Auth/availability errors should not fall back to REST (it will also fail)
+          if (err instanceof Error && err.message.includes('No data source available')) {
+            throw err
+          }
           // SSE stream failed — fall back to REST endpoint
           return await restFetcher()
         }

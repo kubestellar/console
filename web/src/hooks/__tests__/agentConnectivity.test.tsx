@@ -571,9 +571,11 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
       await flushMicrotasks()
       const callsAfterTrigger = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length
 
-      // Advance 3 seconds — should fire multiple checks at 1s interval
-      await act(async () => { vi.advanceTimersByTime(3000) })
-      await flushMicrotasks()
+      // Advance in 1s increments to allow each checkAgent() to complete before the next fires
+      for (let i = 0; i < 3; i++) {
+        await act(async () => { vi.advanceTimersByTime(1000) })
+        await flushMicrotasks()
+      }
 
       const callsAfter3s = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length
       // At least 2 additional checks in 3 seconds (1s interval)
@@ -703,9 +705,10 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
   // ===========================================================================
 
   describe('connection event log', () => {
-    it('logs connecting event on startup', () => {
+    it('logs connecting event on startup', async () => {
       mockFetchHang()
       const { result } = renderHook(() => useLocalAgent())
+      await flushMicrotasks()
 
       const events = result.current.connectionEvents
       expect(events.some(e => e.type === 'connecting')).toBe(true)
