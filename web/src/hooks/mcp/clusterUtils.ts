@@ -210,21 +210,21 @@ export function deduplicateClustersByServer(clusters: ClusterInfo[]): ClusterInf
     // Legacy merge loop: fill in request/usage metrics that may come from a
     // different cluster context than the one that reported capacity.
     for (const cluster of (group || [])) {
-      // Merge request metrics — use nullish check to preserve valid 0 values
-      if (cluster.cpuRequestsCores != null && !bestMetrics.cpuRequestsCores) {
+      // Merge request metrics — nullish checks on both sides preserve valid 0 values
+      if (cluster.cpuRequestsCores != null && bestMetrics.cpuRequestsCores == null) {
         bestMetrics.cpuRequestsMillicores = cluster.cpuRequestsMillicores
         bestMetrics.cpuRequestsCores = cluster.cpuRequestsCores
       }
-      if (cluster.memoryRequestsGB != null && !bestMetrics.memoryRequestsGB) {
+      if (cluster.memoryRequestsGB != null && bestMetrics.memoryRequestsGB == null) {
         bestMetrics.memoryRequestsBytes = cluster.memoryRequestsBytes
         bestMetrics.memoryRequestsGB = cluster.memoryRequestsGB
       }
-      // Merge usage metrics — use nullish check to preserve valid 0 values
-      if (cluster.cpuUsageCores != null && !bestMetrics.cpuUsageCores) {
+      // Merge usage metrics — nullish checks on both sides preserve valid 0 values
+      if (cluster.cpuUsageCores != null && bestMetrics.cpuUsageCores == null) {
         bestMetrics.cpuUsageMillicores = cluster.cpuUsageMillicores
         bestMetrics.cpuUsageCores = cluster.cpuUsageCores
       }
-      if (cluster.memoryUsageGB != null && !bestMetrics.memoryUsageGB) {
+      if (cluster.memoryUsageGB != null && bestMetrics.memoryUsageGB == null) {
         bestMetrics.memoryUsageBytes = cluster.memoryUsageBytes
         bestMetrics.memoryUsageGB = cluster.memoryUsageGB
       }
