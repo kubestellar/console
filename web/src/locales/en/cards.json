@@ -730,7 +730,13 @@
     "cardInfo": "Card information",
     "noDataTitle": "No data available",
     "noDataMessage": "This card has no data to display. Data may become available when the data source is connected.",
-    "cardActions": "Card actions"
+    "cardActions": "Card actions",
+    "failureReasonLabel": "Reason",
+    "failureReasonUnknown": "An unknown error occurred while refreshing this card.",
+    "viewLogs": "View Logs",
+    "hideLogs": "Hide Logs",
+    "failureLogTitle": "Last Error",
+    "failureRetry": "Retry"
   },
   "github": {
     "pullRequests": "Pull Requests",

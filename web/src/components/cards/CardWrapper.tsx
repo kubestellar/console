@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, ComponentType, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import {
-  Maximize2, RefreshCw, ChevronRight, ChevronDown, Bug, AlertTriangle, Info,
+  Maximize2, RefreshCw, ChevronRight, ChevronDown, ChevronUp, Bug, AlertTriangle, Info, FileText,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
@@ -263,6 +263,7 @@ export const CardWrapper = memo(function CardWrapper({
   }, [isExpanded])
   const [showBugReport, setShowBugReport] = useState(false)
   const [showWidgetExport, setShowWidgetExport] = useState(false)
+  const [showFailureLogs, setShowFailureLogs] = useState(false)
 
   // Register expand trigger for keyboard navigation
   useEffect(() => {
@@ -483,6 +484,11 @@ export const CardWrapper = memo(function CardWrapper({
   // Merge child-reported state with props — child reports take priority when present
   const effectiveIsFailed = isFailed || childDataState?.isFailed || cardLoadingTimedOut
   const effectiveConsecutiveFailures = consecutiveFailures || childDataState?.consecutiveFailures || (cardLoadingTimedOut ? 1 : 0)
+  const effectiveErrorMessage = childDataState?.errorMessage || undefined
+  // Collapse the failure log panel when the card recovers
+  useEffect(() => {
+    if (!effectiveIsFailed) setShowFailureLogs(false)
+  }, [effectiveIsFailed])
   // Show loading when:
   // - Card explicitly reports isLoading: true (AND stuck-loading timeout hasn't fired), OR
   // - Card hasn't reported yet AND quick timeout hasn't passed (brief skeleton for reporting cards)
@@ -820,6 +826,62 @@ export const CardWrapper = memo(function CardWrapper({
                 />
               </div>
             </div>
+
+            {/* Failure detail banner — shown when card has failed to refresh */}
+            {effectiveIsFailed && !isCollapsed && (
+              <div className="px-4 py-2 border-b border-red-500/20 bg-red-500/5" data-testid="card-failure-banner">
+                <div className="flex items-start gap-2 text-xs">
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" aria-hidden="true" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-red-400 font-medium">
+                      {t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
+                    </p>
+                    {effectiveErrorMessage && (
+                      <p className="text-muted-foreground mt-0.5 truncate" title={effectiveErrorMessage}>
+                        {t('cardWrapper.failureReasonLabel')}: {effectiveErrorMessage}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {effectiveErrorMessage && (
+                      <button
+                        onClick={() => setShowFailureLogs(prev => !prev)}
+                        className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
+                        aria-expanded={showFailureLogs}
+                      >
+                        <FileText className="w-3 h-3" aria-hidden="true" />
+                        {showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
+                        {showFailureLogs
+                          ? <ChevronUp className="w-3 h-3" aria-hidden="true" />
+                          : <ChevronDown className="w-3 h-3" aria-hidden="true" />}
+                      </button>
+                    )}
+                    {onRefresh && (
+                      <button
+                        onClick={onRefresh}
+                        className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                        aria-label={t('cardWrapper.failureRetry')}
+                      >
+                        <RefreshCw className="w-3 h-3" aria-hidden="true" />
+                        {t('cardWrapper.failureRetry')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {/* Expandable log detail */}
+                {showFailureLogs && effectiveErrorMessage && (
+                  <div className="mt-2 p-2 rounded bg-secondary/50 border border-border/50" data-testid="card-failure-logs">
+                    <p className="text-2xs text-muted-foreground font-medium mb-1">
+                      {t('cardWrapper.failureLogTitle')}
+                    </p>
+                    <pre className="text-2xs text-red-400/80 whitespace-pre-wrap break-all font-mono leading-relaxed">
+                      {effectiveErrorMessage}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Content - hidden when collapsed, lazy loaded when visible or expanded */}
             {!isCollapsed && (
