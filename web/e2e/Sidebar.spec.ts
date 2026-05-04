@@ -242,8 +242,30 @@ test.describe('Sidebar Navigation', () => {
       // Click healthy status button
       await clusterStatus.locator('button').filter({ hasText: /Healthy/i }).first().click()
 
-      // Should navigate to clusters with filter
-      await expect(page).toHaveURL(/\/clusters/, { timeout: 5000 })
+      // Should navigate to clusters with ?status=healthy query param (#11774)
+      await expect(page).toHaveURL(/\/clusters\?.*status=healthy/, { timeout: 5000 })
+    })
+
+    test('unhealthy status link includes ?status=unhealthy', async ({ page }) => {
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
+
+      const clusterStatus = page.getByTestId('sidebar-cluster-status')
+      const isVisible = await clusterStatus.isVisible().catch(() => false)
+
+      if (!isVisible) {
+        test.skip()
+        return
+      }
+
+      // Click unhealthy status button
+      const unhealthyBtn = clusterStatus.locator('button').filter({ hasText: /Unhealthy/i }).first()
+      const unhealthyVisible = await unhealthyBtn.isVisible().catch(() => false)
+      if (!unhealthyVisible) { test.skip(); return }
+
+      await unhealthyBtn.click()
+
+      // Should navigate to clusters with ?status=unhealthy query param (#11774)
+      await expect(page).toHaveURL(/\/clusters\?.*status=unhealthy/, { timeout: 5000 })
     })
   })
 

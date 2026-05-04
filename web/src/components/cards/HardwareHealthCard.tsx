@@ -115,6 +115,21 @@ export function HardwareHealthCard() {
   const nodeCount = hwData.nodeCount
   const lastUpdate = hwData.lastUpdate ? new Date(hwData.lastUpdate) : null
 
+  const [isRetrying, setIsRetrying] = useState(false)
+  const [retryError, setRetryError] = useState<string | null>(null)
+
+  const handleRetry = async () => {
+    setIsRetrying(true)
+    setRetryError(null)
+    try {
+      await retryFetch()
+    } catch (err) {
+      setRetryError(err instanceof Error ? err.message : 'Retry failed due to network/CORS issue')
+    } finally {
+      setIsRetrying(false)
+    }
+  }
+
   const [viewMode, setViewMode] = useState<ViewMode>('inventory')
   // Track whether the user has explicitly chosen a view tab.
   // When true, auto-switch logic is suppressed so data refreshes
@@ -647,20 +662,21 @@ export function HardwareHealthCard() {
       />
 
       {/* Error display with retry */}
-      {fetchError && (
+      {(fetchError || retryError) && (
         <div className="mb-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
           <div className="flex flex-wrap items-center justify-between gap-y-2 gap-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{fetchError}</span>
+              <span>{retryError || fetchError}</span>
             </div>
             <button
-              onClick={() => retryFetch()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors whitespace-nowrap"
+              onClick={handleRetry}
+              disabled={isRetrying}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors whitespace-nowrap disabled:opacity-50"
               aria-label={t('cards:hardwareHealth.retryFetchAria')}
             >
-              <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
-              {t('common:common.retry', 'Retry')}
+              <RefreshCw className={cn('w-3 h-3', (isRefreshing || isRetrying) && 'animate-spin')} />
+              {isRetrying ? t('common:common.loading', 'Loading…') : t('common:common.retry', 'Retry')}
             </button>
           </div>
         </div>

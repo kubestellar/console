@@ -1222,12 +1222,13 @@ export function useCache<T>({
   }, [effectiveEnabled, keepAliveActive, store])
 
   /** Reset failure counters then refetch — use for explicit user-triggered retries
-   *  so backoff is cleared and the fetch runs immediately. */
+   *  so backoff is cleared and the fetch runs immediately.
+   *  Unlike automatic refetch, this always attempts the fetch even when the hook
+   *  is disabled (e.g. demo mode) so the user gets immediate feedback (#11772). */
   const retryFetch = useCallback(async () => {
     store.resetFailures()
-    if (!effectiveEnabled || !keepAliveActive) return
     await store.fetch(() => fetcherRef.current(), mergeRef.current, progressiveFetcherRef.current)
-  }, [effectiveEnabled, keepAliveActive, store])
+  }, [store])
 
   const clearAndRefetch = async () => {
     await store.clear()
