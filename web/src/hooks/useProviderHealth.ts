@@ -7,6 +7,7 @@ import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { getDemoMode } from './useDemoMode'
+import { isInClusterMode } from './useBackendHealth'
 
 const STATUS_CHECK_TIMEOUT = 5_000
 
@@ -45,8 +46,8 @@ async function checkServiceHealth(providerIds: string[]): Promise<Map<string, He
   const result = new Map<string, HealthStatus>()
 
   // Try backend proxy first (handles CORS redirects, all providers)
-  // Skip in demo mode — no local agent on Netlify deployments
-  if (!getDemoMode()) {
+  // Skip in demo mode and in-cluster mode — provider health is agent-only
+  if (!getDemoMode() && !isInClusterMode()) {
     try {
       const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/providers/health`, {
         signal: AbortSignal.timeout(STATUS_CHECK_TIMEOUT) })
@@ -150,6 +151,10 @@ const DEMO_PROVIDERS: ProviderHealthInfo[] = [
 /** Fetch AI + Cloud providers and their health status */
 async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): Promise<ProviderHealthInfo[]> {
   const result: ProviderHealthInfo[] = []
+
+  if (isInClusterMode()) {
+    return result
+  }
 
   // --- AI Providers from /settings/keys ---
   const unconfiguredProviders: string[] = []

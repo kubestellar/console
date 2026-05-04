@@ -8,6 +8,7 @@ import { registerCacheReset } from '../../lib/modeTransition'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, getLocalAgentURL, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { isInClusterMode } from '../useBackendHealth'
 import type { ClusterEvent } from './types'
 
 // ---------------------------------------------------------------------------
@@ -106,9 +107,10 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
     }
     abortControllerRef.current = new AbortController()
     const signal = abortControllerRef.current.signal
+    const inClusterMode = isInClusterMode()
 
-    // Try local agent HTTP endpoint first (works without backend)
-    if (cluster && !isAgentUnavailable()) {
+    // Try direct REST endpoint first for single-cluster queries.
+    if (cluster && (inClusterMode || !isAgentUnavailable())) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -116,10 +118,15 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
         params.append('limit', limit.toString())
 
         const timeoutId = setTimeout(() => abortControllerRef.current?.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await agentFetch(`${getLocalAgentURL()}/events?${params}`, {
-          signal,
-          headers: { 'Accept': 'application/json' },
-        })
+        const response = inClusterMode
+          ? await fetch(`/api/mcp/events?${params}`, {
+              signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+              headers: { 'Accept': 'application/json' },
+            })
+          : await agentFetch(`${getLocalAgentURL()}/events?${params}`, {
+              signal,
+              headers: { 'Accept': 'application/json' },
+            })
         clearTimeout(timeoutId)
 
         if (response.ok) {
@@ -138,11 +145,13 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
           } else {
             setIsRefreshing(false)
           }
-          reportAgentDataSuccess()
+          if (!inClusterMode) {
+            reportAgentDataSuccess()
+          }
           return
         }
       } catch (err: unknown) {
-        console.error(`[useEvents] Local agent failed for ${cluster}:`, err)
+        console.error(`[useEvents] ${inClusterMode ? 'Backend' : 'Local agent'} failed for ${cluster}:`, err)
       }
     }
 
@@ -154,7 +163,7 @@ export function useEvents(cluster?: string, namespace?: string, limit = 20) {
       sseParams.limit = limit.toString()
 
       const allEvents = await fetchSSE<ClusterEvent>({
-        url: `${LOCAL_AGENT_HTTP_URL}/events/stream`,
+        url: `${inClusterMode ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/events/stream`,
         params: sseParams,
         itemsKey: 'events',
         signal,
