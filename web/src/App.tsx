@@ -690,6 +690,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
             warm-nav is near-instant (no unmount/remount). */}
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
+          <Route path={ROUTES.DASHBOARD_ALIAS} element={<Navigate to={ROUTES.HOME} replace />} />
           <Route path={ROUTES.CUSTOM_DASHBOARD} element={<CustomDashboard />} />
           {/* Test routes — rendered with Layout but not cached by KeepAlive */}
           <Route path={ROUTES.PERF_ALL_CARDS} element={<AllCardsPerfTest />} />

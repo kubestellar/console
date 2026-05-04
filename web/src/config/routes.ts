@@ -11,6 +11,7 @@ export const ROUTES = {
   AUTH_CALLBACK: '/auth/callback',
   // Main routes
   HOME: '/',
+  DASHBOARD_ALIAS: '/dashboard',
   CUSTOM_DASHBOARD: '/custom-dashboard/:id',
   
   // Settings & Management
