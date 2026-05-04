@@ -313,8 +313,9 @@ export default defineConfig(({ mode }) => ({
         'src/lib/demo/strimzi.ts',
         'src/lib/demo/volcano.ts',
         'src/lib/demo/wasmcloud.ts',
-        // Type-only file: pure TypeScript interfaces/types compile to no JS bytecode.
+        // Type-only files: pure TypeScript interfaces/types compile to no JS bytecode.
         'src/lib/cache/workerMessages.ts',
+        'src/hooks/mcp/types.ts',
       ],
     },
   },
