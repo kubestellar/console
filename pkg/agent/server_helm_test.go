@@ -51,6 +51,8 @@ func TestValidateHelmChartArg(t *testing.T) {
 		{"valid complex name", "my-repo/my_chart.v1", false},
 		{"contains invalid character", "bitnami/nginx&", true},
 		{"contains space", "bitnami nginx", true},
+		{"exactly max length", strings.Repeat("a", helmMaxChartLen), false},
+		{"exceeds by one", strings.Repeat("a", helmMaxChartLen+1), true},
 		{"exceeds max length", "bitnami/" + strings.Repeat("a", helmMaxChartLen), true},
 	}
 
@@ -77,6 +79,8 @@ func TestValidateHelmChartVersion(t *testing.T) {
 		{"starts with dash", "-1.2.3", true},
 		{"contains space", "1.2.3 alpha", true},
 		{"contains invalid character", "1.2.3&alpha", true},
+		{"bare label latest", "latest", false},
+		{"bare label with colon", "v1:bad", true},
 	}
 
 	for _, tt := range tests {

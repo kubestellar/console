@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os/exec"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -142,13 +143,48 @@ func TestGitopsParseDiffOutput(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:      "two resources modified",
+			namespace: "default",
+			output: `diff -u -N /tmp/1/deployment.yaml /tmp/2/deployment.yaml
+--- /tmp/1/deployment.yaml
++++ /tmp/2/deployment.yaml
+@@ -1,5 +1,5 @@
+ kind: Deployment
+ metadata:
+   name: app-a
+-  replicas: 1
++  replicas: 3
+diff -u -N /tmp/1/service.yaml /tmp/2/service.yaml
+--- /tmp/1/service.yaml
++++ /tmp/2/service.yaml
+@@ -1,3 +1,3 @@
+ kind: Service
+ metadata:
+   name: svc-b
+-  port: 80
++  port: 8080`,
+			want: []agentDriftedResource{
+				{Kind: "Deployment", Name: "app-a", Namespace: "default", ClusterValue: "replicas: 1", GitValue: "replicas: 3"},
+				{Kind: "Service", Name: "svc-b", Namespace: "default", ClusterValue: "port: 80", GitValue: "port: 8080"},
+			},
+		},
 	}
+
+	sortResources := func(rs []agentDriftedResource) {
+		sort.Slice(rs, func(i, j int) bool {
+			return rs[i].Kind+"/"+rs[i].Name < rs[j].Kind+"/"+rs[j].Name
+		})
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := gitopsParseDiffOutput(tt.output, tt.namespace)
 			if len(got) == 0 && len(tt.want) == 0 {
 				return
 			}
+			sortResources(got)
+			sortResources(tt.want)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("gitopsParseDiffOutput() = %+v, want %+v", got, tt.want)
 			}
@@ -166,6 +202,10 @@ func TestGitopsParseApplyOutput(t *testing.T) {
 		{"created", "deployment.apps/test created\nservice/test unchanged", []string{"deployment.apps/test created", "service/test unchanged"}},
 		{"configured", "deployment.apps/test configured", []string{"deployment.apps/test configured"}},
 		{"ignored", "some random log", []string{}},
+		// gitopsParseApplyOutput uses strings.Contains, so any non-empty line
+		// containing a keyword is accepted regardless of format. This case
+		// documents that behaviour explicitly.
+		{"false positive guard", "Warning: resource created some-other-event log", []string{"Warning: resource created some-other-event log"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
