@@ -77,6 +77,24 @@ describe('loadOperatorsCacheFromStorage', () => {
     expect(loadOperatorsCacheFromStorage('operators:all')).toBeNull()
   })
 
+  it('returns null when all elements are non-objects', () => {
+    localStorage.setItem(OPERATORS_CACHE_KEY, JSON.stringify({ data: ['string', 42, null, true], timestamp: 1000, key: 'operators:all' }))
+    expect(loadOperatorsCacheFromStorage('operators:all')).toBeNull()
+  })
+
+  it('filters out non-object elements and returns only valid ones', () => {
+    const validOp = { name: 'prometheus-operator', namespace: 'monitoring', version: 'v0.65.1', status: 'Succeeded', cluster: 'prod' }
+    localStorage.setItem(OPERATORS_CACHE_KEY, JSON.stringify({
+      data: [validOp, 'invalid-string', 42, null, ['array-element']],
+      timestamp: 1000,
+      key: 'operators:all',
+    }))
+    const result = loadOperatorsCacheFromStorage('operators:all')
+    expect(result).not.toBeNull()
+    expect(result!.data).toHaveLength(1)
+    expect(result!.data[0]).toEqual(validOp)
+  })
+
   it('uses Date.now() fallback when timestamp missing', () => {
     const before = Date.now()
     localStorage.setItem(OPERATORS_CACHE_KEY, JSON.stringify({ data: [{ name: 'op' }], key: 'operators:all' }))
@@ -140,6 +158,24 @@ describe('loadSubscriptionsCacheFromStorage', () => {
   it('returns null when data is not an array', () => {
     localStorage.setItem(SUBSCRIPTIONS_CACHE_KEY, JSON.stringify({ data: 'corrupted', timestamp: 1000, key: 'subs:all' }))
     expect(loadSubscriptionsCacheFromStorage('subs:all')).toBeNull()
+  })
+
+  it('returns null when all elements are non-objects', () => {
+    localStorage.setItem(SUBSCRIPTIONS_CACHE_KEY, JSON.stringify({ data: ['string', 99, null, false], timestamp: 1000, key: 'subs:all' }))
+    expect(loadSubscriptionsCacheFromStorage('subs:all')).toBeNull()
+  })
+
+  it('filters out non-object elements and returns only valid ones', () => {
+    const validSub = { name: 'sub1', namespace: 'ns1', channel: 'stable', source: 'catalog', installPlanApproval: 'Automatic', currentCSV: 'op.v1', cluster: 'c1' }
+    localStorage.setItem(SUBSCRIPTIONS_CACHE_KEY, JSON.stringify({
+      data: [validSub, 'bad-string', 42, null, [1, 2, 3]],
+      timestamp: 2000,
+      key: 'subs:all',
+    }))
+    const result = loadSubscriptionsCacheFromStorage('subs:all')
+    expect(result).not.toBeNull()
+    expect(result!.data).toHaveLength(1)
+    expect(result!.data[0]).toEqual(validSub)
   })
 })
 

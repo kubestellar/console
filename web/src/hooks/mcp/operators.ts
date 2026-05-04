@@ -35,7 +35,11 @@ function loadOperatorsCacheFromStorage(cacheKey: string): { data: Operator[], ti
     if (stored) {
       const parsed = JSON.parse(stored)
       if (parsed.key === cacheKey && Array.isArray(parsed.data) && parsed.data.length > 0) {
-        return { data: parsed.data, timestamp: parsed.timestamp || Date.now() }
+        const validData = parsed.data.filter(
+          (item: unknown) => item !== null && typeof item === 'object' && !Array.isArray(item)
+        ) as Operator[]
+        if (validData.length === 0) return null
+        return { data: validData, timestamp: parsed.timestamp || Date.now() }
       }
     }
   } catch { /* ignore */ }
@@ -57,7 +61,11 @@ function loadSubscriptionsCacheFromStorage(cacheKey: string): { data: OperatorSu
     if (stored) {
       const parsed = JSON.parse(stored)
       if (parsed.key === cacheKey && Array.isArray(parsed.data) && parsed.data.length > 0) {
-        return { data: parsed.data, timestamp: parsed.timestamp || Date.now() }
+        const validData = parsed.data.filter(
+          (item: unknown) => item !== null && typeof item === 'object' && !Array.isArray(item)
+        ) as OperatorSubscription[]
+        if (validData.length === 0) return null
+        return { data: validData, timestamp: parsed.timestamp || Date.now() }
       }
     }
   } catch { /* ignore */ }
