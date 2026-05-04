@@ -32,7 +32,7 @@ ARG COMMIT_HASH=unknown
 # package.json / package-lock.json are unchanged, even if other source files
 # differ. This is especially valuable for QEMU arm64 builds.
 COPY web/package.json web/package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy the rest of the frontend source.
 # WARNING (local builds): if web/dist/ is present in your working tree from a
