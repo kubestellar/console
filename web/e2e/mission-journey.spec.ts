@@ -707,8 +707,11 @@ test.describe('Mission Control Journey Tests', () => {
 
         // Wait for error to propagate — spinner should disappear once error is handled
         const loadingSpinner = page.locator('[class*="animate-spin"], [class*="loading"]')
-        await expect(loadingSpinner.first()).not.toBeVisible({ timeout: STREAM_SETTLE_MS + MISSION_ROUNDTRIP_MS })
-          .catch(() => {}) // Spinner may never have appeared
+        try {
+          await expect(loadingSpinner.first()).not.toBeVisible({ timeout: STREAM_SETTLE_MS + MISSION_ROUNDTRIP_MS })
+        } catch {
+          // Spinner may never have appeared
+        }
       }
 
       await page.screenshot({ path: 'test-results/journey-3-runbook-failure.png', fullPage: true })
@@ -793,7 +796,7 @@ test.describe('Mission Control Journey Tests', () => {
             return text.includes('error') || text.includes('Error') || text.includes('failed') || text.includes('Failed')
           },
           { timeout: STREAM_SETTLE_MS }
-        ).toBeTruthy().catch(() => {}) // Soft — error display varies
+        ).toBeTruthy()
 
         // Should see error indication, not spinner
         const bodyText = await page.locator('body').textContent() || ''
@@ -835,7 +838,7 @@ test.describe('Mission Control Journey Tests', () => {
         // Wait for partial stream content (error arrives after some chunks)
         await expect(
           page.getByText('Starting analysis').or(page.getByText('Found 5 deployments'))
-        ).toBeVisible({ timeout: STREAM_SETTLE_MS }).catch(() => {})
+        ).toBeVisible({ timeout: STREAM_SETTLE_MS })
       }
 
       // The partial content should still be visible
@@ -966,14 +969,18 @@ test.describe('Mission Control Journey Tests', () => {
         // Wait for streaming to start — look for stream content appearing
         await expect(
           page.getByText('Starting long analysis').or(page.getByText('Step 1'))
-        ).toBeVisible({ timeout: RENDER_SETTLE_MS }).catch(() => {})
+        ).toBeVisible({ timeout: RENDER_SETTLE_MS })
 
         // Click cancel/stop button
         const stopBtn = page.locator('button[title*="Stop"], button[title*="Cancel"], button[aria-label*="Stop"], button[aria-label*="Cancel"]').first()
         if (await stopBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
           await stopBtn.click()
           // Wait for cancel acknowledgement to propagate
-          await expect(stopBtn).not.toBeVisible({ timeout: MISSION_ROUNDTRIP_MS }).catch(() => {})
+          try {
+            await expect(stopBtn).not.toBeVisible({ timeout: MISSION_ROUNDTRIP_MS })
+          } catch {
+            // Cancellation may already have succeeded
+          }
         }
       }
 
@@ -1020,7 +1027,11 @@ test.describe('Mission Control Journey Tests', () => {
         if (await stopBtn.isVisible({ timeout: PERSIST_SETTLE_MS + 3000 }).catch(() => false)) {
           await stopBtn.click()
           // Wait for cancel to propagate
-          await expect(stopBtn).not.toBeVisible({ timeout: STREAM_SETTLE_MS }).catch(() => {})
+          try {
+            await expect(stopBtn).not.toBeVisible({ timeout: STREAM_SETTLE_MS })
+          } catch {
+            // Cancellation may already have succeeded
+          }
         }
       }
 
@@ -1153,7 +1164,7 @@ test.describe('Mission Control Journey Tests', () => {
         await expect.poll(
           () => getMissionCount(page),
           { timeout: MISSION_ROUNDTRIP_MS }
-        ).toBeGreaterThanOrEqual(1).catch(() => {})
+        ).toBeGreaterThanOrEqual(1)
       }
 
       // Check if missions exist in localStorage before refresh
@@ -1252,7 +1263,7 @@ test.describe('Mission Control Journey Tests', () => {
         await expect.poll(
           () => getMissionCount(page),
           { timeout: STREAM_SETTLE_MS }
-        ).toBeGreaterThanOrEqual(1).catch(() => {})
+        ).toBeGreaterThanOrEqual(1)
 
         await chatInput.fill('Mission Beta')
         await chatInput.press('Enter')
@@ -1260,7 +1271,7 @@ test.describe('Mission Control Journey Tests', () => {
         await expect.poll(
           () => getMissionCount(page),
           { timeout: STREAM_SETTLE_MS }
-        ).toBeGreaterThanOrEqual(2).catch(() => {})
+        ).toBeGreaterThanOrEqual(2)
       }
 
       const preMissionCount = await getMissionCount(page)
@@ -1341,7 +1352,7 @@ test.describe('Mission Control Journey Tests', () => {
         // Wait for response to arrive after processing long prompt
         await expect(
           page.locator('[class*="message"], [class*="chat"], [class*="stream"]').last()
-        ).toBeVisible({ timeout: STREAM_SETTLE_MS }).catch(() => {})
+        ).toBeVisible({ timeout: STREAM_SETTLE_MS })
 
         // Page should not crash
         const bodyContent = await page.locator('body').textContent({ timeout: 3000 }) || ''
@@ -1398,7 +1409,7 @@ test.describe('Mission Control Journey Tests', () => {
         // Wait for response to arrive (proves input was processed)
         await expect(
           page.locator('[class*="message"], [class*="chat"], [class*="stream"]').last()
-        ).toBeVisible({ timeout: STREAM_SETTLE_MS }).catch(() => {})
+        ).toBeVisible({ timeout: STREAM_SETTLE_MS })
 
         // Page should handle safely — no alert dialogs
         expect(dialogs.length).toBe(0)
@@ -1435,7 +1446,7 @@ test.describe('Mission Control Journey Tests', () => {
         await expect.poll(
           () => sessionsReceived.size,
           { timeout: EVENT_SETTLE_MS }
-        ).toBeGreaterThanOrEqual(1).catch(() => {})
+        ).toBeGreaterThanOrEqual(1)
 
         await chatInput.fill('Second concurrent mission')
         await chatInput.press('Enter')
