@@ -233,8 +233,8 @@ func (b *Bridge) startOpsClient(ctx context.Context) error {
 	}
 
 	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.opsClient = client
-	b.mu.Unlock()
 
 	return nil
 }
@@ -255,8 +255,8 @@ func (b *Bridge) startGadgetClient(ctx context.Context) error {
 	}
 
 	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.gadgetClient = client
-	b.mu.Unlock()
 
 	return nil
 }
@@ -277,8 +277,8 @@ func (b *Bridge) startDeployClient(ctx context.Context) error {
 	}
 
 	b.mu.Lock()
+	defer b.mu.Unlock()
 	b.deployClient = client
-	b.mu.Unlock()
 
 	return nil
 }
