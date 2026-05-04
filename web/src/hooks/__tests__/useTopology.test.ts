@@ -17,6 +17,7 @@ vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
 }))
 
+import { DEFAULT_REFRESH_INTERVAL_MS } from '../../lib/constants'
 import { useTopology } from '../useTopology'
 
 // ---------------------------------------------------------------------------
@@ -252,7 +253,27 @@ describe('useTopology', () => {
   })
 
   // -----------------------------------------------------------------------
-  // 12. refetch triggers a new fetch and updates lastRefresh
+  // 12. Auto-refresh starts on first uncached render
+  // -----------------------------------------------------------------------
+  it('starts auto-refresh after the first uncached fetch completes', async () => {
+    vi.mocked(fetch).mockResolvedValue(makeOk())
+    renderHook(() => useTopology())
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(DEFAULT_REFRESH_INTERVAL_MS)
+    })
+
+    await waitFor(() => {
+      expect(fetch).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // 13. refetch triggers a new fetch and updates lastRefresh
   // -----------------------------------------------------------------------
   it('updates lastRefresh after calling refetch', async () => {
     vi.mocked(fetch).mockResolvedValue(makeOk())

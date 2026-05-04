@@ -13,7 +13,8 @@
  * - isDemoData flag for CardWrapper demo badge
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRef } from 'react'
+import { useCache } from '../lib/cache'
 import { STORAGE_KEY_TOKEN, DEFAULT_REFRESH_INTERVAL_MS as REFRESH_INTERVAL_MS } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import type {
@@ -32,9 +33,6 @@ import type {
 const CACHE_EXPIRY_MS = 300_000
 
 /** Auto-refresh interval — 2 minutes */
-
-/** Number of consecutive failures before marking as failed */
-const FAILURE_THRESHOLD = 3
 
 /** localStorage key for topology cache */
 const TOPOLOGY_CACHE_KEY = 'kc-topology-cache'
@@ -164,118 +162,67 @@ export interface UseTopologyResult {
   refetch: () => Promise<void>
 }
 
+interface TopologyData {
+  graph: TopologyGraph | null
+  clusters: TopologyClusterSummary[]
+  stats: TopologyResponse['stats'] | null
+  isDemoData: boolean
+}
+
+function normalizeTopologyData(data: TopologyResponse, isDemoData = false): TopologyData {
+  return {
+    graph: data?.graph || null,
+    clusters: data?.clusters || [],
+    stats: data?.stats || null,
+    isDemoData,
+  }
+}
+
+async function fetchTopology(): Promise<TopologyData> {
+  const res = await fetch('/api/topology', {
+    headers: authHeaders(),
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  })
+
+  if (res.status === STATUS_SERVICE_UNAVAILABLE) {
+    console.warn('[useTopology] Backend returned 503, using demo data')
+    return normalizeTopologyData(DEMO_RESPONSE, true)
+  }
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+  }
+
+  const data = (await res.json()) as TopologyResponse
+  saveToCache(TOPOLOGY_CACHE_KEY, data)
+  return normalizeTopologyData(data)
+}
+
 export function useTopology(): UseTopologyResult {
-  // Initialize from cache — snapshot ref value to avoid reading ref during render
-  const cachedData = useRef(loadFromCache<TopologyResponse>(TOPOLOGY_CACHE_KEY))
-  const cachedSnapshot = cachedData.current
-  const [graph, setGraph] = useState<TopologyGraph | null>(
-    cachedSnapshot?.data?.graph || null
-  )
-  const [clusters, setClusters] = useState<TopologyClusterSummary[]>(
-    cachedSnapshot?.data?.clusters || []
-  )
-  const [stats, setStats] = useState<TopologyResponse['stats'] | null>(
-    cachedSnapshot?.data?.stats || null
-  )
-  const [isLoading, setIsLoading] = useState(!cachedSnapshot)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [isDemoData, setIsDemoData] = useState(!cachedSnapshot)
-  const [lastRefresh, setLastRefresh] = useState<number | null>(
-    cachedSnapshot?.timestamp || null
-  )
-  const initialLoadDone = useRef(!!cachedSnapshot)
+  const cachedDataRef = useRef(loadFromCache<TopologyResponse>(TOPOLOGY_CACHE_KEY))
+  const cachedSnapshot = cachedDataRef.current
+  const cachedTopology = cachedSnapshot ? normalizeTopologyData(cachedSnapshot.data) : null
 
-  const refetch = useCallback(async (silent = false) => {
-    if (!silent) {
-      if (!initialLoadDone.current) {
-        setIsLoading(true)
-      }
-    }
+  const result = useCache<TopologyData | null>({
+    key: 'topology',
+    initialData: cachedTopology,
+    refreshInterval: REFRESH_INTERVAL_MS,
+    fetcher: fetchTopology,
+    persist: false,
+  })
 
-    try {
-      const res = await fetch('/api/topology', {
-        headers: authHeaders(),
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-
-      if (res.status === STATUS_SERVICE_UNAVAILABLE) {
-        // Backend has no k8s client — fall back to demo data
-        console.warn('[useTopology] Backend returned 503, using demo data')
-        setGraph(DEMO_RESPONSE.graph)
-        setClusters(DEMO_RESPONSE.clusters)
-        setStats(DEMO_RESPONSE.stats)
-        setIsDemoData(true)
-        setConsecutiveFailures(0)
-        setLastRefresh(Date.now())
-        initialLoadDone.current = true
-        return
-      }
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-      }
-
-      const data = (await res.json()) as TopologyResponse
-
-      // Guard against malformed responses
-      const responseGraph = data?.graph || null
-      const responseClusters = data?.clusters || []
-      const responseStats = data?.stats || null
-
-      setGraph(responseGraph)
-      setClusters(responseClusters)
-      setStats(responseStats)
-      setIsDemoData(false)
-      setConsecutiveFailures(0)
-      setLastRefresh(Date.now())
-      initialLoadDone.current = true
-
-      // Save to cache
-      saveToCache(TOPOLOGY_CACHE_KEY, data)
-    } catch (err: unknown) {
-      // Suppress 401 errors in demo mode — expected when no auth token
-      const isAuthError = err instanceof Error && (err.message.includes('401') || err.message.includes('Unauthorized'))
-      if (isAuthError) { console.debug('[useTopology] Skipped — no auth') } else { console.error('[useTopology] Fetch error:', err) }
-      setConsecutiveFailures(prev => prev + 1)
-
-      // If we have no data at all, fall back to demo
-      if (!initialLoadDone.current) {
-        setGraph(DEMO_RESPONSE.graph)
-        setClusters(DEMO_RESPONSE.clusters)
-        setStats(DEMO_RESPONSE.stats)
-        setIsDemoData(true)
-        initialLoadDone.current = true
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  // Initial load
-  useEffect(() => {
-    refetch()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Auto-refresh
-  useEffect(() => {
-    if (!initialLoadDone.current) return
-
-    const interval = setInterval(() => {
-      refetch(true)
-    }, REFRESH_INTERVAL_MS)
-
-    return () => clearInterval(interval)
-  }, [refetch])
+  const shouldShowDemoFallback = result.data === null && result.error !== null
+  const displayData = shouldShowDemoFallback ? normalizeTopologyData(DEMO_RESPONSE, true) : result.data
 
   return {
-    graph,
-    clusters,
-    stats,
-    isLoading,
-    isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
-    consecutiveFailures,
-    isDemoData,
-    lastRefresh,
-    refetch: () => refetch(false),
+    graph: displayData?.graph || null,
+    clusters: displayData?.clusters || [],
+    stats: displayData?.stats || null,
+    isLoading: result.data === null ? (shouldShowDemoFallback ? false : result.isLoading) : false,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    isDemoData: displayData?.isDemoData ?? false,
+    lastRefresh: result.lastRefresh ?? cachedSnapshot?.timestamp ?? null,
+    refetch: result.refetch,
   }
 }
