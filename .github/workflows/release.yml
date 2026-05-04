@@ -4,8 +4,8 @@ on:
   schedule:
     # Nightly at 5 AM UTC (midnight Eastern during EST, 1 AM during EDT)
     - cron: '0 5 * * *'
-    # Weekly on Sunday at 5 AM UTC
-    - cron: '0 5 * * 0'
+    # Weekly on Sunday at 8 AM UTC (3 AM Eastern) — offset from nightly to avoid dedup
+    - cron: '0 8 * * 0'
   workflow_dispatch:
     inputs:
       release_type:
@@ -55,7 +55,7 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             RELEASE_TYPE="${{ github.event.inputs.release_type }}"
-          elif [ "${{ github.event.schedule }}" = "0 5 * * 0" ]; then
+          elif [ "${{ github.event.schedule }}" = "0 8 * * 0" ]; then
             RELEASE_TYPE="weekly"
           else
             RELEASE_TYPE="nightly"
