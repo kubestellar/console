@@ -18,6 +18,19 @@ vi.mock('../../lib/constants/network', () => ({
   FETCH_DEFAULT_TIMEOUT_MS: 10_000,
 }))
 
+vi.mock('../../lib/demoMode', () => ({
+  isDemoMode: () => false,
+  isDemoModeForced: false,
+  subscribeDemoMode: () => () => {},
+  toggleDemoMode: vi.fn(),
+  setDemoMode: vi.fn(),
+  getDemoMode: () => false,
+}))
+
+vi.mock('../../hooks/useKeepAliveActive', () => ({
+  useKeepAliveActive: () => true,
+}))
+
 import { DEFAULT_REFRESH_INTERVAL_MS } from '../../lib/constants'
 import { useTopology } from '../useTopology'
 

@@ -171,7 +171,7 @@ describe('FeatureRequestModal Component', () => {
 
     await screen.findByText(/Re-authenticate with GitHub OAuth/i)
     expect(screen.getByRole('button', { name: /Re-authenticate with GitHub/i })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Open Issue on GitHub/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /feedback\.openGitHubIssue/i })).toHaveAttribute(
       'href',
       expect.stringContaining('https://github.com/kubestellar/console/issues/new'),
     )
