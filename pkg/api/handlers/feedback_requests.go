@@ -109,6 +109,9 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 		if errors.Is(err, errGitHubUnauthorized) {
 			return fiber.NewError(fiber.StatusUnauthorized, "FEEDBACK_GITHUB_TOKEN is invalid or expired. Refresh the PAT in your .env and restart the console.")
 		}
+		if errors.Is(err, errGitHubInsufficientPermissions) {
+			return fiber.NewError(fiber.StatusForbidden, "GitHub could not create the issue because the current token does not have permission to open issues in this repository. Re-authenticate with GitHub OAuth and try again, or open the issue directly on GitHub.")
+		}
 		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("Failed to create GitHub issue: %v", err))
 	}
 	request.GitHubIssueNumber = &issueNumber

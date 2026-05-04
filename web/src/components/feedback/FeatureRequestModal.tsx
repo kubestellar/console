@@ -442,6 +442,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
             onSuccess={handleSubmitSuccess}
             onShowSetupDialog={() => setShowSetupDialog(true)}
             onShowLoginPrompt={() => setShowLoginPrompt(true)}
+            onReauthenticate={handleLoginRedirect}
           />
         )}
       </div>

@@ -101,6 +101,68 @@ export function SuccessView({ success, screenshots, onViewUpdates }: SuccessView
   )
 }
 
+type SubmitErrorAction = 'reauthenticate' | 'setup' | null
+
+interface SubmitErrorDetails {
+  message: string
+  guidance: string
+  action: SubmitErrorAction
+}
+
+function splitDraftForIssue(description: string): { title: string; body: string } {
+  const trimmed = description.trim()
+  if (!trimmed) return { title: '', body: '' }
+
+  const lines = trimmed.split('\n')
+  const title = lines[0].trim().substring(0, MAX_TITLE_LENGTH)
+  const body = lines.length > 1 ? lines.slice(1).join('\n').trim() : ''
+  return { title, body }
+}
+
+function buildDirectIssueUrl(targetRepo: TargetRepo, description: string): string {
+  const repoName = targetRepo === 'docs' ? 'docs' : 'console'
+  const { title, body } = splitDraftForIssue(description)
+  const params = new URLSearchParams()
+  if (title) params.set('title', title)
+  if (body) params.set('body', body)
+  const query = params.toString()
+  return `https://github.com/kubestellar/${repoName}/issues/new${query ? `?${query}` : ''}`
+}
+
+function getSubmitErrorDetails(
+  error: string,
+  canPerformActions: boolean,
+  t: (key: string, fallback?: string) => string,
+): SubmitErrorDetails {
+  const normalized = error.toLowerCase()
+  const needsGitHubReauth =
+    normalized.includes('resource not accessible by personal access token') ||
+    normalized.includes('current token does not have permission to open issues in this repository') ||
+    (normalized.includes('github api returned 403') && normalized.includes('create github issue'))
+
+  if (needsGitHubReauth) {
+    return {
+      message: t(
+        'feedback.submitPermissionDenied',
+        'GitHub could not create the issue because the current token does not have permission to open issues in this repository. Re-authenticate with GitHub OAuth and try again.',
+      ),
+      guidance: canPerformActions
+        ? t(
+          'feedback.submitPermissionDeniedGuidance',
+          'Reconnect your GitHub account to refresh the OAuth session, or open the issue directly on GitHub if you need to file it right now.',
+        )
+        : t('feedback.submitFailedGuidance'),
+      action: canPerformActions ? 'reauthenticate' : 'setup',
+    }
+  }
+
+  return {
+    message: error,
+    guidance: t('feedback.submitFailedGuidance'),
+    action: !canPerformActions ? 'setup' : null,
+  }
+}
+
 // ── Submit Form ──
 
 interface SubmitFormProps {
@@ -127,6 +189,7 @@ interface SubmitFormProps {
   onSuccess: (result: SuccessState) => void
   onShowSetupDialog: () => void
   onShowLoginPrompt: () => void
+  onReauthenticate: () => void
 }
 
 export function SubmitForm({
@@ -153,10 +216,13 @@ export function SubmitForm({
   onSuccess,
   onShowSetupDialog,
   onShowLoginPrompt,
+  onReauthenticate,
 }: SubmitFormProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
   const { health: agentHealth, status: agentStatus, dataErrorCount: agentDataErrorCount, lastDataError: agentLastDataError } = useLocalAgent()
+  const directIssueUrl = buildDirectIssueUrl(targetRepo, description)
+  const errorDetails = error ? getSubmitErrorDetails(error, canPerformActions, t) : null
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
@@ -388,7 +454,7 @@ export function SubmitForm({
                     : t('feedback.setupOAuth')}
                 </Button>
                 <a
-                  href="https://github.com/kubestellar/console/issues/new"
+                  href={directIssueUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors"
@@ -713,16 +779,16 @@ export function SubmitForm({
         </div>
 
         {/* Error with actionable guidance */}
-        {error && (
+        {errorDetails && (
           <div className="space-y-2">
-            <p className="text-sm text-red-400">{error}</p>
+            <p className="text-sm text-red-400">{errorDetails.message}</p>
             <div className="p-3 bg-secondary/30 border border-border rounded-lg">
               <p className="text-xs text-muted-foreground mb-2">
-                {t('feedback.submitFailedGuidance')}
+                {errorDetails.guidance}
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <a
-                  href="https://github.com/kubestellar/console/issues/new"
+                  href={directIssueUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-1.5 text-xs rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors flex items-center gap-1.5"
@@ -730,8 +796,19 @@ export function SubmitForm({
                   <ExternalLink className="w-3 h-3" />
                   {t('feedback.openGitHubIssue')}
                 </a>
-                {!canPerformActions && (
+                {errorDetails.action === 'reauthenticate' && (
                   <button
+                    type="button"
+                    onClick={onReauthenticate}
+                    className="px-3 py-1.5 text-xs rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors flex items-center gap-1.5"
+                  >
+                    <Github className="w-3 h-3" />
+                    {t('feedback.reauthenticateGitHub', 'Re-authenticate with GitHub')}
+                  </button>
+                )}
+                {errorDetails.action === 'setup' && (
+                  <button
+                    type="button"
                     onClick={() => { setError(null); onShowSetupDialog() }}
                     className="px-3 py-1.5 text-xs rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors flex items-center gap-1.5"
                   >

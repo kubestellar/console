@@ -152,4 +152,28 @@ describe('FeatureRequestModal Component', () => {
     expect(screen.queryByText(/Unsaved changes/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Save Draft & Close/i)).not.toBeInTheDocument()
   })
+
+  it('shows re-authentication guidance and a direct GitHub fallback for 403 permission errors', async () => {
+    createRequestMock.mockRejectedValue(new Error(JSON.stringify({
+      error: 'GitHub could not create the issue because the current token does not have permission to open issues in this repository. Re-authenticate with GitHub OAuth and try again, or open the issue directly on GitHub.',
+    })))
+
+    render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
+
+    const textarea = await screen.findByRole('textbox')
+    fireEvent.change(textarea, {
+      target: {
+        value: 'Permission denied title\nSubmitting from the modal fails because the token cannot create issues in this repository.',
+      },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /^Submit/i }))
+
+    await screen.findByText(/Re-authenticate with GitHub OAuth/i)
+    expect(screen.getByRole('button', { name: /Re-authenticate with GitHub/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open Issue on GitHub/i })).toHaveAttribute(
+      'href',
+      expect.stringContaining('https://github.com/kubestellar/console/issues/new'),
+    )
+  })
 })

@@ -829,6 +829,9 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 		if resp.StatusCode == http.StatusUnauthorized {
 			return 0, "", fmt.Errorf("%w: %s", errGitHubUnauthorized, string(respBody))
 		}
+		if resp.StatusCode == http.StatusForbidden && isInsufficientIssuePermissionError(string(respBody)) {
+			return 0, "", fmt.Errorf("%w: %s", errGitHubInsufficientPermissions, string(respBody))
+		}
 		return 0, "", fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -995,6 +998,12 @@ func isLabelPermissionError(err error) bool {
 	}
 	msg := err.Error()
 	return strings.Contains(msg, "403") && strings.Contains(msg, "label")
+}
+
+func isInsufficientIssuePermissionError(respBody string) bool {
+	msg := strings.ToLower(respBody)
+	return strings.Contains(msg, "resource not accessible by personal access token") ||
+		(strings.Contains(msg, "insufficient") && strings.Contains(msg, "permission"))
 }
 
 // addPRComment adds a comment to a GitHub PR

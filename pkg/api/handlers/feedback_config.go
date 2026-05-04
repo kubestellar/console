@@ -50,6 +50,12 @@ const maxConcurrentGitHubOps = 5
 // for OAuth app setup issues (#6186).
 var errGitHubUnauthorized = errors.New("github: token invalid or expired")
 
+// errGitHubInsufficientPermissions is returned when GitHub accepts the token
+// but refuses issue creation because it lacks the repository permissions
+// needed to create issues (HTTP 403). Callers can surface a targeted
+// re-authenticate / open-on-GitHub message instead of the raw API payload.
+var errGitHubInsufficientPermissions = errors.New("github: insufficient issue permissions")
+
 // githubAPIBase is the default public GitHub API base URL.
 // Used as the fallback by resolveGitHubAPIBase() when GITHUB_URL is unset.
 const githubAPIBase = "https://api.github.com"
