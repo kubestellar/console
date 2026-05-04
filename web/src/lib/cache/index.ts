@@ -1035,7 +1035,7 @@ class CacheStore<T> {
 
   // Reset failure counters (used when manually refreshing a cluster)
   resetFailures(): void {
-    if (this.state.consecutiveFailures === 0) return
+    if (this.state.consecutiveFailures === 0 && !this.state.error) return
 
     this.saveMeta({
       consecutiveFailures: 0,
@@ -1043,7 +1043,8 @@ class CacheStore<T> {
 
     this.setState({
       consecutiveFailures: 0,
-      isFailed: false })
+      isFailed: false,
+      error: null })
   }
 }
 
