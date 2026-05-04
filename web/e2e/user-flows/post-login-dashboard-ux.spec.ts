@@ -44,11 +44,26 @@ async function assertRouteLoaded(page: Page, expectedPath: string) {
   expect(bodyText.trim().length).toBeGreaterThan(MIN_BODY_TEXT_LENGTH)
 }
 
+async function dismissAnyOpenModals(page: Page) {
+  // Some pages (e.g. /acmm) auto-open educational modals on first visit.
+  // These fixed-overlay modals intercept pointer events on the sidebar,
+  // blocking subsequent navigation clicks. Dismiss them before proceeding.
+  const modal = page.getByRole('dialog').first()
+  const modalVisible = await modal.isVisible().catch(() => false)
+  if (modalVisible) {
+    await page.keyboard.press('Escape')
+    await expect(modal).not.toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
+  }
+}
+
 async function clickSidebarRoute(page: Page, href: string) {
   // After navigating, sidebar sections may re-render / collapse. Wait for
   // the sidebar to stabilize before looking for the target link.
   const sidebar = page.getByTestId('sidebar')
   await expect(sidebar).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+
+  // Dismiss any auto-opened modals that could overlay the sidebar (#11829).
+  await dismissAnyOpenModals(page)
 
   const link = sidebar.locator(`a[href="${href}"]`).first()
   // The link may be inside a collapsed section — scroll it into view which
@@ -126,11 +141,8 @@ test.describe('Post-login initial dashboard UX sweep', () => {
     await page.keyboard.press('Escape')
     await expect(addCardDialog).not.toBeVisible({ timeout: DIALOG_TIMEOUT_MS })
 
-    // "Add more..." customizer should also open/close correctly.
-    const addMoreButton = page
-      .getByTestId('sidebar')
-      .getByRole('button', { name: /add more/i })
-      .first()
+    // "Add dashboard cards…" customizer should also open/close correctly.
+    const addMoreButton = page.getByTestId('sidebar-customize')
     await expect(addMoreButton).toBeVisible({ timeout: DASHBOARD_LOAD_TIMEOUT_MS })
     await addMoreButton.click()
 
