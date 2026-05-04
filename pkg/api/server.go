@@ -220,6 +220,9 @@ func NewServer(cfg Config) (*Server, error) {
 	// When it does, the server serves static files from web/dist/ regardless of
 	// dev mode — there is no Vite dev server to redirect to (#11813).
 	hasStaticFrontend := fileExists("./web/dist/index.html")
+	if cfg.DevMode && hasStaticFrontend {
+		slog.Info("[Server] pre-built frontend found — serving static files instead of redirecting to Vite dev server")
+	}
 
 	// Compute default frontend URL if not explicitly set
 	if cfg.FrontendURL == "" {
@@ -1284,8 +1287,10 @@ s.failureTracker = failureTracker
 	// /ws/exec route via LOCAL_AGENT_WS_URL. See pkg/agent/server_exec.go
 	// and web/src/hooks/useExecSession.ts for the replacement.
 
-	// Serve static files in production
-	if !s.config.DevMode {
+	// Serve static files when a pre-built frontend exists on disk (production
+	// mode *and* dev-mode curl-to-bash installs where web/dist is in the tarball).
+	// Only redirect to the Vite dev server when the built frontend is absent (#11813).
+	if !s.config.DevMode || fileExists("./web/dist/index.html") {
 		// Serve pre-compressed assets (.gz/.br) with Content-Length to avoid chunked encoding
 		s.app.Use(preCompressedStatic("./web/dist"))
 		s.app.Get("/*", func(c *fiber.Ctx) error {
