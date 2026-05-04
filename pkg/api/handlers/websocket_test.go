@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -65,6 +66,8 @@ func TestHubRegistration(t *testing.T) {
 		send:   make(chan []byte, 256),
 	}
 
+	// Simulate what HandleConnection does: pre-increment activeConns before registering
+	atomic.AddInt64(&h.activeConns, 1)
 	h.register <- client
 	time.Sleep(50 * time.Millisecond)
 
@@ -137,6 +140,8 @@ func TestHubSlowClientDisconnect(t *testing.T) {
 		send:    make(chan []byte, 1), // small buffer
 	}
 
+	// Simulate what HandleConnection does: pre-increment activeConns before registering
+	atomic.AddInt64(&h.activeConns, 1)
 	h.register <- client
 	time.Sleep(50 * time.Millisecond)
 
