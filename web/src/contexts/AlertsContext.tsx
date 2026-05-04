@@ -1622,6 +1622,25 @@ Please provide:
             break
         }
       }
+
+      // ── Prune stale alerts for clusters no longer in kubeconfig (#11927) ──
+      // If a cluster disappears entirely from the cluster list, its firing
+      // alerts can never be auto-resolved by the per-cluster evaluators above.
+      // Resolve them here so the alerts page doesn't show phantom entries.
+      const currentClusterNames = new Set(
+        (clustersRef.current || []).map(c => c.name)
+      )
+      const currentAlerts = alertsRef.current || []
+      for (const alert of currentAlerts) {
+        if (
+          alert.status === 'firing' &&
+          alert.cluster &&
+          currentClusterNames.size > 0 &&
+          !currentClusterNames.has(alert.cluster)
+        ) {
+          queueAutoResolve(alert.ruleId, alert.cluster)
+        }
+      }
     } finally {
       // Clear accumulator before flushing so any createAlert calls from
       // outside this cycle fall back to unbatched path
