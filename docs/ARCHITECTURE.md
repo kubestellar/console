@@ -155,15 +155,28 @@ User asks a question in AI chat
 │   └── models/        # Shared data models
 ├── web/
 │   ├── src/
-│   │   ├── cards/     # Dashboard card components
-│   │   ├── components/# Shared React components
-│   │   ├── hooks/     # React hooks (useCached*, useCardLoadingState)
-│   │   ├── pages/     # Route pages (dashboard, missions, marketplace)
-│   │   └── config/    # Frontend configuration
-│   └── e2e/           # Playwright end-to-end tests
+│   │   ├── components/
+│   │   │   ├── cards/       # Dashboard card components
+│   │   │   └── dashboard/   # Dashboard layout and modals
+│   │   ├── config/
+│   │   │   └── cards/       # Card configs (category, columns, filters)
+│   │   ├── contexts/        # React context providers
+│   │   ├── hooks/           # React hooks (useCached*, useCardLoadingState)
+│   │   ├── lib/             # Shared utilities and unified card framework
+│   │   ├── locales/         # i18n translation files
+│   │   ├── pages/           # Route pages (dashboard, missions, marketplace)
+│   │   └── types/           # TypeScript type definitions
+│   └── e2e/                 # Playwright end-to-end tests
 ├── deploy/
 │   ├── helm/          # Helm chart
 │   └── deploy.sh      # Kubernetes deployment script
 ├── scripts/           # CI/CD and testing scripts
 └── docs/              # Project documentation
 ```
+
+## Card Configuration
+
+Each dashboard card is registered in `CARD_CONFIGS` (`web/src/config/cards/index.ts`).
+Card configs specify a `category` field (e.g., `'security'`, `'insights'`, `'ci-cd'`,
+`'network'`) used for browse/filter in the Add Card dialog. The card component itself
+lives in `web/src/components/cards/` and is registered in `cardRegistry.ts`.

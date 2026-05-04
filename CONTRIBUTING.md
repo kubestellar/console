@@ -43,11 +43,33 @@ cd web && npx playwright test --grep "your-test"
 
 Prerequisites: Go 1.25+, Node.js 20+
 
+**macOS / Linux:**
+
 ```bash
 git clone https://github.com/kubestellar/console.git
 cd console
 ./start-dev.sh
 ```
+
+**Windows (WSL2):**
+
+Native Windows is not supported. Install [WSL2 with Ubuntu](https://learn.microsoft.com/windows/wsl/install) and run everything from the WSL shell:
+
+```powershell
+# In PowerShell — one-time setup
+wsl --install -d Ubuntu
+```
+
+Then from inside the Ubuntu/WSL shell:
+
+```bash
+sudo apt-get update && sudo apt-get install -y curl git
+git clone https://github.com/kubestellar/console.git
+cd console
+./start-dev.sh
+```
+
+See the [Windows (WSL2) section in README.md](README.md#windows-wsl2) for additional details on `curl` gotchas and building from source.
 
 Starts backend on `:8080` and frontend on `:5174` with a mock `dev-user` account. See [CLAUDE.md](CLAUDE.md) for development conventions and card development rules.
 
