@@ -4,8 +4,6 @@ import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useFlatcarStatus } from './useFlatcarStatus'
 import { compareFlatcarVersions } from './versionUtils'
-import { createCardSyncFormatter } from '../../../lib/formatters'
-
 
 
 export function FlatcarStatus() {
