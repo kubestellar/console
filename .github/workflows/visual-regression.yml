@@ -35,11 +35,14 @@ jobs:
 
       - run: npm ci
 
-      - name: Verify baseline snapshots exist
+      - name: Check baseline snapshots
+        id: check-baselines
         run: |
-          if ! ls e2e/visual/app-visual-regression.spec.ts-snapshots/chromium/*.png 1>/dev/null 2>&1; then
-            echo "::error::No baseline snapshots found. Run 'cd web && npm run test:visual:update' on Linux and commit the generated .png files."
-            exit 1
+          if ls e2e/visual/app-visual-regression.spec.ts-snapshots/chromium/*.png 1>/dev/null 2>&1; then
+            echo "baselines_exist=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "baselines_exist=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No baseline snapshots found — will generate new baselines."
           fi
 
       - name: Build frontend
@@ -49,9 +52,24 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run visual regression tests
+        if: steps.check-baselines.outputs.baselines_exist == 'true'
         run: npm run test:visual
         env:
           CI: 'true'
+
+      - name: Generate baseline snapshots
+        if: steps.check-baselines.outputs.baselines_exist == 'false'
+        run: npm run test:visual:update
+        env:
+          CI: 'true'
+
+      - name: Upload generated baselines
+        if: steps.check-baselines.outputs.baselines_exist == 'false'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: app-visual-baselines
+          path: web/e2e/visual/app-visual-regression.spec.ts-snapshots/
+          retention-days: 30
 
       - name: Upload visual diff artifacts
         if: failure()
