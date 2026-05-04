@@ -38,6 +38,11 @@ const asyncScreenshotUploadTimeout = 5 * time.Minute
 // becomes slow or unresponsive, causing a goroutine leak.
 const backgroundGitHubOpTimeout = 30 * time.Second
 
+// maxConcurrentGitHubOps caps fire-and-forget GitHub operations
+// (issue close, comment, PR comment) to prevent goroutine explosion
+// under concurrent request load (#11827).
+const maxConcurrentGitHubOps = 5
+
 // errGitHubUnauthorized is returned when GitHub rejects the FEEDBACK_GITHUB_TOKEN
 // as invalid or expired (HTTP 401). Callers should branch on this with errors.Is
 // and surface a user-visible "refresh your PAT" message instead of the generic

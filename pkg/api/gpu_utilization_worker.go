@@ -44,6 +44,14 @@ const (
 	perReservationTimeoutDivisor = 2
 )
 
+const (
+	// maxConcurrentReservationCollectors caps the number of goroutines
+	// that collectAllReservations spawns in parallel. Without a limit,
+	// N active reservations spawn N goroutines each making K8s API calls,
+	// risking OOM under heavy reservation load (#11827).
+	maxConcurrentReservationCollectors = 10
+)
+
 // GPUUtilizationWorker periodically collects GPU utilization data for active reservations
 type GPUUtilizationWorker struct {
 	store              store.Store
@@ -179,10 +187,13 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 	dcgmByCluster := w.scrapeDCGMPerCluster(reservations, perReservationTimeout)
 
 	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrentReservationCollectors)
 	for i := range reservations {
 		wg.Add(1)
+		sem <- struct{}{} // acquire
 		go func(r *models.GPUReservation) {
 			defer wg.Done()
+			defer func() { <-sem }() // release
 			ctx, cancel := context.WithTimeout(w.baseCtx, perReservationTimeout)
 			defer cancel()
 			w.collectForReservation(ctx, r, dcgmByCluster[r.Cluster])

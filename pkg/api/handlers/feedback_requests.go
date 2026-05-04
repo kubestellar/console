@@ -990,19 +990,9 @@ func (h *FeedbackHandler) CloseRequest(c *fiber.Ctx) error {
 
 	// Close the GitHub issue if we have one
 	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in async GitHub issue close",
-						slog.String("operation", "closeGitHubIssue"),
-						slog.String("panic", fmt.Sprintf("%v", r)),
-						slog.String("stack", string(debug.Stack())))
-				}
-			}()
-			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
-			defer cancel()
+		runAsyncGitHubOp("closeGitHubIssue", func(ctx context.Context) {
 			h.closeGitHubIssue(ctx, *request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo))
-		}()
+		})
 	}
 
 	// Refresh and return the updated request
@@ -1030,19 +1020,9 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 
 		// Add a comment to the GitHub issue requesting an update
 		if h.getEffectiveToken() != "" {
-			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						slog.Error("panic in async GitHub issue comment",
-							slog.String("operation", "addIssueComment"),
-							slog.String("panic", fmt.Sprintf("%v", r)),
-							slog.String("stack", string(debug.Stack())))
-					}
-				}()
-				ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
-				defer cancel()
+			runAsyncGitHubOp("addIssueComment", func(ctx context.Context) {
 				h.addIssueComment(ctx, issueNum, "The user has requested an update on this issue.", h.repoName)
-			}()
+			})
 		}
 
 		// Return a minimal response for GitHub items
@@ -1076,19 +1056,9 @@ func (h *FeedbackHandler) RequestUpdate(c *fiber.Ctx) error {
 
 	// Add a comment to the GitHub issue requesting an update
 	if h.getEffectiveToken() != "" && request.GitHubIssueNumber != nil {
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in async GitHub issue comment",
-						slog.String("operation", "addIssueComment"),
-						slog.String("panic", fmt.Sprintf("%v", r)),
-						slog.String("stack", string(debug.Stack())))
-				}
-			}()
-			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
-			defer cancel()
+		runAsyncGitHubOp("addIssueComment", func(ctx context.Context) {
 			h.addIssueComment(ctx, *request.GitHubIssueNumber, "The user has requested an update on this issue.", h.resolveRepoName(request.TargetRepo))
-		}()
+		})
 	}
 
 	return c.JSON(request)
@@ -1283,19 +1253,9 @@ func (h *FeedbackHandler) SubmitFeedback(c *fiber.Ctx) error {
 
 	// Add comment to GitHub PR if configured
 	if h.getEffectiveToken() != "" && request.PRNumber != nil {
-		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in async GitHub PR comment",
-						slog.String("operation", "addPRComment"),
-						slog.String("panic", fmt.Sprintf("%v", r)),
-						slog.String("stack", string(debug.Stack())))
-				}
-			}()
-			ctx, cancel := context.WithTimeout(context.Background(), backgroundGitHubOpTimeout)
-			defer cancel()
+		runAsyncGitHubOp("addPRComment", func(ctx context.Context) {
 			h.addPRComment(ctx, request, feedback)
-		}()
+		})
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(feedback)
