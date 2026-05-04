@@ -262,6 +262,7 @@ export function KVCacheMonitor() {
   const [aggregationMode, setAggregationMode] = useState<AggregationMode>('aggregated')
   const [panelPosition, setPanelPosition] = useState<{ x: number; y: number } | null>(null)
   const gaugeRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const generateStatsRef = useRef<() => KVCacheStats[]>(() => [])
 
   // Detect if card is in expanded/fullscreen mode
   const { isExpanded } = useCardExpanded()
@@ -449,6 +450,8 @@ export function KVCacheMonitor() {
     return stackStats
   }
 
+  generateStatsRef.current = generateStats
+
   // Handle gauge click - calculate portal position
   const handleGaugeClick = (podName: string, element: HTMLDivElement | null) => {
     if (selectedPod === podName) {
@@ -493,7 +496,7 @@ export function KVCacheMonitor() {
   // Update stats periodically
   useEffect(() => {
     const updateStats = () => {
-      const newStats = generateStats()
+      const newStats = generateStatsRef.current()
       setStats(newStats)
 
       // Track average utilization history (guard against empty stats to avoid NaN)
@@ -520,7 +523,6 @@ export function KVCacheMonitor() {
     updateStats()
     const interval = setInterval(updateStats, KV_CACHE_UPDATE_INTERVAL_MS)
     return () => clearInterval(interval)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Calculate aggregate metrics
