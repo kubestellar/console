@@ -745,14 +745,14 @@ export const CardWrapper = memo(function CardWrapper({
                   if (isVisuallySpinning || effectiveIsLoading || !effectiveLastUpdated) {
                     return null
                   }
-                  const title = effectiveIsFailed
-                    ? `${effectiveLastUpdated.toLocaleString()} (stale — refresh failing)`
-                    : effectiveLastUpdated.toLocaleString()
+                  const tooltipLabel = effectiveIsFailed
+                    ? t('cards:cardWrapper.lastRefreshedStale', { time: effectiveLastUpdated.toLocaleString() })
+                    : t('cards:cardWrapper.lastRefreshed', { time: effectiveLastUpdated.toLocaleString() })
                   const className = effectiveIsFailed
-                    ? 'text-2xs text-orange-400'
-                    : 'text-2xs text-muted-foreground'
+                    ? 'text-2xs text-orange-400 cursor-help'
+                    : 'text-2xs text-muted-foreground cursor-help'
                   return (
-                    <span className={className} title={title}>
+                    <span className={className} title={tooltipLabel}>
                       {formatTimeAgo(effectiveLastUpdated, { compact: true, invalidLabel: 'Unknown' })}
                     </span>
                   )

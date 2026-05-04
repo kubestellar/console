@@ -4,7 +4,6 @@ import {
   CheckCircle,
   Database,
   Package,
-  RefreshCw,
   Users,
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
@@ -17,7 +16,6 @@ import { createCardSyncFormatter } from '../../../lib/formatters'
 
 export function ArtifactHubStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = createCardSyncFormatter(t, 'artifactHub')
   const { data, error, isRefreshing, showSkeleton, showEmptyState } = useArtifactHubStatus()
 
   if (showSkeleton) {
@@ -65,11 +63,6 @@ export function ArtifactHubStatus() {
             <AlertTriangle className="w-4 h-4" />
           )}
           {isHealthy ? t('artifactHub.healthy') : t('artifactHub.degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>
 

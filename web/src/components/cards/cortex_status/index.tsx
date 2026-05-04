@@ -22,7 +22,6 @@ import {
   CheckCircle,
   Database,
   Layers,
-  RefreshCw,
   Server,
   Users,
 } from 'lucide-react'
@@ -36,7 +35,6 @@ import type {
   CortexComponentName,
   CortexComponentPod,
 } from '../../../lib/demo/cortex'
-import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -236,12 +234,9 @@ export function CortexStatus() {
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           <span>
             {t('cortexStatus.version', 'version')}:{' '}
             <span className="text-foreground font-mono">{data.version}</span>
-            {' · '}
-            {formatTimeAgo(data.lastCheckTime)}
           </span>
         </div>
       </div>

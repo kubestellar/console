@@ -21,7 +21,6 @@ import {
   FileCode,
   Gauge,
   Layers,
-  RefreshCw,
   Shield,
   Zap,
 } from 'lucide-react'
@@ -212,11 +211,6 @@ export function OpenfgaStatus() {
           {isHealthy
             ? t('openfgaStatus.healthy', 'Healthy')
             : t('openfgaStatus.degraded', 'Degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

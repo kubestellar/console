@@ -13,13 +13,12 @@
  */
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle, Box, CheckCircle, PauseCircle, RefreshCw, Server, StopCircle } from 'lucide-react'
+import { AlertTriangle, Box, CheckCircle, PauseCircle, Server, StopCircle } from 'lucide-react'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedContainerd } from '../../../hooks/useCachedContainerd'
 import { useCardLoadingState } from '../CardDataContext'
 import type { ContainerdContainer, ContainerdContainerState } from '../../../lib/demo/containerd'
-import { formatTimeAgo } from '../../../lib/formatters'
 import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
 
 // ---------------------------------------------------------------------------
@@ -142,11 +141,6 @@ export function ContainerdStatus() {
           {isHealthy
             ? t('containerdStatus.healthy', 'Healthy')
             : t('containerdStatus.degraded', 'Degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

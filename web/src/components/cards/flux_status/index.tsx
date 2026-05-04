@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, GitBranch, Layers, Package, RefreshCw } from 'lucide-react'
+import { AlertTriangle, CheckCircle, GitBranch, Layers, Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
@@ -70,7 +70,6 @@ function ResourceSection({
 
 export function FluxStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = createCardSyncFormatter(t, 'fluxStatus')
   const { data, isRefreshing, error, showSkeleton, showEmptyState } = useFluxStatus()
 
   const totalNotReady = data.sources.notReady + data.kustomizations.notReady + data.helmReleases.notReady
@@ -120,11 +119,6 @@ export function FluxStatus() {
         >
           {isHealthy ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
           {isHealthy ? t('fluxStatus.healthy') : t('fluxStatus.degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>
 

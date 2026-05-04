@@ -18,7 +18,6 @@ import {
   CheckCircle,
   Cpu,
   Network,
-  RefreshCw,
   Shield,
   Share2,
 } from 'lucide-react'
@@ -28,7 +27,6 @@ import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedCni } from '../../../hooks/useCachedCni'
 import { useReportCardDataState } from '../CardDataContext'
 import type { CniNodeState, CniNodeStatus } from '../../../lib/demo/cni'
-import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -158,11 +156,6 @@ export function CniStatus() {
           {isHealthy
             ? t('cniStatus.healthy', 'Healthy')
             : t('cniStatus.degraded', 'Degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

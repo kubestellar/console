@@ -59,7 +59,6 @@ function vmStateColorClass(state: string): string {
 
 export function KubevirtStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = createCardSyncFormatter(t, 'kubevirtStatus')
   const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useKubevirtStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
@@ -173,11 +172,6 @@ export function KubevirtStatus() {
             <AlertTriangle className="w-4 h-4" />
           )}
           {isHealthy ? t('kubevirtStatus.healthy') : t('kubevirtStatus.degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatRelativeTime(data.lastCheckTime)}</span>
         </div>
       </div>
 

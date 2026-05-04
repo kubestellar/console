@@ -1,4 +1,4 @@
-import { CheckCircle, AlertTriangle, RefreshCw, Database, Radio, Activity } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Database, Radio, Activity } from 'lucide-react'
 import { Skeleton } from '../../ui/Skeleton'
 import { useCachedThanosStatus } from '../../../hooks/useCachedThanosStatus'
 import { useTranslation } from 'react-i18next'
@@ -106,11 +106,6 @@ export function ThanosStatus() {
                         <AlertTriangle className="w-4 h-4" />
                     )}
                     {isHealthy ? t('thanosStatus.healthy') : t('thanosStatus.degraded')}
-                </div>
-
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <RefreshCw className="w-3 h-3" />
-                    <span>{formatRelativeTime(data.lastCheckTime)}</span>
                 </div>
             </div>
 

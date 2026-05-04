@@ -15,7 +15,6 @@ import {
   CheckCircle,
   Clock,
   Network,
-  RefreshCw,
   Server,
   Zap,
 } from 'lucide-react'
@@ -25,7 +24,6 @@ import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCachedGrpc } from '../../../hooks/useCachedGrpc'
 import { useReportCardDataState } from '../CardDataContext'
 import type { GrpcService } from './demoData'
-import { formatTimeAgo } from '../../../lib/formatters'
 import { formatThroughput } from '../../../lib/cards/formatters'
 
 // ---------------------------------------------------------------------------
@@ -173,11 +171,6 @@ export function GrpcStatus() {
           {isHealthy
             ? t('grpcStatus.healthy', 'Healthy')
             : t('grpcStatus.degraded', 'Degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

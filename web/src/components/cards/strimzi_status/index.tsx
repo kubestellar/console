@@ -22,7 +22,6 @@ import {
   Database,
   Layers,
   MessageSquare,
-  RefreshCw,
   Server,
   Users,
 } from 'lucide-react'
@@ -36,7 +35,6 @@ import type {
   StrimziConsumerGroup,
   StrimziKafkaCluster,
 } from './demoData'
-import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -242,11 +240,6 @@ export function StrimziStatus() {
           {isHealthy
             ? t('strimziStatus.healthy', 'Healthy')
             : t('strimziStatus.degraded', 'Degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 

@@ -1,14 +1,11 @@
-import { CheckCircle, AlertTriangle, RefreshCw, Box, Image, Layers, Server } from 'lucide-react'
+import { CheckCircle, AlertTriangle, Box, Image, Layers, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { useCrioStatus } from './useCrioStatus'
 import { MetricTile } from '../../../lib/cards/CardComponents'
-import { createCardSyncFormatter } from '../../../lib/formatters'
-
 export function CrioStatus() {
   const { t } = useTranslation('cards')
-  const formatRelativeTime = createCardSyncFormatter(t, 'crio')
-  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useCrioStatus()
+  const { data, error, showSkeleton, showEmptyState } = useCrioStatus()
 
   if (showSkeleton) {
     return (
@@ -86,12 +83,7 @@ export function CrioStatus() {
           {isHealthy ? t('crio.healthy') : t('crio.degraded')}
         </div>
 
-        {!isDemoData && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>{formatRelativeTime(data.lastCheckTime)}</span>
-          </div>
-        )}
+
       </div>
 
       {/* Top metric tiles - Container Runtime */}

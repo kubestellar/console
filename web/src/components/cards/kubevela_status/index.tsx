@@ -38,7 +38,6 @@ import type {
   KubeVelaAppStatus,
   WorkflowStepPhase,
 } from './demoData'
-import { formatTimeAgo } from '../../../lib/formatters'
 import { MINUTES_PER_HOUR } from '../../../lib/constants/time'
 
 // ---------------------------------------------------------------------------
@@ -341,13 +340,6 @@ export function KubeVelaStatus() {
           {isHealthy
             ? t('kubeVela.healthy', 'Healthy')
             : t('kubeVela.degraded', 'Degraded')}
-        </div>
-
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw
-            className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`}
-          />
-          <span>{formatTimeAgo(data.lastCheckTime)}</span>
         </div>
       </div>
 
