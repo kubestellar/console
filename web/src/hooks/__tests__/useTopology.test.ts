@@ -32,6 +32,7 @@ vi.mock('../../hooks/useKeepAliveActive', () => ({
 }))
 
 import { DEFAULT_REFRESH_INTERVAL_MS } from '../../lib/constants'
+import { clearAllCaches } from '../../lib/cache'
 import { useTopology } from '../useTopology'
 
 // ---------------------------------------------------------------------------
@@ -81,8 +82,10 @@ function makeOk(body: unknown = makeTopologyResponse()) {
 }
 
 describe('useTopology', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
+    await clearAllCaches()
+    sessionStorage.clear()
     localStorage.clear()
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(makeOk())
   })
