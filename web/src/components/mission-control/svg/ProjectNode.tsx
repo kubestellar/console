@@ -82,6 +82,8 @@ export interface ProjectHoverInfo {
   cx: number
   cy: number
   radius: number
+  /** Kubara chart reference — used to generate install steps when no KB entry exists (#11881) */
+  kubaraChart?: { repoPath: string; valuesUrl?: string }
 }
 
 /** Categories relevant to each overlay mode */
@@ -156,7 +158,7 @@ export function ProjectNode({
   const hoverInfo = {
     name, displayName, category, status, isRequired, installed,
     reason, dependencies, kbPath, maturity, priority,
-    cx, cy, radius,
+    cx, cy, radius, kubaraChart,
   }
 
   return (

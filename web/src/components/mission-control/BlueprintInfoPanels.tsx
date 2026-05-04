@@ -19,7 +19,8 @@ import type { ProjectHoverInfo } from './svg/ProjectNode'
 import type { ClusterHoverInfo } from './svg/ClusterZone'
 import type { DependencyEdge, DeployPhase, PayloadProject } from './types'
 import { fetchMissionContent } from '../missions/browser/missionCache'
-import type { MissionExport } from '../../lib/missions/types'
+import { fetchKubaraValues } from '../../lib/kubara'
+import type { MissionExport, MissionStep } from '../../lib/missions/types'
 
 // ---------------------------------------------------------------------------
 // Status display maps (shared with the main component)
@@ -72,6 +73,62 @@ export function GaugeRow({ label, value, max, unit }: {
 }
 
 // ---------------------------------------------------------------------------
+// Kubara chart → install steps generator (#11881)
+// ---------------------------------------------------------------------------
+
+/** Default Kubara Helm repo URL used in generated install steps */
+const KUBARA_HELM_REPO_URL = 'https://kubara-io.github.io/kubara'
+/** Repo alias used in helm add repo step */
+const KUBARA_HELM_REPO_ALIAS = 'kubara'
+
+/**
+ * Generate install steps from a kubara chart's values.yaml content.
+ * Produces a practical helm install sequence: add repo, install chart, verify.
+ */
+function generateKubaraInstallSteps(chartName: string, valuesYaml: string | null): MissionStep[] {
+  const steps: MissionStep[] = [
+    {
+      title: 'Add Kubara Helm repository',
+      description: `Register the Kubara Helm chart repository for ${chartName}.`,
+      command: `helm repo add ${KUBARA_HELM_REPO_ALIAS} ${KUBARA_HELM_REPO_URL} && helm repo update`,
+    },
+    {
+      title: `Install ${chartName}`,
+      description: `Install the ${chartName} chart from Kubara with production-tested defaults.`,
+      command: `helm install ${chartName} ${KUBARA_HELM_REPO_ALIAS}/${chartName} --namespace ${chartName} --create-namespace`,
+    },
+  ]
+
+  // If values.yaml was fetched, extract key configurable params for a values step
+  if (valuesYaml) {
+    const hasResources = /resources:/.test(valuesYaml)
+    const hasReplicaCount = /replicaCount:/.test(valuesYaml)
+    const hasMonitoring = /monitoring:/.test(valuesYaml)
+
+    const customizations: string[] = []
+    if (hasReplicaCount) customizations.push('replicaCount')
+    if (hasResources) customizations.push('resources.requests.cpu', 'resources.requests.memory')
+    if (hasMonitoring) customizations.push('monitoring.enabled')
+
+    if (customizations.length > 0) {
+      steps.push({
+        title: 'Customize values (optional)',
+        description: `Key configurable parameters: ${customizations.join(', ')}. Override with --set or a custom values file.`,
+        command: `helm install ${chartName} ${KUBARA_HELM_REPO_ALIAS}/${chartName} --namespace ${chartName} --create-namespace -f custom-values.yaml`,
+      })
+    }
+  }
+
+  steps.push({
+    title: 'Verify installation',
+    description: `Check that ${chartName} pods are running successfully.`,
+    command: `kubectl get pods -n ${chartName} --watch`,
+  })
+
+  return steps
+}
+
+// ---------------------------------------------------------------------------
 // ProjectInfoPanel
 // ---------------------------------------------------------------------------
 
@@ -105,7 +162,31 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
     }
 
     const tryNext = (idx: number) => {
-      if (idx >= candidates.length) { setLoadingSteps(false); return }
+      if (idx >= candidates.length) {
+        // #11881 — No KB entry found; generate install steps from kubara chart data
+        if (info.kubaraChart) {
+          const chartName = info.kubaraChart.repoPath.split('/').pop() || slug
+          fetchKubaraValues(chartName, info.kubaraChart.valuesUrl)
+            .then((valuesYaml) => {
+              const generatedSteps = generateKubaraInstallSteps(chartName, valuesYaml)
+              const generatedMission: MissionExport = {
+                version: 'kc-mission-v1',
+                title: info.displayName,
+                description: info.reason ?? '',
+                type: 'custom',
+                tags: [],
+                steps: generatedSteps,
+                metadata: { source: `kubara/${chartName}` },
+              }
+              setMission(generatedMission)
+              setLoadingSteps(false)
+            })
+            .catch(() => { setLoadingSteps(false) })
+        } else {
+          setLoadingSteps(false)
+        }
+        return
+      }
       const indexMission: MissionExport = {
         version: 'kc-mission-v1',
         title: info.displayName,
@@ -123,7 +204,7 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
         .catch(() => tryNext(idx + 1))
     }
     tryNext(0)
-  }, [slug, info.kbPath, info.displayName, info.reason])
+  }, [slug, info.kbPath, info.displayName, info.reason, info.kubaraChart])
 
   return (
     <div className="space-y-5">
