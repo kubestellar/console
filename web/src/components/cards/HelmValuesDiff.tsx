@@ -479,9 +479,9 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
                 {values}
               </pre>
             ) : (
-              valueEntries.map((entry, idx) => (
+              valueEntries.map((entry) => (
                 <div
-                  key={idx}
+                  key={entry.path}
                   className="p-2 rounded bg-blue-500/10 border-l-2 border-blue-500"
                 >
                   <div className="flex items-center gap-2">
