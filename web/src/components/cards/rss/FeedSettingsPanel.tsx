@@ -3,63 +3,65 @@ import { X, Star, Pencil } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { Button } from '../../ui/Button'
 import { useTranslation } from 'react-i18next'
+import { RSS_DEMO_FEEDS } from './demoData'
+import { RSS_UI_STRINGS } from './strings'
 import type { FeedConfig } from './types'
 import { PRESET_FEEDS } from './constants'
 
 interface FeedSettingsPanelProps {
-  feeds: FeedConfig[]
-  activeFeedIndex: number
-  newFeedUrl: string
-  newFeedName: string
-  showAggregateCreator: boolean
-  editingAggregateIndex: number | null
-  aggregateName: string
-  selectedSourceUrls: string[]
-  aggregateIncludeTerms: string
-  aggregateExcludeTerms: string
-  onClose: () => void
-  onNewFeedUrlChange: (value: string) => void
-  onNewFeedNameChange: (value: string) => void
-  onAddCustomFeed: () => void
-  onAddPresetFeed: (feed: FeedConfig) => void
-  onSelectFeed: (index: number) => void
-  onEditAggregate: (index: number) => void
-  onRemoveFeed: (index: number) => void
-  onToggleAggregateCreator: () => void
-  onAggregateNameChange: (value: string) => void
-  onSelectedSourceUrlsChange: (urls: string[]) => void
-  onAggregateIncludeChange: (value: string) => void
-  onAggregateExcludeChange: (value: string) => void
-  onSaveAggregate: () => void
-  onCancelAggregateEdit: () => void
+  feeds?: FeedConfig[]
+  activeFeedIndex?: number
+  newFeedUrl?: string
+  newFeedName?: string
+  showAggregateCreator?: boolean
+  editingAggregateIndex?: number | null
+  aggregateName?: string
+  selectedSourceUrls?: string[]
+  aggregateIncludeTerms?: string
+  aggregateExcludeTerms?: string
+  onClose?: () => void
+  onNewFeedUrlChange?: (value: string) => void
+  onNewFeedNameChange?: (value: string) => void
+  onAddCustomFeed?: () => void
+  onAddPresetFeed?: (feed: FeedConfig) => void
+  onSelectFeed?: (index: number) => void
+  onEditAggregate?: (index: number) => void
+  onRemoveFeed?: (index: number) => void
+  onToggleAggregateCreator?: () => void
+  onAggregateNameChange?: (value: string) => void
+  onSelectedSourceUrlsChange?: (urls: string[]) => void
+  onAggregateIncludeChange?: (value: string) => void
+  onAggregateExcludeChange?: (value: string) => void
+  onSaveAggregate?: () => void
+  onCancelAggregateEdit?: () => void
 }
 
 export const FeedSettingsPanel = memo(function FeedSettingsPanel({
-  feeds,
-  activeFeedIndex,
-  newFeedUrl,
-  newFeedName,
-  showAggregateCreator,
-  editingAggregateIndex,
-  aggregateName,
-  selectedSourceUrls,
-  aggregateIncludeTerms,
-  aggregateExcludeTerms,
-  onClose,
-  onNewFeedUrlChange,
-  onNewFeedNameChange,
-  onAddCustomFeed,
-  onAddPresetFeed,
-  onSelectFeed,
-  onEditAggregate,
-  onRemoveFeed,
-  onToggleAggregateCreator,
-  onAggregateNameChange,
-  onSelectedSourceUrlsChange,
-  onAggregateIncludeChange,
-  onAggregateExcludeChange,
-  onSaveAggregate,
-  onCancelAggregateEdit,
+  feeds = RSS_DEMO_FEEDS,
+  activeFeedIndex = 0,
+  newFeedUrl = '',
+  newFeedName = '',
+  showAggregateCreator = false,
+  editingAggregateIndex = null,
+  aggregateName = '',
+  selectedSourceUrls = [],
+  aggregateIncludeTerms = '',
+  aggregateExcludeTerms = '',
+  onClose = () => {},
+  onNewFeedUrlChange = () => {},
+  onNewFeedNameChange = () => {},
+  onAddCustomFeed = () => {},
+  onAddPresetFeed = () => {},
+  onSelectFeed = () => {},
+  onEditAggregate = () => {},
+  onRemoveFeed = () => {},
+  onToggleAggregateCreator = () => {},
+  onAggregateNameChange = () => {},
+  onSelectedSourceUrlsChange = () => {},
+  onAggregateIncludeChange = () => {},
+  onAggregateExcludeChange = () => {},
+  onSaveAggregate = () => {},
+  onCancelAggregateEdit = () => {},
 }: FeedSettingsPanelProps) {
   const { t } = useTranslation(['cards', 'common'])
   const nonAggregateFeeds = feeds.filter(f => !f.isAggregate)
@@ -82,7 +84,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
           type="text"
           value={newFeedUrl}
           onChange={(e) => onNewFeedUrlChange(e.target.value)}
-          placeholder="Feed URL (e.g., r/kubernetes or hnrss.org/frontpage)"
+          placeholder={RSS_UI_STRINGS.feedUrlPlaceholder}
           className="w-full px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary"
         />
         <div className="flex gap-2">
@@ -90,7 +92,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
             type="text"
             value={newFeedName}
             onChange={(e) => onNewFeedNameChange(e.target.value)}
-            placeholder="Name (optional)"
+            placeholder={RSS_UI_STRINGS.feedNamePlaceholder}
             className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-primary"
           />
           <button
@@ -102,7 +104,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
           </button>
         </div>
         <p className="text-2xs text-muted-foreground">
-          Examples: r/kubernetes, r/devops, hnrss.org/frontpage, techcrunch.com/feed
+          {RSS_UI_STRINGS.feedExamples}
         </p>
       </div>
 
@@ -129,7 +131,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
               >
                 <span>{feed.icon || '📰'}</span>
                 <span className={idx === activeFeedIndex ? 'text-primary font-medium' : ''}>{feed.name}</span>
-                {feed.isAggregate && <span className="text-[9px] text-purple-400">(agg)</span>}
+                {feed.isAggregate && <span className="text-[9px] text-purple-400">{RSS_UI_STRINGS.aggregateBadge}</span>}
               </button>
               <div className="flex items-center">
                 {feed.isAggregate && (
@@ -139,7 +141,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
                       onEditAggregate(idx)
                     }}
                     className="p-1 text-muted-foreground hover:text-purple-400"
-                    title="Edit aggregate"
+                    title={RSS_UI_STRINGS.editAggregateTitle}
                   >
                     <Pencil className="w-3 h-3" />
                   </button>
@@ -148,7 +150,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
                   <button
                     onClick={() => onRemoveFeed(idx)}
                     className="p-1 text-muted-foreground hover:text-red-400"
-                    title="Remove from favorites"
+                    title={RSS_UI_STRINGS.removeFavoriteTitle}
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -234,7 +236,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
               type="text"
               value={aggregateName}
               onChange={(e) => onAggregateNameChange(e.target.value)}
-              placeholder="Aggregate name (e.g., My Tech News)"
+              placeholder={RSS_UI_STRINGS.aggregateNamePlaceholder}
               className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500 mb-2"
             />
 
@@ -293,7 +295,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
                   type="text"
                   value={aggregateIncludeTerms}
                   onChange={(e) => onAggregateIncludeChange(e.target.value)}
-                  placeholder="kubernetes, AI, cloud..."
+                  placeholder={RSS_UI_STRINGS.aggregateIncludePlaceholder}
                   className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                 />
               </div>
@@ -303,7 +305,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
                   type="text"
                   value={aggregateExcludeTerms}
                   onChange={(e) => onAggregateExcludeChange(e.target.value)}
-                  placeholder="spam, off-topic..."
+                  placeholder={RSS_UI_STRINGS.aggregateExcludePlaceholder}
                   className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500"
                 />
               </div>
@@ -315,7 +317,7 @@ export const FeedSettingsPanel = memo(function FeedSettingsPanel({
                 disabled={!aggregateName.trim() || selectedSourceUrls.length === 0}
                 className="flex-1 px-3 py-1.5 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {editingAggregateIndex !== null ? t('common:common.update') : t('common:common.create')} Aggregate ({selectedSourceUrls.length} sources)
+                {editingAggregateIndex !== null ? t('common:common.update') : t('common:common.create')} {RSS_UI_STRINGS.aggregateLabel} ({selectedSourceUrls.length} {RSS_UI_STRINGS.sourcesLabel})
               </button>
               {editingAggregateIndex !== null && (
                 <Button

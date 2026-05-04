@@ -2,35 +2,37 @@ import { memo } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '../../ui/Button'
 import { useTranslation } from 'react-i18next'
+import { RSS_DEMO_ACTIVE_FEED } from './demoData'
+import { RSS_UI_STRINGS } from './strings'
 import type { FeedConfig } from './types'
 
 interface FeedFilterEditorProps {
-  activeFeed: FeedConfig | undefined
-  tempIncludeTerms: string
-  tempExcludeTerms: string
-  onIncludeChange: (value: string) => void
-  onExcludeChange: (value: string) => void
-  onSave: () => void
-  onClear: () => void
-  onClose: () => void
+  activeFeed?: FeedConfig
+  tempIncludeTerms?: string
+  tempExcludeTerms?: string
+  onIncludeChange?: (value: string) => void
+  onExcludeChange?: (value: string) => void
+  onSave?: () => void
+  onClear?: () => void
+  onClose?: () => void
 }
 
 export const FeedFilterEditor = memo(function FeedFilterEditor({
-  activeFeed,
-  tempIncludeTerms,
-  tempExcludeTerms,
-  onIncludeChange,
-  onExcludeChange,
-  onSave,
-  onClear,
-  onClose,
+  activeFeed = RSS_DEMO_ACTIVE_FEED,
+  tempIncludeTerms = '',
+  tempExcludeTerms = '',
+  onIncludeChange = () => {},
+  onExcludeChange = () => {},
+  onSave = () => {},
+  onClear = () => {},
+  onClose = () => {},
 }: FeedFilterEditorProps) {
   const { t } = useTranslation(['cards', 'common'])
 
   return (
     <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/20 rounded-lg shrink-0 max-h-36 overflow-y-auto">
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-2">
-        <span className="text-xs font-medium text-purple-300">Filter: {activeFeed?.name}</span>
+        <span className="text-xs font-medium text-purple-300">{RSS_UI_STRINGS.filterPrefix} {activeFeed.name}</span>
         <button
           onClick={onClose}
           className="p-1 rounded hover:bg-secondary text-muted-foreground"
@@ -45,7 +47,7 @@ export const FeedFilterEditor = memo(function FeedFilterEditor({
             type="text"
             value={tempIncludeTerms}
             onChange={(e) => onIncludeChange(e.target.value)}
-            placeholder="kubernetes, docker, cloud..."
+            placeholder={RSS_UI_STRINGS.includeTermsPlaceholder}
             className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500"
           />
         </div>
@@ -55,7 +57,7 @@ export const FeedFilterEditor = memo(function FeedFilterEditor({
             type="text"
             value={tempExcludeTerms}
             onChange={(e) => onExcludeChange(e.target.value)}
-            placeholder="spam, politics, off-topic..."
+            placeholder={RSS_UI_STRINGS.excludeTermsPlaceholder}
             className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-hidden focus:ring-1 focus:ring-purple-500"
           />
         </div>
@@ -66,7 +68,7 @@ export const FeedFilterEditor = memo(function FeedFilterEditor({
           >
             {t('cards:rssFeed.applyFilter')}
           </button>
-          {activeFeed?.filter && (
+          {activeFeed.filter && (
             <Button
               variant="secondary"
               size="sm"

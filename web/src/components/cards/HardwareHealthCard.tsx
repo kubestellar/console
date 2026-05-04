@@ -13,6 +13,7 @@ import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeD
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
+import { CARD_UI_STRINGS } from './strings'
 
 // Sort field options — separated by view so only applicable fields are shown
 type SortField = 'severity' | 'nodeName' | 'cluster' | 'deviceType' | 'totalDevices'
@@ -657,7 +658,7 @@ export function HardwareHealthCard() {
       <CardSearchInput
         value={search}
         onChange={setSearch}
-        placeholder="Search devices..."
+        placeholder={CARD_UI_STRINGS.hardwareHealth.searchDevicesPlaceholder}
         className="mb-3"
       />
 
@@ -763,7 +764,7 @@ export function HardwareHealthCard() {
                           unsnoozeAlert(alert.id)
                         }}
                         className="flex items-center gap-1 px-1.5 py-0.5 rounded text-yellow-400 bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors"
-                        title="Click to unsnooze"
+                        title={CARD_UI_STRINGS.hardwareHealth.clickToUnsnooze}
                         aria-label={t('cards:hardwareHealth.unsnoozeAlertAria')}
                       >
                         <BellOff className="w-3 h-3" />
@@ -779,7 +780,7 @@ export function HardwareHealthCard() {
                             setSnoozeMenuOpen(snoozeMenuOpen === alert.id ? null : alert.id)
                           }}
                           className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                          title="Snooze alert"
+                          title={CARD_UI_STRINGS.hardwareHealth.snoozeAlert}
                           aria-label={t('cards:hardwareHealth.snoozeAlertAria')}
                         >
                           <BellOff className="w-3 h-3" />
@@ -810,7 +811,7 @@ export function HardwareHealthCard() {
                         clearAlert(alert.id)
                       }}
                       className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-                      title="Clear alert (after power cycle)"
+                      title={CARD_UI_STRINGS.hardwareHealth.clearAlertAfterPowerCycle}
                       aria-label={t('cards:hardwareHealth.clearAlertAria')}
                     >
                       <XCircle className="w-3 h-3" />
@@ -828,8 +829,8 @@ export function HardwareHealthCard() {
               <div className="flex items-center justify-center h-full text-sm text-muted-foreground py-8">
                 <CheckCircle className="w-4 h-4 mr-2 text-green-400" />
                 {search || localClusterFilter.length > 0
-                  ? 'No matching alerts'
-                  : 'All hardware devices healthy'}
+                  ? CARD_UI_STRINGS.hardwareHealth.noMatchingAlerts
+                  : CARD_UI_STRINGS.hardwareHealth.allHardwareDevicesHealthy}
               </div>
             )}
           </>
@@ -891,24 +892,24 @@ export function HardwareHealthCard() {
                         )}
                         {/* Status indicators */}
                         {node.devices.sriovCapable && (
-                          <StatusBadge color="blue" size="xs">SR-IOV</StatusBadge>
+                          <StatusBadge color="blue" size="xs">{CARD_UI_STRINGS.hardwareHealth.badgeLabels.sriov}</StatusBadge>
                         )}
                         {node.devices.rdmaAvailable && (
-                          <StatusBadge color="purple" size="xs">RDMA</StatusBadge>
+                          <StatusBadge color="purple" size="xs">{CARD_UI_STRINGS.hardwareHealth.badgeLabels.rdma}</StatusBadge>
                         )}
                         {node.devices.mellanoxPresent && (
-                          <StatusBadge color="orange" size="xs">Mellanox</StatusBadge>
+                          <StatusBadge color="orange" size="xs">{CARD_UI_STRINGS.hardwareHealth.badgeLabels.mellanox}</StatusBadge>
                         )}
                         {node.devices.mofedReady && (
-                          <StatusBadge color="green" size="xs">MOFED</StatusBadge>
+                          <StatusBadge color="green" size="xs">{CARD_UI_STRINGS.hardwareHealth.badgeLabels.mofed}</StatusBadge>
                         )}
                         {node.devices.gpuDriverReady && (
-                          <StatusBadge color="green" size="xs">GPU Driver</StatusBadge>
+                          <StatusBadge color="green" size="xs">{CARD_UI_STRINGS.hardwareHealth.badgeLabels.gpuDriver}</StatusBadge>
                         )}
                         {getTotalDevices(node.devices) === 0 && (
-                          <span className="text-2xs text-muted-foreground italic" title={t('hardwareHealth.noDevicesExplanation')}>
-                            {t('hardwareHealth.noDevicesDetected')}
-                            <span className="block text-muted-foreground/60 mt-0.5">{t('hardwareHealth.noDevicesExplanation')}</span>
+                          <span className="text-2xs text-muted-foreground italic" title={t('cards:hardwareHealth.noDevicesExplanation')}>
+                            {t('cards:hardwareHealth.noDevicesDetected')}
+                            <span className="block text-muted-foreground/60 mt-0.5">{t('cards:hardwareHealth.noDevicesExplanation')}</span>
                           </span>
                         )}
                       </div>
@@ -924,9 +925,9 @@ export function HardwareHealthCard() {
               <div className="flex flex-col items-center justify-center h-full text-sm text-muted-foreground py-8">
                 <Server className="w-6 h-6 mb-2 text-muted-foreground/50" />
                 {search || localClusterFilter.length > 0
-                  ? 'No matching nodes'
-                  : 'No nodes tracked yet'}
-                <span className="text-xs mt-1">Waiting for device scan...</span>
+                  ? CARD_UI_STRINGS.hardwareHealth.noMatchingNodes
+                  : CARD_UI_STRINGS.hardwareHealth.noNodesTrackedYet}
+                <span className="text-xs mt-1">{CARD_UI_STRINGS.hardwareHealth.waitingForDeviceScan}</span>
               </div>
             )}
           </>

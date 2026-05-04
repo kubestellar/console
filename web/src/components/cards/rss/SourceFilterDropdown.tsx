@@ -2,6 +2,8 @@ import { memo, useRef, useEffect } from 'react'
 import { Rss, ChevronDown } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { RSS_DEMO_SOURCE_INFO } from './demoData'
+import { RSS_UI_STRINGS } from './strings'
 
 interface SourceInfo {
   url: string
@@ -10,21 +12,21 @@ interface SourceInfo {
 }
 
 interface SourceFilterDropdownProps {
-  availableSources: SourceInfo[]
-  sourceFilter: string[]
-  showSourceFilter: boolean
-  onToggle: () => void
-  onSetFilter: (filter: string[]) => void
-  onClose: () => void
+  availableSources?: SourceInfo[]
+  sourceFilter?: string[]
+  showSourceFilter?: boolean
+  onToggle?: () => void
+  onSetFilter?: (filter: string[]) => void
+  onClose?: () => void
 }
 
 export const SourceFilterDropdown = memo(function SourceFilterDropdown({
-  availableSources,
-  sourceFilter,
-  showSourceFilter,
-  onToggle,
-  onSetFilter,
-  onClose,
+  availableSources = RSS_DEMO_SOURCE_INFO,
+  sourceFilter = [],
+  showSourceFilter = false,
+  onToggle = () => {},
+  onSetFilter = () => {},
+  onClose = () => {},
 }: SourceFilterDropdownProps) {
   const { t } = useTranslation(['cards', 'common'])
   const sourceFilterRef = useRef<HTMLDivElement>(null)
@@ -52,7 +54,7 @@ export const SourceFilterDropdown = memo(function SourceFilterDropdown({
             ? 'bg-blue-500/20 border-blue-500/30 text-blue-400'
             : 'bg-secondary/50 border-border text-muted-foreground hover:text-foreground'
         )}
-        title="Filter by source feed"
+        title={RSS_UI_STRINGS.sourceFilterTitle}
       >
         <Rss className="w-3 h-3" />
         {sourceFilter.length > 0 ? `${sourceFilter.length}/${availableSources.length}` : t('cards:rssFeed.sources')}

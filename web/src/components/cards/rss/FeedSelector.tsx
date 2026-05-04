@@ -2,26 +2,28 @@ import { memo } from 'react'
 import { ChevronDown, Plus, Filter } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
+import { RSS_DEMO_FEEDS, RSS_DEMO_ITEMS } from './demoData'
+import { RSS_UI_STRINGS } from './strings'
 import type { FeedConfig } from './types'
 
 interface FeedSelectorProps {
-  feeds: FeedConfig[]
-  activeFeedIndex: number
-  showFeedSelector: boolean
-  totalItems: number
-  onToggleSelector: () => void
-  onSelectFeed: (index: number) => void
-  onOpenSettings: () => void
+  feeds?: FeedConfig[]
+  activeFeedIndex?: number
+  showFeedSelector?: boolean
+  totalItems?: number
+  onToggleSelector?: () => void
+  onSelectFeed?: (index: number) => void
+  onOpenSettings?: () => void
 }
 
 export const FeedSelector = memo(function FeedSelector({
-  feeds,
-  activeFeedIndex,
-  showFeedSelector,
-  totalItems,
-  onToggleSelector,
-  onSelectFeed,
-  onOpenSettings,
+  feeds = RSS_DEMO_FEEDS,
+  activeFeedIndex = 0,
+  showFeedSelector = false,
+  totalItems = RSS_DEMO_ITEMS.length,
+  onToggleSelector = () => {},
+  onSelectFeed = () => {},
+  onOpenSettings = () => {},
 }: FeedSelectorProps) {
   const { t } = useTranslation(['cards', 'common'])
   const activeFeed = feeds[activeFeedIndex] || feeds[0]
@@ -35,7 +37,7 @@ export const FeedSelector = memo(function FeedSelector({
           className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
         >
           <span>{activeFeed?.icon || '📰'}</span>
-          <span className="truncate max-w-[150px]">{activeFeed?.name || 'Select Feed'}</span>
+          <span className="truncate max-w-[150px]">{activeFeed?.name || RSS_UI_STRINGS.selectFeed}</span>
           <ChevronDown className={cn('w-4 h-4 transition-transform', showFeedSelector && 'rotate-180')} />
         </button>
 
@@ -80,15 +82,15 @@ export const FeedSelector = memo(function FeedSelector({
 })
 
 interface FeedPillsProps {
-  feeds: FeedConfig[]
-  activeFeedIndex: number
-  onSelectFeed: (index: number) => void
+  feeds?: FeedConfig[]
+  activeFeedIndex?: number
+  onSelectFeed?: (index: number) => void
 }
 
 export const FeedPills = memo(function FeedPills({
-  feeds,
-  activeFeedIndex,
-  onSelectFeed,
+  feeds = RSS_DEMO_FEEDS,
+  activeFeedIndex = 0,
+  onSelectFeed = () => {},
 }: FeedPillsProps) {
   if (feeds.length <= 1) return null
 

@@ -18,13 +18,14 @@ import {
 import { formatTimeAgo } from '../../../lib/formatters'
 import { useTranslation } from 'react-i18next'
 import { TOAST_DISMISS_MS } from '../../../lib/constants/network'
-import { MS_PER_HOUR } from '../../../lib/constants/time'
 import { hostnameEndsWith } from '../../../lib/utils/urlHostname'
 import { FeedSelector, FeedPills } from './FeedSelector'
 import { FeedFilterEditor } from './FeedFilterEditor'
 import { FeedSettingsPanel } from './FeedSettingsPanel'
 import { FeedItemsList } from './FeedItemsList'
 import { SourceFilterDropdown } from './SourceFilterDropdown'
+import { RSS_DEMO_FEEDS, getDemoRSSItems } from './demoData'
+import { RSS_UI_STRINGS } from './strings'
 
 const MIN_VALID_FEED_LENGTH = 50
 
@@ -38,39 +39,23 @@ const SORT_COMPARATORS: Record<SortByOption, (a: FeedItem, b: FeedItem) => numbe
   },
   title: commonComparators.string<FeedItem>('title') }
 
-// Demo RSS feed items (avoids external API calls in demo mode)
-function getDemoRSSItems(): FeedItem[] {
-  const now = new Date()
-  const hoursAgo = (h: number) => new Date(now.getTime() - h * MS_PER_HOUR)
-  return [
-    { id: 'demo-1', title: 'Kubernetes 1.32: What You Need to Know', link: '#', description: 'The latest Kubernetes release brings improvements to pod scheduling, enhanced GPU support, and new security features for multi-tenant clusters.', pubDate: hoursAgo(1), author: 'CNCF Blog', sourceName: 'Kubernetes Blog', sourceIcon: '⎈' },
-    { id: 'demo-2', title: 'KubeStellar: Multi-Cluster Management Made Simple', link: '#', description: 'How KubeStellar simplifies deploying and managing workloads across multiple Kubernetes clusters with its innovative control plane architecture.', pubDate: hoursAgo(3), author: 'KubeStellar Team', sourceName: 'KubeStellar Blog', sourceIcon: '🌟' },
-    { id: 'demo-3', title: 'Building Production-Ready AI Pipelines on Kubernetes', link: '#', description: 'A comprehensive guide to deploying ML models at scale using Kubernetes, covering GPU scheduling, model serving, and monitoring best practices.', pubDate: hoursAgo(6), author: 'Tech Blog', sourceName: 'Hacker News', sourceIcon: '🔶' },
-    { id: 'demo-4', title: 'The State of Cloud Native Security in 2026', link: '#', description: 'Annual survey results reveal trends in container security, supply chain protection, and zero-trust architectures across enterprise Kubernetes deployments.', pubDate: hoursAgo(12), author: 'Security Weekly', sourceName: 'InfoQ', sourceIcon: '📰' },
-    { id: 'demo-5', title: 'GitOps Best Practices: Lessons from 1000 Deployments', link: '#', description: 'Real-world insights from managing thousands of GitOps-driven deployments, including drift detection, rollback strategies, and multi-environment workflows.', pubDate: hoursAgo(18), author: 'DevOps Digest', sourceName: 'r/kubernetes', sourceIcon: '🔴', subreddit: 'kubernetes' },
-    { id: 'demo-6', title: 'WebAssembly on Kubernetes: Beyond Containers', link: '#', description: 'Exploring how Wasm workloads can complement containers in Kubernetes environments, with benchmarks and use cases for edge computing.', pubDate: hoursAgo(24), author: 'Cloud Native Weekly', sourceName: 'The New Stack', sourceIcon: '📰' },
-    { id: 'demo-7', title: 'eBPF-Powered Observability: A Deep Dive', link: '#', description: 'How eBPF is revolutionizing Kubernetes observability with zero-instrumentation monitoring, network policies, and security enforcement.', pubDate: hoursAgo(36), author: 'Observability Hub', sourceName: 'Hacker News', sourceIcon: '🔶' },
-    { id: 'demo-8', title: 'Cost Optimization Strategies for Multi-Cloud K8s', link: '#', description: 'Practical strategies for reducing cloud costs when running Kubernetes across AWS, GCP, and Azure, including spot instances and resource right-sizing.', pubDate: hoursAgo(48), author: 'FinOps Community', sourceName: 'r/devops', sourceIcon: '🔴', subreddit: 'devops' },
-  ]
-}
-
 function RSSFeedInternal({ config }: RSSFeedProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { isDemoMode } = useDemoMode()
-  const [feeds, setFeeds] = useState<FeedConfig[]>(() => {
+  const getInitialFeeds = () => {
     if (config?.feedUrl) {
-      return [{ url: config.feedUrl, name: config.feedName || 'Custom Feed' }]
+      return [{ url: config.feedUrl, name: config.feedName || RSS_UI_STRINGS.defaultFeedName }]
     }
-    return loadSavedFeeds()
-  })
+    const savedFeeds = loadSavedFeeds()
+    return savedFeeds.length > 0 ? savedFeeds : (isDemoMode ? RSS_DEMO_FEEDS : [])
+  }
+  const [feeds, setFeeds] = useState<FeedConfig[]>(() => getInitialFeeds())
   const [activeFeedIndex, setActiveFeedIndex] = useState(0)
 
   // Initialize with cached items immediately on mount
   const [items, setItems] = useState<FeedItem[]>(() => {
-    const savedFeeds = config?.feedUrl
-      ? [{ url: config.feedUrl, name: config.feedName || 'Custom Feed' }]
-      : loadSavedFeeds()
-    const firstFeed = savedFeeds?.[0]
+    const initialFeeds = getInitialFeeds()
+    const firstFeed = initialFeeds[0]
     if (firstFeed) {
       const cacheKey = firstFeed.isAggregate
         ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
@@ -83,10 +68,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     return []
   })
   const [itemsSourceUrl, setItemsSourceUrl] = useState<string | null>(() => {
-    const savedFeeds = config?.feedUrl
-      ? [{ url: config.feedUrl, name: config.feedName || 'Custom Feed' }]
-      : loadSavedFeeds()
-    const firstFeed = savedFeeds[0]
+    const initialFeeds = getInitialFeeds()
+    const firstFeed = initialFeeds[0]
     if (firstFeed) {
       return firstFeed.isAggregate
         ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
@@ -95,10 +78,8 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     return null
   })
   const [isLoading, setIsLoading] = useState(() => {
-    const savedFeeds = config?.feedUrl
-      ? [{ url: config.feedUrl, name: config.feedName || 'Custom Feed' }]
-      : loadSavedFeeds()
-    const firstFeed = savedFeeds[0]
+    const initialFeeds = getInitialFeeds()
+    const firstFeed = initialFeeds[0]
     if (firstFeed) {
       const cacheKey = firstFeed.isAggregate
         ? `aggregate:${(firstFeed.sourceUrls ?? []).join(',')}:${firstFeed.name}`
@@ -451,6 +432,23 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
     setShowSourceFilter(false)
   }, [activeFeedIndex])
 
+  // Keep demo mode usable even before any feeds have been configured.
+  useEffect(() => {
+    if (config?.feedUrl) return
+
+    const onlyDemoFeeds = feeds.length > 0 && feeds.every(feed => feed.url.startsWith('demo:'))
+    if (isDemoMode && feeds.length === 0) {
+      setFeeds(RSS_DEMO_FEEDS)
+      setActiveFeedIndex(0)
+      return
+    }
+
+    if (!isDemoMode && onlyDemoFeeds) {
+      setFeeds(loadSavedFeeds())
+      setActiveFeedIndex(0)
+    }
+  }, [config?.feedUrl, feeds, isDemoMode])
+
   // Clear success message after timeout
   useEffect(() => {
     if (fetchSuccess) {
@@ -461,9 +459,9 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
 
   // Save feeds when changed
   useEffect(() => {
-    if (!config?.feedUrl) {
-      saveFeeds(feeds)
-    }
+    if (config?.feedUrl) return
+    if (feeds.length > 0 && feeds.every(feed => feed.url.startsWith('demo:'))) return
+    saveFeeds(feeds)
   }, [feeds, config?.feedUrl])
 
   // --- Callbacks for subcomponents ---

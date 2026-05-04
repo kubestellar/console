@@ -27,6 +27,7 @@ import { loadMissionPrompt } from './multi-tenancy/missionLoader'
 import { useApiKeyCheck, ApiKeyPromptModal } from './console-missions/shared'
 import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
 import { CARD_INSTALL_MAP } from '../../lib/cards/cardInstallMap'
+import { CARD_UI_STRINGS } from './strings'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -305,8 +306,8 @@ Please proceed step by step.`,
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
         <ShieldOff className="w-8 h-8 opacity-50" />
-        <p>Vulnerability scanning not available</p>
-        <p className="text-xs opacity-70">Requires kc-agent (local agent mode)</p>
+        <p>{CARD_UI_STRINGS.compliance.trivyUnavailable}</p>
+        <p className="text-xs opacity-70">{CARD_UI_STRINGS.compliance.requiresLocalAgent}</p>
       </div>
     )
   }
@@ -542,8 +543,8 @@ Please proceed step by step.`,
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
         <ShieldOff className="w-8 h-8 opacity-50" />
-        <p>Security posture scanning not available</p>
-        <p className="text-xs opacity-70">Requires kc-agent (local agent mode)</p>
+        <p>{CARD_UI_STRINGS.compliance.kubescapeUnavailable}</p>
+        <p className="text-xs opacity-70">{CARD_UI_STRINGS.compliance.requiresLocalAgent}</p>
       </div>
     )
   }
@@ -840,8 +841,8 @@ export function PolicyViolations({ config: _config }: CardConfig) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
         <ShieldOff className="w-8 h-8 opacity-50" />
-        <p>Policy violation scanning not available</p>
-        <p className="text-xs opacity-70">Requires kc-agent (local agent mode)</p>
+        <p>{CARD_UI_STRINGS.compliance.policyViolationsUnavailable}</p>
+        <p className="text-xs opacity-70">{CARD_UI_STRINGS.compliance.requiresLocalAgent}</p>
       </div>
     )
   }
@@ -1098,8 +1099,8 @@ export function ComplianceScore({ config: _config }: CardConfig) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm gap-2">
         <ShieldOff className="w-8 h-8 opacity-50" />
-        <p>Compliance scoring not available</p>
-        <p className="text-xs opacity-70">Requires kc-agent (local agent mode)</p>
+        <p>{CARD_UI_STRINGS.compliance.complianceScoreUnavailable}</p>
+        <p className="text-xs opacity-70">{CARD_UI_STRINGS.compliance.requiresLocalAgent}</p>
       </div>
     )
   }

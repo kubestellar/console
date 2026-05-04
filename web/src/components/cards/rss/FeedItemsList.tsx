@@ -3,26 +3,28 @@ import { Rss, ExternalLink, Clock, ArrowUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { normalizeRedditLink } from './RSSParser'
 import { formatTimeAgo } from '../../../lib/formatters'
+import { RSS_DEMO_ACTIVE_FEED, RSS_DEMO_ITEMS } from './demoData'
+import { RSS_UI_STRINGS } from './strings'
 import type { FeedItem, FeedConfig } from './types'
 
 interface FeedItemsListProps {
-  paginatedItems: FeedItem[]
-  totalItems: number
-  showListSkeleton: boolean
-  activeFeed: FeedConfig | undefined
-  isRedditFeed: boolean
-  hasSearchOrFilter: boolean
-  onClearFilters: () => void
+  paginatedItems?: FeedItem[]
+  totalItems?: number
+  showListSkeleton?: boolean
+  activeFeed?: FeedConfig
+  isRedditFeed?: boolean
+  hasSearchOrFilter?: boolean
+  onClearFilters?: () => void
 }
 
 export const FeedItemsList = memo(function FeedItemsList({
-  paginatedItems,
-  totalItems,
-  showListSkeleton,
-  activeFeed,
-  isRedditFeed,
-  hasSearchOrFilter,
-  onClearFilters,
+  paginatedItems = RSS_DEMO_ITEMS,
+  totalItems = RSS_DEMO_ITEMS.length,
+  showListSkeleton = false,
+  activeFeed = RSS_DEMO_ACTIVE_FEED,
+  isRedditFeed = false,
+  hasSearchOrFilter = false,
+  onClearFilters = () => {},
 }: FeedItemsListProps) {
   const { t } = useTranslation(['cards', 'common'])
 
@@ -71,7 +73,7 @@ export const FeedItemsList = memo(function FeedItemsList({
             {item.thumbnail && item.thumbnail.startsWith('http') && (
               <img
                 src={item.thumbnail}
-                alt={item.title || 'Feed thumbnail'}
+                alt={item.title || RSS_UI_STRINGS.feedThumbnailAlt}
                 className="w-16 h-16 object-cover rounded shrink-0"
                 onError={(e) => (e.currentTarget.style.display = 'none')}
               />
@@ -88,9 +90,9 @@ export const FeedItemsList = memo(function FeedItemsList({
                 {/* Feed icon */}
                 <span
                   className="cursor-default text-base leading-none"
-                  title={activeFeed?.isAggregate ? (item.sourceName || 'Unknown source') : (activeFeed?.name || 'Feed')}
+                  title={activeFeed.isAggregate ? (item.sourceName || RSS_UI_STRINGS.unknownSource) : (activeFeed.name || RSS_UI_STRINGS.feedFallbackName)}
                 >
-                  {activeFeed?.isAggregate ? (item.sourceIcon || '📰') : (activeFeed?.icon || '📰')}
+                  {activeFeed.isAggregate ? (item.sourceIcon || '📰') : (activeFeed.icon || '📰')}
                 </span>
 
                 {/* Reddit score */}
