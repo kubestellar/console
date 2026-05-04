@@ -59,6 +59,8 @@ const CHART_LABEL_COLOR = '#94a3b8'
 const CHART_AXIS_COLOR = '#334155'
 const CHART_GRID_COLOR = '#1e293b'
 const CHART_LEGEND_COLOR = '#e2e8f0'
+const TOOLTIP_BG_COLOR = 'hsl(var(--card) / 0.95)'
+const TOOLTIP_BORDER_COLOR = 'hsl(var(--border) / 0.1)'
 const CHART_FALLBACK_COLOR = CHART_TICK_COLOR
 const CHART_LABEL_FONT_SIZE = 11
 const CHART_LEGEND_FONT_SIZE = 12
@@ -133,8 +135,8 @@ export function ChangeTimeline({ config: _config }: ChangeTimelineProps) {
       tooltip: {
         trigger: 'item' as const,
         padding: TOOLTIP_PADDING_PX,
-        backgroundColor: 'rgba(30,30,46,0.95)',
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: TOOLTIP_BG_COLOR,
+        borderColor: TOOLTIP_BORDER_COLOR,
         textStyle: { color: CHART_LEGEND_COLOR, fontSize: CHART_LEGEND_FONT_SIZE },
         formatter: (params: { data?: { _event?: TimelineEvent } }) => {
           const evt: TimelineEvent | undefined = params?.data?._event
