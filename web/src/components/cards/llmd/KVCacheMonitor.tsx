@@ -489,8 +489,8 @@ export function KVCacheMonitor() {
     }
 
     // Listen for scroll on any ancestor (capture phase)
-    window.addEventListener('scroll', handleScroll, true)
-    return () => window.removeEventListener('scroll', handleScroll, true)
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
+    return () => window.removeEventListener('scroll', handleScroll, { capture: true })
   }, [selectedPod, panelPosition])
 
   // Update stats periodically

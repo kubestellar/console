@@ -35,11 +35,11 @@ export function PortalTooltip({ children, content, className = '' }: PortalToolt
     updatePosition()
 
     // Update on scroll (capture phase for nested scrolls)
-    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('scroll', updatePosition, { capture: true, passive: true })
     window.addEventListener('resize', updatePosition)
 
     return () => {
-      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('scroll', updatePosition, { capture: true })
       window.removeEventListener('resize', updatePosition)
     }
   }, [isVisible])

@@ -305,13 +305,6 @@ export function stopEngagementTracking() {
     clearInterval(heartbeatTimer)
     heartbeatTimer = null
   }
-  for (const event of INTERACTION_EVENTS) {
-    document.removeEventListener(event, markActive)
-  }
-  if (visibilityHandler) {
-    document.removeEventListener('visibilitychange', visibilityHandler)
-    visibilityHandler = null
-  }
 }
 
 // ── UTM Tracking ───────────────────────────────────────────────────

@@ -363,8 +363,8 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
   useEffect(() => {
     if (!hovered) return
     const dismiss = () => setHovered(false)
-    window.addEventListener('scroll', dismiss, true)
-    return () => window.removeEventListener('scroll', dismiss, true)
+    window.addEventListener('scroll', dismiss, { capture: true, passive: true })
+    return () => window.removeEventListener('scroll', dismiss, { capture: true })
   }, [hovered])
 
   if (!github) {

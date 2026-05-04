@@ -285,13 +285,13 @@ export function TourOverlay() {
     // anchored to its target element (#5411).
     const handleReposition = () => positionTooltip()
     window.addEventListener('resize', handleReposition)
-    window.addEventListener('scroll', handleReposition, true) // capture phase catches nested scrollable containers
+    window.addEventListener('scroll', handleReposition, { capture: true, passive: true })
 
     return () => {
       isCancelled = true
       timeoutIds.forEach(id => clearTimeout(id))
       window.removeEventListener('resize', handleReposition)
-      window.removeEventListener('scroll', handleReposition, true)
+      window.removeEventListener('scroll', handleReposition, { capture: true })
     }
   }, [isActive, currentStep, currentStepIndex])
 

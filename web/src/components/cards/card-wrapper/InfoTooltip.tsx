@@ -91,11 +91,11 @@ export function InfoTooltip({ text }: { text: string }) {
     const handleScroll = () => updatePosition()
     const handleResize = () => updatePosition()
 
-    window.addEventListener('scroll', handleScroll, true) // capture phase for nested scrolls
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
     window.addEventListener('resize', handleResize)
 
     return () => {
-      window.removeEventListener('scroll', handleScroll, true)
+      window.removeEventListener('scroll', handleScroll, { capture: true })
       window.removeEventListener('resize', handleResize)
     }
   }, [isVisible, updatePosition])
