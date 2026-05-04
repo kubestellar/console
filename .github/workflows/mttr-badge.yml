@@ -27,33 +27,33 @@ jobs:
             const GOOD_THRESHOLD_MIN = 60;
             const WARN_THRESHOLD_MIN = 240;
 
-            // Fetch last 100 merged PRs — matches hive api-collector.sh methodology
-            const mergedPrs = await github.paginate(github.rest.pulls.list, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed',
-              sort: 'updated',
-              direction: 'desc',
-              per_page: 100,
-            }, (response, done) => {
-              const merged = response.data.filter(pr => pr.merged_at);
-              if (merged.length >= PR_LIMIT) done();
-              return merged;
+            // Use search API with sort:created — exact same API that
+            // `gh pr list --state merged` uses under the hood, matching
+            // hive api-collector.sh which calls gh pr list.
+            const SEARCH_PER_PAGE = 100;
+            const { data: searchResult } = await github.rest.search.issuesAndPullRequests({
+              q: `is:pr is:merged repo:${context.repo.owner}/${context.repo.repo}`,
+              sort: 'created',
+              order: 'desc',
+              per_page: SEARCH_PER_PAGE,
             });
 
-            const prs = mergedPrs.slice(0, PR_LIMIT);
-            console.log(`Found ${prs.length} merged PRs`);
+            const prs = searchResult.items.slice(0, PR_LIMIT);
+            console.log(`Found ${prs.length} merged PRs (search API, sort:created)`);
 
             // Extract issue refs from PR bodies
+            // Search API includes pull_request.merged_at on each item
             const issueRefs = [];
             for (const pr of prs) {
+              const mergedAt = pr.pull_request && pr.pull_request.merged_at;
+              if (!mergedAt) continue;
               const body = pr.body || '';
               let match;
               const re = new RegExp(FIXES_RE.source, FIXES_RE.flags);
               while ((match = re.exec(body)) !== null) {
                 issueRefs.push({
                   issue: parseInt(match[1], 10),
-                  mergedAt: pr.merged_at,
+                  mergedAt,
                 });
               }
             }
