@@ -381,8 +381,12 @@ test.describe('Mission Control Dry-Run Tests', () => {
       if (clicked) {
       }
 
-      // Wait for mission to complete (or timeout)
-      await page.waitForTimeout(AI_TIMEOUT_MS)
+      // Wait for dry-run to complete — look for completion indicators in the UI
+      await expect(
+        page.locator('[data-testid="mission-status-complete"], [data-testid="mission-status-success"], [data-testid="dry-run-complete"], .mission-complete, .dry-run-result').first()
+          .or(page.getByText(/completed|succeeded|done|dry.run.finished/i).first())
+      ).toBeVisible({ timeout: AI_TIMEOUT_MS })
+        .catch(() => {}) // Fall through — pod count assertion below is the real gate
 
       // Verify pod count didn't change (dry-run should not create resources)
       const afterCount = countPodsInNamespace(CLUSTER_VLLM_D, 'cert-manager')
@@ -423,7 +427,12 @@ test.describe('Mission Control Dry-Run Tests', () => {
       if (clicked) {
       }
 
-      await page.waitForTimeout(AI_TIMEOUT_MS)
+      // Wait for dry-run to complete — look for completion indicators in the UI
+      await expect(
+        page.locator('[data-testid="mission-status-complete"], [data-testid="mission-status-success"], [data-testid="dry-run-complete"], .mission-complete, .dry-run-result').first()
+          .or(page.getByText(/completed|succeeded|done|dry.run.finished/i).first())
+      ).toBeVisible({ timeout: AI_TIMEOUT_MS })
+        .catch(() => {}) // Fall through — pod count assertion below is the real gate
 
       // Verify monitoring namespace pod count unchanged
       const afterMonitoring = countPodsInNamespace(CLUSTER_PLATFORM_EVAL, 'monitoring')
