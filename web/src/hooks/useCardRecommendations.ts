@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { usePodIssues, useDeploymentIssues, useWarningEvents, useGPUNodes, useClusters, useSecurityIssues } from './useMCP'
 import { useAIMode } from './useAIMode'
 import { RECOMMENDATION_INTERVAL_MS } from '../lib/constants/network'
@@ -177,9 +177,14 @@ export function useCardRecommendations(currentCardTypes: string[]) {
     return () => clearInterval(interval)
   }, [analyzeAndRecommend])
 
+  const highPriorityCount = useMemo(
+    () => recommendations.filter(r => r.priority === 'high').length,
+    [recommendations]
+  )
+
   return {
     recommendations,
     hasRecommendations: recommendations.length > 0,
-    highPriorityCount: recommendations.filter(r => r.priority === 'high').length,
+    highPriorityCount,
   }
 }

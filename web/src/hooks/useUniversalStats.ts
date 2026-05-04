@@ -61,23 +61,30 @@ export function useUniversalStats() {
   const { stats: alertStats } = useAlerts()
   const { rules: alertRules } = useAlertRules()
 
-  // ─── Cluster-derived values ───
+  // ─── Cluster-derived values (memoized) ───
   const safeClusters = deduplicatedClusters || []
-  const totalClusters = safeClusters.length
-  const healthyClusters = safeClusters.filter(c => c.healthy).length
-  const unhealthyClusters = safeClusters.filter(c => !c.healthy).length
-  const unreachableClusters = safeClusters.filter(c => c.reachable === false).length
-  const totalNodes = safeClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
-  const totalPods = safeClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
-  const totalCPUs = safeClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
-  const totalMemoryGB = safeClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
-  const totalStorageGB = safeClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0)
-  const uniqueNamespaces = new Set(safeClusters.flatMap(c => c.namespaces || []))
+  const {
+    totalClusters, healthyClusters, unhealthyClusters, unreachableClusters,
+    totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
+  } = useMemo(() => ({
+    totalClusters: safeClusters.length,
+    healthyClusters: safeClusters.filter(c => c.healthy).length,
+    unhealthyClusters: safeClusters.filter(c => !c.healthy).length,
+    unreachableClusters: safeClusters.filter(c => c.reachable === false).length,
+    totalNodes: safeClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
+    totalPods: safeClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
+    totalCPUs: safeClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
+    totalMemoryGB: safeClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
+    totalStorageGB: safeClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0),
+    uniqueNamespaces: new Set(safeClusters.flatMap(c => c.namespaces || [])),
+  }), [safeClusters])
 
   // ─── Pod-derived values ───
   const podIssuesList = podIssues || []
-  const pendingPods = podIssuesList.filter(p => p.status === 'Pending').length
-  const highRestartPods = podIssuesList.filter(p => p.restarts > HIGH_RESTART_THRESHOLD).length
+  const { pendingPods, highRestartPods } = useMemo(() => ({
+    pendingPods: podIssuesList.filter(p => p.status === 'Pending').length,
+    highRestartPods: podIssuesList.filter(p => p.restarts > HIGH_RESTART_THRESHOLD).length,
+  }), [podIssuesList])
 
   // ─── Deployment-derived values ───
   const allDeployments = deployments || []
@@ -85,59 +92,71 @@ export function useUniversalStats() {
 
   // ─── PVC-derived values ───
   const allPVCs = pvcs || []
-  const boundPVCs = allPVCs.filter(p => p.status === 'Bound').length
-  const storageClassCount = new Set(allPVCs.map(p => p.storageClass).filter(Boolean)).size
+  const { boundPVCs, storageClassCount } = useMemo(() => ({
+    boundPVCs: allPVCs.filter(p => p.status === 'Bound').length,
+    storageClassCount: new Set(allPVCs.map(p => p.storageClass).filter(Boolean)).size,
+  }), [allPVCs])
 
   // ─── Service-derived values ───
   const allServices = services || []
-  const lbCount = allServices.filter(s => s.type === 'LoadBalancer').length
-  const npCount = allServices.filter(s => s.type === 'NodePort').length
-  const cipCount = allServices.filter(s => s.type === 'ClusterIP').length
+  const { lbCount, npCount, cipCount } = useMemo(() => ({
+    lbCount: allServices.filter(s => s.type === 'LoadBalancer').length,
+    npCount: allServices.filter(s => s.type === 'NodePort').length,
+    cipCount: allServices.filter(s => s.type === 'ClusterIP').length,
+  }), [allServices])
 
   // ─── Event-derived values ───
   const allEvents = events || []
   const allWarningEvents = warningEvents || []
-  const normalEvents = allEvents.filter(e => e.type === 'Normal').length
-  const recentEvents = (() => {
+  const { normalEvents, recentEvents } = useMemo(() => {
     const oneHourAgo = Date.now() - MS_PER_HOUR
-    return allEvents.filter(e => {
-      if (!e.lastSeen) return false
-      return new Date(e.lastSeen).getTime() > oneHourAgo
-    }).length
-  })()
+    return {
+      normalEvents: allEvents.filter(e => e.type === 'Normal').length,
+      recentEvents: allEvents.filter(e => {
+        if (!e.lastSeen) return false
+        return new Date(e.lastSeen).getTime() > oneHourAgo
+      }).length,
+    }
+  }, [allEvents])
 
   // ─── Security-derived values ───
   const secIssues = securityIssues || []
-  const highSeverity = secIssues.filter(i => i.severity === 'high').length
-  const mediumSeverity = secIssues.filter(i => i.severity === 'medium').length
-  const lowSeverity = secIssues.filter(i => i.severity === 'low').length
-  const privilegedContainers = secIssues.filter(i => i.issue?.toLowerCase().includes('privileged')).length
-  const rootContainers = secIssues.filter(i => i.issue?.toLowerCase().includes('root')).length
+  const { highSeverity, mediumSeverity, lowSeverity, privilegedContainers, rootContainers } = useMemo(() => ({
+    highSeverity: secIssues.filter(i => i.severity === 'high').length,
+    mediumSeverity: secIssues.filter(i => i.severity === 'medium').length,
+    lowSeverity: secIssues.filter(i => i.severity === 'low').length,
+    privilegedContainers: secIssues.filter(i => i.issue?.toLowerCase().includes('privileged')).length,
+    rootContainers: secIssues.filter(i => i.issue?.toLowerCase().includes('root')).length,
+  }), [secIssues])
 
   // ─── Helm/GitOps-derived values ───
   const allHelm = helmReleases || []
-  const deployedHelm = allHelm.filter(r => r.status === 'deployed').length
-  const failedHelm = allHelm.filter(r => r.status === 'failed').length
+  const { deployedHelm, failedHelm } = useMemo(() => ({
+    deployedHelm: allHelm.filter(r => r.status === 'deployed').length,
+    failedHelm: allHelm.filter(r => r.status === 'failed').length,
+  }), [allHelm])
 
   // ─── Operator-derived values ───
   const allOps = operators || []
   const allSubs = operatorSubscriptions || []
-  const installedOps = allOps.filter(o => o.status === 'Succeeded').length
-  const installingOps = allOps.filter(o => o.status === 'Installing').length
-  const failingOps = allOps.filter(o => o.status === 'Failed').length
-  const upgradesAvailable = allSubs.filter(s => s.pendingUpgrade).length
+  const { installedOps, installingOps, failingOps, upgradesAvailable } = useMemo(() => ({
+    installedOps: allOps.filter(o => o.status === 'Succeeded').length,
+    installingOps: allOps.filter(o => o.status === 'Installing').length,
+    failingOps: allOps.filter(o => o.status === 'Failed').length,
+    upgradesAvailable: allSubs.filter(s => s.pendingUpgrade).length,
+  }), [allOps, allSubs])
 
   // ─── GPU-derived values ───
-  // Only count GPUs from reachable clusters
-  const unreachableClusterNames = new Set(
+  const realGPUCount = useMemo(() => {
+    const unreachableClusterNames = new Set(
       safeClusters
         .filter(c => c.reachable === false)
         .map(c => c.name)
     )
-
-  const realGPUCount = (gpuNodes || [])
+    return (gpuNodes || [])
       .filter(n => !unreachableClusterNames.has(n.cluster))
       .reduce((sum, n) => sum + (n.gpuCount || 0), 0)
+  }, [safeClusters, gpuNodes])
 
   // ─── Alert-derived values ───
   const firingAlerts = alertStats?.firing || 0
