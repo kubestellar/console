@@ -8,12 +8,18 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 )
+
+// wsGoroutineDrainTimeout is the maximum time handleWebSocket waits for
+// spawned goroutines (pinger, chat, kubectl) to exit before closing the
+// connection. Prevents indefinite hangs on abnormal exit (#11878).
+const wsGoroutineDrainTimeout = 5 * time.Second
 
 // maxWSGoroutines limits concurrent chat/kubectl goroutines per connection
 // to prevent resource exhaustion from bursty or malicious traffic (#7277).
@@ -71,7 +77,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		slog.Error("WebSocket upgrade failed", "error", err)
 		return
 	}
-	defer conn.Close()
+	// NOTE: conn.Close() is called explicitly at the end of this function
+	// AFTER draining goroutines (#11878). Do not use defer conn.Close() here.
 	conn.SetReadLimit(wsMaxMessageBytes)
 
 	wsc := &wsClient{}
@@ -104,6 +111,10 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Semaphore to limit concurrent work goroutines per connection (#7277)
 	sem := make(chan struct{}, maxWSGoroutines)
 
+	// wg tracks all spawned goroutines (pinger, chat, kubectl, misc) so
+	// the handler can wait for them before closing the connection (#11878).
+	var wg sync.WaitGroup
+
 	// --- Ping/pong keepalive to detect dead connections ---
 	// Set initial read deadline; each pong resets it.
 	conn.SetReadDeadline(time.Now().Add(wsPongTimeout))
@@ -115,12 +126,17 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Pinger goroutine: sends pings periodically. Exits when connection closes
 	// or the read loop exits (stopPing closed).
 	stopPing := make(chan struct{})
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		ticker := time.NewTicker(wsPingInterval)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
+				if closed.Load() {
+					return // connection already torn down
+				}
 				writeMu.Lock()
 				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
 				err := conn.WriteMessage(websocket.PingMessage, nil)
@@ -153,8 +169,16 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if msg.Type == protocol.TypeClaude {
 				forceAgent = "claude"
 			}
-			sem <- struct{}{} // acquire slot
+			// Non-blocking semaphore acquire: if all slots are taken and the
+			// connection is shutting down, don't block the read loop (#11878).
+			select {
+			case sem <- struct{}{}:
+			case <-connCtx.Done():
+				continue
+			}
+			wg.Add(1)
 			go func(m protocol.Message, fa string) {
+				defer wg.Done()
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
@@ -183,8 +207,14 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			// Handle kubectl messages concurrently so one slow cluster
 			// doesn't block the entire WebSocket message loop.
 			// Bounded by semaphore (#7277).
-			sem <- struct{}{} // acquire slot
+			select {
+			case sem <- struct{}{}:
+			case <-connCtx.Done():
+				continue
+			}
+			wg.Add(1)
 			go func(m protocol.Message) {
+				defer wg.Done()
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
@@ -222,8 +252,14 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			// blocked the read loop, preventing pings and cancel messages from
 			// being processed until the call returned.
 			// Goroutine count is bounded by the same semaphore as chat/kubectl.
-			sem <- struct{}{} // acquire slot
+			select {
+			case sem <- struct{}{}:
+			case <-connCtx.Done():
+				continue
+			}
+			wg.Add(1)
 			go func(m protocol.Message) {
+				defer wg.Done()
 				defer func() { <-sem }() // release slot
 				defer func() {
 					if r := recover(); r != nil {
@@ -256,6 +292,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}(msg)
 		}
 	}
+	// --- Cleanup: signal all goroutines and wait for orderly drain (#11878) ---
 	closed.Store(true)
 	close(stopPing) // signal pinger goroutine to exit
 
@@ -267,6 +304,19 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// cancel function. Explicitly cancelling and removing them here ensures
 	// prompt cleanup on disconnect.
 	s.cancelAllChatsForConn(conn)
+
+	// Wait for spawned goroutines to finish (with timeout to avoid hangs).
+	drainDone := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(drainDone)
+	}()
+	select {
+	case <-drainDone:
+		// All goroutines exited cleanly.
+	case <-time.After(wsGoroutineDrainTimeout):
+		slog.Warn("[WebSocket] timed out waiting for goroutines to drain; closing connection", "addr", conn.RemoteAddr())
+	}
 
 	slog.Info("client disconnected", "addr", conn.RemoteAddr())
 }
