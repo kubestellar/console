@@ -148,7 +148,7 @@ test.describe('Scan Progress Overlay', () => {
           )
           // Scan may be fast; check within timeout
           const appeared = await scanIndicator.first().isVisible({ timeout: 8000 }).catch(() => false)
-          expect(appeared || true).toBeTruthy()
+          expect.soft(appeared).toBeTruthy()
         }
       } else {
         await expect(page.getByTestId('dashboard-page')).toBeVisible()
@@ -178,7 +178,7 @@ test.describe('Scan Progress Overlay', () => {
           const spinner = page.locator('.animate-spin, [data-testid*="scan-spinner"]')
           const spinnerSeen = await spinner.first().isVisible({ timeout: 5000 }).catch(() => false)
           // Spinner may already be gone if scan is fast
-          expect(spinnerSeen || true).toBeTruthy()
+          expect.soft(spinnerSeen).toBeTruthy()
         }
       } else {
         await expect(page.getByTestId('dashboard-page')).toBeVisible()

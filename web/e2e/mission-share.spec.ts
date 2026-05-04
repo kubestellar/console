@@ -215,7 +215,7 @@ test.describe('Mission Sharing', () => {
           // GitHub channel should be disabled or show auth prompt
           const isDisabled = await githubChannel.first().isDisabled().catch(() => false)
           const hasAuthLabel = await page.locator('text=/sign in|authenticate|connect/i').isVisible({ timeout: 2000 }).catch(() => false)
-          expect(isDisabled || hasAuthLabel || true).toBeTruthy()
+          expect(isDisabled || hasAuthLabel).toBeTruthy()
         }
       } else {
         await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
@@ -299,7 +299,7 @@ test.describe('Mission Sharing', () => {
         // Scan may appear briefly during share process
         const scanVisible = await scanOverlay.first().isVisible({ timeout: 5000 }).catch(() => false)
         // Scan may have already completed; either state is acceptable
-        expect(scanVisible || true).toBeTruthy()
+        expect.soft(scanVisible).toBeTruthy()
       } else {
         await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
       }

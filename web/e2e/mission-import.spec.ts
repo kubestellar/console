@@ -166,7 +166,7 @@ test.describe('Mission Import', () => {
         const localVisible = await localSection.first().isVisible({ timeout: 3000 }).catch(() => false)
 
         // At least the dialog should show some content
-        expect(communityVisible || localVisible || true).toBeTruthy()
+        expect(communityVisible || localVisible).toBeTruthy()
       } else {
         await expect(page.getByTestId('dashboard-page')).toBeVisible()
       }
