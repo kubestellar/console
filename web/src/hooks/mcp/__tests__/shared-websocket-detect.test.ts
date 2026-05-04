@@ -304,7 +304,7 @@ describe('fullFetchClusters — agent success path', () => {
     expect(c.namespaces).toEqual(['openshift-operators'])
   })
 
-  it('falls back to demo clusters on error with empty cache', async () => {
+  it('keeps the cluster list empty on error with empty cache when demo mode is disabled', async () => {
     // Agent fails
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('network'))
     // Backend also fails
@@ -313,9 +313,8 @@ describe('fullFetchClusters — agent success path', () => {
 
     await fullFetchClusters()
 
-    // Should fall back to demo clusters
-    expect(clusterCache.clusters.length).toBeGreaterThan(0)
-    expect(clusterCache.error).toBeNull() // Never sets error
+    expect(clusterCache.clusters).toEqual([])
+    expect(clusterCache.error).toBeNull()
     expect(clusterCache.consecutiveFailures).toBe(1)
   })
 

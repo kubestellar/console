@@ -51,6 +51,8 @@ export interface ClusterInfo {
   namespaces?: string[]
   // Aliases - other context names pointing to the same server (populated by deduplication)
   aliases?: string[]
+  // Synthetic demo cluster marker - used to prevent demo data leaking into live mode
+  isDemo?: boolean
   // Node condition issues (DiskPressure, MemoryPressure, PIDPressure, etc.)
   issues?: string[]
 }

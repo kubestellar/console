@@ -579,7 +579,7 @@ describe('fullFetchClusters', () => {
     expect(clusterCache.isLoading).toBe(false)
   })
 
-  it('falls back to demo clusters on backend API error (catch block)', async () => {
+  it('does not fall back to demo clusters on backend API error when demo mode is disabled', async () => {
     localStorage.setItem('token', 'real-token')
     // Agent returns null
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('agent down'))
@@ -589,9 +589,8 @@ describe('fullFetchClusters', () => {
     await fullFetchClusters()
 
     expect(clusterCache.isLoading).toBe(false)
-    expect(clusterCache.error).toBeNull() // Never sets error
-    // Should have demo data as fallback
-    expect(clusterCache.clusters.length).toBeGreaterThan(0)
+    expect(clusterCache.error).toBeNull()
+    expect(clusterCache.clusters).toEqual([])
     expect(clusterCache.consecutiveFailures).toBeGreaterThan(0)
   })
 
