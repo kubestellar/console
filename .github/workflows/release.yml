@@ -320,6 +320,7 @@ jobs:
           name: frontend-dist
           path: web/dist/
           retention-days: 1
+          if-no-files-found: error
 
   # Build Docker images per-platform in parallel. The frontend is pre-built
   # natively above to avoid QEMU arm64 emulation hanging on Vite's bundler.

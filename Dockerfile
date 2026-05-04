@@ -27,14 +27,26 @@ WORKDIR /app
 ARG APP_VERSION=0.0.0
 ARG COMMIT_HASH=unknown
 
-# Copy pre-built dist first (CI injects this to skip Vite under QEMU)
+# Cache npm dependencies independently of source changes.
+# Install dependencies first so that the npm ci layer is reused whenever
+# package.json / package-lock.json are unchanged, even if other source files
+# differ. This is especially valuable for QEMU arm64 builds.
+COPY web/package.json web/package-lock.json ./
+RUN npm ci
+
+# Copy the rest of the frontend source.
+# WARNING (local builds): if web/dist/ is present in your working tree from a
+# previous build it will be copied here and the conditional below will skip
+# Vite, silently shipping stale assets. Remove web/dist/ before building
+# locally if you want a fresh frontend build.
+# In CI this is not a risk: the checkout is clean and dist/ is only present
+# here when the build-frontend job explicitly downloaded the artifact.
 COPY web/ ./
 
 # Build only if dist/ was not pre-built by CI
 RUN if [ -d dist ] && [ -n "$(ls -A dist 2>/dev/null)" ]; then \
       echo "Using pre-built frontend dist/"; \
     else \
-      npm ci --legacy-peer-deps && \
       VITE_APP_VERSION=${APP_VERSION} VITE_COMMIT_HASH=${COMMIT_HASH} npm run build; \
     fi
 
