@@ -22,6 +22,7 @@ export {
   emitPageView,
   emitUserEngagement,
   startGlobalErrorTracking,
+  stopGlobalErrorTracking,
   emitError,
   emitHttpError,
   emitChunkReloadRecoveryFailed,

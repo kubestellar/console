@@ -1183,12 +1183,23 @@ function tryChunkReloadRecovery(msg: string): boolean {
 /** Track unhandled promise rejections and runtime errors globally */
 // Store console originals at module scope for cleanup across multiple initializations
 let consoleRestoreCleanup: (() => void) | null = null
+// Store listener references at module scope so they can be removed on re-init (HMR) or teardown
+let rejectionHandler: ((event: PromiseRejectionEvent) => void) | null = null
+let errorHandler: ((event: ErrorEvent) => void) | null = null
 
 export function startGlobalErrorTracking() {
   // Check if we just recovered from a chunk-load auto-reload
   checkChunkReloadRecovery()
 
-  // Restore previous interception (if any) to avoid chained wrappers
+  // Remove previous listeners (if any) to avoid duplicates during HMR
+  if (rejectionHandler) {
+    window.removeEventListener('unhandledrejection', rejectionHandler)
+  }
+  if (errorHandler) {
+    window.removeEventListener('error', errorHandler)
+  }
+
+  // Restore previous console interception (if any) to avoid chained wrappers
   if (consoleRestoreCleanup) {
     consoleRestoreCleanup()
   }
@@ -1197,7 +1208,7 @@ export function startGlobalErrorTracking() {
   // the global handler must NOT call emitError() again (infinite recursion → max call stack)
   let isEmitting = false
 
-  window.addEventListener('unhandledrejection', (event) => {
+  rejectionHandler = (event: PromiseRejectionEvent) => {
     if (isEmitting) return
     isEmitting = true
     try {
@@ -1279,9 +1290,10 @@ export function startGlobalErrorTracking() {
     } finally {
       isEmitting = false
     }
-  })
+  }
+  window.addEventListener('unhandledrejection', rejectionHandler)
 
-  window.addEventListener('error', (event) => {
+  errorHandler = (event: ErrorEvent) => {
     // Skip errors from cross-origin scripts (no useful info)
     if (!event.message || event.message === 'Script error.') return
     if (isEmitting) return
@@ -1349,7 +1361,8 @@ export function startGlobalErrorTracking() {
     } finally {
       isEmitting = false
     }
-  })
+  }
+  window.addEventListener('error', errorHandler)
 
   // Intercept console.error and console.warn to capture them in the ring buffer
   const originalConsoleError = console.error
@@ -1371,6 +1384,22 @@ export function startGlobalErrorTracking() {
   consoleRestoreCleanup = () => {
     console.error = originalConsoleError
     console.warn = originalConsoleWarn
+  }
+}
+
+/** Remove all global error tracking listeners. Call on teardown or HMR dispose. */
+export function stopGlobalErrorTracking() {
+  if (rejectionHandler) {
+    window.removeEventListener('unhandledrejection', rejectionHandler)
+    rejectionHandler = null
+  }
+  if (errorHandler) {
+    window.removeEventListener('error', errorHandler)
+    errorHandler = null
+  }
+  if (consoleRestoreCleanup) {
+    consoleRestoreCleanup()
+    consoleRestoreCleanup = null
   }
 }
 

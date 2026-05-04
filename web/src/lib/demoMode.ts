@@ -65,6 +65,17 @@ export function canToggleDemoMode(): boolean {
 let globalDemoMode = false
 const listeners = new Set<(value: boolean) => void>()
 
+// Named handler for cross-tab sync so it can be removed on HMR re-init
+function handleStorageEvent(e: StorageEvent) {
+  if (e.key === DEMO_MODE_KEY) {
+    const newValue = e.newValue === 'true'
+    if (globalDemoMode !== newValue) {
+      globalDemoMode = newValue
+      notifyListeners()
+    }
+  }
+}
+
 // Initialize from localStorage or environment
 if (typeof window !== 'undefined') {
   const stored = localStorage.getItem(DEMO_MODE_KEY)
@@ -95,16 +106,10 @@ if (typeof window !== 'undefined') {
     }
   }
 
-  // Cross-tab sync: when another tab changes demo mode, update this tab
-  window.addEventListener('storage', (e) => {
-    if (e.key === DEMO_MODE_KEY) {
-      const newValue = e.newValue === 'true'
-      if (globalDemoMode !== newValue) {
-        globalDemoMode = newValue
-        notifyListeners()
-      }
-    }
-  })
+  // Cross-tab sync: when another tab changes demo mode, update this tab.
+  // Remove first to prevent duplicate listeners during HMR module re-execution.
+  window.removeEventListener('storage', handleStorageEvent)
+  window.addEventListener('storage', handleStorageEvent)
 }
 
 function notifyListeners() {
