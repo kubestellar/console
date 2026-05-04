@@ -97,10 +97,10 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
     const handleClickOutside = (e: MouseEvent) => {
       // Use the currently expanded ID to find the correct dropdown element
       const activeDropdown = document.getElementById(`rec-dropdown-${expandedRec}`)
-      // Check against the parent container (includes both trigger chip and dropdown)
-      // so clicking the chip to toggle closed isn't treated as an outside click
-      const container = activeDropdown?.parentElement
-      if (container && !container.contains(e.target as Node)) {
+      const activeTrigger = document.getElementById(`rec-chip-${expandedRec}`)
+      // Ignore clicks on the trigger chip — its own onClick handles toggling
+      if (activeTrigger && activeTrigger.contains(e.target as Node)) return
+      if (activeDropdown && !activeDropdown.contains(e.target as Node)) {
         setExpandedRec(null)
       }
     }
@@ -190,6 +190,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             return (
               <div key={rec.id} className="relative">
                 <button
+                  id={`rec-chip-${rec.id}`}
                   onClick={() => setExpandedRec(isExpanded ? null : rec.id)}
                   aria-expanded={isExpanded}
                   aria-haspopup="menu"
@@ -320,6 +321,7 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
             <div key={rec.id} className="relative">
               {/* Compact chip */}
               <button
+                id={`rec-chip-${rec.id}`}
                 onClick={() => setExpandedRec(isExpanded ? null : rec.id)}
                 className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all hover:brightness-110 ${CHIP_STYLE.border} ${CHIP_STYLE.bg} ${CHIP_STYLE.text}`}
               >
