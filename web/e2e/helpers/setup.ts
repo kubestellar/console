@@ -342,6 +342,45 @@ export async function mockApiFallback(page: Page) {
     route.fulfill({ status: 204, body: '' })
   )
 
+  // #11896 — Explicitly mock API endpoints that were falling through to real
+  // backends. These are probed by various hooks on app startup and must return
+  // deterministic responses for test isolation.
+  await page.route('**/api/kagent/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ running: false, version: null }),
+    })
+  )
+  await page.route('**/api/kagent-provider/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ available: false, providers: [] }),
+    })
+  )
+  await page.route('**/api/feedback/queue', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [], count: 0 }),
+    })
+  )
+  await page.route('**/api/rewards/bonus', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ available: false, rewards: [] }),
+    })
+  )
+  await page.route('**/api/agent/auto-update/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ enabled: false, lastCheck: null }),
+    })
+  )
+
   // Mock the local kc-agent HTTP endpoint. Even in demo mode, the cluster
   // cache probes http://127.0.0.1:8585/clusters before falling back to demo
   // data. Without this mock the probe hangs in CI (nobody on port 8585),

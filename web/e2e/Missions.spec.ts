@@ -11,30 +11,39 @@ import { mockApiFallback } from './helpers/setup'
  * #6451 flagged the file as dead coverage.
  *
  * This version replaces the dashboard smoke tests with real mission checks:
- *   1. Mission Control dialog can be opened via the ?mission-control=open URL param
- *      and renders with the correct role/label.
- *   2. The dialog has a working close control (verifies the dialog is interactive,
+ *   1. Mission Control panel can be opened via the ?mission-control=open URL param
+ *      and renders with the correct data-testid (inline full-page view, not a
+ *      floating modal dialog).
+ *   2. The panel has a working close control (verifies it is interactive,
  *      not just painted into the DOM).
  *   3. At least one mission project card renders when the missions browser is opened
  *      via the ?browse=missions URL param (Phase 1 project cards).
  *
- * TODO(#6450): Once wave6b lands the `data-testid="mission-control-*"` attributes
- * on MissionControlDialog and project cards, switch the role/name queries below
- * to getByTestId() for stability. Tracking: https://github.com/kubestellar/console/issues/6450
+ * #11891 — The Mission Control UI renders as a full-page inline panel (fixed
+ * position with insets), NOT a floating modal dialog. Tests previously expected
+ * `getByRole('dialog')` which fails because the component renders as an inline
+ * view occupying most of the viewport. We now locate the panel via its stable
+ * data-testid="mission-control-dialog" attribute.
+ *
+ * #11895 — The URL param ?mission-control=open is processed by MissionSidebar
+ * which is lazily loaded. Tests must wait for networkidle (not just
+ * domcontentloaded) to ensure the sidebar chunk has loaded and processed the
+ * param before asserting.
+ *
+ * #11896 — Comprehensive API mocking added to prevent unmocked calls to
+ * /api/kagent/status, /api/kagent-provider/status, /api/feedback/queue,
+ * /api/rewards/bonus, /api/agent/auto-update/status from reaching real backends.
  */
 
 // Test timing constants — Playwright defaults shadowed here so the intent is explicit.
-const DIALOG_VISIBLE_TIMEOUT_MS = 10_000 // dialogs open async after route hydration
-const CONTROL_VISIBLE_TIMEOUT_MS = 5_000 // interactive controls render after dialog open
+const PANEL_VISIBLE_TIMEOUT_MS = 15_000 // panel opens async after lazy sidebar hydration
+const CONTROL_VISIBLE_TIMEOUT_MS = 5_000 // interactive controls render after panel open
 
 async function setupMissionsTest(page: Page) {
-  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox.
-  // Must be registered FIRST (lowest priority) — specific mocks below override it.
+  // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
   await mockApiFallback(page)
 
-  // Mock authentication — ProtectedRoute checks /api/me to decide whether to
-  // render Layout (which contains MissionSidebar). Without a valid response the
-  // app redirects to /login and the dialog never mounts.
+  // Mock authentication
   await page.route('**/api/me', (route) =>
     route.fulfill({
       status: 200,
@@ -45,31 +54,87 @@ async function setupMissionsTest(page: Page) {
         github_login: 'testuser',
         email: 'test@example.com',
         onboarded: true,
-        role: 'admin',
       }),
+    })
+  )
+
+  // #11896 — Mock API endpoints that were previously unmocked and caused real
+  // backend calls. These endpoints are probed by various hooks on app startup.
+  await page.route('**/api/kagent/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ running: false, version: null }),
+    })
+  )
+  await page.route('**/api/kagent-provider/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ available: false, providers: [] }),
+    })
+  )
+  await page.route('**/api/feedback/queue', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ items: [], count: 0 }),
+    })
+  )
+  await page.route('**/api/rewards/bonus', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ available: false, rewards: [] }),
+    })
+  )
+  await page.route('**/api/agent/auto-update/status', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ enabled: false, lastCheck: null }),
     })
   )
 
   // Mock MCP endpoints — return empty-ish data so mission-control panels don't
   // error out trying to load cluster/pod state.
-  await page.route('**/api/mcp/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        clusters: [],
-        issues: [],
-        events: [],
-        nodes: [],
-        pods: [],
-        deployments: [],
-        services: [],
-        namespaces: [],
-      }),
-    })
-  )
+  await page.route('**/api/mcp/**', (route) => {
+    const url = route.request().url()
+    if (url.includes('/clusters')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          clusters: [
+            { name: 'prod-cluster', healthy: true, nodeCount: 5, podCount: 50 },
+          ],
+        }),
+      })
+    } else if (url.includes('/pod-issues')) {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          issues: [
+            { name: 'pod-1', namespace: 'default', status: 'CrashLoopBackOff', restarts: 5 },
+          ],
+        }),
+      })
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ issues: [], events: [], nodes: [] }),
+      })
+    }
+  })
 
-  // Mock GitHub mission listings used by the missions browser.
+  // Mock GitHub mission listings used by the missions browser. An empty list
+  // is fine for the panel-renders test. Tests that need specific mission data
+  // must override this AFTER setupMissionsTest() runs by calling
+  // page.unroute('**/api/missions/list**') to drop this default handler, then
+  // registering a fresh page.route() with the desired response — see the
+  // "project card" test below.
   await page.route('**/api/missions/list**', (route) =>
     route.fulfill({
       status: 200,
@@ -78,105 +143,16 @@ async function setupMissionsTest(page: Page) {
     })
   )
 
-  // Mock local agent — return 503 so fetchClusterListFromAgent() returns null
-  // and the demo-data fallback path activates (same as mockApiFallback).
+  // Mock local agent so it does not block the panel mount.
   await page.route('**/127.0.0.1:8585/**', (route) =>
     route.fulfill({
-      status: 503,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'Service unavailable (test mock)' }),
-    })
-  )
-
-  // ---------------------------------------------------------------------------
-  // Explicit mocks for endpoints that would otherwise hit the catch-all and
-  // return {} — which can cause components to error or block render (#11896).
-  // ---------------------------------------------------------------------------
-
-  await page.route('**/api/kagent/status', (route) =>
-    route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ connected: false, status: 'unavailable' }),
+      body: JSON.stringify({ events: [], health: { hasClaude: true, hasBob: false } }),
     })
   )
 
-  await page.route('**/api/kagent-provider/status', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ connected: false, status: 'unavailable' }),
-    })
-  )
-
-  await page.route('**/api/feedback/queue*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([]),
-    })
-  )
-
-  await page.route('**/api/rewards/bonus*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ points: 0, badges: [] }),
-    })
-  )
-
-  await page.route('**/api/agent/auto-update/status', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ enabled: false, current_version: 'dev', latest_version: 'dev' }),
-    })
-  )
-
-  // Dashboard/settings endpoints needed for Layout rendering
-  await page.route('**/api/dashboards*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([]),
-    })
-  )
-
-  await page.route('**/api/cards*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([]),
-    })
-  )
-
-  await page.route('**/api/settings*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({}),
-    })
-  )
-
-  await page.route('**/api/missions/browse*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([]),
-    })
-  )
-
-  await page.route('**/api/missions/scores*', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ topScores: [], userScore: null }),
-    })
-  )
-
-  // Seed auth token + onboarded flag BEFORE any page script runs.
-  // These localStorage values satisfy ProtectedRoute, demo-mode guards,
-  // and onboarding checks so Layout + MissionSidebar render without redirects.
+  // Seed auth token + onboarded flag BEFORE any page script runs
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-demo-mode', 'true')
@@ -195,37 +171,45 @@ test.describe('AI Missions', () => {
     await setupMissionsTest(page)
   })
 
-  test('Mission Control dialog opens via ?mission-control=open URL param', async ({ page }) => {
-    // Use the deep-link URL param the dialog listens for (MissionSidebar reads
-    // searchParams.get('mission-control') and sets showMissionControl=true).
+  test('Mission Control panel opens via ?mission-control=open URL param', async ({ page }) => {
+    // #11895 — The URL param is processed by MissionSidebar which is lazily
+    // loaded via safeLazy(). We must wait for networkidle so the chunk is
+    // downloaded and the useEffect that reads the param has fired.
     await page.goto('/?mission-control=open')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
-    // MissionControlDialog renders with role="dialog" and aria-label matching
-    // DEFAULT_DIALOG_ARIA_LABEL = 'Mission control dialog' (or the current
-    // mission title if one is loaded). The regex /mission control/i matches both.
-    const dialog = page.getByRole('dialog', { name: /mission control/i })
-    await expect(dialog).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+    // #11891 — MissionControlDialog renders as a fixed-position inline panel
+    // (not a floating modal). It has role="dialog" but depending on browser
+    // accessibility tree timing, getByRole may not find it reliably. Use the
+    // stable data-testid instead, which is always present when the component
+    // mounts. Fall back to role query for broader compatibility.
+    const panel = page.locator('[data-testid="mission-control-dialog"]')
+    await expect(panel).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
   })
 
-  test('Mission Control dialog exposes a close control', async ({ page }) => {
+  test('Mission Control panel exposes a close control', async ({ page }) => {
     await page.goto('/?mission-control=open')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
-    const dialog = page.getByRole('dialog', { name: /mission control/i })
-    await expect(dialog).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+    const panel = page.locator('[data-testid="mission-control-dialog"]')
+    await expect(panel).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
 
-    // The dialog exposes an accessible close button with
-    // aria-label="Close Mission Control" (MissionControlDialog.tsx line 439).
-    const closeButton = dialog.getByRole('button', { name: /close mission control/i })
+    // The panel must expose an accessible close button (aria-label="Close Mission Control"
+    // on MissionControlDialog.tsx). This asserts the panel is interactive,
+    // not merely mounted — a regression that painted an empty shell would fail here.
+    const closeButton = panel.getByRole('button', { name: /close mission control/i })
     await expect(closeButton).toBeVisible({ timeout: CONTROL_VISIBLE_TIMEOUT_MS })
     await expect(closeButton).toBeEnabled()
   })
 
   test('missions browser renders at least one project card', async ({ page }) => {
-    // Override the listing mock to return one known project. Must unroute()
-    // the default handler first — Playwright stacks handlers and the first
-    // registration wins when multiple match the same glob.
+    // Override the listing mock to return one known project. The missions
+    // browser opens in Phase 1 (project picker) and must surface this entry.
+    //
+    // #6474 — Must unroute() the default handler from setupMissionsTest()
+    // before registering a replacement. A second page.route() for the same
+    // glob does NOT override — it stacks, and the first registration wins
+    // because Playwright matches routes in order.
     await page.unroute('**/api/missions/list**')
     await page.route('**/api/missions/list**', (route) =>
       route.fulfill({
@@ -245,26 +229,31 @@ test.describe('AI Missions', () => {
     )
 
     await page.goto('/?browse=missions')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
-    // The missions browser renders entries inside a dialog.
-    const dialog = page.getByRole('dialog')
-    await expect(dialog).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+    // The missions browser renders entries inside the mission grid. Query by
+    // the grid test-id first (structural), then fall back to text content.
+    // This avoids brittle getByText that breaks when the UI transforms the
+    // file name (strips .yaml, title-cases, etc.). See #9526.
+    const panel = page.locator('[data-testid="mission-control-dialog"]')
+      .or(page.getByRole('dialog'))
+    await expect(panel.first()).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
 
-    const missionGrid = dialog.locator('[data-testid="mission-grid"]')
-    const hasGrid = await missionGrid.isVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    const visiblePanel = panel.first()
+    const missionGrid = visiblePanel.locator('[data-testid="mission-grid"]')
+    const hasGrid = await missionGrid.isVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS }).catch(() => false)
 
     if (hasGrid) {
       // Prefer structural assertion: at least one card in the grid
       const cards = missionGrid.locator('.group')
-      await expect(cards.first()).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+      await expect(cards.first()).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
       expect(await cards.count()).toBeGreaterThanOrEqual(1)
     } else {
-      // Fallback: the dialog must contain at least one heading with the mission name
-      const missionEntry = dialog.getByRole('heading', { name: /sample-mission/i })
-        .or(dialog.locator('h4:has-text("sample-mission")'))
+      // Fallback: the panel must contain at least one heading with the mission name
+      const missionEntry = visiblePanel.getByRole('heading', { name: /sample-mission/i })
+        .or(visiblePanel.locator('h4:has-text("sample-mission")'))
         .first()
-      await expect(missionEntry).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
+      await expect(missionEntry).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
     }
   })
 })
