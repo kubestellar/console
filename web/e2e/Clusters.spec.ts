@@ -412,9 +412,7 @@ test.describe('Clusters Page', () => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 20_000 })
 
       // Wait for offline cluster to render
-      await expect(page.locator('[data-testid="cluster-row-offline-cluster"]').or(
-        page.getByText('offline-cluster').first()
-      )).toBeVisible({ timeout: 20_000 })
+      await expect(page.getByTestId('cluster-row-offline-cluster')).toBeVisible({ timeout: 20_000 })
 
       // Click the Offline tab (may be labeled "Offline" or "Unreachable")
       const offlineTab = page.getByRole('button', { name: /Offline|Unreachable/i }).first()
