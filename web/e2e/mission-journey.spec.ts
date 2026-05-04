@@ -361,9 +361,11 @@ async function openMissionSidebar(page: Page) {
     return false
   })
   if (!clicked) {
-    await page.locator('[data-testid="mission-sidebar-toggle"]')
+    const btn = page.locator('[data-testid="mission-sidebar-toggle"]')
       .or(page.locator('button', { hasText: /Mission/i }))
-      .first().click({ force: true, timeout: 5000 }).catch(() => {})
+      .first()
+    await expect(btn).toBeVisible({ timeout: 5000 })
+    await btn.click({ force: true })
   }
   // Wait for sidebar to appear
   await expect(
