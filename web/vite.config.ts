@@ -113,13 +113,9 @@ export default defineConfig(({ mode }) => ({
             return 'three-vendor'
           }
           // ECharts — only used by ParetoFrontier card; isolate the large
-          // (~500KB minified) echarts + zrender bundle from recharts.
+          // (~500KB minified) echarts + zrender bundle.
           if (id.includes('/echarts/') || id.includes('/echarts-for-react/') || id.includes('/zrender/')) {
             return 'echarts-vendor'
-          }
-          // Recharts + d3 — used widely across chart cards.
-          if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-')) {
-            return 'recharts-vendor'
           }
           // Animation — framer-motion is large (~350KB) and only needed on pages
           // that use <motion.*> or AnimatePresence, so isolate it from core UI deps.
