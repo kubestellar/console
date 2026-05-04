@@ -39,7 +39,7 @@ import { BaseModal } from '../../lib/modals'
 
 const STORAGE_KEY = 'kc-acmm-intro-dismissed'
 const PAPER_URL = 'https://arxiv.org/abs/2604.09388'
-const ACMM_DOCS_URL = 'https://console-docs.kubestellar.io/docs/console/acmm/acmm-dashboard'
+const ACMM_DOCS_URL = 'https://console-docs.kubestellar.io/acmm/acmm-dashboard'
 
 /** Level definitions for rendering the level grid */
 const LEVELS = [
