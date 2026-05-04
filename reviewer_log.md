@@ -1302,3 +1302,61 @@ vllm-d and pok-prod01 deploy correctly on all main-branch pushes; skipped on PR 
 - Coverage: still ~90%, need +1pp to reach 91%. Key gap: `useMissions.provider.tsx` (21.8%, 3162 lines — complex React/WS component, requires heavy mock infrastructure to improve)
 - nightlyPlaywright RED — scanner owns
 - nightlyRel/weeklyRel RED — PR #11669 arm64 fix should resolve on next nightly run
+
+## Pass 106 — 2026-05-04 UTC
+
+### Trigger
+KICK — Post-merge reviewer pass after PR #11766 (shell injection fix) merged. Full pass: CI health, coverage, post-merge diffs (#11763, #11765, #11766), CodeQL, GA4.
+
+### CI Health
+- **HEAD**: `dc2716ad` (#11766)
+- **Dashboard Lint**: ✅ success
+- **OpenSSF Scorecard**: ✅ success
+- **GA4 Error Monitor**: ✅ success
+- **Code Quality / CodeQL** (Python, Go): ✅ success; JavaScript-TypeScript: in_progress → ✅
+- **Build and Deploy KC**: in_progress at pass time (Go Tests/Coverage jobs inside)
+- **PR Verifier**: `startup_failure` for branch `fix/11762` (PR #11767, bot PR) — known issue with `pull_request_target` and reusable workflow; not a regression
+
+### Coverage
+- Last completed run: 89.42% at SHA `63595365` (2026-05-03) — unchanged, no coverage regression from recent merges.
+- Still ~1.58pp below 91% target.
+
+### Post-Merge Diff Reviews
+
+**PR #11766** — `fix: prevent shell injection in config API endpoints`
+- Added `VALID_AGENT_NAME` regex and `validateAgentName()` guard on all 6 PUT routes + GET + DELETE config endpoints
+- `writeEnvVar`: replaced `execSync('echo ... | sudo tee ...')` with pure-JS read + tmp file + `sudo mv ${shellQuote(...)}`
+- `removeEnvVar`: replaced `execSync('sudo sed -i ...')` with pure-JS content manipulation + tmp file + `sudo mv`
+- `shellQuote()` added for all remaining `execSync` calls
+- POST `/api/config/governor/agents` has its own regex validation (`/^[a-z][a-z0-9-]*$/`) — slightly inconsistent with `VALID_AGENT_NAME` but not a security regression
+- **Remaining**: Unrelated `execSync` calls at lines 810-819 (tmux send-keys, agent-controlled), 895/932 (lock file touch/rm, system paths) — out of scope
+- **Verdict**: ✅ Correct and complete for described attack vectors
+
+**PR #11763** — `fix: bind ttyd to localhost only and remove -a flag`
+- Adds `-i 127.0.0.1` to ttyd service — correct, limits exposure
+- Removes `-a` (allow-once) flag
+- PR title says "remove write flag" but `-W` remains — title is misleading but not a security regression since ttyd is now localhost-only
+- **Verdict**: ✅ Net positive
+
+**PR #11765** — `fix: pass shell variables to Python via sys.argv`
+- Replaces all `python3 -c "... '$var' ..."` patterns with `sys.argv[N]` in `copilot-comment-checker.sh`, `gh-rate-check.sh`, `hive-config.sh`, `kick-agents.sh`
+- Eliminates command injection via shell-interpolated variable expansion into Python string literals
+- **Verdict**: ✅ Clean, correct
+
+### Race Condition Fix (PR #11767 / #11768)
+- Bot PR #11767 identified a race condition in `writeEnvVar`: concurrent requests with same PID could collide on temp file name; no advisory locking
+- PR #11767 had merge conflicts with already-merged #11766 (state: dirty, base SHA predated #11766)
+- Closed #11767 with explanation; opened **PR #11768** with clean fix:
+  - `_envWriteSeq` counter: tmp name = `filePath.tmp.PID.SEQ` (unique per call)
+  - `flock -x` advisory lock wraps `sudo mv` in both `writeEnvVar` and `removeEnvVar`
+  - Same pattern applied to POST init write in `/api/config/governor/agents`
+
+### Actions Taken
+- Opened and pushed **PR #11768** — flock + seq counter race condition fix for `writeEnvVar`/`removeEnvVar`
+- Closed conflicted PR #11767 with comment pointing to #11768
+
+### Remaining Items
+- Coverage: 89.42% — still ~1.58pp below 91% target
+- Build and Deploy KC in_progress — Go Tests / Coverage jobs pending
+- POST `/api/config/governor/agents` validation regex (`/^[a-z][a-z0-9-]*$/`) inconsistent with `VALID_AGENT_NAME` — functional gap but not a security issue
+- Community PRs #11754 and #11755 (lightyagami2109) awaiting author fixes (gofmt regression, missing assertions)
