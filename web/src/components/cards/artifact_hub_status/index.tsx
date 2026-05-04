@@ -6,17 +6,16 @@ import {
   Package,
   Users,
 } from 'lucide-react'
-import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { useArtifactHubStatus } from './useArtifactHubStatus'
-import { createCardSyncFormatter } from '../../../lib/formatters'
+
 
 
 export function ArtifactHubStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, isRefreshing, showSkeleton, showEmptyState } = useArtifactHubStatus()
+  const { data, error, showSkeleton, showEmptyState } = useArtifactHubStatus()
 
   if (showSkeleton) {
     return (

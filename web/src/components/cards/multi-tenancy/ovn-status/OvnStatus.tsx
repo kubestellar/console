@@ -19,7 +19,7 @@ import { useOvnStatus } from './useOvnStatus'
 import { OVN_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
 import { OvnDetailModal } from './OvnDetailModal'
-import { createCardSyncFormatter } from '../../../../lib/formatters'
+
 
 // ============================================================================
 // Constants
@@ -42,7 +42,7 @@ const SKELETON_UDN_ROWS = 2
 
 export function OvnStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useOvnStatus()
+  const { data, error, showSkeleton, showEmptyState, isDemoData } = useOvnStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()

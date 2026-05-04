@@ -1,5 +1,4 @@
 import { CheckCircle, AlertTriangle, Server } from 'lucide-react'
-import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { Skeleton } from '../../ui/Skeleton'
 import { MetricTile } from '../../../lib/cards/CardComponents'
@@ -11,7 +10,7 @@ import { createCardSyncFormatter } from '../../../lib/formatters'
 
 export function FlatcarStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, isRefreshing, showSkeleton, showEmptyState } = useFlatcarStatus()
+  const { data, error, showSkeleton, showEmptyState } = useFlatcarStatus()
 
   if (showSkeleton) {
     return (

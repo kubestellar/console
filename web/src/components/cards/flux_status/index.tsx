@@ -4,7 +4,7 @@ import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useFluxStatus } from './useFluxStatus'
 import type { FluxResourceStatus } from './demoData'
-import { createCardSyncFormatter } from '../../../lib/formatters'
+
 
 
 function ResourceSection({
@@ -70,7 +70,7 @@ function ResourceSection({
 
 export function FluxStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useFluxStatus()
+  const { data, error, showSkeleton, showEmptyState } = useFluxStatus()
 
   const totalNotReady = data.sources.notReady + data.kustomizations.notReady + data.helmReleases.notReady
   const isHealthy = data.health === 'healthy'

@@ -19,7 +19,7 @@ import { useK3sStatus } from './useK3sStatus'
 import { K3S_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
 import { K3sDetailModal } from './K3sDetailModal'
-import { createCardSyncFormatter } from '../../../../lib/formatters'
+
 
 // ============================================================================
 // Constants
@@ -42,7 +42,7 @@ const SKELETON_POD_ROWS = 3
 
 export function K3sStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useK3sStatus()
+  const { data, error, showSkeleton, showEmptyState, isDemoData } = useK3sStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()

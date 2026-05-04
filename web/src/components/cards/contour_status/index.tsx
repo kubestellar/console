@@ -4,7 +4,7 @@ import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useContourStatus } from './useContourStatus'
 import type { ContourProxyStatus } from './demoData'
-import { createCardSyncFormatter } from '../../../lib/formatters'
+
 
 
 function ProxySection({
@@ -70,7 +70,7 @@ function ProxySection({
 
 export function ContourStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useContourStatus()
+  const { data, error, showSkeleton, showEmptyState } = useContourStatus()
 
   const isHealthy = data.health === 'healthy'
 

@@ -17,7 +17,7 @@ import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useOpenYurtStatus } from './useOpenYurtStatus'
 import type { OpenYurtNodePool, NodePoolStatus, NodePoolType, OpenYurtGateway, GatewayStatus } from './demoData'
-import { createCardSyncFormatter } from '../../../lib/formatters'
+
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -167,7 +167,7 @@ function GatewayRow({ gw }: { gw: OpenYurtGateway }) {
 
 export function OpenYurtStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useOpenYurtStatus()
+  const { data, error, showSkeleton, showEmptyState } = useOpenYurtStatus()
   const [search, setSearch] = useState('')
 
   // Guard against undefined nested data

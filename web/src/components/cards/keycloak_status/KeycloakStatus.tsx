@@ -20,7 +20,7 @@ import {
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { useKeycloakStatus } from './useKeycloakStatus'
 import type { KeycloakRealm, KeycloakRealmStatus } from './demoData'
-import { createCardSyncFormatter } from '../../../lib/formatters'
+
 
 // Default page size for the paginated realm list. Named constant per
 // CLAUDE.md "No magic numbers" rule.
@@ -119,7 +119,7 @@ function RealmRow({ realm }: { realm: KeycloakRealm }) {
 
 export function KeycloakStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, isFailed, showSkeleton, showEmptyState } =
+  const { data, isFailed, showSkeleton, showEmptyState } =
     useKeycloakStatus()
 
   const realms = data.realms || []

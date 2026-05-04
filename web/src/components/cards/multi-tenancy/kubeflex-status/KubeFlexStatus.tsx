@@ -19,7 +19,7 @@ import { useKubeFlexStatus } from './useKubeflexStatus'
 import { KUBEFLEX_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
 import { KubeFlexDetailModal } from './KubeFlexDetailModal'
-import { createCardSyncFormatter } from '../../../../lib/formatters'
+
 
 // ============================================================================
 // Constants
@@ -39,7 +39,7 @@ const SKELETON_CP_ROWS = 3
 
 export function KubeFlexStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useKubeFlexStatus()
+  const { data, error, showSkeleton, showEmptyState, isDemoData } = useKubeFlexStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()

@@ -5,7 +5,6 @@ import { CardSearchInput, MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
 import { useCloudEventsStatus } from './useCloudEventsStatus'
 import type { CloudEventResourceState } from './demoData'
-import { createCardSyncFormatter } from '../../../lib/formatters'
 import { getHealthBadgeClasses } from '../../../lib/cards/statusColors'
 
 const STATUS_STYLE: Record<CloudEventResourceState, { badge: string; icon: React.ReactNode }> = {
@@ -27,7 +26,7 @@ const STATUS_LABEL_KEY: Record<CloudEventResourceState, 'cloudevents.status_read
 
 export function CloudEventsStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
+  const { data, error, showSkeleton, showEmptyState } = useCloudEventsStatus()
   const [search, setSearch] = useState('')
 
   const isHealthy = data.health === 'healthy'

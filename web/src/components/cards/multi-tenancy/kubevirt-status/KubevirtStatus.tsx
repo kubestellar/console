@@ -19,7 +19,7 @@ import { useKubevirtStatus } from './useKubevirtStatus'
 import { KUBEVIRT_INSTALL_PROMPT } from '../shared'
 import { loadMissionPrompt } from '../missionLoader'
 import { KubevirtDetailModal } from './KubevirtDetailModal'
-import { createCardSyncFormatter } from '../../../../lib/formatters'
+
 
 // ============================================================================
 // Constants
@@ -59,7 +59,7 @@ function vmStateColorClass(state: string): string {
 
 export function KubevirtStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, showSkeleton, showEmptyState, isRefreshing, isDemoData } = useKubevirtStatus()
+  const { data, error, showSkeleton, showEmptyState, isDemoData } = useKubevirtStatus()
   const { startMission } = useMissions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const { isOpen: isDetailModalOpen, open: openDetailModal, close: closeDetailModal } = useModalState()
