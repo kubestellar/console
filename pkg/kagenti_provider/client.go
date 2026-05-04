@@ -306,13 +306,23 @@ func (c *KagentiClient) Discover(namespace, agentName string) (*AgentCard, error
 	return &card, nil
 }
 
+// HistoryMessage represents a single message in conversation history passed to Invoke.
+type HistoryMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 // Invoke sends a message to an agent via the A2A protocol and returns the raw
-// response body for streaming consumption.
-func (c *KagentiClient) Invoke(ctx context.Context, namespace, agentName, message string, contextID string) (io.ReadCloser, error) {
+// response body for streaming consumption. The history parameter provides
+// conversation context so the agent can process follow-up messages correctly.
+func (c *KagentiClient) Invoke(ctx context.Context, namespace, agentName, message string, contextID string, history []HistoryMessage) (io.ReadCloser, error) {
 	if c.directAgentURL != "" {
 		payload := map[string]any{"message": message}
 		if contextID != "" {
 			payload["session_id"] = contextID
+		}
+		if len(history) > 0 {
+			payload["history"] = history
 		}
 
 		body, err := json.Marshal(payload)
@@ -355,10 +365,11 @@ func (c *KagentiClient) Invoke(ctx context.Context, namespace, agentName, messag
 
 	// Kagenti backend uses REST+SSE; keep both known controller paths.
 	type restPayload struct {
-		Message   string `json:"message"`
-		SessionID string `json:"session_id,omitempty"`
+		Message   string           `json:"message"`
+		SessionID string           `json:"session_id,omitempty"`
+		History   []HistoryMessage `json:"history,omitempty"`
 	}
-	rp := restPayload{Message: message, SessionID: contextID}
+	rp := restPayload{Message: message, SessionID: contextID, History: history}
 	payload, err := json.Marshal(rp)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal kagenti request: %w", err)

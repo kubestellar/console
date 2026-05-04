@@ -169,3 +169,63 @@ func TestRefreshGitHubAuth_GhNotInstalled(t *testing.T) {
 		t.Error("Expected false when gh is not on PATH")
 	}
 }
+
+func TestBuildCopilotCLIPrompt_NoHistory(t *testing.T) {
+req := &ChatRequest{
+Prompt: "Create a kind cluster called test",
+}
+prompt := buildCopilotCLIPrompt(req)
+if strings.Contains(prompt, "System:") {
+t.Error("prompt should NOT contain 'System:' prefix for copilot CLI")
+}
+if !strings.Contains(prompt, "Create a kind cluster called test") {
+t.Error("prompt must contain the user request")
+}
+if strings.Contains(prompt, "Conversation so far") {
+t.Error("prompt should not include conversation section when no history")
+}
+}
+
+func TestBuildCopilotCLIPrompt_WithHistory(t *testing.T) {
+req := &ChatRequest{
+Prompt: "kind create cluster --name test-cluster",
+History: []ChatMessage{
+{Role: "user", Content: "Help me create a cluster"},
+{Role: "assistant", Content: "Got it — I'm ready. What provider?"},
+},
+}
+prompt := buildCopilotCLIPrompt(req)
+if strings.Contains(prompt, "System:") {
+t.Error("prompt should NOT contain 'System:' prefix for copilot CLI")
+}
+if !strings.Contains(prompt, "Conversation so far") {
+t.Error("prompt should include conversation history section")
+}
+if !strings.Contains(prompt, "Now execute this request") {
+t.Error("prompt should include execution directive before current request")
+}
+if !strings.Contains(prompt, "kind create cluster --name test-cluster") {
+t.Error("prompt must contain the current user request")
+}
+if !strings.Contains(prompt, "Help me create a cluster") {
+t.Error("prompt must include history user message")
+}
+if !strings.Contains(prompt, "Got it") {
+t.Error("prompt must include history assistant message")
+}
+}
+
+func TestBuildCopilotCLIPrompt_SkipsSystemMessages(t *testing.T) {
+req := &ChatRequest{
+Prompt: "list pods",
+History: []ChatMessage{
+{Role: "user", Content: "deploy app"},
+{Role: "system", Content: "Non-interactive mode enabled"},
+{Role: "assistant", Content: "Deploying..."},
+},
+}
+prompt := buildCopilotCLIPrompt(req)
+if strings.Contains(prompt, "Non-interactive mode") {
+t.Error("system messages should be excluded from copilot CLI prompt")
+}
+}

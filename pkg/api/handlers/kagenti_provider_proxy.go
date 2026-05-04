@@ -73,7 +73,7 @@ func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "agent, namespace, and message are required"})
 	}
 
-	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, req.Message, req.ContextID)
+	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, req.Message, req.ContextID, nil)
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -198,7 +198,7 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 
 	message := fmt.Sprintf("Please use the tool %s with args %s", req.Tool, string(argsJSON))
 
-	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, message, "")
+	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, message, "", nil)
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
 	}

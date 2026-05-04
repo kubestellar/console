@@ -189,13 +189,54 @@ func (c *CopilotCLIProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 	return resp, err
 }
 
+// buildCopilotCLIPrompt creates a prompt tailored for the copilot CLI tool.
+//
+// Unlike buildPromptWithHistoryGeneric, this does NOT embed a "System:" prefix
+// because the copilot CLI already has its own internal system prompt. Embedding
+// a competing system prompt causes the model to ignore conversation history and
+// loop with generic "I'm ready to help" responses (#11904).
+//
+// Instead, this builds a focused task prompt that includes:
+//   - A brief role/context instruction (not prefixed with "System:")
+//   - Conversation history (abbreviated for long exchanges)
+//   - The current user request with an explicit execution directive
+func buildCopilotCLIPrompt(req *ChatRequest) string {
+	var sb strings.Builder
+
+	// Brief context instruction — NOT a "System:" block that would compete
+	// with copilot CLI's internal system prompt.
+	sb.WriteString("You are helping manage Kubernetes clusters via the KubeStellar Console. ")
+	sb.WriteString("Execute commands when asked. Use kubectl, helm, kind, or other CLI tools as needed.\n\n")
+
+	if len(req.History) > 0 {
+		sb.WriteString("Conversation so far:\n")
+		for _, msg := range req.History {
+			switch msg.Role {
+			case "user":
+				sb.WriteString("User: ")
+			case "assistant":
+				sb.WriteString("Assistant: ")
+			default:
+				continue
+			}
+			sb.WriteString(msg.Content)
+			sb.WriteString("\n\n")
+		}
+		sb.WriteString("---\n")
+		sb.WriteString("Now execute this request:\n")
+	}
+
+	sb.WriteString(req.Prompt)
+	return sb.String()
+}
+
 // doStreamChat performs a single invocation of the copilot CLI.
 func (c *CopilotCLIProvider) doStreamChat(ctx context.Context, req *ChatRequest, onChunk func(chunk string), onProgress func(event StreamEvent)) (*ChatResponse, error) {
 	if c.cliPath == "" {
 		return nil, fmt.Errorf("copilot CLI not found")
 	}
 
-	prompt := buildPromptWithHistoryGeneric(req)
+	prompt := buildCopilotCLIPrompt(req)
 	slog.Info("[CopilotCLI] starting", "promptLength", len(prompt))
 
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {

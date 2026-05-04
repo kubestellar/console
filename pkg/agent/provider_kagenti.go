@@ -184,7 +184,17 @@ func (p *KagentiProvider) StreamChatWithProgress(ctx context.Context, req *ChatR
 		p.namespace = kagentiDefaultAgentNamespace
 	}
 
-	stream, err := p.client.Invoke(ctx, p.namespace, p.agentName, req.Prompt, req.SessionID)
+	// Convert conversation history to the format expected by the kagenti client
+	// so the agent receives full conversation context for follow-up messages (#11904).
+	var history []kagenti_provider.HistoryMessage
+	for _, m := range req.History {
+		history = append(history, kagenti_provider.HistoryMessage{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+
+	stream, err := p.client.Invoke(ctx, p.namespace, p.agentName, req.Prompt, req.SessionID, history)
 	if err != nil {
 		return nil, err
 	}
