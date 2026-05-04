@@ -110,6 +110,23 @@ async function setupMissionsTest(page: Page) {
     })
   )
 
+  // Mock agent/backend status endpoints to prevent real backend calls (#11896)
+  await page.route('**/api/kagent/status', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'connected', version: 'test' }) })
+  )
+  await page.route('**/api/kagent-provider/status', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ providers: [] }) })
+  )
+  await page.route('**/api/feedback/queue', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) })
+  )
+  await page.route('**/api/rewards/bonus', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ bonuses: [] }) })
+  )
+  await page.route('**/api/agent/auto-update/status', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ enabled: false, current: 'test' }) })
+  )
+
   // Seed auth token + onboarded flag BEFORE any page script runs
   await page.addInitScript(() => {
     localStorage.setItem('token', 'test-token')
@@ -132,7 +149,7 @@ test.describe('AI Missions', () => {
   test('Mission Control dialog opens via ?mission-control=open URL param', async ({ page }) => {
     // Use the deep-link URL param the dialog listens for (see useMissionControl.ts).
     await page.goto('/?mission-control=open')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     // The dialog renders with role="dialog" and an aria-label of "Mission Control"
     // (or the current mission title if one is already loaded). See
@@ -143,7 +160,7 @@ test.describe('AI Missions', () => {
 
   test('Mission Control dialog exposes a close control', async ({ page }) => {
     await page.goto('/?mission-control=open')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const dialog = page.getByRole('dialog', { name: /mission control/i })
     await expect(dialog).toBeVisible({ timeout: DIALOG_VISIBLE_TIMEOUT_MS })
