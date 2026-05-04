@@ -86,16 +86,20 @@ func TestMediumBlogHandler(t *testing.T) {
 
 func TestStripHTML(t *testing.T) {
 	tests := []struct {
+		name   string
 		input  string
 		maxLen int
 		want   string
 	}{
-		{"<p>Hello World</p>", 100, "Hello World"},
-		{"<div>Part 1</div><span>Part 2</span>", 100, "Part 1 Part 2"},
-		{"This is very long content", 10, "This is ve"},
+		{"simple paragraph", "<p>Hello World</p>", 100, "Hello World"},
+		{"adjacent block elements", "<div>Part 1</div><span>Part 2</span>", 100, "Part 1 Part 2"},
+		{"maxLen truncation", "This is very long content", 10, "This is ve"},
+		{"closing tag before comma", "<p>Hello</p>,<p>World</p>", 100, "Hello, World"},
 	}
 
 	for _, tt := range tests {
-		assert.Equal(t, tt.want, stripHTML(tt.input, tt.maxLen))
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, stripHTML(tt.input, tt.maxLen))
+		})
 	}
 }

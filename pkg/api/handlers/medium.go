@@ -85,26 +85,46 @@ var blogCache = &mediumBlogCache{}
 var mediumSingleflight singleflight.Group
 
 // stripHTML removes HTML tags and returns plain text, trimmed to maxLen.
+// A space separator is inserted after opening tags (e.g. <p>, <div>) so that
+// adjacent text blocks are separated. Closing tags (</p>, </div>) do not
+// insert a separator because the character immediately after the closing tag
+// is part of the surrounding text flow (e.g. a comma in "Hello</p>,World").
 func stripHTML(html string, maxLen int) string {
 	var result strings.Builder
 	inTag := false
+	isClosingTag := false
+	seenFirstTagChar := false
 	for _, r := range html {
 		if r == '<' {
-			if !inTag && result.Len() > 0 && result.String()[result.Len()-1] != ' ' {
-				result.WriteRune(' ')
-			}
 			inTag = true
+			isClosingTag = false
+			seenFirstTagChar = false
 			continue
 		}
 		if r == '>' {
+			// After an opening tag, add a space separator between text blocks,
+			// but not after closing tags — they don't end a text block.
+			if !isClosingTag && result.Len() > 0 {
+				last := result.String()[result.Len()-1]
+				if last != ' ' {
+					result.WriteRune(' ')
+				}
+			}
 			inTag = false
 			continue
 		}
-		if !inTag {
-			result.WriteRune(r)
-			if result.Len() >= maxLen {
-				break
+		if inTag {
+			if !seenFirstTagChar {
+				seenFirstTagChar = true
+				if r == '/' {
+					isClosingTag = true
+				}
 			}
+			continue
+		}
+		result.WriteRune(r)
+		if result.Len() >= maxLen {
+			break
 		}
 	}
 	text := strings.TrimSpace(result.String())
