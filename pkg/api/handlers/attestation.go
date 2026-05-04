@@ -71,6 +71,9 @@ func (h *AttestationHandler) RegisterPublicRoutes(r fiber.Router) {
 }
 
 func (h *AttestationHandler) getScore(c *fiber.Ctx) error {
+	if isDemoMode(c) {
+		return demoResponse(c, "attestation", getDemoAttestationScores())
+	}
 	// TODO: replace with live signal collection when backends land.
 	return c.JSON(getDemoAttestationScores())
 }

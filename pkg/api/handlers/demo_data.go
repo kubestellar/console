@@ -644,3 +644,26 @@ func getDemoPodNetworkStats() []PodNetworkStats {
 func demoResponse(c *fiber.Ctx, key string, data interface{}) error {
 	return c.JSON(fiber.Map{key: data, "source": "demo"})
 }
+
+// getDemoCRDs returns synthetic CRD data for demo mode.
+func getDemoCRDs() []CRDSummary {
+	return []CRDSummary{
+		{Name: "certificates", Group: "cert-manager.io", Version: "v1", Scope: "Namespaced", Status: "Established", Instances: 12, Cluster: "eks-prod-us-east-1", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}}},
+		{Name: "clusterissuers", Group: "cert-manager.io", Version: "v1", Scope: "Cluster", Status: "Established", Instances: 3, Cluster: "eks-prod-us-east-1", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}}},
+		{Name: "bindingpolicies", Group: "control.kubestellar.io", Version: "v1alpha1", Scope: "Cluster", Status: "Established", Instances: 5, Cluster: "gke-staging", Versions: []CRDVersion{{Name: "v1alpha1", Served: true, Storage: true}}},
+		{Name: "prometheusrules", Group: "monitoring.coreos.com", Version: "v1", Scope: "Namespaced", Status: "Established", Instances: 8, Cluster: "gke-staging", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}}},
+		{Name: "clusterpolicies", Group: "kyverno.io", Version: "v1", Scope: "Cluster", Status: "Established", Instances: 15, Cluster: "k3s-edge", Versions: []CRDVersion{{Name: "v1", Served: true, Storage: true}, {Name: "v2beta1", Served: true, Storage: false}}},
+	}
+}
+
+// getDemoWebhooks returns synthetic admission webhook data for demo mode.
+func getDemoWebhooks() []WebhookSummary {
+	return []WebhookSummary{
+		{Name: "cert-manager-webhook", Type: "validating", FailurePolicy: "Fail", MatchPolicy: "Equivalent", Rules: 3, Cluster: "eks-prod-us-east-1"},
+		{Name: "cert-manager-webhook", Type: "mutating", FailurePolicy: "Fail", MatchPolicy: "Equivalent", Rules: 2, Cluster: "eks-prod-us-east-1"},
+		{Name: "kyverno-resource-validating-webhook", Type: "validating", FailurePolicy: "Ignore", MatchPolicy: "Equivalent", Rules: 6, Cluster: "gke-staging"},
+		{Name: "kyverno-resource-mutating-webhook", Type: "mutating", FailurePolicy: "Ignore", MatchPolicy: "Equivalent", Rules: 4, Cluster: "gke-staging"},
+		{Name: "gatekeeper-validating-webhook", Type: "validating", FailurePolicy: "Ignore", MatchPolicy: "Exact", Rules: 1, Cluster: "k3s-edge"},
+		{Name: "istio-sidecar-injector", Type: "mutating", FailurePolicy: "Fail", MatchPolicy: "Equivalent", Rules: 2, Cluster: "eks-prod-us-east-1"},
+	}
+}
