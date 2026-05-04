@@ -1111,6 +1111,9 @@ function shellQuote(s) {
   return "'" + s.replace(/'/g, "'\\''" ) + "'";
 }
 
+// Per-file write sequence counter for unique temp file names.
+let _envWriteSeq = 0;
+
 function parseEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
   const content = fs.readFileSync(filePath, 'utf8');
@@ -1133,9 +1136,10 @@ function writeEnvVar(filePath, key, value) {
   } else {
     updated = content.trimEnd() + `\n${key}=${value}\n`;
   }
-  const tmp = filePath + '.tmp.' + process.pid;
+  const lockFile = filePath + '.lock';
+  const tmp = filePath + '.tmp.' + process.pid + '.' + (++_envWriteSeq);
   fs.writeFileSync(tmp, updated, { mode: 0o644 });
-  execSync(`sudo mv ${shellQuote(tmp)} ${shellQuote(filePath)}`);
+  execSync(`flock -x ${shellQuote(lockFile)} sudo mv ${shellQuote(tmp)} ${shellQuote(filePath)}`, { stdio: 'pipe' });
 }
 
 function removeEnvVar(filePath, key) {
@@ -1144,9 +1148,10 @@ function removeEnvVar(filePath, key) {
   const content = fs.readFileSync(filePath, 'utf8');
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const updated = content.replace(new RegExp(`^${escapedKey}=.*\n?`, 'gm'), '');
-  const tmp = filePath + '.tmp.' + process.pid;
+  const lockFile = filePath + '.lock';
+  const tmp = filePath + '.tmp.' + process.pid + '.' + (++_envWriteSeq);
   fs.writeFileSync(tmp, updated, { mode: 0o644 });
-  execSync(`sudo mv ${shellQuote(tmp)} ${shellQuote(filePath)}`);
+  execSync(`flock -x ${shellQuote(lockFile)} sudo mv ${shellQuote(tmp)} ${shellQuote(filePath)}`, { stdio: 'pipe' });
 }
 
 function deriveCli(launchCmd) {
@@ -1470,9 +1475,10 @@ app.post('/api/config/governor/agents', (req, res) => {
     const envFile = `${ENV_DIR}/${name}.env`;
     if (!fs.existsSync(envFile)) {
       const initContent = `# ${name} agent config\nAGENT_LAUNCH_CMD=agent-launch.sh\nAGENT_CLI_PINNED=false\n`;
-      const tmp = envFile + '.tmp.' + process.pid;
+      const tmp = envFile + '.tmp.' + process.pid + '.' + (++_envWriteSeq);
+      const lockFile = envFile + '.lock';
       fs.writeFileSync(tmp, initContent, { mode: 0o644 });
-      execSync(`sudo mv ${shellQuote(tmp)} ${shellQuote(envFile)}`);
+      execSync(`flock -x ${shellQuote(lockFile)} sudo mv ${shellQuote(tmp)} ${shellQuote(envFile)}`, { stdio: 'pipe' });
     }
     res.json({ ok: true });
   } catch (err) {
