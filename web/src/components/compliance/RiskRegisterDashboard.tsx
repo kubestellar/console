@@ -77,7 +77,11 @@ function statusColor(status: string): string {
 
 // ── Component ─────────────────────────────────────────────────────────
 
-export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardContent() {
+interface ContentProps {
+  onStateChange?: (state: { loading: boolean; error: string | null }) => void
+}
+
+export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardContent({ onStateChange }: ContentProps) {
   const [risks, setRisks] = useState<Risk[]>([])
   const [categories, setCategories] = useState<CategorySummary[]>([])
   const [summary, setSummary] = useState<RegisterSummary | null>(null)
@@ -115,6 +119,10 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  useEffect(() => {
+    onStateChange?.({ loading, error })
+  }, [loading, error, onStateChange])
+
   const filteredRisks = useMemo(() => {
     return risks.filter(r => {
       if (categoryFilter !== 'All' && r.category !== categoryFilter) return false
@@ -132,8 +140,15 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
   )
 
   if (error) return (
-    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg">
-      <p className="text-red-400">{error}</p>
+    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg space-y-3">
+      <p className="text-red-400 font-medium">Unable to load risk register data</p>
+      <p className="text-sm text-gray-400">{error}</p>
+      <button
+        onClick={fetchData}
+        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 rounded text-sm text-red-300 transition-colors"
+      >
+        Retry
+      </button>
     </div>
   )
 
@@ -326,8 +341,12 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
 })
 
 export default function RiskRegisterDashboard() {
+  const [contentState, setContentState] = useState<{ loading: boolean; error: string | null }>({ loading: true, error: null })
+
   return (<>
-    <RiskRegisterDashboardContent />
-    <UnifiedDashboard config={riskRegisterDashboardConfig} />
+    <RiskRegisterDashboardContent onStateChange={setContentState} />
+    {!contentState.error && !contentState.loading && (
+      <UnifiedDashboard config={riskRegisterDashboardConfig} />
+    )}
   </>)
 }

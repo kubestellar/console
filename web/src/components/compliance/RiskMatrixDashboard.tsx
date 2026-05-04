@@ -66,7 +66,11 @@ function severityBadge(score: number) {
 
 // ── Component ─────────────────────────────────────────────────────────
 
-export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardContent() {
+interface ContentProps {
+  onStateChange?: (state: { loading: boolean; error: string | null }) => void
+}
+
+export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardContent({ onStateChange }: ContentProps) {
   const [risks, setRisks] = useState<Risk[]>([])
   const [heatmap, setHeatmap] = useState<HeatmapCell[]>([])
   const [summary, setSummary] = useState<RiskSummary | null>(null)
@@ -97,6 +101,10 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  useEffect(() => {
+    onStateChange?.({ loading, error })
+  }, [loading, error, onStateChange])
+
   // Build a lookup from heatmap data
   const heatmapLookup = useMemo(() => {
     const map = new Map<string, HeatmapCell>()
@@ -125,8 +133,15 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
   )
 
   if (error) return (
-    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg">
-      <p className="text-red-400">{error}</p>
+    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg space-y-3">
+      <p className="text-red-400 font-medium">Unable to load risk matrix data</p>
+      <p className="text-sm text-gray-400">{error}</p>
+      <button
+        onClick={fetchData}
+        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 rounded text-sm text-red-300 transition-colors"
+      >
+        Retry
+      </button>
     </div>
   )
 
@@ -359,8 +374,12 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
 })
 
 export default function RiskMatrixDashboard() {
+  const [contentState, setContentState] = useState<{ loading: boolean; error: string | null }>({ loading: true, error: null })
+
   return (<>
-    <RiskMatrixDashboardContent />
-    <UnifiedDashboard config={riskMatrixDashboardConfig} />
+    <RiskMatrixDashboardContent onStateChange={setContentState} />
+    {!contentState.error && !contentState.loading && (
+      <UnifiedDashboard config={riskMatrixDashboardConfig} />
+    )}
   </>)
 }

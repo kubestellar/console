@@ -112,7 +112,11 @@ const ThresholdCard = memo(function ThresholdCard({ t }: { t: AppetiteThreshold 
 
 // ── Component ─────────────────────────────────────────────────────────
 
-export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardContent() {
+interface ContentProps {
+  onStateChange?: (state: { loading: boolean; error: string | null }) => void
+}
+
+export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardContent({ onStateChange }: ContentProps) {
   const [thresholds, setThresholds] = useState<AppetiteThreshold[]>([])
   const [kris, setKRIs] = useState<KRI[]>([])
   const [summary, setSummary] = useState<AppetiteSummary | null>(null)
@@ -143,6 +147,10 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  useEffect(() => {
+    onStateChange?.({ loading, error })
+  }, [loading, error, onStateChange])
+
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
@@ -151,8 +159,15 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
   )
 
   if (error) return (
-    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg">
-      <p className="text-red-400">{error}</p>
+    <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg space-y-3">
+      <p className="text-red-400 font-medium">Unable to load risk appetite data</p>
+      <p className="text-sm text-gray-400">{error}</p>
+      <button
+        onClick={fetchData}
+        className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 rounded text-sm text-red-300 transition-colors"
+      >
+        Retry
+      </button>
     </div>
   )
 
@@ -346,8 +361,12 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
 })
 
 export default function RiskAppetiteDashboard() {
+  const [contentState, setContentState] = useState<{ loading: boolean; error: string | null }>({ loading: true, error: null })
+
   return (<>
-    <RiskAppetiteDashboardContent />
-    <UnifiedDashboard config={riskAppetiteDashboardConfig} />
+    <RiskAppetiteDashboardContent onStateChange={setContentState} />
+    {!contentState.error && !contentState.loading && (
+      <UnifiedDashboard config={riskAppetiteDashboardConfig} />
+    )}
   </>)
 }
