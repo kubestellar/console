@@ -1336,11 +1336,9 @@ function NightlyE2EPreview() {
         { acronym: 'IS', dots: ['g','g','r','g','g','g','g'] },
         { acronym: 'PD', dots: ['g','g','g','g','g','g','g'] },
         { acronym: 'PPC', dots: ['g','r','g','g','g','r','g'] },
-        { acronym: 'SA', dots: ['g','g','g','g','g','g','g'] },
         { acronym: 'TPC', dots: ['g','g','g','r','g','g','g'] },
         { acronym: 'WEP', dots: ['g','g','g','g','g','g','b'] },
         { acronym: 'WVA', dots: ['g','r','g','g','r','g','g'] },
-        { acronym: 'BM', dots: ['r','r','g','r','g','r','g'] },
       ] },
     {
       name: 'GKE', color: '#3b82f6',
@@ -1348,7 +1346,6 @@ function NightlyE2EPreview() {
         { acronym: 'IS', dots: ['g','g','g','g','g','g','g'] },
         { acronym: 'PD', dots: ['r','g','g','g','g','g','g'] },
         { acronym: 'WEP', dots: ['g','g','g','g','g','g','g'] },
-        { acronym: 'BM', dots: ['b','g','g','r','g','g','g'] },
       ] },
     {
       name: 'CKS', color: '#a855f7',
@@ -1356,7 +1353,6 @@ function NightlyE2EPreview() {
         { acronym: 'IS', dots: [] as string[] },
         { acronym: 'PD', dots: [] as string[] },
         { acronym: 'WEP', dots: [] as string[] },
-        { acronym: 'BM', dots: [] as string[] },
       ] },
   ]
   const dotColor: Record<string, string> = { g: '#22c55e', r: '#ef4444', b: '#60a5fa' }

@@ -58,49 +58,41 @@ export interface NightlyGuideStatus {
 const IMG_CUDA_DEV = { 'llm-d-cuda-dev': 'latest' }
 const IMG_PD = { 'llm-d-cuda-dev': 'latest', 'llm-d-routing-sidecar': 'v0.5.0' }
 const IMG_PPC = { 'llm-d-cuda-dev': 'latest', 'llm-d-uds-tokenizer': 'v0.5.1-rc1' }
-const IMG_SA = { 'llm-d-inference-sim': 'v0.7.1', 'llm-d-routing-sidecar': 'v0.5.0' }
 const IMG_WEP = { 'llm-d-cuda-dev': 'latest', 'llm-d-routing-sidecar': 'v0.5.0' }
 const IMG_WVA = { 'llm-d-cuda-dev': 'latest', 'llm-d-workload-variant-autoscaler': 'nightly' }
 
 export const NIGHTLY_WORKFLOWS: NightlyWorkflowConfig[] = [
   // OCP — all OCP guides run on H100 except WVA (A100) and SA (CPU)
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-ocp.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'OCP', model: 'Qwen3-32B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_CUDA_DEV },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-optimized-baseline-ocp.yaml', guide: 'Optimized Baseline', acronym: 'IS', platform: 'OCP', model: 'Qwen3-32B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_CUDA_DEV },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-ocp.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'OCP', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_PD },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-precise-prefix-cache-ocp.yaml', guide: 'Precise Prefix Cache', acronym: 'PPC', platform: 'OCP', model: 'Qwen3-32B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_PPC },
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-simulated-accelerators.yaml', guide: 'Simulated Accelerators', acronym: 'SA', platform: 'OCP', model: 'Simulated', gpuType: 'CPU', gpuCount: 0, llmdImages: IMG_SA },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-tiered-prefix-cache-ocp.yaml', guide: 'Tiered Prefix Cache', acronym: 'TPC', platform: 'OCP', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 1, llmdImages: IMG_CUDA_DEV },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-ocp.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'OCP', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_WEP },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-ocp.yaml', guide: 'WVA', acronym: 'WVA', platform: 'OCP', model: 'Llama-3.1-8B', gpuType: 'A100', gpuCount: 2, llmdImages: IMG_WVA },
-  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-ocp.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'OCP', model: 'opt-125m', gpuType: 'A100', gpuCount: 1, llmdImages: IMG_CUDA_DEV },
   // GKE — all GKE guides run on L4
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-gke.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'GKE', model: 'Qwen3-32B', gpuType: 'L4', gpuCount: 2, llmdImages: IMG_CUDA_DEV },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-optimized-baseline-gke.yaml', guide: 'Optimized Baseline', acronym: 'IS', platform: 'GKE', model: 'Qwen3-32B', gpuType: 'L4', gpuCount: 2, llmdImages: IMG_CUDA_DEV },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-gke.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'GKE', model: 'Qwen3-0.6B', gpuType: 'L4', gpuCount: 2, llmdImages: IMG_PD },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-gke.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'GKE', model: 'Qwen3-0.6B', gpuType: 'L4', gpuCount: 2, llmdImages: IMG_WEP },
-  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nighly-benchmark-gke.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'GKE', model: 'opt-125m', gpuType: 'L4', gpuCount: 1, llmdImages: IMG_CUDA_DEV },
   // CKS — all CKS guides run on H100
-  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-inference-scheduling-cks.yaml', guide: 'Inference Scheduling', acronym: 'IS', platform: 'CKS', model: 'Qwen3-32B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_CUDA_DEV },
+  { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-optimized-baseline-cks.yaml', guide: 'Optimized Baseline', acronym: 'IS', platform: 'CKS', model: 'Qwen3-32B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_CUDA_DEV },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-pd-disaggregation-cks.yaml', guide: 'PD Disaggregation', acronym: 'PD', platform: 'CKS', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_PD },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wide-ep-lws-cks.yaml', guide: 'Wide EP + LWS', acronym: 'WEP', platform: 'CKS', model: 'Qwen3-0.6B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_WEP },
   { repo: 'llm-d/llm-d', workflowFile: 'nightly-e2e-wva-cks.yaml', guide: 'WVA', acronym: 'WVA', platform: 'CKS', model: 'Llama-3.1-8B', gpuType: 'H100', gpuCount: 2, llmdImages: IMG_WVA },
-  { repo: 'llm-d/llm-d-benchmark', workflowFile: 'ci-nightly-benchmark-cks.yaml', guide: 'Benchmarking', acronym: 'BM', platform: 'CKS', model: 'opt-125m', gpuType: 'H100', gpuCount: 1, llmdImages: IMG_CUDA_DEV },
 ]
 
 // Seeded patterns per guide for deterministic demo data
 const DEMO_PATTERNS: Record<string, ('success' | 'failure' | 'in_progress')[]> = {
   // OCP
-  'Inference Scheduling-OCP': ['success', 'success', 'failure', 'success', 'success', 'success', 'success'],
+  'Optimized Baseline-OCP': ['success', 'success', 'failure', 'success', 'success', 'success', 'success'],
   'PD Disaggregation-OCP': ['success', 'success', 'success', 'success', 'success', 'success', 'success'],
   'Precise Prefix Cache-OCP': ['success', 'failure', 'success', 'success', 'success', 'failure', 'success'],
-  'Simulated Accelerators-OCP': ['success', 'success', 'success', 'success', 'success', 'success', 'success'],
   'Tiered Prefix Cache-OCP': ['success', 'success', 'success', 'failure', 'success', 'success', 'success'],
   'Wide EP + LWS-OCP': ['success', 'success', 'success', 'success', 'success', 'success', 'in_progress'],
   'WVA-OCP': ['success', 'failure', 'success', 'success', 'failure', 'success', 'success'],
-  'Benchmarking-OCP': ['failure', 'failure', 'success', 'failure', 'success', 'failure', 'success'],
   // GKE
-  'Inference Scheduling-GKE': ['success', 'success', 'success', 'success', 'success', 'success', 'success'],
+  'Optimized Baseline-GKE': ['success', 'success', 'success', 'success', 'success', 'success', 'success'],
   'PD Disaggregation-GKE': ['failure', 'success', 'success', 'success', 'success', 'success', 'success'],
   'Wide EP + LWS-GKE': ['success', 'success', 'success', 'success', 'success', 'success', 'success'],
-  'Benchmarking-GKE': ['in_progress', 'success', 'success', 'failure', 'success', 'success', 'success'],
   // CKS — no runs yet, empty arrays
 }
 

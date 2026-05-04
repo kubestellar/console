@@ -23,7 +23,7 @@ func TestNightlyE2EHandler(t *testing.T) {
 		path = strings.TrimPrefix(path, "/api/v3")
 
 		// Workflow runs endpoint
-		if path == "/repos/llm-d/llm-d/actions/workflows/nightly-e2e-inference-scheduling-ocp.yaml/runs" {
+		if path == "/repos/llm-d/llm-d/actions/workflows/nightly-e2e-optimized-baseline-ocp.yaml/runs" {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"workflow_runs":[{"id":123,"status":"completed","conclusion":"success","created_at":"2024-01-01T00:00:00Z","updated_at":"2024-01-01T01:00:00Z","html_url":"http://github.com/123","run_number":1,"event":"push"}]}`))
 			return
@@ -62,7 +62,7 @@ func TestNightlyE2EHandler(t *testing.T) {
 		// Check the specific workflow we mocked
 		found := false
 		for _, g := range result.Guides {
-			if g.WorkflowFile == "nightly-e2e-inference-scheduling-ocp.yaml" {
+			if g.WorkflowFile == "nightly-e2e-optimized-baseline-ocp.yaml" {
 				found = true
 				assert.Len(t, g.Runs, 1)
 				assert.Equal(t, int64(123), g.Runs[0].ID)

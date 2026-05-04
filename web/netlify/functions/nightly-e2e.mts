@@ -103,25 +103,21 @@ interface CacheEntry {
 
 const NIGHTLY_WORKFLOWS: NightlyWorkflow[] = [
   // OCP
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-ocp.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, guidePath: "inference-scheduling" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-optimized-baseline-ocp.yaml", guide: "Optimized Baseline", acronym: "IS", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, guidePath: "optimized-baseline" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-ocp.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, guidePath: "pd-disaggregation" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-precise-prefix-cache-ocp.yaml", guide: "Precise Prefix Cache", acronym: "PPC", platform: "OCP", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, guidePath: "precise-prefix-cache-aware" },
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-simulated-accelerators.yaml", guide: "Simulated Accelerators", acronym: "SA", platform: "OCP", model: "Simulated", gpuType: "CPU", gpuCount: 0, guidePath: "simulated-accelerators" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-tiered-prefix-cache-ocp.yaml", guide: "Tiered Prefix Cache", acronym: "TPC", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 1, guidePath: "tiered-prefix-cache" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-ocp.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "OCP", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, guidePath: "wide-ep-lws" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-ocp.yaml", guide: "WVA", acronym: "WVA", platform: "OCP", model: "Llama-3.1-8B", gpuType: "A100", gpuCount: 2, guidePath: "workload-autoscaling" },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-ocp.yaml", guide: "Benchmarking", acronym: "BM", platform: "OCP", model: "opt-125m", gpuType: "A100", gpuCount: 1 },
   // GKE
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-gke.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "GKE", model: "Qwen3-32B", gpuType: "L4", gpuCount: 2, guidePath: "inference-scheduling" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-optimized-baseline-gke.yaml", guide: "Optimized Baseline", acronym: "IS", platform: "GKE", model: "Qwen3-32B", gpuType: "L4", gpuCount: 2, guidePath: "optimized-baseline" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-gke.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2, guidePath: "pd-disaggregation" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-gke.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "GKE", model: "Qwen3-0.6B", gpuType: "L4", gpuCount: 2, guidePath: "wide-ep-lws" },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nighly-benchmark-gke.yaml", guide: "Benchmarking", acronym: "BM", platform: "GKE", model: "opt-125m", gpuType: "L4", gpuCount: 1 },
   // CKS
-  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-inference-scheduling-cks.yaml", guide: "Inference Scheduling", acronym: "IS", platform: "CKS", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, guidePath: "inference-scheduling" },
+  { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-optimized-baseline-cks.yaml", guide: "Optimized Baseline", acronym: "IS", platform: "CKS", model: "Qwen3-32B", gpuType: "H100", gpuCount: 2, guidePath: "optimized-baseline" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-pd-disaggregation-cks.yaml", guide: "PD Disaggregation", acronym: "PD", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, guidePath: "pd-disaggregation" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wide-ep-lws-cks.yaml", guide: "Wide EP + LWS", acronym: "WEP", platform: "CKS", model: "Qwen3-0.6B", gpuType: "H100", gpuCount: 2, guidePath: "wide-ep-lws" },
   { repo: "llm-d/llm-d", workflowFile: "nightly-e2e-wva-cks.yaml", guide: "WVA", acronym: "WVA", platform: "CKS", model: "Llama-3.1-8B", gpuType: "H100", gpuCount: 2, guidePath: "workload-autoscaling" },
-  { repo: "llm-d/llm-d-benchmark", workflowFile: "ci-nightly-benchmark-cks.yaml", guide: "Benchmarking", acronym: "BM", platform: "CKS", model: "opt-125m", gpuType: "H100", gpuCount: 1 },
 ];
 
 // ---------------------------------------------------------------------------
