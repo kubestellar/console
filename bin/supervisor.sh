@@ -52,8 +52,41 @@ LAST_SWITCH_EPOCH=0
 RATE_LIMIT_ALERTED=""
 
 ACTIVE_LAUNCH_CMD="$AGENT_LAUNCH_CMD"
+LAUNCH_CMD_ARGS=()
 
 log() { hive_log "$*"; }
+
+fail() {
+  log "$*"
+  exit 1
+}
+
+parse_launch_cmd() {
+  local raw_cmd="$1"
+  local launch_bin
+
+  [[ "$raw_cmd" =~ ^[[:alnum:]_./:=,+@%~-]+([[:space:]][[:alnum:]_./:=,+@%~-]+)*$ ]] \
+    || fail "refusing unsafe launch command: $raw_cmd"
+
+  read -r -a LAUNCH_CMD_ARGS <<< "$raw_cmd"
+  [ ${#LAUNCH_CMD_ARGS[@]} -gt 0 ] || fail "launch command cannot be empty"
+
+  launch_bin="${LAUNCH_CMD_ARGS[0]##*/}"
+  case "$launch_bin" in
+    agent-launch.sh|claude|copilot|gemini|codex|q|goose|aider) ;;
+    *) fail "refusing unsupported launch command: ${LAUNCH_CMD_ARGS[0]}" ;;
+  esac
+}
+
+write_launch_cmd_array() {
+  local arg
+
+  printf 'LAUNCH_CMD=(' >> "$LAUNCHER"
+  for arg in "$@"; do
+    printf ' %q' "$arg" >> "$LAUNCHER"
+  done
+  printf ' )\n' >> "$LAUNCHER"
+}
 
 # ─── Write launcher script (avoids quoting hell with eval) ─────────────────
 
@@ -63,40 +96,31 @@ write_launcher() {
   local prompt_file="/tmp/.supervisor-prompt-${SESSION}.txt"
   printf '%s' "$AGENT_LOOP_PROMPT" > "$prompt_file"
 
+  parse_launch_cmd "$ACTIVE_LAUNCH_CMD"
+
+  cat > "$LAUNCHER" << LAUNCH
+#!/bin/bash
+cd $(printf '%q' "$WORKDIR")
+LAUNCH
+  write_launch_cmd_array "${LAUNCH_CMD_ARGS[@]}"
+
   case "$CLI" in
-    claude)
-      cat > "$LAUNCHER" << LAUNCH
-#!/bin/bash
-cd "$WORKDIR"
-exec $ACTIVE_LAUNCH_CMD "\$(cat $prompt_file)"
-LAUNCH
-      ;;
-    copilot)
-      cat > "$LAUNCHER" << LAUNCH
-#!/bin/bash
-cd "$WORKDIR"
-exec $ACTIVE_LAUNCH_CMD -i "\$(cat $prompt_file)"
-LAUNCH
-      ;;
-    gemini)
-      cat > "$LAUNCHER" << LAUNCH
-#!/bin/bash
-cd "$WORKDIR"
-exec $ACTIVE_LAUNCH_CMD -i "\$(cat $prompt_file)"
+    copilot|gemini)
+      cat >> "$LAUNCHER" << LAUNCH
+prompt=\$(cat $(printf '%q' "$prompt_file"))
+exec "\${LAUNCH_CMD[@]}" -i "\$prompt"
 LAUNCH
       ;;
     goose)
-      cat > "$LAUNCHER" << LAUNCH
-#!/bin/bash
-cd "$WORKDIR"
-exec $ACTIVE_LAUNCH_CMD --prompt "\$(cat $prompt_file)"
+      cat >> "$LAUNCHER" << LAUNCH
+prompt=\$(cat $(printf '%q' "$prompt_file"))
+exec "\${LAUNCH_CMD[@]}" --prompt "\$prompt"
 LAUNCH
       ;;
     *)
-      cat > "$LAUNCHER" << LAUNCH
-#!/bin/bash
-cd "$WORKDIR"
-exec $ACTIVE_LAUNCH_CMD "\$(cat $prompt_file)"
+      cat >> "$LAUNCHER" << LAUNCH
+prompt=\$(cat $(printf '%q' "$prompt_file"))
+exec "\${LAUNCH_CMD[@]}" "\$prompt"
 LAUNCH
       ;;
   esac
@@ -118,10 +142,15 @@ PROMPT_DELIVERED=""
 is_paused() { hive_is_paused "$SESSION"; }
 
 write_paused_launcher() {
+  parse_launch_cmd "$ACTIVE_LAUNCH_CMD"
+
   cat > "$LAUNCHER" << LAUNCH
 #!/bin/bash
-cd "$WORKDIR"
-exec $ACTIVE_LAUNCH_CMD
+cd $(printf '%q' "$WORKDIR")
+LAUNCH
+  write_launch_cmd_array "${LAUNCH_CMD_ARGS[@]}"
+  cat >> "$LAUNCHER" << 'LAUNCH'
+exec "${LAUNCH_CMD[@]}"
 LAUNCH
   chmod +x "$LAUNCHER"
 }
