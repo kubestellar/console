@@ -127,7 +127,7 @@
     "vite-plugin-istanbul": "^8.0.0",
     "vitest": "^4.1.4",
     "wait-on": "^9.0.3",
-    "ws": "^8.19.0"
+    "ws": "^8.20.0"
   },
   "msw": {
     "workerDirectory": [
