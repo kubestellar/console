@@ -1466,7 +1466,10 @@ func (s *Server) Start() error {
 // fileExists returns true when the path exists and is a regular file.
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
 }
 
 func waitForPortRelease(port int, timeout time.Duration) error {
