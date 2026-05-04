@@ -15,6 +15,7 @@ import { compressScreenshot } from '../../lib/imageCompression'
 import { copyBlobToClipboard } from '../../lib/clipboard'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
+
 import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
@@ -132,7 +133,7 @@ function buildDirectIssueUrl(targetRepo: TargetRepo, description: string): strin
 function getSubmitErrorDetails(
   error: string,
   canPerformActions: boolean,
-  t: (key: string, fallback?: string) => string,
+  t: (key: string, defaultValue?: string) => string,
 ): SubmitErrorDetails {
   const normalized = error.toLowerCase()
   const needsGitHubReauth =
@@ -222,7 +223,7 @@ export function SubmitForm({
   const { showToast } = useToast()
   const { health: agentHealth, status: agentStatus, dataErrorCount: agentDataErrorCount, lastDataError: agentLastDataError } = useLocalAgent()
   const directIssueUrl = buildDirectIssueUrl(targetRepo, description)
-  const errorDetails = error ? getSubmitErrorDetails(error, canPerformActions, t) : null
+  const errorDetails = error ? getSubmitErrorDetails(error, canPerformActions, t as unknown as (key: string, defaultValue?: string) => string) : null
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
