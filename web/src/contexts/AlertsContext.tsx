@@ -1719,3 +1719,10 @@ export function useAlertsContext() {
   }
   return context
 }
+
+export const __alertsTestables = {
+  shallowEqualRecords,
+  alertDedupKey,
+  deduplicateAlerts,
+  applyMutations,
+}

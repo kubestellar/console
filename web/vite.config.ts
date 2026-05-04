@@ -316,6 +316,8 @@ export default defineConfig(({ mode }) => ({
         // Type-only files: pure TypeScript interfaces/types compile to no JS bytecode.
         'src/lib/cache/workerMessages.ts',
         'src/hooks/mcp/types.ts',
+        // Dead code: not imported by any production module (app uses useMissions.tsx).
+        'src/hooks/useMissions.provider.tsx',
       ],
     },
   },
