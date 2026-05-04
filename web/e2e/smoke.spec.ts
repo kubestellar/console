@@ -96,7 +96,7 @@ test.describe('Smoke Tests', () => {
           // Use native el.click() for cross-browser stability
           await hamburger.evaluate((el) => (el as HTMLElement).click())
           // Wait for sidebar slide-in animation to complete
-          await page.waitForTimeout(1000)
+          await expect(sidebar).toBeVisible({ timeout: 3000 })
         }
       }
 

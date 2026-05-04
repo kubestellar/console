@@ -111,7 +111,8 @@ test.describe('AI Card Recommendations — rendering & interactivity', () => {
   test('updating cluster/pod context re-runs recommendations (not cached stale)', async ({ page }) => {
     // Capture baseline.
     const panel = await recommendationsPanel(page)
-    await page.waitForTimeout(500)
+    // Wait for recommendation chips to render before capturing baseline count
+    await expect(panel.locator('button[aria-haspopup="menu"]').first()).toBeVisible({ timeout: 5000 })
     const baseline = await panel.locator('button[aria-haspopup="menu"]').count()
 
     // Mutate localStorage to simulate a fresh cluster-selection scope change.

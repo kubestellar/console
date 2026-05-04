@@ -260,8 +260,11 @@ test.describe('AI Mode Settings', () => {
           const initialMode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
           await page.keyboard.press('Enter')
           
-          // Wait a bit for the click to process
-          await page.waitForTimeout(200)
+          // Wait for the mode change to persist to localStorage
+          await expect(async () => {
+            const mode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
+            expect(mode).toBeTruthy()
+          }).toPass({ timeout: 2000 })
           
           // Verify that activation changed the mode (or maintained it if already selected)
           const newMode = await page.evaluate(() => localStorage.getItem('kubestellar-ai-mode'))
