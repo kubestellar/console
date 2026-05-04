@@ -328,7 +328,7 @@ export function ClusterHealth() {
       )}
 
       {/* Cluster list */}
-      <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto" style={containerStyle}>
+      <div ref={containerRef} className="flex-1 flex flex-col gap-2 overflow-y-auto" style={containerStyle}>
         {clusters.map((cluster, idx) => {
           const clusterUnreachable = isClusterUnreachable(cluster)
           const clusterTokenExpired = isClusterTokenExpired(cluster)
