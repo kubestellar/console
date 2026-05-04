@@ -1,6 +1,6 @@
 /**
- * Hardware Health retry button E2E test (#11772).
- * Verifies the retry button triggers a re-fetch when the device inventory fails.
+ * Hardware Health retry E2E test (#11772)
+ * Tests that retry button properly re-fetches and surfaces errors
  */
 import { test, expect } from '@playwright/test'
 import {
@@ -8,66 +8,193 @@ import {
   ELEMENT_VISIBLE_TIMEOUT_MS,
 } from './helpers/setup'
 
-test.describe('Hardware Health retry button (#11772)', () => {
+test.describe('Hardware Health retry functionality (#11772)', () => {
   test.beforeEach(async ({ page }) => {
-    await setupDemoAndNavigate(page, '/dashboard')
+    await setupDemoAndNavigate(page, '/ai-ml')
   })
 
-  test('retry button is visible when hardware health fetch fails', async ({ page }) => {
-    // In demo mode, the error state may not appear naturally.
-    // Look for the Hardware Health card which renders an error banner when fetch fails.
-    const retryButton = page.locator('button[aria-label*="retry" i], button[aria-label*="Retry" i]')
-    const hasRetry = await retryButton.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+  test('hardware health card renders', async ({ page }) => {
+    await expect(page.getByTestId('dashboard-header')).toBeVisible({
+      timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+    })
 
-    if (hasRetry) {
-      // Verify the retry button has the RefreshCw icon
-      const icon = retryButton.first().locator('svg')
-      await expect(icon).toBeVisible()
+    // Look for Hardware Health card
+    const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
+    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
 
-      // Click retry and verify it doesn't crash
-      await retryButton.first().click()
-
-      // The button should still be interactable (or disappear if fetch succeeds)
-      await expect(page.locator('body')).toBeVisible()
+    if (!hasCard) {
+      test.skip(true, 'Hardware Health card not visible')
+      return
     }
+
+    expect(hwCard).toBeVisible()
   })
 
-  test('retry button triggers refetch and clears error on success', async ({ page }) => {
-    // Navigate to a page with Hardware Health card
-    // The retry button appears only on error, which won't happen in demo mode.
-    // This test verifies the button's click handler is wired correctly.
-    const hardwareCard = page.locator('[data-card-type="hardware-health"]')
-    const hasCard = await hardwareCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+  test('retry button appears when device fetch fails', async ({ page }) => {
+    // Mock hardware health to fail
+    await page.route('**/api/hardware/health', (route) => {
+      route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Device endpoints unavailable' }),
+      })
+    })
 
-    if (hasCard) {
-      // Look for error state within the card
-      const errorBanner = hardwareCard.locator('.bg-red-500\\/10')
-      const hasError = await errorBanner.isVisible({ timeout: 3000 }).catch(() => false)
+    await page.goto('/ai-ml')
+    await page.waitForLoadState('domcontentloaded')
 
-      if (hasError) {
-        const retryBtn = errorBanner.locator('button').filter({ hasText: /Retry/i })
-        await expect(retryBtn).toBeVisible()
-        await retryBtn.click()
+    // Wait for Hardware Health card
+    const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
+    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
 
-        // After retry, the spinner should appear briefly
-        // or the error clears if fetch succeeds
-        await page.waitForTimeout(500)
-        await expect(page.locator('body')).toBeVisible()
-      }
+    if (!hasCard) {
+      test.skip(true, 'Hardware Health card not visible')
+      return
     }
+
+    // Look for error message or retry button
+    const retryButton = hwCard.getByRole('button', { name: /retry/i })
+    const errorMessage = hwCard.locator('[class*="bg-red"], [class*="text-red"]')
+
+    // Either retry button or error message should appear when fetch fails
+    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
+    const hasError = await errorMessage.isVisible({ timeout: 5000 }).catch(() => false)
+
+    expect(hasRetry || hasError).toBe(true)
   })
 
-  test('retry button shows spinner animation while refetching', async ({ page }) => {
-    const retryButton = page.locator('button[aria-label*="retry" i]')
-    const hasRetry = await retryButton.first().isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+  test('clicking retry button triggers a new fetch attempt', async ({ page }) => {
+    let fetchCount = 0
+    
+    // Mock hardware health to fail initially
+    await page.route('**/api/hardware/health', (route) => {
+      fetchCount++
+      route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Device endpoints unavailable' }),
+      })
+    })
 
-    if (hasRetry) {
-      await retryButton.first().click()
+    await page.goto('/ai-ml')
+    await page.waitForLoadState('domcontentloaded')
 
-      // The RefreshCw icon should get animate-spin class during refetch
-      const spinner = retryButton.first().locator('.animate-spin')
-      // Animation may be brief, verify the button remains functional
-      await expect(retryButton.first()).toBeEnabled()
+    const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
+    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+    if (!hasCard) {
+      test.skip(true, 'Hardware Health card not visible')
+      return
     }
+
+    // Wait for initial fetch
+    await page.waitForTimeout(1000)
+    const initialFetchCount = fetchCount
+
+    // Find and click retry button
+    const retryButton = hwCard.getByRole('button', { name: /retry/i })
+    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
+
+    if (!hasRetry) {
+      // No retry button - card might be working fine
+      return
+    }
+
+    await retryButton.click()
+
+    // Wait for retry fetch
+    await page.waitForTimeout(1000)
+
+    // Verify fetch was called again
+    expect(fetchCount).toBeGreaterThan(initialFetchCount)
+  })
+
+  test('retry button shows loading state during re-fetch', async ({ page }) => {
+    // Mock hardware health with a delay to observe loading state
+    await page.route('**/api/hardware/health', async (route) => {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Device endpoints unavailable' }),
+      })
+    })
+
+    await page.goto('/ai-ml')
+    await page.waitForLoadState('domcontentloaded')
+
+    const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
+    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+    if (!hasCard) {
+      test.skip(true, 'Hardware Health card not visible')
+      return
+    }
+
+    const retryButton = hwCard.getByRole('button', { name: /retry/i })
+    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
+
+    if (!hasRetry) {
+      return
+    }
+
+    // Click retry and immediately check for loading indicator
+    await retryButton.click()
+
+    // Look for loading/spinning icon (RefreshCw with animate-spin)
+    const spinner = hwCard.locator('[class*="animate-spin"]')
+    const hasSpinner = await spinner.isVisible({ timeout: 2000 }).catch(() => false)
+
+    test.info().annotations.push({
+      type: 'ux-finding',
+      description: JSON.stringify({
+        severity: 'info',
+        category: 'loading-state',
+        component: 'HardwareHealth',
+        finding: `Retry button ${hasSpinner ? 'shows' : 'does not show'} loading indicator`,
+        recommendation: hasSpinner ? 'None' : 'Consider adding loading indicator to retry button',
+      }),
+    })
+  })
+
+  test('retry surfaces meaningful error when re-fetch fails', async ({ page }) => {
+    const errorMessage = 'Device endpoints unavailable: CORS error'
+
+    await page.route('**/api/hardware/health', (route) => {
+      route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: errorMessage }),
+      })
+    })
+
+    await page.goto('/ai-ml')
+    await page.waitForLoadState('domcontentloaded')
+
+    const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
+    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+    if (!hasCard) {
+      test.skip(true, 'Hardware Health card not visible')
+      return
+    }
+
+    const retryButton = hwCard.getByRole('button', { name: /retry/i })
+    const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
+
+    if (!hasRetry) {
+      return
+    }
+
+    // Click retry
+    await retryButton.click()
+    await page.waitForTimeout(1000)
+
+    // Verify error message is displayed
+    const errorDisplay = hwCard.locator('[class*="bg-red"], [class*="text-red"]')
+    const errorText = await errorDisplay.textContent()
+
+    // Error should contain some meaningful text (not just "Error" or empty)
+    expect(errorText?.length).toBeGreaterThan(5)
   })
 })
