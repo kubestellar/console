@@ -1,0 +1,55 @@
+name: Hold Issue Guard
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-hold-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for hold-labeled referenced issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || '';
+            const CLOSING_PATTERN = /(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
+            let match;
+            const referencedIssues = [];
+            while ((match = CLOSING_PATTERN.exec(body)) !== null) {
+              referencedIssues.push(parseInt(match[1], 10));
+            }
+
+            if (referencedIssues.length === 0) {
+              core.info('No closing keywords found in PR body.');
+              return;
+            }
+
+            core.info(`Found referenced issues: ${referencedIssues.join(', ')}`);
+
+            const holdIssues = [];
+            for (const issueNumber of referencedIssues) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                });
+                const hasHold = issue.labels.some(l => l.name === 'hold');
+                if (hasHold) {
+                  holdIssues.push(`#${issueNumber} (${issue.title})`);
+                }
+              } catch (e) {
+                core.warning(`Could not fetch issue #${issueNumber}: ${e.message}`);
+              }
+            }
+
+            if (holdIssues.length > 0) {
+              core.setFailed(
+                `This PR references hold-labeled issues that must not be auto-closed:\n` +
+                holdIssues.map(i => `  - ${i}`).join('\n') +
+                `\n\nRemove the "Fixes/Closes" keyword for these issues, or remove the hold label first.`
+              );
+            } else {
+              core.info('No hold-labeled issues referenced. OK.');
+            }
