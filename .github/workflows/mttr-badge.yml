@@ -1,0 +1,147 @@
+name: MTTR Badge
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  issues: read
+  pull-requests: read
+
+jobs:
+  mttr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculate MTTR and update badge
+        uses: actions/github-script@v7
+        env:
+          BADGE_GIST_ID: 4ae525a9797e8f83231ac344fcb47226
+          GIST_TOKEN: ${{ secrets.GIST_TOKEN }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const PR_LIMIT = 100;
+            const FIXES_RE = /(?:fixes|closes|resolves)\s+#(\d+)/gi;
+            const MS_PER_MINUTE = 60000;
+            const GOOD_THRESHOLD_MIN = 60;
+            const WARN_THRESHOLD_MIN = 240;
+
+            // Fetch last 100 merged PRs — matches hive api-collector.sh methodology
+            const mergedPrs = await github.paginate(github.rest.pulls.list, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'closed',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 100,
+            }, (response, done) => {
+              const merged = response.data.filter(pr => pr.merged_at);
+              if (merged.length >= PR_LIMIT) done();
+              return merged;
+            });
+
+            const prs = mergedPrs.slice(0, PR_LIMIT);
+            console.log(`Found ${prs.length} merged PRs`);
+
+            // Extract issue refs from PR bodies
+            const issueRefs = [];
+            for (const pr of prs) {
+              const body = pr.body || '';
+              let match;
+              const re = new RegExp(FIXES_RE.source, FIXES_RE.flags);
+              while ((match = re.exec(body)) !== null) {
+                issueRefs.push({
+                  issue: parseInt(match[1], 10),
+                  mergedAt: pr.merged_at,
+                });
+              }
+            }
+
+            if (issueRefs.length === 0) {
+              console.log('No Fixes/Closes refs found — skipping badge update');
+              return;
+            }
+
+            // Fetch issue createdAt for each unique issue
+            const uniqueIssues = [...new Set(issueRefs.map(r => r.issue))];
+            console.log(`Fetching createdAt for ${uniqueIssues.length} issues`);
+
+            const createdAt = {};
+            for (const num of uniqueIssues) {
+              try {
+                const { data: issue } = await github.rest.issues.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: num,
+                });
+                createdAt[num] = issue.created_at;
+              } catch (e) {
+                console.log(`Could not fetch issue #${num}: ${e.message}`);
+              }
+            }
+
+            // Compute durations (issue filed → PR merged) in minutes
+            const durations = [];
+            for (const ref of issueRefs) {
+              const ca = createdAt[ref.issue];
+              if (!ca) continue;
+              const issueMs = new Date(ca).getTime();
+              const mergeMs = new Date(ref.mergedAt).getTime();
+              if (mergeMs <= issueMs) continue;
+              durations.push(Math.round((mergeMs - issueMs) / MS_PER_MINUTE));
+            }
+
+            if (durations.length === 0) {
+              console.log('No valid durations computed — skipping');
+              return;
+            }
+
+            durations.sort((a, b) => a - b);
+            const median = durations[Math.floor(durations.length / 2)];
+            const avg = Math.round(durations.reduce((s, d) => s + d, 0) / durations.length);
+            const p90 = durations[Math.min(Math.floor(durations.length * 0.9), durations.length - 1)];
+
+            console.log(`MTTR: median=${median}m avg=${avg}m p90=${p90}m count=${durations.length}`);
+
+            // Determine badge color
+            let color;
+            if (median <= GOOD_THRESHOLD_MIN) color = 'brightgreen';
+            else if (median <= WARN_THRESHOLD_MIN) color = 'yellow';
+            else color = 'red';
+
+            // Update gist badge
+            const gistId = process.env.BADGE_GIST_ID;
+            const gistToken = process.env.GIST_TOKEN;
+            if (!gistToken) {
+              console.log('No GIST_TOKEN — skipping badge update');
+              return;
+            }
+
+            const badge = {
+              schemaVersion: 1,
+              label: 'MTTR',
+              message: `${median} min`,
+              color,
+            };
+
+            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+              method: 'PATCH',
+              headers: {
+                Authorization: `token ${gistToken}`,
+                Accept: 'application/vnd.github+json',
+              },
+              body: JSON.stringify({
+                files: {
+                  'median-fix.json': {
+                    content: JSON.stringify(badge),
+                  },
+                },
+              }),
+            });
+            if (!response.ok) {
+              console.log(`Gist update failed: ${response.status} ${response.statusText}`);
+              return;
+            }
+
+            console.log(`Badge updated: ${JSON.stringify(badge)}`);
