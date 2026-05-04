@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { ROUTES } from '@/config/routes'
 import { useAlerts } from './useAlerts'
 import { useBackendHealth } from './useBackendHealth'
 import { useClusters, usePodIssues } from './useMCP'
@@ -103,11 +104,11 @@ export function useDashboardHealth(): DashboardHealthInfo {
     if (criticalCount > 0) {
       status = 'critical'
       message = `${criticalCount} critical issue${criticalCount > 1 ? 's' : ''}`
-      navigateTo = '/alerts'
+      navigateTo = ROUTES.ALERTS
     } else if (warningCount > 0) {
       status = 'warning'
       message = `${warningCount} warning${warningCount > 1 ? 's' : ''}`
-      navigateTo = '/alerts'
+      navigateTo = ROUTES.ALERTS
     }
 
     return {
