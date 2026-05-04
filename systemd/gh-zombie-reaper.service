@@ -1,6 +1,0 @@
-[Unit]
-Description=Kill stale gh CLI processes stuck in rate-limit retry loops
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/gh-zombie-reaper.sh

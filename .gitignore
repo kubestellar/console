@@ -1,34 +1,86 @@
-*.swp
-*.bak
-.DS_Store
-
-# Environment & Secrets
-/.env
-*.env
-# Keep tracked example .env files
-!examples/kubestellar/agents/*.env
-/agent.env
-/config/agent.env
-
-# Build Artifacts
-/bin/console
-/bin/kc-agent
-/bin/kc-watcher
-
-# Frontend dependencies
+# Dependencies
+node_modules/
 web/node_modules/
 
-# Runtime data
+# Build outputs
+web/dist/
+web/tsconfig.tsbuildinfo
+/console
+/console-server
+bin/
+*.exe
+*.out
+*.test
+coverage.out
+
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+.jwt-secret
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.out
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Playwright
+web/playwright-report/
+web/test-results/
+web/blob-report/
+web/playwright/.cache/
+web/playwright/.auth/
+web/auth.json
+
+# Temp directories
+a2a-rebase/
+a2a-temp/
+kubeflex-rebase/
+kubestellar-rebase/
 data/
 
-# IDE settings
-.vscode/
-.idea/
+# SQLite database
+*.db
+*.sqlite
 
-# Beads ledger — runtime state, not source code
-.beads/
+# Go
+vendor/
 
-# Frontend build output
-web/dist/
-web/*.tsbuildinfo
-*.tsbuildinfo
+# Coordination file (local only)
+.claude-coord.md
+/kc-agent
+
+# Claude Code local files
+.bob/
+/bin/*
+*.bak
+web/.netlify/
+web/e2e/test-results/
+web/e2e/user-flows/test-results/
+
+# Storybook
+web/storybook-static/
+web/node_modules
+punkpeye-awesome-mcp-servers/
+
+# Local worktrees and fix branches (never commit these)
+fix-*/
+work-fix-*/
+worktrees/
+fix-11638-worktree/

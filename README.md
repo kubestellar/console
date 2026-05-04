@@ -1,311 +1,226 @@
-# hive
+# KubeStellar Console
 
-**One command starts everything. Your phone, Slack, or Discord buzzes if anything needs you.**
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/clubanderson/b9a9ae8469f1897a22d5a40629bc1e82/raw/coverage-badge.json)
+[![ACMM](https://img.shields.io/endpoint?url=https%3A%2F%2Fconsole.kubestellar.io%2Fapi%2Facmm%2Fbadge%3Frepo%3Dkubestellar%252Fconsole%26v%3D3)](https://console.kubestellar.io/acmm?repo=kubestellar%2Fconsole)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/kubestellar/console/badge)](https://securityscorecards.dev/viewer/?uri=github.com/kubestellar/console)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12343/badge?v=2)](https://www.bestpractices.dev/projects/12343)
+[![MTTR](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fclubanderson%2F4ae525a9797e8f83231ac344fcb47226%2Fraw%2Fmedian-fix.json "Mean Time to Resolution — median time from issue filed to PR merged, updated every 5 minutes")](https://github.com/kubestellar/console/issues)
 
-![hive dashboard](docs/dashboard-screenshot.png)
+AI-powered multi-cluster Kubernetes dashboard with guided install missions for 250+ CNCF projects.
 
----
+[Contributing](CONTRIBUTING.md)
 
-![hive architecture](docs/hive-arch.svg)
+![KubeStellar Console](docs/images/console-screenshot.png)
 
----
+## Try it now (no install)
 
-## Setup
+The fastest way to evaluate the console is the **hosted version** — no Kubernetes cluster, no install, no configuration. Demo data is built in:
 
-```bash
-# 1. install tmux
-sudo apt install tmux
+> 👉 **[console.kubestellar.io](https://console.kubestellar.io)**
 
-# 2. install hive
-curl -fsSL https://raw.githubusercontent.com/kubestellar/hive/main/install.sh | sudo bash
+The hosted demo is a self-contained showcase: it serves canned demo data and intentionally **does not** talk to a local agent (`LOCAL_AGENT_HTTP_URL` is disabled in the Netlify build, so the browser cannot reach a kc-agent on your laptop). Use it to explore the UI, browse missions, and test cards without touching your machine. To work against your **own** clusters or use AI features with your own keys, you need to self-host the console — see the next section.
 
-# 3. configure
-sudo nano /etc/hive/hive.conf
+## Which path do I need?
 
-# 4. start
-hive supervisor
-```
+| I want to… | What to do | Need a cluster? | Need to install anything? |
+|---|---|---|---|
+| Explore the UI / evaluate the product | [console.kubestellar.io](https://console.kubestellar.io) | no | no |
+| Connect the console to **my own** clusters | [**Self-host**](#local-install-self-host) the console **and** install [**kc-agent**](#kc-agent-bridge-self-hosted-console-to-your-clusters) on the same machine | yes | yes (curl + kc-agent) |
+| Self-host the console (air-gapped, custom OAuth, etc.) | [**Local install**](#local-install-self-host) | optional | yes |
+| Run the console **inside** a cluster | [`deploy.sh`](deploy.sh) | yes | Helm-style script |
 
-That's it. `hive supervisor` installs missing tools, starts all agents, sets the kick cadence, and launches the supervisor. No tmux knowledge needed.
+> **Note**: `kc-agent` is **not** consumed by the hosted demo at [console.kubestellar.io](https://console.kubestellar.io). It bridges your **self-hosted** console (running at `localhost:8080`) to your kubeconfig contexts and to AI providers. If you want the convenience of the hosted UI plus your real cluster data, you currently have to run the console locally.
 
----
+## Local install (self-host)
 
-## Commands
-
-```bash
-hive supervisor             # start everything
-hive status                 # live terminal dashboard (cached repo data)
-hive status --repos         # refresh repo issue/PR counts from GitHub API
-hive status --json          # machine-readable JSON output
-hive status --json --repos  # JSON with fresh repo data (used by dashboard slow path)
-hive status --watch 5       # auto-refresh every 5 seconds (in-place overwrite)
-hive dashboard              # launch web dashboard (port 3001)
-hive attach supervisor      # watch the supervisor  (Ctrl+B D to leave)
-hive attach scanner         # watch any agent
-
-hive kick all               # immediate kick to all agents
-hive kick scanner           # kick one agent
-
-hive switch scanner claude  # switch CLI backend (pins it)
-hive switch reviewer copilot
-hive unpin scanner          # let governor manage CLI again
-
-hive logs governor          # tail governor decisions
-hive logs scanner           # tail any agent's service log
-
-hive stop all               # stop everything
-```
-
----
-
-## Web Dashboard
-
-`hive dashboard` launches a real-time web dashboard on port 3001.
-
-- **Live updates** via SSE — agent states, governor mode, repo counts, and beads refresh every 5 seconds
-- **Sparkline history** — per-agent busy time and restart count sparklines with rolling history
-- **Restart tracking** — 24-hour restart count per agent with color-coded thresholds (yellow >0, red >5)
-- **Kick buttons** — one-click kick for any agent
-- **Switch dropdown** — switch agent CLI backend from the UI (auto-pins to prevent governor override)
-- **CLI pinning** — `hive switch` pins the backend so the governor won't override it; `hive unpin` releases it
-- **Intensity gauge** — half-circle speedometer comparing recent vs trailing token rates (cooling → steady → surging)
-- **Coverage tracking** — shows test coverage progress toward the configured target
-- **Übersicht widget** — download a macOS desktop widget from the button in the header
-- **Fast/slow refresh** — agent status refreshes every 5s; GitHub repo data refreshes every 60s to avoid API rate limits
-
-The dashboard runs as a systemd service (`hive-dashboard.service`) and auto-restarts on failure.
+The quickest path to a working console with your own data. `start.sh` downloads the pre-built console binary and a pre-built `kc-agent`, starts both, and opens [http://localhost:8080](http://localhost:8080):
 
 ```bash
-# Manual access
-open http://192.168.4.56:3001    # from LAN
-open http://localhost:3001       # from hive itself
-
-# Install Übersicht widget (macOS)
-curl -sf http://192.168.4.56:3001/api/widget | tar xzf - -C "$HOME/Library/Application Support/Übersicht/widgets/"
+curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 ```
 
----
+Deploy into a cluster instead with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`).
 
-## How it works
+## kc-agent (bridge self-hosted console to your clusters)
 
-The **kick-governor** measures issue and PR backlog across your repos every 5 minutes and picks a mode:
+`kc-agent` is a small local HTTP/WS daemon that the **self-hosted** console talks to (default `http://127.0.0.1:8585`). It forwards requests from the browser to your kubeconfig contexts and to AI providers. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) cannot reach it (#6195) — kc-agent is only useful when you self-host.
 
-| Mode | Trigger | Scanner | Reviewer | Architect | Outreach | Supervisor |
-|------|---------|---------|----------|-----------|----------|-----------|
-| SURGE | queue > 20 | 10 min | 10 min | **paused** | **paused** | 5 min |
-| BUSY  | queue > 10 | 15 min | 15 min | **paused** | **paused** | 5 min |
-| QUIET | queue > 2  | 15 min | 30 min | 1 h        | 2 h        | 5 min |
-| IDLE  | queue ≤ 2  | 30 min | 1 h    | 30 min     | 30 min     | 5 min |
+**You do not need kc-agent** if you only want to browse the UI / demo data — just use the hosted demo. **`start.sh` already installs and launches a pre-built kc-agent for you**, so most users never need to install it manually. The instructions below are for development builds or platforms without a Homebrew formula:
 
-Architect and outreach are **opportunistic** — they fill idle cycles and pause entirely under load. Supervisor runs every 5 min regardless of mode.
+**Prerequisites for kc-agent:**
+- A kubeconfig that points at one or more reachable clusters (`kubectl get nodes` works locally)
+- macOS, Linux, or Windows with WSL2 (see [Windows section](#windows-wsl2))
 
-Cadences are tunable in `/etc/hive/governor.env` — no restart needed.
+```bash
+# macOS — Homebrew formula (pre-built)
+brew tap kubestellar/tap && brew install kc-agent
 
-### Restart tracking
+# Linux / from source — requires Go 1.25+ (matches go.mod)
+mkdir -p bin
+go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
+```
 
-Each supervisor process tracks agent restarts in `/var/run/kick-governor/restarts_<session>`. The count is a rolling 24-hour window — old timestamps are pruned automatically. The dashboard and `hive status --json` both expose the `restarts` field per agent.
+When both the self-hosted console and `kc-agent` are running, open [http://localhost:8080](http://localhost:8080) and your local clusters appear in the cluster picker.
 
----
+## Windows (WSL2)
 
-## Deterministic Pipeline
+The console install scripts and `kc-agent` are POSIX shell + Go, so they run unchanged inside WSL2. Native Windows (PowerShell / CMD) is not supported — install [WSL2 with Ubuntu](https://learn.microsoft.com/windows/wsl/install) and run everything from the WSL shell:
 
-Hive separates work into two layers:
+```powershell
+# In PowerShell — one-time setup
+wsl --install -d Ubuntu
+```
 
-- **Deterministic layer** (shell scripts + JSON + config) — handles every decision where a human would give the same answer every time. Runs before agents wake up.
-- **Non-deterministic layer** (LLM agents) — receives pre-computed data and focuses on judgment calls: reading code, reasoning about fixes, writing PRs.
+Then from inside the Ubuntu/WSL shell. **`start.sh` only needs `curl`** — it downloads pre-built binaries, no Go toolchain required:
 
-The rule: **if a human would give the same answer every time, it belongs in infrastructure, not in a prompt.**
+```bash
+# Prerequisite: just curl
+sudo apt-get update && sudo apt-get install -y curl
 
-LLMs treat "NEVER" rules as suggestions. No amount of prompt engineering reliably prevents an agent from closing a hold-labeled issue or merging an untested PR. The deterministic pipeline removes those decisions from the agent entirely.
+# Same install command as macOS / Linux
+curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
+```
 
-### Pipeline stages
+> **⚠️ Windows PowerShell `curl` gotcha:** In PowerShell, `curl` is an alias
+> for `Invoke-WebRequest`, which behaves completely differently from the real
+> curl. If you need to test endpoints from PowerShell (outside WSL), always
+> use **`curl.exe`** instead of `curl`, or use the native PowerShell cmdlet:
+>
+> ```powershell
+> # Option 1 — use curl.exe (the real curl shipped with Windows 10+)
+> curl.exe -s http://localhost:8080/api/health
+>
+> # Option 2 — use PowerShell native cmdlet
+> Invoke-RestMethod http://localhost:8080/api/health
+> ```
 
-Each stage runs as a shell script, declared in `hive-project.yaml`, with explicit dependencies:
+**Building `kc-agent` from source is a separate path** — only needed if you want a development build of the agent rather than the prebuilt binary that `start.sh` already installs. It requires Go **1.25+** (the version pinned in `go.mod`) and `git`. Ubuntu's `golang-go` package usually lags the current release; use the [official Go install](https://go.dev/doc/install) or the `longsleep/golang-backports` PPA to get a recent version:
 
-| Category | What it does | Example |
-|----------|-------------|---------|
-| **Enumerator** | Fetches and filters the canonical work list | `enumerate-actionable.sh` — queries GitHub, excludes hold/exempt labels, filters by author |
-| **Classifier** | Enriches items with deterministic metadata | `issue-classifier.sh` — complexity, model tier, lane assignment based on label/title patterns |
-| **Gate** | Pre-checks eligibility before action | `merge-gate.sh` — CI green? Author authorized? Required reviews in? |
-| **Monitor** | Detects state in external systems | `ga4-anomaly-detector.sh` — production error spikes; `copilot-comment-checker.sh` — unaddressed review comments |
-| **Enforcer** | Blocks agents from forbidden operations | `gh` wrapper — prevents merging to main, closing hold issues, pushing to protected branches |
+```bash
+# add-apt-repository lives in software-properties-common — install it
+# first on minimal Ubuntu/WSL images that don't ship with it.
+sudo apt-get update && sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y ppa:longsleep/golang-backports
+sudo apt-get update && sudo apt-get install -y golang-1.25 git
+git clone https://github.com/kubestellar/console.git
+cd console
+mkdir -p bin
+go build -o bin/kc-agent ./cmd/kc-agent && ./bin/kc-agent
+```
 
-Stages declare their consumers and dependencies. The pipeline runner resolves the DAG and executes in parallel where possible.
+Open http://localhost:8080 in your **Windows** browser — WSL2 forwards `localhost` automatically. Tracked by [#6185](https://github.com/kubestellar/console/issues/6185).
 
-### Adding a pipeline stage
+## GitHub authentication
 
-1. Add an entry to `pipeline.stages[]` in `hive-project.yaml`
-2. Write the script in `bin/`
-3. Declare `output`, `consumers`, `phase`, and `depends`
-4. The pipeline runner picks it up on the next kick cycle
+The console uses **two** GitHub credentials (#6190). Most users need **neither** — the hosted demo works without any GitHub auth at all.
 
-### Config-driven rules
+| Credential | What it does | When you need it |
+|---|---|---|
+| **GitHub OAuth App** (`GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET`) | Sign-in for the **self-hosted** console at `localhost:8080` | Only if you self-host the console AND want user sign-in. Skip for the hosted demo. |
+| **Consolidated GitHub PAT** (a.k.a. `FeedbackGitHubToken`) | Same single PAT powers everything: nightly E2E status, community activity, leaderboard widgets, and the `/issue` page that opens GitHub issues | Optional. Without it, `/issue` returns `503 Issue submission is not available` and the GitHub-powered dashboard widgets fall back to demo data. |
 
-Classification patterns, clustering signals, severity keywords, and exempt labels all live in `hive-project.yaml`. Scripts read rules from config — they don't contain project-specific logic. Change the config, change the behavior.
+**Minimum to get started**: nothing — hit [console.kubestellar.io](https://console.kubestellar.io). Everything above is opt-in.
 
----
+### Setting the consolidated PAT
 
-## Adapting for Your Project
+There are two equivalent ways to supply this PAT — pick one. Both write to the same field (`FeedbackGitHubToken` in `pkg/api/handlers/feedback.go` and `pkg/api/handlers/github_proxy.go`), so you don't need to set both:
 
-Hive is designed to be forked and configured, not hardcoded. All project-specific values live in `hive-project.yaml`.
+1. **`.env` file at the repo root** — set on startup, no UI step needed:
+   ```
+   FEEDBACK_GITHUB_TOKEN=ghp_…
+   ```
 
-### Step by step
+2. **Settings UI** (self-hosted only, **admin role required**) — visit Settings → GitHub Token → paste. The UI POSTs to `/api/github/token` which is gated on the console `admin` role and returns `403 Console admin access required` for non-admin users (verified in `pkg/api/handlers/github_proxy.go:214`). Persisted to `~/.kc/settings.json` by the backend.
 
-1. **Copy the example config:**
+The hosted Netlify demo cannot persist a PAT — it has no writable local backend — so Settings UI saves don't work there. Use the env-var path for self-hosting.
+
+### Setting up GitHub OAuth (self-hosted only)
+
+If you self-host the console and want sign-in:
+
+1. **Create a [GitHub OAuth App](https://github.com/settings/developers)**
+   - Homepage URL: `http://localhost:8080`
+   - Callback URL: `http://localhost:8080/auth/github/callback`
+
+2. **Clone the repo** (if you haven't already):
    ```bash
-   sudo cp examples/kubestellar/hive-project.yaml /etc/hive/hive-project.yaml
+   git clone https://github.com/kubestellar/console.git
+   cd console
    ```
 
-2. **Edit the `project` section** — your org, repos, AI author account:
-   ```yaml
-   project:
-     name: "My Project"
-     org: "my-org"
-     primary_repo: "my-org/my-repo"
-     repos:
-       - my-org/my-repo
-       - my-org/my-docs
-     ai_author: "my-bot-account"
+3. **Create a `.env` file in the repo root** (`console/.env`):
+   ```
+   GITHUB_CLIENT_ID=your-client-id
+   GITHUB_CLIENT_SECRET=your-client-secret
    ```
 
-3. **Edit `agents.enabled`** — pick which agents you need:
-   ```yaml
-   agents:
-     enabled:
-       - supervisor
-       - scanner
-       - reviewer
-       # - architect    # optional
-       # - outreach     # optional
-       # - docs-agent   # add your own
-   ```
-
-4. **Edit `classification`** — your labels, lane patterns, complexity rules:
-   ```yaml
-   classification:
-     complexity:
-       simple:
-         labels: ["typo", "docs"]
-         model: "haiku"
-       complex:
-         labels: ["architecture", "epic"]
-         model: "opus"
-       default_model: "sonnet"
-   ```
-
-5. **Copy and edit agent CLAUDE.md files** from `examples/kubestellar/agents/`. Template variables like `${PROJECT_ORG}`, `${PROJECT_PRIMARY_REPO}`, and `${PROJECT_AI_AUTHOR}` are substituted automatically at kick time — you don't need to hardcode your project values.
-
-6. **Set agent `.env` files** with your workdir and model preferences.
-
-7. **Start:**
+4. **Start the console**:
    ```bash
-   hive supervisor
+   ./startup-oauth.sh
    ```
 
-### Template variables
+Open http://localhost:8080 and sign in with GitHub. For Kubernetes deployments, pass `--github-oauth` to `deploy.sh` instead.
 
-Agent policy files (CLAUDE.md) support these template variables, substituted by `kick-agents.sh` at kick time:
+### Consolidated PAT scopes
 
-| Variable | Source in config | Example value |
-|----------|-----------------|---------------|
-| `${PROJECT_ORG}` | `project.org` | `kubestellar` |
-| `${PROJECT_PRIMARY_REPO}` | `project.primary_repo` | `kubestellar/console` |
-| `${PROJECT_AI_AUTHOR}` | `project.ai_author` | `clubanderson` |
-| `${PROJECT_REPOS_LIST}` | `project.repos` | `kubestellar/console kubestellar/docs ...` |
-| `${HIVE_REPO}` | `project.hive_repo` | `kubestellar/hive` |
-| `${GA4_PROPERTY_ID}` | `outreach.ga4.property_id` | `525401563` |
-| `${AGENTS_WORKDIR}` | `agents.workdir` | `/home/dev/my-project` |
-| `${BEADS_BASE}` | `agents.beads_base` | `/home/dev` |
+Whichever path you used above (env var or Settings UI), the [Personal Access Token](https://github.com/settings/tokens) needs **either**:
+- A **classic** PAT with the `repo` scope, **or**
+- A **fine-grained** PAT with both **Issues: Read & Write** *and* **Contents: Read & Write** (verified against `pkg/api/handlers/feedback.go:71` — Contents is required, not just Issues).
 
----
+## AI configuration
 
-## Backends
+The console can use AI for adaptive card suggestions and mission help. AI is **optional** — the UI, missions, and dashboards all work without any AI keys configured (#6191).
 
-Set `HIVE_BACKENDS` in `hive.conf`. `HIVE_AUTO_INSTALL=true` installs missing backends on startup.
+**Important**: AI BYOK only works on the **self-hosted** console. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) explicitly disables `LOCAL_AGENT_HTTP_URL` (verified in `web/src/lib/constants/network.ts`), so the browser cannot reach a local agent there. To use your own AI keys, self-host the console first.
 
-| Backend | Type | Description |
-|---------|------|-------------|
-| `claude` | CLI | Anthropic's CLI — runs Claude models directly |
-| `gemini` | CLI | Google's CLI — runs Gemini models directly |
-| `copilot` | Aggregate | GitHub Copilot — routes to Claude, GPT, Gemini, and other vendor models |
-| `goose` | Aggregate | Block's Goose — routes to any model via config: qwen, deepseek, llama, and more (cloud or local) |
-
-**Native backends** (`claude`, `gemini`) are single-vendor tools that run their own models directly. **Aggregate backends** (`copilot`, `goose`) are multi-vendor routers — they can call models from different providers through a single interface.
-
-### Local models (optional)
-
-Set `HIVE_MODEL_SERVICES="ollama litellm"` to run models on-device with no API costs.
-
-```
-ollama        → runs local models (llama3, codestral, qwen2.5-coder, ...)
-    └── litellm proxy :4000  ← unified OpenAI-compatible endpoint
-            └── goose        ← points here when AGENT_BACKEND=goose
-```
-
-Ollama and litellm start as background services before any agent session launches.
-
----
-
-## Notifications
-
-hive sends alerts to any combination of ntfy, Slack, and Discord. Set whichever you use in `hive.conf` — all three fire simultaneously if configured.
-
-| Channel | Config key | How to get it |
-|---------|-----------|---------------|
-| ntfy (phone push) | `NTFY_TOPIC` | Free at [ntfy.sh](https://ntfy.sh) — pick any topic string |
-| Slack | `SLACK_WEBHOOK` | api.slack.com/apps → Incoming Webhooks |
-| Discord | `DISCORD_WEBHOOK` | Channel Settings → Integrations → Webhooks |
-
----
-
-## Config
-
-`/etc/hive/hive.conf` — the only file you need to edit:
+**How to add API keys (self-hosted):** the supported path today is **environment variables** read by `kc-agent` at startup. Export the keys you want, then launch the agent:
 
 ```bash
-# Repos to watch (space-separated)
-HIVE_REPOS="owner/repo1 owner/repo2"
-
-# Agent CLI backends to use (space-separated)
-HIVE_BACKENDS="copilot"          # copilot claude gemini goose
-
-# Local model services (optional — needs GPU or fast CPU)
-# HIVE_MODEL_SERVICES="ollama litellm"
-
-# Auto-install missing backends on hive supervisor start
-HIVE_AUTO_INSTALL=true
-
-# Notifications — set any combination
-NTFY_TOPIC=your-secret-topic     # free at ntfy.sh
-# SLACK_WEBHOOK=https://hooks.slack.com/services/...
-# DISCORD_WEBHOOK=https://discord.com/api/webhooks/...
+export ANTHROPIC_API_KEY=sk-ant-...   # Claude
+export OPENAI_API_KEY=sk-...          # OpenAI
+export GOOGLE_API_KEY=...             # Gemini  (note: GOOGLE_API_KEY, not GEMINI_API_KEY)
+./bin/kc-agent
 ```
 
----
+> **A note on the Settings → API Keys modal**: the console UI exposes a "Manage Keys" button under **Settings → API Keys**. This modal is wired to the agent's `/settings/keys` endpoint, but in the current build that endpoint returns an empty providers list (`providers := []providerDef{}` in `pkg/agent/server_operations.go:288`) — the comment in the source explains that "API-key-driven agents are hidden because they cannot execute commands to diagnose/repair clusters." So the modal will render no providers and you can't enter keys through it. **Use the environment-variable path above.** This README will be updated if/when the providers list is re-enabled.
 
-## Troubleshooting
+**If no key is configured**, AI-powered features fall back to deterministic / rule-based behavior. The card suggestions, missions, and dashboards remain fully usable.
 
-```bash
-hive status                  # check what's running
-hive logs governor           # why did it kick / not kick?
-hive logs scanner            # what is scanner doing?
-hive attach supervisor       # watch supervisor live
-journalctl -u claude-scanner # raw service log
-```
+**Security model, air-gapped deployments, and local / self-hosted LLMs** are covered in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md). That document explains the data flow between browser, Go backend, kc-agent, and AI providers; how to run the console with no external AI access; and the currently supported self-hosted path using kc-agent's CLI-based agents. It also notes that OpenAI-compatible local LLM endpoints (for example Ollama, vLLM, LM Studio, or an internal gateway) are a planned follow-up for the base-URL-overridable HTTP providers referenced by `GROQ_BASE_URL` / `OPENROUTER_BASE_URL` / `OPEN_WEBUI_URL`, which are not yet wired into the selectable provider list in the current build.
 
-### Common issues
+## How It Works
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| All agents idle, no ntfy | Governor crashing (check `hive logs governor`) | See below |
-| Governor: `Permission denied` on `/var/run/kick-governor/` | Root-owned files from `sudo` operations | `sudo chown -R dev:dev /var/run/kick-governor/` |
-| Governor: `Slack: command not found` | Broken comments in `notify.sh` | Reinstall: `sudo cp bin/notify.sh /usr/local/bin/notify.sh` |
-| Governor: `$2: unbound variable` | `set -u` + missing arg defaults | Use `${N:-}` syntax in all function params |
-| Dashboard: agents show `stopped` / CLI `?` | Service running as root (can't see dev's tmux) | Add `User=dev` to `hive-dashboard.service` |
-| Dashboard: widget download 404 | Stale node process on port 3001 | `ss -tlnp \| grep 3001` → `kill <PID>` → restart service |
-| `bd dolt push` fails | Root-owned `.beads/` files | `sudo chown -R dev:dev ~/.beads/ /home/dev/scanner-beads/.beads/` |
-| Beads: `?` in status | `bd list` blocked by stale lock | `sudo killall -9 bd && rm -f /home/dev/scanner-beads/.beads/embeddeddolt/.lock` |
+1. **Onboarding** — Sign in with GitHub, answer role questions, get a personalized dashboard
+2. **Adaptive AI** — Tracks card interactions and suggests swaps when your focus shifts (Claude, OpenAI, or Gemini)
+3. **MCP Bridge** — Queries cluster state (pods, deployments, events, drift, security) via `kubestellar-ops` and `kubestellar-deploy`
+4. **Missions** — Step-by-step guided installs with pre-flight checks, validation, troubleshooting, and rollback
+5. **Real-time** — WebSocket-powered live event streaming from all connected clusters
 
----
+## Architecture
 
-Apache 2.0  ·  [Architecture](docs/architecture.md)  ·  [KubeStellar example](examples/kubestellar/)
+See the full [Architecture documentation](https://kubestellar.io/docs/console/overview/architecture) on the KubeStellar website.
+
+### Related Repositories
+
+- **[console-kb](https://github.com/kubestellar/console-kb)** — Knowledge base of guided installers for 250+ CNCF projects and solutions to common Kubernetes problems
+- **[console-marketplace](https://github.com/kubestellar/console-marketplace)** — Community-contributed monitoring cards per CNCF project
+- **[kc-agent](cmd/kc-agent/)** — Local agent bridging the browser to kubeconfig, coding agents (Codex, Copilot, Claude CLI), and MCP servers (`kubestellar-ops`, `kubestellar-deploy`)
+- **[claude-plugins](https://github.com/kubestellar/claude-plugins)** — Claude Code marketplace plugins for Kubernetes
+- **[homebrew-tap](https://github.com/kubestellar/homebrew-tap)** — Homebrew formulae for KubeStellar tools
+- **[KubeStellar](https://kubestellar.io)** — Multi-cluster configuration management
+
+## Quality Assurance
+
+Console uses AI tools (GitHub Copilot, Claude Code) to accelerate development. Quality is maintained through **layered feedback loops** — every PR triggers the same automated checks regardless of author, and continuous monitoring catches what PR checks miss.
+
+- **Before commit**: TypeScript build + Go build + 5 post-build safety checks + lint
+- **Before merge**: nil-safety, ts-null-safety, array-safety, API contract, Playwright E2E, coverage gate, TTFI performance, CodeQL, Copilot code review, UI/UX standards scanner, visual regression
+- **Visual regression**: 18 UI components documented as Storybook stories with theme support. Playwright captures screenshots and diffs against baselines on every PR that touches UI components.
+- **After merge**: Targeted Playwright tests run against production (`console.kubestellar.io`); failures reopen the original issue
+- **Continuous**: Hourly coverage (12 shards), 4x daily QA, nightly E2E, nightly security scanning, real-time GA4 error tracking, UI/UX standards nightly scan
+
+When a regression class is identified, a maintainer adds an automated check to the earliest possible loop. See [docs/AI-QUALITY-ASSURANCE.md](docs/AI-QUALITY-ASSURANCE.md) for the full breakdown.
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE).
