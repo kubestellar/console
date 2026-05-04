@@ -1,5 +1,5 @@
 const express = require('express');
-const { execFile, execSync, spawn } = require('child_process');
+const { execFile, execFileSync, execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -7,6 +7,26 @@ const yaml = (() => { try { return require('js-yaml'); } catch (_) { return null
 
 const app = express();
 app.use(express.json());
+
+// Simple in-memory rate limiter for mutation endpoints
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 20;
+const _rateLimitMap = new Map();
+function rateLimiter(req, res, next) {
+  const key = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  let entry = _rateLimitMap.get(key);
+  if (!entry || now - entry.start > RATE_LIMIT_WINDOW_MS) {
+    entry = { start: now, count: 1 };
+    _rateLimitMap.set(key, entry);
+  } else {
+    entry.count++;
+  }
+  if (entry.count > RATE_LIMIT_MAX) {
+    return res.status(429).json({ error: 'Too many requests, please try again later' });
+  }
+  next();
+}
 
 // Load project config from hive-project.yaml
 const CONFIG_PATH = process.env.HIVE_PROJECT_CONFIG || '/etc/hive/hive-project.yaml';
@@ -1139,7 +1159,7 @@ function writeEnvVar(filePath, key, value) {
   const lockFile = filePath + '.lock';
   const tmp = filePath + '.tmp.' + process.pid + '.' + (++_envWriteSeq);
   fs.writeFileSync(tmp, updated, { mode: 0o644 });
-  execSync(`flock -x ${shellQuote(lockFile)} sudo mv ${shellQuote(tmp)} ${shellQuote(filePath)}`, { stdio: 'pipe' });
+  execFileSync('flock', ['-x', lockFile, 'sudo', 'mv', tmp, filePath], { stdio: 'pipe' });
 }
 
 function removeEnvVar(filePath, key) {
@@ -1151,7 +1171,7 @@ function removeEnvVar(filePath, key) {
   const lockFile = filePath + '.lock';
   const tmp = filePath + '.tmp.' + process.pid + '.' + (++_envWriteSeq);
   fs.writeFileSync(tmp, updated, { mode: 0o644 });
-  execSync(`flock -x ${shellQuote(lockFile)} sudo mv ${shellQuote(tmp)} ${shellQuote(filePath)}`, { stdio: 'pipe' });
+  execFileSync('flock', ['-x', lockFile, 'sudo', 'mv', tmp, filePath], { stdio: 'pipe' });
 }
 
 function deriveCli(launchCmd) {
@@ -1466,7 +1486,7 @@ app.put('/api/config/governor/health', (req, res) => {
   }
 });
 
-app.post('/api/config/governor/agents', (req, res) => {
+app.post('/api/config/governor/agents', rateLimiter, (req, res) => {
   const { name } = req.body;
   if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) {
     return res.status(400).json({ error: 'Invalid agent name (lowercase alphanumeric + hyphens)' });
@@ -1478,7 +1498,7 @@ app.post('/api/config/governor/agents', (req, res) => {
       const tmp = envFile + '.tmp.' + process.pid + '.' + (++_envWriteSeq);
       const lockFile = envFile + '.lock';
       fs.writeFileSync(tmp, initContent, { mode: 0o644 });
-      execSync(`flock -x ${shellQuote(lockFile)} sudo mv ${shellQuote(tmp)} ${shellQuote(envFile)}`, { stdio: 'pipe' });
+      execFileSync('flock', ['-x', lockFile, 'sudo', 'mv', tmp, envFile], { stdio: 'pipe' });
     }
     res.json({ ok: true });
   } catch (err) {
@@ -1494,7 +1514,7 @@ app.delete('/api/config/governor/agents/:name', (req, res) => {
   try {
     const envFile = `${ENV_DIR}/${name}.env`;
     if (fs.existsSync(envFile)) {
-      execSync(`sudo rm ${shellQuote(envFile)}`);
+      execFileSync('sudo', ['rm', envFile], { stdio: 'pipe' });
     }
     res.json({ ok: true });
   } catch (err) {
