@@ -40,6 +40,8 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
     testInfo.setTimeout(OAUTH_TEST_TIMEOUT_MS)
     await mockApiFallback(page)
     await mockHealthOAuthConfigured(page)
+    // #11908: Use the canonical mockApiMe helper (helpers/setup.ts) — do NOT
+    // duplicate inline. This ensures /api/me stays consistent across tests.
     await mockApiMe(page)
   })
 
@@ -73,14 +75,33 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
       route.fulfill({ status: 200, contentType: 'text/html', body: '' })
     )
 
-    // route.fulfill() rejects 3xx outside Chromium, so absorb the callback
-    // with a 200 and drive the next step via page.goto() (Login.spec.ts:131).
+    // #11909: Instead of absorbing the callback with a plain 200 and manually
+    // navigating to /auth/callback, respond with HTML that performs the
+    // client-side redirect the real backend would trigger. This exercises the
+    // actual redirect chain so regressions that leak tokens in the redirect URL
+    // are caught.
+    const callbackRedirectUrl = `/auth/callback?onboarded=true#kc_x=${encodeURIComponent(FAKE_ACCESS_TOKEN)}`
     await page.route('**/auth/github/callback*', (route) =>
-      route.fulfill({ status: 200, contentType: 'text/html', body: '' })
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: `<html><head><meta http-equiv="refresh" content="0;url=${callbackRedirectUrl}"></head><body><script>window.location.href="${callbackRedirectUrl}";</script></body></html>`,
+      })
     )
 
+    // #11910: Validate that the session cookie is present on /auth/refresh.
+    // If AuthCallback reverts to token-based auth (no cookie), the mock now
+    // returns 401 — catching the regression instead of passing silently.
     await page.route('**/auth/refresh', (route) => {
       refreshHeaders = route.request().headers()
+      const cookies = refreshHeaders['cookie'] || ''
+      if (!cookies.includes('kc_auth=')) {
+        return route.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'missing session cookie' }),
+        })
+      }
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -115,13 +136,14 @@ test.describe('OAuth flow - frontend (mocked backend)', () => {
     })
     await page.getByTestId('github-login-button').click()
 
+    // Navigate to the GitHub callback — the mock responds with a redirect
+    // to /auth/callback, exercising the real redirect chain (#11909).
     await page.goto(
       `/auth/github/callback?code=${FAKE_OAUTH_CODE}&state=${FAKE_OAUTH_STATE}`
     )
 
-    await page.goto(
-      `/auth/callback?onboarded=true#kc_x=${encodeURIComponent(FAKE_ACCESS_TOKEN)}`
-    )
+    // Wait for the client-side redirect to complete
+    await page.waitForURL(/\/auth\/callback/, { timeout: NAV_INTERCEPT_TIMEOUT_MS })
 
     await expect(page.getByTestId('dashboard-page')).toBeVisible({
       timeout: ELEMENT_VISIBLE_TIMEOUT_MS,

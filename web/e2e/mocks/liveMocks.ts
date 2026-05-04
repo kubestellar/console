@@ -193,7 +193,13 @@ export function getMockRESTData(url: string, data?: Record<string, Record<string
   return { items: [], message: 'No data available for this endpoint', source: 'mock' }
 }
 
-/** Mock /api/me endpoint with test user */
+/**
+ * Mock /api/me endpoint with test user.
+ *
+ * #11908: This delegates to the canonical mockApiMe pattern from
+ * helpers/setup.ts. Tests should prefer importing mockApiMe directly
+ * from '../helpers/setup' when they don't need a custom user payload.
+ */
 export async function setupAuth(page: Page, user?: typeof mockUser): Promise<void> {
   const u = user || mockUser
   await page.route('**/api/me', (route) =>
