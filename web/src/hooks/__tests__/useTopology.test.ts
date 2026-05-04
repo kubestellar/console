@@ -9,6 +9,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>
   return {
     ...actual,
+    DEFAULT_REFRESH_INTERVAL_MS: 120_000,
     STORAGE_KEY_TOKEN: 'token',
   }
 })
