@@ -216,9 +216,14 @@ type Server struct {
 // (DB, k8s, MCP, etc.) while the loading page is shown. Start() shuts down
 // the loading server and starts the real Fiber application.
 func NewServer(cfg Config) (*Server, error) {
+	// Check whether a pre-built frontend exists on disk (e.g. curl-to-bash installs).
+	// When it does, the server serves static files from web/dist/ regardless of
+	// dev mode — there is no Vite dev server to redirect to (#11813).
+	hasStaticFrontend := fileExists("./web/dist/index.html")
+
 	// Compute default frontend URL if not explicitly set
 	if cfg.FrontendURL == "" {
-		if cfg.DevMode {
+		if cfg.DevMode && !hasStaticFrontend {
 			cfg.FrontendURL = defaultDevFrontendURL
 		} else {
 			cfg.FrontendURL = defaultProdFrontendURL
@@ -1291,14 +1296,24 @@ s.failureTracker = failureTracker
 			return c.SendFile("./web/dist/index.html")
 		})
 	} else {
-		// In dev mode the frontend is served by the Vite dev server on a separate port.
-		// Redirect any SPA route that lands on the API port so developers get the real UI
-		// instead of a confusing Fiber 404.
-		devFrontend := strings.TrimRight(s.config.FrontendURL, "/")
-		s.app.Get("/*", func(c *fiber.Ctx) error {
-			target := devFrontend + c.OriginalURL()
-			return c.Redirect(target, fiber.StatusTemporaryRedirect)
-		})
+		// In dev mode the frontend is normally served by Vite on a separate port.
+		// However, binary distributions (curl-to-bash) may auto-activate dev
+		// mode without a Vite server running (#11813). If web/dist/ exists,
+		// serve static files directly; otherwise redirect to Vite.
+		if _, err := os.Stat("./web/dist/index.html"); err == nil {
+			slog.Info("[Server] dev mode active but web/dist found — serving static files instead of redirecting to Vite")
+			s.app.Use(preCompressedStatic("./web/dist"))
+			s.app.Get("/*", func(c *fiber.Ctx) error {
+				c.Set("Cache-Control", "public, max-age=0, must-revalidate")
+				return c.SendFile("./web/dist/index.html")
+			})
+		} else {
+			devFrontend := strings.TrimRight(s.config.FrontendURL, "/")
+			s.app.Get("/*", func(c *fiber.Ctx) error {
+				target := devFrontend + c.OriginalURL()
+				return c.Redirect(target, fiber.StatusTemporaryRedirect)
+			})
+		}
 	}
 }
 
@@ -1443,6 +1458,12 @@ func (s *Server) Start() error {
 }
 
 // waitForPortRelease polls until the given port is free or the timeout expires.
+// fileExists returns true when the path exists and is a regular file.
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
 func waitForPortRelease(port int, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	addr := fmt.Sprintf("127.0.0.1:%d", port)

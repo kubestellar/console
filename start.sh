@@ -440,6 +440,7 @@ if [ -z "$JWT_SECRET" ]; then
 fi
 
 # Start console (serves frontend from web/dist at the specified port)
+export DEV_MODE=false
 echo "Starting console on port $PORT..."
 cd "$INSTALL_DIR"
 ./console --port "$PORT" &
