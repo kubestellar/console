@@ -275,7 +275,9 @@ export default async (req: Request) => {
   try {
     detectedIds = await fetchFromScanEndpoint(url.origin, repo, force);
     // Persist to Blobs for next request
-    writeBlobCache(repo, detectedIds).catch(() => {});
+    writeBlobCache(repo, detectedIds).catch((err) => {
+      console.error('[acmm-badge] blob cache write failed', err instanceof Error ? err.message : err)
+    });
   } catch {
     // scan endpoint unreachable — try direct GitHub
   }
@@ -288,7 +290,9 @@ export default async (req: Request) => {
   const token = process.env.GITHUB_TOKEN || "";
   try {
     detectedIds = await fetchDetectedIdsDirect(repo, token);
-    writeBlobCache(repo, detectedIds).catch(() => {});
+    writeBlobCache(repo, detectedIds).catch((err) => {
+      console.error('[acmm-badge] blob cache write failed', err instanceof Error ? err.message : err)
+    });
     return badgeResponse(detectedIds, origin);
   } catch {
     // direct GitHub also failed
