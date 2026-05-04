@@ -118,7 +118,7 @@ function ProjectLogo({ projectName, iconPath }: { projectName: string; iconPath:
   }
 
   return (
-    <div className="w-12 h-12 rounded-xl bg-white/90 shadow-xs flex items-center justify-center">
+    <div className="w-12 h-12 rounded-xl bg-card/90 shadow-xs flex items-center justify-center">
       <img
         src={getProjectLogoUrl(projectName)}
         alt={projectName}

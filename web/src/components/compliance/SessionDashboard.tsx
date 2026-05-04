@@ -30,7 +30,7 @@ interface SessionSummary {
 const STATUS_STYLES: Record<string, string> = {
   active: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   idle: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  expired: 'bg-gray-500/20 text-gray-200 border-gray-500/30',
+  expired: 'bg-muted/20 text-muted-foreground border-border',
   terminated: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
@@ -130,7 +130,7 @@ export const SessionDashboardContent = memo(function SessionDashboardContent() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'
+              activeTab === tab ? 'bg-blue-600 text-white' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             }`}
           >
             {tab === 'sessions' ? 'Active Sessions' : 'Policies'}
@@ -155,7 +155,7 @@ export const SessionDashboardContent = memo(function SessionDashboardContent() {
             </thead>
             <tbody>
               {sessions.map(s => (
-                <tr key={s.id} className="border-b border-gray-700/50 hover:bg-white/5">
+                <tr key={s.id} className="border-b border-border hover:bg-muted/50">
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-purple-400" />
