@@ -27,17 +27,16 @@ WORKDIR /app
 ARG APP_VERSION=0.0.0
 ARG COMMIT_HASH=unknown
 
-# Copy package files
-COPY web/package*.json web/.npmrc ./
-RUN npm ci
-
-# Copy source
+# Copy pre-built dist first (CI injects this to skip Vite under QEMU)
 COPY web/ ./
 
-# Build with version and commit hash baked into the JS bundle
-ENV VITE_APP_VERSION=${APP_VERSION}
-ENV VITE_COMMIT_HASH=${COMMIT_HASH}
-RUN npm run build
+# Build only if dist/ was not pre-built by CI
+RUN if [ -d dist ] && [ -n "$(ls -A dist 2>/dev/null)" ]; then \
+      echo "Using pre-built frontend dist/"; \
+    else \
+      npm ci && \
+      VITE_APP_VERSION=${APP_VERSION} VITE_COMMIT_HASH=${COMMIT_HASH} npm run build; \
+    fi
 
 # Final stage
 FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
