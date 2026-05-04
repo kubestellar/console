@@ -1,9 +1,29 @@
 *.swp
 *.bak
 .DS_Store
+
+# Environment & Secrets
+/.env
+*.env
+# Keep tracked example .env files
+!examples/kubestellar/agents/*.env
 /agent.env
 /config/agent.env
-examples/kubestellar/agents/agent.env
+
+# Build Artifacts
+/bin/console
+/bin/kc-agent
+/bin/kc-watcher
+
+# Frontend dependencies
+web/node_modules/
+
+# Runtime data
+data/
+
+# IDE settings
+.vscode/
+.idea/
 
 # Beads ledger — runtime state, not source code
 .beads/
