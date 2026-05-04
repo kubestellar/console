@@ -414,9 +414,9 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       await expect(webhooksCard).toBeVisible()
 
       // At least one card should show a loading indicator (skeleton pulse or loading attribute)
+      // With a 3 s response delay the cards must still be in loading state.
       const anyLoading = page.locator('[data-card-type="etcd_status"][data-loading="true"], [data-card-type="dns_health"][data-loading="true"], [data-card-type="admission_webhooks"][data-loading="true"], [data-card-type="etcd_status"] .animate-pulse, [data-card-type="dns_health"] .animate-pulse, [data-card-type="admission_webhooks"] .animate-pulse')
-      const loadingCount = await anyLoading.count()
-      expect(loadingCount).toBeGreaterThanOrEqual(0) // graceful — some cards may load from cache
+      await expect(anyLoading.first()).toBeVisible({ timeout: 5000 })
     })
   })
 
@@ -639,6 +639,234 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
 
   // =========================================================================
   // Accessibility
+  // =========================================================================
+  // Default 21-Card Layout (#11786)
+  // =========================================================================
+  test.describe('Default 21-Card Layout', () => {
+    test('renders all 21 default cards when localStorage is cleared', async ({ page }) => {
+      // Setup without injecting custom cards into localStorage
+      await mockApiFallback(page)
+
+      await page.route('**/api/me', route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: '1',
+            github_id: '12345',
+            github_login: 'testuser',
+            email: 'test@example.com',
+            onboarded: true,
+          }),
+        })
+      )
+
+      await page.route('**/api/mcp/**', route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ clusters: MOCK_CLUSTERS, pods: MOCK_PODS, issues: [], events: [], nodes: [] }),
+        })
+      )
+
+      await page.route('http://127.0.0.1:8585/**', route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ clusters: MOCK_CLUSTERS, pods: MOCK_PODS, issues: [], events: [], nodes: [] }),
+        })
+      )
+
+      // Explicitly clear the cluster-admin storage key so default config is used
+      await page.addInitScript(({ storageKey }: { storageKey: string }) => {
+        localStorage.setItem('token', 'test-token')
+        localStorage.setItem('kc-demo-mode', 'false')
+        localStorage.setItem('kc-has-session', 'true')
+        localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kc-agent-setup-dismissed', 'true')
+        localStorage.setItem('kc-backend-status', JSON.stringify({
+          available: true,
+          timestamp: Date.now(),
+        }))
+        localStorage.removeItem(storageKey)
+      }, { storageKey: CLUSTER_ADMIN_STORAGE_KEY })
+
+      await page.goto('/cluster-admin')
+      await page.waitForLoadState('domcontentloaded')
+
+      // All 21 default card types from cluster-admin.ts config
+      const EXPECTED_CARD_TYPES = [
+        'kubectl',
+        'node_debug',
+        'cluster_health',
+        'control_plane_health',
+        'provider_health',
+        'resource_usage',
+        'predictive_health',
+        'pod_issues',
+        'deployment_issues',
+        'warning_events',
+        'hardware_health',
+        'upgrade_status',
+        'node_conditions',
+        'cert_manager',
+        'operator_status',
+        'operator_subscriptions',
+        'opa_policies',
+        'active_alerts',
+        'alert_rules',
+        'security_issues',
+        'console_ai_health_check',
+      ]
+
+      const EXPECTED_CARD_COUNT = 21
+
+      // Wait for the dashboard grid to be visible
+      const grid = page.locator('[data-testid="dashboard-cards-grid"], .grid')
+      await grid.first().waitFor({ state: 'visible', timeout: 15000 })
+
+      // Verify total card count matches expected 21 cards
+      const allCards = page.locator('[data-card-type]')
+      await expect(allCards).toHaveCount(EXPECTED_CARD_COUNT, { timeout: 15000 })
+
+      // Verify each expected card type is present
+      for (const cardType of EXPECTED_CARD_TYPES) {
+        const card = page.locator(`[data-card-type="${cardType}"]`)
+        await expect(card).toBeVisible({ timeout: 10000 })
+      }
+    })
+  })
+
+  // =========================================================================
+  // Error Banner and Demo Stat Styling (#11788)
+  // =========================================================================
+  test.describe('Error Banner and Demo Stat Styling', () => {
+    test('shows red error banner when cluster API returns 500', async ({ page }) => {
+      await mockApiFallback(page)
+
+      await page.route('**/api/me', route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: '1',
+            github_id: '12345',
+            github_login: 'testuser',
+            email: 'test@example.com',
+            onboarded: true,
+          }),
+        })
+      )
+
+      // Mock clusters endpoint to return 500 error
+      await page.route('**/api/mcp/clusters', route =>
+        route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Internal Server Error' }),
+        })
+      )
+
+      await page.route('**/api/mcp/**', route => {
+        if (!route.request().url().includes('/clusters')) {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ pods: [], issues: [], events: [], nodes: [] }),
+          })
+        }
+      })
+
+      await page.route('http://127.0.0.1:8585/**', route =>
+        route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Internal Server Error' }),
+        })
+      )
+
+      await page.addInitScript(({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
+        localStorage.setItem('token', 'test-token')
+        localStorage.setItem('kc-demo-mode', 'false')
+        localStorage.setItem('kc-has-session', 'true')
+        localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kc-agent-setup-dismissed', 'true')
+        localStorage.setItem('kc-backend-status', JSON.stringify({
+          available: true,
+          timestamp: Date.now(),
+        }))
+        localStorage.setItem(storageKey, JSON.stringify(cards))
+      }, { storageKey: CLUSTER_ADMIN_STORAGE_KEY, cards: CARDS_UNDER_TEST })
+
+      await page.goto('/cluster-admin')
+      await page.waitForLoadState('domcontentloaded')
+
+      // The error banner should be visible with red styling
+      const errorBanner = page.locator('.bg-red-500\\/10')
+      await expect(errorBanner).toBeVisible({ timeout: 15000 })
+
+      // Error banner should contain meaningful error text
+      const errorText = errorBanner.locator('.font-medium')
+      await expect(errorText).toBeVisible({ timeout: 10000 })
+    })
+
+    test('stat blocks show demo badge styling when no cluster data is available', async ({ page }) => {
+      await mockApiFallback(page)
+
+      await page.route('**/api/me', route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: '1',
+            github_id: '12345',
+            github_login: 'testuser',
+            email: 'test@example.com',
+            onboarded: true,
+          }),
+        })
+      )
+
+      // Return empty clusters so isDemoData becomes true
+      await page.route('**/api/mcp/**', route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ clusters: [], pods: [], issues: [], events: [], nodes: [] }),
+        })
+      )
+
+      await page.route('http://127.0.0.1:8585/**', route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ clusters: [], pods: [], issues: [], events: [], nodes: [] }),
+        })
+      )
+
+      await page.addInitScript(({ storageKey, cards }: { storageKey: string; cards: typeof CARDS_UNDER_TEST }) => {
+        localStorage.setItem('token', 'test-token')
+        localStorage.setItem('kc-demo-mode', 'false')
+        localStorage.setItem('kc-has-session', 'true')
+        localStorage.setItem('demo-user-onboarded', 'true')
+        localStorage.setItem('kc-agent-setup-dismissed', 'true')
+        localStorage.setItem('kc-backend-status', JSON.stringify({
+          available: true,
+          timestamp: Date.now(),
+        }))
+        localStorage.setItem(storageKey, JSON.stringify(cards))
+      }, { storageKey: CLUSTER_ADMIN_STORAGE_KEY, cards: CARDS_UNDER_TEST })
+
+      await page.goto('/cluster-admin')
+      await page.waitForLoadState('domcontentloaded')
+
+      // Wait for the page to settle — stats should render with demo indicators
+      // Demo stat blocks typically show a "Demo" badge or yellow outline
+      const demoBadge = page.locator('text=Demo').or(page.locator('[data-demo="true"]')).or(page.locator('.border-yellow-500, .border-yellow-400, .text-yellow-400'))
+      await expect(demoBadge.first()).toBeVisible({ timeout: 15000 })
+    })
+  })
+
   // =========================================================================
   test.describe('Accessibility', () => {
     test.beforeEach(async ({ page }) => {
