@@ -249,6 +249,7 @@ export function StackSelector() {
   // Extract values from context (use defaults when context is missing so hooks below run unconditionally)
   const stacks = stackContext?.stacks || []
   const isLoading = stackContext?.isLoading ?? false
+  const isRefreshing = stackContext?.isRefreshing ?? false
   const selectedStack = stackContext?.selectedStack
   const selectedStackId = stackContext?.selectedStackId
   const setSelectedStackId = stackContext?.setSelectedStackId
@@ -441,7 +442,7 @@ export function StackSelector() {
                   className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-white transition-colors"
                   title="Refresh stacks"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`w-3.5 h-3.5 ${(isLoading || isRefreshing) ? 'animate-spin' : ''}`} />
                 </button>
               </div>
 

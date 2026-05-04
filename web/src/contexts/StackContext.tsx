@@ -148,6 +148,7 @@ interface StackContextType {
   // Discovery
   stacks: LLMdStack[]
   isLoading: boolean
+  isRefreshing: boolean
   error: string | null
   refetch: () => void
   lastRefresh: Date | null
@@ -181,7 +182,7 @@ export function StackProvider({ children }: StackProviderProps) {
       .filter(c => c.reachable === true)
       .map(c => c.name)
 
-  const { stacks: discoveredStacks, isLoading: liveLoading, error: liveError, refetch: liveRefetch, lastRefresh: liveLastRefresh } = useStackDiscovery(onlineClusterNames)
+  const { stacks: discoveredStacks, isLoading: liveLoading, isRefreshing: liveRefreshing, error: liveError, refetch: liveRefetch, lastRefresh: liveLastRefresh } = useStackDiscovery(onlineClusterNames)
 
   // Filter out stacks from clusters that went offline since last discovery
   // Memoize to prevent unstable array references triggering useEffect loops
@@ -196,6 +197,7 @@ export function StackProvider({ children }: StackProviderProps) {
   const demoStacks = useMemo(() => createDemoStacks(), [])
   const stacks = isDemoMode ? demoStacks : liveStacks
   const isLoading = isDemoMode ? false : liveLoading
+  const isRefreshing = isDemoMode ? false : liveRefreshing
   const error = isDemoMode ? null : liveError
   // Stable no-op for demo mode so refetch identity doesn't change every render
   const demoRefetch = useCallback(() => {}, [])
@@ -257,6 +259,7 @@ export function StackProvider({ children }: StackProviderProps) {
   const value = useMemo<StackContextType>(() => ({
     stacks,
     isLoading,
+    isRefreshing,
     error,
     refetch,
     lastRefresh,
@@ -267,7 +270,7 @@ export function StackProvider({ children }: StackProviderProps) {
     getStackById,
     healthyStacks,
     disaggregatedStacks }), [
-    stacks, isLoading, error, refetch, lastRefresh,
+    stacks, isLoading, isRefreshing, error, refetch, lastRefresh,
     selectedStack, selectedStackId, setSelectedStackId,
     isDemoMode, getStackById, healthyStacks, disaggregatedStacks
   ])

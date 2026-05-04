@@ -557,7 +557,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
             }}
             title={t('issueActivityChart.refresh', 'Refresh')}
           >
-            <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
           </Button>
         </div>
       </div>

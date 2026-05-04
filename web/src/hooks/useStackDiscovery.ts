@@ -351,6 +351,7 @@ export function useStackDiscovery(clusters: string[]) {
   const [stacks, setStacks] = useState<LLMdStack[]>(cached?.stacks || [])
   // Only show loading if we have NO cached data at all — stale cache is still shown
   const [isLoading, setIsLoading] = useState(!hasCachedStacks)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(cached ? new Date(cached.timestamp) : null)
   const initialLoadDone = useRef(isCacheValid || false)
@@ -388,7 +389,11 @@ export function useStackDiscovery(clusters: string[]) {
       // (stale-while-revalidate pattern — never wipe visible data).
       if (!hasStacksRef.current) {
         setIsLoading(true)
+      } else {
+        setIsRefreshing(true)
       }
+    } else if (hasStacksRef.current) {
+      setIsRefreshing(true)
     }
 
     try {
@@ -702,6 +707,7 @@ export function useStackDiscovery(clusters: string[]) {
       setError(err instanceof Error ? err.message : 'Failed to discover stacks')
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
       isRefetching.current = false
     }
   }, [clustersKey])
@@ -722,6 +728,7 @@ export function useStackDiscovery(clusters: string[]) {
   return {
     stacks,
     isLoading,
+    isRefreshing,
     error,
     refetch: () => refetch(false),
     lastRefresh }
