@@ -164,12 +164,14 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     // failure (keep the stale cache). See issue #6111.
     let fetchSucceeded = false
 
-    // Try local agent first (works without backend running)
-    if (!isAgentUnavailable()) {
+    // Try local agent first (works without backend running).
+    // Skip when agent URL is suppressed (in-cluster deployments set it to '').
+    const agentURL = getLocalAgentURL()
+    if (agentURL && !isAgentUnavailable()) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_EXTENDED_TIMEOUT_MS)
-        const response = await agentFetch(`${getLocalAgentURL()}/gpu-nodes?${params}`, {
+        const response = await agentFetch(`${agentURL}/gpu-nodes?${params}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
@@ -188,8 +190,9 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       }
     }
 
-    // If agent didn't work (not just "returned 0 nodes"), try SSE streaming then REST
-    if (!agentSucceeded && token) {
+    // If agent didn't work (not just "returned 0 nodes"), try SSE streaming then REST.
+    // In-cluster mode uses cookie auth (no localStorage token), so allow the fallback.
+    if (!agentSucceeded && (token || isInClusterMode())) {
       try {
         // Try SSE streaming first for progressive rendering
         const sseResult = await fetchSSE<GPUNode>({
@@ -482,11 +485,12 @@ export function useNodes(cluster?: string) {
     setIsLoading(true)
 
     // Try local agent HTTP endpoint first (works without backend)
-    if (cluster && !isAgentUnavailable()) {
+    const nodeAgentURL = getLocalAgentURL()
+    if (cluster && nodeAgentURL && !isAgentUnavailable()) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
-        const response = await agentFetch(`${getLocalAgentURL()}/nodes?cluster=${encodeURIComponent(cluster)}`, {
+        const response = await agentFetch(`${nodeAgentURL}/nodes?cluster=${encodeURIComponent(cluster)}`, {
           signal: controller.signal,
           headers: { 'Accept': 'application/json' },
         })
@@ -615,7 +619,7 @@ export function useNVIDIAOperators(cluster?: string) {
 
       // Try SSE streaming first
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
-      if (token && token !== 'demo-token') {
+      if ((token && token !== 'demo-token') || isInClusterMode()) {
         try {
           const accumulated: NVIDIAOperatorStatus[] = []
           const result = await fetchSSE<NVIDIAOperatorStatus>({
