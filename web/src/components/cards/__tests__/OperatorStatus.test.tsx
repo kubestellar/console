@@ -338,7 +338,7 @@ describe('OperatorStatus', () => {
 
   it('renders operator list as an accessible list role', () => {
     render(<OperatorStatus />)
-    const list = screen.getByRole('list')
+    const list = screen.getByRole('group', { name: 'Operators' })
     expect(list).toBeTruthy()
   })
 
