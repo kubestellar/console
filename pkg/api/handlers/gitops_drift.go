@@ -227,7 +227,6 @@ func (h *GitOpsHandlers) syncViaMCP(ctx context.Context, req SyncRequest) (*Sync
 	if len(result.Content) > 0 {
 		text := result.Content[0].Text
 		response.Message = text
-		response.Success = true
 
 		// Try to parse as JSON
 		var parsed map[string]interface{}
@@ -238,6 +237,18 @@ func (h *GitOpsHandlers) syncViaMCP(ctx context.Context, req SyncRequest) (*Sync
 			if message, ok := parsed["message"].(string); ok {
 				response.Message = message
 			}
+		}
+
+		// Detect kubectl errors in plain-text MCP responses.
+		// MCP servers often return kubectl failures as text without
+		// setting IsError, so we scan for known error patterns.
+		if errs := detectKubectlErrors(text); len(errs) > 0 {
+			response.Success = false
+			response.Errors = errs
+		} else if !response.Success {
+			// Keep Success=false if JSON parsing already set it
+		} else {
+			response.Success = true
 		}
 	}
 
@@ -317,6 +328,43 @@ func (h *GitOpsHandlers) syncViaKubectl(ctx context.Context, req SyncRequest) (*
 }
 
 // Helper functions
+
+// kubectlErrorPatterns are substrings (lowercase) that indicate kubectl failures.
+// MCP servers often return these as plain text without setting the isError flag.
+var kubectlErrorPatterns = []string{
+	"error:",
+	"error from server",
+	"forbidden",
+	"no matches for kind",
+	"unable to",
+	"cannot",
+	"not found",
+	"connection refused",
+	"timeout",
+	"unauthorized",
+	"invalid",
+	"failed to",
+	"is not valid",
+	"already exists",
+	"admission webhook",
+	"denied the request",
+}
+
+// detectKubectlErrors scans text for known kubectl/K8s error patterns
+// and returns the matching error lines. Returns nil when no errors are found.
+func detectKubectlErrors(text string) []string {
+	var errs []string
+	for _, line := range strings.Split(text, "\n") {
+		lineLower := strings.ToLower(line)
+		for _, pattern := range kubectlErrorPatterns {
+			if strings.Contains(lineLower, pattern) {
+				errs = append(errs, strings.TrimSpace(line))
+				break
+			}
+		}
+	}
+	return errs
+}
 
 func getString(m map[string]interface{}, key string) string {
 	if v, ok := m[key].(string); ok {
