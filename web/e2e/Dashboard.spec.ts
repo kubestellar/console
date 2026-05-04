@@ -3,12 +3,35 @@ import { setupDashboardTest, mockApiFallback } from './helpers/setup'
 import { setupStrictDemoMode, API_RESPONSES } from './helpers/api-mocks'
 
 test.describe('Dashboard Page', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, browserName }) => {
     // Strict API mocking setup — tracks calls and logs unmocked endpoints
     await setupStrictDemoMode(page, {
       logUnmocked: true,
       failOnUnmocked: false, // Gradual migration — log but don't fail
       customHandlers: [
+        // Override /health to return oauth_configured: true so the AuthProvider
+        // does not call setDemoMode() and force a redirect during initialization.
+        // Without this, Firefox/WebKit fail instantly because the auth flow
+        // triggers before the page fully renders. (#11900)
+        {
+          pattern: '**/health',
+          handler: async (route) => {
+            const url = new URL(route.request().url())
+            if (url.pathname !== '/health') return route.fallback()
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                status: 'ok',
+                version: 'dev',
+                oauth_configured: true,
+                in_cluster: false,
+                no_local_agent: true,
+                install_method: 'dev',
+              }),
+            })
+          },
+        },
         // MCP endpoints for dashboard cards
         {
           pattern: '**/api/mcp/**',
@@ -29,6 +52,7 @@ test.describe('Dashboard Page', () => {
       localStorage.setItem('kc-demo-mode', 'true')
       localStorage.setItem('kc-has-session', 'true')
       localStorage.setItem('demo-user-onboarded', 'true')
+      localStorage.setItem('kc-agent-setup-dismissed', 'true')
       localStorage.setItem('kc-backend-status', JSON.stringify({
         available: true,
         timestamp: Date.now(),
@@ -36,6 +60,12 @@ test.describe('Dashboard Page', () => {
     })
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
+    // Firefox/WebKit settle the DOM slower than Chromium — wait for
+    // networkidle to ensure all mock responses have been delivered and
+    // React has finished its initial render pass. (#11900)
+    if (browserName === 'firefox' || browserName === 'webkit') {
+      await page.waitForLoadState('networkidle').catch(() => {})
+    }
     await page.locator('#root').waitFor({ state: 'visible', timeout: 15000 })
   })
 
@@ -155,22 +185,24 @@ test.describe('Dashboard Page', () => {
     })
 
     test('cards are interactive (hover/click)', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 10000 })
+      const GRID_TIMEOUT_MS = 10_000
 
-      // Find first card in the grid
+      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: GRID_TIMEOUT_MS })
+
+      // Use data-card-id selector (same as "cards have proper structure" test)
+      // instead of generic `> div` which can match non-card wrapper elements
+      // and trigger Playwright's auto-retry loop indefinitely. (#11899)
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      const firstCard = cardsGrid.locator('> div').first()
+      const firstCard = cardsGrid.locator('[data-card-id]').first()
 
-      // Card should be visible
-      const isVisible = await firstCard.isVisible().catch(() => false)
+      // Wait for the first card to be visible before interacting
+      await expect(firstCard).toBeVisible({ timeout: GRID_TIMEOUT_MS })
 
-      if (isVisible) {
-        // Test hover - should not throw
-        await firstCard.hover()
+      // Test hover - should not throw
+      await firstCard.hover()
 
-        // Card should remain visible after hover
-        await expect(firstCard).toBeVisible()
-      }
+      // Card should remain visible after hover
+      await expect(firstCard).toBeVisible()
     })
   })
 
