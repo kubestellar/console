@@ -5,9 +5,10 @@ export type ConnectStep = 1 | 2 | 3
 export type ConnectState = 'idle' | 'testing' | 'tested' | 'adding' | 'done' | 'error'
 
 export interface PreviewContext {
-  context: string
-  cluster: string
-  server: string
+  contextName: string
+  clusterName: string
+  serverUrl: string
+  userName?: string
   authMethod?: string
   isNew: boolean
 }

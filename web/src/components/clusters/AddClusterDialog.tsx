@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { X, Terminal, Upload, FormInput } from 'lucide-react'
+import { X, Terminal, Upload, FormInput, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
 import { emitClusterCreated } from '../../lib/analytics'
+import { isAgentConnected } from '../../hooks/useLocalAgent'
 import { CommandLineTab } from './add-cluster/CommandLineTab'
 import { ImportTab } from './add-cluster/ImportTab'
 import { ConnectTab } from './add-cluster/ConnectTab'
@@ -303,8 +304,28 @@ export function AddClusterDialog({ open, onClose }: AddClusterDialogProps) {
           ))}
         </div>
 
-        {/* Content */}
-        <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
+        {/* Content — fixed min-height so tabs don't resize the dialog */}
+        <div className="px-6 py-5 max-h-[60vh] min-h-[340px] overflow-y-auto">
+          {!isAgentConnected() && (
+            <div className="flex items-start gap-3 mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+              <AlertTriangle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-yellow-400">{t('cluster.agentRequired')}</p>
+                <p className="text-muted-foreground mt-1">
+                  {t('cluster.agentRequiredDesc')}{' '}
+                  <a
+                    href="https://github.com/kubestellar/console#install-kc-agent"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-400 hover:text-purple-300 underline"
+                  >
+                    {t('cluster.agentInstallLink')}
+                  </a>
+                </p>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'command-line' && (
             <CommandLineTab cloudCLIs={cloudCLIs} />
           )}

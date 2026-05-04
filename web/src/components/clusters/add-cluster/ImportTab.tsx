@@ -74,9 +74,9 @@ export function ImportTab({
                   setErrorMessage('')
                 }
               }}
-              rows={6}
+              rows={8}
               placeholder="apiVersion: v1&#10;kind: Config&#10;..."
-              className="bg-secondary rounded-lg p-4 font-mono text-sm w-full resize-y border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden"
+              className="bg-secondary rounded-lg p-4 font-mono text-sm w-full resize-y border border-border dark:border-white/10 focus:border-purple-500 focus:outline-hidden min-h-[180px]"
             />
           </div>
 
@@ -123,13 +123,13 @@ export function ImportTab({
               <div className="space-y-1">
                 {previewContexts.map((ctx) => (
                   <div
-                    key={ctx.context}
+                    key={ctx.contextName}
                     className="flex items-center justify-between bg-secondary/50 rounded-lg px-4 py-2.5"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-foreground truncate">{ctx.context}</div>
+                      <div className="text-sm font-medium text-foreground truncate">{ctx.contextName}</div>
                       <div className="text-xs text-muted-foreground truncate">
-                        {ctx.cluster} — {ctx.server}
+                        {ctx.clusterName} — {ctx.serverUrl}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-3 shrink-0">
