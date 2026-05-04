@@ -79,10 +79,14 @@ vi.mock('../useTokenUsage', () => ({
   clearActiveTokenCategory: vi.fn(),
 }))
 
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_WS_URL: 'ws://localhost:8080/ws',
-  LOCAL_AGENT_HTTP_URL: 'http://localhost:8080',
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_WS_URL: 'ws://localhost:8080/ws',
+    LOCAL_AGENT_HTTP_URL: 'http://localhost:8080',
+  }
+})
 
 vi.mock('../useLocalAgent', () => ({
   useLocalAgent: mockUseLocalAgent,

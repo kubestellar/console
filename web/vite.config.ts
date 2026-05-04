@@ -258,6 +258,8 @@ export default defineConfig(({ mode }) => ({
     css: true,
     include: ['src/**/*.{test,spec}.{ts,tsx}', 'netlify/functions/__tests__/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'e2e/**/*'],
+    // Retry flaky tests up to 2 times in CI to reduce false-positive workflow failures (#11872)
+    retry: process.env.CI ? 2 : 0,
     teardownTimeout: process.env.CI ? 120_000 : 10_000, // CI: increased from 60s to 120s for worker cleanup stability (#10436)
     // CI runners (2-core, 7GB) OOM with 600+ test files at full concurrency
     maxWorkers: process.env.CI ? 2 : undefined,

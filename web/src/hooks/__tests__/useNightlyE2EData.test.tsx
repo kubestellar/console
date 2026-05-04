@@ -32,14 +32,22 @@ vi.mock('../../lib/demoMode', () => ({
     createCachedHook: vi.fn(),
   isNetlifyDeployment: false,
 }))
-vi.mock('../../lib/constants', () => ({
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
-  STORAGE_KEY_TOKEN: 'token',
-}))
-vi.mock('../../lib/constants/network', () => ({
+    STORAGE_KEY_TOKEN: 'token',
+  }
+})
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
     createCachedHook: vi.fn(),
-  FETCH_DEFAULT_TIMEOUT_MS: 30000,
-}))
+    FETCH_DEFAULT_TIMEOUT_MS: 30000,
+  }
+})
 
 describe('useNightlyE2EData', () => {
   beforeEach(() => {

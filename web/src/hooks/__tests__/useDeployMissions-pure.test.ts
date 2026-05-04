@@ -10,18 +10,26 @@ vi.mock('../mcp/shared', () => ({
 vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: vi.fn() },
 }))
-vi.mock('../../lib/constants', () => ({
-  LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-  STORAGE_KEY_TOKEN: 'kc-auth-token',
-  STORAGE_KEY_MISSIONS_ACTIVE: 'kc-missions-active',
-  STORAGE_KEY_MISSIONS_HISTORY: 'kc-missions-history',
-}))
-vi.mock('../../lib/constants/network', () => ({
-  FETCH_DEFAULT_TIMEOUT_MS: 10_000,
-  DEPLOY_ABORT_TIMEOUT_MS: 30_000,
-  KUBECTL_DEFAULT_TIMEOUT_MS: 15_000,
-  MCP_HOOK_TIMEOUT_MS: 15_000,
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
+    STORAGE_KEY_TOKEN: 'kc-auth-token',
+    STORAGE_KEY_MISSIONS_ACTIVE: 'kc-missions-active',
+    STORAGE_KEY_MISSIONS_HISTORY: 'kc-missions-history',
+  }
+})
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    FETCH_DEFAULT_TIMEOUT_MS: 10_000,
+    DEPLOY_ABORT_TIMEOUT_MS: 30_000,
+    KUBECTL_DEFAULT_TIMEOUT_MS: 15_000,
+    MCP_HOOK_TIMEOUT_MS: 15_000,
+  }
+})
 
 vi.mock('../useBackendHealth', () => ({
   isInClusterMode: vi.fn().mockReturnValue(false),
@@ -30,9 +38,13 @@ vi.mock('../useBackendHealth', () => ({
 vi.mock('../../lib/api', () => ({
   api: { get: vi.fn().mockResolvedValue({ data: null }) },
 }))
-vi.mock('../../lib/constants/time', () => ({
-  MS_PER_MINUTE: 60_000,
-}))
+vi.mock('../../lib/constants/time', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    MS_PER_MINUTE: 60_000,
+  }
+})
 
 const mod = await import('../useDeployMissions')
 const {

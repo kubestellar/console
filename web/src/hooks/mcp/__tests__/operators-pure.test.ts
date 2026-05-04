@@ -12,9 +12,13 @@ vi.mock('../../../lib/modeTransition', () => ({
   registerRefetch: vi.fn(),
   registerCacheReset: vi.fn(),
 }))
-vi.mock('../../../lib/constants', () => ({
-  STORAGE_KEY_TOKEN: 'kc-auth-token',
-}))
+vi.mock('../../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    STORAGE_KEY_TOKEN: 'kc-auth-token',
+  }
+})
 vi.mock('../shared', () => ({
   clusterCacheRef: { current: new Map() },
   subscribeClusterCache: vi.fn(),

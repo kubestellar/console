@@ -94,15 +94,23 @@ vi.mock('../../lib/api', () => ({
   RateLimitError: class RateLimitError extends Error {},
 }))
 
-vi.mock('../../lib/constants', () => ({
-  COPY_FEEDBACK_TIMEOUT_MS: 2000,
-  FETCH_DEFAULT_TIMEOUT_MS: 10000,
-}))
+vi.mock('../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    COPY_FEEDBACK_TIMEOUT_MS: 2000,
+    FETCH_DEFAULT_TIMEOUT_MS: 10000,
+  }
+})
 
-vi.mock('../../lib/constants/time', () => ({
-  MS_PER_HOUR: 3600000,
-  MS_PER_DAY: 86400000,
-}))
+vi.mock('../../lib/constants/time', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    MS_PER_HOUR: 3600000,
+    MS_PER_DAY: 86400000,
+  }
+})
 
 vi.mock('../../lib/formatters', () => ({
   formatTimeAgo: (d: Date) => d.toISOString(),

@@ -18,9 +18,13 @@ vi.mock('../../../lib/modeTransition', () => ({
 vi.mock('../../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: vi.fn() },
 }))
-vi.mock('../../../lib/constants', () => ({
-  STORAGE_KEY_TOKEN: 'kc-auth-token',
-}))
+vi.mock('../../../lib/constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    STORAGE_KEY_TOKEN: 'kc-auth-token',
+  }
+})
 vi.mock('../shared', () => ({
   REFRESH_INTERVAL_MS: 120_000,
   MIN_REFRESH_INDICATOR_MS: 500,
