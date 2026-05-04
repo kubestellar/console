@@ -846,6 +846,23 @@ export function useMissionControl() {
       setState((prev) => ({ ...prev, aiStreaming: false }))
       aiRequestInFlightRef.current = false // #6827
     }
+
+    // #11875 — Show a toast when the planning mission fails so the user gets
+    // immediate feedback in Phase 1 (the error details are also in the sidebar,
+    // but the sidebar may not be visible).
+    if (status === 'failed' && state.aiStreaming) {
+      const lastMsg = planningMission.messages[planningMission.messages.length - 1]
+      const msgText = (lastMsg?.content || '').toLowerCase()
+      const isAuthError =
+        msgText.includes('401') ||
+        msgText.includes('unauthorized') ||
+        msgText.includes('authentication') ||
+        msgText.includes('token')
+      const toastMessage = isAuthError
+        ? 'Agent returned 401 Unauthorized — check kc-agent credentials or restart the agent'
+        : 'AI suggestion failed — local agent is unavailable or returned an error'
+      showToast(toastMessage, 'error')
+    }
   }, [planningMission?.status, state.aiStreaming])
 
   // Safety-net: clear aiStreaming if no planning mission appears within 30s (#5669).
