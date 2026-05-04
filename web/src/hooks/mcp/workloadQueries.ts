@@ -786,7 +786,7 @@ export function usePodIssues(cluster?: string, namespace?: string): UsePodIssues
     }
 
     // Try kubectl proxy first when cluster is specified (for cluster-specific issues)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && !isInClusterMode()) {
       try {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster

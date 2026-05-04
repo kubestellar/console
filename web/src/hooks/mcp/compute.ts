@@ -167,7 +167,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     // Try local agent first (works without backend running).
     // Skip when agent URL is suppressed (in-cluster deployments set it to '').
     const agentURL = getLocalAgentURL()
-    if (agentURL && !isAgentUnavailable()) {
+    if (agentURL && !isAgentUnavailable() && !isInClusterMode()) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_EXTENDED_TIMEOUT_MS)
@@ -486,7 +486,7 @@ export function useNodes(cluster?: string) {
 
     // Try local agent HTTP endpoint first (works without backend)
     const nodeAgentURL = getLocalAgentURL()
-    if (cluster && nodeAgentURL && !isAgentUnavailable()) {
+    if (cluster && nodeAgentURL && !isAgentUnavailable() && !isInClusterMode()) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
