@@ -24,34 +24,37 @@ jobs:
             const LOOKBACK_DAYS = 30;
             const PR_LIMIT = 300;
             const FIXES_RE = /(?:fixes|closes|resolves)\s+#(\d+)/gi;
+            const MS_PER_DAY = 86400000;
 
-            // Fetch merged PRs from the last 30 days
-            const since = new Date(Date.now() - LOOKBACK_DAYS * 86400000).toISOString();
-            const prs = await github.paginate(github.rest.pulls.list, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'closed',
+            // Fetch merged PRs from the last 30 days using search API (date-filtered)
+            const sinceDate = new Date(Date.now() - LOOKBACK_DAYS * MS_PER_DAY);
+            const sinceStr = sinceDate.toISOString().slice(0, 10);
+            const searchQuery = `repo:${context.repo.owner}/${context.repo.repo} is:pr is:merged merged:>=${sinceStr}`;
+
+            const results = await github.paginate(github.rest.search.issuesAndPullRequests, {
+              q: searchQuery,
               sort: 'updated',
-              direction: 'desc',
+              order: 'desc',
               per_page: 100,
-            });
+            }, (response) => response.data);
 
-            const mergedPrs = prs
-              .filter(pr => pr.merged_at && new Date(pr.merged_at) >= new Date(since))
-              .slice(0, PR_LIMIT);
+            const mergedPrs = results.slice(0, PR_LIMIT);
 
             console.log(`Found ${mergedPrs.length} merged PRs in last ${LOOKBACK_DAYS} days`);
 
             // Extract issue refs from PR bodies
+            // Search API items use pull_request.merged_at; fall back to closed_at
             const issueRefs = [];
             for (const pr of mergedPrs) {
               const body = pr.body || '';
+              const mergedAt = (pr.pull_request && pr.pull_request.merged_at) || pr.closed_at;
+              if (!mergedAt) continue;
               let match;
               const re = new RegExp(FIXES_RE.source, FIXES_RE.flags);
               while ((match = re.exec(body)) !== null) {
                 issueRefs.push({
                   issue: parseInt(match[1], 10),
-                  mergedAt: pr.merged_at,
+                  mergedAt,
                 });
               }
             }
