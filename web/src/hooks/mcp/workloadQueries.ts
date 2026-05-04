@@ -154,6 +154,30 @@ export interface UsePodLogsResult {
   refetch: () => Promise<void>
 }
 
+async function fetchInClusterCollection<T>(
+  resource: string,
+  params: URLSearchParams,
+  collectionKey: string,
+): Promise<T[] | null> {
+  try {
+    const response = await fetch(`/api/mcp/${resource}?${params.toString()}`, {
+      signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+    })
+    if (!response.ok) {
+      return null
+    }
+    const data = await response.json() as Record<string, unknown> | T[]
+    if (Array.isArray(data)) {
+      return data
+    }
+    const collection = data[collectionKey]
+    return Array.isArray(collection) ? collection as T[] : []
+  } catch (err: unknown) {
+    console.warn(`[${resource}] Backend fetch failed:`, err)
+    return null
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Demo data (internal to this module)
 // ---------------------------------------------------------------------------
@@ -1191,8 +1215,32 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
       }
     }
 
+    if (cluster && isInClusterMode()) {
+      const params = new URLSearchParams()
+      params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const backendDeployments = await fetchInClusterCollection<Deployment>('deployments', params, 'deployments')
+      if (backendDeployments) {
+        const enriched = backendDeployments.map(d => ({ ...d, cluster: d.cluster || cluster }))
+        const now = new Date()
+        deploymentsCache = { data: enriched, timestamp: now, key: cacheKey }
+        setDeployments(enriched)
+        setError(null)
+        setLastUpdated(now)
+        setConsecutiveFailures(0)
+        setLastRefresh(now)
+        setIsLoading(false)
+        if (!silent) {
+          setTimeout(() => setIsRefreshing(false), MIN_REFRESH_INDICATOR_MS)
+        } else {
+          setIsRefreshing(false)
+        }
+        return
+      }
+    }
+
     // Try kubectl proxy as fallback
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && !isInClusterMode()) {
       try {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
@@ -1228,7 +1276,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
 
     // Fall back to REST API
     try {
-      if (isDemoMode() || !LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
+      if (!LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
         setDeployments([])
         const now = new Date()
         setLastUpdated(now)
@@ -1443,7 +1491,20 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
         console.debug('[useHPAs] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
+    if (isInClusterMode()) {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const backendHPAs = await fetchInClusterCollection<HPA>('hpas', params, 'hpas')
+      if (backendHPAs) {
+        setHPAs(backendHPAs)
+        setError(null)
+        setConsecutiveFailures(0)
+      }
+      setIsLoading(false)
+      return
+    }
+    if (!LOCAL_AGENT_HTTP_URL) {
       setIsLoading(false)
       return
     }
@@ -1514,7 +1575,20 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
         console.debug('[useReplicaSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
+    if (isInClusterMode()) {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const backendReplicaSets = await fetchInClusterCollection<ReplicaSet>('replicasets', params, 'replicasets')
+      if (backendReplicaSets) {
+        setReplicaSets(backendReplicaSets)
+        setError(null)
+        setConsecutiveFailures(0)
+      }
+      setIsLoading(false)
+      return
+    }
+    if (!LOCAL_AGENT_HTTP_URL) {
       setIsLoading(false)
       return
     }
@@ -1583,7 +1657,20 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
         console.debug('[useStatefulSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
+    if (isInClusterMode()) {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const backendStatefulSets = await fetchInClusterCollection<StatefulSet>('statefulsets', params, 'statefulsets')
+      if (backendStatefulSets) {
+        setStatefulSets(backendStatefulSets)
+        setError(null)
+        setConsecutiveFailures(0)
+      }
+      setIsLoading(false)
+      return
+    }
+    if (!LOCAL_AGENT_HTTP_URL) {
       setIsLoading(false)
       return
     }
@@ -1652,7 +1739,20 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
         console.debug('[useDaemonSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
+    if (isInClusterMode()) {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const backendDaemonSets = await fetchInClusterCollection<DaemonSet>('daemonsets', params, 'daemonsets')
+      if (backendDaemonSets) {
+        setDaemonSets(backendDaemonSets)
+        setError(null)
+        setConsecutiveFailures(0)
+      }
+      setIsLoading(false)
+      return
+    }
+    if (!LOCAL_AGENT_HTTP_URL) {
       setIsLoading(false)
       return
     }
@@ -1721,7 +1821,20 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
         console.debug('[useCronJobs] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (!LOCAL_AGENT_HTTP_URL || isInClusterMode()) {
+    if (isInClusterMode()) {
+      const params = new URLSearchParams()
+      if (cluster) params.append('cluster', cluster)
+      if (namespace) params.append('namespace', namespace)
+      const backendCronJobs = await fetchInClusterCollection<CronJob>('cronjobs', params, 'cronjobs')
+      if (backendCronJobs) {
+        setCronJobs(backendCronJobs)
+        setError(null)
+        setConsecutiveFailures(0)
+      }
+      setIsLoading(false)
+      return
+    }
+    if (!LOCAL_AGENT_HTTP_URL) {
       setIsLoading(false)
       return
     }
