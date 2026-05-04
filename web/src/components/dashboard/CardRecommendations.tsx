@@ -97,7 +97,10 @@ export function CardRecommendations({ currentCardTypes, onAddCard }: Props) {
     const handleClickOutside = (e: MouseEvent) => {
       // Use the currently expanded ID to find the correct dropdown element
       const activeDropdown = document.getElementById(`rec-dropdown-${expandedRec}`)
-      if (activeDropdown && !activeDropdown.contains(e.target as Node)) {
+      // Check against the parent container (includes both trigger chip and dropdown)
+      // so clicking the chip to toggle closed isn't treated as an outside click
+      const container = activeDropdown?.parentElement
+      if (container && !container.contains(e.target as Node)) {
         setExpandedRec(null)
       }
     }
