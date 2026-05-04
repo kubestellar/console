@@ -158,6 +158,7 @@ export function useNightlyE2EData() {
   // still reports isLoading=true until the async cache layer confirms.  In that
   // case we already have good data — suppress the loading state.
   const hasCachedInitial = CACHED_INITIAL.guides.length > 0
+  const effectiveIsLoading = hasCachedInitial ? false : cacheResult.isLoading
 
   return {
     guides,
@@ -165,9 +166,9 @@ export function useNightlyE2EData() {
     // 1. Optimistic demo during cold-start loading (showOptimisticDemo)
     // 2. Normal demo mode when disabled
     // 3. demoWhenEmpty fallback after fetch returns empty
-    // Don't suppress during loading — demoWhenEmpty already handles this properly.
-    isDemoFallback: cacheResult.isDemoFallback || (!cacheResult.isLoading && isDemo),
-    isLoading: hasCachedInitial ? false : cacheResult.isLoading,
+    // Evaluate against effectiveIsLoading so isDemoFallback and isLoading stay consistent.
+    isDemoFallback: cacheResult.isDemoFallback || (!effectiveIsLoading && isDemo),
+    isLoading: effectiveIsLoading,
     isRefreshing: cacheResult.isRefreshing || (hasCachedInitial && cacheResult.isLoading),
     isFailed: cacheResult.isFailed,
     consecutiveFailures: cacheResult.consecutiveFailures,
