@@ -79,7 +79,7 @@ function FluentdStatusInternal() {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
-        <p className="text-sm text-red-400">{t('fluentd.fetchError', 'Failed to fetch Fluentd status')}</p>
+        <div className="text-sm text-red-400">{t('fluentd.fetchError', 'Failed to fetch Fluentd status')}</div>
       </div>
     )
   }
@@ -88,10 +88,10 @@ function FluentdStatusInternal() {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Layers className="w-6 h-6 text-muted-foreground/50" />
-        <p className="text-sm font-medium">{t('fluentd.notInstalled', 'Fluentd not detected')}</p>
-        <p className="text-xs text-center max-w-xs">
+        <div className="text-sm font-medium">{t('fluentd.notInstalled', 'Fluentd not detected')}</div>
+        <div className="text-xs text-center max-w-xs">
           {t('fluentd.notInstalledHint', 'No Fluentd pods found. Deploy Fluentd as a DaemonSet to monitor log pipelines.')}
-        </p>
+        </div>
       </div>
     )
   }

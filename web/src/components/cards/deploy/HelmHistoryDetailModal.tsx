@@ -116,19 +116,19 @@ Please proceed step by step.`,
           {/* Revision info grid — Issue 9285: labels now i18n */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.chart')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:helmHistoryModal.chart')}</span>
               <span className="text-sm font-medium text-foreground">{entry.chart}</span>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.appVersion')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:helmHistoryModal.appVersion')}</span>
               <span className="text-sm text-foreground">{entry.app_version || t('cards:helmHistoryModal.notAvailable')}</span>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.updated')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:helmHistoryModal.updated')}</span>
               <span className="text-sm text-foreground">{formatDate(entry.updated)}</span>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.cluster')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:helmHistoryModal.cluster')}</span>
               <span className="text-sm text-foreground">{clusterName}</span>
             </div>
           </div>
@@ -136,7 +136,7 @@ Please proceed step by step.`,
           {/* Description */}
           {entry.description && (
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:helmHistoryModal.description')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:helmHistoryModal.description')}</span>
               <div className="bg-secondary/30 rounded-lg p-3">
                 <p className="text-xs text-foreground">{entry.description}</p>
               </div>

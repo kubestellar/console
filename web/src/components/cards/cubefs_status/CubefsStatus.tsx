@@ -388,9 +388,9 @@ export function CubefsStatus() {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <AlertTriangle className="w-6 h-6 text-red-400" />
-        <p className="text-sm text-red-400">
+        <div className="text-sm text-red-400">
           {t('cubefs.fetchError', 'Failed to fetch CubeFS status')}
-        </p>
+        </div>
       </div>
     )
   }
@@ -400,15 +400,15 @@ export function CubefsStatus() {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <Database className="w-6 h-6 text-muted-foreground/50" />
-        <p className="text-sm font-medium">
+        <div className="text-sm font-medium">
           {t('cubefs.notInstalled', 'CubeFS not detected')}
-        </p>
-        <p className="text-xs text-center max-w-xs">
+        </div>
+        <div className="text-xs text-center max-w-xs">
           {t(
             'cubefs.notInstalledHint',
             'No CubeFS pods found. Deploy CubeFS to enable distributed file system storage.',
           )}
-        </p>
+        </div>
       </div>
     )
   }
@@ -523,10 +523,10 @@ export function CubefsStatus() {
           ) : volumes.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1 py-6">
               <Database className="w-6 h-6 opacity-40" />
-              <p className="text-sm">{t('cubefs.noVolumes', 'No volumes found')}</p>
-              <p className="text-xs text-center">
+              <div className="text-sm">{t('cubefs.noVolumes', 'No volumes found')}</div>
+              <div className="text-xs text-center">
                 {t('cubefs.noVolumesHint', 'CubeFS volumes will appear here when created.')}
-              </p>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
@@ -545,10 +545,10 @@ export function CubefsStatus() {
           ) : nodes.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-1 py-6">
               <Server className="w-6 h-6 opacity-40" />
-              <p className="text-sm">{t('cubefs.noNodes', 'No nodes found')}</p>
-              <p className="text-xs text-center">
+              <div className="text-sm">{t('cubefs.noNodes', 'No nodes found')}</div>
+              <div className="text-xs text-center">
                 {t('cubefs.noNodesHint', 'CubeFS nodes (master, meta, data) will appear here.')}
-              </p>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">

@@ -117,11 +117,11 @@ Please proceed step by step.`,
           {/* Resource info grid — Issue 9285: labels now i18n */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:gitopsDriftModal.kind')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:gitopsDriftModal.kind')}</span>
               <span className="text-sm font-medium text-foreground">{drift.kind}</span>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:gitopsDriftModal.driftTypeLabel')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:gitopsDriftModal.driftTypeLabel')}</span>
               <StatusBadge
                 color={drift.driftType === 'deleted' ? 'red' : drift.driftType === 'added' ? 'blue' : 'yellow'}
                 size="sm"
@@ -130,18 +130,18 @@ Please proceed step by step.`,
               </StatusBadge>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:gitopsDriftModal.namespace')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:gitopsDriftModal.namespace')}</span>
               <span className="text-sm text-foreground">{drift.namespace}</span>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:gitopsDriftModal.cluster')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:gitopsDriftModal.cluster')}</span>
               <ClusterBadge cluster={drift.cluster} />
             </div>
           </div>
 
           {/* Git version */}
           <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:gitopsDriftModal.gitVersion')}</h4>
+            <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:gitopsDriftModal.gitVersion')}</span>
             <code className="px-2 py-1 rounded bg-secondary text-purple-400 font-mono text-xs">
               {drift.gitVersion}
             </code>
@@ -150,7 +150,7 @@ Please proceed step by step.`,
           {/* Details */}
           {drift.details && (
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">{t('cards:gitopsDriftModal.details')}</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">{t('cards:gitopsDriftModal.details')}</span>
               <div className="bg-secondary/30 rounded-lg p-3">
                 <p className="text-xs text-foreground whitespace-pre-wrap">{drift.details}</p>
               </div>

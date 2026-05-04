@@ -89,18 +89,18 @@ Please proceed step by step.`,
           {/* Tool info */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">Tool</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">Tool</span>
               <StatusBadge color="blue" size="sm">{violation.tool}</StatusBadge>
             </div>
             <div>
-              <h4 className="text-xs font-medium text-muted-foreground mb-1">Violations</h4>
+              <span className="text-xs font-medium text-muted-foreground mb-1 block">Violations</span>
               <span className="text-lg font-bold text-orange-400">{violation.count}</span>
             </div>
           </div>
 
           {/* Clusters */}
           <div>
-            <h4 className="text-xs font-medium text-muted-foreground mb-2">Affected Clusters</h4>
+            <span className="text-xs font-medium text-muted-foreground mb-2 block">Affected Clusters</span>
             <div className="flex flex-wrap gap-1.5">
               {(violation.clusters || []).map(cluster => (
                 <StatusBadge key={cluster} color="purple" size="sm">{cluster}</StatusBadge>
