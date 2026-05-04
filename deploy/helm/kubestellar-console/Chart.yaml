@@ -3,7 +3,7 @@ name: kubestellar-console
 description: KubeStellar Console - AI-powered multi-cluster Kubernetes dashboard
 type: application
 version: 0.0.0
-appVersion: "latest"
+appVersion: "0.3.24"
 keywords:
   - kubernetes
   - dashboard
