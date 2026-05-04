@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -109,6 +110,12 @@ type Hub struct {
 	mu           sync.RWMutex
 	done         chan struct{}
 	closeOnce    sync.Once // protects done channel from double-close panic
+	// activeConns tracks the number of connections that have passed the limit
+	// check but may not yet appear in h.clients (pending registration via
+	// the channel). This eliminates the TOCTOU race where multiple goroutines
+	// pass GetTotalConnectionsCount() simultaneously before any of them are
+	// registered in the hub's Run loop (#11877).
+	activeConns int64
 	// #6576 — configMu guards jwtSecret and devMode so Set/Get callers
 	// never race. Previously SetJWTSecret and SetDevMode wrote unguarded
 	// fields that were read concurrently by incoming WebSocket handshakes
@@ -197,6 +204,7 @@ func (h *Hub) Run() {
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
 				close(client.send)
+				atomic.AddInt64(&h.activeConns, -1) // #11877 — decrement atomic counter
 
 				// Remove from user index
 				clients := h.userIndex[client.userID]
@@ -232,15 +240,18 @@ func (h *Hub) Run() {
 					slog.Warn("[WebSocket] slow client buffer full, disconnecting",
 						"user", client.userID)
 					go func(c *Client) {
+						// #11877 — Use a timeout instead of default case so
+						// the unregister is never silently dropped. If the
+						// unregister channel is full for >1s, forcibly close
+						// the connection to prevent goroutine/FD leaks.
 						select {
 						case h.unregister <- c:
-						default:
+						case <-time.After(1 * time.Second):
+							slog.Warn("[WebSocket] unregister channel full, force-closing client",
+								"user", c.userID)
+							c.closeConn()
+						case <-h.done:
 						}
-						// #7434 — Do not call c.closeConn() directly from here.
-						// Sending to h.unregister will cause the hub to close
-						// c.send, which signals the writer goroutine to exit
-						// and call closeConn() in its defer. This ensures
-						// synchronization within the HandleConnection lifecycle.
 					}(client)
 				}
 			}
@@ -322,9 +333,10 @@ func (h *Hub) GetActiveUsersCount() int {
 
 // GetTotalConnectionsCount returns the total number of active WebSocket connections
 func (h *Hub) GetTotalConnectionsCount() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.clients)
+	// #11877 — Use atomic counter for accurate count that includes
+	// connections that passed the limit check but haven't been registered
+	// in the hub's Run loop yet.
+	return int(atomic.LoadInt64(&h.activeConns))
 }
 
 // DisconnectUser closes all WebSocket connections belonging to the given user.
@@ -551,10 +563,13 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 		return
 	}
 
-	// Check connection limit before registration to prevent resource exhaustion
-	if h.GetTotalConnectionsCount() >= h.maxConnections {
+	// Check connection limit using atomic counter to prevent TOCTOU race (#11877).
+	// Increment first, then check — if over limit, decrement and reject.
+	currentConns := atomic.AddInt64(&h.activeConns, 1)
+	if int(currentConns) > h.maxConnections {
+		atomic.AddInt64(&h.activeConns, -1)
 		slog.Warn("[WebSocket] SECURITY: rejected connection - limit reached",
-			"user", userID, "current", h.GetTotalConnectionsCount(), "limit", h.maxConnections)
+			"user", userID, "current", currentConns-1, "limit", h.maxConnections)
 		if err := conn.WriteJSON(Message{Type: "error", Data: map[string]string{"message": "server at capacity"}}); err != nil {
 			slog.Error("[WebSocket] failed to send limit error", "error", err)
 		}
@@ -589,6 +604,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	select {
 	case h.register <- client:
 	case <-h.done:
+		atomic.AddInt64(&h.activeConns, -1) // #11877 — undo pre-increment
 		client.closeConn()
 		return
 	}
