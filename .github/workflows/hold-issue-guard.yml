@@ -1,19 +1,60 @@
 name: Hold Issue Guard
 
 on:
-  pull_request:
-    types: [opened, edited, synchronize]
+  pull_request_target:
+    types: [opened, edited, synchronize, labeled, unlabeled]
+  issues:
+    types: [labeled, unlabeled]
 
 jobs:
   check-hold-issues:
     runs-on: ubuntu-latest
+    # Run on PR events always; on issue events only when the hold label is involved
+    if: >-
+      github.event_name == 'pull_request_target' ||
+      (github.event_name == 'issues' && github.event.label.name == 'hold')
     steps:
       - name: Check for hold-labeled referenced issues
         uses: actions/github-script@v7
         with:
           script: |
+            // Matches: Fixes #123, Closes: #123, Resolves #123, fix #45, close: #9, etc.
+            const CLOSING_PATTERN = /(?:fix(?:es)?|close[sd]?|resolve[sd]?):?\s+#(\d+)/gi;
+
+            // For issue events, find open PRs that reference this issue
+            if (context.eventName === 'issues') {
+              const issueNumber = context.payload.issue.number;
+              const { data: pulls } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+              });
+
+              const hasHold = context.payload.issue.labels.some(l => l.name === 'hold');
+              if (!hasHold) {
+                core.info(`Issue #${issueNumber} no longer has hold label. No action needed.`);
+                return;
+              }
+
+              for (const pr of pulls) {
+                const body = pr.body || '';
+                let match;
+                while ((match = CLOSING_PATTERN.exec(body)) !== null) {
+                  if (parseInt(match[1], 10) === issueNumber) {
+                    core.setFailed(
+                      `PR #${pr.number} references hold-labeled issue #${issueNumber}.\n` +
+                      `Remove the closing keyword or remove the hold label first.`
+                    );
+                    return;
+                  }
+                }
+              }
+              core.info(`No open PRs reference hold-labeled issue #${issueNumber}.`);
+              return;
+            }
+
+            // For pull_request_target events
             const body = context.payload.pull_request.body || '';
-            const CLOSING_PATTERN = /(?:fix(?:es)?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
             let match;
             const referencedIssues = [];
             while ((match = CLOSING_PATTERN.exec(body)) !== null) {
@@ -40,7 +81,8 @@ jobs:
                   holdIssues.push(`#${issueNumber} (${issue.title})`);
                 }
               } catch (e) {
-                core.warning(`Could not fetch issue #${issueNumber}: ${e.message}`);
+                // Treat API errors (404, 403, transient) as non-blocking
+                core.warning(`Could not fetch issue #${issueNumber}: ${e.message}. Skipping.`);
               }
             }
 
