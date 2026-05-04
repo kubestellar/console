@@ -128,15 +128,23 @@ jobs:
               color,
             };
 
-            const { Octokit } = await import('@octokit/rest');
-            const gistKit = new Octokit({ auth: gistToken });
-            await gistKit.gists.update({
-              gist_id: gistId,
-              files: {
-                'median-fix.json': {
-                  content: JSON.stringify(badge),
-                },
+            const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+              method: 'PATCH',
+              headers: {
+                Authorization: `token ${gistToken}`,
+                Accept: 'application/vnd.github+json',
               },
+              body: JSON.stringify({
+                files: {
+                  'median-fix.json': {
+                    content: JSON.stringify(badge),
+                  },
+                },
+              }),
             });
+            if (!response.ok) {
+              console.log(`Gist update failed: ${response.status} ${response.statusText}`);
+              return;
+            }
 
             console.log(`Badge updated: ${JSON.stringify(badge)}`);
