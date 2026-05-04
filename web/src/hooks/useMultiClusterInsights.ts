@@ -7,6 +7,7 @@
  * are enriched with AI explanations and remediation suggestions.
  */
 
+import { useMemo } from 'react'
 import { useCachedEvents, useCachedWarningEvents, useCachedDeployments, useCachedPodIssues } from './useCachedData'
 import { useClusters } from './mcp/clusters'
 import { useDemoMode } from './useDemoMode'
@@ -798,7 +799,7 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
   const isLoading = clustersLoading || eventsLoading || deploymentsLoading
   const isRefreshing = clustersRefreshing || eventsRefreshing || deploymentsRefreshing
 
-  const insights = (() => {
+  const insights = useMemo(() => {
     if (isDemoData) return getDemoInsights()
 
     const all: MultiClusterInsight[] = [
@@ -817,14 +818,14 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
       if (sevDiff !== 0) return sevDiff
       return b.affectedClusters.length - a.affectedClusters.length
     })
-  })()
+  }, [isDemoData, events, deployments, deduplicatedClusters, warningEvents, podIssues])
 
   // AI enrichment: when agent is connected, enrich heuristic insights
   // with AI-generated descriptions, root causes, and remediation.
   // Falls back gracefully to heuristic-only when agent is unavailable.
   const { enrichedInsights } = useInsightEnrichment(insights)
 
-  const insightsByCategory = (() => {
+  const insightsByCategory = useMemo(() => {
     const result: Record<InsightCategory, MultiClusterInsight[]> = {
       'event-correlation': [],
       'cluster-delta': [],
@@ -837,9 +838,9 @@ export function useMultiClusterInsights(): UseMultiClusterInsightsResult {
       result[insight.category].push(insight)
     }
     return result
-  })()
+  }, [enrichedInsights])
 
-  const topInsights = (enrichedInsights || []).slice(0, MAX_TOP_INSIGHTS)
+  const topInsights = useMemo(() => (enrichedInsights || []).slice(0, MAX_TOP_INSIGHTS), [enrichedInsights])
 
   return {
     insights: enrichedInsights,
