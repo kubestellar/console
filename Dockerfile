@@ -34,7 +34,7 @@ COPY web/ ./
 RUN if [ -d dist ] && [ -n "$(ls -A dist 2>/dev/null)" ]; then \
       echo "Using pre-built frontend dist/"; \
     else \
-      npm ci && \
+      npm ci --legacy-peer-deps && \
       VITE_APP_VERSION=${APP_VERSION} VITE_COMMIT_HASH=${COMMIT_HASH} npm run build; \
     fi
 
