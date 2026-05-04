@@ -116,6 +116,8 @@ export function useHelmReleases(cluster?: string) {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(helmReleasesCache.lastError)
   const [consecutiveFailures, setConsecutiveFailures] = useState(helmReleasesCache.consecutiveFailures)
+  const consecutiveFailuresRef = useRef(consecutiveFailures)
+  consecutiveFailuresRef.current = consecutiveFailures
   const [lastRefresh, setLastRefresh] = useState<number | null>(
     helmReleasesCache.timestamp > 0 ? helmReleasesCache.timestamp : null
   )
@@ -291,9 +293,10 @@ export function useHelmReleases(cluster?: string) {
     }
 
     // Poll for Helm releases (shared interval prevents duplicates across components)
+    // Use ref for consecutiveFailures to avoid re-triggering effect on each failure
     const unsubscribePolling = subscribePolling(
       `helmReleases:${cluster || 'all'}`,
-      getEffectiveInterval(HELM_REFRESH_INTERVAL_MS, consecutiveFailures),
+      getEffectiveInterval(HELM_REFRESH_INTERVAL_MS, consecutiveFailuresRef.current),
       () => refetch(true),
     )
 
@@ -304,7 +307,7 @@ export function useHelmReleases(cluster?: string) {
       unsubscribePolling()
       unregisterRefetch()
     }
-  }, [refetch, cluster, consecutiveFailures])
+  }, [refetch, cluster])
 
   // Re-fetch when demo mode changes (not on initial mount)
   useEffect(() => {
