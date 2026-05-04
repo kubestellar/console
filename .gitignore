@@ -27,3 +27,8 @@ data/
 
 # Beads ledger — runtime state, not source code
 .beads/
+
+# Frontend build output
+web/dist/
+web/*.tsbuildinfo
+*.tsbuildinfo
