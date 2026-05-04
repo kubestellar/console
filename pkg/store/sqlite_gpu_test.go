@@ -127,22 +127,34 @@ func TestGPUUtilizationSnapshots(t *testing.T) {
 	})
 
 	t.Run("GetBulkUtilizationSnapshots returns snapshots for multiple reservations", func(t *testing.T) {
-		res2 := &models.GPUReservation{
+		// Create two fresh reservations so this subtest is self-contained
+		resA := &models.GPUReservation{
 			UserID:   user.ID,
 			UserName: user.GitHubLogin,
-			Title:    "Snap Job 2",
+			Title:    "Bulk Snap Job A",
 			Cluster:  "snap-cluster",
 			GPUCount: 1,
 		}
-		require.NoError(t, s.CreateGPUReservation(ctx, res2))
-		resID2 := res2.ID.String()
+		require.NoError(t, s.CreateGPUReservation(ctx, resA))
+		resAID := resA.ID.String()
 
-		_ = s.InsertUtilizationSnapshot(ctx, &models.GPUUtilizationSnapshot{ReservationID: resID, GPUUtilizationPct: 10})
-		_ = s.InsertUtilizationSnapshot(ctx, &models.GPUUtilizationSnapshot{ReservationID: resID2, GPUUtilizationPct: 20})
+		resB := &models.GPUReservation{
+			UserID:   user.ID,
+			UserName: user.GitHubLogin,
+			Title:    "Bulk Snap Job B",
+			Cluster:  "snap-cluster",
+			GPUCount: 1,
+		}
+		require.NoError(t, s.CreateGPUReservation(ctx, resB))
+		resBID := resB.ID.String()
 
-		bulk, err := s.GetBulkUtilizationSnapshots(ctx, []string{resID, resID2})
+		require.NoError(t, s.InsertUtilizationSnapshot(ctx, &models.GPUUtilizationSnapshot{ReservationID: resAID, GPUUtilizationPct: 10}))
+		require.NoError(t, s.InsertUtilizationSnapshot(ctx, &models.GPUUtilizationSnapshot{ReservationID: resAID, GPUUtilizationPct: 15}))
+		require.NoError(t, s.InsertUtilizationSnapshot(ctx, &models.GPUUtilizationSnapshot{ReservationID: resBID, GPUUtilizationPct: 20}))
+
+		bulk, err := s.GetBulkUtilizationSnapshots(ctx, []string{resAID, resBID})
 		require.NoError(t, err)
-		require.Len(t, bulk[resID], 2)
-		require.Len(t, bulk[resID2], 1)
+		require.Len(t, bulk[resAID], 2)
+		require.Len(t, bulk[resBID], 1)
 	})
 }

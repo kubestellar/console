@@ -96,7 +96,7 @@ func TestDashboardExtra(t *testing.T) {
 
 	t.Run("CountUserDashboards returns correct count", func(t *testing.T) {
 		for i := 0; i < 3; i++ {
-			_ = s.CreateDashboard(ctx, &models.Dashboard{UserID: user.ID, Name: "D"})
+			require.NoError(t, s.CreateDashboard(ctx, &models.Dashboard{UserID: user.ID, Name: "D"}))
 		}
 		count, err := s.CountUserDashboards(ctx, user.ID)
 		require.NoError(t, err)

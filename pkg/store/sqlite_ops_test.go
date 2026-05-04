@@ -22,6 +22,8 @@ func TestClusterGroupCRUD(t *testing.T) {
 	})
 
 	t.Run("DeleteClusterGroup removes group", func(t *testing.T) {
+		// Ensure group exists before deleting (subtest must be self-contained)
+		require.NoError(t, s.SaveClusterGroup(ctx, "my-group", []byte(`{"clusters":["c1"]}`)))
 		require.NoError(t, s.DeleteClusterGroup(ctx, "my-group"))
 		groups, err := s.ListClusterGroups(ctx)
 		require.NoError(t, err)
