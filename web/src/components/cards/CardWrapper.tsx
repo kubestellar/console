@@ -732,7 +732,7 @@ export const CardWrapper = memo(function CardWrapper({
                   </span>
                 )}
                 {/* Refresh indicator - only shows when no refresh button is present (button handles its own spin) */}
-                {!onRefresh && (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && !effectiveIsFailed && (
+                {!onRefresh && (isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && !effectiveIsFailed && (
                   <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" aria-hidden="true" />
                 )}
                 {/* Last updated indicator — use prop or child-reported timestamp.
@@ -779,7 +779,7 @@ export const CardWrapper = memo(function CardWrapper({
                     disabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
                     className={cn(
                       'p-1.5 rounded-lg transition-colors',
-                      isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline
+                      isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline
                         ? 'text-blue-400 cursor-not-allowed'
                         : effectiveIsFailed
                           ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300'
@@ -788,7 +788,7 @@ export const CardWrapper = memo(function CardWrapper({
                     aria-label={forceSkeletonForOffline ? t('cardWrapper.waitingForAgent') : effectiveIsFailed ? t('cardWrapper.refreshFailedRetry', { count: effectiveConsecutiveFailures }) : t('cardWrapper.refreshData')}
                     title={forceSkeletonForOffline ? t('cardWrapper.waitingForAgent') : effectiveIsFailed ? t('cardWrapper.refreshFailedRetry', { count: effectiveConsecutiveFailures }) : t('cardWrapper.refreshData')}
                   >
-                    <RefreshCw className={cn('w-4 h-4', (isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-spin')} aria-hidden="true" />
+                    <RefreshCw className={cn('w-4 h-4', (isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline) && 'animate-spin')} aria-hidden="true" />
                   </button>
                 )}
                 {/* Chat button - feature not yet implemented
