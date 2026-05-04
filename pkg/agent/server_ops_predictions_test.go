@@ -61,7 +61,9 @@ func TestServer_HandlePredictionsFeedback(t *testing.T) {
 }
 
 func TestServer_HandleMetricsHistory(t *testing.T) {
-	worker := NewMetricsHistory(nil, "")
+	// Pass a temp directory so NewMetricsHistory doesn't default to ~/.kc and
+	// call loadFromDisk() with real user data during the test.
+	worker := NewMetricsHistory(nil, t.TempDir())
 	s := &Server{
 		metricsHistory: worker,
 		allowedOrigins: []string{"*"},

@@ -31,18 +31,19 @@ func TestServer_HandleScaleHTTP(t *testing.T) {
 
 	s.handleScaleHTTP(w, req)
 
-	// Since cluster1 doesn't exist, it should return an error from ScaleWorkload
-	// but we expect the handler to have processed the request.
-	// Actually, GetDynamicClient("cluster1") will fail inside ScaleWorkload.
-	if w.Code != http.StatusOK && w.Code != http.StatusInternalServerError {
-		t.Errorf("Unexpected status code: %d", w.Code)
+	// ScaleWorkload returns a DeployResponse (not an error) when a cluster is
+	// not registered — the handler always returns HTTP 200 with a JSON body
+	// containing "success". A handler-level non-2xx for partial/all-cluster
+	// failure would be an improvement, but the current contract is 200 + body.
+	// TODO: handler should return 500 when all target clusters fail (#11844).
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", w.Code)
 	}
 
 	var resp map[string]interface{}
 	json.NewDecoder(w.Body).Decode(&resp)
-	// Even on failure, success field should be present if it reached k8sClient call
-	if _, ok := resp["success"]; !ok {
-		t.Error("Response should contain 'success' field")
+	if success, ok := resp["success"].(bool); !ok || success {
+		t.Error("Expected success: false when cluster is not registered")
 	}
 }
 
@@ -78,7 +79,9 @@ func TestServer_HandlePodsHTTP(t *testing.T) {
 
 	s.handlePodsHTTP(w, req)
 
-	if w.Code != http.StatusServiceUnavailable && w.Code != http.StatusOK {
-		t.Errorf("Expected 503 or 200, got %d", w.Code)
+	// cluster1 has no registered typed client, so GetPods returns an error
+	// and the handler responds with 503 Service Unavailable.
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected 503 for unregistered cluster, got %d", w.Code)
 	}
 }

@@ -16,8 +16,15 @@ import (
 // picking up keys from ~/.kc/config.yaml on developer or CI machines, where
 // in-memory keys (lowest precedence) would otherwise be silently overridden
 // by a pre-existing on-disk config.
+//
+// It also primes configManagerOnce before overriding, so that a subsequent
+// in-test call to GetConfigManager() does not re-initialize globalConfigManager
+// from disk (sync.Once fires only once, but must have already fired before we
+// override or the next GetConfigManager() call will overwrite our mock).
 func isolateConfigManager(t *testing.T) *ConfigManager {
 	t.Helper()
+	// Prime the Once so it cannot fire again and overwrite our mock.
+	GetConfigManager()
 	cm := &ConfigManager{
 		configPath:  t.TempDir() + "/config.yaml",
 		config:      &AgentConfig{Agents: make(map[string]AgentKeyConfig)},

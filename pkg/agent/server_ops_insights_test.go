@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"testing"
 )
 
@@ -73,6 +74,15 @@ func TestServer_HandleInsightsAI(t *testing.T) {
 }
 
 func TestServer_HandleVClusterCheck(t *testing.T) {
+	// Stub execCommand so CheckVClusterOnAllClusters does not invoke real
+	// kubectl binaries. The stub exits 0 with empty output so the handler
+	// returns an empty clusters list rather than a 500.
+	oldExecCommand := execCommand
+	defer func() { execCommand = oldExecCommand }()
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("true")
+	}
+
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		localClusters:  &LocalClusterManager{},
@@ -83,9 +93,17 @@ func TestServer_HandleVClusterCheck(t *testing.T) {
 
 	s.handleVClusterCheck(w, req)
 
-	// Since localClusters is not fully initialized with k8s client, it might return 500 or 200 empty.
-	// But it shouldn't panic.
-	if w.Code == http.StatusInternalServerError {
-		// This is acceptable if it's due to missing k8s client
+	// With stubbed exec and an empty LocalClusterManager the handler returns
+	// 200 with an empty clusters list.
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200, got %d", w.Code)
+	}
+
+	var resp map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+	if _, ok := resp["clusters"]; !ok {
+		t.Error("Response should contain 'clusters' field")
 	}
 }

@@ -13,9 +13,18 @@ import (
 
 func TestServer_HandleSettingsAll(t *testing.T) {
 	// Setup temporary settings and key files
-	tmpSettings, _ := os.CreateTemp("", "settings-*.json")
-	tmpKey, _ := os.CreateTemp("", ".keyfile")
+	tmpSettings, err := os.CreateTemp("", "settings-*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp settings file: %v", err)
+	}
+	defer tmpSettings.Close()
 	defer os.Remove(tmpSettings.Name())
+
+	tmpKey, err := os.CreateTemp("", ".keyfile")
+	if err != nil {
+		t.Fatalf("Failed to create temp key file: %v", err)
+	}
+	defer tmpKey.Close()
 	defer os.Remove(tmpKey.Name())
 
 	sm := settings.GetSettingsManager()
@@ -55,11 +64,16 @@ func TestServer_HandleSettingsAll(t *testing.T) {
 }
 
 func TestServer_HandleGetKeysStatus(t *testing.T) {
-	// Setup temporary config file
-	tmpConfig, _ := os.CreateTemp("", "config-*.yaml")
+	// Use isolateConfigManager to avoid reading/mutating the real ~/.kc/config.yaml.
+	cm := isolateConfigManager(t)
+
+	tmpConfig, err := os.CreateTemp("", "config-*.yaml")
+	if err != nil {
+		t.Fatalf("Failed to create temp config file: %v", err)
+	}
+	defer tmpConfig.Close()
 	defer os.Remove(tmpConfig.Name())
 
-	cm := GetConfigManager()
 	cm.SetConfigPath(tmpConfig.Name())
 
 	s := &Server{

@@ -52,9 +52,10 @@ func TestServer_HandleEventsHTTP_Limit(t *testing.T) {
 	
 	// We just want to make sure it doesn't crash and uses default limit
 	s.handleEventsHTTP(w, req)
-	
-	// Since c1 doesn't exist in k8sClient, it might error, but we check 503 from GetEvents failure
-	if w.Code != http.StatusServiceUnavailable && w.Code != http.StatusOK {
-		t.Errorf("Expected 503 or 200, got %d", w.Code)
+
+	// c1 has no registered typed client, so GetEvents returns an error
+	// and the handler responds with 503 Service Unavailable.
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("Expected 503 for unregistered cluster, got %d", w.Code)
 	}
 }

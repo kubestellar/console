@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -108,7 +109,9 @@ func TestServer_HandleKagentCRDSummary(t *testing.T) {
 
 	var resp map[string]interface{}
 	json.NewDecoder(w.Body).Decode(&resp)
-	if resp["agentCount"].(float64) != 0 {
-		t.Errorf("Expected 0 agents, got %v", resp["agentCount"])
+	agentCount, ok := resp["agentCount"].(float64)
+	require.True(t, ok, "agentCount field missing or wrong type in response")
+	if agentCount != 0 {
+		t.Errorf("Expected 0 agents, got %v", agentCount)
 	}
 }

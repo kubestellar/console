@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os/exec"
 	"testing"
 )
 
@@ -35,7 +36,7 @@ func TestServer_HandleCloudCLIStatus(t *testing.T) {
 }
 
 func TestServer_HandleLocalClusterTools(t *testing.T) {
-	// Mock lookPath to simulate tool detection
+	// Mock lookPath to simulate tool detection without invoking real executables.
 	oldLookPath := lookPath
 	defer func() { lookPath = oldLookPath }()
 	lookPath = func(file string) (string, error) {
@@ -43,6 +44,15 @@ func TestServer_HandleLocalClusterTools(t *testing.T) {
 			return "/usr/local/bin/kind", nil
 		}
 		return "", &execError{file}
+	}
+
+	// Mock execCommand so DetectTools does not invoke real binaries (e.g.
+	// "kind version"). The stub command exits 0 with empty output, which is
+	// handled gracefully by all detectX helpers (version stays empty).
+	oldExecCommand := execCommand
+	defer func() { execCommand = oldExecCommand }()
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("true")
 	}
 
 	s := &Server{
@@ -81,6 +91,13 @@ type execError struct{ file string }
 func (e *execError) Error() string { return "not found: " + e.file }
 
 func TestServer_HandleLocalClusters_List(t *testing.T) {
+	// Stub execCommand so ListClusters does not invoke real binaries.
+	oldExecCommand := execCommand
+	defer func() { execCommand = oldExecCommand }()
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("true")
+	}
+
 	s := &Server{
 		allowedOrigins: []string{"*"},
 		localClusters:  NewLocalClusterManager(nil),

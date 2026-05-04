@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -46,15 +47,13 @@ func TestServer_HandleWebSocket_Upgrade(t *testing.T) {
 	}
 	s.clientsMux.Unlock()
 
-	// Wait for cleanup on close
+	// Wait for cleanup on close — poll instead of a fixed sleep to avoid flakiness.
 	conn.Close()
-	time.Sleep(50 * time.Millisecond)
-
-	s.clientsMux.Lock()
-	if len(s.clients) != 0 {
-		t.Errorf("Expected 0 registered clients after close, got %d", len(s.clients))
-	}
-	s.clientsMux.Unlock()
+	require.Eventually(t, func() bool {
+		s.clientsMux.Lock()
+		defer s.clientsMux.Unlock()
+		return len(s.clients) == 0
+	}, 2*time.Second, 10*time.Millisecond, "Expected 0 registered clients after close")
 }
 
 func TestServer_HandleWebSocket_TokenRequired(t *testing.T) {
