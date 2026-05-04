@@ -1,7 +1,7 @@
 import { ReactNode, useState, useEffect, useCallback, useRef, useMemo, memo, createContext, use, ComponentType, Suspense } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import {
-  Maximize2, RefreshCw, ChevronRight, ChevronDown, ChevronUp, Bug, AlertTriangle, Info, FileText,
+  Maximize2, RefreshCw, ChevronRight, ChevronDown, ChevronUp, Bug, AlertTriangle, Info, FileText, Trash2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_TITLES, CARD_DESCRIPTIONS, DEMO_EXEMPT_CARDS } from './cardMetadata'
@@ -34,6 +34,9 @@ const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestMod
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
+
+/** Number of consecutive failures before showing the "Remove card" prompt */
+const REMOVE_CARD_FAILURE_THRESHOLD = 3
 
 /** Default snooze duration for card swaps */
 const DEFAULT_SNOOZE_MS = MS_PER_HOUR
@@ -867,6 +870,17 @@ export const CardWrapper = memo(function CardWrapper({
                         {t('cardWrapper.failureRetry')}
                       </button>
                     )}
+                    {onRemove && effectiveConsecutiveFailures >= REMOVE_CARD_FAILURE_THRESHOLD && (
+                      <button
+                        onClick={onRemove}
+                        className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                        aria-label={t('cardWrapper.removeCardLabel')}
+                        data-testid="card-remove-button"
+                      >
+                        <Trash2 className="w-3 h-3" aria-hidden="true" />
+                        {t('cardWrapper.removeCardButton')}
+                      </button>
+                    )}
                   </div>
                 </div>
                 {/* Expandable log detail */}
@@ -924,6 +938,16 @@ export const CardWrapper = memo(function CardWrapper({
                             {t('cardWrapper.loadingTimedOutRetry')}
                           </button>
                         )}
+                        {onRemove && (
+                          <button
+                            onClick={onRemove}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md mt-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                            data-testid="card-remove-button"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            {t('cardWrapper.removeCardButton')}
+                          </button>
+                        )}
                       </div>
                     )}
                     {/* Fallback empty state: when a card finishes loading but has no data,
@@ -948,6 +972,16 @@ export const CardWrapper = memo(function CardWrapper({
                           >
                             <RefreshCw className="w-3 h-3" />
                             {t('cardWrapper.loadingTimedOutRetry')}
+                          </button>
+                        )}
+                        {onRemove && (
+                          <button
+                            onClick={onRemove}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md mt-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
+                            data-testid="card-remove-button"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            {t('cardWrapper.removeCardButton')}
                           </button>
                         )}
                       </div>

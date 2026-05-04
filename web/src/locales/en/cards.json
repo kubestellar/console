@@ -736,7 +736,10 @@
     "viewLogs": "View Logs",
     "hideLogs": "Hide Logs",
     "failureLogTitle": "Last Error",
-    "failureRetry": "Retry"
+    "failureRetry": "Retry",
+    "removeCardButton": "Remove card",
+    "removeCardLabel": "Remove this card from the dashboard",
+    "removeCardMessage": "This card can't display data. You can remove it from your dashboard."
   },
   "github": {
     "pullRequests": "Pull Requests",
