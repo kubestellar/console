@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, XCircle } from 'lucide-react'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useDeployments, useServices, useEvents } from '../../../hooks/useMCP'
@@ -91,20 +91,29 @@ export function ClusterDrillDown({ data }: Props) {
   }
 
   // Filter data for this cluster - ALL useMemo hooks must be before any early returns
-  const clusterGPUNodes = allGPUNodes.filter(n => n.cluster === clusterName || n.cluster.includes(clusterName.split('/')[0]))
+  const clusterPrefix = useMemo(() => clusterName.split('/')[0], [clusterName])
+  const normalizedSearchFilter = useMemo(() => searchFilter.trim().toLowerCase(), [searchFilter])
 
-  const clusterDeploymentIssues = deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterName.split('/')[0]))
+  const clusterGPUNodes = useMemo(() => {
+    if (!clusterName) return []
+    return allGPUNodes.filter(n => n.cluster === clusterName || n.cluster.includes(clusterPrefix))
+  }, [allGPUNodes, clusterName, clusterPrefix])
+
+  const clusterDeploymentIssues = useMemo(() => {
+    if (!clusterName) return []
+    return deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterPrefix))
+  }, [clusterName, clusterPrefix, deploymentIssues])
 
   // Get unique namespaces from issues
-  const namespaces = (() => {
+  const namespaces = useMemo(() => {
     const ns = new Set<string>()
     podIssues.forEach(p => ns.add(p.namespace))
     clusterDeploymentIssues.forEach(d => ns.add(d.namespace))
     return Array.from(ns).sort()
-  })()
+  }, [podIssues, clusterDeploymentIssues])
 
   // Group GPUs by type
-  const gpuByType = (() => {
+  const gpuByType = useMemo(() => {
     const map: Record<string, { total: number; allocated: number; nodes: number }> = {}
     clusterGPUNodes.forEach(node => {
       const type = node.gpuType || 'Unknown'
@@ -116,13 +125,13 @@ export function ClusterDrillDown({ data }: Props) {
       map[type].nodes += 1
     })
     return map
-  })()
+  }, [clusterGPUNodes])
 
   // Filter resources based on search and lens
-  const filteredNodes = (() => {
+  const filteredNodes = useMemo(() => {
     let nodes = allNodes || []
-    if (searchFilter) {
-      nodes = nodes.filter(n => n.name.toLowerCase().includes(searchFilter.toLowerCase()))
+    if (normalizedSearchFilter) {
+      nodes = nodes.filter(n => n.name.toLowerCase().includes(normalizedSearchFilter))
     }
     if (activeLens === 'issues') {
       nodes = nodes.filter(n => n.status !== 'Ready')
@@ -131,16 +140,16 @@ export function ClusterDrillDown({ data }: Props) {
       return nodes
     }
     return activeLens === 'issues' ? nodes : []
-  })()
+  }, [activeLens, allNodes, normalizedSearchFilter])
 
-  const filteredNamespaces = (() => {
+  const filteredNamespaces = useMemo(() => {
     let ns = allNamespaces || []
-    if (searchFilter) {
-      ns = ns.filter(n => n.toLowerCase().includes(searchFilter.toLowerCase()))
+    if (normalizedSearchFilter) {
+      ns = ns.filter(n => n.toLowerCase().includes(normalizedSearchFilter))
     }
     // Filter out system namespaces unless explicitly searching
     // But keep them if that's all we have
-    if (!searchFilter) {
+    if (!normalizedSearchFilter) {
       const nonSystemNs = ns.filter(n => !n.startsWith('kube-') && n !== 'default')
       // Only filter if we have non-system namespaces, otherwise show all
       if (nonSystemNs.length > 0) {
@@ -148,12 +157,12 @@ export function ClusterDrillDown({ data }: Props) {
       }
     }
     return ns
-  })()
+  }, [allNamespaces, normalizedSearchFilter])
 
-  const filteredDeployments = (() => {
+  const filteredDeployments = useMemo(() => {
     let deps = allDeployments || []
-    if (searchFilter) {
-      deps = deps.filter(d => d.name.toLowerCase().includes(searchFilter.toLowerCase()) || d.namespace.toLowerCase().includes(searchFilter.toLowerCase()))
+    if (normalizedSearchFilter) {
+      deps = deps.filter(d => d.name.toLowerCase().includes(normalizedSearchFilter) || d.namespace.toLowerCase().includes(normalizedSearchFilter))
     }
     if (activeLens === 'issues') {
       deps = deps.filter(d => d.readyReplicas < d.replicas || d.status === 'failed')
@@ -162,23 +171,23 @@ export function ClusterDrillDown({ data }: Props) {
       return deps
     }
     return []
-  })()
+  }, [activeLens, allDeployments, normalizedSearchFilter])
 
-  const filteredServices = (() => {
+  const filteredServices = useMemo(() => {
     let svcs = allServices || []
-    if (searchFilter) {
-      svcs = svcs.filter(s => s.name.toLowerCase().includes(searchFilter.toLowerCase()) || s.namespace.toLowerCase().includes(searchFilter.toLowerCase()))
+    if (normalizedSearchFilter) {
+      svcs = svcs.filter(s => s.name.toLowerCase().includes(normalizedSearchFilter) || s.namespace.toLowerCase().includes(normalizedSearchFilter))
     }
     if (activeLens === 'network' || activeLens === 'all') {
       return svcs
     }
     return []
-  })()
+  }, [activeLens, allServices, normalizedSearchFilter])
 
-  const filteredPVCs = (() => {
+  const filteredPVCs = useMemo(() => {
     let pvcs = allPVCs || []
-    if (searchFilter) {
-      pvcs = pvcs.filter(p => p.name.toLowerCase().includes(searchFilter.toLowerCase()) || p.namespace.toLowerCase().includes(searchFilter.toLowerCase()))
+    if (normalizedSearchFilter) {
+      pvcs = pvcs.filter(p => p.name.toLowerCase().includes(normalizedSearchFilter) || p.namespace.toLowerCase().includes(normalizedSearchFilter))
     }
     if (activeLens === 'issues') {
       pvcs = pvcs.filter(p => p.status !== 'Bound')
@@ -187,17 +196,54 @@ export function ClusterDrillDown({ data }: Props) {
       return pvcs
     }
     return []
-  })()
+  }, [activeLens, allPVCs, normalizedSearchFilter])
+
+  const namespaceResources = useMemo(() => {
+    const podIssueCounts: Record<string, number> = {}
+    const deploymentIssueCounts: Record<string, number> = {}
+    const deploymentsByNamespace: Record<string, typeof filteredDeployments> = {}
+    const servicesByNamespace: Record<string, typeof filteredServices> = {}
+
+    podIssues.forEach(issue => {
+      podIssueCounts[issue.namespace] = (podIssueCounts[issue.namespace] || 0) + 1
+    })
+
+    clusterDeploymentIssues.forEach(issue => {
+      deploymentIssueCounts[issue.namespace] = (deploymentIssueCounts[issue.namespace] || 0) + 1
+    })
+
+    filteredDeployments.forEach(deployment => {
+      deploymentsByNamespace[deployment.namespace] ||= []
+      deploymentsByNamespace[deployment.namespace].push(deployment)
+    })
+
+    filteredServices.forEach(service => {
+      servicesByNamespace[service.namespace] ||= []
+      servicesByNamespace[service.namespace].push(service)
+    })
+
+    return {
+      podIssueCounts,
+      deploymentIssueCounts,
+      deploymentsByNamespace,
+      servicesByNamespace,
+    }
+  }, [clusterDeploymentIssues, filteredDeployments, filteredServices, podIssues])
 
   // Count issues for each category
-  const issueCounts = {
-    nodes: (allNodes || []).filter(n => n.status !== 'Ready').length,
-    deployments: (allDeployments || []).filter(d => d.readyReplicas < d.replicas).length,
-    pods: podIssues.length,
-    pvcs: (allPVCs || []).filter(p => p.status !== 'Bound').length,
-    total: 0, // computed below
-  }
-  issueCounts.total = issueCounts.nodes + issueCounts.deployments + issueCounts.pods + issueCounts.pvcs
+  const issueCounts = useMemo(() => {
+    const nodes = (allNodes || []).filter(n => n.status !== 'Ready').length
+    const deployments = (allDeployments || []).filter(d => d.readyReplicas < d.replicas).length
+    const pods = podIssues.length
+    const pvcs = (allPVCs || []).filter(p => p.status !== 'Bound').length
+    return {
+      nodes,
+      deployments,
+      pods,
+      pvcs,
+      total: nodes + deployments + pods + pvcs,
+    }
+  }, [allDeployments, allNodes, allPVCs, podIssues])
 
   // Guard against missing cluster name (after ALL hooks)
   if (!clusterName) {
@@ -679,9 +725,11 @@ export function ClusterDrillDown({ data }: Props) {
                           <div className="ml-6 border-l-2 border-purple-500/30 pl-4 mt-1 space-y-1">
                             {filteredNamespaces.slice(0, 15).map((ns, i) => {
                               const nsKey = `ns-${ns}`
-                              const nsPodIssues = podIssues.filter(p => p.namespace === ns).length
-                              const nsDeploymentIssues = clusterDeploymentIssues.filter(d => d.namespace === ns).length
+                              const nsPodIssues = namespaceResources.podIssueCounts[ns] || 0
+                              const nsDeploymentIssues = namespaceResources.deploymentIssueCounts[ns] || 0
                               const totalIssues = nsPodIssues + nsDeploymentIssues
+                              const namespaceDeployments = namespaceResources.deploymentsByNamespace[ns] || []
+                              const namespaceServices = namespaceResources.servicesByNamespace[ns] || []
 
                               return (
                                 <div key={i}>
@@ -701,7 +749,7 @@ export function ClusterDrillDown({ data }: Props) {
                                   {expandedSections.has(nsKey) && (
                                     <div className="ml-6 border-l-2 border-muted/30 pl-4 mt-1 space-y-1">
                                       {/* Deployments in namespace */}
-                                      {filteredDeployments.filter(d => d.namespace === ns).slice(0, 5).map((dep, j) => (
+                                      {namespaceDeployments.slice(0, 5).map((dep, j) => (
                                         <div
                                           key={j}
                                           onClick={() => drillToNamespace(clusterName, dep.namespace)}
@@ -717,7 +765,7 @@ export function ClusterDrillDown({ data }: Props) {
                                       ))}
 
                                       {/* Services in namespace */}
-                                      {filteredServices.filter(s => s.namespace === ns).slice(0, 3).map((svc, j) => (
+                                      {namespaceServices.slice(0, 3).map((svc, j) => (
                                         <div
                                           key={j}
                                           onClick={() => drillToNamespace(clusterName, svc.namespace)}

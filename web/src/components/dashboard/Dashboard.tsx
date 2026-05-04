@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext,
@@ -198,26 +198,51 @@ export function Dashboard() {
     groupName: string
   } | null>(null)
 
+  const selectedClusterSet = useMemo(() => new Set(globalSelectedClusters), [globalSelectedClusters])
+
   // Apply global cluster filter before computing stats so the overview
   // reflects only the user's current cluster selection.
-  const filteredClusters = (() => {
+  const filteredClusters = useMemo(() => {
     const all = clusters || []
     if (isAllClustersSelected) return all
-    return all.filter(c => globalSelectedClusters.includes(c.name))
-  })()
+    return all.filter(c => selectedClusterSet.has(c.name))
+  }, [clusters, isAllClustersSelected, selectedClusterSet])
 
   // Stats calculations for StatsOverview (scoped to filtered clusters)
-  const healthyClusters = filteredClusters.filter(c => c.healthy).length
-  const unhealthyClusters = filteredClusters.filter(c => !c.healthy).length
-  const totalPods = filteredClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
-  const totalNamespaces = filteredClusters.reduce((sum, c) => sum + (c.namespaces?.length || 0), 0)
-  const totalNodes = filteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  const {
+    clusterCount,
+    healthyClusters,
+    unhealthyClusters,
+    totalPods,
+    totalNamespaces,
+    totalNodes,
+  } = useMemo(() => {
+    return filteredClusters.reduce((stats, cluster) => {
+      stats.clusterCount += 1
+      if (cluster.healthy) {
+        stats.healthyClusters += 1
+      } else {
+        stats.unhealthyClusters += 1
+      }
+      stats.totalPods += cluster.podCount || 0
+      stats.totalNamespaces += cluster.namespaces?.length || 0
+      stats.totalNodes += cluster.nodeCount || 0
+      return stats
+    }, {
+      clusterCount: 0,
+      healthyClusters: 0,
+      unhealthyClusters: 0,
+      totalPods: 0,
+      totalNamespaces: 0,
+      totalNodes: 0,
+    })
+  }, [filteredClusters])
 
   // Dashboard-specific stats value getter
-  const getDashboardStatValue = (blockId: string): StatBlockValue => {
+  const getDashboardStatValue = useCallback((blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
-        return { value: filteredClusters.length, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: filteredClusters.length > 0 }
+        return { value: clusterCount, sublabel: 'total clusters', onClick: () => drillToAllClusters(), isClickable: clusterCount > 0 }
       case 'healthy':
         return { value: healthyClusters, sublabel: 'healthy', onClick: () => drillToAllClusters('healthy'), isClickable: healthyClusters > 0 }
       case 'warnings':
@@ -233,7 +258,7 @@ export function Dashboard() {
       default:
         return { value: '-' }
     }
-  }
+  }, [clusterCount, drillToAllClusters, drillToAllNodes, drillToAllPods, healthyClusters, navigate, totalNamespaces, totalNodes, totalPods, unhealthyClusters])
 
   // Merged getter: dashboard-specific values first, then universal fallback
   const getStatValue = getDashboardStatValue
