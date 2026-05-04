@@ -7,6 +7,7 @@ import { registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { getLocalAgentURL, agentFetch } from './shared'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { isInClusterMode } from '../useBackendHealth'
 import type { ConfigMap, Secret, ServiceAccount } from './types'
 
 export function useConfigMaps(cluster?: string, namespace?: string) {
@@ -58,7 +59,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
         if (namespace) sseParams.namespace = namespace
         const accumulated: ConfigMap[] = []
         const result = await fetchSSE<ConfigMap>({
-          url: `${LOCAL_AGENT_HTTP_URL}/configmaps/stream`,
+          url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/configmaps/stream`,
           params: sseParams,
           itemsKey: 'configmaps',
           onClusterData: (_clusterName, items) => {
@@ -79,6 +80,24 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/configmaps?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json()
+            setConfigMaps(data.configmaps || [])
+            setError(null)
+            setIsLoading(false)
+            return
+          }
+        } catch (err) {
+          console.warn('[configmaps] Backend fetch failed:', err)
+        }
+        setIsLoading(false)
+        return
+      }
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/configmaps?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
@@ -163,7 +182,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
         if (namespace) sseParams.namespace = namespace
         const accumulated: Secret[] = []
         const result = await fetchSSE<Secret>({
-          url: `${LOCAL_AGENT_HTTP_URL}/secrets/stream`,
+          url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/secrets/stream`,
           params: sseParams,
           itemsKey: 'secrets',
           onClusterData: (_clusterName, items) => {
@@ -184,6 +203,24 @@ export function useSecrets(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/secrets?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json() as { secrets: Secret[] }
+            setSecrets(data.secrets || [])
+            setError(null)
+            setIsLoading(false)
+            return
+          }
+        } catch (err) {
+          console.warn('[secrets] Backend fetch failed:', err)
+        }
+        setIsLoading(false)
+        return
+      }
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/secrets?${params}`)
       if (!resp.ok) throw new Error(`secrets fetch failed: ${resp.status}`)
       const data = await resp.json() as { secrets: Secret[] }
@@ -263,6 +300,24 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/serviceaccounts?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json() as { serviceAccounts: ServiceAccount[] }
+            setServiceAccounts(data.serviceAccounts || [])
+            setError(null)
+            setIsLoading(false)
+            return
+          }
+        } catch (err) {
+          console.warn('[serviceaccounts] Backend fetch failed:', err)
+        }
+        setIsLoading(false)
+        return
+      }
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/serviceaccounts?${params}`)
       if (!resp.ok) throw new Error(`serviceaccounts fetch failed: ${resp.status}`)
       const data = await resp.json() as { serviceAccounts: ServiceAccount[] }

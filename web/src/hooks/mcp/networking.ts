@@ -8,6 +8,7 @@ import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, getLocalAgentURL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, SERVICES_CACHE_TTL_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { isInClusterMode } from '../useBackendHealth'
 import type { Service, Ingress, NetworkPolicy } from './types'
 import { getDemoIngresses } from '../useCachedData/demoData'
 
@@ -247,6 +248,31 @@ export function useServices(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/services?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json() as { services: Service[] }
+            const newData = data.services || []
+            const now = new Date()
+
+            servicesCache = { data: newData, timestamp: now, key: cacheKey }
+            saveServicesCacheToStorage()
+
+            setServices(newData)
+            setError(null)
+            setLastUpdated(now)
+            setConsecutiveFailures(0)
+            setLastRefresh(now)
+            return
+          }
+        } catch (err) {
+          console.warn('[services] Backend fetch failed:', err)
+        }
+        return
+      }
       const url = `${LOCAL_AGENT_HTTP_URL}/services?${params}`
 
       // Use direct fetch with timeout to prevent hanging
@@ -444,6 +470,29 @@ export function useIngresses(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/ingresses?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json()
+            setIngresses(data.ingresses || [])
+            hasReceivedLiveDataRef.current = true
+            setIsDemoFallback(false)
+            setError(null)
+            setConsecutiveFailures(0)
+            setIsLoading(false)
+            setIsRefreshing(false)
+            return
+          }
+        } catch (err) {
+          console.warn('[ingresses] Backend fetch failed:', err)
+        }
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/ingresses?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
@@ -541,6 +590,28 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/networkpolicies?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json()
+            setNetworkPolicies(data.networkpolicies || [])
+            hasReceivedLiveDataRef.current = true
+            setError(null)
+            setConsecutiveFailures(0)
+            setIsLoading(false)
+            setIsRefreshing(false)
+            return
+          }
+        } catch (err) {
+          console.warn('[networkpolicies] Backend fetch failed:', err)
+        }
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/networkpolicies?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()

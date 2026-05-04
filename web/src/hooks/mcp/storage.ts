@@ -8,6 +8,7 @@ import { deduplicateClustersByServer } from './dedup'
 import { subscribePolling } from './pollingManager'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { isInClusterMode } from '../useBackendHealth'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
 
 // ---------------------------------------------------------------------------
@@ -270,6 +271,35 @@ export function usePVCs(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/pvcs?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json()
+            const newData = data.pvcs || []
+            const now = new Date()
+
+            pvcsCache = { data: newData, timestamp: now, key: cacheKey }
+            savePVCsCacheToStorage()
+
+            if (!isMountedRef.current) return
+            setPVCs(newData)
+            setError(null)
+            setLastUpdated(now)
+            setConsecutiveFailures(0)
+            setLastRefresh(now)
+            setIsLoading(false)
+            return
+          }
+        } catch (err) {
+          console.warn('[pvcs] Backend fetch failed:', err)
+        }
+        if (!isMountedRef.current) return
+        setIsLoading(false)
+        return
+      }
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pvcs?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
@@ -424,6 +454,21 @@ export function usePVs(cluster?: string) {
         try {
           const params = new URLSearchParams()
           params.append('cluster', c.context || c.name)
+          if (isInClusterMode()) {
+            try {
+              const response = await fetch(`/api/mcp/pvs?${params}`, {
+                signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+              })
+              if (response.ok) {
+                const agentData = await response.json()
+                const mappedPVs: PV[] = (agentData.pvs || []).map((p: PV) => ({ ...p, cluster: c.name }))
+                return { success: true, pvs: mappedPVs }
+              }
+            } catch (err) {
+              console.warn('[pvs] Backend fetch failed:', err)
+            }
+            return { success: false, pvs: [] }
+          }
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
           const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/pvs?${params}`, {
@@ -525,6 +570,26 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/resourcequotas?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json()
+            setResourceQuotas(data.resourceQuotas || [])
+            setIsDemoFallback(false)
+            setError(null)
+            setConsecutiveFailures(0)
+            setIsLoading(false)
+            return
+          }
+        } catch (err) {
+          console.warn('[resourcequotas] Backend fetch failed:', err)
+        }
+        setIsLoading(false)
+        return
+      }
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
@@ -590,6 +655,25 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
+      if (isInClusterMode()) {
+        try {
+          const response = await fetch(`/api/mcp/limitranges?${params}`, {
+            signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+          })
+          if (response.ok) {
+            const data = await response.json()
+            setLimitRanges(data.limitRanges || [])
+            setError(null)
+            setConsecutiveFailures(0)
+            setIsLoading(false)
+            return
+          }
+        } catch (err) {
+          console.warn('[limitranges] Backend fetch failed:', err)
+        }
+        setIsLoading(false)
+        return
+      }
       const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/limitranges?${params}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
@@ -632,6 +716,18 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
 
 // Create or update a ResourceQuota
 export async function createOrUpdateResourceQuota(spec: ResourceQuotaSpec): Promise<ResourceQuota> {
+  if (isInClusterMode()) {
+    const response = await fetch('/api/mcp/resourcequotas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(spec),
+      signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    const data = await response.json()
+    return data.resourceQuota
+  }
+
   const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -645,6 +741,16 @@ export async function createOrUpdateResourceQuota(spec: ResourceQuotaSpec): Prom
 // Delete a ResourceQuota
 export async function deleteResourceQuota(cluster: string, namespace: string, name: string): Promise<void> {
   const params = new URLSearchParams({ cluster, namespace, name })
+
+  if (isInClusterMode()) {
+    const response = await fetch(`/api/mcp/resourcequotas?${params.toString()}`, {
+      method: 'DELETE',
+      signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
+    })
+    if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    return
+  }
+
   const resp = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/resourcequotas?${params.toString()}`, {
     method: 'DELETE',
   })
