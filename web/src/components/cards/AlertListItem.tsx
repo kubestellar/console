@@ -173,24 +173,30 @@ export function AlertListItem({
         {/* Snooze button */}
         <div className="relative" ref={snoozeRef}>
           {alertSnoozed ? (
-            <button
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => { e.stopPropagation(); unsnoozeAlert(alert.id) }}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); unsnoozeAlert(alert.id) } }}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors cursor-pointer"
               title="Snoozed — click to unsnooze"
               aria-label={t('activeAlerts.unsnoozeAlertAria')}
             >
               <BellOff className="w-3 h-3" />
               {formatSnoozeRemaining(snoozeRemaining ?? 0)}
-            </button>
+            </span>
           ) : (
-            <button
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => { e.stopPropagation(); setSnoozeMenuOpen(!snoozeMenuOpen) }}
-              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setSnoozeMenuOpen(!snoozeMenuOpen) } }}
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
               title="Snooze this alert"
               aria-label={t('activeAlerts.snoozeAlertAria')}
             >
               <BellOff className="w-3.5 h-3.5" />
-            </button>
+            </span>
           )}
           {snoozeMenuOpen && (
             // Issue 9257 — use the themed `bg-card` token instead of the

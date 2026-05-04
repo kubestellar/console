@@ -366,18 +366,24 @@ export function Game2048(_props: CardComponentProps) {
               <Trophy className="w-12 h-12 text-foreground mb-2" />
               <div className="text-2xl font-bold text-foreground mb-4">You Win!</div>
               <div className="flex gap-2">
-                <button
+                <span
+                  role="button"
+                  tabIndex={0}
                   onClick={continueGame}
-                  className="px-4 py-2 bg-muted/30 text-foreground rounded-lg hover:bg-muted/50"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); continueGame() } }}
+                  className="px-4 py-2 bg-muted/30 text-foreground rounded-lg hover:bg-muted/50 cursor-pointer"
                 >
                   Keep Playing
-                </button>
-                <button
+                </span>
+                <span
+                  role="button"
+                  tabIndex={0}
                   onClick={newGame}
-                  className="px-4 py-2 bg-muted/30 text-foreground rounded-lg hover:bg-muted/50"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); newGame() } }}
+                  className="px-4 py-2 bg-muted/30 text-foreground rounded-lg hover:bg-muted/50 cursor-pointer"
                 >
                   New Game
-                </button>
+                </span>
               </div>
             </div>
           )}

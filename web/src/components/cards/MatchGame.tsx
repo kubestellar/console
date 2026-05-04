@@ -332,20 +332,26 @@ export function MatchGame(_props: CardComponentProps) {
             <span>Time: <span className="font-bold">{formatTime(time)}</span></span>
           </div>
           <div className="flex gap-1">
-            <button
+            <span
+              role="button"
+              tabIndex={0}
               onClick={togglePause}
-              className="p-0.5 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePause() } }}
+              className="p-0.5 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer"
               title={isPaused ? 'Resume' : 'Pause'}
             >
               {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-            </button>
-            <button
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
               onClick={resetGame}
-              className="p-0.5 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); resetGame() } }}
+              className="p-0.5 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer"
               title={t('common.reset')}
             >
               <RotateCcw className="w-3.5 h-3.5" />
-            </button>
+            </span>
           </div>
         </div>
       )}
@@ -361,13 +367,16 @@ export function MatchGame(_props: CardComponentProps) {
       {/* Start screen */}
       {!isPlaying && cards.length === 0 && (
         <div className="flex-1 flex items-center justify-center min-h-[120px]">
-          <button
+          <span
+            role="button"
+            tabIndex={0}
             onClick={initGame}
-            className="px-4 py-2 bg-linear-to-r from-purple-500 to-blue-500 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center gap-2"
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); initGame() } }}
+            className="px-4 py-2 bg-linear-to-r from-purple-500 to-blue-500 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center gap-2 cursor-pointer"
           >
             <Play className="w-4 h-4" />
             Start Game
-          </button>
+          </span>
         </div>
       )}
 

@@ -525,26 +525,32 @@ export function KubeGalaga() {
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
               <h3 className="text-2xl font-bold text-cyan-400 mb-2">Kube Galaga</h3>
               <p className="text-sm text-muted-foreground mb-4">Arrow keys to move, Space to shoot</p>
-              <button
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={startGame}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startGame() } }}
+                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
               >
                 <Play className="w-4 h-4" />
                 Start Game
-              </button>
+              </span>
             </div>
           )}
 
           {gameState === 'paused' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 rounded">
               <h3 className="text-xl font-bold text-white mb-4">Paused</h3>
-              <button
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={togglePause}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePause() } }}
+                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
               >
                 <Play className="w-4 h-4" />
                 Resume
-              </button>
+              </span>
             </div>
           )}
 
@@ -553,13 +559,16 @@ export function KubeGalaga() {
               <Zap className="w-12 h-12 text-yellow-400 mb-2" />
               <h3 className="text-2xl font-bold text-green-400 mb-2">Level {level - 1} Complete!</h3>
               <p className="text-lg text-white mb-4">Score: {score}</p>
-              <button
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={nextLevel}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nextLevel() } }}
+                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
               >
                 <Play className="w-4 h-4" />
                 Level {level}
-              </button>
+              </span>
             </div>
           )}
 
@@ -571,13 +580,16 @@ export function KubeGalaga() {
               {score === highScore && score > 0 && (
                 <p className="text-sm text-yellow-400 mb-4">New High Score!</p>
               )}
-              <button
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={startGame}
-                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startGame() } }}
+                className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
               >
                 <RotateCcw className="w-4 h-4" />
                 Play Again
-              </button>
+              </span>
             </div>
           )}
         </div>
