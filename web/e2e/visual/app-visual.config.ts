@@ -51,7 +51,7 @@ export default defineConfig({
     : {
         command: 'npm run build && npm run preview -- --port 4173',
         url: BASE_URL,
-        timeout: 120_000,
+        timeout: 300_000,
         reuseExistingServer: !IS_CI,
         stdout: 'pipe',
         stderr: 'pipe',
