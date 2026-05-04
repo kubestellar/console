@@ -972,10 +972,32 @@ export function _resetAnalyticsState() {
  * Emit a `ksc_http_error` GA4 event for a failed API call.
  * Throttled to at most one emission per status+page per HTTP_ERROR_THROTTLE_MS window.
  * Also records the failure in the failed-API-call ring buffer (for feedback modal).
+ * 
+ * Filters out false-positive errors to reduce noise:
+ * - Errors in demo mode (expected 404s from non-existent APIs on Netlify)
+ * - Aborted requests (user navigation, component unmount)
+ * - Auth flow errors (already handled separately)
  */
 export function emitHttpError(httpStatus: string, errorDetail: string) {
   const page = window.location.pathname
   pushCapturedApiCall(httpStatus, page, errorDetail)
+  
+  // Skip errors in demo mode - many API endpoints return 404/502 on Netlify
+  // and these are expected since the backend doesn't exist in demo mode
+  if (isDemoMode()) {
+    return
+  }
+  
+  // Skip aborted requests (user navigation, component unmount, timeouts)
+  if (httpStatus === 'timeout' || errorDetail.includes('AbortError') || errorDetail.includes('aborted')) {
+    return
+  }
+  
+  // Skip expected auth flow errors (401/403 during normal auth flow)
+  if (httpStatus === 'auth' || httpStatus === '401' || httpStatus === '403') {
+    return
+  }
+  
   if (!isHttpErrorThrottled(httpStatus, page) && !isGlobalRateLimited('ksc_http_error')) {
     send('ksc_http_error', {
       http_status: httpStatus,
@@ -1231,12 +1253,18 @@ export function startGlobalErrorTracking() {
       // these as ksc_error creates false-positive alert spikes (#9994).
       if (errorName === 'UnauthenticatedError' || errorName === 'UnauthorizedError') {
         pushCapturedError('error', msg, 'auth_error')
-        emitHttpError('auth', msg)
+        // Only emit HTTP error if not in demo mode
+        if (!isDemoMode()) {
+          emitHttpError('auth', msg)
+        }
         return
       }
       if (msg.includes('No authentication token') || msg.includes('Token is invalid or expired')) {
         pushCapturedError('error', msg, 'auth_error')
-        emitHttpError('auth', msg)
+        // Only emit HTTP error if not in demo mode
+        if (!isDemoMode()) {
+          emitHttpError('auth', msg)
+        }
         return
       }
       if (/\b50[234]\b/.test(msg) && (msg.includes('fetch') || msg.includes('Fetch') || msg.includes('upstream'))) {
@@ -1302,12 +1330,18 @@ export function startGlobalErrorTracking() {
       if (tryChunkReloadRecovery(event.message)) return
       if (event.error?.name === 'UnauthenticatedError' || event.error?.name === 'UnauthorizedError') {
         pushCapturedError('error', event.message, 'auth_error')
-        emitHttpError('auth', event.message)
+        // Only emit HTTP error if not in demo mode
+        if (!isDemoMode()) {
+          emitHttpError('auth', event.message)
+        }
         return
       }
       if (event.message.includes('No authentication token') || event.message.includes('Token is invalid or expired')) {
         pushCapturedError('error', event.message, 'auth_error')
-        emitHttpError('auth', event.message)
+        // Only emit HTTP error if not in demo mode
+        if (!isDemoMode()) {
+          emitHttpError('auth', event.message)
+        }
         return
       }
       pushCapturedError('error', event.message, 'runtime')
