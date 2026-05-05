@@ -809,33 +809,40 @@ func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query stri
 		if res == nil {
 			return out, fmt.Errorf("github: nil response with no error")
 		}
-		if res.StatusCode == http.StatusNotFound {
-			res.Body.Close()
+
+		runs, done, loopErr := func() ([]workflowRunRaw, bool, error) {
+			defer res.Body.Close()
+			if res.StatusCode == http.StatusNotFound {
+				return nil, true, nil
+			}
+			if res.StatusCode >= 400 {
+				body, err := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+				if err != nil {
+					slog.Warn("failed to read response body", "error", err)
+				}
+				return nil, false, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
+			}
+			// Store rate limit headers from the last successful API call
+			ctx = ghpStoreRateLimitHeaders(ctx, res)
+			var data struct {
+				WorkflowRuns []workflowRunRaw `json:"workflow_runs"`
+			}
+			if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+				return nil, false, err
+			}
+			return data.WorkflowRuns, false, nil
+		}()
+		if loopErr != nil {
+			return out, loopErr
+		}
+		if done {
 			return out, nil
 		}
-		if res.StatusCode >= 400 {
-			body, err := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
-			if err != nil {
-				slog.Warn("failed to read response body", "error", err)
-			}
-			res.Body.Close()
-			return out, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
-		}
-		// Store rate limit headers from the last successful API call
-		ctx = ghpStoreRateLimitHeaders(ctx, res)
-		var data struct {
-			WorkflowRuns []workflowRunRaw `json:"workflow_runs"`
-		}
-		if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
-			res.Body.Close()
-			return out, err
-		}
-		res.Body.Close()
-		for _, r := range data.WorkflowRuns {
+		for _, r := range runs {
 			out = append(out, normalizeRunRaw(r, repo))
 		}
 		// Stop early if this page returned fewer than pageSize (no more pages)
-		if len(data.WorkflowRuns) < pageSize {
+		if len(runs) < pageSize {
 			break
 		}
 		if len(out) >= desired {

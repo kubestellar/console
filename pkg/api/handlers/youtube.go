@@ -130,16 +130,19 @@ func fetchPlaylistViaInvidious() ([]PlaylistVideo, error) {
 			continue
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			lastErr = fmt.Errorf("invidious %s returned %d", instance, resp.StatusCode)
-			continue
-		}
-
-		body, err := io.ReadAll(io.LimitReader(resp.Body, maxYouTubeResponseBytes))
-		resp.Body.Close()
+		body, err := func() ([]byte, error) {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				return nil, fmt.Errorf("invidious %s returned %d", instance, resp.StatusCode)
+			}
+			b, err := io.ReadAll(io.LimitReader(resp.Body, maxYouTubeResponseBytes))
+			if err != nil {
+				return nil, fmt.Errorf("invidious %s read: %w", instance, err)
+			}
+			return b, nil
+		}()
 		if err != nil {
-			lastErr = fmt.Errorf("invidious %s read: %w", instance, err)
+			lastErr = err
 			continue
 		}
 

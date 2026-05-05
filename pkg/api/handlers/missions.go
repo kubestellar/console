@@ -532,9 +532,10 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 			continue
 		}
 
-		limitedBody := io.LimitReader(resp.Body, missionsMaxBodyBytes)
-		body, err = io.ReadAll(limitedBody)
-		resp.Body.Close()
+		body, err = func() ([]byte, error) {
+			defer resp.Body.Close()
+			return io.ReadAll(io.LimitReader(resp.Body, missionsMaxBodyBytes))
+		}()
 		if err != nil {
 			slog.Error("[missions] failed to read response body "+logContext, append(logArgs, "error", err, "attempt", attempt+1)...)
 			continue
@@ -1257,9 +1258,12 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 			return c.Status(502).JSON(fiber.Map{"error": "failed to get main branch ref"})
 		}
 
-		var refData map[string]interface{}
-		decodeErr := json.NewDecoder(mainRefResp.Body).Decode(&refData)
-		mainRefResp.Body.Close()
+		refData, decodeErr := func() (map[string]interface{}, error) {
+			defer mainRefResp.Body.Close()
+			var data map[string]interface{}
+			err := json.NewDecoder(mainRefResp.Body).Decode(&data)
+			return data, err
+		}()
 		if decodeErr != nil {
 			return c.Status(502).JSON(fiber.Map{"error": "failed to decode ref response"})
 		}

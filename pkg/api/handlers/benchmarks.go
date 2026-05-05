@@ -477,12 +477,14 @@ func (h *BenchmarkHandlers) driveGetWithRetry(ctx context.Context, url string) (
 			continue
 		}
 		if resp.StatusCode == 403 || resp.StatusCode == 429 {
-			body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes))
-			if readErr != nil {
-				body = []byte("(failed to read response body)")
-			}
-			resp.Body.Close()
-			lastErr = fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, string(body))
+			func() {
+				defer resp.Body.Close()
+				body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes))
+				if readErr != nil {
+					body = []byte("(failed to read response body)")
+				}
+				lastErr = fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, string(body))
+			}()
 			continue
 		}
 		return resp, nil
@@ -1018,21 +1020,24 @@ func (h *BenchmarkHandlers) listDriveFolder(ctx context.Context, folderID string
 			return nil, fmt.Errorf("driveGetWithRetry returned nil response without error (should not happen)")
 		}
 
-		if resp.StatusCode != 200 {
-			var bodyStr string
-			if body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes)); readErr == nil {
-				bodyStr = string(body)
+		result, err := func() (*driveFileList, error) {
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				var bodyStr string
+				if body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxBenchmarkReportBytes)); readErr == nil {
+					bodyStr = string(body)
+				}
+				return nil, fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, bodyStr)
 			}
-			resp.Body.Close()
-			return nil, fmt.Errorf("Drive API returned %d: %s", resp.StatusCode, bodyStr)
+			var result driveFileList
+			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+				return nil, fmt.Errorf("decoding response: %w", err)
+			}
+			return &result, nil
+		}()
+		if err != nil {
+			return nil, err
 		}
-
-		var result driveFileList
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			resp.Body.Close()
-			return nil, fmt.Errorf("decoding response: %w", err)
-		}
-		resp.Body.Close()
 
 		allFiles = append(allFiles, result.Files...)
 

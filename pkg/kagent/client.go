@@ -174,11 +174,11 @@ func (c *KagentClient) Invoke(ctx context.Context, namespace, agentName, message
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		defer resp.Body.Close()
 		errBody, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
 		if err != nil {
 			slog.Warn("failed to read response body", "error", err)
 		}
-		resp.Body.Close()
 		return nil, fmt.Errorf("A2A invoke returned %d: %s", resp.StatusCode, string(errBody))
 	}
 

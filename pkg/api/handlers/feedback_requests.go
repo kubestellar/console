@@ -692,17 +692,20 @@ func (h *FeedbackHandler) fetchPRPages(ctx context.Context, state string) []GitH
 			break
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
+		prs, ok := func() ([]GitHubPR, bool) {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				return nil, false
+			}
+			var prs []GitHubPR
+			if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
+				return nil, false
+			}
+			return prs, true
+		}()
+		if !ok {
 			break
 		}
-
-		var prs []GitHubPR
-		if err := json.NewDecoder(resp.Body).Decode(&prs); err != nil {
-			resp.Body.Close()
-			break
-		}
-		resp.Body.Close()
 
 		allPRs = append(allPRs, prs...)
 
@@ -758,24 +761,30 @@ func (h *FeedbackHandler) fetchGitHubIssuesFromRepo(ctx context.Context, githubL
 			break
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			// First page failure is a hard error; subsequent pages are best-effort.
-			if page == 1 {
-				return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
+		issues, loopErr := func() ([]GitHubIssue, error) {
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				// First page failure is a hard error; subsequent pages are best-effort.
+				if page == 1 {
+					return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
+				}
+				return nil, nil
 			}
-			break
+			// #7063: limit response body to prevent memory exhaustion.
+			body, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+			if err != nil {
+				return nil, nil
+			}
+			var issues []GitHubIssue
+			if err := json.Unmarshal(body, &issues); err != nil {
+				return nil, nil
+			}
+			return issues, nil
+		}()
+		if loopErr != nil {
+			return nil, loopErr
 		}
-
-		// #7063: limit response body to prevent memory exhaustion.
-		body, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
-		resp.Body.Close()
-		if err != nil {
-			break
-		}
-
-		var issues []GitHubIssue
-		if err := json.Unmarshal(body, &issues); err != nil {
+		if issues == nil {
 			break
 		}
 

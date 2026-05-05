@@ -289,8 +289,10 @@ func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]s
 			return allItems, fmt.Errorf("execute request: %w", err)
 		}
 
-		body, err := io.ReadAll(io.LimitReader(resp.Body, maxRewardsResponseBytes))
-		resp.Body.Close()
+		body, err := func() ([]byte, error) {
+			defer resp.Body.Close()
+			return io.ReadAll(io.LimitReader(resp.Body, maxRewardsResponseBytes))
+		}()
 
 		if err != nil {
 			return allItems, fmt.Errorf("read body: %w", err)

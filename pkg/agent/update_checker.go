@@ -1600,12 +1600,11 @@ func waitForBackendHealth() bool {
 	healthURL := backendHealthURL()
 	for i := 0; i < healthCheckRetries; i++ {
 		resp, err := client.Get(healthURL)
-		if err == nil && resp.StatusCode == http.StatusOK {
+		if err == nil {
 			resp.Body.Close()
-			return true
-		}
-		if resp != nil {
-			resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				return true
+			}
 		}
 		time.Sleep(healthCheckDelay)
 	}
