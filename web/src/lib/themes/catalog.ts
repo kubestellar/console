@@ -1,78 +1,8 @@
 /**
- * Theme definitions inspired by oh-my-zsh themes
- * Each theme defines colors, fonts, and UI styles
+ * Theme catalog - all theme definitions
  */
 
-import { STORAGE_KEY_CUSTOM_THEMES } from './constants/storage'
-
-export interface ThemeColors {
-  // Core colors (HSL format without hsl())
-  background: string
-  foreground: string
-  card: string
-  cardForeground: string
-  primary: string
-  primaryForeground: string
-  secondary: string
-  secondaryForeground: string
-  muted: string
-  mutedForeground: string
-  accent: string
-  accentForeground: string
-  destructive: string
-  destructiveForeground: string
-  border: string
-  input: string
-  ring: string
-
-  // Brand/accent colors (hex)
-  brandPrimary: string
-  brandSecondary: string
-  brandTertiary: string
-
-  // Status colors (hex)
-  success: string
-  warning: string
-  error: string
-  info: string
-
-  // Glass effect
-  glassBackground: string
-  glassBorder: string
-  glassShadow: string
-
-  // Scrollbar
-  scrollbarThumb: string
-  scrollbarThumbHover: string
-
-  // Chart colors (array of hex)
-  chartColors: string[]
-}
-
-export interface ThemeFont {
-  family: string
-  monoFamily: string
-  weight: {
-    normal: number
-    medium: number
-    semibold: number
-    bold: number
-  }
-}
-
-export interface Theme {
-  id: string
-  name: string
-  description: string
-  author?: string
-  dark: boolean
-  colors: ThemeColors
-  font: ThemeFont
-  // Special effects
-  starField?: boolean
-  glowEffects?: boolean
-  gradientAccents?: boolean
-}
+import type { Theme } from './types'
 
 // Default KubeStellar theme
 const kubestellar: Theme = {
@@ -1454,11 +1384,9 @@ const cobalt2: Theme = {
   },
 }
 
-// All themes collection
-export const themes: Theme[] = [
+export {
   kubestellar,
   kubestellarClassic,
-  kubestellarLight,
   batman,
   dracula,
   nord,
@@ -1474,6 +1402,7 @@ export const themes: Theme[] = [
   sunset,
   rosePine,
   oneDark,
+  kubestellarLight,
   githubLight,
   synthwave,
   nightOwl,
@@ -1485,48 +1414,5 @@ export const themes: Theme[] = [
   kanagawa,
   moonlight,
   cobalt2,
-]
-
-// Theme groups for UI organization
-export const themeGroups = [
-  { name: 'KubeStellar', themes: ['kubestellar', 'kubestellar-classic', 'kubestellar-light'] },
-  { name: 'Popular', themes: ['dracula', 'nord', 'tokyo-night', 'monokai', 'gruvbox', 'catppuccin'] },
-  { name: 'Developer', themes: ['night-owl', 'cobalt2', 'shades-of-purple', 'palenight', 'ayu-dark'] },
-  { name: 'Iconic', themes: ['batman', 'matrix', 'cyberpunk', 'synthwave'] },
-  { name: 'Classic', themes: ['solarized-dark', 'one-dark', 'github-light'] },
-  { name: 'Nature', themes: ['ocean', 'forest', 'sunset', 'rose-pine', 'everforest'] },
-  { name: 'Aesthetic', themes: ['kanagawa', 'moonlight', 'horizon'] },
-]
-
-// Custom themes from marketplace (localStorage)
-
-export function getCustomThemes(): Theme[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY_CUSTOM_THEMES) || '[]')
-  } catch {
-    return []
-  }
 }
 
-export function addCustomTheme(theme: Theme): void {
-  const customs = getCustomThemes().filter(t => t.id !== theme.id)
-  customs.push(theme)
-  localStorage.setItem(STORAGE_KEY_CUSTOM_THEMES, JSON.stringify(customs))
-}
-
-export function removeCustomTheme(themeId: string): void {
-  const customs = getCustomThemes().filter(t => t.id !== themeId)
-  localStorage.setItem(STORAGE_KEY_CUSTOM_THEMES, JSON.stringify(customs))
-}
-
-export function getAllThemes(): Theme[] {
-  return [...themes, ...getCustomThemes()]
-}
-
-export function getThemeById(id: string): Theme | undefined {
-  return getAllThemes().find(t => t.id === id)
-}
-
-export function getDefaultTheme(): Theme {
-  return kubestellar
-}
