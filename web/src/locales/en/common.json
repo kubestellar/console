@@ -3112,7 +3112,11 @@
     "errors": {
       "agentNotReachable": "Local agent is not reachable. Make sure kc-agent is running on port 8585.",
       "requestTimedOut": "Request timed out. The cluster may be slow to respond.",
-      "createFailed": "Failed to create namespace"
+      "createFailed": "Failed to create namespace",
+      "authorizationFailed": "Authorization failed for namespace access. Your credentials may lack permission to list namespaces on the connected clusters.",
+      "someClusterAuthFailed": "{{count}} cluster(s) denied access. You may lack permissions to list namespaces on those clusters.",
+      "someClusterAuthFailed_one": "{{count}} cluster denied access. You may lack permissions to list namespaces on that cluster.",
+      "someClusterAuthFailed_other": "{{count}} cluster(s) denied access. You may lack permissions to list namespaces on those clusters."
     }
   },
   "cluster": {

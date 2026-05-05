@@ -121,6 +121,7 @@ export function NamespaceManager() {
     setError(null)
 
     const failedClusters: string[] = []
+    const authFailedClusters: string[] = []
 
     // Helper to update state progressively
     const updateNamespacesFromCache = () => {
@@ -137,6 +138,7 @@ export function NamespaceManager() {
       try {
         let clusterNamespaces: NamespaceDetails[] = []
         let agentFailed = false
+        let agentAuthFailed = false
         let apiFailed = false
 
         // Always try local agent first (works without backend auth)
@@ -160,6 +162,8 @@ export function NamespaceManager() {
                 createdAt: ns.createdAt || new Date().toISOString()
               }))
             }
+          } else if (response.status === 401 || response.status === 403) {
+            agentAuthFailed = true
           } else {
             agentFailed = true
           }
@@ -173,8 +177,8 @@ export function NamespaceManager() {
           // Local agent failed, will fall back to API
         }
 
-        // Fall back to API if local agent didn't return data
-        if (clusterNamespaces.length === 0) {
+        // Fall back to API if local agent didn't return data (skip fallback for auth errors - they'll fail the same way)
+        if (clusterNamespaces.length === 0 && !agentAuthFailed) {
           try {
             const response = await api.get<{ pods: Array<{ namespace: string; status: string }> }>(
               `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`
@@ -201,7 +205,10 @@ export function NamespaceManager() {
         }
 
         // Track as failed if both data sources returned no data due to errors
-        if (clusterNamespaces.length === 0 && agentFailed && apiFailed) {
+        if (clusterNamespaces.length === 0 && agentAuthFailed) {
+          // Auth failure is distinct from connectivity failure
+          authFailedClusters.push(cluster)
+        } else if (clusterNamespaces.length === 0 && agentFailed && apiFailed) {
           failedClusters.push(cluster)
         }
 
@@ -244,16 +251,29 @@ export function NamespaceManager() {
     }
 
     // Only show error if ALL clusters failed (no namespaces at all)
-    if (failedClusters.length > 0 && totalCachedNamespaces === 0) {
-      setError(t('namespaces.errors.unableToConnect', 'Unable to connect to clusters. Check that the KC agent is running.'))
+    const totalFailed = failedClusters.length + authFailedClusters.length
+    if (totalFailed > 0 && totalCachedNamespaces === 0) {
+      if (authFailedClusters.length > 0 && failedClusters.length === 0) {
+        // All failures were auth-related - agent is running but access is denied
+        setError(t('namespaces.errors.authorizationFailed', 'Authorization failed for namespace access. Your credentials may lack permission to list namespaces on the connected clusters.'))
+      } else {
+        setError(t('namespaces.errors.unableToConnect', 'Unable to connect to clusters. Check that the KC agent is running.'))
+      }
       // Allow retry on next trigger since all clusters failed
       hasFetchedRef.current = false
-    } else if (failedClusters.length > 0) {
+    } else if (totalFailed > 0) {
       // Some clusters failed but we have partial data - show partial error
-      setError(t('namespaces.errors.someClustersUnavailable', {
-        count: failedClusters.length,
-        defaultValue: '{{count}} cluster(s) could not be reached. Showing cached data for available clusters.'
-      }))
+      if (authFailedClusters.length > 0 && failedClusters.length === 0) {
+        setError(t('namespaces.errors.someClusterAuthFailed', {
+          count: authFailedClusters.length,
+          defaultValue: '{{count}} cluster(s) denied access. You may lack permissions to list namespaces on those clusters.'
+        }))
+      } else {
+        setError(t('namespaces.errors.someClustersUnavailable', {
+          count: totalFailed,
+          defaultValue: '{{count}} cluster(s) could not be reached. Showing cached data for available clusters.'
+        }))
+      }
     } else {
       // Clear any previous error since we have data
       setError(null)
