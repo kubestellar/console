@@ -47,16 +47,32 @@ interface NavigatorWithConnection extends Navigator {
 const STORAGE_KEY = 'network_utils_hosts'
 const PING_INTERVAL_KEY = 'network_utils_ping_interval'
 const PING_TIMEOUT = 5000
+const DEFAULT_PING_INTERVAL_MS = 3000
+const PARSE_INT_RADIX = 10
 
 // Ping interval options in milliseconds
 const PING_INTERVALS = [
   { value: 1000, label: '1s' },
   { value: 2000, label: '2s' },
-  { value: 3000, label: '3s' },
+  { value: DEFAULT_PING_INTERVAL_MS, label: '3s' },
   { value: 5000, label: '5s' },
   { value: 10000, label: '10s' },
   { value: 30000, label: '30s' },
 ]
+
+function getStoredPingInterval(): number {
+  try {
+    const saved = localStorage.getItem(PING_INTERVAL_KEY)
+    if (!saved) return DEFAULT_PING_INTERVAL_MS
+
+    const parsedInterval = Number.parseInt(saved, PARSE_INT_RADIX)
+    const isSupportedInterval = PING_INTERVALS.some(({ value }) => value === parsedInterval)
+
+    return Number.isFinite(parsedInterval) && isSupportedInterval ? parsedInterval : DEFAULT_PING_INTERVAL_MS
+  } catch {
+    return DEFAULT_PING_INTERVAL_MS
+  }
+}
 
 // Demo ping result for demo mode (avoids backend API calls)
 function getDemoPingResult(host: string): PingResult {
@@ -96,14 +112,7 @@ export function NetworkUtils() {
   const [pingResults, setPingResults] = useState<Map<string, PingResult[]>>(new Map())
   const [isPinging, setIsPinging] = useState(false)
   const [continuousPing, setContinuousPing] = useState(false)
-  const [pingInterval, setPingInterval] = useState<number>(() => {
-    try {
-      const saved = localStorage.getItem(PING_INTERVAL_KEY)
-      return saved ? parseInt(saved) : 3000
-    } catch {
-      return 3000
-    }
-  })
+  const [pingInterval, setPingInterval] = useState<number>(getStoredPingInterval)
   const [hostInput, setHostInput] = useState('')
   const [portInput, setPortInput] = useState('443')
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo>({ online: typeof navigator !== 'undefined' ? navigator.onLine : true })
