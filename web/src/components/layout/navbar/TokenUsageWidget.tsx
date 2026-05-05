@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } from 'lucide-react'
-import { useTokenUsage, type TokenCategory } from '../../../hooks/useTokenUsage'
+import { useTokenUsage, type TokenCategory, type TokenAlertLevel } from '../../../hooks/useTokenUsage'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { cn } from '../../../lib/cn'
 import { getSettingsWithHash } from '../../../config/routes'
@@ -15,6 +15,35 @@ const CATEGORY_CONFIG: Record<TokenCategory, { label: string; icon: React.Compon
   predictions: { label: 'Predictions', icon: TrendingUp, color: 'bg-green-500' },
   other: { label: 'Other', icon: MoreHorizontal, color: 'bg-muted-foreground' },
 }
+
+const TOKEN_ALERT_STYLES: Record<TokenAlertLevel, { button: string; bar: string; text: string }> = {
+  normal: {
+    button: 'bg-green-500/10 text-green-400 hover:bg-green-500/15',
+    bar: 'bg-green-500',
+    text: 'text-green-400',
+  },
+  warning: {
+    button: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/15',
+    bar: 'bg-yellow-500',
+    text: 'text-yellow-400',
+  },
+  critical: {
+    button: 'bg-red-500/10 text-red-400 hover:bg-red-500/15',
+    bar: 'bg-red-500',
+    text: 'text-red-400',
+  },
+  stopped: {
+    button: 'bg-red-500/20 text-red-400 hover:bg-red-500/25',
+    bar: 'bg-red-500',
+    text: 'text-red-400 font-medium',
+  },
+}
+
+const DEMO_TOKEN_STYLES = {
+  button: 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400',
+  bar: 'bg-yellow-500',
+  text: 'text-yellow-400',
+} as const
 
 interface TokenUsageWidgetProps {
   /** Force label text to be visible (used in overflow menu) */
@@ -29,6 +58,7 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
   const [tokenAnimating, setTokenAnimating] = useState(false)
   const previousTokensRef = useRef<number>(usage.used)
   const tokenRef = useRef<HTMLDivElement>(null)
+  const alertStyles = isDemoData ? DEMO_TOKEN_STYLES : TOKEN_ALERT_STYLES[alertLevel]
 
   // Animate token icon when usage increases significantly
   useEffect(() => {
@@ -58,17 +88,7 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
       <button
         data-testid="navbar-token-usage-btn"
         onClick={() => setShowTokenDetails(!showTokenDetails)}
-        className={`flex items-center gap-2 px-3 py-1.5 h-9 rounded-lg transition-colors ${
-          isDemoData
-            ? 'bg-yellow-500/10 border border-yellow-500/20 text-yellow-400'
-            : alertLevel === 'stopped'
-            ? 'bg-red-500/20 text-red-400'
-            : alertLevel === 'critical'
-            ? 'bg-red-500/10 text-red-400'
-            : alertLevel === 'warning'
-            ? 'bg-yellow-500/10 text-yellow-400'
-            : 'bg-secondary/50 text-muted-foreground hover:text-foreground'
-        }`}
+        className={`flex items-center gap-2 px-3 py-1.5 h-9 rounded-lg transition-colors ${alertStyles.button}`}
         title={t('layout.navbar.tokenUsageTitle', { percentage: percentage.toFixed(0), suffix: isDemoData ? ` (${t('layout.navbar.demoData')})` : '' })}
       >
         <Coins className={cn("w-4 h-4 transition-transform", tokenAnimating && "animate-bounce text-yellow-400 scale-125")} />
@@ -78,15 +98,7 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
         <span className={cn("text-xs font-medium", showLabel ? 'inline' : 'hidden sm:inline')}>{percentage.toFixed(0)}%</span>
         <div className={cn("w-12 h-1.5 bg-secondary rounded-full overflow-hidden", showLabel ? 'block' : 'hidden sm:block')}>
           <div
-            className={`h-full transition-all ${
-              isDemoData
-                ? 'bg-yellow-500'
-                : alertLevel === 'stopped' || alertLevel === 'critical'
-                ? 'bg-red-500'
-                : alertLevel === 'warning'
-                ? 'bg-yellow-500'
-                : 'bg-green-500'
-            }`}
+            className={`h-full transition-all ${alertStyles.bar}`}
             style={{ width: `${percentage}%` }}
           />
         </div>
@@ -123,30 +135,12 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
             </div>
             <div className="h-2 bg-secondary rounded-full overflow-hidden mt-2">
               <div
-                className={`h-full transition-all ${
-                  isDemoData
-                    ? 'bg-yellow-500'
-                    : alertLevel === 'stopped' || alertLevel === 'critical'
-                    ? 'bg-red-500'
-                    : alertLevel === 'warning'
-                    ? 'bg-yellow-500'
-                    : 'bg-green-500'
-                }`}
+                className={`h-full transition-all ${alertStyles.bar}`}
                 style={{ width: `${percentage}%` }}
               />
             </div>
             <div className="flex justify-between text-xs mt-1">
-              <span className={`${
-                isDemoData
-                  ? 'text-yellow-400'
-                  : alertLevel === 'stopped'
-                  ? 'text-red-400 font-medium'
-                  : alertLevel === 'critical'
-                  ? 'text-red-400'
-                  : alertLevel === 'warning'
-                  ? 'text-yellow-400'
-                  : 'text-green-400'
-              }`}>
+              <span className={alertStyles.text}>
                 {isDemoData
                   ? t('layout.demoMode')
                   : alertLevel === 'stopped'

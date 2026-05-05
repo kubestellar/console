@@ -63,6 +63,18 @@ export interface TokenUsage {
 
 export type TokenAlertLevel = 'normal' | 'warning' | 'critical' | 'stopped'
 
+export function getTokenAlertLevel(usage: Pick<TokenUsage, 'used' | 'limit' | 'warningThreshold' | 'criticalThreshold' | 'stopThreshold'>): TokenAlertLevel {
+  if (usage.limit <= 0) return 'normal'
+
+  const percentageUsed = usage.used / usage.limit
+  const stopThreshold = usage.stopThreshold > 0 ? usage.stopThreshold : DEFAULT_SETTINGS.stopThreshold
+
+  if (percentageUsed >= stopThreshold) return 'stopped'
+  if (percentageUsed >= usage.criticalThreshold) return 'critical'
+  if (percentageUsed >= usage.warningThreshold) return 'warning'
+  return 'normal'
+}
+
 const SETTINGS_KEY = 'kubestellar-token-settings'
 const CATEGORY_KEY = 'kubestellar-token-categories'
 const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
@@ -622,16 +634,7 @@ export function useTokenUsage() {
   }, [])
 
   // Calculate alert level
-  const getAlertLevel = (): TokenAlertLevel => {
-    if (usage.limit <= 0) return 'normal'
-    const percentage = usage.used / usage.limit
-    // Guard: stopThreshold must be positive — 0 would falsely disable AI at 0% usage
-    const stop = usage.stopThreshold > 0 ? usage.stopThreshold : DEFAULT_SETTINGS.stopThreshold
-    if (percentage >= stop) return 'stopped'
-    if (percentage >= usage.criticalThreshold) return 'critical'
-    if (percentage >= usage.warningThreshold) return 'warning'
-    return 'normal'
-  }
+  const getAlertLevel = (): TokenAlertLevel => getTokenAlertLevel(usage)
 
   // Add tokens used (optionally with category)
   const addTokens = (tokens: number, category: TokenCategory = 'other') => {

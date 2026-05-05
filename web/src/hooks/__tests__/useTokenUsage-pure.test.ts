@@ -33,6 +33,7 @@ const {
   DEMO_TOKEN_USAGE,
   DEMO_BY_CATEGORY,
 } = mod.__testables
+const { getTokenAlertLevel } = mod
 
 beforeEach(() => {
   localStorage.clear()
@@ -94,6 +95,46 @@ describe('getNextResetDate', () => {
   it('returns the first day of next month', () => {
     const result = new Date(getNextResetDate())
     expect(result.getDate()).toBe(1)
+  })
+})
+
+describe('getTokenAlertLevel', () => {
+  it('returns normal below warning threshold', () => {
+    expect(getTokenAlertLevel({
+      used: 40,
+      limit: 100,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.8,
+      stopThreshold: 1,
+    })).toBe('normal')
+  })
+
+  it('returns warning and critical using configured thresholds', () => {
+    expect(getTokenAlertLevel({
+      used: 60,
+      limit: 100,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.8,
+      stopThreshold: 1,
+    })).toBe('warning')
+
+    expect(getTokenAlertLevel({
+      used: 85,
+      limit: 100,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.8,
+      stopThreshold: 1,
+    })).toBe('critical')
+  })
+
+  it('returns stopped at stop threshold', () => {
+    expect(getTokenAlertLevel({
+      used: 100,
+      limit: 100,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.8,
+      stopThreshold: 1,
+    })).toBe('stopped')
   })
 })
 

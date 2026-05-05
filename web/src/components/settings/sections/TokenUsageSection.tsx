@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Save, Coins, RefreshCw } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
 import { Button } from '../../../components/ui/Button'
-import type { TokenUsage } from '../../../hooks/useTokenUsage'
+import { getTokenAlertLevel, type TokenUsage, type TokenAlertLevel } from '../../../hooks/useTokenUsage'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface TokenUsageSectionProps {
@@ -11,6 +11,20 @@ interface TokenUsageSectionProps {
   updateSettings: (settings: Partial<Omit<TokenUsage, 'used' | 'resetDate'>>) => void
   resetUsage: () => void
   isDemoData: boolean
+}
+
+const TOKEN_ALERT_TEXT_STYLES: Record<TokenAlertLevel, string> = {
+  normal: 'text-green-400',
+  warning: 'text-yellow-400',
+  critical: 'text-red-400',
+  stopped: 'text-red-400 font-medium',
+}
+
+const TOKEN_ALERT_BAR_STYLES: Record<TokenAlertLevel, string> = {
+  normal: 'bg-green-500',
+  warning: 'bg-yellow-500',
+  critical: 'bg-red-500',
+  stopped: 'bg-red-500',
 }
 
 export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoData }: TokenUsageSectionProps) {
@@ -21,6 +35,10 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
   const [saved, setSaved] = useState(false)
   const [thresholdError, setThresholdError] = useState<string | null>(null)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const usagePercent = usage.limit > 0 ? Math.min((usage.used / usage.limit) * 100, 100) : 0
+  const alertLevel = getTokenAlertLevel(usage)
+  const usageBarClass = isDemoData ? 'bg-yellow-500' : TOKEN_ALERT_BAR_STYLES[alertLevel]
+  const usageTextClass = isDemoData ? 'text-yellow-400' : TOKEN_ALERT_TEXT_STYLES[alertLevel]
 
   // Token limit value that effectively disables all AI operations
   const DISABLED_TOKEN_LIMIT = 0
@@ -102,29 +120,13 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
           <div className="relative">
             <div className="h-2 bg-secondary rounded-full overflow-hidden">
               <div
-                className={`h-full transition-all ${
-                  isDemoData
-                    ? 'bg-yellow-500'
-                    : (usage.used / usage.limit) >= 0.9
-                    ? 'bg-red-500'
-                    : (usage.used / usage.limit) >= 0.7
-                    ? 'bg-yellow-500'
-                    : 'bg-green-500'
-                }`}
-                style={{ width: `${Math.min((usage.used / usage.limit) * 100, 100)}%` }}
+                className={`h-full transition-all ${usageBarClass}`}
+                style={{ width: `${usagePercent}%` }}
               />
             </div>
             <div className="flex justify-between mt-1">
-              <span className={`text-xs font-medium ${
-                isDemoData
-                  ? 'text-yellow-400'
-                  : (usage.used / usage.limit) >= 0.9
-                  ? 'text-red-400'
-                  : (usage.used / usage.limit) >= 0.7
-                  ? 'text-yellow-400'
-                  : 'text-green-400'
-              }`}>
-                {t('settings.tokens.percentUsed', { percent: ((usage.used / usage.limit) * 100).toFixed(1) })}
+              <span className={`text-xs font-medium ${usageTextClass}`}>
+                {t('settings.tokens.percentUsed', { percent: usagePercent.toFixed(1) })}
               </span>
               <span className="text-xs text-muted-foreground">
                 {t('settings.tokens.remaining', { count: Math.max(usage.limit - usage.used, 0).toLocaleString() })}
