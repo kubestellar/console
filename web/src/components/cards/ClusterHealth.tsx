@@ -328,7 +328,7 @@ export function ClusterHealth() {
       )}
 
       {/* Cluster list */}
-      <div ref={containerRef} className="flex-1 flex flex-col gap-2 overflow-y-auto" style={containerStyle}>
+      <div ref={containerRef} className="flex-1 flex flex-col gap-3 overflow-y-auto" style={containerStyle}>
         {clusters.map((cluster, idx) => {
           const clusterUnreachable = isClusterUnreachable(cluster)
           const clusterTokenExpired = isClusterTokenExpired(cluster)
@@ -350,17 +350,21 @@ export function ClusterHealth() {
                   ? t('clusterHealth.offlineCheckNetwork')
                   : cluster.errorMessage || t('clusterHealth.clusterHasIssues')
           return (
-            <Tooltip key={cluster.name} content={t('clusterHealth.clickViewDetails', { name: cluster.name })}>
+            <Tooltip
+              key={cluster.name}
+              content={t('clusterHealth.clickViewDetails', { name: cluster.name })}
+              wrapperClassName="block w-full"
+            >
             <div
               data-tour={idx === 0 ? 'drilldown' : undefined}
-              className={`group ${isMobile ? 'flex flex-col gap-1.5' : 'flex flex-wrap items-center justify-between gap-y-2'} p-2 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50 min-w-0 overflow-hidden`}
+              className={`group w-full ${isMobile ? 'flex flex-col gap-2' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3'} p-3 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50 min-w-0 overflow-hidden`}
               role="button"
               tabIndex={0}
               onClick={() => setSelectedCluster(cluster.name)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCluster(cluster.name) } }}
               aria-label={t('clusterHealth.clickViewDetails', { name: cluster.name })}
             >
-              <div className="flex items-center gap-2 min-w-0 flex-1" title={statusTooltip}>
+              <div className="flex items-center gap-2.5 min-w-0 flex-1 flex-wrap" title={statusTooltip}>
                 {/* Status icon: green check for healthy, red key for auth error, yellow wifi-off for offline, red triangle for degraded */}
                 {clusterLoading ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground shrink-0" />
@@ -415,7 +419,7 @@ export function ClusterHealth() {
                   </a>
                 )}
               </div>
-              <div className={`flex items-center ${isMobile ? 'gap-2 pl-6 flex-wrap' : 'gap-3 shrink-0'} text-xs text-muted-foreground min-w-0 overflow-hidden`}>
+              <div className={`flex items-center ${isMobile ? 'gap-3 pl-6 flex-wrap' : 'gap-4 shrink-0 flex-wrap justify-end'} text-xs text-muted-foreground min-w-0 overflow-hidden`}>
                 <span className="whitespace-nowrap" title={clusterLoading ? t('common:common.checking') : !clusterUnreachable ? t('clusterHealth.nodesInCluster', { count: cluster.nodeCount || 0 }) : t('clusterHealth.offlineCheckNetwork')}>
                   {clusterLoading ? <Loader2 className="w-3 h-3 animate-spin inline" /> : !clusterUnreachable ? (cluster.nodeCount || 0) : '-'} {t('common:common.nodes').toLowerCase()}
                 </span>

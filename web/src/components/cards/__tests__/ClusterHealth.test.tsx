@@ -104,7 +104,9 @@ vi.mock('react-router-dom', () => ({
 }))
 
 vi.mock('../../ui/Tooltip', () => ({
-  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Tooltip: ({ children, wrapperClassName }: { children: React.ReactNode; wrapperClassName?: string }) => (
+    <div data-testid="tooltip-wrapper" className={wrapperClassName}>{children}</div>
+  ),
 }))
 
 vi.mock('../../../config/routes', () => ({
@@ -308,6 +310,14 @@ describe('ClusterHealth', () => {
       setupDefaults({ clusters })
       render(<ClusterHealth />)
       expect(screen.getByText('my-cluster')).toBeInTheDocument()
+    })
+
+    it('stretches each cluster row to the full card width', () => {
+      const clusters = [makeCluster({ name: 'full-width-cluster' })]
+      setupDefaults({ clusters })
+      render(<ClusterHealth />)
+      expect(screen.getByTestId('tooltip-wrapper')).toHaveClass('block', 'w-full')
+      expect(screen.getByRole('button', { name: /full-width-cluster/i })).toHaveClass('w-full')
     })
 
     it('renders node and pod count per row', () => {
