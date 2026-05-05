@@ -504,20 +504,35 @@ describe('useCachedDeploymentIssues', () => {
     expect(issues[0].readyReplicas).toBe(1)
   })
 
-  it('fetcher falls back to REST API when agent unavailable', async () => {
+  it('fetcher derives issues from deployments when agent unavailable', async () => {
     mockClusterCacheRef.clusters = []
     mockIsBackendUnavailable.mockReturnValue(false)
 
-    const mockIssues = [
-      { name: 'failing-deploy', namespace: 'prod', replicas: 2, readyReplicas: 0, reason: 'DeploymentFailed' },
-    ]
-    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ issues: mockIssues }))
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({
+      deployments: [
+        { name: 'failing-deploy', namespace: 'prod', replicas: 2, readyReplicas: 0, status: 'failed' },
+        { name: 'healthy-deploy', namespace: 'prod', replicas: 2, readyReplicas: 2, status: 'running' },
+      ],
+    }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues('prod'),
     )
     const result = await capturedFetcher()
-    expect(result).toEqual(mockIssues)
+
+    expect(result).toEqual([
+      {
+        name: 'failing-deploy',
+        namespace: 'prod',
+        cluster: 'prod',
+        replicas: 2,
+        readyReplicas: 0,
+        reason: 'DeploymentFailed',
+      },
+    ])
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(url).toContain(`${LOCAL_AGENT_HTTP_URL}/deployments?`)
+    expect(url).toContain('cluster=prod')
   })
 
   it('fetcher throws when both agent and backend unavailable', async () => {
@@ -1065,20 +1080,32 @@ describe('Backend/Agent unavailability', () => {
   })
 
   it('useCachedDeploymentIssues fetcher skips agent when isAgentUnavailable returns true', async () => {
-    mockClusterCacheRef.clusters = [{ name: 'prod', reachable: true }]
+    mockClusterCacheRef.clusters = [{ name: 'prod', context: 'prod-ctx', reachable: true }]
     mockIsAgentUnavailable.mockReturnValue(true)
     mockIsBackendUnavailable.mockReturnValue(false)
 
-    // Should fall through to REST API
-    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ issues: [{ name: 'deploy-issue' }] }))
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({
+      deployments: [{ name: 'deploy-issue', namespace: 'default', replicas: 1, readyReplicas: 0, status: 'running' }],
+    }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues('prod'),
     )
 
-    const result = await capturedFetcher() as Array<{ name: string }>
-    expect(result).toHaveLength(1)
-    expect(result[0].name).toBe('deploy-issue')
+    const result = await capturedFetcher()
+    expect(result).toEqual([
+      {
+        name: 'deploy-issue',
+        namespace: 'default',
+        cluster: 'prod',
+        replicas: 1,
+        readyReplicas: 0,
+        reason: 'ReplicaFailure',
+      },
+    ])
+    const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(url).toContain('cluster=prod')
+    expect(url).not.toContain('prod-ctx')
   })
 })
 

@@ -61,6 +61,16 @@ vi.mock('../../../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }))
 
+vi.mock('../../../cards/console-missions/shared', () => ({
+  useApiKeyCheck: () => ({
+    showKeyPrompt: false,
+    checkKeyAndRun: vi.fn(),
+    goToSettings: vi.fn(),
+    dismissPrompt: vi.fn(),
+  }),
+  ApiKeyPromptModal: () => null,
+}))
+
 import { PodDrillDown } from '../PodDrillDown'
 
 describe('PodDrillDown', () => {
