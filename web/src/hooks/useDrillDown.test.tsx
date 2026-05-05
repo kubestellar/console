@@ -30,7 +30,10 @@ function makeView(overrides: Partial<DrillDownView> = {}): DrillDownView {
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks()
   vi.clearAllMocks()
+  vi.spyOn(window.history, 'go').mockImplementation(() => undefined)
+  window.history.replaceState(null, '', window.location.pathname)
 })
 
 // ── Provider setup ────────────────────────────────────────────────────────────

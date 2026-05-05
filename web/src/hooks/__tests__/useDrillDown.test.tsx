@@ -30,7 +30,10 @@ function makeView(type: string, title: string, data: Record<string, unknown> = {
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks()
   vi.clearAllMocks()
+  vi.spyOn(window.history, 'go').mockImplementation(() => undefined)
+  window.history.replaceState(null, '', window.location.pathname)
 })
 
 describe('useDrillDown', () => {
@@ -196,6 +199,54 @@ describe('useDrillDown', () => {
     expect(result.current.state.stack).toHaveLength(2)
     expect(result.current.state.currentView?.title).toBe('kube-system')
     expect(result.current.state.stack[0].title).toBe('Cluster A')
+  })
+
+  it('pushes a browser history entry when opening a drill-down', () => {
+    const { result } = renderHook(() => useDrillDown(), { wrapper })
+
+    act(() => {
+      result.current.open(makeView('cluster', 'Cluster A'))
+    })
+
+    expect(window.history.state).toMatchObject({
+      __kscDrillDownHistoryId: expect.any(Number),
+    })
+  })
+
+  it('restores a previous drill-down step on popstate', () => {
+    const { result } = renderHook(() => useDrillDown(), { wrapper })
+
+    act(() => {
+      result.current.open(makeView('cluster', 'Cluster A'))
+    })
+    const rootHistoryState = window.history.state
+
+    act(() => {
+      result.current.push(makeView('namespace', 'default'))
+    })
+
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate', { state: rootHistoryState }))
+    })
+
+    expect(result.current.state.stack).toHaveLength(1)
+    expect(result.current.state.currentView?.title).toBe('Cluster A')
+  })
+
+  it('closes the drill-down when popstate returns to the page entry', () => {
+    const { result } = renderHook(() => useDrillDown(), { wrapper })
+
+    act(() => {
+      result.current.open(makeView('cluster', 'Cluster A'))
+    })
+
+    act(() => {
+      window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+    })
+
+    expect(result.current.state.isOpen).toBe(false)
+    expect(result.current.state.stack).toEqual([])
+    expect(result.current.state.currentView).toBeNull()
   })
 })
 

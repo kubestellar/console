@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect, ReactNode } from 'react'
 import { emitDrillDownOpened, emitDrillDownClosed } from '../lib/analytics'
 
 // Types for drill-down navigation
@@ -87,111 +87,226 @@ interface DrillDownContextType {
   // Replace current view
   replace: (view: DrillDownView) => void
   // Open or push: opens if closed, pushes if open, navigates to existing
-  // if the view is already in the stack. Uses functional setState to
-  // guarantee the latest state is read, avoiding stale-closure bugs.
+  // if the view is already in the stack. Reads provider state from a ref to
+  // avoid stale-closure bugs when callers haven't re-rendered yet.
   openOrPush: (view: DrillDownView) => void
 }
 
 const DrillDownContext = createContext<DrillDownContextType | null>(null)
 
+const CLOSED_DRILLDOWN_STATE: DrillDownState = {
+  isOpen: false,
+  stack: [],
+  currentView: null,
+}
+const DRILLDOWN_HISTORY_STATE_KEY = '__kscDrillDownHistoryId'
+const MAX_DRILLDOWN_HISTORY_ENTRIES = 100
+
+type BrowserHistoryState = Record<string, unknown>
+
+function canUseBrowserHistory() {
+  return typeof window !== 'undefined' && typeof window.history !== 'undefined'
+}
+
+function getCurrentBrowserHistoryState(): BrowserHistoryState {
+  if (!canUseBrowserHistory()) return {}
+  const currentState = window.history.state
+  return currentState && typeof currentState === 'object'
+    ? currentState as BrowserHistoryState
+    : {}
+}
+
+function getDrillDownHistoryEntryId(state: unknown): number | null {
+  if (!state || typeof state !== 'object') return null
+  const entryId = (state as BrowserHistoryState)[DRILLDOWN_HISTORY_STATE_KEY]
+  return typeof entryId === 'number' ? entryId : null
+}
+
 export function DrillDownProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<DrillDownState>({
-    isOpen: false,
-    stack: [],
-    currentView: null })
+  const [state, setState] = useState<DrillDownState>(CLOSED_DRILLDOWN_STATE)
+  const stateRef = useRef<DrillDownState>(CLOSED_DRILLDOWN_STATE)
+  const historyEntriesRef = useRef(new Map<number, DrillDownState>())
+  const nextHistoryEntryIdRef = useRef(1)
+
+  const applyState = useCallback((nextState: DrillDownState) => {
+    stateRef.current = nextState
+    setState(nextState)
+  }, [])
+
+  const persistHistoryEntry = useCallback((nextState: DrillDownState, mode: 'push' | 'replace') => {
+    if (!canUseBrowserHistory()) return
+
+    const entryId = nextHistoryEntryIdRef.current
+    nextHistoryEntryIdRef.current += 1
+    historyEntriesRef.current.set(entryId, nextState)
+
+    while (historyEntriesRef.current.size > MAX_DRILLDOWN_HISTORY_ENTRIES) {
+      const oldestEntryId = historyEntriesRef.current.keys().next().value
+      if (typeof oldestEntryId !== 'number') break
+      historyEntriesRef.current.delete(oldestEntryId)
+    }
+
+    const nextHistoryState: BrowserHistoryState = {
+      ...getCurrentBrowserHistoryState(),
+      [DRILLDOWN_HISTORY_STATE_KEY]: entryId,
+    }
+    const nextUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
+
+    if (mode === 'push') {
+      window.history.pushState(nextHistoryState, '', nextUrl)
+      return
+    }
+
+    window.history.replaceState(nextHistoryState, '', nextUrl)
+  }, [])
+
+  const navigateHistory = useCallback((delta: number) => {
+    if (!canUseBrowserHistory() || delta === 0) return false
+    if (getDrillDownHistoryEntryId(window.history.state) === null) return false
+    window.history.go(delta)
+    return true
+  }, [])
 
   const open = useCallback((view: DrillDownView) => {
-    setState({
+    const nextState = {
       isOpen: true,
       stack: [view],
-      currentView: view })
+      currentView: view,
+    }
+    applyState(nextState)
     emitDrillDownOpened(view.type)
-  }, [])
+    persistHistoryEntry(nextState, 'push')
+  }, [applyState, persistHistoryEntry])
 
   const push = useCallback((view: DrillDownView) => {
-    setState(prev => ({
-      ...prev,
-      stack: [...prev.stack, view],
-      currentView: view }))
-  }, [])
+    const prev = stateRef.current
+    const wasOpen = prev.isOpen
+    const nextState = wasOpen
+      ? {
+          ...prev,
+          stack: [...prev.stack, view],
+          currentView: view,
+        }
+      : {
+          isOpen: true,
+          stack: [view],
+          currentView: view,
+        }
+    applyState(nextState)
+    if (!wasOpen) {
+      emitDrillDownOpened(view.type)
+    }
+    persistHistoryEntry(nextState, 'push')
+  }, [applyState, persistHistoryEntry])
 
   const pop = useCallback(() => {
-    setState(prev => {
-      if (prev.stack.length <= 1) {
-        return { isOpen: false, stack: [], currentView: null }
-      }
-      const newStack = prev.stack.slice(0, -1)
-      return {
-        ...prev,
-        stack: newStack,
-        currentView: newStack[newStack.length - 1] }
-    })
-  }, [])
+    const prev = stateRef.current
+    if (prev.stack.length === 0) return
 
-  const goTo = useCallback((index: number) => {
-    setState(prev => {
-      if (index < 0 || index >= prev.stack.length) return prev
-      const newStack = prev.stack.slice(0, index + 1)
-      return {
-        ...prev,
-        stack: newStack,
-        currentView: newStack[newStack.length - 1] }
-    })
-  }, [])
-
-  const close = useCallback(() => {
-    setState(prev => {
+    if (prev.stack.length === 1) {
       if (prev.currentView) {
         emitDrillDownClosed(prev.currentView.type, prev.stack.length)
       }
-      return { isOpen: false, stack: [], currentView: null }
-    })
-  }, [])
+      applyState(CLOSED_DRILLDOWN_STATE)
+      navigateHistory(-1)
+      return
+    }
+
+    const newStack = prev.stack.slice(0, -1)
+    const nextState = {
+      ...prev,
+      stack: newStack,
+      currentView: newStack[newStack.length - 1],
+    }
+    applyState(nextState)
+    navigateHistory(-1)
+  }, [applyState, navigateHistory])
+
+  const goTo = useCallback((index: number) => {
+    const prev = stateRef.current
+    if (index < 0 || index >= prev.stack.length) return
+
+    const newStack = prev.stack.slice(0, index + 1)
+    const nextState = {
+      ...prev,
+      stack: newStack,
+      currentView: newStack[newStack.length - 1],
+    }
+    applyState(nextState)
+    navigateHistory(index + 1 - prev.stack.length)
+  }, [applyState, navigateHistory])
+
+  const close = useCallback(() => {
+    const prev = stateRef.current
+    if (!prev.isOpen) return
+
+    if (prev.currentView) {
+      emitDrillDownClosed(prev.currentView.type, prev.stack.length)
+    }
+    applyState(CLOSED_DRILLDOWN_STATE)
+    navigateHistory(-prev.stack.length)
+  }, [applyState, navigateHistory])
 
   const replace = useCallback((view: DrillDownView) => {
-    setState(prev => {
-      const newStack = [...prev.stack.slice(0, -1), view]
-      return {
-        ...prev,
-        stack: newStack,
-        currentView: view }
-    })
-  }, [])
+    const prev = stateRef.current
+    const newStack = prev.stack.length > 0 ? [...prev.stack.slice(0, -1), view] : [view]
+    const nextState = {
+      ...prev,
+      isOpen: newStack.length > 0,
+      stack: newStack,
+      currentView: view,
+    }
+    applyState(nextState)
+    if (nextState.isOpen) {
+      persistHistoryEntry(nextState, 'replace')
+    }
+  }, [applyState, persistHistoryEntry])
 
-  // Open-or-push that reads state via functional setState to guarantee
-  // freshness even when the calling component hasn't re-rendered yet.
-  // This prevents the stale-closure bug where state.isOpen reads as false
-  // when the modal is actually open, which would reset the entire stack.
+  // Open-or-push that reads state via a ref to guarantee freshness even when
+  // the calling component hasn't re-rendered yet.
   const openOrPushFn = useCallback((view: DrillDownView) => {
-    setState(prev => {
-      if (!prev.isOpen) {
-        emitDrillDownOpened(view.type)
-        return {
-          isOpen: true,
-          stack: [view],
-          currentView: view }
+    const prev = stateRef.current
+    if (!prev.isOpen) {
+      open(view)
+      return
+    }
+
+    const viewKey = getViewKey(view)
+    const existingIndex = prev.stack.findIndex(v => getViewKey(v) === viewKey)
+
+    if (existingIndex >= 0) {
+      goTo(existingIndex)
+      return
+    }
+
+    push(view)
+  }, [goTo, open, push])
+
+  useEffect(() => {
+    if (!canUseBrowserHistory()) return undefined
+
+    const handlePopState = (event: PopStateEvent) => {
+      const previousState = stateRef.current
+      const entryId = getDrillDownHistoryEntryId(event.state)
+      const nextState = entryId !== null ? historyEntriesRef.current.get(entryId) ?? null : null
+
+      if (nextState) {
+        applyState(nextState)
+        if (!previousState.isOpen && nextState.currentView) {
+          emitDrillDownOpened(nextState.currentView.type)
+        }
+        return
       }
 
-      // Check if this view already exists in the stack
-      const viewKey = getViewKey(view)
-      const existingIndex = prev.stack.findIndex(v => getViewKey(v) === viewKey)
-
-      if (existingIndex >= 0) {
-        // Navigate to existing view instead of pushing duplicate
-        const newStack = prev.stack.slice(0, existingIndex + 1)
-        return {
-          ...prev,
-          stack: newStack,
-          currentView: newStack[newStack.length - 1] }
+      if (previousState.isOpen && previousState.currentView) {
+        emitDrillDownClosed(previousState.currentView.type, previousState.stack.length)
       }
+      applyState(CLOSED_DRILLDOWN_STATE)
+    }
 
-      // Push new view onto the stack
-      return {
-        ...prev,
-        stack: [...prev.stack, view],
-        currentView: view }
-    })
-  }, [])
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [applyState])
 
   // #6149 — Memoize the provider value so consumers don't re-render every
   // time DrillDownProvider itself re-renders for an unrelated reason.
