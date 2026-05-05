@@ -672,20 +672,20 @@ export function Layout({ children: _children }: LayoutProps) {
           {/* Agent Setup Dialog — shown when agent not connected; also triggered by open-agent-setup event */}
           <AgentSetupDialog />
 
-      {/* Backend connection lost snackbar — fixed bottom center */}
+      {/* Backend connection lost / restarting snackbar — fixed bottom center */}
       {showBackendBanner && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className={cn(
             "flex items-center gap-2 px-4 py-3 rounded-lg border shadow-lg text-sm",
             backendDown
-              ? "bg-secondary border-border text-foreground"
+              ? "bg-blue-950/90 border-blue-800/50 text-blue-200"
               : "bg-green-900/80 border-green-700/50 text-green-200"
           )}>
             {backendDown ? (
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-400 animate-pulse" />
-                  <span>{t('layout.connectionLost')}</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                  <span>{t('layout.consoleRestarting')}</span>
                   {restartState === 'restarting' ? (
                     <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-2 min-h-11 bg-muted text-muted-foreground rounded text-xs cursor-wait">
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -715,7 +715,7 @@ export function Layout({ children: _children }: LayoutProps) {
                 {restartError ? (
                   <span className="text-xs text-muted-foreground">{restartError}</span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">{t('layout.connectionLostHint')}</span>
+                  <span className="text-xs text-blue-300/70">{t('layout.consoleRestartingHint')}</span>
                 )}
               </div>
             ) : (

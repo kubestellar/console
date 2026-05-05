@@ -17,12 +17,10 @@ function writeInClusterToSession(): void {
   try { sessionStorage.setItem(SS_IN_CLUSTER_KEY, 'true') } catch { /* ignore */ }
 }
 
-const POLL_INTERVAL = 15000 // Check every 15 seconds
-const FAILURE_THRESHOLD = 4 // Require 4 consecutive failures before showing "Connection lost"
-// Short timeout for health checks — a healthy backend responds in <100ms.
-// Using the default 10s timeout causes false failures when the browser's
-// HTTP/1.1 connection pool (6 per origin) is saturated by SSE streams.
-const HEALTH_CHECK_TIMEOUT_MS = 3000
+const POLL_INTERVAL_MS = 15_000
+const FAST_RETRY_INTERVAL_MS = 3_000
+const FAILURE_THRESHOLD = 4
+const HEALTH_CHECK_TIMEOUT_MS = 3_000
 
 interface BackendState {
   status: BackendStatus
@@ -47,12 +45,13 @@ class BackendHealthManager {
   private isStarted = false
   private isChecking = false
   private initialVersion: string | null = null
+  private isFastRetrying = false
 
   start() {
     if (this.isStarted) return
     this.isStarted = true
     this.checkBackend()
-    this.pollInterval = setInterval(() => this.checkBackend(), POLL_INTERVAL)
+    this.pollInterval = setInterval(() => this.checkBackend(), POLL_INTERVAL_MS)
   }
 
   stop() {
@@ -61,6 +60,21 @@ class BackendHealthManager {
       this.pollInterval = null
     }
     this.isStarted = false
+    this.isFastRetrying = false
+  }
+
+  private switchToFastRetry() {
+    if (this.isFastRetrying || !this.isStarted) return
+    this.isFastRetrying = true
+    if (this.pollInterval) clearInterval(this.pollInterval)
+    this.pollInterval = setInterval(() => this.checkBackend(), FAST_RETRY_INTERVAL_MS)
+  }
+
+  private switchToNormalPoll() {
+    if (!this.isFastRetrying || !this.isStarted) return
+    this.isFastRetrying = false
+    if (this.pollInterval) clearInterval(this.pollInterval)
+    this.pollInterval = setInterval(() => this.checkBackend(), POLL_INTERVAL_MS)
   }
 
   subscribe(listener: (state: BackendState) => void): () => void {
@@ -110,6 +124,7 @@ class BackendHealthManager {
 
       if (response.ok) {
         this.failureCount = 0
+        this.switchToNormalPoll()
 
         // Parse response to check version and status
         try {
@@ -157,11 +172,11 @@ class BackendHealthManager {
       // The agent endpoint uses a separate connection pool.
       const agentAlive = await this.checkAgentHealth()
       if (agentAlive) {
-        // Agent is reachable → backend is likely fine, just connection-starved.
-        // Don't increment failure count.
         this.setState({ status: 'connected', lastCheck: new Date() })
+        this.switchToNormalPoll()
       } else {
         this.failureCount++
+        this.switchToFastRetry()
         if (this.failureCount >= FAILURE_THRESHOLD) {
           this.setState({
             status: 'disconnected',

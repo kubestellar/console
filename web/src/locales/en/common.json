@@ -3698,6 +3698,8 @@
     "demo": "Demo",
     "connectionLost": "Connection lost",
     "connectionLostHint": "Could not reach the backend — restart the server to reconnect",
+    "consoleRestarting": "Console restarting…",
+    "consoleRestartingHint": "Reconnecting automatically — no action needed",
     "copiedRestartCommand": "Copied — run this in your project root terminal",
     "restarting": "Restarting…",
     "restartedWaiting": "Restarted, waiting for connection…",
