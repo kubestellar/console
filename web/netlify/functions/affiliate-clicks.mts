@@ -7,10 +7,18 @@
  *   - contributor_affiliate: utm_term IS the GitHub handle directly (no mapping)
  * Used by the docs leaderboard to show a "Social" column.
  *
+ * Uses raw fetch + Web Crypto JWT (same pattern as analytics-dashboard.mts)
+ * instead of the googleapis npm package — Netlify Functions don't bundle
+ * googleapis reliably and it caused a persistent 502.
+ *
  * Requires Netlify env vars: GA4_SERVICE_ACCOUNT_JSON (base64), GA4_PROPERTY_ID
  */
 
-import { google } from "googleapis";
+// ── Constants ─────────────────────────────────────────────────────────
+
+const GA4_DATA_API = "https://analyticsdata.googleapis.com/v1beta";
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const JWT_EXPIRY_SECONDS = 3600;
 
 /** Map GitHub login → utm_term for intern affiliate links */
 const INTERN_MAP: Record<string, string> = {
@@ -26,46 +34,50 @@ const INTERN_MAP: Record<string, string> = {
   "Abhishek-Punhani": "intern-10",
 };
 
-/** Reverse map: utm_term → GitHub login (lowercased — GitHub logins are case-insensitive) */
+/** Reverse map: utm_term → GitHub login (lowercased) */
 const TERM_TO_LOGIN: Record<string, string> = {};
 for (const [login, term] of Object.entries(INTERN_MAP)) {
   TERM_TO_LOGIN[term] = login.toLowerCase();
 }
 
 /** Cache TTL — 3 minutes. Shorter than before (was 15m) so intern shares
- *  feel responsive on the leaderboard once GA4 has processed the clicks.
- *  GA4 itself has a separate 24-48h attribution-dimension processing lag
- *  that this cache cannot help with; see the leaderboard footnote. */
+ *  feel responsive on the leaderboard once GA4 has processed the clicks. */
 const CACHE_TTL_MS = 3 * 60 * 1000;
 /** Days to look back for affiliate clicks */
 const LOOKBACK_DAYS = 90;
 
-/** Minimum / maximum plausible GitHub login length. GitHub enforces 1-39
- *  chars; we require 2+ to avoid spurious single-letter matches that look
- *  like parsing artifacts. */
 const GH_LOGIN_MIN_LEN = 2;
 const GH_LOGIN_MAX_LEN = 39;
 const GH_LOGIN_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9]|-(?=[a-zA-Z0-9])){1,38}$/;
 
-/** True when a raw utm_term looks like a plausible GitHub login — i.e. a
- *  mentee shared a link with `utm_campaign=intern_outreach` but used their
- *  GitHub handle as utm_term instead of the legacy `intern-0X` form. We
- *  treat those as contributor_affiliate-style entries rather than dropping
- *  them (GA4 data on 2026-04-19 showed xonas1101 under intern_outreach —
- *  the old code silently skipped that row). */
+/** Max rows to return per GA4 query */
+const GA4_QUERY_LIMIT = 50;
+
 function isPlausibleGitHubLogin(term: string): boolean {
   if (term.length < GH_LOGIN_MIN_LEN || term.length > GH_LOGIN_MAX_LEN) return false;
   if (/^intern-\d+$/.test(term)) return false;
   return GH_LOGIN_PATTERN.test(term);
 }
 
-let cachedResult: { data: Record<string, AffiliateData>; fetchedAt: number } | null = null;
+// ── Types ─────────────────────────────────────────────────────────────
 
 interface AffiliateData {
   clicks: number;
   unique_users: number;
   utm_term: string;
 }
+
+interface ServiceAccountKey {
+  client_email: string;
+  private_key: string;
+}
+
+interface GA4Row {
+  dimensionValues: { value: string }[];
+  metricValues: { value: string }[];
+}
+
+// ── CORS ──────────────────────────────────────────────────────────────
 
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
@@ -87,20 +99,134 @@ function corsOrigin(origin: string | null): string {
   return ALLOWED_ORIGINS[0];
 }
 
+// ── JWT / OAuth helpers (Web Crypto — no npm deps) ────────────────────
+
+function base64url(data: Uint8Array): string {
+  return btoa(String.fromCharCode(...data))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+function textToBase64url(text: string): string {
+  return base64url(new TextEncoder().encode(text));
+}
+
+async function importPrivateKey(pem: string): Promise<CryptoKey> {
+  const pemContents = pem
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\n/g, "");
+  const binaryDer = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+
+  return crypto.subtle.importKey(
+    "pkcs8",
+    binaryDer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+}
+
+async function createSignedJWT(serviceAccount: ServiceAccountKey): Promise<string> {
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: serviceAccount.client_email,
+    sub: serviceAccount.client_email,
+    aud: GOOGLE_TOKEN_URL,
+    iat: now,
+    exp: now + JWT_EXPIRY_SECONDS,
+    scope: "https://www.googleapis.com/auth/analytics.readonly",
+  };
+
+  const headerB64 = textToBase64url(JSON.stringify(header));
+  const payloadB64 = textToBase64url(JSON.stringify(payload));
+  const signingInput = `${headerB64}.${payloadB64}`;
+
+  const key = await importPrivateKey(serviceAccount.private_key);
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    new TextEncoder().encode(signingInput)
+  );
+
+  return `${signingInput}.${base64url(new Uint8Array(signature))}`;
+}
+
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+let cachedToken: { accessToken: string; expiresAt: number } | null = null;
+
+async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expiresAt - TOKEN_REFRESH_BUFFER_MS) {
+    return cachedToken.accessToken;
+  }
+
+  const jwt = await createSignedJWT(serviceAccount);
+  const resp = await fetch(GOOGLE_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: jwt,
+    }),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`Token exchange failed (${resp.status}): ${body}`);
+  }
+
+  const data = await resp.json();
+  const accessToken = data.access_token;
+  const expiresIn = data.expires_in || JWT_EXPIRY_SECONDS;
+
+  cachedToken = { accessToken, expiresAt: Date.now() + expiresIn * 1000 };
+  return accessToken;
+}
+
+// ── GA4 Data API ──────────────────────────────────────────────────────
+
+async function runReport(
+  propertyId: string,
+  accessToken: string,
+  body: Record<string, unknown>
+): Promise<GA4Row[]> {
+  const resp = await fetch(
+    `${GA4_DATA_API}/properties/${propertyId}:runReport`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`GA4 API ${resp.status}: ${text}`);
+  }
+
+  const data = await resp.json();
+  return data.rows || [];
+}
+
+// ── Core logic ────────────────────────────────────────────────────────
+
+let cachedResult: { data: Record<string, AffiliateData>; fetchedAt: number } | null = null;
+
 async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
-  // Netlify env vars use GA4_SERVICE_ACCOUNT_JSON (base64-encoded) + GA4_PROPERTY_ID
-  const serviceAccountB64 =
-    process.env.GA4_SERVICE_ACCOUNT_JSON;
-  const propertyId =
-    process.env.GA4_PROPERTY_ID;
+  const serviceAccountB64 = process.env.GA4_SERVICE_ACCOUNT_JSON;
+  const propertyId = process.env.GA4_PROPERTY_ID;
 
   if (!serviceAccountB64 || !propertyId) {
     console.warn("GA4_SERVICE_ACCOUNT_JSON or GA4_PROPERTY_ID not set in Netlify env vars");
     return {};
   }
 
-  // Decode base64 service account JSON
-  let credentials: Record<string, unknown>;
+  let credentials: ServiceAccountKey;
   try {
     credentials = JSON.parse(
       Buffer.from(serviceAccountB64, "base64").toString("utf-8")
@@ -109,58 +235,44 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
     console.error("GA4_SERVICE_ACCOUNT_JSON is not valid base64-encoded JSON");
     return {};
   }
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
-  });
-  const analyticsData = google.analyticsdata({ version: "v1beta", auth });
+
+  const accessToken = await getAccessToken(credentials);
 
   const endDate = new Date();
   const startDate = new Date(endDate.getTime() - LOOKBACK_DAYS * 86400000);
   const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  const dateRange = { startDate: fmt(startDate), endDate: fmt(endDate) };
 
-  /** Max rows to return per GA4 query */
-  const GA4_QUERY_LIMIT = 50;
-
-  // --- Query 1: intern_outreach campaign (intern-01..10 → GitHub login via INTERN_MAP) ---
-  const internRes = await analyticsData.properties.runReport({
-    property: `properties/${propertyId}`,
-    requestBody: {
-      dateRanges: [{ startDate: fmt(startDate), endDate: fmt(endDate) }],
-      dimensions: [{ name: "sessionManualTerm" }],
-      metrics: [{ name: "sessions" }, { name: "activeUsers" }],
-      dimensionFilter: {
-        filter: {
-          fieldName: "sessionCampaignName",
-          stringFilter: { matchType: "EXACT", value: "intern_outreach" },
-        },
+  // Query 1: intern_outreach campaign (intern-01..10 → GitHub login via INTERN_MAP)
+  const internRows = await runReport(propertyId, accessToken, {
+    dateRanges: [dateRange],
+    dimensions: [{ name: "sessionManualTerm" }],
+    metrics: [{ name: "sessions" }, { name: "activeUsers" }],
+    dimensionFilter: {
+      filter: {
+        fieldName: "sessionCampaignName",
+        stringFilter: { matchType: "EXACT", value: "intern_outreach" },
       },
-      limit: GA4_QUERY_LIMIT,
     },
+    limit: GA4_QUERY_LIMIT,
   });
 
-  // --- Query 2: contributor_affiliate campaign (utm_term IS the GitHub handle) ---
-  const contributorRes = await analyticsData.properties.runReport({
-    property: `properties/${propertyId}`,
-    requestBody: {
-      dateRanges: [{ startDate: fmt(startDate), endDate: fmt(endDate) }],
-      dimensions: [{ name: "sessionManualTerm" }],
-      metrics: [{ name: "sessions" }, { name: "activeUsers" }],
-      dimensionFilter: {
-        filter: {
-          fieldName: "sessionCampaignName",
-          stringFilter: { matchType: "EXACT", value: "contributor_affiliate" },
-        },
+  // Query 2: contributor_affiliate campaign (utm_term IS the GitHub handle)
+  const contributorRows = await runReport(propertyId, accessToken, {
+    dateRanges: [dateRange],
+    dimensions: [{ name: "sessionManualTerm" }],
+    metrics: [{ name: "sessions" }, { name: "activeUsers" }],
+    dimensionFilter: {
+      filter: {
+        fieldName: "sessionCampaignName",
+        stringFilter: { matchType: "EXACT", value: "contributor_affiliate" },
       },
-      limit: GA4_QUERY_LIMIT,
     },
+    limit: GA4_QUERY_LIMIT,
   });
 
   const result: Record<string, AffiliateData> = {};
 
-  /** Helper to merge a row into the result, summing clicks/unique_users for duplicates.
-   *  Keys are always lowercased — GitHub logins are case-insensitive and GA4 utm_term
-   *  casing varies by how mentees share their links. */
   function mergeEntry(login: string, utmTerm: string, sessions: number, users: number): void {
     const key = login.toLowerCase();
     if (result[key]) {
@@ -171,13 +283,7 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
     }
   }
 
-  // Process intern_outreach rows. Historically utm_term was `intern-0X` and
-  // mapped through INTERN_MAP; the project is migrating to utm_term=<github>.
-  // Since interns may still tag shares with `intern_outreach` while using a
-  // GitHub-login utm_term (observed 2026-04-19 with xonas1101), fall back to
-  // treating that term AS the login when it doesn't match INTERN_MAP and
-  // looks like a plausible GitHub handle.
-  for (const row of internRes.data.rows || []) {
+  for (const row of internRows) {
     const utmTerm = row.dimensionValues?.[0]?.value;
     const sessions = parseInt(row.metricValues?.[0]?.value || "0");
     const users = parseInt(row.metricValues?.[1]?.value || "0");
@@ -185,20 +291,13 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
     if (!utmTerm) continue;
 
     if (TERM_TO_LOGIN[utmTerm]) {
-      // Legacy intern-0X → mapped GitHub login
       mergeEntry(TERM_TO_LOGIN[utmTerm], utmTerm, sessions, users);
     } else if (isPlausibleGitHubLogin(utmTerm)) {
-      // New shape under the legacy campaign — credit the GitHub login directly
       mergeEntry(utmTerm, utmTerm, sessions, users);
     }
-    // Otherwise drop — utm_term is not a known intern slot and not a
-    // plausible GitHub login (e.g. free-form text, spam, typo).
   }
 
-  // Process contributor_affiliate rows (utm_term IS the GitHub login directly).
-  // Validate with the GitHub-login pattern so a stray `(not set)` / typo /
-  // garbage term doesn't create a phantom leaderboard row.
-  for (const row of contributorRes.data.rows || []) {
+  for (const row of contributorRows) {
     const utmTerm = row.dimensionValues?.[0]?.value;
     const sessions = parseInt(row.metricValues?.[0]?.value || "0");
     const users = parseInt(row.metricValues?.[1]?.value || "0");
@@ -208,7 +307,7 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
     mergeEntry(utmTerm, utmTerm, sessions, users);
   }
 
-  // Fill in zeros for interns with no clicks (use lowercase key to match mergeEntry)
+  // Fill in zeros for interns with no clicks
   for (const [login, term] of Object.entries(INTERN_MAP)) {
     const key = login.toLowerCase();
     if (!result[key]) {
@@ -218,6 +317,8 @@ async function fetchAffiliateClicks(): Promise<Record<string, AffiliateData>> {
 
   return result;
 }
+
+// ── Handler ───────────────────────────────────────────────────────────
 
 export default async (req: Request) => {
   const origin = req.headers.get("origin");
@@ -235,7 +336,6 @@ export default async (req: Request) => {
   }
 
   try {
-    // Check cache
     if (cachedResult && Date.now() - cachedResult.fetchedAt < CACHE_TTL_MS) {
       return new Response(JSON.stringify(cachedResult.data), {
         status: 200,
@@ -249,7 +349,6 @@ export default async (req: Request) => {
     return new Response(JSON.stringify(data), { status: 200, headers });
   } catch (err) {
     console.error("Failed to fetch affiliate clicks:", err);
-    // Return cached data on error if available
     if (cachedResult) {
       return new Response(JSON.stringify(cachedResult.data), {
         status: 200,
