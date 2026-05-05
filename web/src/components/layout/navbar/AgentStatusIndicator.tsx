@@ -320,6 +320,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
   return (
     <div className="relative" ref={agentRef}>
       <button
+        data-testid="navbar-agent-status-btn"
         onClick={() => setShowAgentStatus(!showAgentStatus)}
         className={cn(
           'flex items-center justify-center gap-2 px-3 py-1.5 h-9 rounded-lg whitespace-nowrap',
@@ -340,6 +341,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
       {showAgentStatus && (
         <div
           ref={dropdownRef}
+          data-testid="navbar-agent-status-dropdown"
           className="absolute top-full right-0 mt-2 w-96 bg-card border border-border rounded-lg shadow-xl z-toast"
         >
           {/* Demo Mode Toggle */}

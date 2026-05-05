@@ -238,6 +238,7 @@ export function AlertBadge() {
       <Button
         variant="ghost"
         size="sm"
+        data-testid="navbar-alerts-btn"
         onClick={toggle}
         className={`relative p-2 w-9 h-9 ${
           stats.critical > 0 ? 'text-red-400' : stats.warning > 0 ? 'text-orange-400' : ''
@@ -268,6 +269,7 @@ export function AlertBadge() {
           )}
           <div
             ref={dropdownRef}
+            data-testid="navbar-alerts-dropdown"
             role="dialog"
             aria-label="Active Alerts"
             aria-modal={isMobile}

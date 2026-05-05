@@ -129,6 +129,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     <div className="relative" ref={dropdownRef}>
       {/* Trigger button */}
       <button
+        data-testid="navbar-profile-btn"
         onClick={toggleDropdown}
         aria-expanded={isOpen}
         aria-haspopup="true"
@@ -154,7 +155,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
 
       {/* Dropdown menu */}
       {isOpen && (
-        <div id="profile-dropdown-menu" role="menu" className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-5rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden overflow-y-auto z-toast">
+        <div id="profile-dropdown-menu" data-testid="navbar-profile-dropdown" role="menu" className="absolute right-0 top-full mt-2 w-72 max-w-[calc(100vw-1rem)] max-h-[calc(100vh-5rem)] bg-card border border-border rounded-xl shadow-2xl overflow-hidden overflow-y-auto z-toast">
           {/* Header with avatar and name */}
           <div className="p-4 bg-secondary border-b border-border">
             <div className="flex items-center gap-3">
