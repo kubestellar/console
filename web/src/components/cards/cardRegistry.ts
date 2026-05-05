@@ -5,7 +5,7 @@
  *   src/components/dashboard/AddCardModal.tsx → CARD_CATALOG
  * See src/config/cards/index.ts for the full registration checklist.
  */
-import { createElement, ComponentType } from 'react'
+import { createElement } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { isDynamicCardRegistered } from '../../lib/dynamic-cards/dynamicCardRegistry'
 import { getCardConfig } from '../../config/cards'
@@ -794,10 +794,16 @@ const RAW_CARD_COMPONENTS: Record<string, CardComponent> = {
 // Lazy-load UnifiedCard — keeps it out of the main bundle for fast page load
 const LazyUnifiedCard = safeLazy(() => import('../../lib/unified/card/UnifiedCard'), 'UnifiedCard')
 
-/** Supported unified content types that the adapter can render */
-const _UNIFIED_CONTENT_TYPES = ['list', 'table', 'chart', 'status-grid']
+const RAW_CARD_COMPONENTS: Record<string, CardComponent> = Object.assign({ dynamic_card: DynamicCard }, ...REGISTRY_CATEGORIES.map(({ components }) => components))
+const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = Object.assign({ dynamic_card: () => import('./DynamicCard') }, ...REGISTRY_CATEGORIES.map(({ preloaders }) => preloaders))
+export const DEMO_DATA_CARDS = new Set(REGISTRY_CATEGORIES.flatMap(({ demoDataCards = [] }) => [...demoDataCards]))
+export const LIVE_DATA_CARDS = new Set(REGISTRY_CATEGORIES.flatMap(({ liveDataCards = [] }) => [...liveDataCards]))
+LIVE_DATA_CARDS.add('node_status')
+export const CARD_DEFAULT_WIDTHS: Record<string, number> = Object.assign({}, ...REGISTRY_CATEGORIES.map(({ defaultWidths }) => defaultWidths))
+CARD_DEFAULT_WIDTHS.node_status = 6
+const CARD_DEMO_STARTUP_PRELOADERS = REGISTRY_CATEGORIES.flatMap(({ demoStartupPreloaders = [] }) => [...demoStartupPreloaders])
 
-/** Build a lazy adapter component for a unified card type */
+const _UNIFIED_CONTENT_TYPES = ['list', 'table', 'chart', 'status-grid']
 function _makeUnifiedEntry(cardType: string): CardComponent | undefined {
   const config = getCardConfig(cardType)
   if (!config?.dataSource || !config?.content) return undefined
@@ -807,134 +813,17 @@ function _makeUnifiedEntry(cardType: string): CardComponent | undefined {
   return Adapter
 }
 
-// Statically register unified-only cards (no legacy component) so they render
-// without a Proxy and participate in normal lazy-loading like every other card.
 const _UNIFIED_ONLY_TYPES = [
-  'node_status', 'statefulset_status', 'daemonset_status', 'job_status',
-  'cronjob_status', 'replicaset_status', 'hpa_status', 'configmap_status',
-  'secret_status', 'pv_status', 'ingress_status', 'network_policy_status',
-  'namespace_status', 'resource_quota_status', 'limit_range_status',
-  'service_account_status', 'role_status', 'role_binding_status',
-  'operator_subscription_status',
+  'node_status', 'statefulset_status', 'daemonset_status', 'job_status', 'cronjob_status', 'replicaset_status', 'hpa_status',
+  'configmap_status', 'secret_status', 'pv_status', 'ingress_status', 'network_policy_status', 'namespace_status',
+  'resource_quota_status', 'limit_range_status', 'service_account_status', 'role_status', 'role_binding_status', 'operator_subscription_status',
 ] as const
-
 for (const cardType of _UNIFIED_ONLY_TYPES) {
   const adapter = _makeUnifiedEntry(cardType)
-  if (adapter) {
-    RAW_CARD_COMPONENTS[cardType] = adapter
-  }
+  if (adapter) RAW_CARD_COMPONENTS[cardType] = adapter
 }
 
 export const CARD_COMPONENTS = RAW_CARD_COMPONENTS
-
-/**
- * Cards that ALWAYS use demo/mock data (no live data source exists).
- *
- * IMPORTANT: When adding live data support to a card, you MUST:
- * 1. Remove the card type from this set
- * 2. Have the card call useReportCardDataState({ isDemoData: shouldUseDemoData, ... })
- *    to dynamically report its demo state based on actual data source
- *
- * Cards in this set get isDemoData={true} passed as a prop to CardWrapper,
- * which OVERRIDES any child-reported state. This is why cards with live data
- * must be removed from this set.
- *
- * For cards that use StackContext or other dynamic data sources, use
- * useCardDemoState({ requires: 'stack' | 'agent' | 'backend' }) to determine
- * if demo data should be used, then report via useReportCardDataState.
- */
-export const DEMO_DATA_CARDS = new Set([
-  // MCS cards - demo until MCS is installed
-  'service_exports',
-  'service_imports',
-  // Gateway API cards - demo until Gateway API is installed
-  'gateway_status',
-  // Note: service_topology removed — now reports isDemoData via useTopology hook
-  // Note: buildpacks_status removed — reports isDemoData via useBuildpackImages hook
-
-  // Workload Deployment - uses real data when backend is running, falls back to demo internally
-  // NOT in DEMO_DATA_CARDS because the static badge can't detect runtime data source
-  // Note: argocd_applications removed — now reports isDemoData via useArgoCDApplications hook
-  // Note: argocd_health removed — now reports isDemoData via useArgoCDHealth hook
-  // Note: argocd_sync_status removed — reports isDemoData via useArgoCDSyncStatus hook
-  // GitOps cards - use mock data
-  // Note: kustomization_status removed — reports isDemoData via demoMode check
-  // Helm cards - all now use real data via helm CLI backend
-  // Namespace cards - namespace_quotas, namespace_rbac, resource_capacity, and helm_release_status now have real data support
-  // Cost management integrations - demo until connected
-  'opencost_overview',
-  'kubecost_overview',
-  // Note: kyverno_policies removed — now reports isDemoData via useKyverno hook
-  // Note: trivy_scan removed — now reports isDemoData via useTrivy hook
-  // Note: kubescape_scan removed — now reports isDemoData via useKubescape hook
-  // Note: policy_violations removed — now reports isDemoData via useKyverno hook
-  // Note: compliance_score removed — now reports isDemoData via useKubescape/useKyverno hooks
-  // Note: iso27001_audit removed — now reports isDemoData via useCachedISO27001Audit hook
-  // Security posture cards - demo until tools are detected
-  'falco_alerts',
-  // Data compliance cards - demo until tools are detected
-  // Note: cert_manager now uses real data via useCertManager hook
-  'vault_secrets',
-  'external_secrets',
-  // Workload detection cards - demo until tools are detected
-  // Note: prow_jobs, prow_status, prow_history now use real data via useProw hook
-  // Note: llm_inference, llm_models now use real data via useLLMd hook
-  'ml_jobs',
-  'ml_notebooks',
-  // Note: LLM-d cards (llmd_flow, kvcache_monitor, epp_routing, pd_disaggregation, llmd_ai_insights)
-  // removed - they now use StackContext for live data and report isDemoData via useReportCardDataState
-  // LLM-d Configurator - demo showcase of tuning options, not a complete YAML generator
-  'llmd_configurator',
-  // Note: nightly_e2e_status NOT here — dynamically reports isDemoData via useNightlyE2EData hook
-  // Provider health card uses real data from /settings/keys + useClusters()
-  // Only shows demo data when getDemoMode() is true (handled inside the hook)
-  // Cluster admin cards - demo until backend endpoints exist
-  'admission_webhooks',
-  // Note: etcd_status removed — reports isDemoData via useCachedPods isDemoFallback
-  'rbac_explorer',
-  // Kagenti cards - demo until kagenti-operator is installed on clusters
-  'kagenti_status',
-  'kagenti_agent_fleet',
-  'kagenti_build_pipeline',
-  'kagenti_tool_registry',
-  'kagenti_agent_discovery',
-  'kagenti_security',
-  'kagenti_topology',
-  'kagenti_security_posture',
-  // Kagent CRD cards - demo until kagent CRDs are installed on clusters
-  'kagent_status',
-  'kagent_agent_fleet',
-  'kagent_tool_registry',
-  'kagent_model_providers',
-  'kagent_agent_discovery',
-  'kagent_security',
-  'kagent_topology',
-  // Crossplane cards - demo until Crossplane is installed
-  'crossplane_managed_resources',
-  // KubeVela - demo until KubeVela is installed
-  'kubevela_status',
-  'vcluster_status',
-  // Knative serverless - demo until Knative is installed
-  'knative_status',
-  // KServe model serving - demo until KServe is installed
-  'kserve_status',
-  // Fluid dataset caching - demo until Fluid is installed
-  'fluid_status',
-  // CubeFS distributed file system - demo until CubeFS is installed
-  'cubefs_status',
-  // Harbor registry - demo until Harbor is installed
-  'harbor_status',
-  // Deployment Risk Score — demo when no live Argo/Kyverno/pod data (#9827)
-  'deployment_risk_score',
-])
-
-/**
- * Cards that should never show demo indicators (badge/yellow border).
- * Arcade/game cards don't have "demo data" — they're always just games.
- */
-// Re-export the imported DEMO_EXEMPT_CARDS for backward compatibility.
-// (Imported at the top of this file from cardMetadata.ts so the descriptor
-// registration can mutate the same Set instance.)
 export { DEMO_EXEMPT_CARDS }
 
 /**
@@ -1267,55 +1156,11 @@ const CARD_CHUNK_PRELOADERS: Record<string, () => Promise<unknown>> = {
  * Repeated calls with the same card types are no-ops (browser caches modules).
  */
 export function prefetchCardChunks(cardTypes: string[]): void {
-  for (const type of cardTypes) {
-    CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => { })
-  }
+  for (const type of cardTypes) CARD_CHUNK_PRELOADERS[type]?.()?.catch(() => {})
 }
 
-/**
- * Prefetch component chunks for demo-only cards at startup.
- * These are the shared modules behind DEMO_DATA_CARDS entries.
- * Per-dashboard prefetching (via prefetchCardChunks) handles the rest.
- */
 export function prefetchDemoCardChunks(): void {
-  // Use direct imports (not CARD_CHUNK_PRELOADERS) for the initial startup batch
-  // to ensure fast, deduped chunk loading without flooding the dev server
-  const startupChunks = [
-    () => import('./ServiceExports'),
-    () => import('./ServiceImports'),
-    () => import('./GatewayStatus'),
-    () => import('./ServiceTopology'),
-    () => import('./ArgoCDApplications'),
-    () => import('./ArgoCDHealth'),
-    () => import('./ArgoCDSyncStatus'),
-    () => import('./KustomizationStatus'),
-    () => import('./OverlayComparison'),
-    () => import('./OpenCostOverview'),
-    () => import('./KubecostOverview'),
-    () => import('./KyvernoPolicies'),
-    () => import('./ComplianceCards'),
-    () => import('./DataComplianceCards'),
-    () => import('./workload-detection/MLJobs'),
-    () => import('./workload-detection/MLNotebooks'),
-    () => import('./llmd'),  // Barrel import loads all 7 LLM-d cards at once
-    () => import('./KagentiStatusCard'),
-    () => import('./kagenti/KagentiAgentFleet'),
-    () => import('./kagenti/KagentiBuildPipeline'),
-    () => import('./kagenti/KagentiToolRegistry'),
-    () => import('./kagenti/KagentiAgentDiscovery'),
-    () => import('./kagenti/KagentiSecurity'),
-    () => import('./kagenti/KagentiTopology'),
-    () => import('./KagentStatusCard'),
-    () => import('./kagent/KagentAgentFleet'),
-    () => import('./kagent/KagentToolRegistry'),
-    () => import('./kagent/KagentModelProviders'),
-    () => import('./kagent/KagentAgentDiscovery'),
-    () => import('./kagent/KagentSecurity'),
-    () => import('./kagent/KagentTopology'),
-    () => import('./crossplane-status/CrossplaneManagedResources'),
-    () => import('./VClusterStatus'),
-  ]
-  startupChunks.forEach(load => load().catch(() => { }))
+  CARD_DEMO_STARTUP_PRELOADERS.forEach(load => load().catch(() => {}))
 }
 
 /**
@@ -1809,60 +1654,30 @@ registerAllDescriptorCards({
   demoExemptCards: DEMO_EXEMPT_CARDS,
 })
 
-// Default width for cards not in the map
 const DEFAULT_CARD_WIDTH = 4
-
-/**
- * Get the default width for a card type.
- * Returns the configured default or 4 columns if not specified.
- */
 export function getDefaultCardWidth(cardType: string): number {
   return CARD_DEFAULT_WIDTHS[cardType] ?? DEFAULT_CARD_WIDTH
 }
 
-/**
- * Get a card component by type.
- * Falls back to the DynamicCard meta-component for dynamically registered types.
- * Returns undefined if the card type is not registered anywhere.
- */
 export function getCardComponent(cardType: string): CardComponent | undefined {
-  // Check static registry first
   const staticComponent = CARD_COMPONENTS[cardType]
   if (staticComponent) return staticComponent
-
-  // Check dynamic registry — render via DynamicCard meta-component
-  if (isDynamicCardRegistered(cardType)) {
-    return CARD_COMPONENTS['dynamic_card']
-  }
-
-  // Log a warning so missing/misspelled card types are surfaced in the console
-  // instead of silently disappearing (#4932).
+  if (isDynamicCardRegistered(cardType)) return CARD_COMPONENTS.dynamic_card
   console.warn(
     `[cardRegistry] Unknown card type "${cardType}" — no component registered. ` +
     'Check for typos in the dashboard config or register the card in cardRegistry.ts.',
   )
-
   return undefined
 }
 
-/**
- * Check if a card type is registered (static or dynamic).
- */
 export function isCardTypeRegistered(cardType: string): boolean {
   return cardType in CARD_COMPONENTS || isDynamicCardRegistered(cardType)
 }
 
-/**
- * Register a dynamic card type at runtime.
- * This adds the type to the default widths map so it gets a proper grid size.
- */
 export function registerDynamicCardType(cardType: string, width = 6): void {
   CARD_DEFAULT_WIDTHS[cardType] = width
 }
 
-/**
- * Get all registered card types.
- */
 export function getRegisteredCardTypes(): string[] {
   return Object.keys(CARD_COMPONENTS)
 }
