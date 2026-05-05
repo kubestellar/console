@@ -32,6 +32,7 @@ export function useApiKeyCheck() {
   const { showToast } = useToast()
   const navigate = useNavigate()
   const [showKeyPrompt, setShowKeyPrompt] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string>('')
   const { agents, selectedAgent } = useMissions()
 
   // Check if any agent is available (bob, claude CLI, or API-based)
@@ -121,6 +122,7 @@ export function useApiKeyCheck() {
       }
 
       if (message) {
+        setErrorMessage(message)
         showToast(message, 'error')
       }
       setShowKeyPrompt(true)
@@ -146,18 +148,22 @@ export function useApiKeyCheck() {
     dismissPrompt,
     hasApiKey,
     hasAvailableAgent,
-    selectedAgent }
+    selectedAgent,
+    errorMessage,
+  }
 }
 
 // Reusable AI Agent Prompt Modal
-export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings }: {
+export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings, errorMessage, fallbackContent }: {
   isOpen: boolean
   onDismiss: () => void
   onGoToSettings: () => void
+  errorMessage?: string
+  fallbackContent?: React.ReactNode
 }) {
   useEffect(() => {
     if (!isOpen) return
-    emitError('config', 'No AI agent available. Please configure an API key')
+    emitError('config', errorMessage || 'No AI agent available. Please configure an API key')
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
@@ -166,29 +172,36 @@ export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings }: {
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onDismiss])
+  }, [isOpen, onDismiss, errorMessage])
 
   if (!isOpen) return null
 
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-xs rounded-lg">
-      <div className="bg-card border border-border rounded-lg p-4 m-4 shadow-xl max-w-sm">
+      <div className="bg-card border border-border rounded-lg p-4 m-4 shadow-xl max-w-md">
         <div className="flex items-center gap-2 mb-3">
           <div className="p-1.5 rounded bg-purple-500/20">
             <Bot className="w-4 h-4 text-purple-400" />
           </div>
           <h3 className="text-sm font-medium text-foreground">AI Agent Required</h3>
         </div>
-        <p className="text-xs text-muted-foreground mb-4">
-          No AI agent available. Select an agent from the top navbar (bob, claude, or configure an API key) to use AI-powered diagnostics.
-        </p>
+        <div className="text-xs text-muted-foreground mb-4 space-y-2">
+          <p>
+            {errorMessage || 'No AI agent available. Configure an API key in Settings to use AI-powered diagnostics.'}
+          </p>
+          {fallbackContent && (
+            <div className="mt-3 p-2 bg-secondary/50 rounded border border-border">
+              {fallbackContent}
+            </div>
+          )}
+        </div>
         <div className="flex gap-2">
           <button
             onClick={onGoToSettings}
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500 text-white text-xs font-medium hover:bg-purple-600 transition-colors"
           >
             <Bot className="w-3.5 h-3.5" />
-            Select Agent
+            Go to Settings
           </button>
           <button
             onClick={onDismiss}

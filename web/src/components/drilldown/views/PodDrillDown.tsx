@@ -130,7 +130,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   // #5945 — Track AI analysis errors so failures are surfaced in the UI instead of silently swallowed
   const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null)
   const { showToast } = useToast()
-  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt, errorMessage } = useApiKeyCheck()
   const [labels, setLabels] = useState<Record<string, string> | null>(cache.labels || null)
   const [annotations, setAnnotations] = useState<Record<string, string> | null>(cache.annotations || null)
   const [showAllLabels, setShowAllLabels] = useState(false)
@@ -1818,6 +1818,17 @@ Please:
         isOpen={showKeyPrompt}
         onDismiss={dismissPrompt}
         onGoToSettings={goToSettings}
+        errorMessage={errorMessage}
+        fallbackContent={
+          eventsOutput && !eventsOutput.includes('No resources found') ? (
+            <div>
+              <p className="text-xs font-medium text-foreground mb-1.5">Pod Events (non-AI troubleshooting):</p>
+              <pre className="text-[10px] text-muted-foreground overflow-x-auto whitespace-pre-wrap max-h-32 overflow-y-auto">
+                {eventsOutput.split('\n').slice(0, 10).join('\n')}
+              </pre>
+            </div>
+          ) : null
+        }
       />
     </div>
   )
