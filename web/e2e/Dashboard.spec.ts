@@ -799,6 +799,8 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     // Seed localStorage BEFORE any page script runs (#9096, #12088, #12089).
     // Disable demo mode so the app fetches from the mocked API routes
     // above instead of returning built-in demo data (12 clusters).
+    // Uses the shared storage helper so addInitScript does not accumulate
+    // across tests and IndexedDB cleanup finishes before rehydration.
     await setupTestStorage(page, { demoMode: false, agentSetupDismissed: true })
   })
 

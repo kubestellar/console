@@ -75,11 +75,9 @@ test.describe('Cost Deep Tests (/cost)', () => {
 
     test('shows stats overview', async ({ page }) => {
       // DashboardPage renders stats blocks; look for the "est. monthly" sublabel
+      // #12090 — Wait for data hydration instead of skipping assertion
       const statsArea = page.locator('text=' + STAT_TOTAL_COST_SUBLABEL).first()
-      const isVisible = await statsArea.isVisible().catch(() => false)
-      if (isVisible) {
-        await expect(statsArea).toBeVisible()
-      }
+      await expect(statsArea).toBeVisible({ timeout: 30000 })
     })
   })
 
@@ -89,35 +87,29 @@ test.describe('Cost Deep Tests (/cost)', () => {
 
   test.describe('Stats', () => {
     test('shows estimated monthly cost stat', async ({ page }) => {
+      // #12090 — Wait for data hydration instead of skipping assertion
       const stat = page.locator('text=' + STAT_TOTAL_COST_SUBLABEL).first()
-      const isVisible = await stat.isVisible().catch(() => false)
-      if (isVisible) {
-        await expect(stat).toBeVisible()
-        // The value above the sublabel should contain a dollar sign.
-        // Walk up multiple levels to find the stat block container that
-        // includes both the value and sublabel elements.
-        const parentBlock = stat.locator('xpath=ancestor::*[contains(., "$")]').first()
-        const blockText = await parentBlock.textContent()
-        expect(blockText).toContain(DOLLAR_PREFIX)
-      }
+      await expect(stat).toBeVisible({ timeout: 30000 })
+      // The value above the sublabel should contain a dollar sign.
+      // Walk up multiple levels to find the stat block container that
+      // includes both the value and sublabel elements.
+      const parentBlock = stat.locator('xpath=ancestor::*[contains(., "$")]').first()
+      const blockText = await parentBlock.textContent()
+      expect(blockText).toContain(DOLLAR_PREFIX)
     })
 
     test('shows CPU cost stat', async ({ page }) => {
       // CPU stat sublabel contains "cores" (e.g. "24 cores")
+      // #12090 — Wait for data hydration instead of skipping assertion
       const stat = page.locator('text=' + STAT_CPU_COST_SUBLABEL).first()
-      const isVisible = await stat.isVisible().catch(() => false)
-      if (isVisible) {
-        await expect(stat).toBeVisible()
-      }
+      await expect(stat).toBeVisible({ timeout: 30000 })
     })
 
     test('shows memory cost stat', async ({ page }) => {
       // Memory stat sublabel contains a memory unit like "GB" or "TB"
+      // #12090 — Wait for data hydration instead of skipping assertion
       const stat = page.locator('text=/\\d+.*(?:GB|TB|GiB|TiB)/').first()
-      const isVisible = await stat.isVisible().catch(() => false)
-      if (isVisible) {
-        await expect(stat).toBeVisible()
-      }
+      await expect(stat).toBeVisible({ timeout: 30000 })
     })
 
     test('shows storage cost stat', async ({ page }) => {
@@ -160,16 +152,15 @@ test.describe('Cost Deep Tests (/cost)', () => {
 
   test.describe('Refresh', () => {
     test('refresh button is clickable', async ({ page }) => {
+      // #12090 — Wait for data hydration instead of skipping assertion
       const refreshBtn = page.getByTestId('dashboard-refresh-button')
-      const isVisible = await refreshBtn.isVisible().catch(() => false)
-      if (isVisible) {
-        await expect(refreshBtn).toBeEnabled()
-        await refreshBtn.click()
-        // After clicking, the page should still show the header
-        await expect(page.getByTestId('dashboard-header')).toBeVisible({
-          timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
-        })
-      }
+      await expect(refreshBtn).toBeVisible({ timeout: 30000 })
+      await expect(refreshBtn).toBeEnabled()
+      await refreshBtn.click()
+      // After clicking, the page should still show the header
+      await expect(page.getByTestId('dashboard-header')).toBeVisible({
+        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+      })
     })
   })
 

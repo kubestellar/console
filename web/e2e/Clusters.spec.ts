@@ -92,9 +92,9 @@ async function setupClustersTest(page: Page) {
   })
 
   // Seed localStorage BEFORE any page script runs so the auth guard sees
-  // the token on first execution. Uses unified storage setup to prevent
-  // addInitScript accumulation and ensure IndexedDB cleanup completes
-  // before sessionStorage rehydration (#9096, #10828, #12088, #12089).
+  // the token on first execution. Uses unified storage setup to inject
+  // state via addInitScript and wait for IndexedDB cleanup before
+  // sessionStorage rehydration (#9096, #10828, #12088, #12089).
   await setupLiveMode(page)
 
   await page.goto('/clusters')

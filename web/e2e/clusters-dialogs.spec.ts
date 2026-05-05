@@ -135,7 +135,9 @@ async function setupClustersDialogTest(page: Page) {
     }
   })
 
-  // Seed localStorage before page scripts run (#12088, #12089)
+  // Seed localStorage before page scripts run. Uses the shared helper so
+  // addInitScript does not accumulate and IndexedDB cleanup completes
+  // before sessionStorage rehydration (#12088, #12089).
   await setupLiveMode(page)
 
   await page.goto('/clusters')
