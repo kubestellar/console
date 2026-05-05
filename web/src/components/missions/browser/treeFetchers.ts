@@ -26,6 +26,9 @@ const KUBARA_CHART_NAMES = [
 /** Files surfaced for each Kubara chart node — Chart.yaml and values.yaml are
  *  loaded lazily as files; templates is a (synthetic) directory placeholder. */
 const KUBARA_CHART_FILES = ['Chart.yaml', 'values.yaml', 'templates'] as const
+const KUBARA_NODE_SEGMENT_DELIMITER = '/'
+const KUBARA_CHART_NODE_SEGMENT_COUNT = 2
+const KUBARA_SAMPLE_FILE_NODE_SEGMENT_COUNT = 3
 
 const KUBARA_DEFAULT_REPO_OWNER = 'kubara-io'
 const KUBARA_DEFAULT_REPO_NAME = 'kubara'
@@ -95,6 +98,41 @@ function splitOwnerRepo(node: TreeNode): { owner: string; repo: string; subPath:
   }
 }
 
+function isKubaraChartNode(node: TreeNode): boolean {
+  return node.id.startsWith(`kubara${KUBARA_NODE_SEGMENT_DELIMITER}`)
+    && node.id.split(KUBARA_NODE_SEGMENT_DELIMITER).length === KUBARA_CHART_NODE_SEGMENT_COUNT
+}
+
+function shouldUseKubaraSampleContent(node: TreeNode): boolean {
+  return node.id.startsWith(`kubara${KUBARA_NODE_SEGMENT_DELIMITER}`)
+    && node.id.split(KUBARA_NODE_SEGMENT_DELIMITER).length === KUBARA_SAMPLE_FILE_NODE_SEGMENT_COUNT
+    && (node.name === 'Chart.yaml' || node.name === 'values.yaml')
+}
+
+async function fetchGitHubContents(node: TreeNode): Promise<GitHubEntry[]> {
+  const { owner, repo, subPath } = splitOwnerRepo(node)
+  const apiPath = subPath
+    ? `/api/github/repos/${owner}/${repo}/contents/${subPath}`
+    : `/api/github/repos/${owner}/${repo}/contents/`
+  const { data: ghEntries } = await api.get<GitHubEntry[]>(apiPath)
+  return ghEntries || []
+}
+
+function mapGitHubTreeEntry(node: TreeNode, entry: GitHubEntry): TreeNode {
+  const { owner, repo } = splitOwnerRepo(node)
+  return {
+    id: `${node.id}/${entry.name}`,
+    name: entry.name,
+    path: node.repoOwner && node.repoName ? entry.path : `${owner}/${repo}/${entry.path}`,
+    type: (entry.type === 'dir' ? 'directory' : 'file') as TreeNode['type'],
+    source: 'github' as const,
+    repoOwner: node.repoOwner,
+    repoName: node.repoName,
+    loaded: entry.type !== 'dir',
+    description: entry.size ? `${entry.size} bytes` : undefined,
+  }
+}
+
 // ============================================================================
 // Tree expansion — fetch children for a node
 // ============================================================================
@@ -158,7 +196,7 @@ export async function fetchTreeChildren(node: TreeNode): Promise<TreeNode[]> {
       }))
     }
 
-    if (nodeId.startsWith('kubara/')) {
+    if (isKubaraChartNode(node)) {
       const cfg = await getKubaraConfig()
       return KUBARA_CHART_FILES.map(fname => ({
         id: `${nodeId}/${fname}`,
@@ -172,21 +210,19 @@ export async function fetchTreeChildren(node: TreeNode): Promise<TreeNode[]> {
       }))
     }
 
+    if (nodeId.startsWith(`kubara${KUBARA_NODE_SEGMENT_DELIMITER}`)) {
+      const ghEntries = await fetchGitHubContents(node)
+      return ghEntries
+        .filter(e => e.path !== node.path)
+        .filter(e => e.type === 'dir' || isMissionFile(e.name))
+        .map(e => mapGitHubTreeEntry(node, e))
+    }
+
     // Specific repo node — list repo contents via GitHub Contents API
-    const repoPath = node.path
-    const { data: ghEntries } = await api.get<GitHubEntry[]>(
-      `/api/github/repos/${repoPath}/contents`
-    )
-    return (ghEntries || [])
+    const ghEntries = await fetchGitHubContents(node)
+    return ghEntries
       .filter(e => e.type === 'dir' || isMissionFile(e.name))
-      .map(e => ({
-        id: `${nodeId}/${e.name}`,
-        name: e.name,
-        path: `${repoPath.split('/').slice(0, 2).join('/')}/${e.path}`,
-        type: (e.type === 'dir' ? 'directory' : 'file') as TreeNode['type'],
-        source: 'github' as const,
-        loaded: e.type !== 'dir',
-        description: e.size ? `${e.size} bytes` : undefined }))
+      .map(e => mapGitHubTreeEntry(node, e))
   }
 
   return []
@@ -274,20 +310,17 @@ export async function fetchNodeFileContent(node: TreeNode): Promise<string | nul
   }
 
   if (node.source === 'github') {
-    // Serve canned sample content for kubara/* nodes instead of hitting
-    // the GitHub Contents API — avoids per-file rate-limit burn when a
-    // user expands a chart tree.
-    if (node.id.startsWith('kubara/')) {
+    // Serve canned sample content only for the synthetic chart-root files.
+    // Nested Kubara files (for example templates/*.yaml) must come from the
+    // real GitHub contents API so folder expansion does not recurse forever.
+    if (shouldUseKubaraSampleContent(node)) {
       return getKubaraSampleContent(node)
     }
 
     // Fetch raw file content via GitHub Contents API proxy
-    const parts = node.path.split('/')
-    const owner = parts[0]
-    const repo = parts[1]
-    const filePath = parts.slice(2).join('/')
+    const { owner, repo, subPath } = splitOwnerRepo(node)
     const { data: ghFile } = await api.get<GitHubFile>(
-      `/api/github/repos/${owner}/${repo}/contents/${filePath}`
+      `/api/github/repos/${owner}/${repo}/contents/${subPath}`
     )
     // GitHub returns base64-encoded content for files
     if (ghFile.content && ghFile.encoding === 'base64') {
