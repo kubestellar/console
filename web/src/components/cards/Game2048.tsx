@@ -9,6 +9,16 @@ import { useGameKeys } from '../../hooks/useGameKeys'
 type Grid = (number | null)[][]
 
 const GRID_SIZE = 4
+const BEST_SCORE_STORAGE_KEY = 'kube2048-best'
+
+function getStoredBestScore(): number {
+  try {
+    const parsedBestScore = parseInt(localStorage.getItem(BEST_SCORE_STORAGE_KEY) || '0', 10)
+    return Number.isFinite(parsedBestScore) && parsedBestScore >= 0 ? parsedBestScore : 0
+  } catch {
+    return 0
+  }
+}
 
 // Tile colors based on value - Kubernetes themed
 const TILE_COLORS: Record<number, { bg: string; text: string }> = {
@@ -180,13 +190,7 @@ export function Game2048(_props: CardComponentProps) {
   const gameContainerRef = useRef<HTMLDivElement>(null)
   const [grid, setGrid] = useState<Grid>(initGame)
   const [score, setScore] = useState(0)
-  const [bestScore, setBestScore] = useState(() => {
-    try {
-      return parseInt(localStorage.getItem('kube2048-best') || '0')
-    } catch {
-      return 0
-    }
-  })
+  const [bestScore, setBestScore] = useState(getStoredBestScore)
   const [gameOver, setGameOver] = useState(false)
   const [won, setWon] = useState(false)
   const [keepPlaying, setKeepPlaying] = useState(false)
@@ -206,7 +210,7 @@ export function Game2048(_props: CardComponentProps) {
       if (newScore > bestScore) {
         setBestScore(newScore)
         try {
-          localStorage.setItem('kube2048-best', String(newScore))
+          localStorage.setItem(BEST_SCORE_STORAGE_KEY, String(newScore))
         } catch {
           // Ignore storage errors (e.g. private browsing, quota exceeded)
         }
