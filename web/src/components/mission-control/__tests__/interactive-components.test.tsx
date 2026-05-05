@@ -1,12 +1,13 @@
 /** @vitest-environment jsdom */
+import type { HTMLAttributes, ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AssignmentMatrix } from '../AssignmentMatrix'
 import { ClusterAssignmentPanel } from '../ClusterAssignmentPanel'
 import { LaunchSequence } from '../LaunchSequence'
 import { RequestApprovalModal } from '../RequestApprovalModal'
-import type { PayloadProject, MissionControlState } from '../types'
 import type { ClusterInfo } from '../../../hooks/mcp/types'
+import type { PayloadProject, MissionControlState } from '../types'
 
 // Mock hooks
 vi.mock('../../../hooks/mcp/clusters', () => ({
@@ -41,12 +42,15 @@ vi.mock('../../ui/Toast', () => ({
   useToast: vi.fn(() => ({ showToast: vi.fn() })),
 }))
 
+type MotionDivProps = HTMLAttributes<HTMLDivElement> & { children?: ReactNode }
+type ChildrenOnlyProps = { children?: ReactNode }
+
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: MotionDivProps) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  AnimatePresence: ({ children }: ChildrenOnlyProps) => <>{children}</>,
 }))
 
 // Mock useTranslation
@@ -58,7 +62,7 @@ vi.mock('react-i18next', () => ({
 
 // Mock ReactMarkdown
 vi.mock('react-markdown', () => ({
-  default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  default: ({ children }: ChildrenOnlyProps) => <div>{children}</div>,
 }))
 
 // Mock missionLoader
@@ -90,12 +94,17 @@ const mockState: MissionControlState = {
   aiStreaming: false,
 }
 
+const mockCluster: ClusterInfo = {
+  name: 'cluster-1',
+  context: 'cluster-1',
+}
+
 describe('AssignmentMatrix', () => {
   it('renders clusters as columns and projects as rows', () => {
     render(
       <AssignmentMatrix
         projects={[mockProject]}
-        clusters={[{ name: 'cluster-1' } as ClusterInfo]}
+        clusters={[mockCluster]}
         assignments={[]}
         onToggle={vi.fn()}
       />
@@ -110,7 +119,7 @@ describe('AssignmentMatrix', () => {
     render(
       <AssignmentMatrix
         projects={[mockProject]}
-        clusters={[{ name: 'cluster-1' } as ClusterInfo]}
+        clusters={[mockCluster]}
         assignments={[]}
         onToggle={onToggle}
       />
@@ -172,7 +181,19 @@ describe('LaunchSequence', () => {
     const onUpdateProgress = vi.fn()
     const stateWithAssignments: MissionControlState = {
       ...mockState,
-      assignments: [{ clusterName: 'cluster-1', projectNames: ['falco'], readiness: {}, warnings: [] }]
+      assignments: [{
+        clusterName: 'cluster-1',
+        clusterContext: 'cluster-1',
+        provider: 'kind',
+        projectNames: ['falco'],
+        readiness: {
+          cpuHeadroomPercent: 80,
+          memHeadroomPercent: 80,
+          storageHeadroomPercent: 80,
+          overallScore: 80,
+        },
+        warnings: [],
+      }],
     }
     
     render(

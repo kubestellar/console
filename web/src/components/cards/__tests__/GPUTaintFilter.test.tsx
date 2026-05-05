@@ -59,7 +59,7 @@ describe('collectDistinctTaints', () => {
   })
 
   it('tolerates null/undefined inputs safely', () => {
-    expect(collectDistinctTaints(undefined as unknown)).toEqual([])
+    expect(collectDistinctTaints(undefined as unknown as GPUNode[])).toEqual([])
   })
 })
 
