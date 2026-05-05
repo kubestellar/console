@@ -25,9 +25,16 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		defer writeMu.Unlock()
 		// #7429 — Set a write deadline so a hung client (TCP zero-window) cannot
 		// block this goroutine indefinitely, starving the pinger and leaking FDs.
-		conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+		if err := setWSWriteDeadline(conn, "[Chat] failed to set WebSocket write deadline",
+			"msgID", outMsg.ID, "type", outMsg.Type); err != nil {
+			closed.Store(true)
+			return
+		}
 		err := conn.WriteJSON(outMsg)
-		conn.SetWriteDeadline(time.Time{}) // clear deadline
+		if clearErr := clearWSWriteDeadline(conn, "[Chat] failed to clear WebSocket write deadline",
+			"msgID", outMsg.ID, "type", outMsg.Type); clearErr != nil {
+			closed.Store(true)
+		}
 		if err != nil {
 			slog.Error("[Chat] WebSocket write failed; marking connection closed",
 				"msgID", outMsg.ID, "type", outMsg.Type, "error", err)
@@ -435,16 +442,22 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 			slog.Warn("[Chat] SECURITY: rejected cancel from non-owning connection",
 				"sessionID", req.SessionID, "requester", conn.RemoteAddr())
 			writeMu.Lock()
-			conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-			_ = conn.WriteJSON(protocol.Message{
-				ID:   msg.ID,
-				Type: protocol.TypeError,
-				Payload: protocol.ErrorPayload{
-					Code:    "unauthorized_cancel",
-					Message: "You do not own this session",
-				},
-			})
-			conn.SetWriteDeadline(time.Time{})
+			if err := setWSWriteDeadline(conn, "[Chat] failed to set WebSocket write deadline",
+				"msgID", msg.ID, "type", protocol.TypeError); err == nil {
+				if err := conn.WriteJSON(protocol.Message{
+					ID:   msg.ID,
+					Type: protocol.TypeError,
+					Payload: protocol.ErrorPayload{
+						Code:    "unauthorized_cancel",
+						Message: "You do not own this session",
+					},
+				}); err != nil {
+					slog.Error("[Chat] failed to write unauthorized cancel error to WebSocket",
+						"sessionID", req.SessionID, "error", err)
+				}
+				_ = clearWSWriteDeadline(conn, "[Chat] failed to clear WebSocket write deadline",
+					"msgID", msg.ID, "type", protocol.TypeError)
+			}
 			writeMu.Unlock()
 			return
 		}
@@ -465,19 +478,22 @@ func (s *Server) handleCancelChat(conn *websocket.Conn, msg protocol.Message, wr
 	// fails to reach the client (typically because the connection died
 	// concurrently with the cancel request).
 	// #7429 — Write deadline prevents blocking on hung clients.
-	conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-	if err := conn.WriteJSON(protocol.Message{
-		ID:   msg.ID,
-		Type: protocol.TypeResult,
-		Payload: map[string]interface{}{
-			"cancelled": ok,
-			"sessionId": req.SessionID,
-		},
-	}); err != nil {
-		slog.Error("[Chat] failed to write cancel ack to WebSocket",
-			"sessionID", req.SessionID, "cancelled", ok, "error", err)
+	if err := setWSWriteDeadline(conn, "[Chat] failed to set WebSocket write deadline",
+		"msgID", msg.ID, "type", protocol.TypeResult); err == nil {
+		if err := conn.WriteJSON(protocol.Message{
+			ID:   msg.ID,
+			Type: protocol.TypeResult,
+			Payload: map[string]interface{}{
+				"cancelled": ok,
+				"sessionId": req.SessionID,
+			},
+		}); err != nil {
+			slog.Error("[Chat] failed to write cancel ack to WebSocket",
+				"sessionID", req.SessionID, "cancelled", ok, "error", err)
+		}
+		_ = clearWSWriteDeadline(conn, "[Chat] failed to clear WebSocket write deadline",
+			"msgID", msg.ID, "type", protocol.TypeResult)
 	}
-	conn.SetWriteDeadline(time.Time{}) // clear deadline
 	writeMu.Unlock()
 }
 

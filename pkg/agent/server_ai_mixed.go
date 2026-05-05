@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
@@ -24,9 +23,16 @@ func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, 
 		writeMu.Lock()
 		defer writeMu.Unlock()
 		// #7429 — Set a write deadline so a hung client cannot block indefinitely.
-		conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+		if err := setWSWriteDeadline(conn, "[Chat/MixedMode] failed to set WebSocket write deadline",
+			"msgID", outMsg.ID, "type", outMsg.Type); err != nil {
+			closed.Store(true)
+			return
+		}
 		err := conn.WriteJSON(outMsg)
-		conn.SetWriteDeadline(time.Time{}) // clear deadline
+		if clearErr := clearWSWriteDeadline(conn, "[Chat/MixedMode] failed to clear WebSocket write deadline",
+			"msgID", outMsg.ID, "type", outMsg.Type); clearErr != nil {
+			closed.Store(true)
+		}
 		if err != nil {
 			slog.Error("[Chat/MixedMode] WebSocket write failed; marking connection closed",
 				"msgID", outMsg.ID, "type", outMsg.Type, "error", err)

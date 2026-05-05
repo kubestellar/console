@@ -98,7 +98,7 @@ type PredictionWorker struct {
 	broadcast func(msgType string, payload interface{})
 
 	// Token tracking callback
-	trackTokens        func(usage *ProviderTokenUsage)
+	trackTokens func(usage *ProviderTokenUsage)
 	// loggedClusterError suppresses repeated "no kubeconfig" errors. This is
 	// read/written from runAnalysis, which can be invoked concurrently from
 	// the ticker goroutine and from on-demand Trigger() callers, so it must
@@ -188,9 +188,10 @@ func (w *PredictionWorker) GetPredictions() AIPredictionsResponse {
 // blocking all subsequent TriggerAnalysis calls until process restart.
 // Callers polling TriggerAnalysis as a lightweight RPC-style surface hung
 // indefinitely. Now we:
-//   1. recover the panic so the process survives,
-//   2. reset w.running in a defer that is guaranteed to run,
-//   3. log the panic with its stack for postmortem.
+//  1. recover the panic so the process survives,
+//  2. reset w.running in a defer that is guaranteed to run,
+//  3. log the panic with its stack for postmortem.
+//
 // This is the pragmatic subset of the watchdog pattern called out in the
 // issue — a full crash-detection channel for every in-flight worker RPC
 // requires a larger refactor. See the doc comment on Stop() for the full
@@ -840,18 +841,20 @@ func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 	var dead []*websocket.Conn
 	for _, c := range clients {
 		c.wsc.writeMu.Lock()
-		if err := c.conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout)); err != nil {
-			slog.Error("[Server] failed to set write deadline; marking client dead", "client", c.conn.RemoteAddr(), "error", err)
-			dead = append(dead, c.conn)
-			c.wsc.writeMu.Unlock()
-			continue
+		deadConn := false
+		if err := setWSWriteDeadline(c.conn, "[Server] failed to set WebSocket write deadline during broadcast"); err != nil {
+			deadConn = true
+		} else {
+			if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
+				slog.Error("[Server] error broadcasting to client", "client", c.conn.RemoteAddr(), "error", err)
+				deadConn = true
+			}
+			if err := clearWSWriteDeadline(c.conn, "[Server] failed to clear WebSocket write deadline during broadcast"); err != nil {
+				deadConn = true
+			}
 		}
-		if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
-			slog.Error("[Server] error broadcasting to client", "client", c.conn.RemoteAddr(), "error", err)
+		if deadConn {
 			dead = append(dead, c.conn)
-		}
-		if err := c.conn.SetWriteDeadline(time.Time{}); err != nil {
-			slog.Warn("[Server] failed to clear write deadline (conn likely closed)", "client", c.conn.RemoteAddr(), "error", err)
 		}
 		c.wsc.writeMu.Unlock()
 	}

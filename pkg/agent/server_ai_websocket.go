@@ -138,11 +138,20 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					return // connection already torn down
 				}
 				writeMu.Lock()
-				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+				if err := setWSWriteDeadline(conn, "[WS] failed to set WebSocket write deadline",
+					"frameType", websocket.PingMessage); err != nil {
+					writeMu.Unlock()
+					closed.Store(true)
+					return
+				}
 				err := conn.WriteMessage(websocket.PingMessage, nil)
-				conn.SetWriteDeadline(time.Time{}) // clear deadline for normal writes
+				if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",
+					"frameType", websocket.PingMessage); clearErr != nil {
+					closed.Store(true)
+				}
 				writeMu.Unlock()
 				if err != nil {
+					closed.Store(true)
 					return // connection dead
 				}
 			case <-stopPing:
@@ -187,13 +196,23 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						// can display an error state instead of spinning forever.
 						if !closed.Load() {
 							writeMu.Lock()
-							conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-							_ = conn.WriteJSON(protocol.Message{
-								ID:      m.ID,
-								Type:    protocol.TypeError,
-								Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during chat streaming"},
-							})
-							conn.SetWriteDeadline(time.Time{})
+							if err := setWSWriteDeadline(conn, "[WS] failed to set WebSocket write deadline",
+								"msgID", m.ID, "type", protocol.TypeError); err == nil {
+								if err := conn.WriteJSON(protocol.Message{
+									ID:      m.ID,
+									Type:    protocol.TypeError,
+									Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during chat streaming"},
+								}); err != nil {
+									slog.Error("[WS] failed to write panic response", "msgID", m.ID, "error", err)
+									closed.Store(true)
+								}
+								if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",
+									"msgID", m.ID, "type", protocol.TypeError); clearErr != nil {
+									closed.Store(true)
+								}
+							} else {
+								closed.Store(true)
+							}
 							writeMu.Unlock()
 						}
 					}
@@ -222,13 +241,23 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						// Notify the client about the panic so the UI can show an error
 						if !closed.Load() {
 							writeMu.Lock()
-							conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-							_ = conn.WriteJSON(protocol.Message{
-								ID:      m.ID,
-								Type:    protocol.TypeError,
-								Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during kubectl execution"},
-							})
-							conn.SetWriteDeadline(time.Time{})
+							if err := setWSWriteDeadline(conn, "[WS] failed to set WebSocket write deadline",
+								"msgID", m.ID, "type", protocol.TypeError); err == nil {
+								if err := conn.WriteJSON(protocol.Message{
+									ID:      m.ID,
+									Type:    protocol.TypeError,
+									Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error during kubectl execution"},
+								}); err != nil {
+									slog.Error("[WS] failed to write kubectl panic response", "msgID", m.ID, "error", err)
+									closed.Store(true)
+								}
+								if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",
+									"msgID", m.ID, "type", protocol.TypeError); clearErr != nil {
+									closed.Store(true)
+								}
+							} else {
+								closed.Store(true)
+							}
 							writeMu.Unlock()
 						}
 					}
@@ -239,11 +268,19 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 				writeMu.Lock()
 				defer writeMu.Unlock()
-				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+				if err := setWSWriteDeadline(conn, "[WS] failed to set WebSocket write deadline",
+					"msgID", m.ID, "type", response.Type); err != nil {
+					closed.Store(true)
+					return
+				}
 				if err := conn.WriteJSON(response); err != nil {
 					slog.Error("write error", "error", err)
+					closed.Store(true)
 				}
-				conn.SetWriteDeadline(time.Time{})
+				if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",
+					"msgID", m.ID, "type", response.Type); clearErr != nil {
+					closed.Store(true)
+				}
 			}(msg)
 		} else {
 			// Dispatch all remaining message types to a goroutine so the
@@ -266,13 +303,23 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 						slog.Error("[WS] recovered from panic in async handler", "panic", r, "msgType", m.Type)
 						if !closed.Load() {
 							writeMu.Lock()
-							conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
-							_ = conn.WriteJSON(protocol.Message{
-								ID:      m.ID,
-								Type:    protocol.TypeError,
-								Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error"},
-							})
-							conn.SetWriteDeadline(time.Time{})
+							if err := setWSWriteDeadline(conn, "[WS] failed to set WebSocket write deadline",
+								"msgID", m.ID, "type", protocol.TypeError); err == nil {
+								if err := conn.WriteJSON(protocol.Message{
+									ID:      m.ID,
+									Type:    protocol.TypeError,
+									Payload: protocol.ErrorPayload{Code: "panic", Message: "Internal server error"},
+								}); err != nil {
+									slog.Error("[WS] failed to write async panic response", "msgID", m.ID, "error", err)
+									closed.Store(true)
+								}
+								if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",
+									"msgID", m.ID, "type", protocol.TypeError); clearErr != nil {
+									closed.Store(true)
+								}
+							} else {
+								closed.Store(true)
+							}
 							writeMu.Unlock()
 						}
 					}
@@ -282,12 +329,21 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 				writeMu.Lock()
-				conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+				if err := setWSWriteDeadline(conn, "[WS] failed to set WebSocket write deadline",
+					"msgID", m.ID, "type", response.Type); err != nil {
+					writeMu.Unlock()
+					closed.Store(true)
+					return
+				}
 				err := conn.WriteJSON(response)
-				conn.SetWriteDeadline(time.Time{})
+				if clearErr := clearWSWriteDeadline(conn, "[WS] failed to clear WebSocket write deadline",
+					"msgID", m.ID, "type", response.Type); clearErr != nil {
+					closed.Store(true)
+				}
 				writeMu.Unlock()
 				if err != nil {
 					slog.Error("write error", "error", err)
+					closed.Store(true)
 				}
 			}(msg)
 		}
