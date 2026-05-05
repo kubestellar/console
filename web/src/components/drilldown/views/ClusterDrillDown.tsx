@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, XCircle } from 'lucide-react'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useDeployments, useServices, useEvents } from '../../../hooks/useMCP'
+import { useClusterHealth, useClusters, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useNamespaceStats, useDeployments, useServices, useEvents } from '../../../hooks/useMCP'
 import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
@@ -24,7 +24,14 @@ interface Props {
 export function ClusterDrillDown({ data }: Props) {
   const { t } = useTranslation()
   const clusterName = (data.cluster as string) || ''
+  const { deduplicatedClusters } = useClusters()
   const { drillToNamespace, drillToPod, drillToGPUNode, drillToEvents, drillToNode } = useDrillDownActions()
+  const clusterInfo = useMemo(
+    () => deduplicatedClusters.find(cluster => cluster.name === clusterName || cluster.aliases?.includes(clusterName)),
+    [clusterName, deduplicatedClusters],
+  )
+  const effectiveClusterName = clusterInfo?.name || clusterName
+  const clusterDisplayName = clusterInfo?.name || clusterName
 
   // Tree view state
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['cluster', 'nodes', 'namespaces']))
@@ -62,20 +69,21 @@ export function ClusterDrillDown({ data }: Props) {
     setLoadingTimedOut(false) // Reset on cluster change
     const timer = setTimeout(() => setLoadingTimedOut(true), LOADING_TIMEOUT_MS)
     return () => clearTimeout(timer)
-  }, [clusterName])
+  }, [effectiveClusterName])
 
-  const { health, isLoading: healthLoading } = useClusterHealth(clusterName)
+  const { health, isLoading: healthLoading } = useClusterHealth(effectiveClusterName)
   // Only show loading spinner if health is loading AND we haven't timed out
   const isLoading = healthLoading && !loadingTimedOut
-  const { issues: podIssues } = usePodIssues(clusterName)
-  const { issues: deploymentIssues } = useDeploymentIssues()
-  const { nodes: allGPUNodes } = useGPUNodes()
-  const { nodes: allNodes } = useNodes(clusterName)
-  const { namespaces: allNamespaces } = useNamespaces(clusterName)
-  const { deployments: allDeployments } = useDeployments(clusterName)
-  const { services: allServices } = useServices(clusterName)
-  const { pvcs: allPVCs } = useCachedPVCs(clusterName)
-  const { events: clusterEvents, isLoading: eventsLoading } = useEvents(clusterName, undefined, 10)
+  const { issues: podIssues } = usePodIssues(effectiveClusterName)
+  const { issues: deploymentIssues } = useDeploymentIssues(effectiveClusterName)
+  const { nodes: allGPUNodes } = useGPUNodes(effectiveClusterName)
+  const { nodes: allNodes } = useNodes(effectiveClusterName)
+  const { namespaces: allNamespaces } = useNamespaces(effectiveClusterName)
+  const { stats: namespaceStats } = useNamespaceStats(effectiveClusterName)
+  const { deployments: allDeployments } = useDeployments(effectiveClusterName)
+  const { services: allServices } = useServices(effectiveClusterName)
+  const { pvcs: allPVCs } = useCachedPVCs(effectiveClusterName)
+  const { events: clusterEvents, isLoading: eventsLoading } = useEvents(effectiveClusterName, undefined, 10)
 
   // Toggle section expansion
   const toggleSection = (section: string) => {
@@ -91,18 +99,25 @@ export function ClusterDrillDown({ data }: Props) {
   }
 
   // Filter data for this cluster - ALL useMemo hooks must be before any early returns
-  const clusterPrefix = useMemo(() => clusterName.split('/')[0], [clusterName])
+  const clusterLookupNames = useMemo(() => {
+    const names = new Set<string>()
+    if (clusterName) names.add(clusterName)
+    if (effectiveClusterName) names.add(effectiveClusterName)
+    ;(clusterInfo?.aliases || []).forEach(alias => names.add(alias))
+    return names
+  }, [clusterInfo?.aliases, clusterName, effectiveClusterName])
+  const clusterPrefix = useMemo(() => effectiveClusterName.split('/')[0], [effectiveClusterName])
   const normalizedSearchFilter = useMemo(() => searchFilter.trim().toLowerCase(), [searchFilter])
 
   const clusterGPUNodes = useMemo(() => {
-    if (!clusterName) return []
-    return allGPUNodes.filter(n => n.cluster === clusterName || n.cluster.includes(clusterPrefix))
-  }, [allGPUNodes, clusterName, clusterPrefix])
+    if (!effectiveClusterName) return []
+    return (allGPUNodes || []).filter(node => clusterLookupNames.has(node.cluster) || node.cluster.includes(clusterPrefix))
+  }, [allGPUNodes, clusterLookupNames, effectiveClusterName, clusterPrefix])
 
   const clusterDeploymentIssues = useMemo(() => {
-    if (!clusterName) return []
-    return deploymentIssues.filter(d => d.cluster === clusterName || d.cluster?.includes(clusterPrefix))
-  }, [clusterName, clusterPrefix, deploymentIssues])
+    if (!effectiveClusterName) return []
+    return (deploymentIssues || []).filter(issue => clusterLookupNames.has(issue.cluster || '') || issue.cluster?.includes(clusterPrefix))
+  }, [clusterLookupNames, effectiveClusterName, clusterPrefix, deploymentIssues])
 
   // Get unique namespaces from issues
   const namespaces = useMemo(() => {
@@ -229,6 +244,17 @@ export function ClusterDrillDown({ data }: Props) {
       servicesByNamespace,
     }
   }, [clusterDeploymentIssues, filteredDeployments, filteredServices, podIssues])
+
+  const namespaceStatsByName = useMemo(
+    () => Object.fromEntries((namespaceStats || []).map(stat => [stat.name, stat])),
+    [namespaceStats],
+  )
+  const hasVisibleResourceData =
+    filteredNodes.length > 0 ||
+    filteredNamespaces.length > 0 ||
+    filteredDeployments.length > 0 ||
+    filteredServices.length > 0 ||
+    filteredPVCs.length > 0
 
   // Count issues for each category
   const issueCounts = useMemo(() => {
@@ -378,7 +404,7 @@ export function ClusterDrillDown({ data }: Props) {
                 {podIssues.map((issue, i) => (
                   <div
                     key={i}
-                    onClick={() => drillToPod(clusterName, issue.namespace, issue.name, { ...issue })}
+                    onClick={() => drillToPod(effectiveClusterName, issue.namespace, issue.name, { ...issue })}
                     className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors"
                   >
                     <div className="flex items-center justify-between">
@@ -410,7 +436,7 @@ export function ClusterDrillDown({ data }: Props) {
                 {clusterDeploymentIssues.map((issue, i) => (
                   <div
                     key={i}
-                    onClick={() => drillToNamespace(clusterName, issue.namespace)}
+                    onClick={() => drillToNamespace(effectiveClusterName, issue.namespace)}
                     className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20 cursor-pointer hover:bg-orange-500/20 transition-colors"
                   >
                     <div className="flex items-center justify-between">
@@ -447,7 +473,7 @@ export function ClusterDrillDown({ data }: Props) {
               return (
                 <button
                   key={ns}
-                  onClick={() => drillToNamespace(clusterName, ns)}
+                  onClick={() => drillToNamespace(effectiveClusterName, ns)}
                   className="p-3 rounded-lg bg-card/50 border border-border text-left hover:bg-card hover:border-primary/50 transition-colors"
                 >
                   <div className="font-medium text-foreground text-sm truncate">{ns}</div>
@@ -471,7 +497,7 @@ export function ClusterDrillDown({ data }: Props) {
             {clusterGPUNodes.map((node, i) => (
               <div
                 key={i}
-                onClick={() => drillToGPUNode(clusterName, node.name, { ...node })}
+                onClick={() => drillToGPUNode(effectiveClusterName, node.name, { ...node })}
                 className="p-4 rounded-lg bg-card/50 border border-border flex items-center justify-between cursor-pointer hover:bg-card hover:border-primary/50 transition-colors"
               >
                 <div className="min-w-0 flex-1">
@@ -533,7 +559,7 @@ export function ClusterDrillDown({ data }: Props) {
           <div>
             <div className="flex justify-end mb-3">
               <button
-                onClick={() => drillToEvents(clusterName)}
+                onClick={() => drillToEvents(effectiveClusterName)}
                 className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
               >
                 View All →
@@ -562,7 +588,7 @@ export function ClusterDrillDown({ data }: Props) {
                         ? 'bg-yellow-500/10 border-l-yellow-500'
                         : 'bg-card/30 border-l-green-500'
                     }`}
-                    onClick={() => drillToEvents(clusterName)}
+                    onClick={() => drillToEvents(effectiveClusterName)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -647,7 +673,7 @@ export function ClusterDrillDown({ data }: Props) {
                 >
                   {expandedSections.has('cluster') ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   <Server className="w-4 h-4 text-cyan-400" />
-                  <span className="font-medium text-foreground">{clusterName}</span>
+                  <span className="font-medium text-foreground">{clusterDisplayName}</span>
                   <StatusIndicator status={
                     health?.reachable === false ? 'unreachable' :
                     (health?.nodeCount && health.nodeCount > 0)
@@ -681,7 +707,7 @@ export function ClusterDrillDown({ data }: Props) {
                             {filteredNodes.slice(0, 20).map((node) => (
                               <button
                                 key={node.name}
-                                onClick={() => drillToNode(clusterName, node.name, { status: node.status, roles: node.roles, unschedulable: node.unschedulable })}
+                                onClick={() => drillToNode(effectiveClusterName, node.name, { status: node.status, roles: node.roles, unschedulable: node.unschedulable })}
                                 type="button"
                                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group w-full text-left bg-transparent border-none"
                               >
@@ -730,6 +756,7 @@ export function ClusterDrillDown({ data }: Props) {
                               const totalIssues = nsPodIssues + nsDeploymentIssues
                               const namespaceDeployments = namespaceResources.deploymentsByNamespace[ns] || []
                               const namespaceServices = namespaceResources.servicesByNamespace[ns] || []
+                              const namespaceSummary = namespaceStatsByName[ns]
 
                               return (
                                 <div key={i}>
@@ -739,6 +766,11 @@ export function ClusterDrillDown({ data }: Props) {
                                   >
                                     {expandedSections.has(nsKey) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                                     <span className="text-sm text-foreground">{ns}</span>
+                                    {namespaceSummary?.podCount ? (
+                                      <span className="text-xs text-muted-foreground">
+                                        {namespaceSummary.podCount} pods
+                                      </span>
+                                    ) : null}
                                     {totalIssues > 0 && (
                                       <StatusBadge color="red" size="xs" rounded="full" className="ml-1">
                                         {totalIssues}
@@ -748,11 +780,20 @@ export function ClusterDrillDown({ data }: Props) {
 
                                   {expandedSections.has(nsKey) && (
                                     <div className="ml-6 border-l-2 border-muted/30 pl-4 mt-1 space-y-1">
+                                      {namespaceSummary ? (
+                                        <div className="flex flex-wrap items-center gap-3 px-1.5 py-1 text-2xs text-muted-foreground">
+                                          <span>{namespaceSummary.podCount} pods</span>
+                                          {namespaceSummary.runningPods > 0 ? <span className="text-green-400">{namespaceSummary.runningPods} running</span> : null}
+                                          {namespaceSummary.pendingPods > 0 ? <span className="text-yellow-400">{namespaceSummary.pendingPods} pending</span> : null}
+                                          {namespaceSummary.failedPods > 0 ? <span className="text-red-400">{namespaceSummary.failedPods} failed</span> : null}
+                                        </div>
+                                      ) : null}
+
                                       {/* Deployments in namespace */}
                                       {namespaceDeployments.slice(0, 5).map((dep, j) => (
                                         <div
                                           key={j}
-                                          onClick={() => drillToNamespace(clusterName, dep.namespace)}
+                                          onClick={() => drillToNamespace(effectiveClusterName, dep.namespace)}
                                           className="flex items-center gap-2 p-1.5 rounded hover:bg-secondary/50 cursor-pointer group"
                                         >
                                           <Box className="w-3 h-3 text-green-400" />
@@ -768,7 +809,7 @@ export function ClusterDrillDown({ data }: Props) {
                                       {namespaceServices.slice(0, 3).map((svc, j) => (
                                         <div
                                           key={j}
-                                          onClick={() => drillToNamespace(clusterName, svc.namespace)}
+                                          onClick={() => drillToNamespace(effectiveClusterName, svc.namespace)}
                                           className="flex items-center gap-2 p-1.5 rounded hover:bg-secondary/50 cursor-pointer group"
                                         >
                                           <Network className="w-3 h-3 text-blue-400" />
@@ -780,7 +821,7 @@ export function ClusterDrillDown({ data }: Props) {
 
                                       {/* View all in namespace */}
                                       <button
-                                        onClick={() => drillToNamespace(clusterName, ns)}
+                                        onClick={() => drillToNamespace(effectiveClusterName, ns)}
                                         className="text-xs text-purple-400 hover:text-purple-300 p-1.5 transition-colors"
                                       >
                                         View all in {ns} →
@@ -820,7 +861,7 @@ export function ClusterDrillDown({ data }: Props) {
                             {filteredDeployments.filter(d => d.readyReplicas < d.replicas).map((dep, i) => (
                               <div
                                 key={i}
-                                onClick={() => drillToNamespace(clusterName, dep.namespace)}
+                                onClick={() => drillToNamespace(effectiveClusterName, dep.namespace)}
                                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
                               >
                                 <XCircle className="w-3 h-3 text-orange-400" />
@@ -855,7 +896,7 @@ export function ClusterDrillDown({ data }: Props) {
                             {podIssues.slice(0, 10).map((issue, i) => (
                               <div
                                 key={i}
-                                onClick={() => drillToPod(clusterName, issue.namespace, issue.name, { ...issue })}
+                                onClick={() => drillToPod(effectiveClusterName, issue.namespace, issue.name, { ...issue })}
                                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
                               >
                                 <XCircle className="w-3 h-3 text-red-400" />
@@ -898,7 +939,7 @@ export function ClusterDrillDown({ data }: Props) {
                             {filteredPVCs.slice(0, 10).map((pvc, i) => (
                               <div
                                 key={i}
-                                onClick={() => drillToNamespace(clusterName, pvc.namespace)}
+                                onClick={() => drillToNamespace(effectiveClusterName, pvc.namespace)}
                                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
                               >
                                 <div className={`w-2 h-2 rounded-full ${pvc.status === 'Bound' ? 'bg-green-400' : 'bg-yellow-400'}`} />
@@ -939,7 +980,7 @@ export function ClusterDrillDown({ data }: Props) {
                             {filteredServices.slice(0, 15).map((svc, i) => (
                               <div
                                 key={i}
-                                onClick={() => drillToNamespace(clusterName, svc.namespace)}
+                                onClick={() => drillToNamespace(effectiveClusterName, svc.namespace)}
                                 className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 cursor-pointer group"
                               >
                                 <Network className="w-3 h-3 text-blue-400" />
@@ -960,7 +1001,7 @@ export function ClusterDrillDown({ data }: Props) {
                     )}
 
                     {/* Empty state for filters */}
-                    {filteredNodes.length === 0 && filteredDeployments.length === 0 && filteredServices.length === 0 && filteredPVCs.length === 0 && (
+                    {!hasVisibleResourceData && (
                       <div className="text-center text-muted-foreground text-sm py-4">
                         No resources match the current filter
                       </div>
