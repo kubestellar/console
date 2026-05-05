@@ -10,7 +10,7 @@
  * for DELETED_DRAFT_RETENTION_DAYS before being permanently purged.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { RequestType, TargetRepo } from './useFeatureRequests'
 
 /** localStorage key for the drafts array */
@@ -108,8 +108,8 @@ export function useFeedbackDrafts() {
   })
 
   // Derived lists
-  const drafts = (allDrafts || []).filter(d => !d.deletedAt)
-  const recentlyDeletedDrafts = (allDrafts || []).filter(d => !!d.deletedAt)
+  const drafts = useMemo(() => (allDrafts || []).filter(d => !d.deletedAt), [allDrafts])
+  const recentlyDeletedDrafts = useMemo(() => (allDrafts || []).filter(d => !!d.deletedAt), [allDrafts])
 
   // Keep in-memory state in sync if another tab modifies localStorage
   useEffect(() => {

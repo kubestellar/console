@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { usePersistence } from './usePersistence'
 import { useClusterGroups as useCRClusterGroups, ClusterGroup as CRClusterGroup } from './useConsoleCRs'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
@@ -140,12 +140,12 @@ export function useClusterGroups() {
   }, [localGroups, shouldUseCRs])
 
   // Convert CR groups to local format
-  const groups: ClusterGroup[] = (() => {
+  const groups: ClusterGroup[] = useMemo(() => {
     if (shouldUseCRs) {
       return crGroups.map(crToLocalGroup)
     }
     return localGroups
-  })()
+  }, [shouldUseCRs, crGroups, localGroups])
 
   const createGroup = async (group: ClusterGroup) => {
     if (shouldUseCRs) {

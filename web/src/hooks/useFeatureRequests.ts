@@ -463,11 +463,11 @@ export function useNotifications() {
   const pollingRef = useRef<number | null>(null)
 
   // Get unread count for a specific feature request
-  const getUnreadCountForRequest = (featureRequestId: string): number => {
+  const getUnreadCountForRequest = useCallback((featureRequestId: string): number => {
     return notifications.filter(n =>
       n.feature_request_id === featureRequestId && !n.read
     ).length
-  }
+  }, [notifications])
 
   // Mark all notifications for a specific feature request as read
   const markRequestNotificationsAsRead = async (featureRequestId: string) => {

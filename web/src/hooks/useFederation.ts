@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { agentFetch } from './mcp/shared'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
@@ -448,7 +448,7 @@ export function useFederationForCluster(clusterName: string, apiServerURL?: stri
 } {
   const awareness = useFederationAwareness()
 
-  const pills = (awareness.clusters || []).filter(fc => {
+  const pills = useMemo(() => (awareness.clusters || []).filter(fc => {
     if (fc.name === clusterName) return true
     if (apiServerURL && fc.apiServerURL && fc.apiServerURL === apiServerURL) return true
     return false
@@ -456,7 +456,7 @@ export function useFederationForCluster(clusterName: string, apiServerURL?: stri
     provider: fc.provider,
     hubContext: fc.hubContext,
     state: fc.state,
-  }))
+  })), [awareness.clusters, clusterName, apiServerURL])
 
   return { pills }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Send, Copy, Download, FileCode, History, Sparkles, Trash2, Search, ChevronDown, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
 import { STORAGE_KEY_KUBECTL_HISTORY } from '../../lib/constants'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
@@ -42,7 +42,7 @@ export function Kubectl() {
   // every kubeconfig context is already known from the cluster cache, so we
   // can hide the unhealthy ones from the picker entirely. (A cluster is
   // considered usable if it is both reachable and not explicitly unhealthy.)
-  const clusters = allClusters.filter(c => c.reachable !== false && c.healthy !== false)
+  const clusters = useMemo(() => allClusters.filter(c => c.reachable !== false && c.healthy !== false), [allClusters])
   const { isDemoMode } = useDemoMode()
   const [selectedContext, setSelectedContext] = useState<string>('')
 
@@ -480,10 +480,10 @@ data:
   }
 
   // Filtered history based on search
-  const filteredHistory = commandHistory.filter(item =>
+  const filteredHistory = useMemo(() => commandHistory.filter(item =>
     item.command.toLowerCase().includes(historySearch.toLowerCase()) ||
     item.context.toLowerCase().includes(historySearch.toLowerCase())
-  ).reverse()
+  ).reverse(), [commandHistory, historySearch])
 
   return (
     <div className="h-full flex flex-col min-h-card overflow-hidden">

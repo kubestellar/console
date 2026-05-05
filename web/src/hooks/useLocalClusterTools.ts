@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
@@ -598,7 +598,7 @@ export function useLocalClusterTools() {
   }, [clusterProgress?.status, fetchClusters, fetchVClusters])
 
   // Get only installed tools
-  const installedTools = tools.filter(t => t.installed)
+  const installedTools = useMemo(() => tools.filter(t => t.installed), [tools])
 
   return {
     tools,

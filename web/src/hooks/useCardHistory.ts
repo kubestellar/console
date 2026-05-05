@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 export interface CardHistoryEntry {
   id: string
@@ -115,9 +115,9 @@ export function useCardHistory() {
       dashboardName })
   }
 
-  const getRemovedCards = () => {
+  const getRemovedCards = useCallback(() => {
     return history.filter((entry) => entry.action === 'removed')
-  }
+  }, [history])
 
   const clearHistory = () => {
     setHistory([])
