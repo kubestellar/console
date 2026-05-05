@@ -304,16 +304,17 @@ describe('MissionBrowser', () => {
 
     render(<MissionBrowser {...defaultProps} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'Install OPA' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Install OPA' }))
 
     await waitFor(() => {
-      expect(screen.getByTestId('mission-sidebar')).toHaveAttribute(
+      const sidebar = screen.getByTestId('mission-sidebar')
+      expect(sidebar).toHaveAttribute(
         'data-selected-path',
         'community/cncf-install/install-open-policy-agent-opa.json',
       )
+      const expanded = sidebar.getAttribute('data-expanded') ?? ''
+      expect(expanded).toContain('community')
+      expect(expanded).toContain('community/cncf-install')
     })
-
-    expect(screen.getByTestId('mission-sidebar').getAttribute('data-expanded')).toContain('community')
-    expect(screen.getByTestId('mission-sidebar').getAttribute('data-expanded')).toContain('community/cncf-install')
   })
 })
