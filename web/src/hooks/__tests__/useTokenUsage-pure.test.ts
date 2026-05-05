@@ -143,6 +143,46 @@ describe('getTokenAlertLevel', () => {
   })
 })
 
+describe('getTokenAlertLevel', () => {
+  it('returns normal below warning threshold', () => {
+    expect(getTokenAlertLevel({
+      used: 40,
+      limit: 100,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.8,
+      stopThreshold: 1,
+    })).toBe('normal')
+  })
+
+  it('returns warning and critical using configured thresholds', () => {
+    expect(getTokenAlertLevel({
+      used: 60,
+      limit: 100,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.8,
+      stopThreshold: 1,
+    })).toBe('warning')
+
+    expect(getTokenAlertLevel({
+      used: 85,
+      limit: 100,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.8,
+      stopThreshold: 1,
+    })).toBe('critical')
+  })
+
+  it('returns stopped at stop threshold', () => {
+    expect(getTokenAlertLevel({
+      used: 100,
+      limit: 100,
+      warningThreshold: 0.5,
+      criticalThreshold: 0.8,
+      stopThreshold: 1,
+    })).toBe('stopped')
+  })
+})
+
 describe('constants', () => {
   it('MAX_SINGLE_DELTA_TOKENS is 50000', () => {
     expect(MAX_SINGLE_DELTA_TOKENS).toBe(50_000)
