@@ -950,7 +950,7 @@ describe('KubectlProxy - resource methods', () => {
       proxy.close()
     })
 
-    it('detects OOMKilled pods', async () => {
+    it('detects OOMKilled pods and prioritizes the OOM reason', async () => {
       const proxy = await createProxy()
 
       const issuesPromise = proxy.getPodIssues('test-ctx', 'kube-system')
@@ -959,7 +959,6 @@ describe('KubectlProxy - resource methods', () => {
       await vi.advanceTimersByTimeAsync(0)
 
       const msg = JSON.parse(sentMessages[0])
-      // Should use -n for specific namespace
       expect(msg.payload.args).toContain('-n')
       expect(msg.payload.args).toContain('kube-system')
 
@@ -972,7 +971,7 @@ describe('KubectlProxy - resource methods', () => {
               containerStatuses: [
                 {
                   restartCount: 10,
-                  state: { running: {} },
+                  state: { waiting: { reason: 'CrashLoopBackOff' } },
                   lastState: { terminated: { reason: 'OOMKilled' } },
                 },
               ],
@@ -989,7 +988,50 @@ describe('KubectlProxy - resource methods', () => {
 
       const issues = await issuesPromise
       expect(issues).toHaveLength(1)
-      expect(issues[0].issues).toContain('OOMKilled')
+      expect(issues[0].status).toBe('OOMKilled')
+      expect(issues[0].reason).toBe('OOMKilled')
+      expect(issues[0].issues).toEqual(['OOMKilled', 'CrashLoopBackOff'])
+
+      proxy.close()
+    })
+
+    it('drops stale image pull errors when OOMKilled is the primary issue', async () => {
+      const proxy = await createProxy()
+
+      const issuesPromise = proxy.getPodIssues('test-ctx')
+      await vi.advanceTimersByTimeAsync(0)
+      activeWs!.simulateOpen()
+      await vi.advanceTimersByTimeAsync(0)
+
+      const msg = JSON.parse(sentMessages[0])
+      const podsJson = {
+        items: [
+          {
+            metadata: { name: 'oom-loop-pod', namespace: 'default' },
+            status: {
+              phase: 'Running',
+              containerStatuses: [
+                {
+                  restartCount: 12,
+                  state: { waiting: { reason: 'ErrImagePull' } },
+                  lastState: { terminated: { reason: 'OOMKilled' } },
+                },
+              ],
+            },
+          },
+        ],
+      }
+
+      activeWs!.simulateMessage({
+        id: msg.id,
+        type: 'result',
+        payload: { output: JSON.stringify(podsJson), exitCode: 0 },
+      })
+
+      const issues = await issuesPromise
+      expect(issues).toHaveLength(1)
+      expect(issues[0].status).toBe('OOMKilled')
+      expect(issues[0].issues).toEqual(['OOMKilled'])
 
       proxy.close()
     })

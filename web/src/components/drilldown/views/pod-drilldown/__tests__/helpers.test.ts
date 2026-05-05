@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getPodDiagnosis } from '../helpers'
+import { filterPodIssuesForDiagnosis, getPodDiagnosis } from '../helpers'
 
 describe('getPodDiagnosis', () => {
   it('detects crash loops and surfaces exit details', () => {
@@ -35,6 +35,29 @@ Last State:     Terminated
       lastExitReason: 'OOMKilled',
       exitCode: '137',
     })
+  })
+
+  it('prioritizes OOMKilled over unrelated image pull warnings', () => {
+    const diagnosis = getPodDiagnosis({
+      status: 'Running',
+      issues: ['OOMKilled', 'Warning: ErrImagePull — failed to pull image'],
+      describeOutput: `State:          Waiting
+  Reason:       CrashLoopBackOff
+Last State:     Terminated
+  Reason:       OOMKilled
+  Exit Code:    137`,
+      eventsOutput: 'Warning  Failed  ErrImagePull: image pull failed',
+    })
+
+    expect(diagnosis?.kind).toBe('oom-killed')
+  })
+
+  it('filters unrelated issues once the diagnosis is known', () => {
+    expect(filterPodIssuesForDiagnosis([
+      'OOMKilled',
+      'CrashLoopBackOff',
+      'Warning: ErrImagePull — failed to pull image',
+    ], 'oom-killed')).toEqual(['OOMKilled', 'CrashLoopBackOff'])
   })
 
   it('returns null when there is no failure signal', () => {

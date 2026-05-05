@@ -12,6 +12,7 @@ import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import {
+  filterPodIssuesForDiagnosis,
   getIssueSeverity,
   getPodDiagnosis,
   UNHEALTHY_STATUSES, RAPID_REOPEN_THRESHOLD_MS,
@@ -198,34 +199,27 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const passedLabels = data.labels as Record<string, string> | undefined
   const passedAnnotations = data.annotations as Record<string, string> | undefined
 
-  // Compute all issues including status-based ones
-  const issues = useMemo(() => {
+  const baseIssues = useMemo(() => {
     const allIssues = [...passedIssues]
 
-    // Check status from data prop
     if (status && UNHEALTHY_STATUSES.some(s => status.toLowerCase().includes(s.toLowerCase()))) {
       if (!allIssues.some(i => i.toLowerCase() === status.toLowerCase())) {
         allIssues.unshift(status)
       }
     }
 
-    // Parse kubectl output for status - handles cases where data.status is stale
     if (podStatusOutput) {
-      // Parse the STATUS column from kubectl get pod output
       const lines = podStatusOutput.split('\n')
       const dataLine = lines.find(line => line.includes(podName))
       if (dataLine) {
         const parts = dataLine.trim().split(/\s+/)
-        // Format: NAME READY STATUS RESTARTS AGE ...
         if (parts.length >= 3) {
           const kubectlStatus = parts[2]
-          // Check if kubectl status is unhealthy
           if (kubectlStatus && UNHEALTHY_STATUSES.some(s => kubectlStatus.toLowerCase().includes(s.toLowerCase()))) {
             if (!allIssues.some(i => i.toLowerCase() === kubectlStatus.toLowerCase())) {
               allIssues.unshift(kubectlStatus)
             }
           }
-          // Check READY column (e.g., 0/1)
           const ready = parts[1]
           if (ready && ready.includes('/')) {
             const [current, total] = ready.split('/')
@@ -240,35 +234,42 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       }
     }
 
-    // Add reason as an issue if it exists and indicates a problem
     if (reason && !allIssues.some(i => i.toLowerCase() === reason.toLowerCase())) {
       allIssues.push(reason)
     }
 
-    // Parse warning events from kubectl events output (#10444)
-    // Events with TYPE=Warning indicate active issues even if pod status is Running
+    return allIssues
+  }, [passedIssues, status, reason, podStatusOutput, podName])
+
+  const podDiagnosis = useMemo(() => getPodDiagnosis({
+    status,
+    reason,
+    issues: baseIssues,
+    describeOutput,
+    eventsOutput,
+    logsOutput,
+  }), [status, reason, baseIssues, describeOutput, eventsOutput, logsOutput])
+
+  const issues = useMemo(() => {
+    const allIssues = [...baseIssues]
+
     if (eventsOutput && !eventsOutput.includes('No resources found')) {
       const eventLines = eventsOutput.split('\n')
-      // Find header to locate TYPE and MESSAGE columns
       const headerLine = eventLines[0] || ''
       const typeIdx = headerLine.indexOf('TYPE')
       const reasonIdx = headerLine.indexOf('REASON')
       const messageIdx = headerLine.indexOf('MESSAGE')
 
-      /** Fallback column width for TYPE field when REASON column is absent */
       const TYPE_COLUMN_FALLBACK_WIDTH = 10
       if (typeIdx >= 0 && messageIdx >= 0) {
         for (const line of eventLines.slice(1)) {
           if (!line.trim()) continue
-          // Extract TYPE field — use REASON column start as the end boundary if available
           const typeEnd = reasonIdx > typeIdx ? reasonIdx : typeIdx + TYPE_COLUMN_FALLBACK_WIDTH
           const eventType = line.substring(typeIdx, typeEnd).trim()
           if (eventType.toLowerCase() === 'warning') {
             const message = messageIdx < line.length
               ? line.substring(messageIdx).trim()
               : ''
-            // Use a shortened version: "Warning: <reason>" or "Warning: <message snippet>"
-            /** Fallback column width for REASON field when MESSAGE column is absent */
             const REASON_COLUMN_FALLBACK_WIDTH = 30
             const eventReason = reasonIdx >= 0
               ? line.substring(reasonIdx, messageIdx > reasonIdx ? messageIdx : reasonIdx + REASON_COLUMN_FALLBACK_WIDTH).trim()
@@ -277,7 +278,6 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
             const issueText = eventReason
               ? `Warning: ${eventReason}${message ? ' — ' + message.substring(0, MAX_EVENT_MSG_LENGTH) : ''}`
               : `Warning: ${message.substring(0, MAX_EVENT_MSG_LENGTH)}`
-            // Avoid duplicate issues (case-insensitive)
             if (!allIssues.some(i => i.toLowerCase() === issueText.toLowerCase())) {
               allIssues.push(issueText)
             }
@@ -286,17 +286,8 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       }
     }
 
-    return allIssues
-  }, [passedIssues, status, reason, podStatusOutput, podName, eventsOutput])
-
-  const podDiagnosis = useMemo(() => getPodDiagnosis({
-    status,
-    reason,
-    issues,
-    describeOutput,
-    eventsOutput,
-    logsOutput,
-  }), [status, reason, issues, describeOutput, eventsOutput, logsOutput])
+    return filterPodIssuesForDiagnosis(allIssues, podDiagnosis?.kind)
+  }, [baseIssues, eventsOutput, podDiagnosis?.kind])
 
   const diagnosisEvidence = useMemo(() => {
     if (!podDiagnosis) {

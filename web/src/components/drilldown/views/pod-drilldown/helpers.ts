@@ -55,6 +55,47 @@ const CRASH_LOOP_PATTERN = /crashloopbackoff|back-off restarting failed containe
 const UNKNOWN_ISSUE_PATTERN = /error|failed|warning|backoff|crash|killed/i
 const MAX_LOG_SNIPPET_LENGTH = 160
 
+function dedupeIssues(issues: string[]): string[] {
+  const seen = new Set<string>()
+  return issues.filter(issue => {
+    const normalized = issue.trim().toLowerCase()
+    if (!normalized || seen.has(normalized)) {
+      return false
+    }
+    seen.add(normalized)
+    return true
+  })
+}
+
+function matchesDiagnosis(kind: PodDiagnosisKind, issue: string): boolean {
+  const lowerIssue = issue.toLowerCase()
+
+  switch (kind) {
+    case 'oom-killed':
+      return OOM_KILLED_PATTERN.test(lowerIssue) || CRASH_LOOP_PATTERN.test(lowerIssue) || lowerIssue.includes('restart')
+    case 'crash-loop':
+      return CRASH_LOOP_PATTERN.test(lowerIssue) || lowerIssue.includes('restart') || lowerIssue.includes('exit code')
+    case 'image-pull':
+      return IMAGE_PULL_PATTERN.test(lowerIssue)
+    case 'config-error':
+      return CONFIG_ERROR_PATTERN.test(lowerIssue)
+    case 'probe-failure':
+      return PROBE_FAILURE_PATTERN.test(lowerIssue)
+    default:
+      return true
+  }
+}
+
+export function filterPodIssuesForDiagnosis(issues: string[], diagnosisKind?: PodDiagnosisKind | null): string[] {
+  const dedupedIssues = dedupeIssues(issues)
+  if (!diagnosisKind || diagnosisKind === 'unknown') {
+    return dedupedIssues
+  }
+
+  const relevantIssues = dedupedIssues.filter(issue => matchesDiagnosis(diagnosisKind, issue))
+  return relevantIssues.length > 0 ? relevantIssues : dedupedIssues
+}
+
 function extractMatch(source: string | null | undefined, pattern: RegExp): string | undefined {
   const match = source?.match(pattern)
   return match?.[1]?.trim()
@@ -100,19 +141,6 @@ export function getPodDiagnosis({
   eventsOutput,
   logsOutput,
 }: PodDiagnosisInput): PodDiagnosis | null {
-  const searchText = [
-    status,
-    reason,
-    ...issues,
-    describeOutput || '',
-    eventsOutput || '',
-    logsOutput || '',
-  ].join('\n').toLowerCase()
-
-  if (!searchText.trim()) {
-    return null
-  }
-
   const diagnosis: PodDiagnosis = {
     kind: 'unknown',
     currentStateReason: extractMatch(describeOutput, WAITING_REASON_PATTERN),
@@ -123,18 +151,49 @@ export function getPodDiagnosis({
     logSnippet: extractLogSnippet(logsOutput),
   }
 
-  if (OOM_KILLED_PATTERN.test(searchText)) {
+  const structuredSignals = [
+    diagnosis.lastExitReason,
+    diagnosis.currentStateReason,
+    status,
+    reason,
+    ...issues,
+  ].join('\n').toLowerCase()
+
+  const contextualSignals = [
+    describeOutput || '',
+    eventsOutput || '',
+    logsOutput || '',
+  ].join('\n').toLowerCase()
+
+  const searchText = `${structuredSignals}\n${contextualSignals}`.trim()
+  if (!searchText) {
+    return null
+  }
+
+  if (OOM_KILLED_PATTERN.test(structuredSignals) || OOM_KILLED_PATTERN.test(contextualSignals)) {
     diagnosis.kind = 'oom-killed'
-  } else if (IMAGE_PULL_PATTERN.test(searchText)) {
-    diagnosis.kind = 'image-pull'
-  } else if (CONFIG_ERROR_PATTERN.test(searchText)) {
-    diagnosis.kind = 'config-error'
-  } else if (PROBE_FAILURE_PATTERN.test(searchText)) {
-    diagnosis.kind = 'probe-failure'
-  } else if (CRASH_LOOP_PATTERN.test(searchText)) {
+  } else if (CRASH_LOOP_PATTERN.test(structuredSignals)) {
     diagnosis.kind = 'crash-loop'
+  } else if (IMAGE_PULL_PATTERN.test(structuredSignals)) {
+    diagnosis.kind = 'image-pull'
+  } else if (CONFIG_ERROR_PATTERN.test(structuredSignals)) {
+    diagnosis.kind = 'config-error'
+  } else if (PROBE_FAILURE_PATTERN.test(structuredSignals)) {
+    diagnosis.kind = 'probe-failure'
+  } else if (CRASH_LOOP_PATTERN.test(contextualSignals)) {
+    diagnosis.kind = 'crash-loop'
+  } else if (IMAGE_PULL_PATTERN.test(contextualSignals)) {
+    diagnosis.kind = 'image-pull'
+  } else if (CONFIG_ERROR_PATTERN.test(contextualSignals)) {
+    diagnosis.kind = 'config-error'
+  } else if (PROBE_FAILURE_PATTERN.test(contextualSignals)) {
+    diagnosis.kind = 'probe-failure'
   } else if (!UNKNOWN_ISSUE_PATTERN.test(searchText)) {
     return null
+  }
+
+  if (diagnosis.warningEvent && diagnosis.kind !== 'unknown' && !matchesDiagnosis(diagnosis.kind, diagnosis.warningEvent)) {
+    diagnosis.warningEvent = undefined
   }
 
   return diagnosis

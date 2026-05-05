@@ -63,11 +63,17 @@ export function Pods() {
   const showSkeletons = (podIssues.length === 0 && isLoading) || isModeSwitching
 
   // Handler for keyboard navigation on pod issue cards
-  const handlePodIssueKeyDown = (e: React.KeyboardEvent, cluster: string | undefined, namespace: string, name: string) => {
+  const handlePodIssueKeyDown = (
+    e: React.KeyboardEvent,
+    cluster: string | undefined,
+    namespace: string,
+    name: string,
+    issueData?: Record<string, unknown>,
+  ) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault() // Prevent default for both Enter and Space to match button behavior
+      e.preventDefault()
       if (cluster) {
-        drillToPod(cluster, namespace, name)
+        drillToPod(cluster, namespace, name, issueData)
       }
     }
   }
@@ -233,8 +239,8 @@ export function Pods() {
           {filteredPodIssues.map((issue, i) => (
             <div
               key={i}
-              onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name)}
-              onKeyDown={(e) => handlePodIssueKeyDown(e, issue.cluster, issue.namespace, issue.name)}
+              onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name, { ...issue })}
+              onKeyDown={(e) => handlePodIssueKeyDown(e, issue.cluster, issue.namespace, issue.name, { ...issue })}
               role="button"
               tabIndex={issue.cluster ? 0 : -1}
               aria-disabled={!issue.cluster || undefined}

@@ -196,6 +196,7 @@ export function PodIssues() {
               dataTour={idx === 0 ? 'drilldown' : undefined}
               onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name, {
                 status: issue.status,
+                reason: issue.reason,
                 restarts: issue.restarts,
                 issues: issue.issues,
               })}

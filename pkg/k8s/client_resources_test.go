@@ -70,6 +70,12 @@ func TestFindPodIssues_OOMandCrashLoop(t *testing.T) {
 	if !hasCrashLoop {
 		t.Errorf("Expected CrashLoopBackOff in issues, got %v", issues[0].Issues)
 	}
+	if issues[0].Status != "OOMKilled" {
+		t.Errorf("Expected status OOMKilled, got %s", issues[0].Status)
+	}
+	if issues[0].Reason != "OOMKilled" {
+		t.Errorf("Expected reason OOMKilled, got %s", issues[0].Reason)
+	}
 }
 
 func TestGetPods_ResourceParsing(t *testing.T) {

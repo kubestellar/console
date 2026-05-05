@@ -15,6 +15,72 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var podPrimaryReasonPriority = []string{
+	"Init:OOMKilled",
+	"OOMKilled",
+	"Init:CrashLoopBackOff",
+	"CrashLoopBackOff",
+	"ImagePullBackOff",
+	"ErrImagePull",
+	"CreateContainerConfigError",
+	"InvalidImageName",
+	"CreateContainerError",
+	"RunContainerError",
+	"PostStartHookError",
+	"Unschedulable",
+	"Failed",
+	"Terminating",
+}
+
+func appendUniquePodIssue(issues []string, issue string) []string {
+	if issue == "" {
+		return issues
+	}
+	for _, existing := range issues {
+		if existing == issue {
+			return issues
+		}
+	}
+	return append(issues, issue)
+}
+
+func normalizePodIssues(issues []string) []string {
+	hasOOM := false
+	for _, issue := range issues {
+		if issue == "OOMKilled" || issue == "Init:OOMKilled" {
+			hasOOM = true
+			break
+		}
+	}
+	if !hasOOM {
+		return issues
+	}
+
+	normalized := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		if issue == "OOMKilled" || issue == "Init:OOMKilled" || issue == "CrashLoopBackOff" || issue == "Init:CrashLoopBackOff" || strings.HasPrefix(issue, "High restarts") {
+			normalized = append(normalized, issue)
+		}
+	}
+	if len(normalized) == 0 {
+		return issues
+	}
+	return normalized
+}
+
+func getPrimaryPodIssue(issues []string, fallback string) string {
+	for _, candidate := range podPrimaryReasonPriority {
+		candidateLower := strings.ToLower(candidate)
+		for _, issue := range issues {
+			issueLower := strings.ToLower(issue)
+			if issue == candidate || strings.HasPrefix(issue, candidate+":") || strings.Contains(issueLower, candidateLower) {
+				return candidate
+			}
+		}
+	}
+	return fallback
+}
+
 func (m *MultiClusterClient) GetPods(ctx context.Context, contextName, namespace string) ([]PodInfo, error) {
 	client, err := m.GetClient(contextName)
 	if err != nil {
@@ -130,86 +196,68 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 
 		var podIssues []string
 		restarts := 0
-
-		// Determine effective status (mirrors kubectl logic)
 		effectiveStatus := string(pod.Status.Phase)
 
-		// Check init container statuses
 		for i, cs := range pod.Status.InitContainerStatuses {
 			restarts += int(cs.RestartCount)
 
+			if cs.LastTerminationState.Terminated != nil && cs.LastTerminationState.Terminated.Reason == "OOMKilled" {
+				podIssues = appendUniquePodIssue(podIssues, "Init:OOMKilled")
+			}
 			if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
 				if problemWaitingReasons[cs.State.Waiting.Reason] {
-					podIssues = append(podIssues, fmt.Sprintf("Init:%s", cs.State.Waiting.Reason))
-					effectiveStatus = fmt.Sprintf("Init:%s", cs.State.Waiting.Reason)
+					podIssues = appendUniquePodIssue(podIssues, fmt.Sprintf("Init:%s", cs.State.Waiting.Reason))
 				}
 			}
 			if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
-				podIssues = append(podIssues, fmt.Sprintf("Init container %d failed (exit %d)", i, cs.State.Terminated.ExitCode))
-			}
-			if cs.LastTerminationState.Terminated != nil && cs.LastTerminationState.Terminated.Reason == "OOMKilled" {
-				podIssues = append(podIssues, "Init:OOMKilled")
+				podIssues = appendUniquePodIssue(podIssues, fmt.Sprintf("Init container %d failed (exit %d)", i, cs.State.Terminated.ExitCode))
 			}
 		}
 
-		// Check container statuses
 		for _, cs := range pod.Status.ContainerStatuses {
 			restarts += int(cs.RestartCount)
 
+			if cs.LastTerminationState.Terminated != nil && cs.LastTerminationState.Terminated.Reason == "OOMKilled" {
+				podIssues = appendUniquePodIssue(podIssues, "OOMKilled")
+			}
 			if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
 				reason := cs.State.Waiting.Reason
 				if problemWaitingReasons[reason] {
-					podIssues = append(podIssues, reason)
-					effectiveStatus = reason
+					podIssues = appendUniquePodIssue(podIssues, reason)
 				}
 			}
-
 			if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
-				podIssues = append(podIssues, fmt.Sprintf("Exit code %d", cs.State.Terminated.ExitCode))
-				if cs.State.Terminated.Reason != "" {
+				podIssues = appendUniquePodIssue(podIssues, fmt.Sprintf("Exit code %d", cs.State.Terminated.ExitCode))
+				if cs.State.Terminated.Reason != "" && effectiveStatus == string(pod.Status.Phase) {
 					effectiveStatus = cs.State.Terminated.Reason
 				}
 			}
 
-			if cs.LastTerminationState.Terminated != nil {
-				if cs.LastTerminationState.Terminated.Reason == "OOMKilled" {
-					podIssues = append(podIssues, "OOMKilled")
-				}
-			}
-
-			// Container running but not ready for over 5 minutes
 			if cs.State.Running != nil && !cs.Ready {
 				age := now.Sub(cs.State.Running.StartedAt.Time)
 				if age > podIssueAgeThreshold {
-					podIssues = append(podIssues, "Not ready")
+					podIssues = appendUniquePodIssue(podIssues, "Not ready")
 				}
 			}
 
 			if cs.RestartCount > 5 {
-				podIssues = append(podIssues, fmt.Sprintf("High restarts (%d)", cs.RestartCount))
+				podIssues = appendUniquePodIssue(podIssues, fmt.Sprintf("High restarts (%d)", cs.RestartCount))
 			}
 		}
 
-		// Check pod conditions for scheduling failures
 		for _, cond := range pod.Status.Conditions {
 			if cond.Type == corev1.PodScheduled && cond.Status == corev1.ConditionFalse {
 				msg := cond.Reason
 				if cond.Message != "" {
 					msg = cond.Message
 				}
-				podIssues = append(podIssues, fmt.Sprintf("Unschedulable: %s", msg))
-				effectiveStatus = "Unschedulable"
+				podIssues = appendUniquePodIssue(podIssues, fmt.Sprintf("Unschedulable: %s", msg))
 			}
 		}
 
-		// Check pod phase
 		if pod.Status.Phase == corev1.PodPending {
-			// Only add "Pending" if no more specific issue was found
-			if len(podIssues) == 0 {
-				// Pending for over 2 minutes is suspicious
-				if pod.CreationTimestamp.Time.Before(now.Add(-podPendingAgeThreshold)) {
-					podIssues = append(podIssues, "Pending")
-				}
+			if len(podIssues) == 0 && pod.CreationTimestamp.Time.Before(now.Add(-podPendingAgeThreshold)) {
+				podIssues = appendUniquePodIssue(podIssues, "Pending")
 			}
 		}
 		if pod.Status.Phase == corev1.PodFailed {
@@ -217,27 +265,35 @@ func (m *MultiClusterClient) FindPodIssues(ctx context.Context, contextName, nam
 			if pod.Status.Reason != "" {
 				reason = pod.Status.Reason
 			}
-			podIssues = append(podIssues, reason)
-			effectiveStatus = reason
+			podIssues = appendUniquePodIssue(podIssues, reason)
 		}
 
-		// Stuck terminating (has deletion timestamp but still exists)
 		if pod.DeletionTimestamp != nil {
 			age := now.Sub(pod.DeletionTimestamp.Time)
 			if age > podIssueAgeThreshold {
-				podIssues = append(podIssues, fmt.Sprintf("Stuck terminating (%dm)", int(age.Minutes())))
-				effectiveStatus = "Terminating"
+				podIssues = appendUniquePodIssue(podIssues, fmt.Sprintf("Stuck terminating (%dm)", int(age.Minutes())))
 			}
 		}
 
-		if len(podIssues) > 0 {
+		normalizedIssues := normalizePodIssues(podIssues)
+		fallbackStatus := effectiveStatus
+		if pod.Status.Reason != "" {
+			fallbackStatus = pod.Status.Reason
+		}
+		primaryReason := getPrimaryPodIssue(normalizedIssues, fallbackStatus)
+		if primaryReason != "" {
+			effectiveStatus = primaryReason
+		}
+
+		if len(normalizedIssues) > 0 {
 			issues = append(issues, PodIssue{
 				Name:      pod.Name,
 				Namespace: pod.Namespace,
 				Cluster:   contextName,
 				Status:    effectiveStatus,
+				Reason:    effectiveStatus,
 				Restarts:  restarts,
-				Issues:    podIssues,
+				Issues:    normalizedIssues,
 			})
 		}
 	}

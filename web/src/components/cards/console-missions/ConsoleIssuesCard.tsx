@@ -170,7 +170,7 @@ Please:
           <div
             key={`pod-${i}`}
             className="p-2 rounded bg-orange-500/10 text-xs cursor-pointer hover:bg-orange-500/20 transition-colors group flex flex-wrap items-center justify-between gap-y-2"
-            onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name, { status: issue.status, restarts: issue.restarts, issues: issue.issues })}
+            onClick={() => issue.cluster && drillToPod(issue.cluster, issue.namespace, issue.name, { status: issue.status, reason: issue.reason, restarts: issue.restarts, issues: issue.issues })}
             title={`Click to view details for pod ${issue.name}`}
           >
             <div className="min-w-0">

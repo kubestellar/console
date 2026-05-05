@@ -59,6 +59,47 @@ interface QueuedRequest {
   reject: (error: Error) => void
 }
 
+const POD_PRIMARY_REASON_PRIORITY = [
+  'OOMKilled',
+  'CrashLoopBackOff',
+  'ImagePullBackOff',
+  'ErrImagePull',
+  'CreateContainerConfigError',
+  'CreateContainerError',
+  'RunContainerError',
+  'PostStartHookError',
+  'Unschedulable',
+  'Failed',
+] as const
+
+function appendUniqueProblem(problems: string[], problem: string | undefined): void {
+  if (!problem || problems.includes(problem)) {
+    return
+  }
+  problems.push(problem)
+}
+
+function normalizePodProblems(problems: string[]): string[] {
+  if (!problems.includes('OOMKilled')) {
+    return problems
+  }
+
+  return problems.filter(problem => (
+    problem === 'OOMKilled' ||
+    problem === 'CrashLoopBackOff' ||
+    problem.startsWith('High restarts')
+  ))
+}
+
+function getPrimaryPodProblem(problems: string[], fallback: string): string {
+  for (const reason of POD_PRIMARY_REASON_PRIORITY) {
+    if (problems.includes(reason)) {
+      return reason
+    }
+  }
+  return fallback
+}
+
 class KubectlProxy {
   private ws: WebSocket | null = null
   private pendingRequests: Map<string, PendingRequest> = new Map()
@@ -803,13 +844,15 @@ class KubectlProxy {
       const phase = status.phase
       const containerStatuses = status.containerStatuses || []
 
-      // Check for problematic states
       const problems: string[] = []
       let restarts = 0
-      let reason = ''
 
       for (const cs of containerStatuses) {
         restarts += cs.restartCount || 0
+
+        if (cs.lastState?.terminated?.reason === 'OOMKilled') {
+          appendUniqueProblem(problems, 'OOMKilled')
+        }
 
         if (cs.state?.waiting) {
           const waitReason = cs.state.waiting.reason ?? ''
@@ -818,16 +861,14 @@ class KubectlProxy {
               'CrashLoopBackOff',
               'ImagePullBackOff',
               'ErrImagePull',
+              'CreateContainerConfigError',
               'CreateContainerError',
+              'RunContainerError',
+              'PostStartHookError',
             ].includes(waitReason)
           ) {
-            problems.push(waitReason)
-            reason = waitReason
+            appendUniqueProblem(problems, waitReason)
           }
-        }
-
-        if (cs.lastState?.terminated?.reason === 'OOMKilled') {
-          problems.push('OOMKilled')
         }
       }
 
@@ -837,24 +878,26 @@ class KubectlProxy {
             c.type === 'PodScheduled' && c.status === 'False',
         )
         if (unschedulable) {
-          problems.push('Unschedulable')
-          reason = unschedulable.reason || 'Pending'
+          appendUniqueProblem(problems, 'Unschedulable')
         }
       }
 
       if (phase === 'Failed') {
-        problems.push('Failed')
-        reason = status.reason || 'Failed'
+        appendUniqueProblem(problems, status.reason || 'Failed')
       }
 
-      if (problems.length > 0 || restarts > POD_RESTART_ISSUE_THRESHOLD) {
+      const normalizedProblems = normalizePodProblems(problems)
+      const fallbackReason = status.reason || phase || 'Unknown'
+      const primaryReason = getPrimaryPodProblem(normalizedProblems, fallbackReason)
+
+      if (normalizedProblems.length > 0 || restarts > POD_RESTART_ISSUE_THRESHOLD) {
         issues.push({
           name: pod.metadata.name,
           namespace: pod.metadata.namespace,
           cluster: context,
-          status: reason || phase || 'Unknown',
-          reason,
-          issues: problems,
+          status: primaryReason,
+          reason: primaryReason,
+          issues: normalizedProblems,
           restarts,
         })
       }
