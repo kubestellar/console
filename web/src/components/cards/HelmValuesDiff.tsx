@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
-import { ChevronRight, Plus, Edit, Filter, ChevronDown, Server, RotateCcw } from 'lucide-react'
+import { ChevronRight, Plus, Edit, RotateCcw } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedHelmReleases, useCachedHelmValues } from '../../hooks/useCachedData'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -64,35 +63,6 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
   const [selectedCluster, setSelectedCluster] = useState<string>(config?.cluster || '')
   const [selectedRelease, setSelectedRelease] = useState<string>(config?.release || '')
   const { drillToHelm } = useDrillDownActions()
-
-  // Local cluster filter (card-specific, kept as separate state)
-  const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
-  const [showClusterFilter, setShowClusterFilter] = useState(false)
-  const clusterFilterRef = useRef<HTMLDivElement>(null)
-  const clusterFilterBtnRef = useRef<HTMLButtonElement>(null)
-  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left: number } | null>(null)
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (clusterFilterRef.current && !clusterFilterRef.current.contains(event.target as Node)) {
-        setShowClusterFilter(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  useEffect(() => {
-    if (showClusterFilter && clusterFilterBtnRef.current) {
-      const rect = clusterFilterBtnRef.current.getBoundingClientRect()
-      setDropdownStyle({
-        top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192) })
-    } else {
-      setDropdownStyle(null)
-    }
-  }, [showClusterFilter])
 
   // Track local selection state for global filter sync
   const savedLocalCluster = useRef<string>('')
@@ -205,21 +175,6 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
     return result
   })()
 
-  // Available clusters for the local cluster filter dropdown
-  const chartFilterClusters = clusters.filter(c => c.reachable !== false)
-
-  const toggleClusterFilter = (clusterName: string) => {
-    if (localClusterFilter.includes(clusterName)) {
-      setLocalClusterFilter(localClusterFilter.filter(c => c !== clusterName))
-    } else {
-      setLocalClusterFilter([...localClusterFilter, clusterName])
-    }
-  }
-
-  const clearClusterFilter = () => {
-    setLocalClusterFilter([])
-  }
-
   // Filter releases locally by selected cluster (no API call)
   const filteredReleases = (() => {
     if (!selectedCluster) return allHelmReleases
@@ -316,70 +271,6 @@ export function HelmValuesDiff({ config }: HelmValuesDiffProps) {
           />
         </div>
         <div className="flex items-center gap-2">
-          {/* Cluster count indicator */}
-          {localClusterFilter.length > 0 && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
-              <Server className="w-3 h-3" />
-              {localClusterFilter.length}/{chartFilterClusters.length}
-            </span>
-          )}
-
-          {/* Cluster filter dropdown */}
-          {chartFilterClusters.length >= 1 && (
-            <div ref={clusterFilterRef} className="relative">
-              <button
-                ref={clusterFilterBtnRef}
-                onClick={() => setShowClusterFilter(!showClusterFilter)}
-                className={`flex items-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  localClusterFilter.length > 0
-                    ? 'bg-purple-500/20 border-purple-500/30 text-purple-400'
-                    : 'bg-secondary border-border text-muted-foreground hover:text-foreground'
-                }`}
-                title="Filter by cluster"
-              >
-                <Filter className="w-3 h-3" />
-                <ChevronDown className="w-3 h-3" />
-              </button>
-
-              {showClusterFilter && dropdownStyle && createPortal(
-                <div className="fixed w-48 max-h-48 overflow-y-auto rounded-lg bg-card border border-border shadow-lg z-50"
-                  style={{ top: dropdownStyle.top, left: dropdownStyle.left }}
-                  onMouseDown={e => e.stopPropagation()}
-                  onKeyDown={(e) => {
-                    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
-                    e.preventDefault()
-                    const items = e.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled])')
-                    const idx = Array.from(items).indexOf(document.activeElement as HTMLElement)
-                    if (e.key === 'ArrowDown') items[Math.min(idx + 1, items.length - 1)]?.focus()
-                    else items[Math.max(idx - 1, 0)]?.focus()
-                  }}>
-                  <div className="p-1">
-                    <button
-                      onClick={clearClusterFilter}
-                      className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                        localClusterFilter.length === 0 ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                      }`}
-                    >
-                      All clusters
-                    </button>
-                    {chartFilterClusters.map(cluster => (
-                      <button
-                        key={cluster.name}
-                        onClick={() => toggleClusterFilter(cluster.name)}
-                        className={`w-full px-2 py-1.5 text-xs text-left rounded transition-colors ${
-                          localClusterFilter.includes(cluster.name) ? 'bg-purple-500/20 text-purple-400' : 'hover:bg-secondary text-foreground'
-                        }`}
-                      >
-                        {cluster.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>,
-              document.body
-              )}
-            </div>
-          )}
-
           <CardControlsRow
             cardControls={{
               limit: itemsPerPage,
