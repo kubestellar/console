@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -92,12 +93,30 @@ func NewWebhookNotifier(webhookURL string) (*WebhookNotifier, error) {
 // address. Used to carve out an exception to the HTTPS-only webhook rule for
 // local development and in-cluster sidecar receivers (#8392).
 func isLoopbackHost(host string) bool {
-	switch host {
-	case "localhost", "127.0.0.1", "::1":
-		return true
-	default:
+	host = strings.TrimSpace(host)
+	host = strings.TrimPrefix(host, "[")
+	host = strings.TrimSuffix(host, "]")
+	if host == "" {
 		return false
 	}
+
+	if strings.EqualFold(host, "localhost") || strings.EqualFold(host, "localhost.localdomain") {
+		return true
+	}
+
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return false
+	}
+	if ip.IsLoopback() {
+		return true
+	}
+
+	if ipv4 := ip.To4(); ipv4 != nil {
+		return ipv4[0] == 127
+	}
+
+	return false
 }
 
 // checkWebhookHostAllowed enforces the optional KC_WEBHOOK_ALLOWED_HOSTS

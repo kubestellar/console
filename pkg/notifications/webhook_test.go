@@ -61,8 +61,17 @@ func TestWebhookNotifier_NewError(t *testing.T) {
 	})
 
 	t.Run("loopback plaintext http allowed", func(t *testing.T) {
-		_, err := NewWebhookNotifier("http://localhost:8080")
-		require.NoError(t, err)
+		for _, webhookURL := range []string{
+			"http://localhost:8080",
+			"http://localhost.localdomain:8080",
+			"http://127.0.0.2:8080",
+			"http://127.1.2.3:8080",
+			"http://[::1]:8080",
+			"http://[::ffff:127.0.0.1]:8080",
+		} {
+			_, err := NewWebhookNotifier(webhookURL)
+			require.NoError(t, err, webhookURL)
+		}
 	})
 }
 
@@ -95,11 +104,27 @@ func TestWebhookNotifier_NonSuccessStatus(t *testing.T) {
 }
 
 func TestIsLoopbackHost(t *testing.T) {
-	require.True(t, isLoopbackHost("localhost"))
-	require.True(t, isLoopbackHost("127.0.0.1"))
-	require.True(t, isLoopbackHost("::1"))
-	require.False(t, isLoopbackHost("example.com"))
-	require.False(t, isLoopbackHost("10.0.0.1"))
-	require.False(t, isLoopbackHost("192.168.1.1"))
-	require.False(t, isLoopbackHost("kubernetes.default.svc"))
+	tests := []struct {
+		host string
+		want bool
+	}{
+		{host: "localhost", want: true},
+		{host: "LOCALHOST", want: true},
+		{host: "localhost.localdomain", want: true},
+		{host: "127.0.0.1", want: true},
+		{host: "127.0.0.2", want: true},
+		{host: "127.1.2.3", want: true},
+		{host: "::1", want: true},
+		{host: "[::1]", want: true},
+		{host: "::ffff:127.0.0.1", want: true},
+		{host: "[::ffff:127.0.0.1]", want: true},
+		{host: "example.com", want: false},
+		{host: "10.0.0.1", want: false},
+		{host: "192.168.1.1", want: false},
+		{host: "kubernetes.default.svc", want: false},
+	}
+
+	for _, tt := range tests {
+		require.Equal(t, tt.want, isLoopbackHost(tt.host), tt.host)
+	}
 }
