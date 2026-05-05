@@ -12,7 +12,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2, Film, Keyboard } from 'lucide-react'
+import { X, Bug, Lightbulb, Send, CheckCircle2, ExternalLink, ImagePlus, Trash2, Copy, Check, AlertTriangle, Loader2, Film } from 'lucide-react'
 import { Linkedin } from '@/lib/icons'
 import { ConfirmDialog } from '../../lib/modals'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -38,7 +38,6 @@ interface FeedbackModalProps {
 }
 
 const DRAFT_KEY = 'feedback-modal-draft'
-const KEYBOARD_HINT_BADGE_CLASS = 'px-2 py-1 rounded-md bg-secondary/70 text-xs font-semibold leading-none text-foreground'
 
 interface DraftState {
   type: FeedbackType
