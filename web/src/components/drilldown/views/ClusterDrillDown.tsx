@@ -258,6 +258,17 @@ export function ClusterDrillDown({ data }: Props) {
     filteredServices.length > 0 ||
     filteredPVCs.length > 0
 
+  const namespaceStatsByName = useMemo(
+    () => Object.fromEntries((namespaceStats || []).map(stat => [stat.name, stat])),
+    [namespaceStats],
+  )
+  const hasVisibleResourceData =
+    filteredNodes.length > 0 ||
+    filteredNamespaces.length > 0 ||
+    filteredDeployments.length > 0 ||
+    filteredServices.length > 0 ||
+    filteredPVCs.length > 0
+
   // Count issues for each category
   const issueCounts = useMemo(() => {
     const nodes = (allNodes || []).filter(n => n.status !== 'Ready').length
