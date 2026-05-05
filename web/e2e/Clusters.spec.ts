@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { mockApiFallback } from './helpers/setup'
+import { setupLiveMode } from './helpers/storage-setup'
 
 /**
  * Sets up authentication and MCP mocks for cluster tests
@@ -82,34 +83,10 @@ async function setupClustersTest(page: Page) {
   })
 
   // Seed localStorage BEFORE any page script runs so the auth guard sees
-  // the token on first execution. page.evaluate() runs after the page has
-  // already parsed and executed scripts, which is too late for webkit/Safari
-  // where the auth redirect fires synchronously on script evaluation.
-  // page.addInitScript() injects the snippet ahead of any page code (#9096).
-  await page.addInitScript(() => {
-    // Clear the IndexedDB cache so stale data from previous tests doesn't bleed in.
-    // Tests run against the same origin so cache entries are shared across tests.
-    indexedDB.deleteDatabase('kc_cache')
-    // Clear sessionStorage snapshots so the SWR cache layer cannot rehydrate
-    // stale cluster data from a previous navigation/test. sessionStorage
-    // survives page.reload() and on webkit/firefox the sync rehydration
-    // outraces the async IndexedDB delete, causing filter tests to render
-    // clusters from the beforeEach mock alongside the test-specific mock. (#10828)
-    sessionStorage.clear()
-    // Clear stale backend-status cache so checkBackendAvailability() makes a
-    // fresh health check instead of returning a cached "unavailable" result
-    // from a previous test. (#10784)
-    localStorage.removeItem('kc-backend-status')
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('kc-demo-mode', 'false')
-    localStorage.setItem('kc-has-session', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-    localStorage.setItem('kc-agent-setup-dismissed', 'true')
-    localStorage.setItem('kc-backend-status', JSON.stringify({
-      available: true,
-      timestamp: Date.now(),
-    }))
-  })
+  // the token on first execution. Uses unified storage setup to prevent
+  // addInitScript accumulation and ensure IndexedDB cleanup completes
+  // before sessionStorage rehydration (#9096, #10828, #12088, #12089).
+  await setupLiveMode(page)
 
   await page.goto('/clusters')
   await page.waitForLoadState('domcontentloaded')

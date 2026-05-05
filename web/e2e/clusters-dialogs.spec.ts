@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test'
 import { mockApiFallback } from './helpers/setup'
+import { setupLiveMode } from './helpers/storage-setup'
 
 // ---------------------------------------------------------------------------
 // Timeout constants
@@ -134,21 +135,8 @@ async function setupClustersDialogTest(page: Page) {
     }
   })
 
-  // Seed localStorage before page scripts run
-  await page.addInitScript(() => {
-    indexedDB.deleteDatabase('kc_cache')
-    sessionStorage.clear()
-    localStorage.removeItem('kc-backend-status')
-    localStorage.setItem('token', 'test-token')
-    localStorage.setItem('kc-demo-mode', 'false')
-    localStorage.setItem('kc-has-session', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-    localStorage.setItem('kc-agent-setup-dismissed', 'true')
-    localStorage.setItem('kc-backend-status', JSON.stringify({
-      available: true,
-      timestamp: Date.now(),
-    }))
-  })
+  // Seed localStorage before page scripts run (#12088, #12089)
+  await setupLiveMode(page)
 
   await page.goto('/clusters')
   await page.waitForLoadState('domcontentloaded')

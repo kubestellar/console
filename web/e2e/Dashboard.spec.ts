@@ -4,6 +4,7 @@ import { getDefaultCardsForDashboard } from '../src/config/dashboards'
 import { formatCardTitle } from '../src/lib/formatCardTitle'
 import { mockApiFallback } from './helpers/setup'
 import { setupStrictDemoMode, API_RESPONSES } from './helpers/api-mocks'
+import { setupDemoMode, setupTestStorage } from './helpers/storage-setup'
 
 /**
  * These dashboard tests intentionally mock most API traffic so loading,
@@ -162,18 +163,10 @@ test.describe('Dashboard Page', () => {
       ],
     })
 
-    // Navigate to dashboard
-    await page.addInitScript(() => {
-      localStorage.setItem('token', 'demo-token')
-      localStorage.setItem('kc-demo-mode', 'true')
-      localStorage.setItem('kc-has-session', 'true')
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('kc-agent-setup-dismissed', 'true')
-      localStorage.setItem('kc-backend-status', JSON.stringify({
-        available: true,
-        timestamp: Date.now(),
-      }))
-    })
+    // Set up storage before navigation (#12088, #12089)
+    // Uses unified storage setup to prevent addInitScript accumulation and
+    // ensure IndexedDB cleanup completes before sessionStorage rehydration
+    await setupDemoMode(page)
     await page.goto('/')
     await waitForDashboardReady(page)
   })
@@ -343,17 +336,8 @@ test.describe('Dashboard Page', () => {
         })
       })
 
-      // Seed localStorage BEFORE any page script runs (#9096).
-      await page.addInitScript(() => {
-        localStorage.setItem('token', 'test-token')
-        localStorage.setItem('demo-user-onboarded', 'true')
-        localStorage.setItem('kc-demo-mode', 'false')
-        localStorage.setItem('kc-has-session', 'true')
-        localStorage.setItem('kc-backend-status', JSON.stringify({
-          available: true,
-          timestamp: Date.now(),
-        }))
-      })
+      // Seed localStorage BEFORE any page script runs (#9096, #12088, #12089).
+      await setupTestStorage(page, { demoMode: false })
 
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
@@ -410,17 +394,8 @@ test.describe('Dashboard Page', () => {
         })
       )
 
-      // Seed localStorage BEFORE any page script runs (#9096).
-      await page.addInitScript(() => {
-        localStorage.setItem('token', 'test-token')
-        localStorage.setItem('demo-user-onboarded', 'true')
-        localStorage.setItem('kc-demo-mode', 'false')
-        localStorage.setItem('kc-has-session', 'true')
-        localStorage.setItem('kc-backend-status', JSON.stringify({
-          available: true,
-          timestamp: Date.now(),
-        }))
-      })
+      // Seed localStorage BEFORE any page script runs (#9096, #12088, #12089).
+      await setupTestStorage(page, { demoMode: false })
 
       await page.goto('/')
       await waitForDashboardReady(page)
@@ -824,30 +799,10 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       })
     })
 
-    // Seed localStorage BEFORE any page script runs (#9096).
+    // Seed localStorage BEFORE any page script runs (#9096, #12088, #12089).
     // Disable demo mode so the app fetches from the mocked API routes
     // above instead of returning built-in demo data (12 clusters).
-    await page.addInitScript(() => {
-      // Clear stale backend-status cache so checkBackendAvailability()
-      // makes a fresh health check instead of returning a cached
-      // "unavailable" result from a previous test. (#10784)
-      localStorage.removeItem('kc-backend-status')
-      // Clear sessionStorage snapshots so the SWR cache layer cannot
-      // rehydrate stale cluster data from a previous test. sessionStorage
-      // survives page.reload() and on webkit/firefox the sync rehydration
-      // outraces the async IndexedDB delete, causing row-count
-      // mismatches. (#10828)
-      sessionStorage.clear()
-      localStorage.setItem('token', 'test-token')
-      localStorage.setItem('demo-user-onboarded', 'true')
-      localStorage.setItem('kc-demo-mode', 'false')
-      localStorage.setItem('kc-has-session', 'true')
-      localStorage.setItem('kc-agent-setup-dismissed', 'true')
-      localStorage.setItem('kc-backend-status', JSON.stringify({
-        available: true,
-        timestamp: Date.now(),
-      }))
-    })
+    await setupTestStorage(page, { demoMode: false, agentSetupDismissed: true })
   })
 
   test('cluster count in dashboard header matches /clusters page row count', async ({
