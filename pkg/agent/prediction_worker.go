@@ -840,12 +840,19 @@ func (s *Server) BroadcastToClients(msgType string, payload interface{}) {
 	var dead []*websocket.Conn
 	for _, c := range clients {
 		c.wsc.writeMu.Lock()
-		c.conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout))
+		if err := c.conn.SetWriteDeadline(time.Now().Add(wsWriteTimeout)); err != nil {
+			slog.Error("[Server] failed to set write deadline; marking client dead", "client", c.conn.RemoteAddr(), "error", err)
+			dead = append(dead, c.conn)
+			c.wsc.writeMu.Unlock()
+			continue
+		}
 		if err := c.conn.WriteMessage(websocket.TextMessage, data); err != nil {
 			slog.Error("[Server] error broadcasting to client", "client", c.conn.RemoteAddr(), "error", err)
 			dead = append(dead, c.conn)
 		}
-		c.conn.SetWriteDeadline(time.Time{}) // clear for normal writes
+		if err := c.conn.SetWriteDeadline(time.Time{}); err != nil {
+			slog.Warn("[Server] failed to clear write deadline (conn likely closed)", "client", c.conn.RemoteAddr(), "error", err)
+		}
 		c.wsc.writeMu.Unlock()
 	}
 
