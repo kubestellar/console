@@ -597,10 +597,24 @@ describe('ModalRuntime custom renderers', () => {
 // ============================================================================
 
 describe('ModalRuntime footer', () => {
-  it('shows Esc + Space hints when onBack is provided', () => {
+  it('hides keyboard hints by default', () => {
     render(
       <ModalRuntime
         definition={makeDefinition()}
+        isOpen={true}
+        onClose={vi.fn()}
+        data={defaultData}
+      />
+    )
+    expect(screen.queryByText('Esc: close')).toBeNull()
+    expect(screen.queryByText('Space: back')).toBeNull()
+  })
+
+  it('shows Esc + Space hints when onBack is provided and showKeyboardHints is true', () => {
+    const def = makeDefinition({ footer: { showKeyboardHints: true } })
+    render(
+      <ModalRuntime
+        definition={def}
         isOpen={true}
         onClose={vi.fn()}
         onBack={vi.fn()}
@@ -611,10 +625,11 @@ describe('ModalRuntime footer', () => {
     expect(screen.getByText('Space: back')).toBeInTheDocument()
   })
 
-  it('shows only Esc hint when onBack is not provided', () => {
+  it('shows only Esc hint when onBack is not provided and showKeyboardHints is true', () => {
+    const def = makeDefinition({ footer: { showKeyboardHints: true } })
     render(
       <ModalRuntime
-        definition={makeDefinition()}
+        definition={def}
         isOpen={true}
         onClose={vi.fn()}
         data={defaultData}

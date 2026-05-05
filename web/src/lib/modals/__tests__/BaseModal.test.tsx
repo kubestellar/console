@@ -268,25 +268,25 @@ describe('BaseModal.Content', () => {
 })
 
 describe('BaseModal.Footer', () => {
-  it('renders keyboard hints by default', () => {
+  it('hides keyboard hints by default', () => {
     render(
       <BaseModal isOpen={true} onClose={vi.fn()}>
         <BaseModal.Footer />
+      </BaseModal>
+    )
+    expect(screen.queryByText('Esc')).not.toBeInTheDocument()
+  })
+
+  it('shows keyboard hints when showKeyboardHints is true', () => {
+    render(
+      <BaseModal isOpen={true} onClose={vi.fn()}>
+        <BaseModal.Footer showKeyboardHints={true} />
       </BaseModal>
     )
     expect(screen.getByText('Esc')).toBeInTheDocument()
     // Both Esc and Space hints show "close" as label, so use getAllByText
     const closeLabels = screen.getAllByText('close')
     expect(closeLabels.length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('hides keyboard hints when showKeyboardHints is false', () => {
-    render(
-      <BaseModal isOpen={true} onClose={vi.fn()}>
-        <BaseModal.Footer showKeyboardHints={false} />
-      </BaseModal>
-    )
-    expect(screen.queryByText('Esc')).not.toBeInTheDocument()
   })
 })
 
