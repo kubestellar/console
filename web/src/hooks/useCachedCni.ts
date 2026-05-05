@@ -1,11 +1,12 @@
 /**
  * CNI Status Hook — Data fetching for the cni_status card.
  *
- * Uses createCardCachedHook factory for zero-boilerplate caching + loading state.
+ * Keeps the public hook contract stable while sharing the common fetchJson helper.
  * Domain logic (parsing, health derivation) remains in pure helper functions.
  */
 
-import { createCardCachedHook } from '../lib/cache'
+import { useCache } from '../lib/cache'
+import { useCardLoadingState } from '../components/cards/CardDataContext'
 import { fetchJson } from '../lib/fetchJson'
 import {
   CNI_DEMO_DATA,
@@ -148,20 +149,70 @@ async function fetchCniStatus(): Promise<CniStatusData> {
 }
 
 // ---------------------------------------------------------------------------
-// Hook (factory-generated)
+// Hook
 // ---------------------------------------------------------------------------
 
-export const useCachedCni = createCardCachedHook<CniStatusData>({
-  key: CACHE_KEY,
-  category: 'services',
-  initialData: INITIAL_DATA,
-  demoData: CNI_DEMO_DATA,
-  fetcher: fetchCniStatus,
-  hasAnyData: (data) => data.health === 'not-installed' || (data.nodes ?? []).length > 0,
-})
+export interface UseCachedCniResult {
+  data: CniStatusData
+  isLoading: boolean
+  isRefreshing: boolean
+  isDemoData: boolean
+  isFailed: boolean
+  consecutiveFailures: number
+  lastRefresh: number | null
+  showSkeleton: boolean
+  showEmptyState: boolean
+  error: boolean
+  refetch: () => Promise<void>
+}
 
-// Re-export the result type for consumers that need it
-export type { CardCachedHookResult as UseCachedCniResult } from '../lib/cache'
+export function useCachedCni(): UseCachedCniResult {
+  const {
+    data,
+    isLoading,
+    isRefreshing,
+    isFailed,
+    consecutiveFailures,
+    isDemoFallback,
+    lastRefresh,
+    refetch,
+  } = useCache<CniStatusData>({
+    key: CACHE_KEY,
+    category: 'services',
+    initialData: INITIAL_DATA,
+    demoData: CNI_DEMO_DATA,
+    persist: true,
+    fetcher: fetchCniStatus,
+  })
+
+  const effectiveIsDemoData = isDemoFallback && !isLoading
+  const hasAnyData =
+    data.health === 'not-installed' ? true : (data.nodes ?? []).length > 0
+
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading: isLoading && !hasAnyData,
+    isRefreshing,
+    hasAnyData,
+    isFailed,
+    consecutiveFailures,
+    isDemoData: effectiveIsDemoData,
+    lastRefresh,
+  })
+
+  return {
+    data,
+    isLoading,
+    isRefreshing,
+    isDemoData: effectiveIsDemoData,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh,
+    showSkeleton,
+    showEmptyState,
+    error: isFailed && !hasAnyData,
+    refetch,
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing
