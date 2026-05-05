@@ -677,10 +677,14 @@ export function SubmitForm({
               )}
             </div>
           )}
-          <p className="text-2xs text-muted-foreground mt-1">
-            First line becomes the title. Add details below.{' '}
-            <span className="text-muted-foreground/70">{t('feedback.submitShortcutHint')}</span>
-          </p>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              First line becomes the title. Add details below.
+            </p>
+            <div className="inline-flex items-center rounded-lg border border-purple-500/30 bg-purple-500/10 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
+              {t('feedback.submitShortcutHint')}
+            </div>
+          </div>
         </div>
 
         {/* Attachment Upload (images & videos) */}
