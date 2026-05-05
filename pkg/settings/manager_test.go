@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -87,8 +88,8 @@ func TestManager_GetAllSaveAll_RoundTrip(t *testing.T) {
 		SlackWebhookURL: "https://hooks.slack.com/services/T00/B00/xxx",
 		EmailSMTPHost:   "smtp.example.com",
 		EmailSMTPPort:   587,
-		EmailUsername:    "user@example.com",
-		EmailPassword:    "secret-password",
+		EmailUsername:   "user@example.com",
+		EmailPassword:   "secret-password",
 	}
 
 	// Save
@@ -209,6 +210,49 @@ func TestManager_SchemaVersion_ForwardCompat(t *testing.T) {
 	// AIMode should get default since it was missing
 	if sm.settings.Settings.AIMode != "medium" {
 		t.Errorf("aiMode = %q, want default %q", sm.settings.Settings.AIMode, "medium")
+	}
+}
+
+func TestManager_LoadReturnsErrorWhenCorruptBackupFails(t *testing.T) {
+	dir := t.TempDir()
+	sm := &SettingsManager{
+		settingsPath: filepath.Join(dir, settingsFileName),
+		keyPath:      filepath.Join(dir, keyFileName),
+	}
+	if err := sm.init(); err != nil {
+		t.Fatalf("init failed: %v", err)
+	}
+	if err := os.WriteFile(sm.settingsPath, []byte("{not-json"), settingsFileMode); err != nil {
+		t.Fatalf("failed to write corrupt settings file: %v", err)
+	}
+	if err := os.Chmod(dir, 0500); err != nil {
+		t.Fatalf("failed to chmod settings dir: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(dir, 0700)
+	})
+
+	err := sm.Load()
+	if err == nil {
+		t.Fatal("Load error = nil, want backup failure")
+	}
+	if !strings.Contains(err.Error(), "failed to back up corrupt settings file") {
+		t.Fatalf("Load error = %v, want backup failure", err)
+	}
+	if _, statErr := os.Stat(sm.settingsPath); statErr != nil {
+		t.Fatalf("corrupt settings file missing after failed backup: %v", statErr)
+	}
+	backups, globErr := filepath.Glob(sm.settingsPath + ".corrupt.*")
+	if globErr != nil {
+		t.Fatalf("Glob failed: %v", globErr)
+	}
+	if len(backups) != 0 {
+		t.Fatalf("unexpected backup files after failed rename: %v", backups)
+	}
+	if saveErr := sm.Save(); saveErr == nil {
+		t.Fatal("Save error = nil, want refusal to overwrite settings")
+	} else if !strings.Contains(saveErr.Error(), "refusing to overwrite settings after backup failure") {
+		t.Fatalf("Save error = %v, want refusal after backup failure", saveErr)
 	}
 }
 

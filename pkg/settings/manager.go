@@ -33,6 +33,7 @@ type SettingsManager struct {
 	keyPath      string
 	key          []byte
 	settings     *SettingsFile
+	loadErr      error
 }
 
 var (
@@ -95,6 +96,7 @@ func (sm *SettingsManager) Load() error {
 	data, err := os.ReadFile(sm.settingsPath)
 	if err != nil {
 		if os.IsNotExist(err) {
+			sm.loadErr = nil
 			sm.settings = DefaultSettings()
 			return nil
 		}
@@ -104,11 +106,18 @@ func (sm *SettingsManager) Load() error {
 	var sf SettingsFile
 	if err := json.Unmarshal(data, &sf); err != nil {
 		backupPath := sm.settingsPath + ".corrupt." + time.Now().UTC().Format("20060102T150405Z")
-		os.Rename(sm.settingsPath, backupPath)
+		if renameErr := os.Rename(sm.settingsPath, backupPath); renameErr != nil {
+			sm.loadErr = fmt.Errorf("failed to back up corrupt settings file: %w", renameErr)
+			slog.Error("[settings] failed to back up corrupt settings file", "error", renameErr, "path", sm.settingsPath, "backup", backupPath)
+			return sm.loadErr
+		}
 		slog.Error("[settings] corrupt settings file, resetting to defaults", "error", err, "path", sm.settingsPath, "backup", backupPath)
+		sm.loadErr = nil
 		sm.settings = DefaultSettings()
 		return nil
 	}
+
+	sm.loadErr = nil
 
 	// Detect missing boolean fields in older settings files (#7572).
 	// Booleans deserialize to false when absent, which silently disables
@@ -193,7 +202,17 @@ func (sm *SettingsManager) Save() error {
 	return sm.saveLocked()
 }
 
+func (sm *SettingsManager) pendingLoadErrorLocked() error {
+	if sm.loadErr == nil {
+		return nil
+	}
+	return fmt.Errorf("refusing to overwrite settings after backup failure: %w", sm.loadErr)
+}
+
 func (sm *SettingsManager) saveLocked() error {
+	if err := sm.pendingLoadErrorLocked(); err != nil {
+		return err
+	}
 	if sm.settings == nil {
 		sm.settings = DefaultSettings()
 	}
@@ -349,6 +368,9 @@ func (sm *SettingsManager) SaveAll(all *AllSettings) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
+	if err := sm.pendingLoadErrorLocked(); err != nil {
+		return err
+	}
 	if sm.settings == nil {
 		sm.settings = DefaultSettings()
 	}
@@ -426,6 +448,9 @@ func (sm *SettingsManager) MigrateFromConfigYaml(cp ConfigProvider) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
+	if err := sm.pendingLoadErrorLocked(); err != nil {
+		return err
+	}
 	if sm.settings == nil {
 		sm.settings = DefaultSettings()
 	}
@@ -513,6 +538,9 @@ func (sm *SettingsManager) ImportEncrypted(data []byte) error {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 
+	if err := sm.pendingLoadErrorLocked(); err != nil {
+		return err
+	}
 	if sm.settings == nil {
 		sm.settings = DefaultSettings()
 	}
