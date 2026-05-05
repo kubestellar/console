@@ -225,8 +225,8 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
     // Verify section is hidden or has collapsed class
     const nowVisible = await infoSection.isVisible({ timeout: 2000 }).catch(() => false)
     
-    // Either section is hidden, or it's still visible but we clicked collapse (state toggled)
-    expect(nowVisible !== initiallyVisible || true).toBe(true)
+    // Verify the collapse toggle changes the section visibility state.
+    expect(nowVisible).not.toBe(initiallyVisible)
   })
 
   test('collapse state persists across navigation', async ({ page }) => {

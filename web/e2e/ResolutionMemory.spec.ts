@@ -310,7 +310,7 @@ test.describe('Resolution Memory System', () => {
         const visible = await knowledgePanel.isVisible({ timeout: 3000 }).catch(() => false)
 
         // The panel should exist (even if empty, the header should show)
-        expect(visible || true).toBe(true) // Pass if we got this far
+        expect(visible).toBe(true)
       }
     }
   })

@@ -801,7 +801,7 @@ test.describe('Mission Control Journey Tests', () => {
         const bodyText = await page.locator('body').textContent() || ''
         const hasErrorIndicator = bodyText.includes('error') || bodyText.includes('Error') || bodyText.includes('failed') || bodyText.includes('Failed')
         // The error should be visible somewhere in the page
-        expect(hasErrorIndicator || true).toBe(true) // Soft assertion — error display varies by state
+        expect(hasErrorIndicator).toBe(true)
       }
 
       await page.screenshot({ path: 'test-results/journey-4-ai-failure.png', fullPage: true })
