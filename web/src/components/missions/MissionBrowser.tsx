@@ -468,7 +468,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // Ref to hold revealMissionInTree so selectCardMission can call it
   // without a circular declaration dependency (revealMissionInTree depends on
   // expandNode which is declared later in the component).
-  const revealMissionInTreeRef = useRef<(mission: MissionExport) => Promise<void>>()
+  const revealMissionInTreeRef = useRef<((mission: MissionExport) => Promise<void>) | undefined>(undefined)
 
   // PR #6518 item F — wrap in useCallback so the deep-link effect below can
   // safely list it in its dependency array without thrashing every render.
