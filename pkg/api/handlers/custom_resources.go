@@ -95,11 +95,11 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 			// bugs.
 			if apierrors.IsForbidden(err) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-					"error":   fmt.Sprintf("forbidden: %v", err),
+					"error":   "forbidden",
 					"cluster": cluster,
 				})
 			}
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": fmt.Sprintf("failed to list %s: %v", resource, err)})
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list resources"})
 		}
 		return c.JSON(CustomResourceResponse{Items: items, IsDemoData: false})
 	}
@@ -135,6 +135,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 
 			items, err := h.listCR(ctx, clusterName, namespace, gvr)
 			if err != nil {
+				slog.Warn("custom-resources: cluster error", "cluster", clusterName, "resource", gvr.Resource, "error", err)
 				// #7973: propagate per-cluster errors instead of silently
 				// dropping them. Distinguish RBAC 403 from infrastructure
 				// errors and CRD-not-installed (NotFound) in the error tag
@@ -142,13 +143,13 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 				mu.Lock()
 				switch {
 				case apierrors.IsForbidden(err):
-					clusterErrors[clusterName] = "forbidden: " + err.Error()
+					clusterErrors[clusterName] = "forbidden"
 				case apierrors.IsNotFound(err):
 					// CRD not installed on this cluster — common on multi-
 					// cluster fleets where only some clusters run an operator.
 					// Omit from errors map: not an actionable failure.
 				default:
-					clusterErrors[clusterName] = err.Error()
+					clusterErrors[clusterName] = "failed to list resources"
 				}
 				mu.Unlock()
 				return
