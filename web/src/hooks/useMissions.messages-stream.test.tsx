@@ -2,16 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
+import { agentFetch } from './mcp/agentFetch'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
-vi.mock('./mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  clusterCacheRef: { clusters: [] },
-  REFRESH_INTERVAL_MS: 120_000,
-  CLUSTER_POLL_INTERVAL_MS: 60_000,
+vi.mock('./mcp/agentFetch', () => ({
+  agentFetch: vi.fn((...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?]))),
 }))
 
 vi.mock('./useDemoMode', () => ({
@@ -370,7 +368,7 @@ describe('cancelMission', () => {
       result.current.cancelMission(missionId)
     })
 
-    expect(globalThis.fetch).toHaveBeenCalledWith(
+    expect(agentFetch).toHaveBeenCalledWith(
       expect.stringContaining('/cancel-chat'),
       expect.objectContaining({ method: 'POST' }),
     )
