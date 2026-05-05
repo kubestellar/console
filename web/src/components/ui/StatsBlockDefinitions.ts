@@ -45,6 +45,7 @@ export interface StatBlockConfig {
 export type DashboardStatsType =
   | 'clusters'
   | 'workloads'
+  | 'deployments'
   | 'pods'
   | 'gitops'
   | 'storage'
@@ -164,6 +165,18 @@ export const WORKLOADS_STAT_BLOCKS: StatBlockConfig[] = [
   { id: 'warning', name: 'Warning', icon: 'AlertTriangle', visible: true, color: 'yellow' },
   block('healthy'),
   block('deployments'),
+  block('pod_issues'),
+  { id: 'deployment_issues', name: 'Deploy Issues', icon: 'XCircle', visible: true, color: 'red' },
+]
+
+/**
+ * Default stat blocks for the Deployments dashboard
+ */
+export const DEPLOYMENTS_STAT_BLOCKS: StatBlockConfig[] = [
+  { id: 'namespaces', name: 'Total Deployments', icon: 'Layers', visible: true, color: 'blue' },
+  block('critical'),
+  { id: 'warning', name: 'Warning', icon: 'AlertTriangle', visible: true, color: 'yellow' },
+  block('healthy'),
   block('pod_issues'),
   { id: 'deployment_issues', name: 'Deploy Issues', icon: 'XCircle', visible: true, color: 'red' },
 ]
@@ -472,6 +485,7 @@ export const ALL_STAT_BLOCKS: StatBlockConfig[] = (() => {
   const allBlocks = [
     ...CLUSTERS_STAT_BLOCKS,
     ...WORKLOADS_STAT_BLOCKS,
+    ...DEPLOYMENTS_STAT_BLOCKS,
     ...PODS_STAT_BLOCKS,
     ...GITOPS_STAT_BLOCKS,
     ...STORAGE_STAT_BLOCKS,
@@ -516,6 +530,8 @@ export function getDefaultStatBlocks(dashboardType: DashboardStatsType): StatBlo
       return CLUSTERS_STAT_BLOCKS
     case 'workloads':
       return WORKLOADS_STAT_BLOCKS
+    case 'deployments':
+      return DEPLOYMENTS_STAT_BLOCKS
     case 'pods':
       return PODS_STAT_BLOCKS
     case 'gitops':

@@ -110,7 +110,7 @@ function DeploymentsContent() {
       rightExtra={<RotatingTip page="deployments" />}
       storageKey={DEPLOYMENTS_CARDS_KEY}
       defaultCards={DEFAULT_DEPLOYMENTS_CARDS}
-      statsType="workloads"
+      statsType="deployments"
       getStatValue={getStatValue}
       onRefresh={handleRefresh}
       isLoading={isLoading}
