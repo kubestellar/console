@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, XCircle } from 'lucide-react'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { useClusterHealth, useClusters, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useNamespaceStats, useDeployments, useServices, useEvents } from '../../../hooks/useMCP'
+import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useNamespaceStats, useDeployments, useServices, useEvents } from '../../../hooks/useMCP'
 import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
+import { NamespaceResources } from '../../clusters/components'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 import { LOADING_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -157,22 +158,41 @@ export function ClusterDrillDown({ data }: Props) {
     return activeLens === 'issues' ? nodes : []
   }, [activeLens, allNodes, normalizedSearchFilter])
 
-  const filteredNamespaces = useMemo(() => {
-    let ns = allNamespaces || []
+  const filteredNamespaceStats = useMemo(() => {
+    const statsByName = new Map(namespaceStats.map(ns => [ns.name, ns]))
+    const mergedNamespaceNames = Array.from(new Set([
+      ...namespaceStats.map(ns => ns.name),
+      ...(allNamespaces || []),
+    ]))
+
+    let namespaces = mergedNamespaceNames.map(name => statsByName.get(name) || {
+      name,
+      podCount: 0,
+      runningPods: 0,
+      pendingPods: 0,
+      failedPods: 0,
+    })
+
     if (normalizedSearchFilter) {
-      ns = ns.filter(n => n.toLowerCase().includes(normalizedSearchFilter))
+      namespaces = namespaces.filter(ns => ns.name.toLowerCase().includes(normalizedSearchFilter))
     }
+
     // Filter out system namespaces unless explicitly searching
     // But keep them if that's all we have
     if (!normalizedSearchFilter) {
-      const nonSystemNs = ns.filter(n => !n.startsWith('kube-') && n !== 'default')
-      // Only filter if we have non-system namespaces, otherwise show all
+      const nonSystemNs = namespaces.filter(ns => !ns.name.startsWith('kube-') && ns.name !== 'default')
       if (nonSystemNs.length > 0) {
-        ns = nonSystemNs
+        namespaces = nonSystemNs
       }
     }
-    return ns
-  }, [allNamespaces, normalizedSearchFilter])
+
+    return namespaces
+  }, [allNamespaces, namespaceStats, normalizedSearchFilter])
+
+  const filteredNamespaces = useMemo(
+    () => filteredNamespaceStats.map(ns => ns.name),
+    [filteredNamespaceStats],
+  )
 
   const filteredDeployments = useMemo(() => {
     let deps = allDeployments || []
@@ -216,8 +236,6 @@ export function ClusterDrillDown({ data }: Props) {
   const namespaceResources = useMemo(() => {
     const podIssueCounts: Record<string, number> = {}
     const deploymentIssueCounts: Record<string, number> = {}
-    const deploymentsByNamespace: Record<string, typeof filteredDeployments> = {}
-    const servicesByNamespace: Record<string, typeof filteredServices> = {}
 
     podIssues.forEach(issue => {
       podIssueCounts[issue.namespace] = (podIssueCounts[issue.namespace] || 0) + 1
@@ -227,23 +245,11 @@ export function ClusterDrillDown({ data }: Props) {
       deploymentIssueCounts[issue.namespace] = (deploymentIssueCounts[issue.namespace] || 0) + 1
     })
 
-    filteredDeployments.forEach(deployment => {
-      deploymentsByNamespace[deployment.namespace] ||= []
-      deploymentsByNamespace[deployment.namespace].push(deployment)
-    })
-
-    filteredServices.forEach(service => {
-      servicesByNamespace[service.namespace] ||= []
-      servicesByNamespace[service.namespace].push(service)
-    })
-
     return {
       podIssueCounts,
       deploymentIssueCounts,
-      deploymentsByNamespace,
-      servicesByNamespace,
     }
-  }, [clusterDeploymentIssues, filteredDeployments, filteredServices, podIssues])
+  }, [clusterDeploymentIssues, podIssues])
 
   const namespaceStatsByName = useMemo(
     () => Object.fromEntries((namespaceStats || []).map(stat => [stat.name, stat])),
@@ -635,7 +641,7 @@ export function ClusterDrillDown({ data }: Props) {
                   { id: 'all' as TreeLens, label: 'All', icon: Layers },
                   { id: 'issues' as TreeLens, label: 'Issues', icon: AlertTriangle, count: issueCounts.total },
                   { id: 'nodes' as TreeLens, label: 'Nodes', icon: Server, count: filteredNodes.length },
-                  { id: 'workloads' as TreeLens, label: 'Workloads', icon: Box, count: filteredDeployments.length },
+                  { id: 'workloads' as TreeLens, label: 'Workloads', icon: Box, count: filteredNamespaceStats.length },
                   { id: 'storage' as TreeLens, label: 'Storage', icon: HardDrive, count: filteredPVCs.length },
                   { id: 'network' as TreeLens, label: 'Network', icon: Network, count: filteredServices.length },
                 ].map(lens => (
@@ -749,14 +755,13 @@ export function ClusterDrillDown({ data }: Props) {
 
                         {expandedSections.has('namespaces') && (
                           <div className="ml-6 border-l-2 border-purple-500/30 pl-4 mt-1 space-y-1">
-                            {filteredNamespaces.slice(0, 15).map((ns, i) => {
+                            {filteredNamespaceStats.slice(0, 15).map((namespaceStat, i) => {
+                              const ns = namespaceStat.name
                               const nsKey = `ns-${ns}`
                               const nsPodIssues = namespaceResources.podIssueCounts[ns] || 0
                               const nsDeploymentIssues = namespaceResources.deploymentIssueCounts[ns] || 0
                               const totalIssues = nsPodIssues + nsDeploymentIssues
-                              const namespaceDeployments = namespaceResources.deploymentsByNamespace[ns] || []
-                              const namespaceServices = namespaceResources.servicesByNamespace[ns] || []
-                              const namespaceSummary = namespaceStatsByName[ns]
+
 
                               return (
                                 <div key={i}>
@@ -766,11 +771,16 @@ export function ClusterDrillDown({ data }: Props) {
                                   >
                                     {expandedSections.has(nsKey) ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                                     <span className="text-sm text-foreground">{ns}</span>
-                                    {namespaceSummary?.podCount ? (
+                                    {namespaceStat.podCount > 0 && (
                                       <span className="text-xs text-muted-foreground">
-                                        {namespaceSummary.podCount} pods
+                                        {namespaceStat.runningPods}/{namespaceStat.podCount} pods
                                       </span>
-                                    ) : null}
+                                    )}
+                                    {namespaceStat.pendingPods > 0 && (
+                                      <StatusBadge color="yellow" size="xs" rounded="full" className="ml-1">
+                                        {namespaceStat.pendingPods} pending
+                                      </StatusBadge>
+                                    )}
                                     {totalIssues > 0 && (
                                       <StatusBadge color="red" size="xs" rounded="full" className="ml-1">
                                         {totalIssues}
@@ -779,47 +789,8 @@ export function ClusterDrillDown({ data }: Props) {
                                   </div>
 
                                   {expandedSections.has(nsKey) && (
-                                    <div className="ml-6 border-l-2 border-muted/30 pl-4 mt-1 space-y-1">
-                                      {namespaceSummary ? (
-                                        <div className="flex flex-wrap items-center gap-3 px-1.5 py-1 text-2xs text-muted-foreground">
-                                          <span>{namespaceSummary.podCount} pods</span>
-                                          {namespaceSummary.runningPods > 0 ? <span className="text-green-400">{namespaceSummary.runningPods} running</span> : null}
-                                          {namespaceSummary.pendingPods > 0 ? <span className="text-yellow-400">{namespaceSummary.pendingPods} pending</span> : null}
-                                          {namespaceSummary.failedPods > 0 ? <span className="text-red-400">{namespaceSummary.failedPods} failed</span> : null}
-                                        </div>
-                                      ) : null}
-
-                                      {/* Deployments in namespace */}
-                                      {namespaceDeployments.slice(0, 5).map((dep, j) => (
-                                        <div
-                                          key={j}
-                                          onClick={() => drillToNamespace(effectiveClusterName, dep.namespace)}
-                                          className="flex items-center gap-2 p-1.5 rounded hover:bg-secondary/50 cursor-pointer group"
-                                        >
-                                          <Box className="w-3 h-3 text-green-400" />
-                                          <span className="text-xs text-foreground">{dep.name}</span>
-                                          <span className={`text-2xs ${dep.readyReplicas === dep.replicas ? 'text-green-400' : 'text-yellow-400'}`}>
-                                            {dep.readyReplicas}/{dep.replicas}
-                                          </span>
-                                          <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                                        </div>
-                                      ))}
-
-                                      {/* Services in namespace */}
-                                      {namespaceServices.slice(0, 3).map((svc, j) => (
-                                        <div
-                                          key={j}
-                                          onClick={() => drillToNamespace(effectiveClusterName, svc.namespace)}
-                                          className="flex items-center gap-2 p-1.5 rounded hover:bg-secondary/50 cursor-pointer group"
-                                        >
-                                          <Network className="w-3 h-3 text-blue-400" />
-                                          <span className="text-xs text-foreground">{svc.name}</span>
-                                          <span className="text-2xs text-muted-foreground">{svc.type}</span>
-                                          <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 ml-auto" />
-                                        </div>
-                                      ))}
-
-                                      {/* View all in namespace */}
+                                    <div className="ml-6 border-l-2 border-muted/30 pl-4 mt-1 space-y-2">
+                                      <NamespaceResources clusterName={effectiveClusterName} namespace={ns} />
                                       <button
                                         onClick={() => drillToNamespace(effectiveClusterName, ns)}
                                         className="text-xs text-purple-400 hover:text-purple-300 p-1.5 transition-colors"
