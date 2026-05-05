@@ -90,7 +90,7 @@ export interface Mission {
     description: string
     missionClass?: string
     cncfProject?: string
-    steps?: Array<{ title: string; description: string }>
+    steps?: Array<{ title: string; description: string; yaml?: string; command?: string }>
     tags?: string[]
   }
 }
@@ -132,7 +132,7 @@ export interface SaveMissionParams {
   type: Mission['type']
   missionClass?: string
   cncfProject?: string
-  steps?: Array<{ title: string; description: string }>
+  steps?: Array<{ title: string; description: string; yaml?: string; command?: string }>
   tags?: string[]
   initialPrompt: string
   /** Optional context (e.g. orbitConfig) stored on the mission */
@@ -142,6 +142,6 @@ export interface SaveMissionParams {
 /** Fields that can be updated on a saved (not-yet-run) mission */
 export interface SavedMissionUpdates {
   description?: string
-  steps?: Array<{ title: string; description: string }>
+  steps?: Array<{ title: string; description: string; yaml?: string; command?: string }>
   cluster?: string
 }

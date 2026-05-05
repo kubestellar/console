@@ -174,6 +174,15 @@ export function stripInteractiveArtifacts(text: string): string {
  */
 export function buildSavedMissionPrompt(mission: Pick<Mission, 'description' | 'importedFrom'>): string {
   return mission.importedFrom?.steps
-    ? `${mission.description}\n\nSteps:\n${mission.importedFrom.steps.map((s, i) => `${i + 1}. ${s.title}: ${s.description}`).join('\n')}`
+    ? `${mission.description}\n\nSteps:\n${mission.importedFrom.steps.map((s, i) => {
+        let stepText = `${i + 1}. ${s.title}: ${s.description}`
+        if (s.yaml) {
+          stepText += `\n\n\`\`\`yaml\n${s.yaml}\n\`\`\``
+        }
+        if (s.command) {
+          stepText += `\n\n\`\`\`bash\n${s.command}\n\`\`\``
+        }
+        return stepText
+      }).join('\n\n')}`
     : mission.description
 }
