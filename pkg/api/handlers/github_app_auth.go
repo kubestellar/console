@@ -181,7 +181,10 @@ func (p *GitHubAppTokenProvider) mintInstallationToken(ctx context.Context) (str
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return "", time.Time{}, fmt.Errorf("installation token request returned %d: %s", resp.StatusCode, string(body))
 	}
 

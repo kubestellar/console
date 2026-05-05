@@ -814,7 +814,10 @@ func (h *GitHubPipelinesHandler) fetchRuns(ctx context.Context, repo, query stri
 			return out, nil
 		}
 		if res.StatusCode >= 400 {
-			body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+			body, err := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+			if err != nil {
+				slog.Warn("failed to read response body", "error", err)
+			}
 			res.Body.Close()
 			return out, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
 		}
@@ -857,7 +860,10 @@ func (h *GitHubPipelinesHandler) fetchWorkflowRuns(ctx context.Context, repo, wo
 		return nil, nil
 	}
 	if res.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		body, err := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return nil, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
 	}
 	// Store rate limit headers from the successful API call
@@ -888,7 +894,10 @@ func (h *GitHubPipelinesHandler) fetchJobs(ctx context.Context, repo string, run
 	}
 	defer res.Body.Close()
 	if res.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		body, err := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return nil, fmt.Errorf("github %d: %s", res.StatusCode, string(body))
 	}
 	// Store rate limit headers from the successful API call
@@ -1451,7 +1460,10 @@ func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
 	}
 	defer res.Body.Close()
 	if res.StatusCode >= 400 {
-		body, _ := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		body, err := io.ReadAll(io.LimitReader(res.Body, ghpMaxErrorBodyBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": fmt.Sprintf("github %d: %s", res.StatusCode, string(body))})
 	}
 	return c.JSON(fiber.Map{"ok": true, "op": op, "run": run, "repo": repo})

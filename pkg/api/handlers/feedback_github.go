@@ -886,7 +886,10 @@ func (h *FeedbackHandler) postGitHubIssueViaProxy(ctx context.Context, repoOwner
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return 0, "", fmt.Errorf("proxy returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -972,7 +975,10 @@ func (h *FeedbackHandler) uploadScreenshotToGitHub(repoOwner, repoName, requestI
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		respBody, err := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return "", fmt.Errorf("GitHub Contents API returned %d: %s", resp.StatusCode, string(respBody))
 	}
 

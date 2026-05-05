@@ -957,7 +957,10 @@ s.failureTracker = failureTracker
 		}
 		defer resp.Body.Close()
 
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxAgentProxyResponseBytes))
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxAgentProxyResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		c.Set("Content-Type", resp.Header.Get("Content-Type"))
 		return c.Status(resp.StatusCode).Send(body)
 	})

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	neturl "net/url"
 	"os"
@@ -240,7 +241,10 @@ func (c *KagentiClient) ListAgentsWithContext(ctx context.Context) ([]AgentInfo,
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+			body, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+			if err != nil {
+				slog.Warn("failed to read response body", "error", err)
+			}
 			drainAndClose(resp.Body)
 			lastErr = fmt.Errorf("list agents at %s returned %d: %s", path, resp.StatusCode, string(body))
 			continue
@@ -295,7 +299,10 @@ func (c *KagentiClient) Discover(namespace, agentName string) (*AgentCard, error
 	defer drainAndClose(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return nil, fmt.Errorf("discover agent %s/%s returned %d: %s", namespace, agentName, resp.StatusCode, string(body))
 	}
 
@@ -352,7 +359,10 @@ func (c *KagentiClient) Invoke(ctx context.Context, namespace, agentName, messag
 				return resp.Body, nil
 			}
 
-			errBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+			errBody, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+			if err != nil {
+				slog.Warn("failed to read response body", "error", err)
+			}
 			drainAndClose(resp.Body)
 			lastErr = fmt.Errorf("direct invoke returned %d: %s", resp.StatusCode, string(errBody))
 		}
@@ -408,7 +418,10 @@ func (c *KagentiClient) Invoke(ctx context.Context, namespace, agentName, messag
 			return resp.Body, nil
 		}
 
-		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		errBody, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		drainAndClose(resp.Body)
 		lastErr = fmt.Errorf("kagenti invoke at %s returned %d: %s", url, resp.StatusCode, string(errBody))
 	}

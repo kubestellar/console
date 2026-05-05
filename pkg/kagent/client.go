@@ -1,14 +1,15 @@
 package kagent
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	neturl "net/url"
 	"os"
-	"bytes"
 	"strings"
 	"time"
 )
@@ -84,7 +85,10 @@ func (c *KagentClient) ListAgents() ([]AgentInfo, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return nil, fmt.Errorf("list agents returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -106,7 +110,10 @@ func (c *KagentClient) Discover(namespace, agentName string) (*AgentCard, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		return nil, fmt.Errorf("discover agent %s/%s returned %d: %s", namespace, agentName, resp.StatusCode, string(body))
 	}
 
@@ -167,7 +174,10 @@ func (c *KagentClient) Invoke(ctx context.Context, namespace, agentName, message
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		errBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		errBody, err := io.ReadAll(io.LimitReader(resp.Body, maxKAgentResponseBytes))
+		if err != nil {
+			slog.Warn("failed to read response body", "error", err)
+		}
 		resp.Body.Close()
 		return nil, fmt.Errorf("A2A invoke returned %d: %s", resp.StatusCode, string(errBody))
 	}
