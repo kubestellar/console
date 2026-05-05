@@ -131,6 +131,28 @@ export function setupErrorCollector(page: Page): { errors: string[]; warnings: s
 // ---------------------------------------------------------------------------
 
 /**
+ * Clean all persistent storage (IndexedDB + sessionStorage + localStorage caches).
+ * Returns a promise that resolves when cleanup is complete. Must be called in
+ * page.evaluate() or page.addInitScript() so it runs in the browser context.
+ *
+ * #12089 — sessionStorage.clear() is synchronous but indexedDB.deleteDatabase()
+ * is async. On webkit/firefox, sessionStorage hydration can outrace the async
+ * IndexedDB delete, causing stale data to reappear. This helper ensures both
+ * are cleaned before proceeding.
+ */
+async function cleanPersistentStorage(): Promise<void> {
+  sessionStorage.clear()
+  localStorage.removeItem('kc-backend-status')
+  const deletePromise = new Promise<void>((resolve) => {
+    const req = indexedDB.deleteDatabase('kc_cache')
+    req.onsuccess = () => resolve()
+    req.onerror = () => resolve()
+    req.onblocked = () => resolve()
+  })
+  await deletePromise
+}
+
+/**
  * Install a mock for `/api/me` that returns a demo user. Safe to call
  * multiple times — Playwright will overwrite the handler. Tests that need
  * to simulate an unauthenticated state should NOT call this helper.

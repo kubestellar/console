@@ -225,8 +225,10 @@ test.describe('Sidebar Navigation', () => {
 
       // Cluster status section depends on config.showClusterStatus being true
       // which may not be enabled by default — skip if not present
+      // #12090 — Use timeout instead of catch to differentiate between
+      // "feature disabled" and "slow hydration"
       const clusterStatus = page.getByTestId('sidebar-cluster-status')
-      const isVisible = await clusterStatus.isVisible().catch(() => false)
+      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch(() => false)
 
       if (isVisible) {
         // Should show healthy/unhealthy labels inside the cluster status section
@@ -240,8 +242,9 @@ test.describe('Sidebar Navigation', () => {
     test('cluster status links navigate to filtered cluster view', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
+      // #12090 — Use timeout instead of catch
       const clusterStatus = page.getByTestId('sidebar-cluster-status')
-      const isVisible = await clusterStatus.isVisible().catch(() => false)
+      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch(() => false)
 
       if (!isVisible) {
         test.skip()
@@ -258,8 +261,9 @@ test.describe('Sidebar Navigation', () => {
     test('unhealthy status link includes ?status=unhealthy', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: 10000 })
 
+      // #12090 — Use timeout instead of catch
       const clusterStatus = page.getByTestId('sidebar-cluster-status')
-      const isVisible = await clusterStatus.isVisible().catch(() => false)
+      const isVisible = await clusterStatus.isVisible({ timeout: 30000 }).catch(() => false)
 
       if (!isVisible) {
         test.skip()
@@ -268,7 +272,7 @@ test.describe('Sidebar Navigation', () => {
 
       // Click unhealthy status button
       const unhealthyBtn = clusterStatus.locator('button').filter({ hasText: /Unhealthy/i }).first()
-      const unhealthyVisible = await unhealthyBtn.isVisible().catch(() => false)
+      const unhealthyVisible = await unhealthyBtn.isVisible({ timeout: 30000 }).catch(() => false)
       if (!unhealthyVisible) { test.skip(); return }
 
       await unhealthyBtn.click()

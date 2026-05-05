@@ -255,10 +255,21 @@ test.describe('Auth Flow', () => {
     test.skip(!backendUp, 'Backend not running — auth redirect tests require OAuth mode')
 
     // Clear all storage to ensure no auth state
+    // #12089 — Wait for IndexedDB cleanup to complete
     await page.goto('/login')
-    await page.evaluate(() => {
-      localStorage.clear()
-      sessionStorage.clear()
+    await page.evaluate(async () => {
+      async function cleanStorage(): Promise<void> {
+        localStorage.clear()
+        sessionStorage.clear()
+        const deletePromise = new Promise<void>((resolve) => {
+          const req = indexedDB.deleteDatabase('kc_cache')
+          req.onsuccess = () => resolve()
+          req.onerror = () => resolve()
+          req.onblocked = () => resolve()
+        })
+        await deletePromise
+      }
+      await cleanStorage()
     })
 
     await page.goto('/')

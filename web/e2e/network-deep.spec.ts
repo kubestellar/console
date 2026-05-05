@@ -59,10 +59,11 @@ test.describe('Network Deep Tests (/network)', () => {
 
   test('renders subtitle about monitoring network resources', async ({ page }) => {
     // The subtitle is rendered near the title in DashboardPage
+    // #12090 — Wait for data hydration instead of skipping assertion
     const subtitle = page.locator('text=' + PAGE_SUBTITLE).first()
-    const isVisible = await subtitle.isVisible().catch(() => false)
-    // Subtitle may be in a responsive-hidden element; at minimum the title must exist
-    if (isVisible) {
+    // Subtitle may be in a responsive-hidden element on mobile; check if visible with timeout
+    const subtitleVisible = await subtitle.isVisible({ timeout: 5000 }).catch(() => false)
+    if (subtitleVisible) {
       await expect(subtitle).toBeVisible()
     } else {
       // Fallback: ensure the page at least has the title
@@ -79,51 +80,33 @@ test.describe('Network Deep Tests (/network)', () => {
   })
 
   test('shows total services stat', async ({ page }) => {
+    // #12090 — Wait for data hydration instead of skipping assertion
     const stat = page.locator('text=' + STAT_SUBLABEL_SERVICES).first()
-    const isVisible = await stat.isVisible().catch(() => false)
-    // In demo mode, stats should render even if values are zero
-    if (isVisible) {
-      await expect(stat).toBeVisible()
-    }
-    // Regardless, the dashboard header must be present
-    await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(stat).toBeVisible({ timeout: 30000 })
   })
 
   test('shows LoadBalancer count with "external access" sublabel', async ({ page }) => {
+    // #12090 — Wait for data hydration instead of skipping assertion
     const stat = page.locator('text=' + STAT_SUBLABEL_LOADBALANCER).first()
-    const isVisible = await stat.isVisible().catch(() => false)
-    if (isVisible) {
-      await expect(stat).toBeVisible()
-    }
-    // Verify page is functional
-    await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(stat).toBeVisible({ timeout: 30000 })
   })
 
   test('shows NodePort count with "node-level access" sublabel', async ({ page }) => {
+    // #12090 — Wait for data hydration instead of skipping assertion
     const stat = page.locator('text=' + STAT_SUBLABEL_NODEPORT).first()
-    const isVisible = await stat.isVisible().catch(() => false)
-    if (isVisible) {
-      await expect(stat).toBeVisible()
-    }
-    await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(stat).toBeVisible({ timeout: 30000 })
   })
 
   test('shows ClusterIP count with "internal only" sublabel', async ({ page }) => {
+    // #12090 — Wait for data hydration instead of skipping assertion
     const stat = page.locator('text=' + STAT_SUBLABEL_CLUSTERIP).first()
-    const isVisible = await stat.isVisible().catch(() => false)
-    if (isVisible) {
-      await expect(stat).toBeVisible()
-    }
-    await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(stat).toBeVisible({ timeout: 30000 })
   })
 
   test('shows endpoints stat', async ({ page }) => {
+    // #12090 — Wait for data hydration instead of skipping assertion
     const stat = page.locator('text=' + STAT_SUBLABEL_ENDPOINTS).first()
-    const isVisible = await stat.isVisible().catch(() => false)
-    if (isVisible) {
-      await expect(stat).toBeVisible()
-    }
-    await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    await expect(stat).toBeVisible({ timeout: 30000 })
   })
 
   test('refresh button is clickable', async ({ page }) => {
@@ -158,8 +141,9 @@ test.describe('Network Deep Tests (/network)', () => {
     await expect(page.getByTestId('dashboard-header')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     // Check for error message — it may or may not appear depending on demo mode fallback
+    // This is a legitimate conditional since error state depends on data availability
     const errorAlert = page.locator('text=' + ERROR_MESSAGE_TEXT).first()
-    const errorVisible = await errorAlert.isVisible().catch(() => false)
+    const errorVisible = await errorAlert.isVisible({ timeout: 5000 }).catch(() => false)
     // If the error is shown, verify it is displayed properly
     if (errorVisible) {
       await expect(errorAlert).toBeVisible()
