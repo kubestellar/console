@@ -22,11 +22,24 @@ const FAST_RETRY_INTERVAL_MS = 3_000
 const FAILURE_THRESHOLD = 4
 const HEALTH_CHECK_TIMEOUT_MS = 3_000
 
+/** Maps watchdog stage strings from /health to user-facing i18n keys. */
+export const WATCHDOG_STAGE_LABELS: Record<string, string> = {
+  watchdog: 'layout.watchdogStageWatchdog',
+  npm_install: 'layout.watchdogStageNpmInstall',
+  parallel_build: 'layout.watchdogStageParallelBuild',
+  frontend_build: 'layout.watchdogStageFrontendBuild',
+  vite_starting: 'layout.watchdogStageViteStarting',
+  backend_compiling: 'layout.watchdogStageBackendCompiling',
+  backend_starting: 'layout.watchdogStageBackendStarting',
+  ready: 'layout.watchdogStageReady',
+}
+
 interface BackendState {
   status: BackendStatus
   lastCheck: Date | null
   versionChanged: boolean
   inCluster: boolean
+  watchdogStage: string | null
 }
 
 class BackendHealthManager {
@@ -38,6 +51,7 @@ class BackendHealthManager {
     // on page reload — avoids the timing race where first data fetch fires before
     // the async /health response comes back.
     inCluster: readInClusterFromSession(),
+    watchdogStage: null,
   }
   private listeners: Set<(state: BackendState) => void> = new Set()
   private pollInterval: ReturnType<typeof setInterval> | null = null
@@ -99,8 +113,9 @@ class BackendHealthManager {
     const prevStatus = this.state.status
     const prevVersionChanged = this.state.versionChanged
     const prevInCluster = this.state.inCluster
+    const prevWatchdogStage = this.state.watchdogStage
     this.state = { ...this.state, ...updates }
-    if (prevStatus !== this.state.status || prevVersionChanged !== this.state.versionChanged || prevInCluster !== this.state.inCluster) {
+    if (prevStatus !== this.state.status || prevVersionChanged !== this.state.versionChanged || prevInCluster !== this.state.inCluster || prevWatchdogStage !== this.state.watchdogStage) {
       this.notify()
     }
     // When inCluster transitions false→true (first /health response on fresh session),
@@ -124,7 +139,6 @@ class BackendHealthManager {
 
       if (response.ok) {
         this.failureCount = 0
-        this.switchToNormalPoll()
 
         // Parse response to check version and status
         try {
@@ -132,6 +146,19 @@ class BackendHealthManager {
           // before the outer try/catch processes the rejection (microtask timing issue).
           const data = await response.json().catch(() => null)
           if (!data) throw new Error('Invalid JSON')
+
+          // Watchdog is alive but backend is not ready — show startup progress.
+          if (data.status === 'watchdog') {
+            this.switchToFastRetry()
+            this.setState({
+              status: 'disconnected',
+              lastCheck: new Date(),
+              watchdogStage: (data.stage as string) ?? 'watchdog',
+            })
+            return
+          }
+
+          this.switchToNormalPoll()
           const version = data.version as string | undefined
 
           // Track initial version for stale-frontend detection
@@ -153,12 +180,15 @@ class BackendHealthManager {
             lastCheck: new Date(),
             versionChanged,
             inCluster,
+            watchdogStage: null,
           })
         } catch {
           // JSON parse failed — still mark as connected
+          this.switchToNormalPoll()
           this.setState({
             status: 'connected',
             lastCheck: new Date(),
+            watchdogStage: null,
           })
         }
       } else {
@@ -228,6 +258,7 @@ export function useBackendHealth() {
     versionChanged: state.versionChanged,
     inCluster: state.inCluster,
     isInClusterMode: state.status === 'connected' && state.inCluster,
+    watchdogStage: state.watchdogStage,
   }
 }
 
