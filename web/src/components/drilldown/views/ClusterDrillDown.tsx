@@ -258,10 +258,6 @@ export function ClusterDrillDown({ data }: Props) {
     filteredServices.length > 0 ||
     filteredPVCs.length > 0
 
-  const namespaceStatsByName = useMemo(
-    () => Object.fromEntries((namespaceStats || []).map(stat => [stat.name, stat])),
-    [namespaceStats],
-  )
   const hasVisibleResourceData =
     filteredNodes.length > 0 ||
     filteredNamespaces.length > 0 ||
