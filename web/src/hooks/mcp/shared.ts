@@ -828,7 +828,7 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
   if (isNetlifyDeployment) return null
 
   // In-cluster Helm deployments have no local kc-agent. Go directly to the
-  // backend API which authenticates via the pod's ServiceAccount. (#10511)
+  // backend API which authenticates via the pod's ServiceAccount.
   if (isInClusterMode()) {
     return fetchClusterListFromBackendAPI()
   }
