@@ -34,11 +34,15 @@ const TABLET_VIEWPORT_WIDTH_PX = 768
 const TABLET_VIEWPORT_HEIGHT_PX = 1024
 const KEYBOARD_FOCUS_SEQUENCE_LENGTH = 5
 const REFRESH_BUTTON_TITLE = 'Refresh cluster data'
+const REFRESH_BUTTON_ACCESSIBLE_NAME = 'Refresh cluster data'
 const ADD_CARD_DIALOG_TITLE = 'Console Studio'
 const ADD_CARD_BROWSE_TAB_LABEL = /Add Cards/i
 const ADD_CARD_SEARCH_PLACEHOLDER = /Search cards/i
 const GRID_CARD_SELECTOR = '[data-card-id]'
 const GRID_VISIBLE_TIMEOUT_MS = 10_000
+const SINGLE_COLUMN_GRID_COUNT = 1
+const MULTI_COLUMN_GRID_COUNT_THRESHOLD = 2
+const DASHBOARD_REFRESH_BUTTON_TEST_ID = 'dashboard-refresh-button'
 const DEFAULT_MAIN_DASHBOARD_CARDS = getDefaultCardsForDashboard('main').map((card) => ({
   id: card.id,
   cardType: card.card_type,
@@ -105,6 +109,13 @@ async function reloadDashboard(page: Page) {
 
 async function expectVisible(locator: Locator, reason: string, timeoutMs = CARD_DATA_TIMEOUT_MS) {
   await expect(locator, reason).toBeVisible({ timeout: timeoutMs })
+}
+
+async function getGridColumnCount(locator: Locator): Promise<number> {
+  return locator.evaluate((element) => {
+    const templateColumns = window.getComputedStyle(element).gridTemplateColumns
+    return templateColumns.split(' ').filter(Boolean).length
+  })
 }
 
 test.describe('Dashboard Page', () => {
@@ -204,13 +215,13 @@ test.describe('Dashboard Page', () => {
     test('displays header with refresh controls', async ({ page }) => {
       const dashboardHeader = page.getByTestId('dashboard-header')
       const dashboardTitle = page.getByTestId('dashboard-title')
-      const refreshButton = page.getByTestId('dashboard-refresh-button')
+      const refreshButton = page.getByTestId(DASHBOARD_REFRESH_BUTTON_TEST_ID)
 
       await expect(dashboardHeader).toBeVisible({ timeout: HEADER_ASSERT_TIMEOUT_MS })
       await expect(dashboardTitle).toBeVisible({ timeout: HEADER_ASSERT_TIMEOUT_MS })
       await expect(dashboardTitle).toContainText(/\S+/, { timeout: HEADER_ASSERT_TIMEOUT_MS })
       await expect(refreshButton).toBeVisible({ timeout: HEADER_ASSERT_TIMEOUT_MS })
-      await expect(refreshButton).toHaveAttribute('title', REFRESH_BUTTON_TITLE, { timeout: HEADER_ASSERT_TIMEOUT_MS })
+      await expect(refreshButton).toHaveAttribute('aria-label', REFRESH_BUTTON_ACCESSIBLE_NAME, { timeout: HEADER_ASSERT_TIMEOUT_MS })
     })
   })
 
@@ -451,11 +462,11 @@ test.describe('Dashboard Page', () => {
     })
 
     test('refresh button triggers data reload', async ({ page }) => {
-      const refreshButton = page.getByTestId('dashboard-refresh-button')
+      const refreshButton = page.getByTestId(DASHBOARD_REFRESH_BUTTON_TEST_ID)
 
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: DASHBOARD_RENDER_TIMEOUT_MS })
       await expect(refreshButton).toBeVisible({ timeout: DASHBOARD_RENDER_TIMEOUT_MS })
-      await expect(refreshButton).toHaveAttribute('title', REFRESH_BUTTON_TITLE, { timeout: DASHBOARD_RENDER_TIMEOUT_MS })
+      await expect(refreshButton).toHaveAttribute('aria-label', REFRESH_BUTTON_ACCESSIBLE_NAME, { timeout: DASHBOARD_RENDER_TIMEOUT_MS })
       await expect(refreshButton).toBeEnabled({ timeout: DASHBOARD_RENDER_TIMEOUT_MS })
 
       const refreshRequestPromise = page.waitForRequest(
@@ -465,10 +476,10 @@ test.describe('Dashboard Page', () => {
 
       await refreshButton.click()
       await expect(refreshButton).toBeVisible({ timeout: DASHBOARD_RENDER_TIMEOUT_MS })
-      await expect(refreshButton).toHaveAttribute('title', REFRESH_BUTTON_TITLE, { timeout: DASHBOARD_RENDER_TIMEOUT_MS })
+      await expect(refreshButton).toHaveAttribute('aria-label', REFRESH_BUTTON_ACCESSIBLE_NAME, { timeout: DASHBOARD_RENDER_TIMEOUT_MS })
 
       const refreshIndicatorVisible = await page
-        .locator('[data-testid="dashboard-refresh-button"] .animate-spin, [data-testid="dashboard-header"] .animate-spin, [data-card-id] .animate-spin')
+        .locator(`[data-testid="${DASHBOARD_REFRESH_BUTTON_TEST_ID}"] .animate-spin, [data-testid="dashboard-header"] .animate-spin, [data-card-id] .animate-spin`)
         .first()
         .waitFor({ state: 'visible', timeout: REFRESH_SIGNAL_TIMEOUT_MS })
         .then(() => true, () => false)
@@ -491,21 +502,31 @@ test.describe('Dashboard Page', () => {
       // layout is exercised through the same initialization path. (#12057)
       await reloadDashboard(page)
 
-      // Page should still render at mobile size
       const PAGE_VISIBLE_TIMEOUT_MS = 15_000
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
+      const cardsGrid = page.getByTestId('dashboard-cards-grid')
+      const sidebarCollapseToggle = page.getByTestId('sidebar-collapse-toggle')
 
-      // Header should still be visible
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
       await expect(page.getByTestId('dashboard-header')).toBeVisible()
+      await expect(cardsGrid).toBeVisible()
+      await expect(sidebarCollapseToggle).toBeHidden()
+      expect(await getGridColumnCount(cardsGrid)).toBe(SINGLE_COLUMN_GRID_COUNT)
     })
 
     test('adapts to tablet viewport', async ({ page }) => {
       await page.setViewportSize({ width: TABLET_VIEWPORT_WIDTH_PX, height: TABLET_VIEWPORT_HEIGHT_PX })
       await reloadDashboard(page)
 
-      // Content should still be accessible
+      const cardsGrid = page.getByTestId('dashboard-cards-grid')
+      const sidebar = page.getByTestId('sidebar')
+      const sidebarCollapseToggle = page.getByTestId('sidebar-collapse-toggle')
+
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
       await expect(page.getByTestId('dashboard-header')).toBeVisible()
+      await expect(cardsGrid).toBeVisible()
+      await expect(sidebar).toBeVisible()
+      await expect(sidebarCollapseToggle).toBeVisible()
+      expect(await getGridColumnCount(cardsGrid)).toBeGreaterThanOrEqual(MULTI_COLUMN_GRID_COUNT_THRESHOLD)
     })
   })
 
@@ -581,11 +602,9 @@ test.describe('Dashboard Page', () => {
     test('has proper ARIA labels', async ({ page }) => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
 
-      // Refresh button should have title for accessibility. The actual i18n
-      // string is `common.refreshClusterData` → "Refresh cluster data"
-      // (see web/src/locales/en/common.json and DashboardHeader.tsx).
-      const refreshButton = page.getByTestId('dashboard-refresh-button')
-      await expect(refreshButton).toHaveAttribute('title', REFRESH_BUTTON_TITLE)
+      const refreshButton = page.getByRole('button', { name: REFRESH_BUTTON_ACCESSIBLE_NAME })
+      await expect(refreshButton).toHaveAttribute('data-testid', DASHBOARD_REFRESH_BUTTON_TEST_ID)
+      await expect(refreshButton).toHaveAttribute('aria-label', REFRESH_BUTTON_ACCESSIBLE_NAME)
     })
   })
 
@@ -612,11 +631,12 @@ test.describe('Dashboard Page', () => {
       await reloadDashboard(page)
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      const podCount = cardsGrid.getByText(new RegExp(`\\b${MOCK_POD_COUNT}\\b`)).first()
+      const podCard = cardsGrid.locator('[data-card-id]').filter({ hasText: /pods/i }).first()
       await expectVisible(
-        podCount,
+        podCard,
         'Pod card not present on default dashboard',
       )
+      await expect(podCard).toContainText(new RegExp(`(?<!\d)${MOCK_POD_COUNT}(?!\d)`))
     })
 
     test('renders cluster health status from mocked API data', async ({ page }) => {
@@ -638,11 +658,14 @@ test.describe('Dashboard Page', () => {
       await reloadDashboard(page)
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      const healthyCluster = cardsGrid.getByText('test-healthy-cluster').first()
+      const clusterHealthCard = cardsGrid.locator('[data-card-id]').filter({
+        hasText: 'test-healthy-cluster',
+      }).first()
       await expectVisible(
-        healthyCluster,
+        clusterHealthCard,
         'Cluster health card not present on default dashboard layout',
       )
+      await expect(clusterHealthCard).toContainText('test-unhealthy-cluster')
     })
 
     test('renders namespace count from mocked API data', async ({ page }) => {
@@ -666,11 +689,12 @@ test.describe('Dashboard Page', () => {
       await reloadDashboard(page)
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      const namespaceCount = cardsGrid.getByText(new RegExp(`\\b${MOCK_NAMESPACE_COUNT}\\b`)).first()
+      const namespaceCard = cardsGrid.locator('[data-card-id]').filter({ hasText: /namespace/i }).first()
       await expectVisible(
-        namespaceCount,
+        namespaceCard,
         'Namespace card not present on default dashboard',
       )
+      await expect(namespaceCard).toContainText(new RegExp(`(?<!\d)${MOCK_NAMESPACE_COUNT}(?!\d)`))
     })
   })
 })
@@ -907,10 +931,13 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       timeout: 10000,
     })
 
-    const clusterHealthCard = page.locator('[data-card-type="cluster_health"]').first()
-    await expect(clusterHealthCard).toBeVisible({ timeout: 10000 })
-    await expect(
-      clusterHealthCard.getByText('accuracy-cluster-1', { exact: true }),
-    ).toBeVisible({ timeout: 10000 })
+    const cardsGrid = page.getByTestId('dashboard-cards-grid')
+    const injectedClusterCard = cardsGrid.locator('[data-card-id]').filter({
+      hasText: 'accuracy-cluster-1',
+    }).first()
+    await expect(injectedClusterCard).toBeVisible({ timeout: 10000 })
+    await expect(injectedClusterCard).toContainText('accuracy-cluster-1', {
+      timeout: 10000,
+    })
   })
 })
