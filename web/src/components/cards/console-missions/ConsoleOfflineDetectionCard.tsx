@@ -226,6 +226,20 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     ],
   )
 
+  // Issue #12196: clear refresh-failure badges once any of the card's data
+  // sources recover. This card can still render useful results when one
+  // background source has a transient timeout, so only surface a failure when
+  // the card has no usable data at all.
+  const hasAnyCardData =
+    allNodes.length > 0 ||
+    nodesCache.length > 0 ||
+    gpuNodes.length > 0 ||
+    podIssues.length > 0 ||
+    clusters.length > 0 ||
+    aiPredictions.length > 0
+  const hasRefreshFailure = (gpuFailed || podsFailed) && !hasAnyCardData
+  const refreshFailureCount = hasRefreshFailure ? Math.max(gpuFailures, podsFailures) : 0
+
   // Report loading state to CardWrapper for skeleton/refresh behavior
   useCardLoadingState(cardLoadState)
 
