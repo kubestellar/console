@@ -117,8 +117,21 @@ func (cm *ConfigManager) Save() error {
 	return cm.saveLocked()
 }
 
+// ensureConfigLocked lazily creates the config object and agent map.
+// Caller MUST hold cm.mu.
+func (cm *ConfigManager) ensureConfigLocked() {
+	if cm.config == nil {
+		cm.config = &AgentConfig{}
+	}
+	if cm.config.Agents == nil {
+		cm.config.Agents = make(map[string]AgentKeyConfig)
+	}
+}
+
 // saveLocked writes config to disk. Caller MUST hold cm.mu.
 func (cm *ConfigManager) saveLocked() error {
+	cm.ensureConfigLocked()
+
 	// Ensure directory exists with secure permissions
 	configDir := filepath.Dir(cm.configPath)
 	if err := os.MkdirAll(configDir, configDirMode); err != nil {
@@ -202,6 +215,7 @@ func (cm *ConfigManager) GetModel(provider, defaultModel string) string {
 func (cm *ConfigManager) SetAPIKey(provider, apiKey string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
+	cm.ensureConfigLocked()
 	agentConfig := cm.config.Agents[provider]
 	agentConfig.APIKey = apiKey
 	cm.config.Agents[provider] = agentConfig
@@ -212,6 +226,7 @@ func (cm *ConfigManager) SetAPIKey(provider, apiKey string) error {
 func (cm *ConfigManager) SetModel(provider, model string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
+	cm.ensureConfigLocked()
 	agentConfig := cm.config.Agents[provider]
 	agentConfig.Model = model
 	cm.config.Agents[provider] = agentConfig
@@ -246,6 +261,7 @@ func (cm *ConfigManager) GetBaseURL(provider string) string {
 func (cm *ConfigManager) SetBaseURL(provider, baseURL string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
+	cm.ensureConfigLocked()
 	agentConfig := cm.config.Agents[provider]
 	agentConfig.BaseURL = baseURL
 	cm.config.Agents[provider] = agentConfig
@@ -257,6 +273,7 @@ func (cm *ConfigManager) SetBaseURL(provider, baseURL string) error {
 func (cm *ConfigManager) RemoveBaseURL(provider string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
+	cm.ensureConfigLocked()
 	agentConfig := cm.config.Agents[provider]
 	agentConfig.BaseURL = ""
 	cm.config.Agents[provider] = agentConfig
@@ -267,6 +284,7 @@ func (cm *ConfigManager) RemoveBaseURL(provider string) error {
 func (cm *ConfigManager) RemoveAPIKey(provider string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
+	cm.ensureConfigLocked()
 	delete(cm.config.Agents, provider)
 	return cm.saveLocked()
 }
@@ -337,6 +355,9 @@ func (cm *ConfigManager) IsKeyAvailable(provider string) bool {
 func (cm *ConfigManager) GetDefaultAgent() string {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
+	if cm.config == nil {
+		return ""
+	}
 	return cm.config.DefaultAgent
 }
 
@@ -344,6 +365,7 @@ func (cm *ConfigManager) GetDefaultAgent() string {
 func (cm *ConfigManager) SetDefaultAgent(agent string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
+	cm.ensureConfigLocked()
 	cm.config.DefaultAgent = agent
 	return cm.saveLocked()
 }
