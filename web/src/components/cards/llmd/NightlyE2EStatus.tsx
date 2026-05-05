@@ -27,6 +27,26 @@ const PLATFORM_ORDER = ['OCP', 'GKE', 'CKS'] as const
 
 /** Minimum number of runs required before a guide's pass rate is considered meaningful */
 const MIN_RUNS_FOR_RATE = 3
+const TREND_CHART_WIDTH = 200
+const TREND_CHART_HEIGHT = 64
+const TREND_CHART_PADDING_LEFT = 30
+const TREND_CHART_PADDING_RIGHT = 12
+const TREND_CHART_PADDING_TOP = 10
+const TREND_CHART_PADDING_BOTTOM = 18
+const TREND_CHART_AXIS_TICK_LENGTH = 4
+const TREND_CHART_LABEL_FONT_SIZE = 8
+const TREND_CHART_X_LABEL_FONT_SIZE = 7
+const TREND_CHART_POINT_RADIUS = 2.5
+const TREND_CHART_LATEST_POINT_RADIUS = 3.5
+const TREND_CHART_POINT_STROKE_WIDTH = 1.5
+const TREND_CHART_LINE_STROKE_WIDTH = 2
+const TREND_CHART_GRID_STROKE_WIDTH = 0.75
+const TREND_CHART_AXIS_STROKE_WIDTH = 1
+const TREND_CHART_AXIS_COLOR = 'hsl(var(--foreground))'
+const TREND_CHART_LABEL_COLOR = 'hsl(var(--foreground))'
+const TREND_CHART_MUTED_LABEL_COLOR = 'hsl(var(--muted-foreground))'
+const TREND_CHART_GRID_COLOR = 'hsl(var(--muted-foreground))'
+const TREND_CHART_POINT_STROKE_COLOR = 'hsl(var(--background))'
 
 const PLATFORM_COLORS: Record<string, string> = {
   OCP: '#ef4444',  // red
@@ -385,7 +405,7 @@ function GuideRow({ guide, delay, isSelected, onMouseEnter, onRunHover }: {
 }
 
 function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
-  const { t } = useTranslation(['cards'])
+  const { t } = useTranslation(['cards', 'common'])
   // Build data points: 1 = success, 0 = failure/cancelled, 0.5 = in_progress
   // Newest on left, oldest on right (matches run history dots)
   const points = runs.map(r => {
@@ -395,32 +415,33 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
 
   if (points.length < 2) return null
 
-  const width = 200
-  const height = 52
-  const padX = 12
-  const padY = 8
-  const chartW = width - padX * 2
-  const chartH = height - padY * 2
+  const chartWidth = TREND_CHART_WIDTH - TREND_CHART_PADDING_LEFT - TREND_CHART_PADDING_RIGHT
+  const chartHeight = TREND_CHART_HEIGHT - TREND_CHART_PADDING_TOP - TREND_CHART_PADDING_BOTTOM
+  const chartBottom = TREND_CHART_PADDING_TOP + chartHeight
+  const yAxisLevels = [
+    { label: t('cards:llmd.pass'), value: 1 },
+    { label: t('common:common.running'), value: 0.5 },
+    { label: t('cards:llmd.fail'), value: 0 },
+  ]
 
   // Build SVG path + area
-  const xStep = chartW / (points.length - 1)
-  const pathPoints = points.map((val, i) => ({
-    x: padX + i * xStep,
-    y: padY + (1 - val) * chartH }))
+  const xStep = chartWidth / (points.length - 1)
+  const pathPoints = points.map((value, index) => ({
+    x: TREND_CHART_PADDING_LEFT + index * xStep,
+    y: TREND_CHART_PADDING_TOP + (1 - value) * chartHeight,
+  }))
 
   // Smooth curve using cardinal spline approximation
   let linePath = `M ${pathPoints[0].x} ${pathPoints[0].y}`
-  for (let i = 1; i < pathPoints.length; i++) {
-    const prev = pathPoints[i - 1]
-    const curr = pathPoints[i]
-    const cpx = (prev.x + curr.x) / 2
-    linePath += ` C ${cpx} ${prev.y}, ${cpx} ${curr.y}, ${curr.x} ${curr.y}`
+  for (let index = 1; index < pathPoints.length; index++) {
+    const previousPoint = pathPoints[index - 1]
+    const currentPoint = pathPoints[index]
+    const controlPointX = (previousPoint.x + currentPoint.x) / 2
+    linePath += ` C ${controlPointX} ${previousPoint.y}, ${controlPointX} ${currentPoint.y}, ${currentPoint.x} ${currentPoint.y}`
   }
 
-  // Area fill path (same curve, closed at bottom)
-  const areaPath = `${linePath} L ${pathPoints[pathPoints.length - 1].x} ${height - padY + 4} L ${pathPoints[0].x} ${height - padY + 4} Z`
+  const areaPath = `${linePath} L ${pathPoints[pathPoints.length - 1].x} ${chartBottom} L ${pathPoints[0].x} ${chartBottom} Z`
 
-  // Gradient color based on latest (newest) point — now at index 0
   const latest = points[0]
   const gradientId = `sparkGrad-${latest}`
   const strokeColor = latest >= 1 ? '#34d399' : latest > 0 ? '#fbbf24' : '#f87171'
@@ -429,40 +450,129 @@ function TrendSparkline({ runs }: { runs: NightlyRun[] }) {
   return (
     <div className="bg-secondary/60 border border-border/50 rounded-lg p-2">
       <div className="text-2xs text-muted-foreground uppercase tracking-wider mb-1">{t('cards:llmd.passFailTrend')}</div>
-      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <svg width="100%" height={TREND_CHART_HEIGHT} viewBox={`0 0 ${TREND_CHART_WIDTH} ${TREND_CHART_HEIGHT}`} preserveAspectRatio="none">
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={strokeColor} stopOpacity={fillOpacity} />
             <stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
           </linearGradient>
         </defs>
-        {/* Grid lines */}
-        <line x1={padX} y1={padY} x2={width - padX} y2={padY} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
-        <line x1={padX} y1={padY + chartH / 2} x2={width - padX} y2={padY + chartH / 2} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
-        <line x1={padX} y1={padY + chartH} x2={width - padX} y2={padY + chartH} stroke="#334155" strokeWidth="0.5" strokeDasharray="3 3" />
-        {/* Y-axis labels */}
-        <text x={padX - 2} y={padY + 3} textAnchor="end" fontSize="7" fill="#64748b">{t('cards:llmd.pass')}</text>
-        <text x={padX - 2} y={padY + chartH + 3} textAnchor="end" fontSize="7" fill="#64748b">{t('cards:llmd.fail')}</text>
-        {/* X-axis direction labels */}
-        <text x={padX} y={height - 2} textAnchor="start" fontSize="6" fill="#475569">new</text>
-        <text x={width - padX} y={height - 2} textAnchor="end" fontSize="6" fill="#475569">old</text>
-        {/* Area fill */}
+
+        {yAxisLevels.map(({ label, value }) => {
+          const y = TREND_CHART_PADDING_TOP + (1 - value) * chartHeight
+          return (
+            <g key={label}>
+              <line
+                x1={TREND_CHART_PADDING_LEFT}
+                y1={y}
+                x2={TREND_CHART_WIDTH - TREND_CHART_PADDING_RIGHT}
+                y2={y}
+                stroke={TREND_CHART_GRID_COLOR}
+                strokeWidth={TREND_CHART_GRID_STROKE_WIDTH}
+                strokeOpacity={0.45}
+                strokeDasharray="3 3"
+              />
+              <line
+                x1={TREND_CHART_PADDING_LEFT - TREND_CHART_AXIS_TICK_LENGTH}
+                y1={y}
+                x2={TREND_CHART_PADDING_LEFT}
+                y2={y}
+                stroke={TREND_CHART_AXIS_COLOR}
+                strokeWidth={TREND_CHART_AXIS_STROKE_WIDTH}
+                strokeOpacity={0.9}
+              />
+              <text
+                x={TREND_CHART_PADDING_LEFT - TREND_CHART_AXIS_TICK_LENGTH - 2}
+                y={y + TREND_CHART_LABEL_FONT_SIZE / 2 - 1}
+                textAnchor="end"
+                fontSize={TREND_CHART_LABEL_FONT_SIZE}
+                fill={TREND_CHART_LABEL_COLOR}
+                fillOpacity={0.92}
+              >
+                {label}
+              </text>
+            </g>
+          )
+        })}
+
+        <line
+          x1={TREND_CHART_PADDING_LEFT}
+          y1={TREND_CHART_PADDING_TOP}
+          x2={TREND_CHART_PADDING_LEFT}
+          y2={chartBottom}
+          stroke={TREND_CHART_AXIS_COLOR}
+          strokeWidth={TREND_CHART_AXIS_STROKE_WIDTH}
+          strokeOpacity={0.9}
+        />
+        <line
+          x1={TREND_CHART_PADDING_LEFT}
+          y1={chartBottom}
+          x2={TREND_CHART_WIDTH - TREND_CHART_PADDING_RIGHT}
+          y2={chartBottom}
+          stroke={TREND_CHART_AXIS_COLOR}
+          strokeWidth={TREND_CHART_AXIS_STROKE_WIDTH}
+          strokeOpacity={0.9}
+        />
+        <line
+          x1={TREND_CHART_PADDING_LEFT}
+          y1={chartBottom}
+          x2={TREND_CHART_PADDING_LEFT}
+          y2={chartBottom + TREND_CHART_AXIS_TICK_LENGTH}
+          stroke={TREND_CHART_AXIS_COLOR}
+          strokeWidth={TREND_CHART_AXIS_STROKE_WIDTH}
+          strokeOpacity={0.9}
+        />
+        <line
+          x1={TREND_CHART_WIDTH - TREND_CHART_PADDING_RIGHT}
+          y1={chartBottom}
+          x2={TREND_CHART_WIDTH - TREND_CHART_PADDING_RIGHT}
+          y2={chartBottom + TREND_CHART_AXIS_TICK_LENGTH}
+          stroke={TREND_CHART_AXIS_COLOR}
+          strokeWidth={TREND_CHART_AXIS_STROKE_WIDTH}
+          strokeOpacity={0.9}
+        />
+        <text
+          x={TREND_CHART_PADDING_LEFT}
+          y={TREND_CHART_HEIGHT - 3}
+          textAnchor="start"
+          fontSize={TREND_CHART_X_LABEL_FONT_SIZE}
+          fill={TREND_CHART_MUTED_LABEL_COLOR}
+          fillOpacity={0.95}
+        >
+          {t('common:common.newest')}
+        </text>
+        <text
+          x={TREND_CHART_WIDTH - TREND_CHART_PADDING_RIGHT}
+          y={TREND_CHART_HEIGHT - 3}
+          textAnchor="end"
+          fontSize={TREND_CHART_X_LABEL_FONT_SIZE}
+          fill={TREND_CHART_MUTED_LABEL_COLOR}
+          fillOpacity={0.95}
+        >
+          {t('common:common.oldest')}
+        </text>
+
         <path d={areaPath} fill={`url(#${gradientId})`} />
-        {/* Line */}
-        <path d={linePath} fill="none" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Data points */}
-        {pathPoints.map((pt, i) => {
-          const val = points[i]
-          const dotColor = val >= 1 ? '#34d399' : val > 0 ? '#fbbf24' : '#f87171'
+        <path
+          d={linePath}
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth={TREND_CHART_LINE_STROKE_WIDTH}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {pathPoints.map((point, index) => {
+          const value = points[index]
+          const dotColor = value >= 1 ? '#34d399' : value > 0 ? '#fbbf24' : '#f87171'
           return (
             <circle
-              key={i}
-              cx={pt.x}
-              cy={pt.y}
-              r={i === 0 ? 3.5 : 2.5}
+              key={index}
+              cx={point.x}
+              cy={point.y}
+              r={index === 0 ? TREND_CHART_LATEST_POINT_RADIUS : TREND_CHART_POINT_RADIUS}
               fill={dotColor}
-              stroke="#0f172a"
-              strokeWidth="1.5"
+              stroke={TREND_CHART_POINT_STROKE_COLOR}
+              strokeWidth={TREND_CHART_POINT_STROKE_WIDTH}
             />
           )
         })}
