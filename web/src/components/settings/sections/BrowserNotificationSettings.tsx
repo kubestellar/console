@@ -218,6 +218,7 @@ function QuietHoursConfig() {
           <input
             type="time"
             value={dnd.quietHoursStart}
+            aria-label={t('settings.notifications.browser.quietHoursStart', 'Quiet hours start time')}
             onChange={(e) => dnd.setQuietHours(true, e.target.value)}
             className="px-2 py-1 text-sm bg-secondary border border-border rounded text-foreground"
           />
@@ -227,6 +228,7 @@ function QuietHoursConfig() {
           <input
             type="time"
             value={dnd.quietHoursEnd}
+            aria-label={t('settings.notifications.browser.quietHoursEnd', 'Quiet hours end time')}
             onChange={(e) => dnd.setQuietHours(true, undefined, e.target.value)}
             className="px-2 py-1 text-sm bg-secondary border border-border rounded text-foreground"
           />

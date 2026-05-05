@@ -78,10 +78,11 @@ export function SlackNotificationSettings({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label htmlFor="slack-webhook-url" className="block text-sm font-medium text-foreground mb-1">
           {t('settings.notifications.slack.webhookUrl')}
         </label>
         <input
+          id="slack-webhook-url"
           type="text"
           value={config.slackWebhookUrl || ''}
           onChange={e => handleUrlChange(e.target.value)}
@@ -99,10 +100,11 @@ export function SlackNotificationSettings({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label htmlFor="slack-channel" className="block text-sm font-medium text-foreground mb-1">
           {t('settings.notifications.slack.channel')}
         </label>
         <input
+          id="slack-channel"
           type="text"
           value={config.slackChannel || ''}
           onChange={e => updateConfig({ slackChannel: e.target.value })}

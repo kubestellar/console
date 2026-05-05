@@ -405,6 +405,7 @@ After installation, ask:
             </h3>
             <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 w-full">
               <select
+                aria-label={t('settings.localClusters.selectTool')}
                 value={selectedTool}
                 onChange={(e) => setSelectedTool(e.target.value)}
                 className="min-w-0 sm:w-auto sm:max-w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50 truncate"
@@ -418,6 +419,7 @@ After installation, ask:
               </select>
               <input
                 type="text"
+                aria-label={t('settings.localClusters.clusterName', 'Cluster name')}
                 value={clusterName}
                 onChange={(e) => setClusterName(e.target.value)}
                 placeholder="Cluster name"
@@ -497,6 +499,7 @@ After installation, ask:
                       <button
                         onClick={() => setDeleteClusterConfirm({ tool: cluster.tool, name: cluster.name })}
                         disabled={isDeleting === cluster.name}
+                        aria-label={t('settings.localClusters.deleteCluster', { name: cluster.name, defaultValue: `Delete cluster ${cluster.name}` })}
                         className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                         title="Delete cluster"
                       >
@@ -563,8 +566,9 @@ After installation, ask:
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-muted-foreground font-medium">Host Cluster</label>
+                    <label htmlFor="vcluster-host-cluster" className="text-xs text-muted-foreground font-medium">Host Cluster</label>
                     <select
+                      id="vcluster-host-cluster"
                       value={vclusterHostCluster}
                       onChange={(e) => { setVclusterHostCluster(e.target.value); if (e.target.value) checkVClusterOnCluster(e.target.value) }}
                       className="px-3 py-2 rounded-lg bg-secondary border border-border text-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
@@ -605,8 +609,9 @@ After installation, ask:
                     })()}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-muted-foreground font-medium">Namespace</label>
+                    <label htmlFor="vcluster-namespace" className="text-xs text-muted-foreground font-medium">Namespace</label>
                     <input
+                      id="vcluster-namespace"
                       type="text"
                       value={vclusterNamespace}
                       onChange={(e) => setVclusterNamespace(e.target.value)}
@@ -615,8 +620,9 @@ After installation, ask:
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-muted-foreground font-medium">vCluster Name</label>
+                    <label htmlFor="vcluster-name" className="text-xs text-muted-foreground font-medium">vCluster Name</label>
                     <input
+                      id="vcluster-name"
                       type="text"
                       value={vclusterName}
                       onChange={(e) => setVclusterName(e.target.value)}
@@ -713,6 +719,7 @@ After installation, ask:
                               <button
                                 onClick={() => disconnectVCluster(instance.name, instance.namespace)}
                                 disabled={isDisconnecting === instance.name}
+                                aria-label={t('settings.localClusters.vclusterDisconnect')}
                                 className="p-2 rounded-lg text-muted-foreground hover:text-orange-400 hover:bg-orange-500/10 disabled:opacity-50"
                                 title={t('settings.localClusters.vclusterDisconnect')}
                               >
@@ -726,6 +733,7 @@ After installation, ask:
                               <button
                                 onClick={() => connectVCluster(instance.name, instance.namespace)}
                                 disabled={isConnecting === instance.name}
+                                aria-label={t('settings.localClusters.vclusterConnect')}
                                 className="p-2 rounded-lg text-muted-foreground hover:text-green-400 hover:bg-green-500/10 disabled:opacity-50"
                                 title={t('settings.localClusters.vclusterConnect')}
                               >
@@ -740,6 +748,7 @@ After installation, ask:
                             <button
                               onClick={() => setDeleteVClusterConfirm({ name: instance.name, namespace: instance.namespace })}
                               disabled={isDeleting === instance.name}
+                              aria-label={t('settings.localClusters.deleteVcluster', { name: instance.name, defaultValue: `Delete vCluster ${instance.name}` })}
                               className="p-2 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 disabled:opacity-50"
                               title="Delete vCluster"
                             >

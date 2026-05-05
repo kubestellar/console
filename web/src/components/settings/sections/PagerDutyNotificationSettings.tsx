@@ -55,10 +55,11 @@ export function PagerDutyNotificationSettings({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label htmlFor="pagerduty-routing-key" className="block text-sm font-medium text-foreground mb-1">
           {t('settings.notifications.pagerduty.routingKey', 'Integration / Routing Key')}
         </label>
         <input
+          id="pagerduty-routing-key"
           type="password"
           value={config.pagerdutyRoutingKey || ''}
           onChange={e => updateConfig({ pagerdutyRoutingKey: e.target.value })}

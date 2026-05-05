@@ -35,7 +35,7 @@ export function AccessibilitySection({
         {/* Color Blind Mode */}
         <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
           <div>
-            <p className="text-sm font-medium text-foreground">{t('settings.accessibility.colorBlindMode')}</p>
+            <p id="accessibility-color-blind-mode-label" className="text-sm font-medium text-foreground">{t('settings.accessibility.colorBlindMode')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {t('settings.accessibility.colorBlindModeDesc')}
             </p>
@@ -44,6 +44,7 @@ export function AccessibilitySection({
             onClick={() => setColorBlindMode(!colorBlindMode)}
             role="switch"
             aria-checked={colorBlindMode}
+            aria-labelledby="accessibility-color-blind-mode-label"
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               colorBlindMode ? 'bg-purple-500' : 'bg-secondary'
             }`}
@@ -59,7 +60,7 @@ export function AccessibilitySection({
         {/* Reduce Motion */}
         <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
           <div>
-            <p className="text-sm font-medium text-foreground">{t('settings.accessibility.reduceMotion')}</p>
+            <p id="accessibility-reduce-motion-label" className="text-sm font-medium text-foreground">{t('settings.accessibility.reduceMotion')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {t('settings.accessibility.reduceMotionDesc')}
             </p>
@@ -68,6 +69,7 @@ export function AccessibilitySection({
             onClick={() => setReduceMotion(!reduceMotion)}
             role="switch"
             aria-checked={reduceMotion}
+            aria-labelledby="accessibility-reduce-motion-label"
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               reduceMotion ? 'bg-purple-500' : 'bg-secondary'
             }`}
@@ -83,7 +85,7 @@ export function AccessibilitySection({
         {/* High Contrast */}
         <div className="flex items-center justify-between p-4 rounded-lg bg-secondary/30">
           <div>
-            <p className="text-sm font-medium text-foreground">{t('settings.accessibility.highContrast')}</p>
+            <p id="accessibility-high-contrast-label" className="text-sm font-medium text-foreground">{t('settings.accessibility.highContrast')}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {t('settings.accessibility.highContrastDesc')}
             </p>
@@ -92,6 +94,7 @@ export function AccessibilitySection({
             onClick={() => setHighContrast(!highContrast)}
             role="switch"
             aria-checked={highContrast}
+            aria-labelledby="accessibility-high-contrast-label"
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
               highContrast ? 'bg-purple-500' : 'bg-secondary'
             }`}

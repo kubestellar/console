@@ -338,6 +338,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
                     </button>
                     <button
                       onClick={() => setConfirmRemoveId(ct.id)}
+                      aria-label={t('common.remove')}
                       className="p-1.5 text-muted-foreground hover:text-red-400 hover:bg-red-950/50 rounded transition-colors"
                       title={t('common.remove')}
                     >

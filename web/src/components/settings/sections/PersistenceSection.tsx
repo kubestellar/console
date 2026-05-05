@@ -133,6 +133,9 @@ export function PersistenceSection() {
         </div>
         <button
           onClick={() => setLocalConfig(prev => ({ ...prev, enabled: !prev.enabled }))}
+          role="switch"
+          aria-checked={localConfig.enabled}
+          aria-label={t('settings.persistence.enablePersistence')}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             localConfig.enabled ? 'bg-purple-500' : 'bg-secondary'
           }`}
@@ -150,11 +153,12 @@ export function PersistenceSection() {
         <div className="space-y-4">
           {/* Primary Cluster */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="persistence-primary-cluster" className="block text-sm font-medium text-foreground mb-2">
               {t('settings.persistence.primaryCluster')}
             </label>
             <div className="flex gap-2">
               <select
+                id="persistence-primary-cluster"
                 value={localConfig.primaryCluster}
                 onChange={e => setLocalConfig(prev => ({ ...prev, primaryCluster: e.target.value }))}
                 className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
@@ -169,6 +173,7 @@ export function PersistenceSection() {
               <button
                 onClick={() => localConfig.primaryCluster && handleTest(localConfig.primaryCluster)}
                 disabled={!localConfig.primaryCluster || testing}
+                aria-label={t('settings.persistence.test')}
                 className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 disabled:opacity-50"
               >
                 {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : t('settings.persistence.test')}
@@ -218,11 +223,12 @@ export function PersistenceSection() {
           {/* Secondary Cluster (if active-passive) */}
           {localConfig.syncMode === 'active-passive' && (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label htmlFor="persistence-secondary-cluster" className="block text-sm font-medium text-foreground mb-2">
                 {t('settings.persistence.secondaryCluster')}
               </label>
               <div className="flex gap-2">
                 <select
+                  id="persistence-secondary-cluster"
                   value={localConfig.secondaryCluster || ''}
                   onChange={e => setLocalConfig(prev => ({ ...prev, secondaryCluster: e.target.value }))}
                   className="flex-1 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground"
@@ -239,6 +245,7 @@ export function PersistenceSection() {
                 <button
                   onClick={() => localConfig.secondaryCluster && handleTest(localConfig.secondaryCluster)}
                   disabled={!localConfig.secondaryCluster || testing}
+                  aria-label={t('settings.persistence.test')}
                   className="px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 disabled:opacity-50"
                 >
                   {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : t('settings.persistence.test')}
@@ -254,10 +261,11 @@ export function PersistenceSection() {
 
           {/* Namespace */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="persistence-namespace" className="block text-sm font-medium text-foreground mb-2">
               {t('settings.persistence.namespace')}
             </label>
             <input
+              id="persistence-namespace"
               type="text"
               value={localConfig.namespace}
               onChange={e => setLocalConfig(prev => ({ ...prev, namespace: e.target.value }))}

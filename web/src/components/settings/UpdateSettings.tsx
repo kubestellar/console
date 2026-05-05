@@ -385,12 +385,15 @@ export function UpdateSettings() {
 
       {/* Channel Selector */}
       <div className="mb-4">
-        <label className="block text-sm text-muted-foreground mb-2">
+        <label id="updates-channel-label" className="block text-sm text-muted-foreground mb-2">
           {t('settings.updates.updateChannel')}
         </label>
         <div className="relative">
           <button
             onClick={channelDropdown.toggle}
+            aria-haspopup="listbox"
+            aria-expanded={channelDropdown.isOpen}
+            aria-labelledby="updates-channel-label"
             className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-secondary border border-border text-foreground hover:bg-secondary/80 transition-colors"
           >
             <span className="flex items-center gap-2">
@@ -402,7 +405,7 @@ export function UpdateSettings() {
             />
           </button>
           {channelDropdown.isOpen && (
-            <div className="absolute z-dropdown mt-2 w-full rounded-lg bg-card border border-border shadow-xl">
+            <div role="listbox" aria-labelledby="updates-channel-label" className="absolute z-dropdown mt-2 w-full rounded-lg bg-card border border-border shadow-xl">
               {visibleChannels.map((option) => (
                 <button
                   key={option.value}
@@ -515,6 +518,9 @@ export function UpdateSettings() {
             </div>
             <button
               onClick={() => setAutoUpdateEnabled(!autoUpdateEnabled)}
+              role="switch"
+              aria-checked={autoUpdateEnabled}
+              aria-label={t('settings.updates.autoUpdate')}
               className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                 autoUpdateEnabled
                   ? 'bg-green-500 border-green-500'
@@ -708,6 +714,7 @@ export function UpdateSettings() {
             <button
               data-testid="update-cancelled-dismiss"
               onClick={dismissProgress}
+              aria-label={t('common.dismiss')}
               className="text-yellow-400/60 hover:text-yellow-400 shrink-0 ml-2"
             >
               <X className="w-4 h-4" />
@@ -736,7 +743,7 @@ export function UpdateSettings() {
                 </button>
               </div>
             </div>
-            <button data-testid="update-done-dismiss" onClick={dismissProgress} disabled={isUpdating} className="text-green-400/60 hover:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button data-testid="update-done-dismiss" onClick={dismissProgress} disabled={isUpdating} aria-label={t('common.dismiss')} className="text-green-400/60 hover:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -754,7 +761,7 @@ export function UpdateSettings() {
                 )}
               </div>
             </div>
-            <button data-testid="update-failed-dismiss" onClick={dismissProgress} disabled={isUpdating} className="text-red-400/60 hover:text-red-400 shrink-0 ml-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button data-testid="update-failed-dismiss" onClick={dismissProgress} disabled={isUpdating} aria-label={t('common.dismiss')} className="text-red-400/60 hover:text-red-400 shrink-0 ml-2 disabled:opacity-50 disabled:cursor-not-allowed">
               <X className="w-4 h-4" />
             </button>
           </div>

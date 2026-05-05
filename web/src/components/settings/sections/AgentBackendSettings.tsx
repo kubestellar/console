@@ -52,6 +52,7 @@ export function AgentBackendSettings({
         </div>
         <button
           onClick={onRefresh}
+          aria-label={t('settings.agentBackend.refreshStatus')}
           className="p-1.5 rounded-md hover:bg-accent transition-colors"
           title={t('settings.agentBackend.refreshStatus')}
         >

@@ -55,10 +55,11 @@ export function OpsGenieNotificationSettings({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label htmlFor="opsgenie-api-key" className="block text-sm font-medium text-foreground mb-1">
           {t('settings.notifications.opsgenie.apiKey', 'API Key')}
         </label>
         <input
+          id="opsgenie-api-key"
           type="password"
           value={config.opsgenieApiKey || ''}
           onChange={e => updateConfig({ opsgenieApiKey: e.target.value })}

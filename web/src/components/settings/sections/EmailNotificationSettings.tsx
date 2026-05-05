@@ -96,10 +96,11 @@ export function EmailNotificationSettings({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="email-smtp-host" className="block text-sm font-medium text-foreground mb-1">
             {t('settings.notifications.email.smtpHost')}
           </label>
           <input
+            id="email-smtp-host"
             type="text"
             value={config.emailSMTPHost || ''}
             onChange={e => updateConfig({ emailSMTPHost: e.target.value })}
@@ -109,10 +110,11 @@ export function EmailNotificationSettings({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="email-smtp-port" className="block text-sm font-medium text-foreground mb-1">
             {t('settings.notifications.email.smtpPort')}
           </label>
           <input
+            id="email-smtp-port"
             type="number"
             value={portRaw}
             onChange={e => handlePortChange(e.target.value)}
@@ -130,10 +132,11 @@ export function EmailNotificationSettings({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label htmlFor="email-from-address" className="block text-sm font-medium text-foreground mb-1">
           {t('settings.notifications.email.fromAddress')}
         </label>
         <input
+          id="email-from-address"
           type="email"
           value={config.emailFrom || ''}
           onChange={e => updateConfig({ emailFrom: e.target.value })}
@@ -143,10 +146,11 @@ export function EmailNotificationSettings({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">
+        <label htmlFor="email-to-addresses" className="block text-sm font-medium text-foreground mb-1">
           {t('settings.notifications.email.toAddresses')}
         </label>
         <input
+          id="email-to-addresses"
           type="text"
           value={config.emailTo || ''}
           onChange={e => updateConfig({ emailTo: e.target.value })}
@@ -160,10 +164,11 @@ export function EmailNotificationSettings({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="email-username" className="block text-sm font-medium text-foreground mb-1">
             {t('settings.notifications.email.username')}
           </label>
           <input
+            id="email-username"
             type="text"
             value={config.emailUsername || ''}
             onChange={e => updateConfig({ emailUsername: e.target.value })}
@@ -173,10 +178,11 @@ export function EmailNotificationSettings({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="email-password" className="block text-sm font-medium text-foreground mb-1">
             {t('settings.notifications.email.password')}
           </label>
           <input
+            id="email-password"
             type="password"
             value={config.emailPassword || ''}
             onChange={e => updateConfig({ emailPassword: e.target.value })}

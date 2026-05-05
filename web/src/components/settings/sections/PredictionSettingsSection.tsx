@@ -127,7 +127,7 @@ export function PredictionSettingsSection({
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
-                <label className="text-sm text-foreground">
+                <label htmlFor="predictions-analysis-interval" className="text-sm text-foreground">
                   {t('settings.predictions.analysisInterval', { minutes: settings.interval })}
                 </label>
                 <div className="relative group">
@@ -138,6 +138,7 @@ export function PredictionSettingsSection({
                 </div>
               </div>
               <input
+                id="predictions-analysis-interval"
                 type="range"
                 min="15"
                 max="120"
@@ -162,7 +163,7 @@ export function PredictionSettingsSection({
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <Percent className="w-4 h-4 text-muted-foreground" />
-                <label className="text-sm text-foreground">
+                <label htmlFor="predictions-min-confidence" className="text-sm text-foreground">
                   {t('settings.predictions.minConfidence', { percent: settings.minConfidence })}
                 </label>
                 <div className="relative group">
@@ -173,6 +174,7 @@ export function PredictionSettingsSection({
                 </div>
               </div>
               <input
+                id="predictions-min-confidence"
                 type="range"
                 min="50"
                 max="90"
