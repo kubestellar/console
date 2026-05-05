@@ -97,43 +97,28 @@ export default defineConfig(({ mode }) => ({
     rolldownOptions: {
       output: {
         manualChunks: (id) => {
+          const sourceChunkRules = [
+            ['card-registry', ['/src/components/cards/cardRegistry.ts']],
+            ['card-registry-data', ['/src/config/cards/', '/src/components/cards/cardMetadata.ts', '/src/components/cards/cardDescriptors.registry.ts']],
+            ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
+            ['app-shell', ['/src/App.tsx', '/src/components/layout/', '/src/lib/auth/', '/src/hooks/useBranding', '/src/hooks/useTheme', '/src/hooks/usePersistedSettings']],
+            ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
+          ] as const
+          for (const [chunkName, needles] of sourceChunkRules) {
+            if (needles.some(needle => id.includes(needle))) return chunkName
+          }
           if (!id.includes('node_modules')) return
-          // React ecosystem must stay together (shared hooks/context internals).
-          // react-reconciler is a React internal used by @react-three — keep it
-          // here to avoid circular dep between vendor ↔ three-vendor.
-          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/') || id.includes('/react-reconciler/')) {
-            return 'react-vendor'
-          }
-          // 3D engine — three.js + @react-three (~400KB) only used by
-          // globe animation and KubeCraft3D card; isolate so they never
-          // load on normal page views. zustand is a transitive dep of
-          // @react-three (not used directly), so keep it with three.
-          // react-reconciler is already in react-vendor above.
-          if (id.includes('/three/') || id.includes('/three-stdlib/') || id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/stats-gl/')) {
-            return 'three-vendor'
-          }
-          // ECharts — only used by ParetoFrontier card; isolate the large
-          // (~500KB minified) echarts + zrender bundle.
-          if (id.includes('/echarts/') || id.includes('/echarts-for-react/') || id.includes('/zrender/')) {
-            return 'echarts-vendor'
-          }
-          // Animation — framer-motion is large (~350KB) and only needed on pages
-          // that use <motion.*> or AnimatePresence, so isolate it from core UI deps.
-          if (id.includes('/framer-motion/')) {
-            return 'motion-vendor'
-          }
-          // Terminal emulator — only needed when a pod exec drilldown is opened.
-          // Isolate so xterm never loads on normal page views.
-          if (id.includes('/@xterm/')) {
-            return 'xterm-vendor'
-          }
-          // Core UI interaction (icons + drag-and-drop)
-          if (id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) {
-            return 'ui-vendor'
-          }
-          // Markdown rendering — only loaded when the AI mission sidebar is open.
-          // Includes the full unified/remark/rehype ecosystem to avoid circular
-          // deps with the vendor chunk.
+          if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router') || id.includes('/scheduler/') || id.includes('/react-reconciler/')) return 'react-vendor'
+          if (id.includes('/three-stdlib/')) return 'three-stdlib-vendor'
+          if (id.includes('/@react-three/') || id.includes('/zustand/') || id.includes('/stats-gl/')) return 'three-react-vendor'
+          if (id.includes('/three/')) return 'three-core-vendor'
+          if (id.includes('/zrender/')) return 'zrender-vendor'
+          if (id.includes('/echarts-for-react/')) return 'echarts-react-vendor'
+          if (id.includes('/echarts/')) return 'echarts-vendor'
+          if (id.includes('/framer-motion/')) return 'motion-vendor'
+          if (id.includes('/@xterm/addon-fit/')) return 'xterm-addon-vendor'
+          if (id.includes('/@xterm/')) return 'xterm-vendor'
+          if (id.includes('/lucide-react/') || id.includes('/@dnd-kit/')) return 'ui-vendor'
           if (
             id.includes('/react-markdown/') ||
             id.includes('/remark-') ||
@@ -157,23 +142,17 @@ export default defineConfig(({ mode }) => ({
             id.includes('/decode-named-character-reference') ||
             id.includes('/devlop') ||
             id.includes('/estree-')
-          ) {
-            return 'markdown-vendor'
-          }
-          // Sucrase JS compiler — only used when editing/previewing dynamic cards;
-          // isolate it so the ~150 KB compiler never loads on normal page views.
-          if (id.includes('/sucrase/')) {
-            return 'sucrase-vendor'
-          }
-          // Code editor — only used by Drasi stream samples drawer;
-          // isolate so the CodeMirror editor never loads on normal pages.
-          if (id.includes('/@codemirror/') || id.includes('/@uiw/react-codemirror/') || id.includes('/codemirror/') || id.includes('/@lezer/')) {
-            return 'codemirror-vendor'
-          }
-          // Internationalization
-          if (id.includes('/i18next') || id.includes('/react-i18next/')) {
-            return 'i18n-vendor'
-          }
+          ) return 'markdown-vendor'
+          if (id.includes('/sucrase/')) return 'sucrase-vendor'
+          if (id.includes('/@codemirror/legacy-modes/')) return 'codemirror-modes-vendor'
+          if (id.includes('/@uiw/react-codemirror/')) return 'codemirror-react-vendor'
+          if (id.includes('/@codemirror/') || id.includes('/codemirror/') || id.includes('/@lezer/')) return 'codemirror-core-vendor'
+          if (id.includes('/i18next-browser-languagedetector/')) return 'i18n-detector-vendor'
+          if (id.includes('/i18next') || id.includes('/react-i18next/')) return 'i18n-vendor'
+          if (id.includes('/js-yaml/')) return 'yaml-vendor'
+          if (id.includes('/dompurify/')) return 'sanitize-vendor'
+          if (id.includes('/zod/')) return 'schema-vendor'
+          if (id.includes('/@tanstack/react-virtual/')) return 'virtual-vendor'
           return 'vendor'
         },
       },
