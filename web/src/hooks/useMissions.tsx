@@ -9,6 +9,7 @@ import { agentFetch } from './mcp/agentFetch'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
+import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory'
 import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
 import { runPreflightCheck, runToolPreflightCheck, resolveRequiredTools, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
@@ -1643,7 +1644,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           const previousTotal = m.tokenUsage?.total ?? 0
           const delta = safeTotal - previousTotal
           if (delta > 0) {
-            addCategoryTokens(delta, 'missions')
+            addCategoryTokens(delta, getTokenCategoryForMissionType(m.type))
           }
         }
         const safeInput = Number(payload.tokens?.input)
@@ -1740,7 +1741,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             const previousTotal = m.tokenUsage?.total ?? 0
             const delta = payload.usage.totalTokens - previousTotal
             if (delta > 0) {
-              addCategoryTokens(delta, 'missions')
+              addCategoryTokens(delta, getTokenCategoryForMissionType(m.type))
             }
           }
 
@@ -1783,7 +1784,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           const previousTotal = m.tokenUsage?.total ?? 0
           const delta = chatPayload.usage.totalTokens - previousTotal
           if (delta > 0) {
-            addCategoryTokens(delta, 'missions')
+            addCategoryTokens(delta, getTokenCategoryForMissionType(m.type))
           }
         }
 
@@ -2352,7 +2353,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
 
       // Track token usage for this specific mission (#6016 — keyed by
       // missionId so concurrent missions get independent attribution).
-      setActiveTokenCategory(missionId, 'missions')
+      setActiveTokenCategory(missionId, getTokenCategoryForMissionType(params.type))
 
       wsSend(JSON.stringify({
         id: requestId,
@@ -2838,7 +2839,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
     // Track token usage for this specific mission (#6016 — keyed by
     // missionId so concurrent missions get independent attribution).
-    setActiveTokenCategory(missionId, 'missions')
+    setActiveTokenCategory(missionId, getTokenCategoryForMissionType(currentMission?.type))
 
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m

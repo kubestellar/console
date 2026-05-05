@@ -523,9 +523,11 @@ describe('unknown request ID handling', () => {
 
 describe('token usage tracking', () => {
   it('calls addCategoryTokens on progress message with token delta', async () => {
-    const { addCategoryTokens } = await import('./useTokenUsage')
+    const { addCategoryTokens, setActiveTokenCategory } = await import('./useTokenUsage')
     const { result } = renderHook(() => useMissions(), { wrapper })
-    const { requestId } = await startMissionWithConnection(result)
+    const { missionId, requestId } = await startMissionWithConnection(result)
+
+    expect(setActiveTokenCategory).toHaveBeenCalledWith(missionId, 'diagnose')
 
     act(() => {
       MockWebSocket.lastInstance?.simulateMessage({
@@ -535,7 +537,7 @@ describe('token usage tracking', () => {
       })
     })
 
-    expect(addCategoryTokens).toHaveBeenCalledWith(75, 'missions')
+    expect(addCategoryTokens).toHaveBeenCalledWith(75, 'diagnose')
   })
 
   it('calls clearActiveTokenCategory when stream completes with usage', async () => {
@@ -570,7 +572,7 @@ describe('token usage tracking', () => {
       })
     })
 
-    expect(addCategoryTokens).toHaveBeenCalledWith(300, 'missions')
+    expect(addCategoryTokens).toHaveBeenCalledWith(300, 'diagnose')
   })
 })
 
@@ -1019,7 +1021,7 @@ describe('token usage delta tracking', () => {
         payload: { tokens: { input: 80, output: 20, total: 100 } },
       })
     })
-    expect(addCategoryTokens).toHaveBeenCalledWith(100, 'missions')
+    expect(addCategoryTokens).toHaveBeenCalledWith(100, 'diagnose')
 
     vi.mocked(addCategoryTokens).mockClear()
 
@@ -1031,7 +1033,7 @@ describe('token usage delta tracking', () => {
         payload: { tokens: { input: 200, output: 50, total: 250 } },
       })
     })
-    expect(addCategoryTokens).toHaveBeenCalledWith(150, 'missions')
+    expect(addCategoryTokens).toHaveBeenCalledWith(150, 'diagnose')
   })
 
   it('does not call addCategoryTokens when progress has no tokens', async () => {
@@ -1113,7 +1115,7 @@ describe('token usage delta tracking', () => {
     })
 
     // Delta: 300 - 150 = 150
-    expect(addCategoryTokens).toHaveBeenCalledWith(150, 'missions')
+    expect(addCategoryTokens).toHaveBeenCalledWith(150, 'diagnose')
   })
 })
 
