@@ -220,18 +220,24 @@ export function Events() {
     }))
     const now = new Date()
     const hourlyData: { name: string; value: number; color?: string }[] = []
-    for (let i = HOURS_IN_DAY - 1; i >= 0; i--) {
-      const hourStart = new Date(now.getTime() - i * MILLISECONDS_PER_HOUR)
-      const hourEnd = new Date(hourStart.getTime() + MILLISECONDS_PER_HOUR)
-      const hourTotal = globalFilteredAllEvents.filter(e => {
-        const ts = parseEventTime(e.lastSeen)
-        return ts !== null && ts >= hourStart && ts < hourEnd
-      }).length
-      const hourWarnings = globalFilteredAllEvents.filter(e => {
-        const ts = parseEventTime(e.lastSeen)
-        return ts !== null && ts >= hourStart && ts < hourEnd && e.type === 'Warning'
-      }).length
-      hourlyData.push({ name: hourStart.getHours().toString().padStart(2, '0') + ':00', value: hourTotal, color: hourWarnings > hourTotal / 2 ? getChartColorByName('warning') : getChartColorByName('primary') })
+    // Single-pass: bucket events by hour instead of N×M filter scans
+    const hourlyTotals = new Array(HOURS_IN_DAY).fill(0)
+    const hourlyWarnings = new Array(HOURS_IN_DAY).fill(0)
+    const windowStart = now.getTime() - HOURS_IN_DAY * MILLISECONDS_PER_HOUR
+    for (const e of globalFilteredAllEvents) {
+      const ts = parseEventTime(e.lastSeen)
+      if (ts === null || ts.getTime() < windowStart || ts >= now) continue
+      const bucket = Math.floor((ts.getTime() - windowStart) / MILLISECONDS_PER_HOUR)
+      if (bucket >= 0 && bucket < HOURS_IN_DAY) {
+        hourlyTotals[bucket]++
+        if (e.type === 'Warning') hourlyWarnings[bucket]++
+      }
+    }
+    for (let i = 0; i < HOURS_IN_DAY; i++) {
+      const hourStart = new Date(windowStart + i * MILLISECONDS_PER_HOUR)
+      const total = hourlyTotals[i]
+      const warns = hourlyWarnings[i]
+      hourlyData.push({ name: hourStart.getHours().toString().padStart(2, '0') + ':00', value: total, color: warns > total / 2 ? getChartColorByName('warning') : getChartColorByName('primary') })
     }
     const oneHourAgo = new Date(now.getTime() - MILLISECONDS_PER_HOUR)
     const recentCount = globalFilteredAllEvents.filter(e => {
@@ -444,8 +450,8 @@ export function Events() {
               <div className="text-sm text-muted-foreground text-center py-4"><CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-green-400 opacity-50" />{t('events.empty.noWarnings')}</div>
             ) : (
               <div className="space-y-2">
-                {globalFilteredWarningEvents.slice(0, MAX_RECENT_WARNINGS_PREVIEW).map((event, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
+                {globalFilteredWarningEvents.slice(0, MAX_RECENT_WARNINGS_PREVIEW).map((event) => (
+                  <div key={`${event.reason}-${event.object}-${event.lastSeen}`} className="flex items-center gap-3 p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
                     <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">

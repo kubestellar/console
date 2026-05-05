@@ -335,7 +335,7 @@ export function useArgoCDApplications(): UseArgoCDApplicationsResult {
   )
   const initialLoadDone = useRef(!!cachedSnapshot)
 
-  const clusterNames = (clusters || []).map(c => c.name)
+  const clusterNames = useMemo(() => (clusters || []).map(c => c.name), [clusters])
 
   const refetch = useCallback(async (silent = false) => {
     if (clusterNames.length === 0) {
@@ -860,7 +860,7 @@ export function useArgoApplicationSets(): UseArgoApplicationSetsResult {
   )
   const initialLoadDone = useRef(!!cachedAppSetSnapshot)
 
-  const clusterNames = (clusters || []).map(c => c.name)
+  const clusterNames = useMemo(() => (clusters || []).map(c => c.name), [clusters])
 
   const refetch = useCallback(async (silent = false) => {
     if (clusterNames.length === 0) {

@@ -118,7 +118,7 @@ export function Pods() {
   }, [showToast, t, refetchPodIssues, deleteConfirm.close])
 
   // Filter pod issues by global cluster selection
-  const filteredPodIssues = (() => {
+  const filteredPodIssues = useMemo(() => {
     // Apply cluster filtering using the built-in helper
     let filtered = filterByCluster(podIssues)
 
@@ -134,7 +134,7 @@ export function Pods() {
     }
 
     return filtered
-  })()
+  }, [podIssues, customFilter, filterByCluster])
 
   // Calculate stats
   const stats = useMemo(() => {

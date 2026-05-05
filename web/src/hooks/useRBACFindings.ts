@@ -10,7 +10,7 @@
  * - Demo fallback when no clusters are connected
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -337,7 +337,7 @@ export function useRBACFindings() {
   const fetchInProgress = useRef(false)
   const initialLoadDone = useRef(!!cachedSnapshot)
 
-  const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
+  const clusters = useMemo(() => allClusters.filter(c => c.reachable === true).map(c => c.name), [allClusters])
 
   const refetch = useCallback(async () => {
     if (clusters.length === 0) {
