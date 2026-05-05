@@ -534,32 +534,52 @@ function LightweightShell({ children }: { children: React.ReactNode }) {
   )
 }
 
-// Live pathname subscriber — bypasses React Router's useLocation, whose
-// state update is wrapped in startTransition and can be perpetually
-// interrupted on cluster-heavy pages (the "needs 2 clicks" symptom from
-// issue 7865). Polls window.location.pathname and notifies React via
-// useSyncExternalStore, which guarantees a synchronous (non-deferrable)
-// update. We pass this value to <Routes location={...}> below so route
-// matching uses the real URL, not React Router's stale internal state.
-const LIVE_PATH_POLL_MS = 60
-function useLivePathname(): string {
+// Live URL subscriber — bypasses React Router's useLocation, whose state
+// update is wrapped in startTransition and can be interrupted on busy pages.
+// Listen to real History API mutations so pathname/search/hash stay in sync
+// with the visible route instead of briefly lagging behind the URL.
+const LIVE_LOCATION_EVENT = 'kc:locationchange'
+const HISTORY_PATCHED_FLAG = '__kcHistoryPatched__'
+const getLiveUrl = () => `${window.location.pathname}${window.location.search}${window.location.hash}`
+
+function installLocationChangeBridge() {
+  if (typeof window === 'undefined') return
+  const historyWithFlag = window.history as History & { [HISTORY_PATCHED_FLAG]?: boolean }
+  if (historyWithFlag[HISTORY_PATCHED_FLAG]) return
+
+  const notifyLocationChange = () => {
+    window.dispatchEvent(new Event(LIVE_LOCATION_EVENT))
+  }
+  const wrapHistoryMethod = (method: 'pushState' | 'replaceState') => {
+    const original = window.history[method]
+    window.history[method] = function (...args: Parameters<History[typeof method]>) {
+      const result = original.apply(this, args)
+      notifyLocationChange()
+      return result
+    }
+  }
+
+  wrapHistoryMethod('pushState')
+  wrapHistoryMethod('replaceState')
+  window.addEventListener('popstate', notifyLocationChange)
+  window.addEventListener('hashchange', notifyLocationChange)
+  historyWithFlag[HISTORY_PATCHED_FLAG] = true
+}
+
+if (typeof window !== 'undefined') {
+  installLocationChangeBridge()
+}
+
+function useLiveUrl(): string {
   return useSyncExternalStore(
     (notify) => {
-      let last = window.location.pathname
-      const tick = () => {
-        const cur = window.location.pathname
-        if (cur !== last) { last = cur; notify() }
-      }
-      const interval = setInterval(tick, LIVE_PATH_POLL_MS)
-      const handler = () => notify()
-      window.addEventListener('popstate', handler)
+      window.addEventListener(LIVE_LOCATION_EVENT, notify)
       return () => {
-        clearInterval(interval)
-        window.removeEventListener('popstate', handler)
+        window.removeEventListener(LIVE_LOCATION_EVENT, notify)
       }
     },
-    () => window.location.pathname,
-    () => '/'
+    getLiveUrl,
+    () => '/',
   )
 }
 
@@ -585,19 +605,22 @@ function LiveLocationProvider({
 }
 
 function App() {
-  const livePath = useLivePathname()
-  // Merge the real router location (which carries search/hash/state and —
-  // critically — a real `key` that changes on every navigation) with the
-  // live pathname. Hardcoding `key: 'default'` breaks effects across the
-  // app that fire on `location.key` change (Dashboard, Clusters, Compute
-  // re-fetch; Settings distinguishes direct load vs in-app nav via
-  // `location.key !== 'default'`).
+  const liveUrl = useLiveUrl()
+  // Merge the real router location (which carries state and — critically —
+  // a real `key` that changes on every navigation) with the live browser URL.
+  // This keeps pathname/search/hash in lockstep with the address bar while
+  // preserving React Router's navigation metadata once it catches up.
   const routerLocation = useLocation()
   const navigationType = useNavigationType()
-  const liveLocation = useMemo(
-    () => ({ ...routerLocation, pathname: livePath }),
-    [routerLocation, livePath],
-  )
+  const liveLocation = useMemo(() => {
+    const url = new URL(liveUrl, window.location.origin)
+    return {
+      ...routerLocation,
+      pathname: url.pathname,
+      search: url.search,
+      hash: url.hash,
+    }
+  }, [routerLocation, liveUrl])
   return (
     <BrandingProvider>
     <ThemeProvider>
