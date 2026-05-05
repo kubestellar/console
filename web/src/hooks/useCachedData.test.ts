@@ -508,16 +508,20 @@ describe('useCachedDeploymentIssues', () => {
     mockClusterCacheRef.clusters = []
     mockIsBackendUnavailable.mockReturnValue(false)
 
-    const mockIssues = [
-      { name: 'failing-deploy', namespace: 'prod', replicas: 2, readyReplicas: 0, reason: 'DeploymentFailed' },
-    ]
-    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ issues: mockIssues }))
+    // REST API returns deployments — issues are derived from unhealthy replicas
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({
+      deployments: [
+        { name: 'failing-deploy', namespace: 'prod', replicas: 2, readyReplicas: 0, status: 'failed' },
+      ],
+    }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues('prod'),
     )
-    const result = await capturedFetcher()
-    expect(result).toEqual(mockIssues)
+    const result = await capturedFetcher() as Array<{ name: string; reason: string }>
+    expect(result).toHaveLength(1)
+    expect(result[0].name).toBe('failing-deploy')
+    expect(result[0].reason).toBe('DeploymentFailed')
   })
 
   it('fetcher throws when both agent and backend unavailable', async () => {
@@ -1069,8 +1073,12 @@ describe('Backend/Agent unavailability', () => {
     mockIsAgentUnavailable.mockReturnValue(true)
     mockIsBackendUnavailable.mockReturnValue(false)
 
-    // Should fall through to REST API
-    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({ issues: [{ name: 'deploy-issue' }] }))
+    // Should fall through to REST API — returns deployments format
+    globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({
+      deployments: [
+        { name: 'deploy-issue', namespace: 'prod', replicas: 2, readyReplicas: 0, status: 'running' },
+      ],
+    }))
 
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues('prod'),

@@ -19,7 +19,8 @@ import {
   PodRelatedTab,
   PodOutputTab,
   PodAiAnalysis,
-  PodDeleteSection
+  PodDeleteSection,
+  PodDiagnosisGuidance,
 } from './pod-drilldown'
 import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
 import { copyToClipboard } from '../../../lib/clipboard'
@@ -1452,6 +1453,17 @@ Please:
               )}
 
             </div>
+
+            {/* Heuristic Diagnosis Guidance — works without AI API key */}
+            <PodDiagnosisGuidance
+              status={status}
+              issues={issues}
+              restarts={restarts}
+              eventsOutput={eventsOutput}
+              logsOutput={logsOutput}
+              onViewLogs={() => setActiveTab('logs')}
+              onViewEvents={() => setActiveTab('events')}
+            />
 
             {/* Recent Events */}
             {eventsOutput && (

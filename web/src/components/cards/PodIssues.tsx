@@ -1,4 +1,4 @@
-import { MemoryStick, ImageOff, Clock, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react'
+import { MemoryStick, ImageOff, Clock, RefreshCw, CheckCircle, AlertTriangle, Lightbulb } from 'lucide-react'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
 import type { PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -30,6 +30,32 @@ const getIssueIcon = (status: string | undefined): { icon: typeof MemoryStick; t
   if (status.includes('Image')) return { icon: ImageOff, tooltip: 'Image Pull Error - Failed to pull container image' }
   if (status.includes('Pending')) return { icon: Clock, tooltip: 'Pending - Pod is waiting to be scheduled' }
   return { icon: RefreshCw, tooltip: 'Restart Loop - Pod is repeatedly crashing' }
+}
+
+/** Provides a short actionable hint for common pod failure modes (no AI needed) */
+const getQuickDiagnosisHint = (status: string | undefined, issues: string[]): string | null => {
+  const lowerStatus = (status || '').toLowerCase()
+  const lowerIssues = (issues || []).map(i => i.toLowerCase()).join(' ')
+
+  if (lowerStatus.includes('oomkilled') || lowerIssues.includes('oomkilled')) {
+    return 'Increase memory limits or investigate memory usage'
+  }
+  if (lowerStatus.includes('crashloopbackoff') || lowerIssues.includes('crashloopbackoff')) {
+    return 'Container crashing repeatedly — check logs for errors'
+  }
+  if (lowerStatus.includes('imagepullbackoff') || lowerStatus.includes('errimagepull')) {
+    return 'Image not found or registry auth failed'
+  }
+  if (lowerStatus.includes('pending') || lowerIssues.includes('unschedulable')) {
+    return 'No node available — check resource requests and constraints'
+  }
+  if (lowerStatus.includes('createcontainerconfigerror')) {
+    return 'Missing ConfigMap or Secret referenced by pod'
+  }
+  if (lowerStatus.includes('evicted')) {
+    return 'Node under resource pressure — check disk/memory on node'
+  }
+  return null
 }
 
 export function PodIssues() {
@@ -228,6 +254,16 @@ export function PodIssues() {
                       {(issue.issues || []).join(', ')}
                     </p>
                   )}
+                  {(() => {
+                    const hint = getQuickDiagnosisHint(issue.status, issue.issues || [])
+                    if (!hint) return null
+                    return (
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <Lightbulb className="w-3 h-3 text-primary shrink-0" />
+                        <span className="text-xs text-primary font-medium truncate" title={hint}>{hint}</span>
+                      </div>
+                    )
+                  })()}
                 </div>
                 {/* AI Diagnose, Repair & Ask actions */}
                 <CardAIActions

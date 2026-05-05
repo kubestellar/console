@@ -828,6 +828,7 @@ class KubectlProxy {
 
         if (cs.lastState?.terminated?.reason === 'OOMKilled') {
           problems.push('OOMKilled')
+          reason = reason || 'OOMKilled'
         }
       }
 
@@ -848,11 +849,14 @@ class KubectlProxy {
       }
 
       if (problems.length > 0 || restarts > POD_RESTART_ISSUE_THRESHOLD) {
+        // Use detected problem as status — not phase (which may still be "Running"
+        // even when the pod is OOMKilled or in a restart loop)
+        const effectiveStatus = reason || problems[0] || phase || 'Unknown'
         issues.push({
           name: pod.metadata.name,
           namespace: pod.metadata.namespace,
           cluster: context,
-          status: reason || phase || 'Unknown',
+          status: effectiveStatus,
           reason,
           issues: problems,
           restarts,

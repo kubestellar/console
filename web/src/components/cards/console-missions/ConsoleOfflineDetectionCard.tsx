@@ -113,26 +113,31 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   // Get all nodes from shared cache
   const [allNodes, setAllNodes] = useState<NodeData[]>(() => nodesCache)
   const [nodesLoading, setNodesLoading] = useState(nodesCache.length === 0)
+  const [nodesFailed, setNodesFailed] = useState(false)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
+  // Only mark card as failed when ALL data sources fail — partial data is acceptable
+  const allSourcesFailed = gpuFailed && podsFailed && nodesFailed && allNodes.length === 0
   useCardLoadingState({
     isLoading: isLoading && nodesLoading,
     isRefreshing: gpuRefreshing || podsRefreshing,
-    hasAnyData: gpuNodes.length > 0 || nodesCache.length > 0 || allNodes.length > 0,
+    hasAnyData: gpuNodes.length > 0 || nodesCache.length > 0 || allNodes.length > 0 || podIssues.length > 0,
     isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback,
-    isFailed: gpuFailed || podsFailed,
-    consecutiveFailures: Math.max(gpuFailures, podsFailures) })
+    isFailed: allSourcesFailed,
+    consecutiveFailures: allSourcesFailed ? Math.max(gpuFailures, podsFailures) : 0 })
 
   // Subscribe to cache updates and fetch nodes
   useEffect(() => {
     if (shouldUseDemoData) {
       setNodesLoading(false)
+      setNodesFailed(false)
       return
     }
 
     const handleUpdate = (nodes: NodeData[]) => {
       setAllNodes(nodes)
       setNodesLoading(false)
+      setNodesFailed(false)
     }
     nodesSubscribers.add(handleUpdate)
 
@@ -141,6 +146,10 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       setNodesLoading(false)
       if (nodesFetchError) {
         console.warn('[OfflineDetection] Node fetch degraded:', nodesFetchError)
+        // Only mark nodes as failed if we got no data at all
+        setNodesFailed(nodes.length === 0)
+      } else {
+        setNodesFailed(false)
       }
     }).catch(() => { /* fetchAllNodes always resolves — defensive catch */ })
 
