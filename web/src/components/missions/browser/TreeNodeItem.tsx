@@ -1,4 +1,4 @@
-import { memo, useState, useRef, useEffect, useCallback } from 'react'
+import { memo, useState, useRef, useEffect, useCallback, type MutableRefObject } from 'react'
 import {
   Folder, FolderOpen, FileJson, FileCode, FileText, ChevronRight, ChevronDown,
   Loader2, Globe, HardDrive, Trash2, Plus, RefreshCw, Info } from 'lucide-react'
@@ -102,6 +102,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   depth,
   expandedNodes,
   selectedPath,
+  nodeRefs,
   onToggle,
   onSelect,
   onRemove,
@@ -111,6 +112,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
   depth: number
   expandedNodes: Set<string>
   selectedPath: string | null
+  nodeRefs: MutableRefObject<Map<string, HTMLButtonElement>>
   onToggle: (node: TreeNode) => void
   onSelect: (node: TreeNode) => void
   /** Optional callback to remove a watched path/repo. When provided and the node is a watched child (source is 'local' or 'github'), a delete button is rendered. */
@@ -147,6 +149,13 @@ export const TreeNodeItem = memo(function TreeNodeItem({
     <div>
       <div className={showHeaderActions ? 'flex items-center' : undefined}>
         <button
+          ref={(element) => {
+            if (element) {
+              nodeRefs.current.set(node.id, element)
+              return
+            }
+            nodeRefs.current.delete(node.id)
+          }}
           onClick={() => {
             if (isDir) onToggle(node)
             onSelect(node)
@@ -255,6 +264,7 @@ export const TreeNodeItem = memo(function TreeNodeItem({
               depth={depth + 1}
               expandedNodes={expandedNodes}
               selectedPath={selectedPath}
+              nodeRefs={nodeRefs}
               onToggle={onToggle}
               onSelect={onSelect}
               onRemove={onRemove}

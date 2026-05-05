@@ -8,7 +8,7 @@
  * Extracted from MissionBrowser.tsx (issue #8624).
  */
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Upload, CheckCircle, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { SIDEBAR_WIDTH, MISSION_FILE_ACCEPT } from './missionBrowserConstants'
@@ -16,10 +16,14 @@ import { TreeNodeItem, updateNodeInTree } from './browser'
 import type { TreeNode } from './browser'
 import { useToast } from '../ui/Toast'
 
+const REVEAL_HIGHLIGHT_TIMEOUT_MS = 2_000
+
 interface MissionBrowserSidebarProps {
   treeNodes: TreeNode[]
   expandedNodes: Set<string>
   selectedPath: string | null
+  revealPath: string | null
+  revealNonce: number
   onToggleNode: (node: TreeNode) => void
   onSelectNode: (node: TreeNode) => void
 
@@ -56,6 +60,8 @@ export function MissionBrowserSidebar({
   treeNodes,
   expandedNodes,
   selectedPath,
+  revealPath,
+  revealNonce,
   onToggleNode,
   onSelectNode,
   isDragging,
@@ -82,7 +88,28 @@ export function MissionBrowserSidebar({
   setExpandedNodes,
 }: MissionBrowserSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const treeNodeRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
   const { showToast } = useToast()
+
+  useEffect(() => {
+    if (!revealPath) return
+
+    const nodeElement = treeNodeRefs.current.get(revealPath)
+    if (!nodeElement) return
+
+    const revealClasses = ['ring-1', 'ring-purple-400/80', 'bg-purple-500/20']
+    nodeElement.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    nodeElement.classList.add(...revealClasses)
+
+    const timeoutId = window.setTimeout(() => {
+      nodeElement.classList.remove(...revealClasses)
+    }, REVEAL_HIGHLIGHT_TIMEOUT_MS)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+      nodeElement.classList.remove(...revealClasses)
+    }
+  }, [revealNonce, revealPath])
 
   return (
     <div
@@ -99,6 +126,7 @@ export function MissionBrowserSidebar({
                 depth={0}
                 expandedNodes={expandedNodes}
                 selectedPath={selectedPath}
+                nodeRefs={treeNodeRefs}
                 onToggle={onToggleNode}
                 onSelect={onSelectNode}
                 onRemove={

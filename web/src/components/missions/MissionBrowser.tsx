@@ -132,6 +132,7 @@ interface MissionBrowserProps {
 interface MissionTreeTarget {
   rootId: 'community' | 'github' | 'kubara'
   targetPath: string
+  repoFullName?: string
 }
 
 function findTreeNodeById(nodes: TreeNode[], nodeId: string): TreeNode | null {
@@ -145,19 +146,31 @@ function findTreeNodeById(nodes: TreeNode[], nodeId: string): TreeNode | null {
   return null
 }
 
-function resolveMissionTreeTarget(sourcePath: string | undefined, kubaraRootPath: string | undefined): MissionTreeTarget | null {
-  const normalizedSource = sourcePath?.trim().replace(/^\/+/, '')
-  if (!normalizedSource) return null
+function parseGitHubRepoFullName(repoUrl: string | undefined): string | null {
+  if (!repoUrl) return null
+  const repoMatch = repoUrl.match(/github\.com\/([^/]+)\/([^/#?]+?)(?:\.git)?(?:[/?#].*)?$/i)
+  if (!repoMatch) return null
+  return `${repoMatch[1]}/${repoMatch[2]}`
+}
 
-  if (normalizedSource.startsWith('fixes/')) {
+function resolveMissionTreeTarget(
+  sourcePath: string | undefined,
+  sourceRepoUrl: string | undefined,
+  kubaraRootPath: string | undefined,
+  kubaraRepoFullName: string | undefined,
+): MissionTreeTarget | null {
+  const normalizedSource = sourcePath?.trim().replace(/^\/+/, '')
+  const repoFullName = parseGitHubRepoFullName(sourceRepoUrl)
+
+  if (normalizedSource?.startsWith('fixes/')) {
     return { rootId: 'community', targetPath: normalizedSource }
   }
 
-  if (normalizedSource.startsWith('go-binary/templates/embedded/managed-service-catalog/helm/')) {
+  if (normalizedSource?.startsWith('go-binary/templates/embedded/managed-service-catalog/helm/')) {
     return { rootId: 'kubara', targetPath: normalizedSource }
   }
 
-  if (normalizedSource.startsWith('kubara/')) {
+  if (normalizedSource?.startsWith('kubara/')) {
     if (!kubaraRootPath) return null
     const relativePath = normalizedSource.slice('kubara/'.length)
     return {
@@ -166,9 +179,31 @@ function resolveMissionTreeTarget(sourcePath: string | undefined, kubaraRootPath
     }
   }
 
-  const pathParts = normalizedSource.split('/')
-  if (pathParts.length >= 3) {
-    return { rootId: 'github', targetPath: normalizedSource }
+  if (repoFullName && kubaraRootPath && repoFullName === kubaraRepoFullName) {
+    const kubaraRelativePath = normalizedSource
+      ? normalizedSource.replace(/^go-binary\/templates\/embedded\/managed-service-catalog\/helm\/?/, '')
+      : ''
+    return {
+      rootId: 'kubara',
+      targetPath: kubaraRelativePath ? `${kubaraRootPath}/${kubaraRelativePath}` : kubaraRootPath,
+      repoFullName,
+    }
+  }
+
+  if (repoFullName) {
+    const targetPath = normalizedSource
+      ? normalizedSource.startsWith(`${repoFullName}/`)
+        ? normalizedSource
+        : `${repoFullName}/${normalizedSource}`
+      : repoFullName
+    return { rootId: 'github', targetPath, repoFullName }
+  }
+
+  if (normalizedSource) {
+    const pathParts = normalizedSource.split('/')
+    if (pathParts.length >= 3) {
+      return { rootId: 'github', targetPath: normalizedSource, repoFullName: `${pathParts[0]}/${pathParts[1]}` }
+    }
   }
 
   return null
@@ -204,6 +239,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([])
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
+  const [revealPath, setRevealPath] = useState<string | null>(null)
+  const [revealNonce, setRevealNonce] = useState(0)
   const treeNodesRef = useRef<TreeNode[]>([])
   const expandedNodesRef = useRef<Set<string>>(new Set())
 
@@ -367,6 +404,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     setTreeNodes(rootNodes)
     setExpandedNodes(new Set())
     setSelectedPath(null)
+    setRevealPath(null)
     setSelectedMission(null)
     setDirectoryEntries([])
     setShowRaw(false)
@@ -491,6 +529,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     // Fetch full file content (steps, uninstall, upgrade, troubleshooting)
     try {
       const { mission: fullMission, raw } = await fetchMissionContent(mission)
+      void revealMissionInTreeRef.current?.(fullMission)
       // Only update if this is still the latest selection (prevents race condition)
       if (latestSelectionRef.current === selectionKey) {
         setSelectedMission(fullMission)
@@ -679,10 +718,59 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     await expandNode(node)
   }
 
+  const ensureGitHubRepoNode = useCallback((repoFullName: string) => {
+    setTreeNodes((prev) => {
+      const githubRoot = prev.find((node) => node.id === 'github')
+      if (!githubRoot) return prev
+
+      const repoExists = (githubRoot.children || []).some((child) => child.path === repoFullName)
+      if (repoExists) return prev
+
+      const next = prev.map((node) => {
+        if (node.id !== 'github') return node
+        return {
+          ...node,
+          children: [
+            ...(node.children || []),
+            {
+              id: `github/${repoFullName}`,
+              name: repoFullName.split('/').pop() || repoFullName,
+              path: repoFullName,
+              type: 'directory' as const,
+              source: 'github' as const,
+              loaded: false,
+              description: repoFullName,
+            },
+          ],
+        }
+      })
+      treeNodesRef.current = next
+      return next
+    })
+  }, [])
+
   const revealMissionInTree = useCallback(async (mission: MissionExport) => {
-    const kubaraRootPath = findTreeNodeById(treeNodesRef.current, 'kubara')?.path
-    const target = resolveMissionTreeTarget(mission.metadata?.source, kubaraRootPath)
+    const kubaraNode = findTreeNodeById(treeNodesRef.current, 'kubara')
+    const kubaraRootPath = kubaraNode?.path
+    const kubaraRepoFullName = kubaraNode?.repoOwner && kubaraNode.repoName
+      ? `${kubaraNode.repoOwner}/${kubaraNode.repoName}`
+      : undefined
+    const target = resolveMissionTreeTarget(
+      mission.metadata?.source,
+      mission.metadata?.sourceUrls?.repo,
+      kubaraRootPath,
+      kubaraRepoFullName,
+    )
     if (!target) return
+
+    if (target.rootId === 'github' && target.repoFullName) {
+      ensureGitHubRepoNode(target.repoFullName)
+      setExpandedNodes((prev) => {
+        const next = new Set(prev).add('github')
+        expandedNodesRef.current = next
+        return next
+      })
+    }
 
     let currentNode = findTreeNodeById(treeNodesRef.current, target.rootId)
     if (!currentNode) return
@@ -690,6 +778,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     while (currentNode) {
       if (currentNode.path === target.targetPath) {
         setSelectedPath(currentNode.id)
+        setRevealPath(currentNode.id)
+        setRevealNonce((prev) => prev + 1)
         return
       }
 
@@ -706,7 +796,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       if (!matchingChild) return
       currentNode = matchingChild
     }
-  }, [expandNode])
+  }, [ensureGitHubRepoNode, expandNode])
   revealMissionInTreeRef.current = revealMissionInTree
 
   // ============================================================================
@@ -1159,6 +1249,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
           treeNodes={treeNodes}
           expandedNodes={expandedNodes}
           selectedPath={selectedPath}
+          revealPath={revealPath}
+          revealNonce={revealNonce}
           onToggleNode={toggleNode}
           onSelectNode={selectNode}
           isDragging={isDragging}
