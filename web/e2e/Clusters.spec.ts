@@ -5,7 +5,12 @@ import { mockApiFallback } from './helpers/setup'
  * Sets up authentication and MCP mocks for cluster tests
  */
 async function setupClustersTest(page: Page) {
+  // IMPORTANT: Playwright matches routes in REVERSE registration order (#12094)
+  // Last registered handler = first matched. Register catch-all handlers FIRST
+  // (lowest priority), then specific handlers AFTER (highest priority).
+  
   // Catch-all API mock prevents unmocked requests hanging in webkit/firefox
+  // This registers **/api/** catch-all first → lowest priority
   await mockApiFallback(page)
 
   // Override /health to return oauth_configured: true so the auth flow
@@ -13,6 +18,7 @@ async function setupClustersTest(page: Page) {
   // oauth_configured: false which causes the AuthProvider to call
   // setDemoMode(), overriding localStorage and falling back to built-in
   // demo data instead of the mocked API data. (#10784)
+  // Registered AFTER mockApiFallback → higher priority, overrides catch-all
   await page.route('**/health', (route) => {
     const url = new URL(route.request().url())
     if (url.pathname !== '/health') return route.fallback()
@@ -34,6 +40,7 @@ async function setupClustersTest(page: Page) {
   // immediately instead of waiting for the 1.5s MCP_PROBE_TIMEOUT_MS on
   // browsers where the connection-refused error is slow (webkit/firefox).
   // This also prevents cross-origin errors from 127.0.0.1:8585. (#10784)
+  // Registered AFTER mockApiFallback → higher priority
   await page.route('**/127.0.0.1:8585/**', (route) =>
     route.fulfill({
       status: 503,
@@ -43,6 +50,7 @@ async function setupClustersTest(page: Page) {
   )
 
   // Mock authentication
+  // Registered AFTER mockApiFallback → higher priority, overrides catch-all
   await page.route('**/api/me', (route) =>
     route.fulfill({
       status: 200,
@@ -58,6 +66,7 @@ async function setupClustersTest(page: Page) {
   )
 
   // Mock MCP endpoints
+  // Registered AFTER mockApiFallback → higher priority, overrides catch-all
   await page.route('**/api/mcp/**', (route) => {
     const url = route.request().url()
     if (url.includes('/clusters')) {
@@ -138,7 +147,12 @@ test.describe('Clusters Page', () => {
       // Should show cluster names from our mock data
       // Webkit/Firefox render mock data slightly later — use a generous timeout
       const CLUSTER_NAME_TIMEOUT_MS = 20_000
-      await expect(page.getByText('prod-east').first()).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
+      
+      // Wait for container to be stable before selecting first occurrence (#12096)
+      // .first() may target stale DOM elements during re-render if not synchronized
+      const clusterNameLocator = page.getByText('prod-east')
+      await expect(clusterNameLocator.first()).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
+      
       await expect(page.getByText('prod-west').first()).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
       await expect(page.getByText('staging').first()).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
     })
@@ -150,8 +164,10 @@ test.describe('Clusters Page', () => {
       // We have 2 healthy clusters and 1 unhealthy
       // StatusIndicator uses text-green-400 and bg-green-500 for healthy status
       const healthyIndicators = page.locator('.bg-green-500, .text-green-400, [class*="bg-green"], [class*="text-green"]')
-      const healthyCount = await healthyIndicators.count()
-      expect(healthyCount).toBeGreaterThan(0)
+      
+      // Use Playwright's auto-retrying expect().toHaveCount() instead of immediate count() (#12097)
+      // count() returns immediately and may execute before DOM is fully rendered
+      await expect(healthyIndicators).not.toHaveCount(0, { timeout: 10000 })
     })
   })
 
@@ -477,6 +493,10 @@ test.describe('Clusters Page', () => {
 
       // Look for layout mode buttons (grid, list, compact, wide)
       const layoutBtns = page.locator('button[aria-label*="layout" i], button[aria-label*="grid" i], button[aria-label*="list" i], button[aria-label*="compact" i]')
+      
+      // Ensure at least one button is visible before counting (#12097)
+      // Immediate count() may execute before DOM fully renders
+      await expect(layoutBtns.first()).toBeVisible({ timeout: 5000 }).catch(() => {})
       const count = await layoutBtns.count()
 
       if (count > 1) {

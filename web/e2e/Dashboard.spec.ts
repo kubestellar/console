@@ -193,9 +193,11 @@ test.describe('Dashboard Page', () => {
       await expect(sidebar).toBeVisible({ timeout: SIDEBAR_ASSERT_TIMEOUT_MS })
       await expect(sidebarPrimaryNav).toBeVisible({ timeout: SIDEBAR_ASSERT_TIMEOUT_MS })
 
+      // Ensure at least one link is visible before counting (#12097)
+      // Immediate count() may execute before DOM fully renders
+      await expect(sidebarLinks.first()).toBeVisible({ timeout: SIDEBAR_ASSERT_TIMEOUT_MS })
       const sidebarLinkCount = await sidebarLinks.count()
       expect(sidebarLinkCount).toBeGreaterThan(0)
-      await expect(sidebarLinks.first()).toBeVisible({ timeout: SIDEBAR_ASSERT_TIMEOUT_MS })
       await expect(sidebarLinks.first()).toHaveAttribute('href', /.+/, { timeout: SIDEBAR_ASSERT_TIMEOUT_MS })
     })
 
@@ -895,6 +897,10 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       timeout: DATA_RENDER_TIMEOUT_MS,
     })
 
+    // IMPORTANT: Wait for network to stabilize before navigating to next page (#12095)
+    // Sequential page.goto() without stabilization causes navigation race conditions
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+
     // 2. Visit / and assert the Clusters stat block matches the
     //    row count from /clusters.
     const dashboardClustersApiPromise = page.waitForResponse(
@@ -910,9 +916,12 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     // Target the Clusters StatBlock directly and wait for the mocked cluster
     // payload to render before comparing counts across pages.
     const STAT_BLOCK_TIMEOUT_MS = 20_000
-    const clusterStatBlock = page.getByTestId('stat-block-clusters').first()
-    await expect(clusterStatBlock).toBeVisible({ timeout: STAT_BLOCK_TIMEOUT_MS })
-    await expect(clusterStatBlock).toContainText(
+    const clusterStatBlock = page.getByTestId('stat-block-clusters')
+    
+    // Ensure container is visible before using .first() (#12096)
+    // .first() may target stale DOM elements during re-render without synchronization
+    await expect(clusterStatBlock.first()).toBeVisible({ timeout: STAT_BLOCK_TIMEOUT_MS })
+    await expect(clusterStatBlock.first()).toContainText(
       new RegExp(`(?<!\\d)${EXPECTED_CLUSTER_COUNT}(?!\\d)`),
       { timeout: STAT_BLOCK_TIMEOUT_MS },
     )

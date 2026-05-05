@@ -245,8 +245,13 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
     await page.waitForTimeout(500)
     
     // Navigate away and back
+    // IMPORTANT: Wait for first navigation to stabilize before navigating again (#12095)
     await page.goto('/')
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
+    await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    
     await page.goto('/clusters')
+    await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {})
     await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
     
     // Verify state persisted (collapsed or expanded - either is valid, key is it persisted)
@@ -256,6 +261,10 @@ test.describe('Clusters: Collapsible Cluster Info Cards section (#11777)', () =>
 
 test.describe('Clusters: Stale kubeconfig banner and Prune flow (#11778)', () => {
   test('stale kubeconfig banner appears when staleContexts > 0', async ({ page }) => {
+    // IMPORTANT: Test-specific route handlers should be registered AFTER
+    // setupDemoAndNavigate() which calls mockApiFallback(). Playwright matches
+    // routes in reverse order, so later registrations have higher priority (#12094).
+    
     // Mock cluster stats with stale contexts
     await page.route('**/api/mcp/clusters', (route) => {
       route.fulfill({
