@@ -265,3 +265,99 @@ if key := cm.GetAPIKey("openai"); key != "env-key" {
 t.Errorf("expected 'env-key', got '%s'", key)
 }
 }
+
+func TestConfigManager_WritesInitializeNilConfig(t *testing.T) {
+createConfigManager := func() *ConfigManager {
+return &ConfigManager{
+configPath:  filepath.Join(t.TempDir(), "config.yaml"),
+keyValidity: make(map[string]bool),
+}
+}
+
+provider := "openai"
+
+writeTests := []struct {
+name      string
+operation func(*ConfigManager) error
+validate  func(*testing.T, *ConfigManager)
+}{
+{
+name: "set api key",
+operation: func(cm *ConfigManager) error {
+return cm.SetAPIKey(provider, "test-key")
+},
+validate: func(t *testing.T, cm *ConfigManager) {
+t.Helper()
+if got := cm.GetAPIKey(provider); got != "test-key" {
+t.Fatalf("expected persisted API key, got %q", got)
+}
+},
+},
+{
+name: "set model",
+operation: func(cm *ConfigManager) error {
+return cm.SetModel(provider, "gpt-4.1")
+},
+validate: func(t *testing.T, cm *ConfigManager) {
+t.Helper()
+if got := cm.GetModel(provider, "fallback"); got != "gpt-4.1" {
+t.Fatalf("expected persisted model, got %q", got)
+}
+},
+},
+{
+name: "set base url",
+operation: func(cm *ConfigManager) error {
+return cm.SetBaseURL(provider, "http://localhost:11434")
+},
+validate: func(t *testing.T, cm *ConfigManager) {
+t.Helper()
+if got := cm.GetBaseURL(provider); got != "http://localhost:11434" {
+t.Fatalf("expected persisted base URL, got %q", got)
+}
+},
+},
+{
+name: "remove base url",
+operation: func(cm *ConfigManager) error {
+cm.config = &AgentConfig{Agents: map[string]AgentKeyConfig{provider: {BaseURL: "http://localhost:11434"}}}
+cm.config.Agents = nil
+return cm.RemoveBaseURL(provider)
+},
+validate: func(t *testing.T, cm *ConfigManager) {
+t.Helper()
+if got := cm.GetBaseURL(provider); got != "" {
+t.Fatalf("expected base URL to be cleared, got %q", got)
+}
+},
+},
+{
+name: "remove api key",
+operation: func(cm *ConfigManager) error {
+return cm.RemoveAPIKey(provider)
+},
+validate: func(t *testing.T, cm *ConfigManager) {
+t.Helper()
+if got := cm.GetAPIKey(provider); got != "" {
+t.Fatalf("expected API key to be removed, got %q", got)
+}
+},
+},
+}
+
+for _, tt := range writeTests {
+t.Run(tt.name, func(t *testing.T) {
+cm := createConfigManager()
+if err := tt.operation(cm); err != nil {
+t.Fatalf("operation failed: %v", err)
+}
+if cm.config == nil {
+t.Fatal("expected config to be initialized")
+}
+if cm.config.Agents == nil {
+t.Fatal("expected agents map to be initialized")
+}
+tt.validate(t, cm)
+})
+}
+}
