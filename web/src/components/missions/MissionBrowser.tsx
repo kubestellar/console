@@ -610,7 +610,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // Tree expansion & lazy loading
   // ============================================================================
 
-  const expandNode = useCallback(async (node: TreeNode) => {
+  const expandNode = useCallback(async (node: TreeNode): Promise<TreeNode | null> => {
     const nodeId = node.id
 
     if (!expandedNodesRef.current.has(nodeId)) {
@@ -621,7 +621,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       })
     }
 
-    if (node.loaded || node.loading) return
+    if (node.loaded || node.loading) {
+      return findTreeNodeById(treeNodesRef.current, nodeId) ?? node
+    }
 
     setTreeNodes((prev) => {
       const next = updateNodeInTree(prev, nodeId, { loading: true })
@@ -638,18 +640,38 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
           treeNodesRef.current = next
           return next
         })
-      } else {
-        setTreeNodes((prev) => {
-          const next = updateNodeInTree(prev, nodeId, {
-            children,
-            loaded: true,
-            loading: false,
-            isEmpty: children.length === 0 })
-          treeNodesRef.current = next
-          return next
-        })
+        return null
       }
+
+      const expandedNode: TreeNode = {
+        ...node,
+        children,
+        loaded: true,
+        loading: false,
+        isEmpty: children.length === 0,
+      }
+
+      setTreeNodes((prev) => {
+        const next = updateNodeInTree(prev, nodeId, {
+          children,
+          loaded: true,
+          loading: false,
+          isEmpty: children.length === 0 })
+        treeNodesRef.current = next
+        return next
+      })
+
+      return expandedNode
     } catch {
+      const failedNode: TreeNode = {
+        ...node,
+        children: [],
+        loaded: true,
+        loading: false,
+        isEmpty: true,
+        description: 'Failed to load — check network or GitHub rate limits',
+      }
+
       setTreeNodes((prev) => {
         const next = updateNodeInTree(prev, nodeId, {
           children: [],
@@ -660,6 +682,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
         treeNodesRef.current = next
         return next
       })
+
+      return failedNode
     }
   }, [])
 
@@ -695,8 +719,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
 
       if (currentNode.type !== 'directory') return
 
-      await expandNode(currentNode)
-      const refreshedNode = findTreeNodeById(treeNodesRef.current, currentNode.id)
+      const refreshedNode = await expandNode(currentNode)
       if (!refreshedNode) return
 
       const matchingChild = (refreshedNode.children || []).find((child) =>
