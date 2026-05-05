@@ -12,6 +12,7 @@ import {
   type UseHPAsResult,
   type UseJobsResult,
   type UseReplicaSetsResult,
+  type UsePodLogsResult,
   type UseStatefulSetsResult,
 } from './shared'
 

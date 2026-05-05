@@ -8,7 +8,7 @@ import { fetchSSE } from '../../../lib/sseClient'
 import { registerRefetch } from '../../../lib/modeTransition'
 import { isInClusterMode } from '../../useBackendHealth'
 import { isAgentUnavailable } from '../../useLocalAgent'
-import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, clusterCacheRef, agentFetch } from '../shared'
+import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, clusterCacheRef } from '../shared'
 import { subscribePolling } from '../pollingManager'
 import type { PodInfo, PodIssue } from '../types'
 import { subscribeWorkloadsCache, type WorkloadsSharedState } from '../workloadSubscriptions'
@@ -16,7 +16,6 @@ import {
   type PodClusterError,
   type UseAllPodsResult,
   type UsePodIssuesResult,
-  type UsePodLogsResult,
   type UsePodsResult,
 } from './shared'
 
