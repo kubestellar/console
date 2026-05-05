@@ -4,6 +4,7 @@ import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -542,8 +543,9 @@ describe('mission reconnection edge cases', () => {
 // ── setActiveTokenCategory called on mission actions ────────────────────────
 
 describe('setActiveTokenCategory on mission actions', () => {
-  it('sets active token category to "missions" when starting a mission', async () => {
+  it('sets active token category from the mission type when starting a mission', async () => {
     const { setActiveTokenCategory } = await import('./useTokenUsage')
+    const expectedCategory = getTokenCategoryForMissionType(defaultParams.type)
     vi.mocked(setActiveTokenCategory).mockClear()
 
     const { result } = renderHook(() => useMissions(), { wrapper })
@@ -551,11 +553,12 @@ describe('setActiveTokenCategory on mission actions', () => {
     await act(async () => { await Promise.resolve() })
     await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
 
-    expect(setActiveTokenCategory).toHaveBeenCalledWith(expect.any(String), 'missions')
+    expect(setActiveTokenCategory).toHaveBeenCalledWith(expect.any(String), expectedCategory)
   })
 
-  it('sets active token category to "missions" on sendMessage', async () => {
+  it('sets active token category from the mission type on sendMessage', async () => {
     const { setActiveTokenCategory } = await import('./useTokenUsage')
+    const expectedCategory = getTokenCategoryForMissionType(defaultParams.type)
     const { result } = renderHook(() => useMissions(), { wrapper })
     const { missionId, requestId } = await startMissionWithConnection(result)
 
@@ -574,7 +577,7 @@ describe('setActiveTokenCategory on mission actions', () => {
     })
 
     // Per-operation tracking keyed by missionId (#6016)
-    expect(setActiveTokenCategory).toHaveBeenCalledWith(missionId, 'missions')
+    expect(setActiveTokenCategory).toHaveBeenCalledWith(missionId, expectedCategory)
   })
 
   it('clears active token category on result message', async () => {

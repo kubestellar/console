@@ -1099,7 +1099,7 @@ describe('KubectlProxy - resource methods', () => {
 
       const issues = await issuesPromise
       expect(issues).toHaveLength(1)
-      expect(issues[0].issues).toContain('Failed')
+      expect(issues[0].issues).toContain('Evicted')
       expect(issues[0].status).toBe('Evicted')
 
       proxy.close()

@@ -511,7 +511,8 @@ describe('KubectlProxy — additional coverage (resource error branches)', () =>
 
       const issues = await promise
       expect(issues).toHaveLength(1)
-      expect(issues[0].status).toBe('Pending')
+      expect(issues[0].issues).toContain('Unschedulable')
+      expect(issues[0].status).toBe('Unschedulable')
       proxy.close()
     })
   })
