@@ -83,6 +83,7 @@ const DASHBOARD_NAMES: Record<DashboardStatsType, string> = {
   'karmada-ops': 'Karmada Ops',
   drasi: 'Drasi',
   acmm: 'AI Codebase Maturity',
+  deployments: 'Deployments',
 }
 
 const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
@@ -110,13 +111,14 @@ const DASHBOARD_ROUTES: Record<DashboardStatsType, string> = {
   'karmada-ops': '/karmada-ops',
   drasi: '/drasi',
   acmm: '/acmm',
+  deployments: '/deployments',
 }
 
 const ALL_STATS_DASHBOARD_TYPES: DashboardStatsType[] = [
   'dashboard', 'clusters', 'workloads', 'pods', 'gitops', 'storage',
   'network', 'security', 'compliance', 'data-compliance', 'compute',
   'events', 'cost', 'alerts', 'operators', 'deploy', 'ai-agents',
-  'cluster-admin', 'insights', 'ci-cd', 'drasi', 'acmm',
+  'cluster-admin', 'insights', 'ci-cd', 'drasi', 'acmm', 'deployments',
 ]
 
 // --- Dashboard storage keys → routes (for scanning placed cards) ---
