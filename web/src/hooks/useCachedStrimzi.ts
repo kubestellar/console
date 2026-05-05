@@ -1,19 +1,12 @@
 /**
  * Strimzi Status Hook — Data fetching for the strimzi_status card.
  *
- * Mirrors the spiffe / linkerd / envoy / contour pattern:
- * - useCache with fetcher + demo fallback
- * - isDemoFallback gated on !isLoading (prevents demo flash while loading)
- * - fetchJson helper with treat404AsEmpty (no real endpoint yet — this is
- *   scaffolding; the fetch will 404 until a real Strimzi bridge lands, at
- *   which point useCache will transparently switch to live data)
- * - showSkeleton / showEmptyState from useCardLoadingState
+ * Uses createCardCachedHook factory for zero-boilerplate caching + loading state.
+ * Domain logic (Kafka cluster health, stats aggregation) remains in pure helpers.
  */
 
-import { useCache } from '../lib/cache'
-import { useCardLoadingState } from '../components/cards/CardDataContext'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
-import { authFetch } from '../lib/api'
+import { createCardCachedHook } from '../lib/cache'
+import { fetchJson } from '../lib/fetchJson'
 import {
   STRIMZI_DEMO_DATA,
   type StrimziKafkaCluster,
@@ -57,11 +50,6 @@ const INITIAL_DATA: StrimziStatusData = {
 // ---------------------------------------------------------------------------
 // Internal types (shape of the future /api/strimzi/status response)
 // ---------------------------------------------------------------------------
-
-interface FetchResult<T> {
-  data: T
-  failed: boolean
-}
 
 interface StrimziStatusResponse {
   clusters?: StrimziKafkaCluster[]
@@ -123,45 +111,12 @@ function buildStrimziStatus(
 }
 
 // ---------------------------------------------------------------------------
-// Private fetchJson helper (mirrors spiffe/envoy/contour/linkerd pattern)
-// ---------------------------------------------------------------------------
-
-async function fetchJson<T>(
-  url: string,
-  options?: { treat404AsEmpty?: boolean },
-): Promise<FetchResult<T | null>> {
-  try {
-    const resp = await authFetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-    })
-
-    if (!resp.ok) {
-      if (options?.treat404AsEmpty && resp.status === 404) {
-        return { data: null, failed: false }
-      }
-      return { data: null, failed: true }
-    }
-
-    const body = (await resp.json()) as T
-    return { data: body, failed: false }
-  } catch {
-    return { data: null, failed: true }
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Fetcher
 // ---------------------------------------------------------------------------
 
 async function fetchStrimziStatus(): Promise<StrimziStatusData> {
-  const result = await fetchJson<StrimziStatusResponse>(
-    STRIMZI_STATUS_ENDPOINT,
-    { treat404AsEmpty: true },
-  )
+  const result = await fetchJson<StrimziStatusResponse>(STRIMZI_STATUS_ENDPOINT)
 
-  // If the endpoint isn't wired up yet (404) or the request failed, the
-  // cache layer will surface demo data via its demoData fallback path.
   if (result.failed) {
     throw new Error('Unable to fetch Strimzi status')
   }
@@ -174,77 +129,20 @@ async function fetchStrimziStatus(): Promise<StrimziStatusData> {
 }
 
 // ---------------------------------------------------------------------------
-// Hook
+// Hook (factory-generated)
 // ---------------------------------------------------------------------------
 
-export interface UseCachedStrimziResult {
-  data: StrimziStatusData
-  isLoading: boolean
-  isRefreshing: boolean
-  isDemoData: boolean
-  isFailed: boolean
-  consecutiveFailures: number
-  lastRefresh: number | null
-  showSkeleton: boolean
-  showEmptyState: boolean
-  error: boolean
-  refetch: () => Promise<void>
-}
+export const useCachedStrimzi = createCardCachedHook<StrimziStatusData>({
+  key: CACHE_KEY,
+  category: 'realtime',
+  initialData: INITIAL_DATA,
+  demoData: STRIMZI_DEMO_DATA,
+  fetcher: fetchStrimziStatus,
+  hasAnyData: (data) => data.health === 'not-installed' || (data.clusters ?? []).length > 0,
+})
 
-export function useCachedStrimzi(): UseCachedStrimziResult {
-  const {
-    data,
-    isLoading,
-    isRefreshing,
-    isFailed,
-    consecutiveFailures,
-    isDemoFallback,
-    lastRefresh,
-    refetch,
-  } = useCache<StrimziStatusData>({
-    key: CACHE_KEY,
-    // Kafka metrics (broker readiness, consumer lag) are live-trend style
-    // event-stream signals — refresh on the realtime cadence.
-    category: 'realtime',
-    initialData: INITIAL_DATA,
-    demoData: STRIMZI_DEMO_DATA,
-    persist: true,
-    fetcher: fetchStrimziStatus,
-  })
-
-  // Prevent demo flash while loading — only surface the Demo badge once
-  // we've actually fallen back to demo data post-load.
-  const effectiveIsDemoData = isDemoFallback && !isLoading
-
-  // 'not-installed' counts as "data" so the card shows the empty state
-  // rather than an infinite skeleton when Strimzi isn't present.
-  const hasAnyData =
-    data.health === 'not-installed' ? true : (data.clusters ?? []).length > 0
-
-  const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !hasAnyData,
-    isRefreshing,
-    hasAnyData,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    lastRefresh,
-  })
-
-  return {
-    data,
-    isLoading,
-    isRefreshing,
-    isDemoData: effectiveIsDemoData,
-    isFailed,
-    consecutiveFailures,
-    lastRefresh,
-    showSkeleton,
-    showEmptyState,
-    error: isFailed && !hasAnyData,
-    refetch,
-  }
-}
+// Re-export the result type for consumers that need it
+export type { CardCachedHookResult as UseCachedStrimziResult } from '../lib/cache'
 
 // ---------------------------------------------------------------------------
 // Exported testables — pure functions for unit testing

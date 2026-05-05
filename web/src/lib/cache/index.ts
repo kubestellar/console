@@ -1703,6 +1703,8 @@ export {
 // Re-export hook factory
 export { createCachedHook } from './createCachedHook'
 export type { CreateCachedHookConfig } from './createCachedHook'
+export { createCardCachedHook } from './createCardCachedHook'
+export type { CreateCardCachedHookConfig, CardCachedHookResult } from './createCardCachedHook'
 
 export const __testables = {
   ssWrite,
