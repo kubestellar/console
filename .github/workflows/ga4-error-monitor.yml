@@ -9,7 +9,8 @@ name: GA4 Error Monitor
 
 on:
   schedule:
-    - cron: '42 * * * *' # Every hour at :42
+    - cron: '42 * * * *' # Primary hourly run
+    - cron: '49 * * * *' # Backup retry if the primary run is dropped by hosted-runner starvation
   workflow_dispatch:
     inputs:
       lookback_hours:
@@ -36,8 +37,13 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: ga4-error-monitor
+  cancel-in-progress: true
+
 jobs:
   monitor:
+    if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
