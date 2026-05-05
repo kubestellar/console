@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"path/filepath"
 	"testing"
@@ -101,6 +102,35 @@ func refreshReq(authHeader string) *http.Request {
 		req.Header.Set("Authorization", authHeader)
 	}
 	return req
+}
+
+func generateRefreshFlowToken(t *testing.T, secret string, user *models.User, issuedAt, expiresAt time.Time) (string, middleware.UserClaims) {
+	t.Helper()
+	claims := middleware.UserClaims{
+		UserID:      user.ID,
+		GitHubLogin: user.GitHubLogin,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
+			IssuedAt:  jwt.NewNumericDate(issuedAt),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			Subject:   user.ID.String(),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte(secret))
+	require.NoError(t, err)
+	return signed, claims
+}
+
+func findResponseCookie(t *testing.T, resp *http.Response, name string) *http.Cookie {
+	t.Helper()
+	for _, cookie := range resp.Cookies() {
+		if cookie.Name == name {
+			return cookie
+		}
+	}
+	t.Fatalf("cookie %s not found", name)
+	return nil
 }
 
 func TestRefreshToken(t *testing.T) {
@@ -210,6 +240,67 @@ func TestRefreshToken(t *testing.T) {
 
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
+}
+
+func TestRefreshToken_FullRefreshCycle(t *testing.T) {
+	app, mockStore, handler := setupAuthTest()
+	app.Get("/api/protected", middleware.JWTAuth(handler.jwtSecret), func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"ok": true})
+	})
+	app.Post("/auth/refresh", middleware.RequireCSRF(), handler.RefreshToken)
+
+	user := &models.User{ID: uuid.New(), GitHubLogin: "refresh-user", Onboarded: true}
+	oldIssuedAt := time.Now().Add(-3 * time.Hour)
+	oldExpiresAt := time.Now().Add(1 * time.Hour)
+	oldToken, oldClaims := generateRefreshFlowToken(t, handler.jwtSecret, user, oldIssuedAt, oldExpiresAt)
+
+	mockStore.On("GetUser", user.ID).Return(user, nil).Once()
+
+	protectedReq := httptest.NewRequest(http.MethodGet, "/api/protected", nil)
+	protectedReq.Header.Set("Authorization", "Bearer "+oldToken)
+	protectedReq.AddCookie(&http.Cookie{Name: jwtCookieName, Value: oldToken})
+	protectedResp, err := app.Test(protectedReq, 5000)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, protectedResp.StatusCode)
+	assert.Equal(t, "true", protectedResp.Header.Get("X-Token-Refresh"))
+
+	refreshRequest := refreshReq("")
+	refreshRequest.AddCookie(&http.Cookie{Name: jwtCookieName, Value: oldToken})
+	refreshResp, err := app.Test(refreshRequest, 5000)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, refreshResp.StatusCode)
+
+	var body map[string]any
+	require.NoError(t, json.NewDecoder(refreshResp.Body).Decode(&body))
+	assert.Equal(t, true, body["refreshed"])
+	assert.Equal(t, true, body["onboarded"])
+
+	rotatedCookie := findResponseCookie(t, refreshResp, jwtCookieName)
+	assert.NotEmpty(t, rotatedCookie.Value)
+	assert.NotEqual(t, oldToken, rotatedCookie.Value)
+	assert.True(t, rotatedCookie.HttpOnly)
+	assert.Equal(t, "/", rotatedCookie.Path)
+	assert.Equal(t, http.SameSiteStrictMode, rotatedCookie.SameSite)
+	assert.Positive(t, rotatedCookie.MaxAge)
+
+	newClaims, err := middleware.ValidateJWT(rotatedCookie.Value, handler.jwtSecret)
+	require.NoError(t, err)
+	assert.Equal(t, user.ID, newClaims.UserID)
+	assert.NotEqual(t, oldClaims.ID, newClaims.ID)
+
+	revoked, err := middleware.IsTokenRevokedChecked(oldClaims.ID)
+	require.NoError(t, err)
+	assert.True(t, revoked)
+
+	_, err = middleware.ValidateJWT(oldToken, handler.jwtSecret)
+	assert.ErrorIs(t, err, middleware.ErrTokenRevoked)
+
+	followupReq := httptest.NewRequest(http.MethodGet, "/api/protected", nil)
+	followupReq.AddCookie(&http.Cookie{Name: jwtCookieName, Value: rotatedCookie.Value})
+	followupResp, err := app.Test(followupReq, 5000)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusOK, followupResp.StatusCode)
+	assert.Empty(t, followupResp.Header.Get("X-Token-Refresh"))
 }
 
 func TestGitHubLogin_Redirects(t *testing.T) {

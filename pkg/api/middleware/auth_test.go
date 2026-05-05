@@ -11,6 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJWTAuth(t *testing.T) {
@@ -181,6 +182,42 @@ func TestJWTAuth(t *testing.T) {
 	})
 }
 
+func TestJWTAuth_TokenRefreshHeader(t *testing.T) {
+	secret := "test-secret"
+	app := fiber.New()
+	app.Get("/protected", JWTAuth(secret), func(c *fiber.Ctx) error {
+		return c.SendString("ok")
+	})
+
+	t.Run("Aged token emits refresh header", func(t *testing.T) {
+		issuedAt := time.Now().Add(-3 * time.Hour)
+		expiresAt := time.Now().Add(1 * time.Hour)
+		token, err := generateTestTokenWithTimes(secret, issuedAt, expiresAt)
+		require.NoError(t, err)
+
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Equal(t, "true", resp.Header.Get("X-Token-Refresh"))
+	})
+
+	t.Run("Fresh token does not emit refresh header", func(t *testing.T) {
+		issuedAt := time.Now().Add(-30 * time.Minute)
+		expiresAt := time.Now().Add(90 * time.Minute)
+		token, err := generateTestTokenWithTimes(secret, issuedAt, expiresAt)
+		require.NoError(t, err)
+
+		req := httptest.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, err := app.Test(req, 5000)
+		require.NoError(t, err)
+		assert.Equal(t, 200, resp.StatusCode)
+		assert.Empty(t, resp.Header.Get("X-Token-Refresh"))
+	})
+}
+
 func TestGetContextHelpers(t *testing.T) {
 	app := fiber.New()
 
@@ -217,7 +254,23 @@ func generateTestToken(secret string, expiry time.Time) (string, error) {
 		UserID:      uuid.New(),
 		GitHubLogin: "test",
 		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(expiry),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
+func generateTestTokenWithTimes(secret string, issuedAt, expiresAt time.Time) (string, error) {
+	claims := UserClaims{
+		UserID:      uuid.New(),
+		GitHubLogin: "test",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ID:        uuid.NewString(),
+			IssuedAt:  jwt.NewNumericDate(issuedAt),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -382,9 +435,11 @@ func TestValidateJWT(t *testing.T) {
 // IsTokenRevoked, used to exercise the fail-closed behavior for #6577.
 type failingRevoker struct{}
 
-func (failingRevoker) RevokeToken(_ context.Context, _ string, _ time.Time) error  { return nil }
-func (failingRevoker) IsTokenRevoked(_ context.Context, _ string) (bool, error)    { return false, assertErr{} }
-func (failingRevoker) CleanupExpiredTokens(_ context.Context) (int64, error)       { return 0, nil }
+func (failingRevoker) RevokeToken(_ context.Context, _ string, _ time.Time) error { return nil }
+func (failingRevoker) IsTokenRevoked(_ context.Context, _ string) (bool, error) {
+	return false, assertErr{}
+}
+func (failingRevoker) CleanupExpiredTokens(_ context.Context) (int64, error) { return 0, nil }
 
 type assertErr struct{}
 
