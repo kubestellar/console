@@ -352,9 +352,11 @@ export function useCachedEvents(
       return await fetchViaSSE<ClusterEvent>('events', 'events', { namespace, limit }, onProgress)
     } })
 
+  const events = result.data || []
+
   return {
-    events: result.data,
-    data: result.data,
+    events,
+    data: events,
     isLoading: result.isLoading,
     isRefreshing: result.isRefreshing,
     isDemoFallback: result.isDemoFallback && !result.isLoading,

@@ -130,4 +130,11 @@ describe('EventsTimeline', () => {
     expect(mockUseCardLoadingState).toHaveBeenCalled()
   })
 
+  it('handles undefined hook data without crashing', () => {
+    mockEvents.mockReturnValue({ events: undefined, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
+    mockUseClusters.mockReturnValue({ clusters: undefined, deduplicatedClusters: undefined, isLoading: false, isRefreshing: false, error: null, lastRefresh: null })
+    const { container } = render(<EventsTimeline />)
+    expect(container).toBeTruthy()
+  })
+
 })

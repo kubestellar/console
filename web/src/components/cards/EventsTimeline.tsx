@@ -87,15 +87,17 @@ function EventsTimelineInternal() {
   const TIME_RANGE_OPTIONS = TIME_RANGE_OPTIONS_KEYS.map(opt => ({ ...opt, label: String(t(opt.labelKey)) }))
   const { isDemoMode } = useDemoMode()
   const {
-    events,
+    events: rawEvents,
     isLoading: hookLoading,
     isDemoFallback,
     isRefreshing,
     lastRefresh,
     isFailed,
     consecutiveFailures } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
+  const events = rawEvents || []
 
-  const { deduplicatedClusters: clusters } = useClusters()
+  const { deduplicatedClusters: rawClusters } = useClusters()
+  const clusters = rawClusters || []
 
   // Report state to CardWrapper for refresh animation
   const hasData = events.length > 0
@@ -106,7 +108,11 @@ function EventsTimelineInternal() {
     isFailed,
     consecutiveFailures,
     isRefreshing })
-  const { selectedClusters, isAllClustersSelected, clusterInfoMap } = useGlobalFilters()
+  const {
+    selectedClusters = [],
+    isAllClustersSelected = true,
+    clusterInfoMap = {},
+  } = useGlobalFilters()
   const [timeRange, setTimeRange] = useState<TimeRange>('1h')
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
