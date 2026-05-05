@@ -32,7 +32,7 @@ const MOBILE_VIEWPORT_WIDTH_PX = 375
 const MOBILE_VIEWPORT_HEIGHT_PX = 667
 const TABLET_VIEWPORT_WIDTH_PX = 768
 const TABLET_VIEWPORT_HEIGHT_PX = 1024
-const KEYBOARD_TAB_COUNT = 5
+const KEYBOARD_FOCUS_SEQUENCE_LENGTH = 5
 const REFRESH_BUTTON_TITLE = 'Refresh cluster data'
 const ADD_CARD_DIALOG_TITLE = 'Console Studio'
 const ADD_CARD_BROWSE_TAB_LABEL = /Add Cards/i
@@ -45,6 +45,14 @@ const DEFAULT_MAIN_DASHBOARD_CARDS = getDefaultCardsForDashboard('main').map((ca
   title: CARD_TITLES[card.card_type] ?? formatCardTitle(card.card_type),
 }))
 const DEFAULT_MAIN_DASHBOARD_CARD_COUNT = DEFAULT_MAIN_DASHBOARD_CARDS.length
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ')
 
 type MockCluster = {
   name: string
@@ -95,19 +103,8 @@ async function reloadDashboard(page: Page) {
   await waitForDashboardReady(page)
 }
 
-async function expectVisibleOrSkip(locator: Locator, reason: string, timeoutMs = CARD_DATA_TIMEOUT_MS) {
-  const isVisible = await locator.isVisible().catch(() => false)
-  if (!isVisible) {
-    try {
-      await expect(locator).toBeVisible({ timeout: timeoutMs })
-    } catch {
-      test.skip(true, reason)
-      return false
-    }
-  }
-
-  await expect(locator).toBeVisible()
-  return true
+async function expectVisible(locator: Locator, reason: string, timeoutMs = CARD_DATA_TIMEOUT_MS) {
+  await expect(locator, reason).toBeVisible({ timeout: timeoutMs })
 }
 
 test.describe('Dashboard Page', () => {
@@ -524,14 +521,61 @@ test.describe('Dashboard Page', () => {
     test('supports keyboard navigation', async ({ page }) => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
 
-      // Tab through elements
-      for (let i = 0; i < KEYBOARD_TAB_COUNT; i++) {
-        await page.keyboard.press('Tab')
-      }
+      const expectedFocusOrder = await page.evaluate(({ selector, limit }) => {
+        const isVisible = (element: Element) => {
+          const htmlElement = element as HTMLElement
+          const style = window.getComputedStyle(htmlElement)
+          const rect = htmlElement.getBoundingClientRect()
+          return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            rect.width > 0 &&
+            rect.height > 0 &&
+            !htmlElement.hasAttribute('disabled') &&
+            htmlElement.getAttribute('aria-hidden') !== 'true'
+          )
+        }
 
-      // Should have a focused element
-      const focused = page.locator(':focus')
-      await expect(focused).toBeVisible()
+        const getLabel = (element: Element) => {
+          const htmlElement = element as HTMLElement
+          return (
+            htmlElement.getAttribute('aria-label') ||
+            htmlElement.getAttribute('title') ||
+            htmlElement.getAttribute('data-testid') ||
+            htmlElement.textContent?.trim() ||
+            htmlElement.tagName
+          )
+        }
+
+        const focusables = Array.from(document.querySelectorAll(selector))
+          .filter(isVisible)
+          .slice(0, limit)
+
+        focusables.forEach((element, index) => {
+          element.setAttribute('data-e2e-focus-order', String(index))
+        })
+
+        return focusables.map((element, index) => ({
+          index,
+          label: getLabel(element),
+        }))
+      }, {
+        selector: FOCUSABLE_SELECTOR,
+        limit: KEYBOARD_FOCUS_SEQUENCE_LENGTH,
+      })
+
+      expect(expectedFocusOrder.length).toBe(KEYBOARD_FOCUS_SEQUENCE_LENGTH)
+      await page.evaluate(() => {
+        (document.activeElement as HTMLElement | null)?.blur?.()
+      })
+
+      for (const expectedElement of expectedFocusOrder) {
+        await page.keyboard.press('Tab')
+        await expect(
+          page.locator(`[data-e2e-focus-order="${expectedElement.index}"]`),
+          `Expected Tab to focus ${expectedElement.label}`,
+        ).toBeFocused()
+      }
     })
 
     test('has proper ARIA labels', async ({ page }) => {
@@ -569,14 +613,10 @@ test.describe('Dashboard Page', () => {
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
       const podCount = cardsGrid.getByText(new RegExp(`\\b${MOCK_POD_COUNT}\\b`)).first()
-      const hasPodCount = await expectVisibleOrSkip(
+      await expectVisible(
         podCount,
         'Pod card not present on default dashboard',
       )
-
-      if (!hasPodCount) {
-        return
-      }
     })
 
     test('renders cluster health status from mocked API data', async ({ page }) => {
@@ -599,14 +639,10 @@ test.describe('Dashboard Page', () => {
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
       const healthyCluster = cardsGrid.getByText('test-healthy-cluster').first()
-      const hasHealthyCluster = await expectVisibleOrSkip(
+      await expectVisible(
         healthyCluster,
         'Cluster health card not present on default dashboard layout',
       )
-
-      if (!hasHealthyCluster) {
-        return
-      }
     })
 
     test('renders namespace count from mocked API data', async ({ page }) => {
@@ -631,14 +667,10 @@ test.describe('Dashboard Page', () => {
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
       const namespaceCount = cardsGrid.getByText(new RegExp(`\\b${MOCK_NAMESPACE_COUNT}\\b`)).first()
-      const hasNamespaceCount = await expectVisibleOrSkip(
+      await expectVisible(
         namespaceCount,
         'Namespace card not present on default dashboard',
       )
-
-      if (!hasNamespaceCount) {
-        return
-      }
     })
   })
 })
@@ -835,106 +867,50 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     // The clusters page renders a row per cluster. We count any element
     // whose data-testid matches the cluster-row pattern.
     const rowsByTestId = page.locator('[data-testid^="cluster-row-"]')
-    const rowCountByTestId = await rowsByTestId.count()
+    await expect(rowsByTestId).toHaveCount(EXPECTED_CLUSTER_COUNT, {
+      timeout: DATA_RENDER_TIMEOUT_MS,
+    })
 
-    let clustersPageCount = rowCountByTestId
-    if (clustersPageCount === 0) {
-      // Fallback: count unique cluster-row testids per cluster name.
-      let found = 0
-      for (let i = 1; i <= EXPECTED_CLUSTER_COUNT; i++) {
-        const rowLocator = page.locator(`[data-testid="cluster-row-accuracy-cluster-${i}"]`)
-        let hasRow = false
-        try { await expect(rowLocator).toBeVisible({ timeout: DATA_RENDER_TIMEOUT_MS }); hasRow = true } catch { hasRow = false }
-        if (hasRow) found++
-      }
-      clustersPageCount = found
-    }
-
-    expect(clustersPageCount).toBe(EXPECTED_CLUSTER_COUNT)
-
-    // 2. Visit /, find any element that reports the cluster count,
-    //    and assert it matches.
+    // 2. Visit / and assert the Clusters stat block matches the
+    //    row count from /clusters.
+    const dashboardClustersApiPromise = page.waitForResponse(
+      (resp) => resp.url().includes('/api/mcp/clusters') && resp.status() === 200
+    )
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByTestId('dashboard-page')).toBeVisible({
       timeout: PAGE_RENDER_TIMEOUT_MS,
     })
+    await dashboardClustersApiPromise
 
-    // PR #6574 items A+B — target the StatBlock for `clusters` directly
-    // via the new `stat-block-${id}` testid. Previously this spec looked
-    // for `cluster-count` / `total-clusters` testids that didn't exist
-    // on StatsOverview.tsx at all, so the `hasCountEl` check always fell
-    // through to the structural fallback. Now we address the block
-    // directly and use a word-boundary regex so the count can't
-    // false-positive on substrings (e.g. "3" matching inside "30 nodes").
-    // In webkit/mobile the SQLite WASM cache can take longer to hydrate
-    // than on desktop Chromium; use a generous timeout.
+    // Target the Clusters StatBlock directly and wait for the mocked cluster
+    // payload to render before comparing counts across pages.
     const STAT_BLOCK_TIMEOUT_MS = 20_000
     const clusterStatBlock = page.getByTestId('stat-block-clusters').first()
-    let hasStatBlock = false
-    try { await expect(clusterStatBlock).toBeVisible({ timeout: STAT_BLOCK_TIMEOUT_MS }); hasStatBlock = true } catch { hasStatBlock = false }
-    if (hasStatBlock) {
-      // Digit-boundary match: the StatBlock wraps the numeric value in a
-      // div with header text ("Clusters") and optional sublabel, so we
-      // can't use toHaveText (which would match the whole block).
-      // Firefox/WebKit concatenate innerText without whitespace between
-      // adjacent block-level elements (e.g. "Clusters3total clusters"),
-      // so \b fails — both letters and digits are \w. Use negative
-      // lookaround for digits instead: (?<!\d)N(?!\d) prevents matching
-      // inside larger numbers (e.g. "30") without requiring word
-      // boundaries at letter-digit transitions. (#11216)
-      await expect(clusterStatBlock).toContainText(
-        new RegExp(`(?<!\\d)${EXPECTED_CLUSTER_COUNT}(?!\\d)`)
-      )
-    } else {
-      // PR #6574 item B — Structural fallback. If the clusters StatBlock
-      // isn't mounted (e.g. user hid it via StatsConfig), try an aria
-      // role=status element that explicitly labels itself as a cluster
-      // count. Use digit-boundary lookaround, not toContainText(String(n)),
-      // so "3" can't silently match "30 nodes in 3 clusters".
-      const countByLabel = page
-        .getByRole('status')
-        .filter({ hasText: /cluster/i })
-        .first()
-      let labelVisible = false
-      try { await expect(countByLabel).toBeVisible({ timeout: STAT_BLOCK_TIMEOUT_MS }); labelVisible = true } catch { labelVisible = false }
-      if (labelVisible) {
-        await expect(countByLabel).toHaveText(
-          new RegExp(`(?<!\\d)${EXPECTED_CLUSTER_COUNT}(?!\\d)`)
-        )
-      } else {
-        // Dashboard cluster-count stat block not reachable in this browser
-        // context (webkit/mobile — SQLite WASM may not hydrate in time).
-        // The /clusters page count was already validated above. Skip
-        // gracefully rather than fail the whole suite on a best-effort check.
-        console.warn(
-          'stat-block-clusters not visible within timeout — skipping dashboard cluster-count assertion. ' +
-          'The /clusters page count assertion above already validated EXPECTED_CLUSTER_COUNT.'
-        )
-      }
-    }
+    await expect(clusterStatBlock).toBeVisible({ timeout: STAT_BLOCK_TIMEOUT_MS })
+    await expect(clusterStatBlock).toContainText(
+      new RegExp(`(?<!\\d)${EXPECTED_CLUSTER_COUNT}(?!\\d)`),
+      { timeout: STAT_BLOCK_TIMEOUT_MS },
+    )
   })
 
   test('injected cluster name renders on dashboard exactly as provided', async ({
     page,
   }) => {
     // A single card-level data-accuracy check: a unique cluster name we
-    // injected via route() must appear verbatim on the rendered page. If
-    // the card transforms, truncates, or mis-maps the API field, this
-    // fails. Uses toContainText so it's a real content assertion, not a
-    // presence check.
+    // injected via route() must appear verbatim inside the Cluster Health
+    // card. If the card transforms, truncates, or mis-maps the API field,
+    // this fails.
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByTestId('dashboard-page')).toBeVisible({
       timeout: 10000,
     })
 
-    // At least one of the injected names should appear. We don't care
-    // which card renders it — what matters is that the API value round-
-    // trips to the DOM without mutation.
-    const body = page.locator('body')
-    await expect(body).toContainText('accuracy-cluster-1', {
-      timeout: 10000,
-    })
+    const clusterHealthCard = page.locator('[data-card-type="cluster_health"]').first()
+    await expect(clusterHealthCard).toBeVisible({ timeout: 10000 })
+    await expect(
+      clusterHealthCard.getByText('accuracy-cluster-1', { exact: true }),
+    ).toBeVisible({ timeout: 10000 })
   })
 })
