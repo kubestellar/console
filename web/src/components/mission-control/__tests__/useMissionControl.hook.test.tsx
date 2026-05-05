@@ -1,12 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useMissionControl } from '../useMissionControl'
+import type { MissionControlState, PayloadProject } from '../types'
 import * as useMissionsModule from '../../../hooks/useMissions'
 import * as useClustersModule from '../../../hooks/mcp/clusters'
 import * as useHelmReleasesModule from '../../../hooks/mcp/helm'
 import * as toastModule from '../../ui/Toast'
-import * as kubaraModule from '../../../lib/kubara'
-import type { ClusterInfo } from '../../../hooks/mcp/types'
 
 // Mock dependencies
 vi.mock('../../../hooks/useMissions')
@@ -14,6 +13,10 @@ vi.mock('../../../hooks/mcp/clusters')
 vi.mock('../../../hooks/mcp/helm')
 vi.mock('../../ui/Toast')
 vi.mock('../../../lib/kubara')
+
+type UseMissionsResult = ReturnType<typeof useMissionsModule.useMissions>
+type UseClustersResult = ReturnType<typeof useClustersModule.useClusters>
+type UseHelmReleasesResult = ReturnType<typeof useHelmReleasesModule.useHelmReleases>
 
 describe('useMissionControl hook', () => {
   const mockShowToast = vi.fn()
@@ -31,16 +34,16 @@ describe('useMissionControl hook', () => {
       sendMessage: mockSendMessage,
       dismissMission: mockDismissMission,
       missions: [],
-    } as unknown as ReturnType<typeof useMissionsModule.useMissions>)
+    } as unknown as UseMissionsResult)
     vi.spyOn(useClustersModule, 'useClusters').mockReturnValue({
       clusters: [], deduplicatedClusters: [],
       isLoading: false,
       lastUpdated: new Date(),
-    } as unknown as ReturnType<typeof useClustersModule.useClusters>)
+    } as unknown as UseClustersResult)
     vi.spyOn(useHelmReleasesModule, 'useHelmReleases').mockReturnValue({
       releases: [],
       isLoading: false,
-    } as unknown as ReturnType<typeof useHelmReleasesModule.useHelmReleases>)
+    } as unknown as UseHelmReleasesResult)
 
     // Clear localStorage
     localStorage.clear()
@@ -144,13 +147,13 @@ describe('useMissionControl hook', () => {
       result.current.addProject(project)
     })
 
-    const clusters = [
+    const clusters: Parameters<ReturnType<typeof useMissionControl>['autoAssignProjects']>[0] = [
       { name: 'cluster-1', cpuCores: 8, memoryGB: 16 },
       { name: 'cluster-2', cpuCores: 4, memoryGB: 8 },
     ]
 
     await act(async () => {
-      await result.current.autoAssignProjects(clusters as unknown as ClusterInfo[])
+      await result.current.autoAssignProjects(clusters)
     })
 
     expect(result.current.state.assignments).toHaveLength(2)
@@ -165,7 +168,7 @@ describe('useMissionControl hook', () => {
         { name: 'prometheus-release', chart: 'prometheus', namespace: 'monitoring', cluster: 'cluster-1' }
       ],
       isLoading: false,
-    } as any)
+    } as unknown as UseHelmReleasesResult)
 
     const { result } = renderHook(() => useMissionControl())
     
@@ -205,7 +208,7 @@ describe('useMissionControl hook', () => {
       deduplicatedClusters: [{ name: 'active-cluster', context: 'active-cluster' }],
       isLoading: false,
       lastUpdated: new Date(),
-    } as any)
+    } as unknown as UseClustersResult)
 
     const { result } = renderHook(() => useMissionControl())
 
@@ -222,10 +225,19 @@ describe('useMissionControl hook', () => {
   it('hydrates state from a plan', () => {
     const { result } = renderHook(() => useMissionControl())
     
-    const partialState = {
+    const hydratedProject: PayloadProject = {
+      name: 'p1',
+      displayName: 'P1',
+      category: 'Observability',
+      priority: 'required',
+      reason: 'test',
+      dependencies: [],
+    }
+
+    const partialState: Partial<MissionControlState> = {
       title: 'Hydrated Plan',
       description: 'Hydrated Desc',
-      projects: [{ name: 'p1', displayName: 'P1' } as any]
+      projects: [hydratedProject],
     }
 
     act(() => {

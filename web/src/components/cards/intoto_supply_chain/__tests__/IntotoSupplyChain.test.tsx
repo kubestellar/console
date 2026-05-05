@@ -69,23 +69,40 @@ vi.mock('../../../../hooks/useIntoto', async (importOriginal) => {
 })
 
 import { IntotoSupplyChain } from '../IntotoSupplyChain'
-import { useIntoto, computeIntotoStats, type IntotoLayout } from '../../../../hooks/useIntoto'
+import { useIntoto, computeIntotoStats, type IntotoLayout, type IntotoStep } from '../../../../hooks/useIntoto'
+
+const makeStep = (name: string): IntotoStep => ({
+  name,
+  status: 'verified',
+  functionary: 'ci-bot',
+  linksFound: 1,
+})
+
+const makeLayout = (overrides: Partial<IntotoLayout>): IntotoLayout => ({
+  name: 'layout',
+  cluster: 'cluster-1',
+  steps: [],
+  expectedProducts: 0,
+  verifiedSteps: 0,
+  failedSteps: 0,
+  createdAt: new Date().toISOString(),
+  ...overrides,
+})
 
 const mockLayouts: IntotoLayout[] = [
-  {
+  makeLayout({
     name: 'web-app-layout',
     cluster: 'cluster-1',
-    steps: [{ name: 'build' }, { name: 'test' }],
+    steps: [makeStep('build'), makeStep('test')],
     verifiedSteps: 1,
     failedSteps: 1,
-  },
-  {
+  }),
+  makeLayout({
     name: 'api-layout',
     cluster: 'cluster-2',
-    steps: [{ name: 'compile' }],
+    steps: [makeStep('compile')],
     verifiedSteps: 1,
-    failedSteps: 0,
-  }
+  }),
 ]
 
 describe('IntotoSupplyChain', () => {
@@ -149,7 +166,7 @@ describe('IntotoSupplyChain', () => {
           cluster: 'prod-cluster',
           installed: true,
           loading: false,
-          layouts: [mockLayouts[0] as IntotoLayout],
+          layouts: [mockLayouts[0]],
           totalLayouts: 1,
           totalSteps: 2,
           verifiedSteps: 1,
@@ -292,31 +309,31 @@ describe('IntotoSupplyChain', () => {
     it('handles multiple links per step without double counting (via verifiedSteps layout logic)', () => {
       // The double counting prevention happens in useIntoto.ts before calling computeIntotoStats.
       // This test verifies that we correctly sum the derived verified/failed steps across layouts.
-      const multiLinkLayout = {
+      const multiLinkLayout = makeLayout({
         name: 'multi-link',
         cluster: 'c1',
-        steps: [{ name: 'step-1' }], // 1 step total
+        steps: [makeStep('step-1')], // 1 step total
         verifiedSteps: 1, // Correctly set to 1 even if there were 10 links
         failedSteps: 0,
-      }
+      })
       
-      const stats = computeIntotoStats([multiLinkLayout] as IntotoLayout[])
+      const stats = computeIntotoStats([multiLinkLayout])
       expect(stats.totalSteps).toBe(1)
       expect(stats.verifiedSteps).toBe(1)
       expect(stats.missingSteps).toBe(0)
     })
 
     it('accurately calculates missing steps', () => {
-      const missingLayout = {
+      const missingLayout = makeLayout({
         name: 'missing-steps',
         cluster: 'c1',
-        steps: [{ name: 's1' }, { name: 's2' }, { name: 's3' }], // 3 steps
+        steps: [makeStep('s1'), makeStep('s2'), makeStep('s3')], // 3 steps
         verifiedSteps: 1,
         failedSteps: 1,
         // missing should be 1
-      }
+      })
       
-      const stats = computeIntotoStats([missingLayout] as IntotoLayout[])
+      const stats = computeIntotoStats([missingLayout])
       expect(stats.missingSteps).toBe(1)
     })
   })

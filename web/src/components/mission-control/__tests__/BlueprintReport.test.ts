@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { RefObject } from 'react'
 import { shortenClusterName, exportFullReport } from '../BlueprintReport'
 import type { MissionControlState } from '../types'
 
 describe('BlueprintReport', () => {
+  let mockDocument: { write: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> }
+
   describe('shortenClusterName', () => {
     it('strips context prefix', () => {
       expect(shortenClusterName('default/my-cluster')).toBe('my-cluster')
@@ -37,12 +40,14 @@ describe('BlueprintReport', () => {
     }
 
     beforeEach(() => {
+      mockDocument = {
+        write: vi.fn(),
+        close: vi.fn(),
+      }
+
       vi.spyOn(window, 'open').mockReturnValue({
-        document: {
-          write: vi.fn(),
-          close: vi.fn(),
-        },
-      } as unknown as Window & typeof globalThis)
+        document: mockDocument,
+      } as unknown as Window)
 
       // Mock XMLSerializer which might not be in all environments
       vi.stubGlobal('XMLSerializer', class {
@@ -51,14 +56,13 @@ describe('BlueprintReport', () => {
     })
 
     it('calls window.open and writes HTML', () => {
-      const svgRef: React.RefObject<HTMLDivElement> = { current: document.createElement('div') }
+      const svgRef: RefObject<HTMLDivElement | null> = { current: document.createElement('div') }
       
       exportFullReport(mockState, mockState, new Set(), null, svgRef)
       
       expect(window.open).toHaveBeenCalledWith('', '_blank')
-      const openedWindow = (window.open as unknown as { mock: { results: Array<{ value: Window }> } }).mock.results[0].value
-      expect(openedWindow.document.write).toHaveBeenCalledWith(expect.stringContaining('Report Mission'))
-      expect(openedWindow.document.write).toHaveBeenCalledWith(expect.stringContaining('<h1>Flight Plan: Report Mission</h1>'))
+      expect(mockDocument.write).toHaveBeenCalledWith(expect.stringContaining('Report Mission'))
+      expect(mockDocument.write).toHaveBeenCalledWith(expect.stringContaining('<h1>Flight Plan: Report Mission</h1>'))
     })
   })
 })

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ThanosStatus } from '../index'
 import * as CardDataContext from '../../CardDataContext'
-import { useCachedThanosStatus } from '../../../../hooks/useCachedThanosStatus'
+import { useCachedThanosStatus, type ThanosStatus } from '../../../../hooks/useCachedThanosStatus'
 
 // Mock dependencies at the top
 vi.mock('../../../../hooks/useCachedThanosStatus', () => ({
@@ -95,7 +95,7 @@ describe('ThanosStatus Component', () => {
         })
 
         vi.mocked(useCachedThanosStatus).mockReturnValue({
-            data: null as unknown as { targets: Array<{ name: string; health: string; lastScrape: string }>; storeGateways: Array<any>; queryHealth: string; lastCheckTime: string },
+            data: null as unknown as ThanosStatus,
             isFailed: true,
             isLoading: false,
             isRefreshing: false,
