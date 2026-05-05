@@ -14,6 +14,11 @@ import { DashboardHealthIndicator } from './DashboardHealthIndicator'
  *  the button into a non-circular shape on narrow viewports (#8777). */
 const FAB_SIZE_DESKTOP = 'w-10 h-10 min-w-10 min-h-10 shrink-0 aspect-square'
 const FAB_SIZE_MOBILE  = 'w-8 h-8 min-w-8 min-h-8 shrink-0 aspect-square'
+const FAB_POSITION_MOBILE = 'right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))]'
+const FAB_POSITION_TABLET = 'right-16 bottom-20'
+const FAB_POSITION_DESKTOP = 'right-16 bottom-20'
+const FAB_POSITION_DESKTOP_MINIMIZED = 'right-[104px] bottom-20'
+const FAB_POSITION_DESKTOP_EXPANDED = 'bottom-20'
 
 interface FloatingDashboardActionsProps {
   /** New: open unified Dashboard Studio customizer */
@@ -112,18 +117,20 @@ export function FloatingDashboardActions({
   }, [menuIsOpen, closeMenu])
 
   const getPositionClasses = () => {
-    if (isMobile) return 'left-4 bottom-4'
+    // On mobile, anchor the FAB on the bottom-right and lift it above the
+    // safe-area inset so it no longer blocks bottom-left card actions.
+    if (isMobile) return FAB_POSITION_MOBILE
     // On tablet (768-1023px) the sidebar renders as an overlay and does not
     // push content, so always use default right positioning (#11505).
-    if (isTablet) return 'right-16 bottom-20'
+    if (isTablet) return FAB_POSITION_TABLET
     // right-16 (64px) keeps the 40px FAB fully visible regardless of
     // macOS "always-show scrollbars" preference, browser zoom, or any
     // future scrollbar-gutter changes (#8551 follow-up).
-    if (!isSidebarOpen) return 'right-16 bottom-20'
-    if (isSidebarMinimized) return 'right-[104px] bottom-20'
+    if (!isSidebarOpen) return FAB_POSITION_DESKTOP
+    if (isSidebarMinimized) return FAB_POSITION_DESKTOP_MINIMIZED
     // When expanded, position dynamically using the CSS var so the FAB
     // tracks the actual resizable sidebar width (#11455).
-    return 'bottom-20'
+    return FAB_POSITION_DESKTOP_EXPANDED
   }
   const positionClasses = getPositionClasses()
 
@@ -155,7 +162,7 @@ export function FloatingDashboardActions({
   if (isUnifiedMode) {
     const showActions = canUndo || canRedo || showResetOption
     return (
-      <div className={`fixed ${positionClasses} z-sticky flex ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`} style={fabStyle}>
+      <div className={`fixed ${positionClasses} z-sticky flex items-end gap-1.5 transition-all duration-300`} style={fabStyle}>
         {showActions && (
           <div className="flex gap-1 p-1 bg-card border border-border rounded-lg shadow-md animate-in fade-in duration-150 mr-1">
             <button
@@ -207,7 +214,7 @@ export function FloatingDashboardActions({
   // =========================================================================
   return (
     <>
-      <div ref={menuRef} className={`fixed ${positionClasses} z-sticky flex flex-col ${isMobile ? 'items-start' : 'items-end'} gap-1.5 transition-all duration-300`} style={fabStyle}>
+      <div ref={menuRef} className={`fixed ${positionClasses} z-sticky flex flex-col items-end gap-1.5 transition-all duration-300`} style={fabStyle}>
         {menu.isOpen && (
           <div
             role="menu"
