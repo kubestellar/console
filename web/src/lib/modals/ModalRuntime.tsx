@@ -399,7 +399,7 @@ export function ModalRuntime({
         that's been disabled via config.
       */}
       <BaseModal.Footer
-        showKeyboardHints={footer?.showKeyboardHints ?? true}
+        showKeyboardHints={footer?.showKeyboardHints ?? false}
         keyboardHints={(() => {
           const hints: { key: string; label: string }[] = []
           if (keyboard.escape === 'close') {

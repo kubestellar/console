@@ -205,7 +205,7 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
 
         {/* Filter dropdown */}
         {showDropdown && (
-          <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-dropdown max-h-[80vh] overflow-y-auto">
+          <div className="absolute top-full right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-xl z-toast max-h-[80vh] overflow-y-auto">
 
             {/* Clear All — shown at top when filters are active */}
             {isFiltered && (

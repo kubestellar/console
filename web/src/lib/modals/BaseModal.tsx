@@ -325,7 +325,7 @@ function ModalContent({
 
 function ModalFooter({
   children,
-  showKeyboardHints = true,
+  showKeyboardHints = false,
   keyboardHints,
   className = '',
 }: ModalFooterProps) {
