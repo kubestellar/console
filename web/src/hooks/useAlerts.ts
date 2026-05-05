@@ -19,11 +19,14 @@ function generateId(): string {
 const SLACK_WEBHOOKS_KEY = 'kc_slack_webhooks'
 
 // Load from localStorage
-function loadFromStorage<T>(key: string, defaultValue: T): T {
+function loadFromStorage<T>(key: string, defaultValue: T, validator?: (value: unknown) => value is T): T {
   try {
     const stored = localStorage.getItem(key)
     if (stored) {
-      return JSON.parse(stored)
+      const parsed = JSON.parse(stored)
+      if (!validator || validator(parsed)) {
+        return parsed
+      }
     }
   } catch (e: unknown) {
     console.error(`Failed to load ${key} from localStorage:`, e)
@@ -80,7 +83,11 @@ export function useAlertRules() {
 // Hook for managing Slack webhooks
 export function useSlackWebhooks() {
   const [webhooks, setWebhooks] = useState<SlackWebhook[]>(() =>
-    loadFromStorage<SlackWebhook[]>(SLACK_WEBHOOKS_KEY, [])
+    loadFromStorage<SlackWebhook[]>(
+      SLACK_WEBHOOKS_KEY,
+      [],
+      (value): value is SlackWebhook[] => Array.isArray(value)
+    )
   )
 
   useEffect(() => {

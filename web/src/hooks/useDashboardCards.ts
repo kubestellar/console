@@ -24,7 +24,10 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
   const [cards, setCards] = useState<DashboardCard[]>(() => {
     try {
       const stored = localStorage.getItem(storageKey)
-      return stored ? JSON.parse(stored) : defaultCards
+      if (!stored) return defaultCards
+
+      const parsed = JSON.parse(stored)
+      return Array.isArray(parsed) ? parsed : defaultCards
     } catch {
       return defaultCards
     }
@@ -100,6 +103,8 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
     // because the persistence effect may have re-written the default state
     try {
       const parsed = JSON.parse(stored)
+      if (!Array.isArray(parsed)) return false
+
       return JSON.stringify(parsed) !== JSON.stringify(defaultCards)
     } catch {
       return false
