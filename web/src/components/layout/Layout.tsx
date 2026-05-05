@@ -14,6 +14,7 @@ import {
   Loader2,
   RefreshCw,
   Plug,
+  AlertTriangle,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
@@ -73,6 +74,9 @@ const STAR_POSITIONS = Array.from({ length: 30 }, () => ({
   top: Math.random() * 100 + '%',
   animationDelay: Math.random() * 3 + 's',
 }))
+
+const UPDATE_TOAST_DONE_DISMISS_MS = 5000
+const UPDATE_TOAST_TERMINAL_DISMISS_MS = 8000
 
 // Thin progress bar shown during route transitions so the user
 // gets immediate visual feedback that navigation is happening.
@@ -144,6 +148,7 @@ export function Layout({ children: _children }: LayoutProps) {
   const [showInClusterAgentDialog, setShowInClusterAgentDialog] =
     useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
+  const [updateToastDismissed, setUpdateToastDismissed] = useState(false)
 
   // Allow any component to open the install dialog via a custom event
   useEffect(() => {
@@ -349,7 +354,7 @@ export function Layout({ children: _children }: LayoutProps) {
   const backendDown = backendStatus === 'disconnected'
   const isUpdateInProgress =
     updateProgress != null &&
-    !['idle', 'done', 'failed'].includes(updateProgress.status)
+    !['idle', 'done', 'failed', 'cancelled'].includes(updateProgress.status)
   const showBackendBanner =
     (backendDown || wasBackendDown) && !isUpdateInProgress
   const prevBackendDown = useRef(backendDown)
@@ -364,6 +369,35 @@ export function Layout({ children: _children }: LayoutProps) {
       return () => clearTimeout(timer)
     }
   }, [backendDown])
+
+  // Reset update toast dismissal when a new update starts
+  const prevUpdateStatus = useRef(updateProgress?.status)
+  useEffect(() => {
+    const cur = updateProgress?.status
+    const prev = prevUpdateStatus.current
+    prevUpdateStatus.current = cur
+    if (cur && ['pulling', 'building', 'checking'].includes(cur) && prev !== cur) {
+      setUpdateToastDismissed(false)
+    }
+  }, [updateProgress?.status])
+
+  // Auto-dismiss update toast on terminal states
+  useEffect(() => {
+    if (!updateProgress) return
+    const { status } = updateProgress
+    if (status === 'done') {
+      const timer = setTimeout(() => setUpdateToastDismissed(true), UPDATE_TOAST_DONE_DISMISS_MS)
+      return () => clearTimeout(timer)
+    }
+    if (status === 'failed' || status === 'cancelled') {
+      const timer = setTimeout(() => setUpdateToastDismissed(true), UPDATE_TOAST_TERMINAL_DISMISS_MS)
+      return () => clearTimeout(timer)
+    }
+  }, [updateProgress?.status])
+
+  const showUpdateToast = updateProgress != null
+    && updateProgress.status !== 'idle'
+    && !updateToastDismissed
 
   // Track navigation for behavior analysis
   useNavigationHistory()
@@ -730,6 +764,68 @@ export function Layout({ children: _children }: LayoutProps) {
           </div>
         </div>
       )}
+      {/* Update progress toast — persistent during the entire update lifecycle */}
+      {showUpdateToast && updateProgress && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className={cn(
+            "flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm min-w-[320px] max-w-[480px]",
+            updateProgress.status === 'done'
+              ? "bg-green-900/80 border-green-700/50 text-green-200"
+              : updateProgress.status === 'failed' || updateProgress.status === 'cancelled'
+                ? "bg-red-950/90 border-red-800/50 text-red-200"
+                : "bg-blue-950/90 border-blue-800/50 text-blue-200"
+          )}>
+            {updateProgress.status === 'done' ? (
+              <>
+                <Check className="w-4 h-4 text-green-400 shrink-0" />
+                <span className="flex-1">{t('layout.updateComplete')}</span>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => window.location.reload()}
+                  className="ml-1 rounded"
+                >
+                  {t('layout.reload')}
+                </Button>
+              </>
+            ) : updateProgress.status === 'failed' || updateProgress.status === 'cancelled' ? (
+              <>
+                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+                <span className="flex-1 truncate">
+                  {updateProgress.status === 'cancelled'
+                    ? t('layout.updateCancelled')
+                    : t('layout.updateFailed')}
+                  {updateProgress.message ? ` — ${updateProgress.message}` : ''}
+                </span>
+                <button
+                  onClick={() => setUpdateToastDismissed(true)}
+                  className="p-1 hover:bg-secondary/50 rounded shrink-0"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
+                <span className="flex-1 truncate">
+                  {updateProgress.status === 'restarting' && watchdogStage
+                    ? t(WATCHDOG_STAGE_LABELS[watchdogStage] ?? 'layout.updateInProgress', { defaultValue: t('layout.updateInProgress') })
+                    : updateProgress.message ?? t('layout.updateInProgress')}
+                </span>
+                <div className="w-20 bg-secondary rounded-full h-1.5 shrink-0">
+                  <div
+                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${updateProgress.progress ?? 0}%` }}
+                  />
+                </div>
+                <span className="text-xs text-blue-300/60 tabular-nums shrink-0">
+                  {updateProgress.progress ?? 0}%
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       {/* Startup snackbar — non-blocking info while backend initializes */}
       {showStartupSnackbar && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -741,7 +837,7 @@ export function Layout({ children: _children }: LayoutProps) {
       )}
 
           {/* Version changed snackbar — persistent until user reloads */}
-          {versionChanged && !showStartupSnackbar && !showBackendBanner && (
+          {versionChanged && !showStartupSnackbar && !showBackendBanner && !showUpdateToast && (
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div className="flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg text-sm bg-blue-950/90 border-blue-800/50 text-blue-200">
                 <RefreshCw className="w-4 h-4 text-blue-400" />
