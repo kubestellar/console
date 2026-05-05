@@ -11,6 +11,7 @@ import { safeGet, safeSet } from '../../lib/safeLocalStorage'
 const HIGH_SCORE_KEY = 'flappy-pod-high'
 /** Default high score string when none has been persisted yet */
 const DEFAULT_HIGH_SCORE = '0'
+const DECIMAL_RADIX = 10
 
 // Game constants
 const GRAVITY = 0.5
@@ -20,6 +21,31 @@ const PIPE_GAP = 120
 const PIPE_WIDTH = 50
 const POD_SIZE = 30
 const PIPE_SPAWN_INTERVAL = 1800
+const INITIAL_POD_Y_PX = 200
+const GAME_WIDTH_EXPANDED_PX = 400
+const GAME_WIDTH_COLLAPSED_PX = 280
+const GAME_HEIGHT_EXPANDED_PX = 500
+const GAME_HEIGHT_COLLAPSED_PX = 350
+const PIPE_GAP_MARGIN_PX = 100
+const POD_X_PX = 50
+const PIPE_CAP_OVERHANG_PX = 3
+const PIPE_CAP_HEIGHT_PX = 20
+const POD_OUTLINE_WIDTH_PX = 2
+const POD_DETAIL_X_OFFSET_PX = 5
+const POD_DETAIL_WIDTH_INSET_PX = 10
+const POD_DETAIL_HEIGHT_PX = 4
+const POD_DETAIL_TOP_ROW_OFFSET_PX = 5
+const POD_DETAIL_MIDDLE_ROW_OFFSET_PX = 12
+const POD_DETAIL_BOTTOM_ROW_OFFSET_PX = 19
+
+const parseHighScore = () => {
+  const storedHighScore = safeGet(HIGH_SCORE_KEY)
+  const parsedHighScore = Number.parseInt(storedHighScore ?? DEFAULT_HIGH_SCORE, DECIMAL_RADIX)
+
+  return Number.isFinite(parsedHighScore)
+    ? parsedHighScore
+    : Number.parseInt(DEFAULT_HIGH_SCORE, DECIMAL_RADIX)
+}
 
 interface Pipe {
   x: number
@@ -39,18 +65,16 @@ export function FlappyPod(_props: CardComponentProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [gameOver, setGameOver] = useState(false)
   const [score, setScore] = useState(0)
-  const [highScore, setHighScore] = useState(() => {
-    return parseInt(safeGet(HIGH_SCORE_KEY) || DEFAULT_HIGH_SCORE)
-  })
+  const [highScore, setHighScore] = useState(parseHighScore)
 
   // Game state refs (for animation loop)
-  const podYRef = useRef(200)
+  const podYRef = useRef(INITIAL_POD_Y_PX)
   const velocityRef = useRef(0)
   const pipesRef = useRef<Pipe[]>([])
   const scoreRef = useRef(0)
 
-  const gameWidth = isExpanded ? 400 : 280
-  const gameHeight = isExpanded ? 500 : 350
+  const gameWidth = isExpanded ? GAME_WIDTH_EXPANDED_PX : GAME_WIDTH_COLLAPSED_PX
+  const gameHeight = isExpanded ? GAME_HEIGHT_EXPANDED_PX : GAME_HEIGHT_COLLAPSED_PX
 
   // Jump action
   const jump = () => {
@@ -93,7 +117,7 @@ export function FlappyPod(_props: CardComponentProps) {
     }
 
     pipeTimerRef.current = setInterval(() => {
-      const gapY = Math.random() * (gameHeight - PIPE_GAP - 100) + 50
+      const gapY = Math.random() * (gameHeight - PIPE_GAP - PIPE_GAP_MARGIN_PX) + POD_X_PX
       pipesRef.current.push({
         x: gameWidth,
         gapY,
@@ -139,8 +163,8 @@ export function FlappyPod(_props: CardComponentProps) {
         pipe.x -= PIPE_SPEED
 
         // Check collision
-        const podLeft = 50
-        const podRight = 50 + POD_SIZE
+        const podLeft = POD_X_PX
+        const podRight = POD_X_PX + POD_SIZE
         const podTop = podYRef.current
         const podBottom = podYRef.current + POD_SIZE
 
@@ -153,7 +177,7 @@ export function FlappyPod(_props: CardComponentProps) {
         }
 
         // Check if passed
-        if (!pipe.passed && pipe.x + PIPE_WIDTH < 50) {
+        if (!pipe.passed && pipe.x + PIPE_WIDTH < POD_X_PX) {
           pipe.passed = true
           scoreRef.current++
           setScore(scoreRef.current)
@@ -180,23 +204,48 @@ export function FlappyPod(_props: CardComponentProps) {
 
         // Pipe edges
         ctx.fillStyle = '#16a34a'
-        ctx.fillRect(pipe.x - 3, pipe.gapY - 20, PIPE_WIDTH + 6, 20)
-        ctx.fillRect(pipe.x - 3, pipe.gapY + PIPE_GAP, PIPE_WIDTH + 6, 20)
+        ctx.fillRect(
+          pipe.x - PIPE_CAP_OVERHANG_PX,
+          pipe.gapY - PIPE_CAP_HEIGHT_PX,
+          PIPE_WIDTH + PIPE_CAP_OVERHANG_PX * 2,
+          PIPE_CAP_HEIGHT_PX
+        )
+        ctx.fillRect(
+          pipe.x - PIPE_CAP_OVERHANG_PX,
+          pipe.gapY + PIPE_GAP,
+          PIPE_WIDTH + PIPE_CAP_OVERHANG_PX * 2,
+          PIPE_CAP_HEIGHT_PX
+        )
         ctx.fillStyle = '#22c55e'
       }
 
       // Draw pod (container)
       ctx.fillStyle = '#3b82f6'
-      ctx.fillRect(50, podYRef.current, POD_SIZE, POD_SIZE)
+      ctx.fillRect(POD_X_PX, podYRef.current, POD_SIZE, POD_SIZE)
       ctx.strokeStyle = '#60a5fa'
-      ctx.lineWidth = 2
-      ctx.strokeRect(50, podYRef.current, POD_SIZE, POD_SIZE)
+      ctx.lineWidth = POD_OUTLINE_WIDTH_PX
+      ctx.strokeRect(POD_X_PX, podYRef.current, POD_SIZE, POD_SIZE)
 
       // Pod details (container look)
       ctx.fillStyle = '#1d4ed8'
-      ctx.fillRect(55, podYRef.current + 5, POD_SIZE - 10, 4)
-      ctx.fillRect(55, podYRef.current + 12, POD_SIZE - 10, 4)
-      ctx.fillRect(55, podYRef.current + 19, POD_SIZE - 10, 4)
+      ctx.fillRect(
+        POD_X_PX + POD_DETAIL_X_OFFSET_PX,
+        podYRef.current + POD_DETAIL_TOP_ROW_OFFSET_PX,
+        POD_SIZE - POD_DETAIL_WIDTH_INSET_PX,
+        POD_DETAIL_HEIGHT_PX
+      )
+      ctx.fillRect(
+        POD_X_PX + POD_DETAIL_X_OFFSET_PX,
+        podYRef.current + POD_DETAIL_MIDDLE_ROW_OFFSET_PX,
+        POD_SIZE - POD_DETAIL_WIDTH_INSET_PX,
+        POD_DETAIL_HEIGHT_PX
+      )
+      ctx.fillRect(
+        POD_X_PX + POD_DETAIL_X_OFFSET_PX,
+        podYRef.current + POD_DETAIL_BOTTOM_ROW_OFFSET_PX,
+        POD_SIZE - POD_DETAIL_WIDTH_INSET_PX,
+        POD_DETAIL_HEIGHT_PX
+      )
 
       gameLoopRef.current = requestAnimationFrame(gameLoop)
     }
