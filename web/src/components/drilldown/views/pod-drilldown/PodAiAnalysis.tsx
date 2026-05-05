@@ -7,6 +7,7 @@ export interface PodAiAnalysisProps {
   aiAnalysis: string | null
   aiAnalysisLoading: boolean
   aiAnalysisError?: string | null
+  backendUnavailable?: boolean
   fetchAiAnalysis: () => void
   handleRepairPod: () => void
 }
@@ -15,6 +16,7 @@ export function PodAiAnalysis({
   aiAnalysis,
   aiAnalysisLoading,
   aiAnalysisError,
+  backendUnavailable,
   fetchAiAnalysis,
   handleRepairPod,
 }: PodAiAnalysisProps) {
@@ -22,6 +24,17 @@ export function PodAiAnalysis({
 
   return (
     <>
+      {/* Backend unavailable warning */}
+      {backendUnavailable && (
+        <div className="p-4 pb-0">
+          <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3">
+            <div className="flex items-center gap-2 text-sm text-yellow-400">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{t('layout.connectionLostHint')}</span>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Error state */}
       {aiAnalysisError && !aiAnalysisLoading && (
         <div className="p-4 pb-0">
@@ -74,12 +87,13 @@ export function PodAiAnalysis({
       <div className="flex items-center gap-2 p-4">
         <button
           onClick={fetchAiAnalysis}
-          disabled={aiAnalysisLoading}
+          disabled={aiAnalysisLoading || backendUnavailable}
           className={cn(
             'flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
             'bg-purple-600/20 text-purple-200 hover:bg-purple-500/30 border border-purple-500/50',
             'shadow-[0_0_15px_rgba(147,51,234,0.2)] hover:shadow-[0_0_20px_rgba(147,51,234,0.3)]',
-            aiAnalysisLoading && 'opacity-70 cursor-wait'
+            aiAnalysisLoading && 'opacity-70 cursor-wait',
+            backendUnavailable && 'opacity-50 cursor-not-allowed'
           )}
         >
           {aiAnalysisLoading ? (
@@ -99,10 +113,12 @@ export function PodAiAnalysis({
         </button>
         <button
           onClick={handleRepairPod}
+          disabled={backendUnavailable}
           className={cn(
             'flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
             'bg-orange-600/20 text-orange-200 hover:bg-orange-500/30 border border-orange-500/50',
-            'shadow-[0_0_15px_rgba(234,88,12,0.2)] hover:shadow-[0_0_20px_rgba(234,88,12,0.3)]'
+            'shadow-[0_0_15px_rgba(234,88,12,0.2)] hover:shadow-[0_0_20px_rgba(234,88,12,0.3)]',
+            backendUnavailable && 'opacity-50 cursor-not-allowed'
           )}
         >
           <div className="relative">

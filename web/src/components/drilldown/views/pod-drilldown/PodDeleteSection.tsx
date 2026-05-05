@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../../../lib/modals'
 export interface PodDeleteSectionProps {
   podName: string
   agentConnected: boolean
+  backendUnavailable?: boolean
   canDeletePod: boolean | null
   deletingPod: boolean
   deleteError: string | null
@@ -18,6 +19,7 @@ export interface PodDeleteSectionProps {
 export function PodDeleteSection({
   podName,
   agentConnected,
+  backendUnavailable,
   canDeletePod,
   deletingPod,
   deleteError,
@@ -39,9 +41,11 @@ export function PodDeleteSection({
         )}
         <button
           onClick={() => setShowDeletePodConfirm(true)}
-          disabled={!agentConnected || canDeletePod === false || deletingPod}
+          disabled={!agentConnected || backendUnavailable || canDeletePod === false || deletingPod}
           title={
-            !agentConnected
+            backendUnavailable
+              ? t('layout.connectionLostHint')
+              : !agentConnected
               ? 'Agent not connected'
               : canDeletePod === false
               ? 'No permission to delete pods in this namespace'
@@ -53,7 +57,7 @@ export function PodDeleteSection({
           }
           className={cn(
             'w-full py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
-            canDeletePod === false || !agentConnected
+            canDeletePod === false || !agentConnected || backendUnavailable
               ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed opacity-50'
               : 'bg-red-600/20 text-red-300 hover:bg-red-500/30 border border-red-500/40 hover:border-red-500/60'
           )}

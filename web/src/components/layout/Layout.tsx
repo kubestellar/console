@@ -720,7 +720,7 @@ export function Layout({ children: _children }: LayoutProps) {
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-                  <span>{watchdogStage ? t(WATCHDOG_STAGE_LABELS[watchdogStage] ?? 'layout.consoleRestarting', { defaultValue: 'Console restarting…' }) : t('layout.consoleRestarting')}</span>
+                  <span>{watchdogStage ? t(WATCHDOG_STAGE_LABELS[watchdogStage] ?? 'layout.consoleRestarting', { defaultValue: 'Console restarting…' }) : t('layout.connectionLost')}</span>
                   {!watchdogStage && (
                     restartState === 'restarting' ? (
                       <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-2 min-h-11 bg-muted text-muted-foreground rounded text-xs cursor-wait">
@@ -752,7 +752,7 @@ export function Layout({ children: _children }: LayoutProps) {
                 {!watchdogStage && (restartError ? (
                   <span className="text-xs text-muted-foreground">{restartError}</span>
                 ) : (
-                  <span className="text-xs text-blue-300/70">{t('layout.consoleRestartingHint')}</span>
+                  <span className="text-xs text-blue-300/70">{t('layout.connectionLostHint')}</span>
                 ))}
               </div>
             ) : (

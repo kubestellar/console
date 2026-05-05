@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
@@ -87,6 +88,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const podName = data.pod as string
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()
+  const { isConnected: backendConnected } = useBackendHealth()
   const { drillToNamespace, drillToCluster, drillToDeployment, drillToReplicaSet, drillToConfigMap, drillToSecret, drillToServiceAccount, drillToPVC } = useDrillDownActions()
 
   // Get cached data - first check module-level cache, then fall back to view cache
@@ -476,7 +478,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
 
   // Fetch AI analysis for pod issues - gathers comprehensive context
   const fetchAiAnalysis = async () => {
-    if (!agentConnected || aiAnalysisLoading) return
+    if (!agentConnected || !backendConnected || aiAnalysisLoading) return
     setAiAnalysisLoading(true)
     // #5945 — Clear any previous error when starting a new analysis so stale
     // failures don't linger in the UI while the new request is in flight.
@@ -888,7 +890,7 @@ Please:
 
   // Delete pod handler
   const handleDeletePod = async () => {
-    if (!agentConnected || !canDeletePod) return
+    if (!agentConnected || !backendConnected || !canDeletePod) return
 
     setDeletingPod(true)
     setDeleteError(null)
@@ -1797,12 +1799,14 @@ Please:
             aiAnalysis={aiAnalysis}
             aiAnalysisLoading={aiAnalysisLoading}
             aiAnalysisError={aiAnalysisError}
+            backendUnavailable={!backendConnected}
             fetchAiAnalysis={fetchAiAnalysis}
             handleRepairPod={handleRepairPod}
           />
           <PodDeleteSection
             podName={podName}
             agentConnected={agentConnected}
+            backendUnavailable={!backendConnected}
             canDeletePod={canDeletePod}
             deletingPod={deletingPod}
             deleteError={deleteError}
