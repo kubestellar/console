@@ -49,6 +49,24 @@ export type GpuIssue = {
   reason: string
 }
 
+export type OfflineDetectionDataSource = {
+  hasData: boolean
+  isLoading?: boolean
+  isRefreshing?: boolean
+  isDemoData?: boolean
+  isFailed?: boolean
+  consecutiveFailures?: number
+}
+
+export type OfflineDetectionCardLoadState = {
+  isLoading: boolean
+  isRefreshing: boolean
+  hasAnyData: boolean
+  isDemoData: boolean
+  isFailed: boolean
+  consecutiveFailures: number
+}
+
 // Sort options for CardControls
 export const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'severity', label: 'Severity' },
@@ -131,6 +149,27 @@ export function analyzeRootCause(node: NodeData): { cause: string; details: stri
   return {
     cause: problems.join(', '),
     details: details.join('; ') || 'Multiple conditions are affecting this node.'
+  }
+}
+
+export function buildOfflineDetectionCardLoadState(
+  sources: OfflineDetectionDataSource[],
+  isDemoMode = false,
+): OfflineDetectionCardLoadState {
+  const hasAnyData = sources.some(source => source.hasData)
+  const isLoading = sources.some(source => source.isLoading) && !hasAnyData
+  const isRefreshing = sources.some(source => source.isRefreshing)
+  const isFailed = !hasAnyData && sources.length > 0 && sources.every(source => source.isFailed)
+
+  return {
+    isLoading,
+    isRefreshing,
+    hasAnyData,
+    isDemoData: isDemoMode || sources.some(source => source.isDemoData),
+    isFailed,
+    consecutiveFailures: isFailed
+      ? Math.max(0, ...sources.map(source => source.consecutiveFailures ?? 0))
+      : 0,
   }
 }
 

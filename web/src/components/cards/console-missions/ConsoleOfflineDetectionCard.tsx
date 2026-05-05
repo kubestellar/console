@@ -33,6 +33,7 @@ import {
   type SortField,
   type GpuIssue,
   SORT_OPTIONS,
+  buildOfflineDetectionCardLoadState,
   buildOfflineItems,
   buildGpuItems,
   buildPredictionItems,
@@ -49,51 +50,90 @@ let nodesCache: NodeData[] = []
 let nodesCacheTimestamp = 0
 let nodesFetchInProgress = false
 let nodesFetchError: string | null = null
+let nodesFetchConsecutiveFailures = 0
 const NODES_CACHE_TTL = 30000
+const OFFLINE_DETECTION_FAILURE_THRESHOLD = 3
 /** Cluster-level GPU allocation threshold — flag when >80% of a cluster's GPUs are allocated */
 const GPU_CLUSTER_EXHAUSTION_THRESHOLD = 0.8
 const nodesSubscribers = new Set<(nodes: NodeData[]) => void>()
+
+type NodesFetchResult = {
+  nodes: NodeData[]
+  error: string | null
+  consecutiveFailures: number
+}
 
 function notifyNodesSubscribers() {
   nodesSubscribers.forEach(cb => cb(nodesCache))
 }
 
-async function fetchAllNodes(): Promise<NodeData[]> {
+async function fetchAllNodes(): Promise<NodesFetchResult> {
   if (Date.now() - nodesCacheTimestamp < NODES_CACHE_TTL && nodesCache.length > 0) {
-    return nodesCache
+    return { nodes: nodesCache, error: null, consecutiveFailures: 0 }
   }
 
   if (nodesFetchInProgress) {
-    return nodesCache
+    return {
+      nodes: nodesCache,
+      error: nodesFetchError,
+      consecutiveFailures: nodesFetchConsecutiveFailures,
+    }
   }
 
   nodesFetchInProgress = true
   try {
     const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/nodes`, {
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-    if (response.ok) {
-      const data = await response.json()
-      nodesCache = data.nodes || []
-      nodesCacheTimestamp = Date.now()
-      nodesFetchError = null
-      notifyNodesSubscribers()
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
     }
+
+    const data = await response.json() as { nodes?: NodeData[] }
+    nodesCache = data.nodes || []
+    nodesCacheTimestamp = Date.now()
+    nodesFetchError = null
+    nodesFetchConsecutiveFailures = 0
+    notifyNodesSubscribers()
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[OfflineDetection] Error fetching nodes:', error)
+    nodesFetchConsecutiveFailures += 1
     nodesFetchError = message
+    if (nodesCache.length > 0) {
+      console.warn('[OfflineDetection] Node fetch degraded:', message)
+    } else {
+      console.error('[OfflineDetection] Error fetching nodes:', error)
+    }
   } finally {
     nodesFetchInProgress = false
   }
-  return nodesCache
+
+  return {
+    nodes: nodesCache,
+    error: nodesFetchError,
+    consecutiveFailures: nodesFetchConsecutiveFailures,
+  }
 }
 
 // Card 4: AI Cluster Issue Predictor - Detect issues, predict failures, group by root cause
 export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const { t } = useTranslation(['cards', 'common'])
   const { startMission, missions } = useMissions()
-  const { nodes: gpuNodes, isLoading, isRefreshing: gpuRefreshing, isDemoFallback: gpuDemoFallback, isFailed: gpuFailed, consecutiveFailures: gpuFailures } = useCachedGPUNodes()
-  const { issues: podIssues, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures } = useCachedPodIssues()
+  const {
+    nodes: gpuNodes,
+    isLoading: gpuLoading,
+    isRefreshing: gpuRefreshing,
+    isDemoFallback: gpuDemoFallback,
+    isFailed: gpuFailed,
+    consecutiveFailures: gpuFailures,
+  } = useCachedGPUNodes()
+  const {
+    issues: podIssues,
+    isLoading: podsLoading,
+    isRefreshing: podsRefreshing,
+    isDemoFallback: podsDemoFallback,
+    isFailed: podsFailed,
+    consecutiveFailures: podsFailures,
+  } = useCachedPodIssues()
   const { deduplicatedClusters: clusters } = useClusters()
   const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
   const { drillToCluster, drillToNode } = useDrillDownActions()
@@ -112,55 +152,96 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
 
   // Get all nodes from shared cache
   const [allNodes, setAllNodes] = useState<NodeData[]>(() => nodesCache)
-  const [nodesLoading, setNodesLoading] = useState(nodesCache.length === 0)
+  const [nodesLoading, setNodesLoading] = useState(() => !shouldUseDemoData && nodesCache.length === 0)
+  const [nodesRefreshing, setNodesRefreshing] = useState(false)
+  const [nodesFailures, setNodesFailures] = useState(0)
 
-  // Issue #12196: clear refresh-failure badges once any of the card's data
-  // sources recover. This card can still render useful results when one
-  // background source has a transient timeout, so only surface a failure when
-  // the card has no usable data at all.
-  const hasAnyCardData =
-    allNodes.length > 0 ||
-    nodesCache.length > 0 ||
-    gpuNodes.length > 0 ||
-    podIssues.length > 0 ||
-    clusters.length > 0 ||
-    aiPredictions.length > 0
-  const hasRefreshFailure = (gpuFailed || podsFailed) && !hasAnyCardData
-  const refreshFailureCount = hasRefreshFailure ? Math.max(gpuFailures, podsFailures) : 0
+  const cardLoadState = useMemo(
+    () => buildOfflineDetectionCardLoadState([
+      {
+        hasData: allNodes.length > 0,
+        isLoading: !shouldUseDemoData && nodesLoading,
+        isRefreshing: !shouldUseDemoData && nodesRefreshing,
+        consecutiveFailures: shouldUseDemoData ? 0 : nodesFailures,
+        isFailed: !shouldUseDemoData && nodesFailures >= OFFLINE_DETECTION_FAILURE_THRESHOLD,
+      },
+      {
+        hasData: gpuNodes.length > 0,
+        isLoading: gpuLoading,
+        isRefreshing: gpuRefreshing,
+        isDemoData: gpuDemoFallback,
+        isFailed: gpuFailed,
+        consecutiveFailures: gpuFailures,
+      },
+      {
+        hasData: podIssues.length > 0,
+        isLoading: podsLoading,
+        isRefreshing: podsRefreshing,
+        isDemoData: podsDemoFallback,
+        isFailed: podsFailed,
+        consecutiveFailures: podsFailures,
+      },
+    ], shouldUseDemoData || isDemoMode),
+    [
+      allNodes.length,
+      gpuDemoFallback,
+      gpuFailed,
+      gpuFailures,
+      gpuLoading,
+      gpuNodes.length,
+      gpuRefreshing,
+      isDemoMode,
+      nodesFailures,
+      nodesLoading,
+      nodesRefreshing,
+      podIssues.length,
+      podsDemoFallback,
+      podsFailed,
+      podsFailures,
+      podsLoading,
+      podsRefreshing,
+      shouldUseDemoData,
+    ],
+  )
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
-  useCardLoadingState({
-    isLoading: isLoading && nodesLoading,
-    isRefreshing: gpuRefreshing || podsRefreshing,
-    hasAnyData: hasAnyCardData,
-    isDemoData: isDemoMode || gpuDemoFallback || podsDemoFallback,
-    isFailed: hasRefreshFailure,
-    consecutiveFailures: refreshFailureCount })
+  useCardLoadingState(cardLoadState)
 
   // Subscribe to cache updates and fetch nodes
   useEffect(() => {
     if (shouldUseDemoData) {
-      setNodesLoading(false)
       return
     }
 
+    let isMounted = true
     const handleUpdate = (nodes: NodeData[]) => {
+      if (!isMounted) return
       setAllNodes(nodes)
       setNodesLoading(false)
     }
     nodesSubscribers.add(handleUpdate)
 
-    fetchAllNodes().then(nodes => {
-      setAllNodes(nodes)
-      setNodesLoading(false)
-      if (nodesFetchError) {
-        console.warn('[OfflineDetection] Node fetch degraded:', nodesFetchError)
-      }
-    }).catch(() => { /* fetchAllNodes always resolves — defensive catch */ })
+    const refreshNodes = () => {
+      if (!isMounted) return
+      setNodesRefreshing(nodesCache.length > 0)
 
-    const interval = setInterval(() => fetchAllNodes(), POLL_INTERVAL_MS)
+      fetchAllNodes().then(result => {
+        if (!isMounted) return
+        setAllNodes(result.nodes)
+        setNodesLoading(false)
+        setNodesRefreshing(false)
+        setNodesFailures(result.consecutiveFailures)
+      }).catch(() => {
+        if (!isMounted) return
+        setNodesRefreshing(false)
+      })
+    }
+
+    refreshNodes()
+    const interval = setInterval(refreshNodes, POLL_INTERVAL_MS)
 
     return () => {
+      isMounted = false
       nodesSubscribers.delete(handleUpdate)
       clearInterval(interval)
     }
