@@ -1703,8 +1703,10 @@ export {
 // Re-export hook factory
 export { createCachedHook } from './createCachedHook'
 export type { CreateCachedHookConfig } from './createCachedHook'
-export { createCardCachedHook } from './createCardCachedHook'
-export type { CreateCardCachedHookConfig, CardCachedHookResult } from './createCardCachedHook'
+// NOTE: createCardCachedHook is intentionally NOT re-exported from this barrel.
+// It imports CardDataContext which pulls in heavy transitive deps (StackContext,
+// useStackDiscovery, kubectlProxy, etc.) that break test mocks for cache consumers.
+// Import directly from './createCardCachedHook' if needed.
 
 export const __testables = {
   ssWrite,

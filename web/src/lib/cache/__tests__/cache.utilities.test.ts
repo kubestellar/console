@@ -15,9 +15,10 @@ vi.mock('../workerRpc', () => ({
   CacheWorkerRpc: vi.fn(),
 }))
 
-vi.mock('../../constants', () => ({
-  STORAGE_KEY_KUBECTL_HISTORY: 'kc-kubectl-history',
-}))
+vi.mock('../../constants', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return { ...actual, STORAGE_KEY_KUBECTL_HISTORY: 'kc-kubectl-history' }
+})
 
 vi.mock('../../../hooks/useKeepAliveActive', () => ({
   useKeepAliveActive: vi.fn(() => true),
