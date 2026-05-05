@@ -73,6 +73,14 @@ vi.mock('../cards/multi-tenancy/missionLoader', () => ({
 // Mock fetch
 global.fetch = vi.fn()
 
+function createMockResponse(body: unknown, ok = true, status = 200): Response {
+  return {
+    ok,
+    status,
+    json: async () => body,
+  } as Response
+}
+
 const mockProject: PayloadProject = {
   name: 'falco',
   displayName: 'Falco',
@@ -216,6 +224,7 @@ describe('LaunchSequence', () => {
 describe('RequestApprovalModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(global.fetch).mockResolvedValue(createMockResponse({ hasToken: true }))
   })
 
   it('validates repo format', () => {
@@ -235,10 +244,9 @@ describe('RequestApprovalModal', () => {
 
   it('creates GitHub issue on submit', async () => {
     const mockFetch = vi.mocked(global.fetch)
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ html_url: 'https://github.com/org/repo/issues/1' }),
-    } as unknown as Response)
+    mockFetch
+      .mockResolvedValueOnce(createMockResponse({ hasToken: true }))
+      .mockResolvedValueOnce(createMockResponse({ html_url: 'https://github.com/org/repo/issues/1' }))
 
     render(
       <RequestApprovalModal
