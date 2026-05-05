@@ -2219,7 +2219,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
 
       // Track token usage for this specific mission (#6016 — keyed by
       // missionId so concurrent missions get independent attribution).
-      setActiveTokenCategory(missionId, getTokenCategoryForMissionType(params.type))
+      setActiveTokenCategory(missionId, getTokenCategoryForMissionType(params.type as Mission['type'] | undefined))
 
       wsSend(JSON.stringify({
         id: requestId,
