@@ -10,8 +10,8 @@
  * Previously duplicated across 7+ useCached* hooks. Now a single import.
  */
 
-import { authFetch } from '../api'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../constants/network'
+import { authFetch } from './api'
+import { FETCH_DEFAULT_TIMEOUT_MS } from './constants/network'
 
 // ---------------------------------------------------------------------------
 // Types
