@@ -5,7 +5,7 @@ import { getDemoMode } from './useDemoMode'
 import { addCategoryTokens, setActiveTokenCategory, clearActiveTokenCategory } from './useTokenUsage'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { useLocalAgent } from './useLocalAgent'
-import { agentFetch } from './mcp/shared'
+import { agentFetch } from './mcp/agentFetch'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
@@ -1961,7 +1961,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
   ) => {
     // --- Phase 1: Tool availability check (#11077) ---
     const requiredTools = resolveRequiredTools(params.type)
-    const toolCheckPromise = runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools)
+    const toolCheckPromise = runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
 
     toolCheckPromise.then(toolResult => {
       if (!toolResult.ok && toolResult.error) {
@@ -2446,104 +2446,132 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         preflightError: undefined } : m
     ))
 
-    // #7145 — Validate ALL clusters in a multi-cluster mission, not just the
-    // first. The cluster field is comma-separated; the old code split on ','
-    // and only checked [0], giving a false recovery state when later clusters
-    // were still failing.
-    const clusterContexts = (mission.cluster || '')
-      .split(',')
-      .map(c => c.trim())
-      .filter(Boolean)
+    void (async () => {
+      try {
+        // --- Phase 1: Tool availability check (matches preflightAndExecute) ---
+        const requiredTools = resolveRequiredTools(mission.type)
+        const toolResult = await runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
+        if (!toolResult.ok && toolResult.error) {
+          setMissions(prev => prev.map(m =>
+            m.id === missionId ? {
+              ...m,
+              status: 'blocked' as MissionStatus,
+              currentStep: 'Missing required tools',
+              preflightError: toolResult.error,
+              messages: [
+                ...m.messages,
+                {
+                  id: generateMessageId('tool-preflight-retry'),
+                  role: 'system' as const,
+                  content: `**Pre-flight Tool Check Still Failing**\n\n${toolResult.error?.message || 'Required tools are missing.'}\n\nInstall the missing tools and retry the mission.`,
+                  timestamp: new Date(),
+                },
+              ],
+            } : m
+          ))
+          return
+        }
 
-    // Run preflight on every cluster context. If any fails, block the mission.
-    const preflightForCluster = clusterContexts.length > 0
-      ? clusterContexts
-      : [undefined] // No cluster specified — run default preflight once
+        // #7145 — Validate ALL clusters in a multi-cluster mission, not just the
+        // first. The cluster field is comma-separated; the old code split on ','
+        // and only checked [0], giving a false recovery state when later clusters
+        // were still failing.
+        const clusterContexts = (mission.cluster || '')
+          .split(',')
+          .map(c => c.trim())
+          .filter(Boolean)
 
-    Promise.all(
-      preflightForCluster.map(ctx =>
-        runPreflightCheck(
-          (args, opts) => kubectlProxy.exec(args, opts),
-          ctx,
-        ).then(result => ({ ctx, result }))
-      )
-    ).then(results => {
-      // Find first failing cluster
-      const failing = results.find(r => !r.result.ok && 'error' in r.result && r.result.error)
-      const preflight = failing ? failing.result : results[0].result
-      if (!preflight.ok && 'error' in preflight && preflight.error) {
-        // Still failing — re-block
+        // Run preflight on every cluster context. If any fails, block the mission.
+        const preflightForCluster = clusterContexts.length > 0
+          ? clusterContexts
+          : [undefined] // No cluster specified — run default preflight once
+
+        const results = await Promise.all(
+          preflightForCluster.map(ctx =>
+            runPreflightCheck(
+              (args, opts) => kubectlProxy.exec(args, opts),
+              ctx,
+            ).then(result => ({ ctx, result }))
+          )
+        )
+
+        // Find first failing cluster
+        const failing = results.find(r => !r.result.ok && 'error' in r.result && r.result.error)
+        const preflight = failing ? failing.result : results[0].result
+        if (!preflight.ok && 'error' in preflight && preflight.error) {
+          // Still failing — re-block
+          setMissions(prev => prev.map(m =>
+            m.id === missionId ? {
+              ...m,
+              status: 'blocked' as MissionStatus,
+              currentStep: 'Preflight check failed',
+              preflightError: preflight.error,
+              messages: [
+                ...m.messages,
+                {
+                  id: generateMessageId('preflight-retry'),
+                  role: 'system' as const,
+                  content: `**Preflight Check Still Failing**\n\nError: ${preflight.error?.message || 'Unknown error'}`,
+                  timestamp: new Date() }
+              ]
+            } : m
+          ))
+          if (preflight.error?.message) {
+            emitError('cluster_access', preflight.error.message)
+          }
+          return
+        }
+
+        // #7091 — Preflight passed — rebuild prompt using the full enhancement
+        // pipeline (cluster targeting, dry-run, non-interactive, resolution
+        // matching) instead of ad-hoc partial reconstruction. The old code
+        // only prepended cluster context, losing dry-run instructions,
+        // resolution context, and non-interactive handling from the original
+        // enriched prompt.
+        const lastUserMsg = mission.messages.find(m => m.role === 'user')
+        const retryParams: StartMissionParams = {
+          title: mission.title,
+          description: mission.description,
+          type: mission.type,
+          cluster: mission.cluster,
+          initialPrompt: lastUserMsg?.content || mission.description,
+          context: mission.context,
+          dryRun: !!mission.context?.dryRun,
+        }
+        const { enhancedPrompt: prompt } = buildEnhancedPrompt(retryParams)
+
         setMissions(prev => prev.map(m =>
           m.id === missionId ? {
             ...m,
-            status: 'blocked' as MissionStatus,
-            currentStep: 'Preflight check failed',
-            preflightError: preflight.error,
+            preflightError: undefined,
             messages: [
               ...m.messages,
               {
-                id: generateMessageId('preflight-retry'),
+                id: generateMessageId('preflight-ok'),
                 role: 'system' as const,
-                content: `**Preflight Check Still Failing**\n\nError: ${preflight.error?.message || 'Unknown error'}`,
+                content: '**Preflight check passed** — proceeding with mission execution.',
                 timestamp: new Date() }
             ]
           } : m
         ))
-        if (preflight.error?.message) {
-          emitError('cluster_access', preflight.error.message)
-        }
-        return
+
+        executeMission(missionId, prompt, { context: mission.context, type: mission.type })
+      } catch (err) {
+        // Preflight threw unexpectedly — re-block instead of fail-open (#5851)
+        setMissions(prev => prev.map(m =>
+          m.id === missionId ? {
+            ...m,
+            status: 'blocked' as MissionStatus,
+            currentStep: 'Preflight check error',
+            preflightError: {
+              code: 'UNKNOWN_EXECUTION_FAILURE',
+              message: err instanceof Error ? err.message : 'Unknown error',
+              details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
+            },
+          } : m
+        ))
       }
-
-      // #7091 — Preflight passed — rebuild prompt using the full enhancement
-      // pipeline (cluster targeting, dry-run, non-interactive, resolution
-      // matching) instead of ad-hoc partial reconstruction. The old code
-      // only prepended cluster context, losing dry-run instructions,
-      // resolution context, and non-interactive handling from the original
-      // enriched prompt.
-      const lastUserMsg = mission.messages.find(m => m.role === 'user')
-      const retryParams: StartMissionParams = {
-        title: mission.title,
-        description: mission.description,
-        type: mission.type,
-        cluster: mission.cluster,
-        initialPrompt: lastUserMsg?.content || mission.description,
-        context: mission.context,
-        dryRun: !!mission.context?.dryRun,
-      }
-      const { enhancedPrompt: prompt } = buildEnhancedPrompt(retryParams)
-
-      setMissions(prev => prev.map(m =>
-        m.id === missionId ? {
-          ...m,
-          preflightError: undefined,
-          messages: [
-            ...m.messages,
-            {
-              id: generateMessageId('preflight-ok'),
-              role: 'system' as const,
-              content: '**Preflight check passed** — proceeding with mission execution.',
-              timestamp: new Date() }
-          ]
-        } : m
-      ))
-
-      executeMission(missionId, prompt, { context: mission.context, type: mission.type })
-    }).catch((err) => {
-      // Preflight threw unexpectedly — re-block instead of fail-open (#5851)
-      setMissions(prev => prev.map(m =>
-        m.id === missionId ? {
-          ...m,
-          status: 'blocked' as MissionStatus,
-          currentStep: 'Preflight check error',
-          preflightError: {
-            code: 'UNKNOWN_EXECUTION_FAILURE',
-            message: err instanceof Error ? err.message : 'Unknown error',
-            details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
-          },
-        } : m
-      ))
-    })
+    })()
   }
 
   // Save a mission to library without running it

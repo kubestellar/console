@@ -429,14 +429,16 @@ export function resolveRequiredTools(
  *
  * @param agentBaseUrl - Base URL for the kc-agent HTTP API (e.g. "http://127.0.0.1:8585")
  * @param requiredTools - Tool names that must be installed
+ * @param fetchFn - Optional fetch implementation for authenticated agent requests
  */
 export async function runToolPreflightCheck(
   agentBaseUrl: string,
   requiredTools: string[],
+  fetchFn: typeof fetch = fetch,
 ): Promise<ToolPreflightResult> {
   const TOOL_CHECK_TIMEOUT_MS = 10_000
   try {
-    const resp = await fetch(`${agentBaseUrl}/local-cluster-tools`, {
+    const resp = await fetchFn(`${agentBaseUrl}/local-cluster-tools`, {
       signal: AbortSignal.timeout(TOOL_CHECK_TIMEOUT_MS),
     })
     if (!resp.ok) {
