@@ -320,15 +320,19 @@ describe('useCachedData', () => {
       mockClusterCacheRef.clusters = [] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(true)
 
-      mockFetchSSE.mockResolvedValue([{ name: 'di1', reason: 'ReplicaFailure' }])
+      mockFetchSSE.mockResolvedValue([
+        { name: 'healthy-dep', namespace: 'default', replicas: 2, readyReplicas: 2, status: 'running' },
+        { name: 'di1', namespace: 'default', replicas: 2, readyReplicas: 1, status: 'running' },
+      ])
 
       const { useCachedDeploymentIssues } = await loadModule()
       useCachedDeploymentIssues()
 
-      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<unknown[]>
+      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<Array<{ name: string; reason?: string }>>
       const result = await progressiveFetcher(vi.fn())
       expect(mockFetchSSE).toHaveBeenCalled()
       expect(result).toHaveLength(1)
+      expect(result[0]).toMatchObject({ name: 'di1', reason: 'ReplicaFailure' })
     })
   })
 

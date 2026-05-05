@@ -458,7 +458,7 @@ export function useCachedDeploymentIssues(
   const key = `deploymentIssues:${cluster || 'all'}:${namespace || 'all'}`
 
   const deriveIssues = (deployments: Deployment[]): DeploymentIssue[] =>
-    deployments
+    (deployments || [])
       .filter(d => (d.readyReplicas ?? 0) < (d.replicas ?? 1))
       .map(d => ({
         name: d.name,
@@ -497,12 +497,20 @@ export function useCachedDeploymentIssues(
         return deriveIssues(deployments)
       }
 
-      // Fall back to REST API — deployment-issues is a backend-only endpoint (#9996)
+      // Fall back to REST API using live deployment state so resolved issues drop
+      // out on the next refresh instead of lingering from stale issue snapshots.
       const token = getToken()
       const hasRealToken = token && token !== 'demo-token'
       if (hasRealToken && !isBackendUnavailable()) {
-        const data = await fetchBackendAPI<{ issues: DeploymentIssue[] }>('deployment-issues', { cluster, namespace })
-        return data.issues || []
+        const deployments = cluster
+          ? await (async () => {
+              const raw = await getClusterFetcher()<unknown>('deployments', { cluster, namespace })
+              const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, raw, '/api/mcp/deployments', 'deployments')
+              return (data.deployments || []).map(d => ({ ...d, cluster: d.cluster || cluster }))
+          })()
+          : await fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace })
+
+        return deriveIssues(deployments)
       }
 
       throw new Error("No data source available")
@@ -515,9 +523,12 @@ export function useCachedDeploymentIssues(
         return deriveIssues(deployments)
       }
 
-      // Fall back to SSE streaming via backend — deployment-issues is backend-only (#9996)
-      const issues = await fetchViaBackendSSE<DeploymentIssue>('deployment-issues', 'issues', { namespace }, onProgress)
-      return issues
+      // Fall back to SSE streaming via backend deployments so cleared rollouts
+      // disappear as soon as the refreshed deployment list is healthy again.
+      const deployments = await fetchViaSSE<Deployment>('deployments', 'deployments', { namespace }, (partialDeployments) => {
+        onProgress(deriveIssues(partialDeployments))
+      })
+      return deriveIssues(deployments)
     } })
 
   return {

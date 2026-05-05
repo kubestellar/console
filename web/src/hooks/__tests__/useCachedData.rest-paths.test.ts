@@ -490,17 +490,21 @@ describe('useCachedData', () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         text: vi.fn().mockResolvedValue(JSON.stringify({
-          issues: [{ name: 'dep-issue', reason: 'ReplicaFailure' }],
+          deployments: [
+            { name: 'healthy-dep', namespace: 'ns', replicas: 2, readyReplicas: 2, status: 'running' },
+            { name: 'dep-issue', namespace: 'ns', replicas: 2, readyReplicas: 1, status: 'running' },
+          ],
         })),
       }))
 
       const { useCachedDeploymentIssues } = await loadModule()
       useCachedDeploymentIssues('c1', 'ns')
 
-      const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
+      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ name: string; reason?: string }>>
       const issues = await fetcher()
 
       expect(issues).toHaveLength(1)
+      expect(issues[0]).toMatchObject({ name: 'dep-issue', reason: 'ReplicaFailure' })
     })
   })
 
