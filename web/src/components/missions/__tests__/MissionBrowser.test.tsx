@@ -6,9 +6,22 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MissionBrowser } from '../MissionBrowser'
+
+const browserMockState = vi.hoisted(() => ({
+  missionCache: {
+    installers: [] as any[],
+    fixes: [] as any[],
+    installersDone: true,
+    fixesDone: true,
+    fetchError: null as string | null,
+    listeners: new Set<() => void>(),
+  },
+  fetchMissionContent: vi.fn(async (mission: any) => ({ mission, raw: JSON.stringify(mission) })),
+  fetchTreeChildren: vi.fn(async () => []),
+}))
 
 // ── Mocks ────────────────────────────────────────────────────────────────
 
@@ -52,7 +65,12 @@ vi.mock('../../../lib/analytics', () => ({
 }))
 
 vi.mock('../../../lib/missions/matcher', () => ({
-  matchMissionsToCluster: vi.fn(() => []),
+  matchMissionsToCluster: vi.fn((missions: any[]) => missions.map((mission) => ({
+    mission,
+    score: 2,
+    matchPercent: 85,
+    matchReasons: ['Matched'],
+  }))),
 }))
 
 vi.mock('../../../lib/missions/scanner/index', () => ({
@@ -83,33 +101,55 @@ vi.mock('../../ui/CollapsibleSection', () => ({
 vi.mock('../browser', () => ({
   TreeNodeItem: () => null,
   DirectoryListing: () => null,
-  RecommendationCard: () => null,
+  RecommendationCard: ({ match, onSelect }: { match: any; onSelect: () => void }) => (
+    <button type="button" onClick={onSelect}>{match.mission.title}</button>
+  ),
   EmptyState: ({ message }: { message: string }) => <div data-testid="empty-state">{message}</div>,
   MissionFetchErrorBanner: ({ message }: { message: string }) => <div data-testid="fetch-error">{message}</div>,
   getMissionSlug: (m: { title?: string }) => (m.title || '').toLowerCase().replace(/\s+/g, '-'),
   getMissionShareUrl: () => 'https://example.com/missions/test',
-  getKubaraConfig: vi.fn().mockResolvedValue({ baseUrl: '', repo: '', branch: '' }),
-  updateNodeInTree: vi.fn((nodes: unknown[]) => nodes),
-  removeNodeFromTree: vi.fn((nodes: unknown[]) => nodes),
-  missionCache: {
-    installers: [],
-    fixes: [],
-    installersDone: true,
-    fixesDone: true,
-    fetchError: null,
-    listeners: new Set(),
-  },
+  getKubaraConfig: vi.fn().mockResolvedValue({ repoOwner: 'kubara-io', repoName: 'kubara', catalogPath: 'go-binary/templates/embedded/managed-service-catalog/helm' }),
+  updateNodeInTree: vi.fn((nodes: any[], nodeId: string, updates: any) => {
+    const apply = (items: any[]): any[] => items.map((node) => {
+      if (node.id === nodeId) return { ...node, ...updates }
+      if (node.children) return { ...node, children: apply(node.children) }
+      return node
+    })
+    return apply(nodes)
+  }),
+  removeNodeFromTree: vi.fn((nodes: any[], nodeId: string) => {
+    const prune = (items: any[]): any[] => items
+      .filter((node) => node.id !== nodeId)
+      .map((node) => node.children ? { ...node, children: prune(node.children) } : node)
+    return prune(nodes)
+  }),
+  missionCache: browserMockState.missionCache,
   startMissionCacheFetch: vi.fn(),
   resetMissionCache: vi.fn(),
-  fetchMissionContent: vi.fn().mockResolvedValue({ mission: {}, raw: '{}' }),
+  fetchMissionContent: browserMockState.fetchMissionContent,
+  fetchTreeChildren: browserMockState.fetchTreeChildren,
+  fetchDirectoryEntries: vi.fn().mockResolvedValue([]),
+  fetchNodeFileContent: vi.fn().mockResolvedValue(null),
   BROWSER_TABS: [
     { id: 'recommended', label: 'Recommended', icon: '★' },
     { id: 'installers', label: 'Installers', icon: '📦' },
     { id: 'fixes', label: 'Fixes', icon: '🔧' },
   ],
-  VirtualizedMissionGrid: () => null,
+  VirtualizedMissionGrid: ({ items, renderItem }: { items: any[]; renderItem: (item: any) => React.ReactNode }) => (
+    <div>{items.map((item, index) => <div key={item.mission?.title ?? index}>{renderItem(item)}</div>)}</div>
+  ),
   getCachedRecommendations: vi.fn(() => null),
   setCachedRecommendations: vi.fn(),
+}))
+
+vi.mock('../MissionBrowserSidebar', () => ({
+  MissionBrowserSidebar: ({ selectedPath, expandedNodes }: { selectedPath: string | null; expandedNodes: Set<string> }) => (
+    <div
+      data-testid="mission-sidebar"
+      data-selected-path={selectedPath ?? ''}
+      data-expanded={Array.from(expandedNodes).sort().join('|')}
+    />
+  ),
 }))
 
 vi.mock('../ScanProgressOverlay', () => ({
@@ -147,6 +187,14 @@ describe('MissionBrowser', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    browserMockState.missionCache.installers = []
+    browserMockState.missionCache.fixes = []
+    browserMockState.missionCache.installersDone = true
+    browserMockState.missionCache.fixesDone = true
+    browserMockState.missionCache.fetchError = null
+    browserMockState.missionCache.listeners.clear()
+    browserMockState.fetchMissionContent.mockImplementation(async (mission: any) => ({ mission, raw: JSON.stringify(mission) }))
+    browserMockState.fetchTreeChildren.mockImplementation(async () => [])
   })
 
   it('renders nothing when isOpen is false', () => {
@@ -215,5 +263,57 @@ describe('MissionBrowser', () => {
     expect(() =>
       render(<MissionBrowser {...defaultProps} initialMission="" />),
     ).not.toThrow()
+  })
+
+  it('reveals a recommended mission path in the sidebar tree when its card is clicked', async () => {
+    browserMockState.missionCache.fixes = [{
+      version: 'kc-mission-v1',
+      title: 'Install OPA',
+      description: 'Install Open Policy Agent',
+      type: 'deploy',
+      tags: [],
+      steps: [],
+      metadata: { source: 'fixes/cncf-install/install-open-policy-agent-opa.json' },
+    }]
+
+    browserMockState.fetchTreeChildren.mockImplementation(async (node: { id: string }) => {
+      if (node.id === 'community') {
+        return [{
+          id: 'community/cncf-install',
+          name: 'cncf-install',
+          path: 'fixes/cncf-install',
+          type: 'directory',
+          source: 'community',
+          loaded: false,
+        }]
+      }
+
+      if (node.id === 'community/cncf-install') {
+        return [{
+          id: 'community/cncf-install/install-open-policy-agent-opa.json',
+          name: 'install-open-policy-agent-opa.json',
+          path: 'fixes/cncf-install/install-open-policy-agent-opa.json',
+          type: 'file',
+          source: 'community',
+          loaded: true,
+        }]
+      }
+
+      return []
+    })
+
+    render(<MissionBrowser {...defaultProps} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Install OPA' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mission-sidebar')).toHaveAttribute(
+        'data-selected-path',
+        'community/cncf-install/install-open-policy-agent-opa.json',
+      )
+    })
+
+    expect(screen.getByTestId('mission-sidebar').getAttribute('data-expanded')).toContain('community')
+    expect(screen.getByTestId('mission-sidebar').getAttribute('data-expanded')).toContain('community/cncf-install')
   })
 })

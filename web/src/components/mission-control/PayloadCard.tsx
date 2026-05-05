@@ -88,13 +88,13 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
       animate={{ scale: 1, opacity: 1 }}
       exit={{ scale: 0.8, opacity: 0 }}
       transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-      className="relative group"
+      className="relative group h-full"
       onMouseEnter={() => onHover?.(project)}
       onMouseLeave={() => onHover?.(null)}
     >
       <div
         className={cn(
-          'rounded-xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md transition-shadow',
+          'h-full rounded-xl border border-border bg-card overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col',
           onClick && 'cursor-pointer'
         )}
         onClick={onClick}
@@ -104,7 +104,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
         }}
       >
         {/* Header with gradient accent */}
-        <div className="flex items-start gap-3 p-3">
+        <div className="flex items-start gap-3 p-3 flex-1">
           {/* Avatar */}
           <div className="shrink-0 w-10 h-10 rounded-lg bg-white/90 dark:bg-white/10 shadow-xs flex items-center justify-center overflow-hidden">
             {!imgFailed ? (
@@ -150,7 +150,8 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
         </div>
 
         {/* Footer: badges */}
-        <div className="flex items-center gap-1.5 px-3 pb-2.5 flex-wrap">
+        <div className="mt-auto flex items-start gap-2 border-t border-border px-3 pb-2.5 pt-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
           {/* Category */}
           <span
             className="text-[10px] px-1.5 py-0.5 rounded-full text-white/90 font-medium"
@@ -196,8 +197,41 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
             </span>
           )}
 
+          {/* Dependencies indicator with portal tooltip */}
+          {project.dependencies.length > 0 && (
+            <>
+              <span
+                ref={depRef}
+                className="text-[10px] text-muted-foreground cursor-default underline decoration-dotted"
+                onMouseEnter={() => setShowDeps(true)}
+                onMouseLeave={() => setShowDeps(false)}
+              >
+                +{project.dependencies.length} dep{project.dependencies.length !== 1 ? 's' : ''}
+              </span>
+              {showDeps && depRef.current && createPortal(
+                <div
+                  className="fixed z-overlay pointer-events-none"
+                  style={{
+                    left: depRef.current.getBoundingClientRect().left + depRef.current.getBoundingClientRect().width / 2,
+                    top: depRef.current.getBoundingClientRect().top - 4,
+                    transform: 'translate(-50%, -100%)',
+                  }}
+                >
+                  <div className="bg-slate-900 border border-slate-600 rounded-lg shadow-xl px-3 py-2 whitespace-nowrap">
+                    <p className="text-[10px] font-medium text-slate-400 mb-1">Dependencies:</p>
+                    {project.dependencies.map((dep) => (
+                      <p key={dep} className="text-xs text-white">{dep}</p>
+                    ))}
+                  </div>
+                </div>,
+                document.body
+              )}
+            </>
+          )}
+          </div>
+
           {/* Priority dropdown */}
-          <div className="relative ml-auto">
+          <div className="relative shrink-0">
             <Button
               variant="ghost"
               size="sm"
@@ -241,38 +275,6 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
               </>
             )}
           </div>
-
-          {/* Dependencies indicator with portal tooltip */}
-          {project.dependencies.length > 0 && (
-            <>
-              <span
-                ref={depRef}
-                className="text-[10px] text-muted-foreground cursor-default underline decoration-dotted"
-                onMouseEnter={() => setShowDeps(true)}
-                onMouseLeave={() => setShowDeps(false)}
-              >
-                +{project.dependencies.length} dep{project.dependencies.length !== 1 ? 's' : ''}
-              </span>
-              {showDeps && depRef.current && createPortal(
-                <div
-                  className="fixed z-overlay pointer-events-none"
-                  style={{
-                    left: depRef.current.getBoundingClientRect().left + depRef.current.getBoundingClientRect().width / 2,
-                    top: depRef.current.getBoundingClientRect().top - 4,
-                    transform: 'translate(-50%, -100%)',
-                  }}
-                >
-                  <div className="bg-slate-900 border border-slate-600 rounded-lg shadow-xl px-3 py-2 whitespace-nowrap">
-                    <p className="text-[10px] font-medium text-slate-400 mb-1">Dependencies:</p>
-                    {project.dependencies.map((dep) => (
-                      <p key={dep} className="text-xs text-white">{dep}</p>
-                    ))}
-                  </div>
-                </div>,
-                document.body
-              )}
-            </>
-          )}
         </div>
       </div>
     </motion.div>

@@ -129,6 +129,51 @@ interface MissionBrowserProps {
   onUseInMissionControl?: (chartName: string) => void
 }
 
+interface MissionTreeTarget {
+  rootId: 'community' | 'github' | 'kubara'
+  targetPath: string
+}
+
+function findTreeNodeById(nodes: TreeNode[], nodeId: string): TreeNode | null {
+  for (const node of nodes) {
+    if (node.id === nodeId) return node
+    if (node.children) {
+      const nested = findTreeNodeById(node.children, nodeId)
+      if (nested) return nested
+    }
+  }
+  return null
+}
+
+function resolveMissionTreeTarget(sourcePath: string | undefined, kubaraRootPath: string | undefined): MissionTreeTarget | null {
+  const normalizedSource = sourcePath?.trim().replace(/^\/+/, '')
+  if (!normalizedSource) return null
+
+  if (normalizedSource.startsWith('fixes/')) {
+    return { rootId: 'community', targetPath: normalizedSource }
+  }
+
+  if (normalizedSource.startsWith('go-binary/templates/embedded/managed-service-catalog/helm/')) {
+    return { rootId: 'kubara', targetPath: normalizedSource }
+  }
+
+  if (normalizedSource.startsWith('kubara/')) {
+    if (!kubaraRootPath) return null
+    const relativePath = normalizedSource.slice('kubara/'.length)
+    return {
+      rootId: 'kubara',
+      targetPath: relativePath ? `${kubaraRootPath}/${relativePath}` : kubaraRootPath,
+    }
+  }
+
+  const pathParts = normalizedSource.split('/')
+  if (pathParts.length >= 3) {
+    return { rootId: 'github', targetPath: normalizedSource }
+  }
+
+  return null
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -159,6 +204,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([])
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set())
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
+  const treeNodesRef = useRef<TreeNode[]>([])
+  const expandedNodesRef = useRef<Set<string>>(new Set())
 
   // Content state
   const [directoryEntries, setDirectoryEntries] = useState<BrowseEntry[]>([])
@@ -211,6 +258,14 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [installerMissions, setInstallerMissions] = useState<MissionExport[]>(missionCache.installers)
   const [fixerMissions, setFixerMissions] = useState<MissionExport[]>(missionCache.fixes)
   const [, forceUpdate] = useState(0)
+
+  useEffect(() => {
+    treeNodesRef.current = treeNodes
+  }, [treeNodes])
+
+  useEffect(() => {
+    expandedNodesRef.current = expandedNodes
+  }, [expandedNodes])
   const loadingInstallers = !missionCache.installersDone
   const loadingFixers = !missionCache.fixesDone
   const [missionFetchError, setMissionFetchError] = useState<string | null>(missionCache.fetchError)
@@ -254,8 +309,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     getKubaraConfig().then((cfg) => {
       const repo = `${cfg.repoOwner}/${cfg.repoName}`
       const isCustom = repo !== 'kubara-io/kubara'
-      setTreeNodes((prev) =>
-        updateNodeInTree(prev, 'kubara', {
+      setTreeNodes((prev) => {
+        const next = updateNodeInTree(prev, 'kubara', {
           path: cfg.catalogPath,
           repoOwner: cfg.repoOwner,
           repoName: cfg.repoName,
@@ -266,7 +321,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
               : 'Production-tested Helm values from kubara-io/kubara',
           infoTooltip: `Catalog: ${repo} · Set KUBARA_CATALOG_REPO (and optionally KUBARA_CATALOG_PATH) to use your own public or private catalog`,
         })
-      )
+        treeNodesRef.current = next
+        return next
+      })
     }).catch(() => { /* keep defaults on error */ })
 
     if (isAuthenticated && user) {
@@ -305,7 +362,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
         description: p })),
       description: 'Drop files or add paths' })
 
+    treeNodesRef.current = rootNodes
+    expandedNodesRef.current = new Set()
     setTreeNodes(rootNodes)
+    setExpandedNodes(new Set())
     setSelectedPath(null)
     setSelectedMission(null)
     setDirectoryEntries([])
@@ -405,14 +465,21 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // Track the latest selection to prevent stale async responses from overwriting
   const latestSelectionRef = useRef<string>('')
 
+  // Ref to hold revealMissionInTree so selectCardMission can call it
+  // without a circular declaration dependency (revealMissionInTree depends on
+  // expandNode which is declared later in the component).
+  const revealMissionInTreeRef = useRef<(mission: MissionExport) => Promise<void>>()
+
   // PR #6518 item F — wrap in useCallback so the deep-link effect below can
   // safely list it in its dependency array without thrashing every render.
-  // All captured references are either state setters (stable) or module-level
-  // imports (fetchMissionContent) — so the callback itself is stable.
+  // All captured references are stable React setters, module-level helpers, or
+  // memoized callbacks (`revealMissionInTree`), so the callback itself is stable.
   const selectCardMission = useCallback(async (mission: MissionExport) => {
     // Use title + type as unique key (MissionExport has no id field)
     const selectionKey = `${mission.title}::${mission.type}`
     latestSelectionRef.current = selectionKey
+
+    void revealMissionInTreeRef.current?.(mission)
 
     // Show index metadata immediately for instant feedback
     setSelectedMission(mission)
@@ -505,10 +572,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
     if (installerMissions.length === 0 && fixerMissions.length === 0 && activeTab !== 'installers') {
       setActiveTab('installers')
     }
-    // PR #6518 item F — `selectCardMission` is now wrapped in useCallback
-    // with an empty dep array, so it's a stable reference across renders.
-    // Including it in the dep array satisfies react-hooks/exhaustive-deps
-    // without causing the effect to re-run on every render.
+    // PR #6518 item F — `selectCardMission` is memoized, so it remains a
+    // stable reference for this effect while still tracking tree-reveal updates.
   }, [initialMission, isOpen, installerMissions, fixerMissions, selectedMission, activeTab, selectCardMission])
 
   // ============================================================================
@@ -545,59 +610,104 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // Tree expansion & lazy loading
   // ============================================================================
 
+  const expandNode = useCallback(async (node: TreeNode) => {
+    const nodeId = node.id
+
+    if (!expandedNodesRef.current.has(nodeId)) {
+      setExpandedNodes((prev) => {
+        const next = new Set(prev).add(nodeId)
+        expandedNodesRef.current = next
+        return next
+      })
+    }
+
+    if (node.loaded || node.loading) return
+
+    setTreeNodes((prev) => {
+      const next = updateNodeInTree(prev, nodeId, { loading: true })
+      treeNodesRef.current = next
+      return next
+    })
+
+    try {
+      const children = await fetchTreeChildren(node)
+
+      if (node.source === 'community' && children.length === 0 && nodeId !== 'community') {
+        setTreeNodes((prev) => {
+          const next = removeNodeFromTree(prev, nodeId)
+          treeNodesRef.current = next
+          return next
+        })
+      } else {
+        setTreeNodes((prev) => {
+          const next = updateNodeInTree(prev, nodeId, {
+            children,
+            loaded: true,
+            loading: false,
+            isEmpty: children.length === 0 })
+          treeNodesRef.current = next
+          return next
+        })
+      }
+    } catch {
+      setTreeNodes((prev) => {
+        const next = updateNodeInTree(prev, nodeId, {
+          children: [],
+          loaded: true,
+          loading: false,
+          isEmpty: true,
+          description: 'Failed to load — check network or GitHub rate limits' })
+        treeNodesRef.current = next
+        return next
+      })
+    }
+  }, [])
+
   const toggleNode = async (node: TreeNode) => {
     const nodeId = node.id
 
-    if (expandedNodes.has(nodeId)) {
+    if (expandedNodesRef.current.has(nodeId)) {
       setExpandedNodes((prev) => {
         const next = new Set(prev)
         next.delete(nodeId)
+        expandedNodesRef.current = next
         return next
       })
       return
     }
 
-    // Expand the node
-    setExpandedNodes((prev) => new Set(prev).add(nodeId))
+    await expandNode(node)
+  }
 
-    // If not loaded, fetch children
-    if (!node.loaded && !node.loading) {
-      setTreeNodes((prev) =>
-        updateNodeInTree(prev, nodeId, { loading: true })
+  const revealMissionInTree = useCallback(async (mission: MissionExport) => {
+    const kubaraRootPath = findTreeNodeById(treeNodesRef.current, 'kubara')?.path
+    const target = resolveMissionTreeTarget(mission.metadata?.source, kubaraRootPath)
+    if (!target) return
+
+    let currentNode = findTreeNodeById(treeNodesRef.current, target.rootId)
+    if (!currentNode) return
+
+    while (currentNode) {
+      if (currentNode.path === target.targetPath) {
+        setSelectedPath(currentNode.id)
+        return
+      }
+
+      if (currentNode.type !== 'directory') return
+
+      await expandNode(currentNode)
+      const refreshedNode = findTreeNodeById(treeNodesRef.current, currentNode.id)
+      if (!refreshedNode) return
+
+      const matchingChild = (refreshedNode.children || []).find((child) =>
+        target.targetPath === child.path || target.targetPath.startsWith(`${child.path}/`)
       )
 
-      try {
-        const children = await fetchTreeChildren(node)
-
-        // For community sub-directories (not root): if no missions remain after filtering,
-        // mark the node as empty and remove it from the parent's children so
-        // empty category folders (containing only .gitkeep) don't clutter the tree.
-        if (node.source === 'community' && children.length === 0 && nodeId !== 'community') {
-          setTreeNodes((prev) =>
-            removeNodeFromTree(prev, nodeId)
-          )
-        } else {
-          setTreeNodes((prev) =>
-            updateNodeInTree(prev, nodeId, {
-              children,
-              loaded: true,
-              loading: false,
-              isEmpty: children.length === 0 })
-          )
-        }
-      } catch {
-        // Network/rate-limit error — show as loaded but empty with a descriptive marker
-        setTreeNodes((prev) =>
-          updateNodeInTree(prev, nodeId, {
-            children: [],
-            loaded: true,
-            loading: false,
-            isEmpty: true,
-            description: 'Failed to load — check network or GitHub rate limits' })
-        )
-      }
+      if (!matchingChild) return
+      currentNode = matchingChild
     }
-  }
+  }, [expandNode])
+  revealMissionInTreeRef.current = revealMissionInTree
 
   // ============================================================================
   // Select a node (directory → show listing, file → show preview)

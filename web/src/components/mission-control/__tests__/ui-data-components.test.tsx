@@ -73,6 +73,28 @@ describe('PayloadCard', () => {
     
     expect(screen.getByText('+1 dep')).toBeDefined()
   })
+
+  it('keeps the card stretched when swapped badges are present', () => {
+    const swappedProject = {
+      ...mockProject,
+      displayName: 'Kube Prometheus Stack',
+      originalName: 'step-ca',
+    }
+
+    const { container } = render(
+      <PayloadCard
+        project={swappedProject}
+        onRemove={vi.fn()}
+        onUpdatePriority={vi.fn()}
+        installed={false}
+      />
+    )
+
+    expect(screen.getByText('Swapped')).toBeDefined()
+    expect(screen.getByText('Needs deploy')).toBeDefined()
+    expect(container.firstElementChild).toHaveClass('h-full')
+    expect(container.firstElementChild?.firstElementChild).toHaveClass('h-full', 'flex', 'flex-col')
+  })
 })
 
 describe('PayloadGrid', () => {
