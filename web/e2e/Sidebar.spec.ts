@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
+import { DEFAULT_PRIMARY_NAV } from '../src/hooks/useSidebarConfig'
 import { mockApiFallback } from './helpers/setup'
 
 /**
@@ -67,70 +68,78 @@ async function setupSidebarTest(page: Page) {
   await page.getByTestId('sidebar').waitFor({ state: 'visible', timeout: 20_000 })
 }
 
+const SIDEBAR_TIMEOUT_MS = 10_000
+const PRIMARY_NAV_EXPECTATIONS = DEFAULT_PRIMARY_NAV.map(({ name, href }) => ({
+  label: name,
+  href,
+}))
+
+async function expectDashboardNavigation(page: Page, href: string, expectedTitle: string) {
+  await expect.poll(
+    () => new URL(page.url()).pathname,
+    { timeout: SIDEBAR_TIMEOUT_MS },
+  ).toBe(href)
+  await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+  await expect(page.getByTestId('dashboard-title')).toContainText(expectedTitle, { timeout: SIDEBAR_TIMEOUT_MS })
+}
+
 test.describe('Sidebar Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await setupSidebarTest(page)
   })
 
   test.describe('Navigation Links', () => {
-    test('displays sidebar with primary navigation', async ({ page }) => {
-      // Wait for sidebar to be visible
-      const SIDEBAR_TIMEOUT_MS = 10_000
+    test('displays primary navigation items in the expected order', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      await expect(page.getByTestId('sidebar-primary-nav')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+      const navLinks = page.getByTestId('sidebar-primary-nav').getByTestId('sidebar-item')
 
-      // Should have navigation links
-      const navLinks = page.getByTestId('sidebar-primary-nav').locator('a')
-      const linkCount = await navLinks.count()
-      expect(linkCount).toBeGreaterThan(0)
+      await expect(navLinks).toHaveCount(PRIMARY_NAV_EXPECTATIONS.length)
+
+      for (const [index, expectedNavItem] of PRIMARY_NAV_EXPECTATIONS.entries()) {
+        const navLink = navLinks.nth(index)
+        await expect(navLink).toHaveAttribute('data-test-label', expectedNavItem.label)
+        await expect(navLink).toHaveAttribute('href', expectedNavItem.href)
+        await expect(navLink).toContainText(expectedNavItem.label)
+      }
     })
 
     test('dashboard link navigates to home', async ({ page }) => {
-      const SIDEBAR_TIMEOUT_MS = 10_000
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
-      // Navigate away first — in webkit, clicking <a href="/"> when already
-      // on "/" hangs because no navigation event fires.
+      // Navigate away first — clicking the home link while already on "/"
+      // would not exercise any real routing behavior.
       await page.goto('/clusters')
       await page.waitForLoadState('domcontentloaded')
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
+      await expectDashboardNavigation(page, '/clusters', 'My Clusters')
 
-      // Find dashboard link by href since sidebar uses NavLink with icons + text
       const dashboardLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/"]').first()
       await expect(dashboardLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
       await dashboardLink.click()
 
-      // Should be on dashboard
-      await expect(page).toHaveURL(/\/$/, { timeout: SIDEBAR_TIMEOUT_MS })
+      await expectDashboardNavigation(page, '/', 'Dashboard')
     })
 
     test('clusters link navigates to clusters page', async ({ page }) => {
-      const SIDEBAR_TIMEOUT_MS = 10_000
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
-      // Find clusters link by href — fall back to sidebar-scoped locator
       const clustersLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/clusters"]').first()
         .or(page.getByTestId('sidebar').locator('a[href="/clusters"]').first())
       await expect(clustersLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
       await clustersLink.click()
 
-      // Should be on clusters page
-      await expect(page).toHaveURL(/\/clusters/, { timeout: SIDEBAR_TIMEOUT_MS })
+      await expectDashboardNavigation(page, '/clusters', 'My Clusters')
     })
 
-    test('events link navigates to events page', async ({ page }) => {
-      const SIDEBAR_TIMEOUT_MS = 10_000
+    test('deploy link navigates to deploy page', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
-      // Events is a discoverable dashboard (not in default sidebar).
-      // Test sidebar navigation with a default item (/deploy) instead.
       const deployLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/deploy"]').first()
         .or(page.getByTestId('sidebar').locator('a[href="/deploy"]').first())
       await expect(deployLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
       await deployLink.click()
 
-      // Should be on deploy page
-      await expect(page).toHaveURL(/\/deploy/, { timeout: SIDEBAR_TIMEOUT_MS })
+      await expectDashboardNavigation(page, '/deploy', 'Deploy')
     })
   })
 

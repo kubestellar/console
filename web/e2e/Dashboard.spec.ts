@@ -1,4 +1,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test'
+import { CARD_TITLES } from '../src/components/cards/cardMetadata'
+import { getDefaultCardsForDashboard } from '../src/config/dashboards'
+import { formatCardTitle } from '../src/lib/formatCardTitle'
 import { mockApiFallback } from './helpers/setup'
 import { setupStrictDemoMode, API_RESPONSES } from './helpers/api-mocks'
 
@@ -12,15 +15,36 @@ import { setupStrictDemoMode, API_RESPONSES } from './helpers/api-mocks'
  * exercises the real backend (or shared fixtures) without page.route().
  */
 const ROOT_VISIBLE_TIMEOUT_MS = 15_000
+const STANDARD_ASSERT_TIMEOUT_MS = 10_000
+const SIDEBAR_ASSERT_TIMEOUT_MS = 10_000
+const HEADER_ASSERT_TIMEOUT_MS = 10_000
 const ERROR_FALLBACK_TIMEOUT_MS = 15_000
 const CARD_DATA_TIMEOUT_MS = 15_000
 const ACCESSIBILITY_ASSERT_TIMEOUT_MS = 10_000
+const HOVER_EFFECT_TIMEOUT_MS = 5_000
+const ADD_CARD_MODAL_TIMEOUT_MS = 10_000
+const INITIAL_PAGE_VISIBLE_TIMEOUT_MS = 15_000
+const LOADING_API_DELAY_MS = 2_000
+const LOADING_SKELETON_TIMEOUT_MS = 10_000
+const DASHBOARD_RENDER_TIMEOUT_MS = 15_000
+const REFRESH_SIGNAL_TIMEOUT_MS = 10_000
 const MOBILE_VIEWPORT_WIDTH_PX = 375
 const MOBILE_VIEWPORT_HEIGHT_PX = 667
 const TABLET_VIEWPORT_WIDTH_PX = 768
 const TABLET_VIEWPORT_HEIGHT_PX = 1024
 const KEYBOARD_TAB_COUNT = 5
 const REFRESH_BUTTON_TITLE = 'Refresh cluster data'
+const ADD_CARD_DIALOG_TITLE = 'Console Studio'
+const ADD_CARD_BROWSE_TAB_LABEL = /Add Cards/i
+const ADD_CARD_SEARCH_PLACEHOLDER = /Search cards/i
+const GRID_CARD_SELECTOR = '[data-card-id]'
+const GRID_VISIBLE_TIMEOUT_MS = 10_000
+const DEFAULT_MAIN_DASHBOARD_CARDS = getDefaultCardsForDashboard('main').map((card) => ({
+  id: card.id,
+  cardType: card.card_type,
+  title: CARD_TITLES[card.card_type] ?? formatCardTitle(card.card_type),
+}))
+const DEFAULT_MAIN_DASHBOARD_CARD_COUNT = DEFAULT_MAIN_DASHBOARD_CARDS.length
 
 type MockCluster = {
   name: string
@@ -194,85 +218,37 @@ test.describe('Dashboard Page', () => {
   })
 
   test.describe('Dashboard Cards', () => {
-    test('displays dashboard cards grid', async ({ page }) => {
-      // Wait for cards grid to be visible
-      await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: 10000 })
-    })
-
-    test('cards have proper structure', async ({ page }) => {
-      // #9074 — This test previously asserted `cardCount >= 0`, which is
-      // mathematically impossible to fail (Playwright `.count()` always
-      // returns a non-negative integer). A regression that removed every
-      // card from the dashboard would have gone undetected. The assertions
-      // below verify real structural properties of the rendered cards.
-
-      // Min number of default cards we expect on a fresh dashboard. The
-      // default dashboard ships with several built-in cards; if this drops
-      // to zero the dashboard is broken.
-      const MIN_DEFAULT_CARDS = 1
-
-      // Max time (ms) to wait for the cards grid + first card to appear.
-      const GRID_VISIBLE_TIMEOUT_MS = 10_000
-
-      // Max number of cards to spot-check structural attributes on. We
-      // bound this so the test stays fast even on dashboards with many
-      // cards while still catching regressions on the first few.
-      const MAX_CARDS_TO_CHECK = 5
-
-      // Wait for cards grid to be visible.
+    test('displays dashboard cards grid with the default cards rendered', async ({ page }) => {
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      await expect(cardsGrid).toBeVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS })
-
-      // The grid itself must be a role=grid with an a11y label so screen
-      // readers can announce it. This is part of the public contract of
-      // the dashboard layout (see Dashboard.tsx).
-      await expect(cardsGrid).toHaveAttribute('role', 'grid')
-      await expect(cardsGrid).toHaveAttribute('aria-label', /.+/)
-
-      // Every rendered card carries a `data-card-id` attribute applied by
-      // CardWrapper. Counting those — rather than direct-child <div>s —
-      // excludes non-card grid children like the DiscoverCardsPlaceholder
-      // and any drag overlays. That makes this a real assertion about
-      // *cards*, not arbitrary grid children.
       const cards = cardsGrid.locator('[data-card-id]')
 
-      // Wait for at least one card to actually render before counting,
-      // otherwise the count race with React's first paint could falsely
-      // report zero. Playwright's `.first()` + toBeVisible serves as the
-      // synchronization barrier.
+      await expect(cardsGrid).toBeVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS })
       await expect(cards.first()).toBeVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS })
+      await expect(cards).toHaveCount(DEFAULT_MAIN_DASHBOARD_CARD_COUNT)
 
-      const cardCount = await cards.count()
-      expect(cardCount).toBeGreaterThanOrEqual(MIN_DEFAULT_CARDS)
+      for (const expectedCard of DEFAULT_MAIN_DASHBOARD_CARDS) {
+        await expect(cardsGrid.locator(`[data-card-id="${expectedCard.id}"]`)).toBeVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS })
+      }
+    })
 
-      // Spot-check each card (up to MAX_CARDS_TO_CHECK) for the structural
-      // attributes that downstream features depend on:
-      //   - data-card-type: drives card-type-specific behaviors and
-      //     analytics (cardType is used as the GA4 event label).
-      //   - data-card-id: stable identity for drag/drop, persistence, and
-      //     selector targeting in other tests.
-      //   - aria-label: announced to screen readers as the card title.
-      //   - <h3>: visible heading per the design system.
-      const cardsToCheck = Math.min(cardCount, MAX_CARDS_TO_CHECK)
-      for (let i = 0; i < cardsToCheck; i++) {
-        const card = cards.nth(i)
+    test('cards have proper structure and match the configured card metadata', async ({ page }) => {
+      const cardsGrid = page.getByTestId('dashboard-cards-grid')
+      const cards = cardsGrid.locator('[data-card-id]')
 
-        // Required attributes.
-        await expect(card).toHaveAttribute('data-card-type', /.+/)
-        await expect(card).toHaveAttribute('data-card-id', /.+/)
-        await expect(card).toHaveAttribute('aria-label', /.+/)
+      await expect(cardsGrid).toBeVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS })
+      await expect(cardsGrid).toHaveAttribute('role', 'grid')
+      await expect(cardsGrid).toHaveAttribute('aria-label', /.+/)
+      await expect(cards).toHaveCount(DEFAULT_MAIN_DASHBOARD_CARD_COUNT)
 
-        // Each card must render an <h3> heading (the title shown in the
-        // card header). If a card variant ever stops rendering the heading,
-        // this catches it. On mobile viewports the heading may be rendered
-        // but visually hidden due to the `truncate` class + narrow card
-        // width, so we use `toBeAttached` (DOM presence) instead of
-        // `toBeVisible` to avoid false failures on mobile-chrome /
-        // mobile-safari projects (#10433).
-        const HEADING_TIMEOUT_MS = 10_000
-        const heading = card.locator('h3').first()
-        await expect(heading).toBeAttached({ timeout: HEADING_TIMEOUT_MS })
-        await expect(heading).not.toHaveText('')
+      for (const expectedCard of DEFAULT_MAIN_DASHBOARD_CARDS) {
+        const card = cardsGrid.locator(`[data-card-id="${expectedCard.id}"]`)
+        const headerTitle = card.locator('[data-tour="card-header"] h2').first()
+
+        await expect(card).toBeVisible({ timeout: GRID_VISIBLE_TIMEOUT_MS })
+        await expect(card).toHaveAttribute('data-card-id', expectedCard.id)
+        await expect(card).toHaveAttribute('data-card-type', expectedCard.cardType)
+        await expect(card).toHaveAttribute('aria-label', expectedCard.title)
+        await expect(headerTitle).toContainText(expectedCard.title, { timeout: GRID_VISIBLE_TIMEOUT_MS })
       }
     })
 
@@ -373,7 +349,7 @@ test.describe('Dashboard Page', () => {
 
       await page.goto('/')
       await page.waitForLoadState('domcontentloaded')
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: INITIAL_PAGE_VISIBLE_TIMEOUT_MS })
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
       const renderedCards = cardsGrid.locator(GRID_CARD_SELECTOR)
@@ -381,7 +357,7 @@ test.describe('Dashboard Page', () => {
 
       const renderSignal = await Promise.any([
         skeletonElement.waitFor({ state: 'visible', timeout: LOADING_SKELETON_TIMEOUT_MS }).then(() => 'skeleton' as const),
-        renderedCards.first().waitFor({ state: 'visible', timeout: PAGE_VISIBLE_TIMEOUT_MS }).then(() => 'cards' as const),
+        renderedCards.first().waitFor({ state: 'visible', timeout: INITIAL_PAGE_VISIBLE_TIMEOUT_MS }).then(() => 'cards' as const),
       ])
 
       expect(renderSignal).toMatch(/skeleton|cards/)
@@ -389,7 +365,7 @@ test.describe('Dashboard Page', () => {
         await expect(skeletonElement).toBeVisible({ timeout: LOADING_SKELETON_TIMEOUT_MS })
       }
 
-      await expect(renderedCards.first()).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
+      await expect(renderedCards.first()).toBeVisible({ timeout: INITIAL_PAGE_VISIBLE_TIMEOUT_MS })
     })
 
     test('handles API errors gracefully', async ({ page }) => {
