@@ -674,10 +674,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
         {tabContent[activeTab]()}
       </BaseModal.Content>
 
-      <BaseModal.Footer
-        showKeyboardHints
-        keyboardHints={[{ key: 'Esc', label: t('workloadImport.close') }]}
-      />
+      <BaseModal.Footer />
     </BaseModal>
   )
 }

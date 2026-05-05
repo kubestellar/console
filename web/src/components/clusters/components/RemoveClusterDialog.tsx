@@ -76,7 +76,7 @@ export function RemoveClusterDialog({
         <p className="text-xs text-muted-foreground">{t('cluster.removeClusterDesc')}</p>
       </BaseModal.Content>
 
-      <BaseModal.Footer showKeyboardHints>
+      <BaseModal.Footer>
         <div className="flex-1" />
         <div className="flex gap-2">
           <button
