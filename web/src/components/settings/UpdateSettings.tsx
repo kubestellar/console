@@ -714,7 +714,7 @@ export function UpdateSettings() {
             <button
               data-testid="update-cancelled-dismiss"
               onClick={dismissProgress}
-              aria-label={t('common.dismiss')}
+              aria-label={t('actions.dismiss')}
               className="text-yellow-400/60 hover:text-yellow-400 shrink-0 ml-2"
             >
               <X className="w-4 h-4" />
@@ -743,7 +743,7 @@ export function UpdateSettings() {
                 </button>
               </div>
             </div>
-            <button data-testid="update-done-dismiss" onClick={dismissProgress} disabled={isUpdating} aria-label={t('common.dismiss')} className="text-green-400/60 hover:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button data-testid="update-done-dismiss" onClick={dismissProgress} disabled={isUpdating} aria-label={t('actions.dismiss')} className="text-green-400/60 hover:text-green-400 disabled:opacity-50 disabled:cursor-not-allowed">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -761,7 +761,7 @@ export function UpdateSettings() {
                 )}
               </div>
             </div>
-            <button data-testid="update-failed-dismiss" onClick={dismissProgress} disabled={isUpdating} aria-label={t('common.dismiss')} className="text-red-400/60 hover:text-red-400 shrink-0 ml-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button data-testid="update-failed-dismiss" onClick={dismissProgress} disabled={isUpdating} aria-label={t('actions.dismiss')} className="text-red-400/60 hover:text-red-400 shrink-0 ml-2 disabled:opacity-50 disabled:cursor-not-allowed">
               <X className="w-4 h-4" />
             </button>
           </div>
