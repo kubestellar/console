@@ -82,10 +82,4 @@ describe('KyvernoPolicies', () => {
     const { container } = render(<KyvernoPolicies config={{}} />)
     expect(container).toBeTruthy()
   })
-
-  // TODO: Test policy list rendering with mock Kyverno data
-  // TODO: Test violation count and severity indicators
-  // TODO: Test per-cluster Kyverno CRD detection fallback
-  // TODO: Test demo data fallback when Kyverno is not installed
-  // TODO: Test loading skeleton and empty state
 })

@@ -59,8 +59,7 @@ describe('collectDistinctTaints', () => {
   })
 
   it('tolerates null/undefined inputs safely', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(collectDistinctTaints(undefined as any)).toEqual([])
+    expect(collectDistinctTaints(undefined as unknown)).toEqual([])
   })
 })
 

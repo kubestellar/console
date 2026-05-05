@@ -69,9 +69,9 @@ vi.mock('../../../../hooks/useIntoto', async (importOriginal) => {
 })
 
 import { IntotoSupplyChain } from '../IntotoSupplyChain'
-import { useIntoto, computeIntotoStats } from '../../../../hooks/useIntoto'
+import { useIntoto, computeIntotoStats, type IntotoLayout } from '../../../../hooks/useIntoto'
 
-const mockLayouts = [
+const mockLayouts: IntotoLayout[] = [
   {
     name: 'web-app-layout',
     cluster: 'cluster-1',
@@ -149,7 +149,7 @@ describe('IntotoSupplyChain', () => {
           cluster: 'prod-cluster',
           installed: true,
           loading: false,
-          layouts: [mockLayouts[0] as any],
+          layouts: [mockLayouts[0] as IntotoLayout],
           totalLayouts: 1,
           totalSteps: 2,
           verifiedSteps: 1,
@@ -281,7 +281,7 @@ describe('IntotoSupplyChain', () => {
 
   describe('computeIntotoStats', () => {
     it('aggregates counts correctly from multiple layouts', () => {
-      const stats = computeIntotoStats(mockLayouts as any)
+      const stats = computeIntotoStats(mockLayouts)
       expect(stats.totalLayouts).toBe(2)
       expect(stats.totalSteps).toBe(3)
       expect(stats.verifiedSteps).toBe(2)
@@ -300,7 +300,7 @@ describe('IntotoSupplyChain', () => {
         failedSteps: 0,
       }
       
-      const stats = computeIntotoStats([multiLinkLayout] as any)
+      const stats = computeIntotoStats([multiLinkLayout] as IntotoLayout[])
       expect(stats.totalSteps).toBe(1)
       expect(stats.verifiedSteps).toBe(1)
       expect(stats.missingSteps).toBe(0)
@@ -316,7 +316,7 @@ describe('IntotoSupplyChain', () => {
         // missing should be 1
       }
       
-      const stats = computeIntotoStats([missingLayout] as any)
+      const stats = computeIntotoStats([missingLayout] as IntotoLayout[])
       expect(stats.missingSteps).toBe(1)
     })
   })

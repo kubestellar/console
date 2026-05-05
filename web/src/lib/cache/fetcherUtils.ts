@@ -32,7 +32,7 @@ const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
  *   backend via the agent selector (kc_agent_backend_preference), OR
  * - The backend is running in-cluster (Helm deployment) — no local kc-agent
  *   exists in-cluster; the Go backend has ServiceAccount access instead.
- * See issues #10510, #10XXX.
+ * See issues #10510, #10511.
  */
 export function isClusterModeBackend(): boolean {
   try {

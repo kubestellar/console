@@ -6,6 +6,7 @@ import { ClusterAssignmentPanel } from '../ClusterAssignmentPanel'
 import { LaunchSequence } from '../LaunchSequence'
 import { RequestApprovalModal } from '../RequestApprovalModal'
 import type { PayloadProject, MissionControlState } from '../types'
+import type { ClusterInfo } from '../../../hooks/mcp/types'
 
 // Mock hooks
 vi.mock('../../../hooks/mcp/clusters', () => ({
@@ -43,9 +44,9 @@ vi.mock('../../ui/Toast', () => ({
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => <div {...props}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }))
 
 // Mock useTranslation
@@ -57,7 +58,7 @@ vi.mock('react-i18next', () => ({
 
 // Mock ReactMarkdown
 vi.mock('react-markdown', () => ({
-  default: ({ children }: any) => <div>{children}</div>,
+  default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
 }))
 
 // Mock missionLoader
@@ -94,7 +95,7 @@ describe('AssignmentMatrix', () => {
     render(
       <AssignmentMatrix
         projects={[mockProject]}
-        clusters={[{ name: 'cluster-1' } as any]}
+        clusters={[{ name: 'cluster-1' } as ClusterInfo]}
         assignments={[]}
         onToggle={vi.fn()}
       />
@@ -109,7 +110,7 @@ describe('AssignmentMatrix', () => {
     render(
       <AssignmentMatrix
         projects={[mockProject]}
-        clusters={[{ name: 'cluster-1' } as any]}
+        clusters={[{ name: 'cluster-1' } as ClusterInfo]}
         assignments={[]}
         onToggle={onToggle}
       />
@@ -169,14 +170,14 @@ describe('ClusterAssignmentPanel', () => {
 describe('LaunchSequence', () => {
   it('initializes progress and starts launch', async () => {
     const onUpdateProgress = vi.fn()
-    const stateWithAssignments = {
+    const stateWithAssignments: MissionControlState = {
       ...mockState,
       assignments: [{ clusterName: 'cluster-1', projectNames: ['falco'], readiness: {}, warnings: [] }]
     }
     
     render(
       <LaunchSequence
-        state={stateWithAssignments as any}
+        state={stateWithAssignments}
         onUpdateProgress={onUpdateProgress}
         onComplete={vi.fn()}
       />
@@ -216,7 +217,7 @@ describe('RequestApprovalModal', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ html_url: 'https://github.com/org/repo/issues/1' }),
-    } as any)
+    } as unknown as Response)
 
     render(
       <RequestApprovalModal

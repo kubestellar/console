@@ -95,7 +95,7 @@ describe('ThanosStatus Component', () => {
         })
 
         vi.mocked(useCachedThanosStatus).mockReturnValue({
-            data: null as any,
+            data: null as unknown as { targets: Array<{ name: string; health: string; lastScrape: string }>; storeGateways: Array<any>; queryHealth: string; lastCheckTime: string },
             isFailed: true,
             isLoading: false,
             isRefreshing: false,

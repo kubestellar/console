@@ -42,7 +42,7 @@ describe('BlueprintReport', () => {
           write: vi.fn(),
           close: vi.fn(),
         },
-      } as any)
+      } as unknown as Window & typeof globalThis)
 
       // Mock XMLSerializer which might not be in all environments
       vi.stubGlobal('XMLSerializer', class {
@@ -51,12 +51,12 @@ describe('BlueprintReport', () => {
     })
 
     it('calls window.open and writes HTML', () => {
-      const svgRef = { current: document.createElement('div') } as any
+      const svgRef: React.RefObject<HTMLDivElement> = { current: document.createElement('div') }
       
       exportFullReport(mockState, mockState, new Set(), null, svgRef)
       
       expect(window.open).toHaveBeenCalledWith('', '_blank')
-      const openedWindow = (window.open as any).mock.results[0].value
+      const openedWindow = (window.open as unknown as { mock: { results: Array<{ value: Window }> } }).mock.results[0].value
       expect(openedWindow.document.write).toHaveBeenCalledWith(expect.stringContaining('Report Mission'))
       expect(openedWindow.document.write).toHaveBeenCalledWith(expect.stringContaining('<h1>Flight Plan: Report Mission</h1>'))
     })

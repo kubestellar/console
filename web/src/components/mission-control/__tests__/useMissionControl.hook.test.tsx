@@ -6,6 +6,7 @@ import * as useClustersModule from '../../../hooks/mcp/clusters'
 import * as useHelmReleasesModule from '../../../hooks/mcp/helm'
 import * as toastModule from '../../ui/Toast'
 import * as kubaraModule from '../../../lib/kubara'
+import type { ClusterInfo } from '../../../hooks/mcp/types'
 
 // Mock dependencies
 vi.mock('../../../hooks/useMissions')
@@ -30,16 +31,16 @@ describe('useMissionControl hook', () => {
       sendMessage: mockSendMessage,
       dismissMission: mockDismissMission,
       missions: [],
-    } as any)
+    } as unknown as ReturnType<typeof useMissionsModule.useMissions>)
     vi.spyOn(useClustersModule, 'useClusters').mockReturnValue({
       clusters: [], deduplicatedClusters: [],
       isLoading: false,
       lastUpdated: new Date(),
-    } as any)
+    } as unknown as ReturnType<typeof useClustersModule.useClusters>)
     vi.spyOn(useHelmReleasesModule, 'useHelmReleases').mockReturnValue({
       releases: [],
       isLoading: false,
-    } as any)
+    } as unknown as ReturnType<typeof useHelmReleasesModule.useHelmReleases>)
 
     // Clear localStorage
     localStorage.clear()
@@ -149,7 +150,7 @@ describe('useMissionControl hook', () => {
     ]
 
     await act(async () => {
-      await result.current.autoAssignProjects(clusters as any)
+      await result.current.autoAssignProjects(clusters as unknown as ClusterInfo[])
     })
 
     expect(result.current.state.assignments).toHaveLength(2)

@@ -57,9 +57,4 @@ describe('DeploymentRiskScore', () => {
     const { container } = render(<DeploymentRiskScore />)
     expect(container).toBeTruthy()
   })
-
-  // TODO: Test risk score calculation (0-100 index) with mock Argo CD / Kyverno data
-  // TODO: Test namespace-level breakdown rendering
-  // TODO: Test loading and empty states
-  // TODO: Test demo mode fallback with isDemoData badge
 })
