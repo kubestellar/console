@@ -44,6 +44,7 @@ import { useUpgradeState } from '../../hooks/useUpgradeState'
 import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/storage'
 import { SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/constants/ui'
 import { safeGetJSON } from '../../lib/utils/localStorage'
+import { getSidebarCardCount } from './sidebarCardCount'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -487,7 +488,7 @@ export function SidebarShell({
               // shows the actual firing alert count; showing the dashboard card count
               // here (e.g. "5") creates a conflicting signal (#11404).
               const count = dashId && item.href !== '/alerts'
-                ? DASHBOARD_CONFIGS[dashId]?.cards?.length : null
+                ? getSidebarCardCount(DASHBOARD_CONFIGS[dashId]) : null
               const isGC = isGroundControlItem(item.href)
               return (
                 <span className="flex-1 min-w-0 flex items-center gap-1">
