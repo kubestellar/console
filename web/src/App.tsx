@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation, useNavigationType, useSearchParams, UNSAFE_LocationContext } from 'react-router-dom'
 import type { Location } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
@@ -563,6 +563,27 @@ function useLivePathname(): string {
   )
 }
 
+function LiveLocationProvider({
+  location,
+  navigationType,
+  children,
+}: {
+  location: Location
+  navigationType: ReturnType<typeof useNavigationType>
+  children: React.ReactNode
+}) {
+  const contextValue = useMemo(
+    () => ({ location, navigationType }),
+    [location, navigationType],
+  )
+
+  return (
+    <UNSAFE_LocationContext.Provider value={contextValue}>
+      {children}
+    </UNSAFE_LocationContext.Provider>
+  )
+}
+
 function App() {
   const livePath = useLivePathname()
   // Merge the real router location (which carries search/hash/state and —
@@ -572,6 +593,7 @@ function App() {
   // re-fetch; Settings distinguishes direct load vs in-app nav via
   // `location.key !== 'default'`).
   const routerLocation = useLocation()
+  const navigationType = useNavigationType()
   const liveLocation = useMemo(
     () => ({ ...routerLocation, pathname: livePath }),
     [routerLocation, livePath],
@@ -579,6 +601,7 @@ function App() {
   return (
     <BrandingProvider>
     <ThemeProvider>
+    <LiveLocationProvider location={liveLocation} navigationType={navigationType}>
     <Routes location={liveLocation}>
       {/* ── Lightweight routes ─────────────────────────────────────────
           Mission landing pages load WITHOUT the heavy dashboard provider
@@ -613,6 +636,7 @@ function App() {
           Everything else gets the full provider stack. */}
       <Route path="*" element={<FullDashboardApp liveLocation={liveLocation} />} />
     </Routes>
+    </LiveLocationProvider>
     </ThemeProvider>
     </BrandingProvider>
   )
