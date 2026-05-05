@@ -178,6 +178,7 @@ class BackendHealthManager {
 
       if (response.ok) {
         this.failureCount = 0
+        this.switchToNormalPoll()
 
         // Parse response to check version and status
         try {
