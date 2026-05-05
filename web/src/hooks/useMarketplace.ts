@@ -190,7 +190,9 @@ function notifyInstalledChange() {
 }
 
 // Listen for cross-tab localStorage changes (#7542)
-if (typeof window !== 'undefined') {
+let _storageListenerRegistered = false
+if (typeof window !== 'undefined' && !_storageListenerRegistered) {
+  _storageListenerRegistered = true
   window.addEventListener('storage', (e) => {
     if (e.key === INSTALLED_KEY) notifyInstalledChange()
   })
