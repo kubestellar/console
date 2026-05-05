@@ -15,6 +15,7 @@ const {
   mockRegisterRefetch,
   mockRegisterCacheReset,
   mockClusterCacheRef,
+  mockLocalAgentHttpUrl,
 } = vi.hoisted(() => ({
   mockIsDemoMode: vi.fn(() => false),
   mockUseDemoMode: vi.fn(() => ({ isDemoMode: false })),
@@ -33,6 +34,9 @@ const {
       cpuCores?: number
       memoryGB?: number
     }>
+  },
+  mockLocalAgentHttpUrl: {
+    value: 'http://127.0.0.1:8585',
   },
 }))
 
@@ -83,10 +87,15 @@ vi.mock('../shared', () => ({
 
 vi.mock('../../../lib/constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
-  return { ...actual,
-  MCP_HOOK_TIMEOUT_MS: 5_000,
-  MCP_EXTENDED_TIMEOUT_MS: 10_000,
-} })
+  return {
+    ...actual,
+    get LOCAL_AGENT_HTTP_URL() {
+      return mockLocalAgentHttpUrl.value
+    },
+    MCP_HOOK_TIMEOUT_MS: 5_000,
+    MCP_EXTENDED_TIMEOUT_MS: 10_000,
+  }
+})
 
 vi.mock('../../../lib/constants', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
@@ -120,6 +129,7 @@ beforeEach(() => {
   mockIsAgentUnavailable.mockReturnValue(true)
   mockRegisterRefetch.mockReturnValue(vi.fn())
   mockClusterCacheRef.clusters = []
+  mockLocalAgentHttpUrl.value = 'http://127.0.0.1:8585'
   mockFetchSSE.mockResolvedValue([])
   // Reset GPU subscribers and force-clear cached nodes to prevent cross-test contamination.
   // Direct assignment bypasses updateGPUNodeCache's cache protection (which blocks clearing
@@ -251,6 +261,20 @@ describe('useNVIDIAOperators', () => {
     // SSE should NOT have been called because token is 'demo-token'
     // Instead it should have fallen through to REST
     expect(result.current.operators).toEqual(fakeOps)
+  })
+
+  it('skips agent requests when the local agent URL is suppressed', async () => {
+    localStorage.setItem('token', 'demo-token')
+    mockLocalAgentHttpUrl.value = ''
+    globalThis.fetch = vi.fn()
+
+    const { result } = renderHook(() => useNVIDIAOperators())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(mockFetchSSE).not.toHaveBeenCalled()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(result.current.operators).toEqual([])
+    expect(result.current.error).toBeNull()
   })
 })
 

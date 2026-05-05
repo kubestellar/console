@@ -617,13 +617,20 @@ export function useNVIDIAOperators(cluster?: string) {
       const params: Record<string, string> = {}
       if (cluster) params.cluster = cluster
 
+      const agentBaseUrl = isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL
+      if (!agentBaseUrl) {
+        setOperators([])
+        setError(null)
+        return
+      }
+
       // Try SSE streaming first
       const token = localStorage.getItem(STORAGE_KEY_TOKEN)
       if ((token && token !== 'demo-token') || isInClusterMode()) {
         try {
           const accumulated: NVIDIAOperatorStatus[] = []
           const result = await fetchSSE<NVIDIAOperatorStatus>({
-            url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/nvidia-operators/stream`,
+            url: `${agentBaseUrl}/nvidia-operators/stream`,
             params,
             itemsKey: 'operators',
             onClusterData: (_clusterName, items) => {
@@ -644,7 +651,7 @@ export function useNVIDIAOperators(cluster?: string) {
       // REST fallback
       const urlParams = new URLSearchParams()
       if (cluster) urlParams.append('cluster', cluster)
-      const resp = await agentFetch(`${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/nvidia-operators?${urlParams}`)
+      const resp = await agentFetch(`${agentBaseUrl}/nvidia-operators?${urlParams}`)
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       const data = await resp.json()
       if (data.operators) {
