@@ -1311,7 +1311,7 @@ Please:
   }, [yamlOutput])
 
   return (
-    <div className="flex flex-col h-full -m-6">
+    <div className="flex flex-col -m-6">
       {/* Pod Info Header */}
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
@@ -1385,8 +1385,8 @@ Please:
         </div>
       </div>
 
-      {/* Scrollable Tab Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      {/* Tab Content */}
+      <div className="p-6 space-y-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Pod Status from kubectl */}
