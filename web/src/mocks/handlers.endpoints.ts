@@ -331,6 +331,12 @@ export function createHandlers() {
     })
   }),
 
+  // NVIDIA operator requests fall back to same-origin relative URLs when the
+  // local kc-agent is suppressed. Pass them through so MSW doesn't warn during
+  // cluster flows before the hook gracefully handles the missing backend.
+  http.all('/nvidia-operators', () => passthrough()),
+  http.all('/nvidia-operators/stream', () => passthrough()),
+
   // Security issues
   http.get('/api/mcp/security-issues', async () => {
     await delay(150)
