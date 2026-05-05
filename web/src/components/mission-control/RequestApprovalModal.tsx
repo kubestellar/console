@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { GitPullRequestArrow, ExternalLink, Loader2 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
@@ -7,6 +7,7 @@ import { useToast } from '../ui/Toast'
 import type { MissionControlState } from './types'
 import { buildApprovalIssueBody } from './buildApprovalIssueBody'
 import { encodePlan } from './missionPlanCodec'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 
 const GITHUB_API = 'https://api.github.com'
 const REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/
@@ -31,8 +32,30 @@ export function RequestApprovalModal({
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [issueUrl, setIssueUrl] = useState<string | null>(null)
+  const [hasGitHubToken, setHasGitHubToken] = useState(false)
+  const tokenCheckedRef = useRef(false)
 
   const isValidRepo = REPO_PATTERN.test(repo.trim())
+
+  // Check whether GitHub token is configured via /api/github/token/status
+  useEffect(() => {
+    if (!isOpen || tokenCheckedRef.current) return
+    tokenCheckedRef.current = true
+
+    fetch('/api/github/token/status', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && data.hasToken) {
+          setHasGitHubToken(true)
+        }
+      })
+      .catch(() => {
+        // Silently ignore — backend may not be reachable
+      })
+  }, [isOpen, token])
 
   const handleSubmit = useCallback(async () => {
     const trimmedRepo = repo.trim()
@@ -175,7 +198,7 @@ export function RequestApprovalModal({
                 </ul>
               </div>
 
-              {!token && (
+              {!hasGitHubToken && (
                 <p className="text-xs text-amber-400">
                   You must be logged in with GitHub to create issues.
                 </p>
@@ -211,7 +234,7 @@ export function RequestApprovalModal({
                 variant="primary"
                 size="sm"
                 onClick={handleSubmit}
-                disabled={!isValidRepo || submitting || !token}
+                disabled={!isValidRepo || submitting || !hasGitHubToken}
                 icon={submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GitPullRequestArrow className="w-3.5 h-3.5" />}
               >
                 {submitting ? 'Creating…' : 'Create Issue'}
