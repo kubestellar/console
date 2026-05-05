@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { ChevronRight, ChevronDown, Server, Box, Layers, Database, Network, HardDrive, Search, AlertTriangle, XCircle } from 'lucide-react'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useNamespaceStats, useDeployments, useServices, useEvents } from '../../../hooks/useMCP'
+import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaces, useNamespaceStats, useDeployments, useServices, useEvents, useClusters, type ClusterInfo } from '../../../hooks/useMCP'
 import { useCachedPVCs } from '../../../hooks/useCachedData'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { StatusIndicator } from '../../charts/StatusIndicator'
@@ -28,7 +28,7 @@ export function ClusterDrillDown({ data }: Props) {
   const { deduplicatedClusters } = useClusters()
   const { drillToNamespace, drillToPod, drillToGPUNode, drillToEvents, drillToNode } = useDrillDownActions()
   const clusterInfo = useMemo(
-    () => deduplicatedClusters.find(cluster => cluster.name === clusterName || cluster.aliases?.includes(clusterName)),
+    () => deduplicatedClusters.find((cluster: ClusterInfo) => cluster.name === clusterName || cluster.aliases?.includes(clusterName)),
     [clusterName, deduplicatedClusters],
   )
   const effectiveClusterName = clusterInfo?.name || clusterName
@@ -104,7 +104,7 @@ export function ClusterDrillDown({ data }: Props) {
     const names = new Set<string>()
     if (clusterName) names.add(clusterName)
     if (effectiveClusterName) names.add(effectiveClusterName)
-    ;(clusterInfo?.aliases || []).forEach(alias => names.add(alias))
+    ;(clusterInfo?.aliases || []).forEach((alias: string) => names.add(alias))
     return names
   }, [clusterInfo?.aliases, clusterName, effectiveClusterName])
   const clusterPrefix = useMemo(() => effectiveClusterName.split('/')[0], [effectiveClusterName])
@@ -251,10 +251,6 @@ export function ClusterDrillDown({ data }: Props) {
     }
   }, [clusterDeploymentIssues, podIssues])
 
-  const namespaceStatsByName = useMemo(
-    () => Object.fromEntries((namespaceStats || []).map(stat => [stat.name, stat])),
-    [namespaceStats],
-  )
   const hasVisibleResourceData =
     filteredNodes.length > 0 ||
     filteredNamespaces.length > 0 ||
