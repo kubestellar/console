@@ -119,13 +119,14 @@ test.describe('Compute Deep Tests (/compute)', () => {
       await toggle.first().click()
 
       const clusterList = page.locator('#cluster-comparison-list')
-      const isVisible = await clusterList.isVisible().catch(() => false)
-      // If clusters exist in demo mode, the list should appear;
-      // if no clusters, the "No clusters available" message shows instead
       const noClusterMsg = page.getByText('No clusters available')
-      const noClusterVisible = await noClusterMsg.isVisible().catch(() => false)
 
-      expect(isVisible || noClusterVisible).toBe(true)
+      // Either cluster list or "no clusters" message should be visible
+      try {
+        await expect(clusterList).toBeVisible({ timeout: 5000 })
+      } catch {
+        await expect(noClusterMsg).toBeVisible({ timeout: 5000 })
+      }
     })
 
     test('cluster checkboxes are interactive', async ({ page }) => {
@@ -133,8 +134,9 @@ test.describe('Compute Deep Tests (/compute)', () => {
       await toggle.first().click()
 
       const clusterList = page.locator('#cluster-comparison-list')
-      const isListVisible = await clusterList.isVisible().catch(() => false)
-      if (!isListVisible) {
+      try {
+        await expect(clusterList).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
@@ -159,8 +161,9 @@ test.describe('Compute Deep Tests (/compute)', () => {
       await toggle.first().click()
 
       const clusterList = page.locator('#cluster-comparison-list')
-      const isListVisible = await clusterList.isVisible().catch(() => false)
-      if (!isListVisible) {
+      try {
+        await expect(clusterList).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
@@ -186,8 +189,9 @@ test.describe('Compute Deep Tests (/compute)', () => {
       await toggle.first().click()
 
       const clusterList = page.locator('#cluster-comparison-list')
-      const isListVisible = await clusterList.isVisible().catch(() => false)
-      if (!isListVisible) {
+      try {
+        await expect(clusterList).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
@@ -269,11 +273,23 @@ test.describe('Compute Deep Tests (/compute)', () => {
       // In demo mode, the error may not surface because demo data is used.
       // Check that the page at least loads without crashing.
       const header = page.getByTestId('dashboard-header')
-      const isHeaderVisible = await header.isVisible().catch(() => false)
+      let isHeaderVisible = false
+      try {
+        await expect(header).toBeVisible({ timeout: 5000 })
+        isHeaderVisible = true
+      } catch {
+        // Header not visible
+      }
 
       // If error text is shown, verify it matches expected message
       const errorText = page.getByText('Error loading compute data')
-      const isErrorVisible = await errorText.isVisible().catch(() => false)
+      let isErrorVisible = false
+      try {
+        await expect(errorText).toBeVisible({ timeout: 5000 })
+        isErrorVisible = true
+      } catch {
+        // Error not visible
+      }
 
       // Either the page loaded successfully or showed the error — both are valid
       expect(isHeaderVisible || isErrorVisible).toBe(true)

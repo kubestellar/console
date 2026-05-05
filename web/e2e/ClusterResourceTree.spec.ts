@@ -235,8 +235,9 @@ test.describe('ClusterResourceTree', () => {
       // Look for the cluster resource tree card
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
       // Card may or may not be visible on default dashboard — skip if not present
-      const isVisible = await treeCard.isVisible().catch(() => false)
-      if (!isVisible) {
+      try {
+        await expect(treeCard).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
@@ -252,8 +253,9 @@ test.describe('ClusterResourceTree', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
-      const isVisible = await treeCard.isVisible().catch(() => false)
-      if (!isVisible) {
+      try {
+        await expect(treeCard).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
@@ -264,8 +266,9 @@ test.describe('ClusterResourceTree', () => {
 
       // Click the cluster name to expand it
       const clusterLabel = treeCard.getByText(MOCK_CLUSTER).first()
-      const isClusterVisible = await clusterLabel.isVisible().catch(() => false)
-      if (!isClusterVisible) {
+      try {
+        await expect(clusterLabel).toBeVisible({ timeout: 5000 })
+      } catch {
         // Clusters root may need to be expanded first
         await clustersRoot.click()
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
@@ -294,8 +297,9 @@ test.describe('ClusterResourceTree', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
-      const isVisible = await treeCard.isVisible().catch(() => false)
-      if (!isVisible) {
+      try {
+        await expect(treeCard).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
@@ -306,8 +310,9 @@ test.describe('ClusterResourceTree', () => {
 
       // Ensure clusters root is expanded
       const clusterLabel = treeCard.getByText(MOCK_CLUSTER).first()
-      const isClusterVisible = await clusterLabel.isVisible().catch(() => false)
-      if (!isClusterVisible) {
+      try {
+        await expect(clusterLabel).toBeVisible({ timeout: 5000 })
+      } catch {
         await clustersRoot.click()
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
       }
@@ -344,8 +349,9 @@ test.describe('ClusterResourceTree', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
-      const isVisible = await treeCard.isVisible().catch(() => false)
-      if (!isVisible) {
+      try {
+        await expect(treeCard).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
@@ -355,8 +361,9 @@ test.describe('ClusterResourceTree', () => {
       await expect(clustersRoot).toBeVisible({ timeout: 5000 })
 
       const clusterLabel = treeCard.getByText(MOCK_CLUSTER).first()
-      const isClusterVisible = await clusterLabel.isVisible().catch(() => false)
-      if (!isClusterVisible) {
+      try {
+        await expect(clusterLabel).toBeVisible({ timeout: 5000 })
+      } catch {
         await clustersRoot.click()
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
       }
@@ -390,8 +397,9 @@ test.describe('ClusterResourceTree', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
-      const isVisible = await treeCard.isVisible().catch(() => false)
-      if (!isVisible) {
+      try {
+        await expect(treeCard).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
@@ -401,8 +409,9 @@ test.describe('ClusterResourceTree', () => {
       await expect(clustersRoot).toBeVisible({ timeout: 5000 })
 
       const clusterLabel = treeCard.getByText(MOCK_CLUSTER).first()
-      const isClusterVisible = await clusterLabel.isVisible().catch(() => false)
-      if (!isClusterVisible) {
+      try {
+        await expect(clusterLabel).toBeVisible({ timeout: 5000 })
+      } catch {
         await clustersRoot.click()
         await expect(clusterLabel).toBeVisible({ timeout: 5000 })
       }
@@ -427,19 +436,22 @@ test.describe('ClusterResourceTree', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
 
       const treeCard = page.locator('[data-card-type="cluster_resource_tree"]')
-      const isVisible = await treeCard.isVisible().catch(() => false)
-      if (!isVisible) {
+      try {
+        await expect(treeCard).toBeVisible({ timeout: 5000 })
+      } catch {
         test.skip()
         return
       }
 
       // Click the "Issues" lens filter button
       const issuesButton = treeCard.getByText('Issues').first()
-      const isIssuesVisible = await issuesButton.isVisible().catch(() => false)
-      if (isIssuesVisible) {
+      try {
+        await expect(issuesButton).toBeVisible({ timeout: 5000 })
         await issuesButton.click()
         // The issues lens should filter the view -- page should not crash
         await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 3000 })
+      } catch {
+        // Issues button not visible
       }
     })
   })

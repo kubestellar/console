@@ -94,8 +94,12 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     let visibleCount = 0
     for (const name of statNames) {
       const el = page.getByText(name, { exact: false }).first()
-      const isVisible = await el.isVisible().catch(() => false)
-      if (isVisible) visibleCount++
+      try {
+        await expect(el).toBeVisible({ timeout: 2000 })
+        visibleCount++
+      } catch {
+        // Element not visible
+      }
     }
 
     // Assert that at least one stat name is visible in the stats bar
@@ -119,11 +123,13 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
 
     for (const testId of statTestIds) {
       const block = page.getByTestId(testId)
-      const isVisible = await block.isVisible().catch(() => false)
-      if (isVisible) {
+      try {
+        await expect(block).toBeVisible({ timeout: 2000 })
         // Each visible stat block should contain a numeric or textual value
         const text = await block.textContent()
         expect((text || '').length).toBeGreaterThan(0)
+      } catch {
+        // Block not visible, skip
       }
     }
 
@@ -171,9 +177,10 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     await expect(title).toContainText(PAGE_TITLE)
 
     const subtitle = page.getByText(PAGE_SUBTITLE).first()
-    const subtitleVisible = await subtitle.isVisible().catch(() => false)
-    if (subtitleVisible) {
-      await expect(subtitle).toBeVisible()
+    try {
+      await expect(subtitle).toBeVisible({ timeout: 5000 })
+    } catch {
+      // Subtitle not visible, that's OK
     }
   })
 
@@ -207,9 +214,10 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
   test('repo filter shows All pill selected by default', async ({ page }) => {
     // The filter bar renders "All" as the default (no selection = all repos)
     const allPill = page.getByRole('button', { name: 'All' }).first()
-    const allVisible = await allPill.isVisible().catch(() => false)
-    if (allVisible) {
-      await expect(allPill).toBeVisible()
+    try {
+      await expect(allPill).toBeVisible({ timeout: 5000 })
+    } catch {
+      // All pill not visible
     }
     // Dashboard should render regardless
     await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -219,9 +227,9 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
 
   test('clicking a repo pill selects it and deselects All', async ({ page }) => {
     const allPill = page.getByRole('button', { name: 'All' }).first()
-    const allVisible = await allPill.isVisible().catch(() => false)
-
-    if (!allVisible) {
+    try {
+      await expect(allPill).toBeVisible({ timeout: 5000 })
+    } catch {
       // Filter bar may not be visible in this config — skip gracefully
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
         timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
@@ -232,7 +240,13 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
     // Find the first repo pill (not "All", not "Add repo", not navigation/system buttons)
     // Scope to the filter bar area to avoid clicking unrelated buttons
     const filterBar = page.locator('[data-testid="repo-filter-bar"], [role="toolbar"]').first()
-    const filterBarVisible = await filterBar.isVisible().catch(() => false)
+    let filterBarVisible = false
+    try {
+      await expect(filterBar).toBeVisible({ timeout: 5000 })
+      filterBarVisible = true
+    } catch {
+      // Filter bar not visible
+    }
     const pillContainer = filterBarVisible ? filterBar : page.locator('nav').first()
     const repoPills = pillContainer.locator('button').filter({ hasNotText: /^All$|^Add repo$|^Refresh$/ })
     const pillCount = await repoPills.count()
@@ -259,9 +273,10 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
   test('Add Repo button opens input and accepts owner/repo', async ({ page }) => {
     // Look for the "+" or "Add repo" trigger in the filter bar
     const addButton = page.getByRole('button', { name: /Add repo/i }).first()
-    const addVisible = await addButton.isVisible().catch(() => false)
 
-    if (!addVisible) {
+    try {
+      await expect(addButton).toBeVisible({ timeout: 5000 })
+    } catch {
       // Filter bar may not render "Add repo" in demo gated mode —
       // verify the page still renders the CI/CD dashboard correctly
       await expect(page.getByTestId('dashboard-header')).toBeVisible({
@@ -277,25 +292,29 @@ test.describe('CI/CD Deep Tests (/ci-cd)', () => {
 
     // The input should appear with the placeholder "owner/repo"
     const input = page.getByPlaceholder(ADD_REPO_PLACEHOLDER).first()
-    const inputVisible = await input.isVisible().catch(() => false)
+    try {
+      await expect(input).toBeVisible({ timeout: 5000 })
+    } catch {
+      // Input didn't appear, skip test
+      return
+    }
 
-    if (inputVisible) {
-      await expect(input).toBeVisible()
-      // Type a valid repo name and submit
-      await input.fill('testorg/testrepo')
-      await input.press('Enter')
+    // Type a valid repo name and submit
+    await input.fill('testorg/testrepo')
+    await input.press('Enter')
 
-      // After adding, the repo should appear as a pill (or the page should stay stable)
-      await expect(page.getByTestId('dashboard-header')).toBeVisible({
-        timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
-      })
+    // After adding, the repo should appear as a pill (or the page should stay stable)
+    await expect(page.getByTestId('dashboard-header')).toBeVisible({
+      timeout: ELEMENT_VISIBLE_TIMEOUT_MS,
+    })
 
-      // The newly added repo pill should be findable in the page
-      const newPill = page.getByRole('button', { name: /testrepo/i }).first()
-      const newPillVisible = await newPill.isVisible().catch(() => false)
-      if (newPillVisible) {
-        await expect(newPill).toBeVisible()
-      }
+    // The newly added repo pill should be findable in the page
+    const newPill = page.getByRole('button', { name: /testrepo/i }).first()
+    try {
+      await expect(newPill).toBeVisible({ timeout: 5000 })
+    } catch {
+      // New pill not visible
+    }
     }
   })
 })

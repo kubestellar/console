@@ -43,8 +43,9 @@ test.describe('Keyboard Shortcuts', () => {
     const addCardBtn = page.getByTestId('sidebar-add-card')
       .or(page.getByRole('button', { name: /add card/i }))
 
-    const hasAddCard = await addCardBtn.first().isVisible().catch(() => false)
-    if (!hasAddCard) {
+    try {
+      await expect(addCardBtn.first()).toBeVisible({ timeout: 5000 })
+    } catch {
       test.skip()
       return
     }
@@ -103,8 +104,11 @@ test.describe('Card Operations', () => {
     let foundTextContent = false
     for (let i = 0; i < cardCount; i++) {
       const card = cards.nth(i)
-      const isCardVisible = await card.isVisible().catch(() => false)
-      if (!isCardVisible) continue
+      try {
+        await expect(card).toBeVisible({ timeout: 2000 })
+      } catch {
+        continue
+      }
 
       const textContent = await card.textContent()
       if (textContent && textContent.trim().length > 0) {
@@ -151,10 +155,12 @@ test.describe('Card Operations', () => {
     const search = dialog.getByRole('searchbox')
       .or(dialog.getByPlaceholder(/search/i))
 
-    const hasCategories = await categories.first().isVisible().catch(() => false)
-    const hasSearch = await search.first().isVisible().catch(() => false)
-
-    expect(hasCategories || hasSearch).toBeTruthy()
+    // Either categories or search should be visible
+    try {
+      await expect(categories.first()).toBeVisible({ timeout: 5000 })
+    } catch {
+      await expect(search.first()).toBeVisible({ timeout: 5000 })
+    }
 
     await page.keyboard.press('Escape')
   })
@@ -163,8 +169,9 @@ test.describe('Card Operations', () => {
     const addCardBtn = page.getByTestId('sidebar-add-card')
       .or(page.getByRole('button', { name: /add card/i }))
 
-    const hasAddCard = await addCardBtn.first().isVisible().catch(() => false)
-    if (!hasAddCard) {
+    try {
+      await expect(addCardBtn.first()).toBeVisible({ timeout: 5000 })
+    } catch {
       test.skip()
       return
     }
@@ -180,8 +187,9 @@ test.describe('Card Operations', () => {
     await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: PAGE_LOAD_TIMEOUT_MS })
 
     const firstCard = page.getByTestId('dashboard-cards-grid').locator('> div').first()
-    const isVisible = await firstCard.isVisible().catch(() => false)
-    if (!isVisible) {
+    try {
+      await expect(firstCard).toBeVisible({ timeout: 5000 })
+    } catch {
       test.skip()
       return
     }
@@ -194,8 +202,9 @@ test.describe('Card Operations', () => {
       .or(firstCard.locator('[data-testid*="card-menu"]'))
       .or(firstCard.locator('[aria-label*="menu"]'))
 
-    const hasMenu = await menuTrigger.first().isVisible().catch(() => false)
-    if (!hasMenu) {
+    try {
+      await expect(menuTrigger.first()).toBeVisible({ timeout: 5000 })
+    } catch {
       test.skip()
       return
     }
@@ -213,8 +222,9 @@ test.describe('Card Operations', () => {
     await expect(page.getByTestId('dashboard-cards-grid')).toBeVisible({ timeout: PAGE_LOAD_TIMEOUT_MS })
 
     const firstCard = page.getByTestId('dashboard-cards-grid').locator('> div').first()
-    const isVisible = await firstCard.isVisible().catch(() => false)
-    if (!isVisible) {
+    try {
+      await expect(firstCard).toBeVisible({ timeout: 5000 })
+    } catch {
       test.skip()
       return
     }
@@ -226,8 +236,9 @@ test.describe('Card Operations', () => {
       .or(firstCard.locator('[data-testid*="card-menu"]'))
       .or(firstCard.locator('[aria-label*="menu"]'))
 
-    const hasMenu = await menuTrigger.first().isVisible().catch(() => false)
-    if (!hasMenu) {
+    try {
+      await expect(menuTrigger.first()).toBeVisible({ timeout: 5000 })
+    } catch {
       test.skip()
       return
     }

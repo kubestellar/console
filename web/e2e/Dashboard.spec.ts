@@ -24,7 +24,6 @@ const ACCESSIBILITY_ASSERT_TIMEOUT_MS = 10_000
 const HOVER_EFFECT_TIMEOUT_MS = 5_000
 const ADD_CARD_MODAL_TIMEOUT_MS = 10_000
 const INITIAL_PAGE_VISIBLE_TIMEOUT_MS = 15_000
-const LOADING_API_DELAY_MS = 2_000
 const LOADING_SKELETON_TIMEOUT_MS = 10_000
 const DASHBOARD_RENDER_TIMEOUT_MS = 15_000
 const REFRESH_SIGNAL_TIMEOUT_MS = 10_000
@@ -333,9 +332,13 @@ test.describe('Dashboard Page', () => {
         })
       )
 
-      // Delay the API response to see loading state
+      // Use manual route control to guarantee skeleton visibility
+      let resolveMcpApi: (() => void) | undefined
+      const mcpApiReady = new Promise<void>((resolve) => {
+        resolveMcpApi = resolve
+      })
       await page.route('**/api/mcp/**', async (route) => {
-        await new Promise((resolve) => setTimeout(resolve, LOADING_API_DELAY_MS))
+        await mcpApiReady
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -363,16 +366,13 @@ test.describe('Dashboard Page', () => {
       const renderedCards = cardsGrid.locator(GRID_CARD_SELECTOR)
       const skeletonElement = page.locator('[data-card-skeleton="true"], .animate-pulse').first()
 
-      const renderSignal = await Promise.any([
-        skeletonElement.waitFor({ state: 'visible', timeout: LOADING_SKELETON_TIMEOUT_MS }).then(() => 'skeleton' as const),
-        renderedCards.first().waitFor({ state: 'visible', timeout: INITIAL_PAGE_VISIBLE_TIMEOUT_MS }).then(() => 'cards' as const),
-      ])
+      // Sequential validation: skeleton appears, then API releases, then cards appear
+      await expect(skeletonElement).toBeVisible({ timeout: LOADING_SKELETON_TIMEOUT_MS })
 
-      expect(renderSignal).toMatch(/skeleton|cards/)
-      if (renderSignal === 'skeleton') {
-        await expect(skeletonElement).toBeVisible({ timeout: LOADING_SKELETON_TIMEOUT_MS })
-      }
+      // Release the API response now that skeleton is confirmed visible
+      resolveMcpApi!()
 
+      // Verify cards render after API response
       await expect(renderedCards.first()).toBeVisible({ timeout: INITIAL_PAGE_VISIBLE_TIMEOUT_MS })
     })
 
@@ -440,18 +440,13 @@ test.describe('Dashboard Page', () => {
       await expect(cards.first()).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
 
       const demoBadge = cardsGrid.getByText('Demo').first()
-      const hasDemoBadge = await demoBadge.isVisible().catch(() => false)
 
-      if (hasDemoBadge) {
+      // Demo badge should appear after API fallback (optional check with soft assertion)
+      try {
         await expect(demoBadge).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
-      } else {
-        const demoBadgeAppeared = await demoBadge
-          .waitFor({ state: 'visible', timeout: ERROR_FALLBACK_TIMEOUT_MS })
-          .then(() => true)
-          .catch(() => false)
-
+      } catch {
         expect.soft(
-          demoBadgeAppeared,
+          false,
           'Expected at least one Demo badge in the dashboard cards after API fallback',
         ).toBe(true)
 
