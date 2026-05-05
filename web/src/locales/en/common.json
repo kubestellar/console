@@ -2176,6 +2176,51 @@
       "resourceUnreachable": "Resource is unreachable. AI actions are limited.",
       "connectAgentAI": "Connect the local agent to enable AI features. Configure →"
     },
+    "diagnosis": {
+      "title": "Crash diagnosis",
+      "subtitle": "Likely root cause based on current pod state, events, and recent logs.",
+      "lastExit": "Last exit",
+      "unknownExit": "Unknown",
+      "exitCode": "exit {{code}}",
+      "evidenceTitle": "Evidence",
+      "nextStepsTitle": "Recommended next steps",
+      "reviewSpec": "Review spec",
+      "summaries": {
+        "crashLoop": "Container exits immediately and Kubernetes keeps restarting it.",
+        "oomKilled": "Container was killed after exceeding its memory limit.",
+        "imagePull": "Pod cannot start because the container image could not be pulled.",
+        "configError": "Pod is blocked by an invalid or missing configuration reference.",
+        "probeFailure": "Health probes are failing and forcing the container to restart.",
+        "unknown": "Pod is failing, but the root cause still needs a closer look."
+      },
+      "evidence": {
+        "currentStateReason": "Current waiting reason: {{reason}}",
+        "lastExitReasonWithCode": "Last terminated state: {{reason}} (exit {{code}})",
+        "lastExitReason": "Last terminated state: {{reason}}",
+        "lastExitMessage": "Termination message: {{message}}",
+        "warningEvent": "Recent warning event: {{event}}",
+        "logSnippet": "Recent log output: {{snippet}}",
+        "reportedReason": "Reported reason: {{reason}}",
+        "reportedStatus": "Reported status: {{status}}"
+      },
+      "steps": {
+        "checkLogs": "Check container logs for the first error before each restart.",
+        "verifyCommand": "Verify the command, args, and entrypoint do not exit immediately.",
+        "ensureLongRunningProcess": "Ensure the container keeps a long-running foreground process alive.",
+        "checkMemoryUsage": "Check memory usage and look for spikes before the container exits.",
+        "raiseMemoryLimit": "Increase memory requests or limits if the workload is legitimately memory hungry.",
+        "inspectRecentChanges": "Inspect recent image or configuration changes that may have increased memory use.",
+        "verifyImageReference": "Verify the image name, tag, and pull policy are correct.",
+        "checkRegistryAccess": "Check registry credentials and network access from the cluster.",
+        "confirmImageExists": "Confirm the referenced image exists and can be pulled manually.",
+        "inspectPodEvents": "Inspect warning events for the exact missing dependency or rejected field.",
+        "verifyReferencedConfig": "Verify referenced Secrets, ConfigMaps, and mounted files exist in this namespace.",
+        "reviewPodSpec": "Review the pod spec for invalid values or missing references.",
+        "checkProbeConfiguration": "Check liveness or startup probe settings, path, and port.",
+        "verifyAppStartup": "Verify the application is ready before the probe timeout and initial delay expires.",
+        "reviewRecentDeployments": "Review recent rollout changes that may have broken startup behavior."
+      }
+    },
     "drift": {
       "driftedResources": "Drifted Resources",
       "gitPath": "Git Path",

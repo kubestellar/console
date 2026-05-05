@@ -1,6 +1,7 @@
 export type { PodDrillDownProps, TabType, RelatedResource, CachedData } from './types'
 export { UNHEALTHY_STATUSES } from './types'
-export { getIssueSeverity } from './helpers'
+export { getIssueSeverity, getPodDiagnosis } from './helpers'
+export type { PodDiagnosis, PodDiagnosisKind, PodDiagnosisInput } from './helpers'
 export type { PodCacheEntry } from './podCache'
 export { RAPID_REOPEN_THRESHOLD_MS, getPodCache, setPodCache, cleanupPodCache } from './podCache'
 export { PodLabelsTab } from './PodLabelsTab'

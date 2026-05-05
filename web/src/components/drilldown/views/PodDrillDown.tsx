@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import {
   getIssueSeverity,
+  getPodDiagnosis,
   UNHEALTHY_STATUSES, RAPID_REOPEN_THRESHOLD_MS,
   getPodCache, setPodCache, cleanupPodCache,
   PodLabelsTab,
@@ -35,6 +36,48 @@ function safeSet<T>(obj: Record<string, T>, key: string, value: T): void {
     obj[key] = value
   }
 }
+
+const DIAGNOSIS_SUMMARY_KEYS = {
+  'crash-loop': 'drilldown.diagnosis.summaries.crashLoop',
+  'oom-killed': 'drilldown.diagnosis.summaries.oomKilled',
+  'image-pull': 'drilldown.diagnosis.summaries.imagePull',
+  'config-error': 'drilldown.diagnosis.summaries.configError',
+  'probe-failure': 'drilldown.diagnosis.summaries.probeFailure',
+  'unknown': 'drilldown.diagnosis.summaries.unknown',
+} as const
+
+const DIAGNOSIS_STEP_KEYS = {
+  'crash-loop': [
+    'drilldown.diagnosis.steps.checkLogs',
+    'drilldown.diagnosis.steps.verifyCommand',
+    'drilldown.diagnosis.steps.ensureLongRunningProcess',
+  ],
+  'oom-killed': [
+    'drilldown.diagnosis.steps.checkMemoryUsage',
+    'drilldown.diagnosis.steps.raiseMemoryLimit',
+    'drilldown.diagnosis.steps.inspectRecentChanges',
+  ],
+  'image-pull': [
+    'drilldown.diagnosis.steps.verifyImageReference',
+    'drilldown.diagnosis.steps.checkRegistryAccess',
+    'drilldown.diagnosis.steps.confirmImageExists',
+  ],
+  'config-error': [
+    'drilldown.diagnosis.steps.inspectPodEvents',
+    'drilldown.diagnosis.steps.verifyReferencedConfig',
+    'drilldown.diagnosis.steps.reviewPodSpec',
+  ],
+  'probe-failure': [
+    'drilldown.diagnosis.steps.checkProbeConfiguration',
+    'drilldown.diagnosis.steps.verifyAppStartup',
+    'drilldown.diagnosis.steps.reviewRecentDeployments',
+  ],
+  'unknown': [
+    'drilldown.diagnosis.steps.checkLogs',
+    'drilldown.diagnosis.steps.inspectPodEvents',
+    'drilldown.diagnosis.steps.reviewPodSpec',
+  ],
+} as const
 
 export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const { t } = useTranslation()
@@ -245,6 +288,49 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
 
     return allIssues
   }, [passedIssues, status, reason, podStatusOutput, podName, eventsOutput])
+
+  const podDiagnosis = useMemo(() => getPodDiagnosis({
+    status,
+    reason,
+    issues,
+    describeOutput,
+    eventsOutput,
+    logsOutput,
+  }), [status, reason, issues, describeOutput, eventsOutput, logsOutput])
+
+  const diagnosisEvidence = useMemo(() => {
+    if (!podDiagnosis) {
+      return []
+    }
+
+    const evidenceItems: string[] = []
+
+    if (podDiagnosis.currentStateReason) {
+      evidenceItems.push(t('drilldown.diagnosis.evidence.currentStateReason', { reason: podDiagnosis.currentStateReason }))
+    }
+    if (podDiagnosis.lastExitReason && podDiagnosis.exitCode) {
+      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitReasonWithCode', { reason: podDiagnosis.lastExitReason, code: podDiagnosis.exitCode }))
+    } else if (podDiagnosis.lastExitReason) {
+      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitReason', { reason: podDiagnosis.lastExitReason }))
+    }
+    if (podDiagnosis.lastExitMessage) {
+      evidenceItems.push(t('drilldown.diagnosis.evidence.lastExitMessage', { message: podDiagnosis.lastExitMessage }))
+    }
+    if (podDiagnosis.warningEvent) {
+      evidenceItems.push(t('drilldown.diagnosis.evidence.warningEvent', { event: podDiagnosis.warningEvent }))
+    }
+    if (podDiagnosis.logSnippet) {
+      evidenceItems.push(t('drilldown.diagnosis.evidence.logSnippet', { snippet: podDiagnosis.logSnippet }))
+    }
+    if (evidenceItems.length === 0 && reason) {
+      evidenceItems.push(t('drilldown.diagnosis.evidence.reportedReason', { reason }))
+    }
+    if (evidenceItems.length === 0 && status) {
+      evidenceItems.push(t('drilldown.diagnosis.evidence.reportedStatus', { status }))
+    }
+
+    return evidenceItems
+  }, [podDiagnosis, reason, status, t])
 
   // Use passed labels/annotations if available
   useEffect(() => {
@@ -1452,6 +1538,91 @@ Please:
               )}
 
             </div>
+
+            {podDiagnosis && (
+              <div className="rounded-xl border border-orange-500/30 bg-orange-500/5 p-4 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-orange-300">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-xs font-semibold tracking-wide uppercase">{t('drilldown.diagnosis.title')}</span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {t(DIAGNOSIS_SUMMARY_KEYS[podDiagnosis.kind])}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">{t('drilldown.diagnosis.subtitle')}</p>
+                  </div>
+                  {(podDiagnosis.lastExitReason || podDiagnosis.exitCode) && (
+                    <div className="rounded-lg border border-orange-500/30 bg-background/60 px-3 py-2 text-right">
+                      <div className="text-[11px] uppercase tracking-wide text-orange-300">{t('drilldown.diagnosis.lastExit')}</div>
+                      <div className="font-mono text-sm text-foreground">
+                        {podDiagnosis.lastExitReason || t('drilldown.diagnosis.unknownExit')}
+                        {podDiagnosis.exitCode ? ` · ${t('drilldown.diagnosis.exitCode', { code: podDiagnosis.exitCode })}` : ''}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div>
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('drilldown.diagnosis.evidenceTitle')}
+                    </h4>
+                    <ul className="space-y-2 text-sm text-foreground">
+                      {diagnosisEvidence.map((item, index) => (
+                        <li key={`${item}-${index}`} className="flex gap-2">
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('drilldown.diagnosis.nextStepsTitle')}
+                    </h4>
+                    <ul className="space-y-2 text-sm text-foreground">
+                      {DIAGNOSIS_STEP_KEYS[podDiagnosis.kind].map(stepKey => (
+                        <li key={stepKey} className="flex gap-2">
+                          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400" />
+                          <span>{t(stepKey)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setActiveTab('logs')}
+                    className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                  >
+                    {t('drilldown.actions.viewLogs')}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('events')}
+                    className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                  >
+                    {t('drilldown.actions.viewEvents')}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('yaml')}
+                    className="rounded-lg border border-border bg-background/70 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+                  >
+                    {t('drilldown.diagnosis.reviewSpec')}
+                  </button>
+                  {agentConnected && canDeletePod && isManagedPod && (
+                    <button
+                      onClick={() => setShowDeletePodConfirm(true)}
+                      className="rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
+                    >
+                      {t('drilldown.actions.restartResource')}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Recent Events */}
             {eventsOutput && (
