@@ -107,26 +107,32 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   }, [isReviewMode, onClose, mc])
 
   // #8483 — Pre-populate Phase 1 with a Kubara chart when opened from Mission Browser
+  // #12216 — Clear the guard when the dialog closes so every new "Use in Mission
+  // Control" click (same or different chart) starts a fresh session.
   const initialChartAdded = useRef<string | null>(null)
   useEffect(() => {
-    if (open && initialKubaraChart && initialChartAdded.current !== initialKubaraChart) {
-      initialChartAdded.current = initialKubaraChart
-      const alreadyAdded = state.projects.some(p => p.name === initialKubaraChart)
-      if (!alreadyAdded) {
-        mc.addProject({
-          name: initialKubaraChart,
-          displayName: initialKubaraChart.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-          reason: 'Imported from Kubara Platform Catalog',
-          category: 'Helm Chart',
-          priority: 'required',
-          dependencies: [],
-          kubaraChart: { repoPath: `helm/${initialKubaraChart}` },
-          userAdded: true,
-        })
-      }
-      // Ensure we're on Phase 1
-      mc.setPhase('define')
+    if (!open) {
+      initialChartAdded.current = null
+      return
     }
+    if (!initialKubaraChart || initialChartAdded.current === initialKubaraChart) return
+    initialChartAdded.current = initialKubaraChart
+    // #12216 — Reset any stale persisted session so the user always lands on
+    // Phase 1 with a clean slate instead of resuming a previous incomplete run.
+    mc.reset()
+    setHighestReached(0)
+    mc.addProject({
+      name: initialKubaraChart,
+      displayName: initialKubaraChart.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+      reason: 'Imported from Kubara Platform Catalog',
+      category: 'Helm Chart',
+      priority: 'required',
+      dependencies: [],
+      kubaraChart: { repoPath: `helm/${initialKubaraChart}` },
+      userAdded: true,
+    })
+    // Ensure we're on Phase 1 (reset() already does this, but explicit for clarity)
+    mc.setPhase('define')
   }, [open, initialKubaraChart]) // eslint-disable-line react-hooks/exhaustive-deps
   // issue 6738 — Ref used by useModalFocusTrap to keep Tab/Shift+Tab inside the dialog
   const dialogRef = useRef<HTMLDivElement>(null)
