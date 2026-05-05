@@ -1,9 +1,93 @@
-import { test, expect } from '@playwright/test'
-import { setupDashboardTest, mockApiFallback } from './helpers/setup'
+import { test, expect, type Locator, type Page } from '@playwright/test'
+import { mockApiFallback } from './helpers/setup'
 import { setupStrictDemoMode, API_RESPONSES } from './helpers/api-mocks'
 
+/**
+ * These dashboard tests intentionally mock most API traffic so loading,
+ * layout, and fallback assertions stay deterministic across CI browsers.
+ * That keeps the suite stable, but it also means mocked payloads can drift
+ * away from the live backend contract if we do not validate them.
+ *
+ * TODO(#12054): Add a focused dashboard contract/integration suite that
+ * exercises the real backend (or shared fixtures) without page.route().
+ */
+const ROOT_VISIBLE_TIMEOUT_MS = 15_000
+const ERROR_FALLBACK_TIMEOUT_MS = 15_000
+const CARD_DATA_TIMEOUT_MS = 15_000
+const ACCESSIBILITY_ASSERT_TIMEOUT_MS = 10_000
+const MOBILE_VIEWPORT_WIDTH_PX = 375
+const MOBILE_VIEWPORT_HEIGHT_PX = 667
+const TABLET_VIEWPORT_WIDTH_PX = 768
+const TABLET_VIEWPORT_HEIGHT_PX = 1024
+const KEYBOARD_TAB_COUNT = 5
+const REFRESH_BUTTON_TITLE = 'Refresh cluster data'
+
+type MockCluster = {
+  name: string
+  healthy: boolean
+  reachable: boolean
+  nodeCount: number
+  podCount: number
+}
+
+type MockClusterResponse = {
+  clusters: MockCluster[]
+}
+
+function validateMockClusterResponse(response: MockClusterResponse): MockClusterResponse {
+  if (!Array.isArray(response.clusters)) {
+    throw new Error('Mock cluster response must include a clusters array')
+  }
+
+  response.clusters.forEach((cluster, index) => {
+    if (typeof cluster.name !== 'string' || cluster.name.length === 0) {
+      throw new Error(`Mock cluster response clusters[${index}] must include a non-empty name`)
+    }
+    if (typeof cluster.healthy !== 'boolean') {
+      throw new Error(`Mock cluster response clusters[${index}] must include healthy:boolean`)
+    }
+    if (typeof cluster.reachable !== 'boolean') {
+      throw new Error(`Mock cluster response clusters[${index}] must include reachable:boolean`)
+    }
+    if (typeof cluster.nodeCount !== 'number') {
+      throw new Error(`Mock cluster response clusters[${index}] must include nodeCount:number`)
+    }
+    if (typeof cluster.podCount !== 'number') {
+      throw new Error(`Mock cluster response clusters[${index}] must include podCount:number`)
+    }
+  })
+
+  return response
+}
+
+async function waitForDashboardReady(page: Page) {
+  await page.waitForLoadState('domcontentloaded')
+  await page.waitForLoadState('networkidle').catch(() => {})
+  await page.locator('#root').waitFor({ state: 'visible', timeout: ROOT_VISIBLE_TIMEOUT_MS })
+}
+
+async function reloadDashboard(page: Page) {
+  await page.reload()
+  await waitForDashboardReady(page)
+}
+
+async function expectVisibleOrSkip(locator: Locator, reason: string, timeoutMs = CARD_DATA_TIMEOUT_MS) {
+  const isVisible = await locator.isVisible().catch(() => false)
+  if (!isVisible) {
+    try {
+      await expect(locator).toBeVisible({ timeout: timeoutMs })
+    } catch {
+      test.skip(true, reason)
+      return false
+    }
+  }
+
+  await expect(locator).toBeVisible()
+  return true
+}
+
 test.describe('Dashboard Page', () => {
-  test.beforeEach(async ({ page, browserName }) => {
+  test.beforeEach(async ({ page }) => {
     // Strict API mocking setup — tracks calls and logs unmocked endpoints
     await setupStrictDemoMode(page, {
       logUnmocked: true,
@@ -59,14 +143,7 @@ test.describe('Dashboard Page', () => {
       }))
     })
     await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
-    // Firefox/WebKit settle the DOM slower than Chromium — wait for
-    // networkidle to ensure all mock responses have been delivered and
-    // React has finished its initial render pass. (#11900)
-    if (browserName === 'firefox' || browserName === 'webkit') {
-      await page.waitForLoadState('networkidle').catch(() => {})
-    }
-    await page.locator('#root').waitFor({ state: 'visible', timeout: 15000 })
+    await waitForDashboardReady(page)
   })
 
   test.describe('Layout and Structure', () => {
@@ -348,7 +425,7 @@ test.describe('Dashboard Page', () => {
       })
 
       await page.goto('/')
-      await page.waitForLoadState('domcontentloaded')
+      await waitForDashboardReady(page)
 
       // Dashboard should still render (not crash)
       const PAGE_VISIBLE_TIMEOUT_MS = 30_000
@@ -356,25 +433,34 @@ test.describe('Dashboard Page', () => {
 
       // When API fails, cards fall back to demo data. The cache layer
       // (useCache) switches to demo fallback on consecutive failures, which
-      // shows a yellow "Demo" badge on affected cards. Verify error handling
-      // shows demo data rather than crashing or showing blank cards.
-      const ERROR_FALLBACK_TIMEOUT_MS = 15_000
+      // shows a yellow "Demo" badge on affected cards. Verify the fallback UI
+      // appears instead of only asserting that cards still exist.
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
       await expect(cardsGrid).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
 
-      // Cards should render (either with demo data or error states).
-      // Wait for at least one card to appear to confirm the grid recovered.
       const cards = cardsGrid.locator('[data-card-id]')
       await expect(cards.first()).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
 
-      // Check for demo badge OR any card content, confirming graceful fallback.
-      // The "Demo" badge appears when isDemoData=true. Not all cards may show
-      // it immediately depending on failure timing, so we check for presence
-      // of any card content (heading text) as proof the UI didn't crash.
-      const firstCard = cards.first()
-      const cardHeading = firstCard.locator('h3').first()
-      await expect(cardHeading).toBeAttached({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
-      await expect(cardHeading).not.toHaveText('')
+      const demoBadge = cardsGrid.getByText('Demo').first()
+      const hasDemoBadge = await demoBadge.isVisible().catch(() => false)
+
+      if (hasDemoBadge) {
+        await expect(demoBadge).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
+      } else {
+        const demoBadgeAppeared = await demoBadge
+          .waitFor({ state: 'visible', timeout: ERROR_FALLBACK_TIMEOUT_MS })
+          .then(() => true)
+          .catch(() => false)
+
+        expect.soft(
+          demoBadgeAppeared,
+          'Expected at least one Demo badge in the dashboard cards after API fallback',
+        ).toBe(true)
+
+        if (!demoBadgeAppeared) {
+          console.warn('Dashboard API fallback did not render a visible Demo badge after /api/mcp/clusters returned 500.')
+        }
+      }
     })
 
     test('refresh button triggers data reload', async ({ page }) => {
@@ -432,13 +518,11 @@ test.describe('Dashboard Page', () => {
 
   test.describe('Responsive Design', () => {
     test('adapts to mobile viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 375, height: 667 })
+      await page.setViewportSize({ width: MOBILE_VIEWPORT_WIDTH_PX, height: MOBILE_VIEWPORT_HEIGHT_PX })
 
-      // Webkit needs a reload after viewport change so the layout
-      // re-initialises at the mobile breakpoint — without this the
-      // dashboard-page element can remain hidden. (#10784)
-      await page.reload()
-      await page.waitForLoadState('domcontentloaded')
+      // Reload after viewport changes on every browser so the responsive
+      // layout is exercised through the same initialization path. (#12057)
+      await reloadDashboard(page)
 
       // Page should still render at mobile size
       const PAGE_VISIBLE_TIMEOUT_MS = 15_000
@@ -449,17 +533,18 @@ test.describe('Dashboard Page', () => {
     })
 
     test('adapts to tablet viewport', async ({ page }) => {
-      await page.setViewportSize({ width: 768, height: 1024 })
+      await page.setViewportSize({ width: TABLET_VIEWPORT_WIDTH_PX, height: TABLET_VIEWPORT_HEIGHT_PX })
+      await reloadDashboard(page)
 
       // Content should still be accessible
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
       await expect(page.getByTestId('dashboard-header')).toBeVisible()
     })
   })
 
   test.describe('Accessibility', () => {
     test('has proper heading hierarchy', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
 
       // Should have h1 heading
       const h1Count = await page.locator('h1').count()
@@ -467,10 +552,10 @@ test.describe('Dashboard Page', () => {
     })
 
     test('supports keyboard navigation', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
 
       // Tab through elements
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < KEYBOARD_TAB_COUNT; i++) {
         await page.keyboard.press('Tab')
       }
 
@@ -480,13 +565,13 @@ test.describe('Dashboard Page', () => {
     })
 
     test('has proper ARIA labels', async ({ page }) => {
-      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: 10000 })
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: ACCESSIBILITY_ASSERT_TIMEOUT_MS })
 
       // Refresh button should have title for accessibility. The actual i18n
       // string is `common.refreshClusterData` → "Refresh cluster data"
       // (see web/src/locales/en/common.json and DashboardHeader.tsx).
       const refreshButton = page.getByTestId('dashboard-refresh-button')
-      await expect(refreshButton).toHaveAttribute('title', 'Refresh cluster data')
+      await expect(refreshButton).toHaveAttribute('title', REFRESH_BUTTON_TITLE)
     })
   })
 
@@ -500,74 +585,57 @@ test.describe('Dashboard Page', () => {
         cluster: 'test-cluster',
         status: 'Running',
       }))
+      const mockPodResponse = { pods: mockPods }
 
       await page.route('**/api/mcp/pods**', (route) =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ pods: mockPods }),
+          body: JSON.stringify(mockPodResponse),
         })
       )
 
-      await page.reload()
-      await page.waitForLoadState('domcontentloaded')
+      await reloadDashboard(page)
 
-      // Wait for any card that displays pod count. Cards use data-card-type
-      // attribute. We don't target a specific card ID since the dashboard
-      // layout may vary, but we expect the mocked pod count to appear
-      // somewhere on the dashboard if a pod-related card is present.
-      const CARD_DATA_TIMEOUT_MS = 15_000
-      const dashboardBody = page.locator('body')
+      const cardsGrid = page.getByTestId('dashboard-cards-grid')
+      const podCount = cardsGrid.getByText(new RegExp(`\\b${MOCK_POD_COUNT}\\b`)).first()
+      const hasPodCount = await expectVisibleOrSkip(
+        podCount,
+        'Pod card not present on default dashboard',
+      )
 
-      // Look for the mock pod count rendered on the page. Use word boundary
-      // regex to avoid matching inside larger numbers (e.g., "42" in "420").
-      let hasPodCount = false
-      try {
-        await expect(dashboardBody
-          .getByText(new RegExp(`\\b${MOCK_POD_COUNT}\\b`))
-          .first()).toBeVisible({ timeout: CARD_DATA_TIMEOUT_MS })
-        hasPodCount = true
-      } catch { hasPodCount = false }
-
-      // If a pod card is present and loaded the mock data, the count should
-      // appear. If no pod card is on the default dashboard, skip gracefully.
-      if (hasPodCount) {
-        await expect(dashboardBody.getByText(new RegExp(`\\b${MOCK_POD_COUNT}\\b`)).first()).toBeVisible()
+      if (!hasPodCount) {
+        return
       }
     })
 
     test('renders cluster health status from mocked API data', async ({ page }) => {
-      // Mock cluster data with known status
-      const mockClusters = [
-        { name: 'test-healthy-cluster', healthy: true, reachable: true, nodeCount: 5, podCount: 20 },
-        { name: 'test-unhealthy-cluster', healthy: false, reachable: true, nodeCount: 3, podCount: 10 },
-      ]
+      const mockClusterResponse: MockClusterResponse = validateMockClusterResponse({
+        clusters: [
+          { name: 'test-healthy-cluster', healthy: true, reachable: true, nodeCount: 5, podCount: 20 },
+          { name: 'test-unhealthy-cluster', healthy: false, reachable: true, nodeCount: 3, podCount: 10 },
+        ],
+      })
 
       await page.route('**/api/mcp/clusters', (route) =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ clusters: mockClusters }),
+          body: JSON.stringify(mockClusterResponse),
         })
       )
 
-      await page.reload()
-      await page.waitForLoadState('domcontentloaded')
+      await reloadDashboard(page)
 
-      // Verify the mocked cluster names appear in the rendered output.
-      // ClusterHealth or similar cards display cluster names from the API.
-      const CLUSTER_NAME_TIMEOUT_MS = 15_000
-      const dashboardPage = page.getByTestId('dashboard-page')
+      const cardsGrid = page.getByTestId('dashboard-cards-grid')
+      const healthyCluster = cardsGrid.getByText('test-healthy-cluster').first()
+      const hasHealthyCluster = await expectVisibleOrSkip(
+        healthyCluster,
+        'Cluster health card not present on default dashboard layout',
+      )
 
-      let hasHealthyCluster = false
-      try {
-        await expect(dashboardPage.getByText('test-healthy-cluster')).toBeVisible({ timeout: CLUSTER_NAME_TIMEOUT_MS })
-        hasHealthyCluster = true
-      } catch { hasHealthyCluster = false }
-
-      // If cluster cards are on the dashboard, verify the mock data appears.
-      if (hasHealthyCluster) {
-        await expect(dashboardPage.getByText('test-healthy-cluster')).toBeVisible()
+      if (!hasHealthyCluster) {
+        return
       }
     })
 
@@ -579,33 +647,27 @@ test.describe('Dashboard Page', () => {
         cluster: 'test-cluster',
         status: 'Active',
       }))
+      const mockNamespaceResponse = { namespaces: mockNamespaces }
 
       await page.route('**/api/mcp/namespaces', (route) =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ namespaces: mockNamespaces }),
+          body: JSON.stringify(mockNamespaceResponse),
         })
       )
 
-      await page.reload()
-      await page.waitForLoadState('domcontentloaded')
+      await reloadDashboard(page)
 
-      // Wait for namespace count to appear on dashboard.
-      const NAMESPACE_COUNT_TIMEOUT_MS = 15_000
-      const dashboardBody = page.locator('body')
+      const cardsGrid = page.getByTestId('dashboard-cards-grid')
+      const namespaceCount = cardsGrid.getByText(new RegExp(`\\b${MOCK_NAMESPACE_COUNT}\\b`)).first()
+      const hasNamespaceCount = await expectVisibleOrSkip(
+        namespaceCount,
+        'Namespace card not present on default dashboard',
+      )
 
-      let hasNamespaceCount = false
-      try {
-        await expect(dashboardBody
-          .getByText(new RegExp(`\\b${MOCK_NAMESPACE_COUNT}\\b`))
-          .first()).toBeVisible({ timeout: NAMESPACE_COUNT_TIMEOUT_MS })
-        hasNamespaceCount = true
-      } catch { hasNamespaceCount = false }
-
-      // If a namespace card is present, verify the mock count appears.
-      if (hasNamespaceCount) {
-        await expect(dashboardBody.getByText(new RegExp(`\\b${MOCK_NAMESPACE_COUNT}\\b`)).first()).toBeVisible()
+      if (!hasNamespaceCount) {
+        return
       }
     })
   })
@@ -706,12 +768,15 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
         podCount: 10,
       })
     )
+    const deterministicClusterResponse: MockClusterResponse = validateMockClusterResponse({
+      clusters: deterministicClusters,
+    })
 
     await page.route('**/api/mcp/clusters', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ clusters: deterministicClusters }),
+        body: JSON.stringify(deterministicClusterResponse),
       })
     )
 
@@ -725,7 +790,7 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          clusters: deterministicClusters,
+          ...deterministicClusterResponse,
           issues: [],
           events: [],
           nodes: [],
