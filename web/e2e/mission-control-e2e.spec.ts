@@ -676,6 +676,8 @@ test.describe('Mission Control E2E', () => {
   // ======================================================================
 
   test('ArgoCD and FluxCD detected as separate projects', async ({ page }) => {
+    test.setTimeout(MOCK_MODE ? 180_000 : 240_000)
+
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 

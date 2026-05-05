@@ -578,7 +578,7 @@ async function openMC(page: Page) {
 // ---------------------------------------------------------------------------
 
 test.describe('Mission Control STRESS Tests', () => {
-  test.describe.configure({ timeout: MOCK_MODE ? 90_000 : 300_000 })
+  test.describe.configure({ timeout: 120_000 })
 
   // ========================================================================
   // CATEGORY 1: AI ORCHESTRATION LIMITS
