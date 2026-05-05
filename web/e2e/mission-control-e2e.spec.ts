@@ -38,6 +38,10 @@ const MOCK_MODE = process.env.MOCK_AI === 'true'
 const AI_RESPONSE_TIMEOUT_MS = MOCK_MODE ? 10_000 : 90_000
 /** Timeout for page navigation and dialog rendering */
 const DIALOG_RENDER_TIMEOUT_MS = 15_000
+/** Timeout for async state transitions before assertions */
+const STATE_TRANSITION_TIMEOUT_MS = 10_000
+/** Timeout for dialog close animations */
+const DIALOG_CLOSE_TIMEOUT_MS = 5_000
 /** Timeout for GitHub API calls */
 const GITHUB_FETCH_TIMEOUT_MS = MOCK_MODE ? 10_000 : 30_000
 /** Test repo with sample YAML/MD runbooks */
@@ -662,7 +666,9 @@ test.describe('Mission Control E2E', () => {
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 
+    const missionBrowser = page.getByTestId('mission-browser')
     await page.getByText('troubleshoot-ka', { exact: false }).click()
+    await expect(missionBrowser).toContainText('Check PropagationPolicy status', { timeout: STATE_TRANSITION_TIMEOUT_MS })
 
     const content = await page.textContent('body')
     expect(content).toMatch(/troubleshoot/i)
@@ -681,21 +687,30 @@ test.describe('Mission Control E2E', () => {
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 
+    const missionBrowser = page.getByTestId('mission-browser')
+    const argocdFile = page.getByText('argocd-application', { exact: false })
+    const fluxFile = page.getByText('fluxcd-helmrele', { exact: false })
+
     // Both files visible
-    await expect(page.getByText('argocd-application', { exact: false })).toBeVisible()
-    await expect(page.getByText('fluxcd-helmrele', { exact: false })).toBeVisible()
+    await expect(argocdFile).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
+    await expect(fluxFile).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
 
     // Click ArgoCD
-    await page.getByText('argocd-application', { exact: false }).click()
+    await argocdFile.click()
+    await expect(missionBrowser).toContainText('guestbook', { timeout: STATE_TRANSITION_TIMEOUT_MS })
     let content = await page.textContent('body')
     expect(content).toMatch(/argo/i)
 
     // Go back
     const backButton = page.getByText('Back', { exact: false }).first()
-    if (await backButton.isVisible({ timeout: 3000 }).catch(() => false)) await backButton.click()
+    if (await backButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await backButton.click()
+      await expect(argocdFile).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
+    }
 
     // Click FluxCD
-    await page.getByText('fluxcd-helmrele', { exact: false }).click()
+    await fluxFile.click()
+    await expect(missionBrowser).toContainText('kube-prometheus-stack', { timeout: STATE_TRANSITION_TIMEOUT_MS })
     content = await page.textContent('body')
     expect(content).toMatch(/flux/i)
 
@@ -727,10 +742,18 @@ test.describe('Mission Control E2E', () => {
       }))
     })
 
-    await openMissionControl(page)
+    const missionControlDialog = page.getByTestId('mission-control-dialog')
 
-    const content = await page.textContent('body')
-    expect(content).toMatch(/Prometheus|persistence/i)
+    await openMissionControl(page)
+    await expect(missionControlDialog).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
+    await expect(missionControlDialog).toContainText(/Prometheus|persistence/i, { timeout: STATE_TRANSITION_TIMEOUT_MS })
+
+    await page.getByLabel('Close Mission Control').click()
+    await expect(missionControlDialog).toBeHidden({ timeout: DIALOG_CLOSE_TIMEOUT_MS })
+
+    await openMissionControl(page)
+    await expect(missionControlDialog).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
+    await expect(missionControlDialog).toContainText(/Prometheus|persistence/i, { timeout: STATE_TRANSITION_TIMEOUT_MS })
   })
 
   // ======================================================================
@@ -757,9 +780,10 @@ test.describe('Mission Control E2E', () => {
     await expandSampleRunbooks(page)
 
     const refreshButton = page.getByTitle('Refresh contents')
-    if (await refreshButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await refreshButton.isVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS }).catch(() => false)) {
       await refreshButton.click()
       await expect(page.getByText('argocd-application', { exact: false })).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })
+      await expect(page.getByText('fluxcd-helmrele', { exact: false })).toBeVisible({ timeout: GITHUB_FETCH_TIMEOUT_MS })
     }
   })
 
@@ -771,22 +795,21 @@ test.describe('Mission Control E2E', () => {
     await navigateToConsole(page)
     await expandSampleRunbooks(page)
 
+    const missionBrowser = page.getByTestId('mission-browser')
     await page.getByText('karmada-propa', { exact: false }).click()
-    await expect(page.getByText(/karmada|propagation/i).first()).toBeVisible({ timeout: DIALOG_RENDER_TIMEOUT_MS })
+    await expect(missionBrowser).toContainText('PropagationPolicy', { timeout: STATE_TRANSITION_TIMEOUT_MS })
 
     const sourceLink = page.getByRole('link', { name: /source/i })
-    if (await sourceLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const href = await sourceLink.getAttribute('href')
-      expect(href).toContain('github.com/clubanderson/sample-runbooks')
-      expect(href).toContain('blob/main')
-    }
+    await expect(sourceLink).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
+    const sourceHref = await sourceLink.getAttribute('href')
+    expect(sourceHref).toContain('github.com/clubanderson/sample-runbooks')
+    expect(sourceHref).toContain('blob/main')
 
     const prLink = page.getByRole('link', { name: /pr/i })
-    if (await prLink.isVisible({ timeout: 5000 }).catch(() => false)) {
-      const href = await prLink.getAttribute('href')
-      expect(href).toContain('github.com/clubanderson/sample-runbooks')
-      expect(href).toContain('edit/main')
-    }
+    await expect(prLink).toBeVisible({ timeout: STATE_TRANSITION_TIMEOUT_MS })
+    const prHref = await prLink.getAttribute('href')
+    expect(prHref).toContain('github.com/clubanderson/sample-runbooks')
+    expect(prHref).toContain('edit/main')
 
     await page.screenshot({ path: 'test-results/source-pr-buttons.png', fullPage: true })
   })
