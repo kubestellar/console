@@ -63,6 +63,7 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
   const [imgFailed, setImgFailed] = useState(false)
   const [showPriorityMenu, setShowPriorityMenu] = useState(false)
   const [showDeps, setShowDeps] = useState(false)
+  const [depsTooltipPosition, setDepsTooltipPosition] = useState<{ left: number, top: number } | null>(null)
 
   // issue 6743 — Dismiss the priority dropdown when the user presses Escape. Without
   // this, keyboard users had no way to close the menu once opened.
@@ -203,17 +204,25 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
               <span
                 ref={depRef}
                 className="text-[10px] text-muted-foreground cursor-default underline decoration-dotted"
-                onMouseEnter={() => setShowDeps(true)}
+                onMouseEnter={() => {
+                  if (!depRef.current) return
+                  const { left, top, width } = depRef.current.getBoundingClientRect()
+                  setDepsTooltipPosition({
+                    left: left + width / 2,
+                    top: top - 4,
+                  })
+                  setShowDeps(true)
+                }}
                 onMouseLeave={() => setShowDeps(false)}
               >
                 +{project.dependencies.length} dep{project.dependencies.length !== 1 ? 's' : ''}
               </span>
-              {showDeps && depRef.current && createPortal(
+              {showDeps && depsTooltipPosition && createPortal(
                 <div
                   className="fixed z-overlay pointer-events-none"
                   style={{
-                    left: depRef.current.getBoundingClientRect().left + depRef.current.getBoundingClientRect().width / 2,
-                    top: depRef.current.getBoundingClientRect().top - 4,
+                    left: depsTooltipPosition.left,
+                    top: depsTooltipPosition.top,
                     transform: 'translate(-50%, -100%)',
                   }}
                 >
