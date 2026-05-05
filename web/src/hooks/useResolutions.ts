@@ -6,6 +6,8 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useAuth } from '../lib/auth'
+import { getOrCreateAnonymousId } from '../lib/analytics-session'
 
 export interface IssueSignature {
   /** Issue type: CrashLoopBackOff, OOMKilled, ImagePullBackOff, etc. */
@@ -315,6 +317,7 @@ export function generateResolutionPromptContext(similarResolutions: SimilarResol
  * Hook for managing resolution memory
  */
 export function useResolutions() {
+  const { user } = useAuth()
   const [resolutions, setResolutions] = useState<Resolution[]>(() => loadResolutions())
   const [sharedResolutions, setSharedResolutions] = useState<Resolution[]>(() => loadSharedResolutions())
 
@@ -392,7 +395,7 @@ export function useResolutions() {
     const newResolution: Resolution = {
       id: `res-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       missionId: params.missionId,
-      userId: 'current-user', // MVP: hardcoded, will be from auth in Phase 2
+      userId: user?.id ?? getOrCreateAnonymousId(),
       title: params.title,
       visibility: params.visibility ?? 'private',
       issueSignature: params.issueSignature,

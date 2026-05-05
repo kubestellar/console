@@ -1,5 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+
+const mockUseAuth = vi.fn(() => ({ user: null }))
+const mockGetOrCreateAnonymousId = vi.fn(() => 'anonymous-user-id')
+
+vi.mock('../../lib/auth', () => ({
+  useAuth: () => mockUseAuth(),
+}))
+
+vi.mock('../../lib/analytics-session', () => ({
+  getOrCreateAnonymousId: () => mockGetOrCreateAnonymousId(),
+}))
+
 import {
   detectIssueSignature,
   findSimilarResolutionsStandalone,
@@ -49,6 +61,13 @@ function seedLocalStorage(
     localStorage.setItem('kc_shared_resolutions', JSON.stringify(shared))
   }
 }
+
+beforeEach(() => {
+  mockUseAuth.mockReset()
+  mockUseAuth.mockReturnValue({ user: null })
+  mockGetOrCreateAnonymousId.mockReset()
+  mockGetOrCreateAnonymousId.mockReturnValue('anonymous-user-id')
+})
 
 // ---------------------------------------------------------------------------
 // detectIssueSignature
@@ -589,7 +608,8 @@ describe('useResolutions — saveResolution defaults', () => {
     expect(result.current.resolutions[0].effectiveness.timesSuccessful).toBe(0)
   })
 
-  it('sets userId to "current-user" (MVP hardcoded)', () => {
+  it('sets userId from the authenticated user when available', () => {
+    mockUseAuth.mockReturnValue({ user: { id: 'auth-user-id' } })
     const { result } = renderHook(() => useResolutions())
 
     act(() => {
@@ -601,7 +621,24 @@ describe('useResolutions — saveResolution defaults', () => {
       })
     })
 
-    expect(result.current.resolutions[0].userId).toBe('current-user')
+    expect(result.current.resolutions[0].userId).toBe('auth-user-id')
+    expect(mockGetOrCreateAnonymousId).not.toHaveBeenCalled()
+  })
+
+  it('falls back to a stable anonymous userId when no authenticated user exists', () => {
+    const { result } = renderHook(() => useResolutions())
+
+    act(() => {
+      result.current.saveResolution({
+        missionId: 'mission-anon',
+        title: 'Anonymous User Test',
+        issueSignature: { type: 'CrashLoopBackOff' },
+        resolution: { summary: 'Fix', steps: [] },
+      })
+    })
+
+    expect(result.current.resolutions[0].userId).toBe('anonymous-user-id')
+    expect(mockGetOrCreateAnonymousId).toHaveBeenCalledTimes(1)
   })
 
   it('sets createdAt and updatedAt to current ISO date string', () => {
