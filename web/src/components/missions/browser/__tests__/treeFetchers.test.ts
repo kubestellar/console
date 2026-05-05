@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const apiGet = vi.fn()
+const { apiGet } = vi.hoisted(() => ({
+  apiGet: vi.fn(),
+}))
 
 vi.mock('../../../../lib/api', () => ({
   api: {
