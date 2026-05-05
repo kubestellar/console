@@ -102,6 +102,12 @@ export function WorkloadMonitorDiagnose({
     })
   }
 
+  const handleExecuteRepairs = () => {
+    checkKeyAndRun(() => {
+      executeRepairs()
+    })
+  }
+
   // Phase progress indicator
   const currentPhaseIndex = PHASE_ORDER.indexOf(state.phase)
 
@@ -244,7 +250,7 @@ export function WorkloadMonitorDiagnose({
               ))}
               {hasApprovedRepairs && (
                 <button
-                  onClick={executeRepairs}
+                  onClick={handleExecuteRepairs}
                   className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors text-xs font-medium"
                 >
                   <Wrench className="w-3.5 h-3.5" />

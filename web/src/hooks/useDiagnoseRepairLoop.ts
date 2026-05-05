@@ -262,14 +262,29 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
     const approvedRepairs = state.proposedRepairs.filter(r => r.approved)
     if (approvedRepairs.length === 0) return
 
-    setPhase('repairing')
+    if (!missionIdRef.current) {
+      setState(prev => ({
+        ...prev,
+        phase: 'failed',
+        error: 'Repair could not start because the AI session is unavailable. Reset and try again.',
+      }))
+      return
+    }
 
-    if (missionIdRef.current) {
-      const repairPrompt = `Execute the following approved repairs:\n${approvedRepairs.map(r =>
-        `- ${r.action}: ${r.description} (risk: ${r.risk})`
-      ).join('\n')}\n\nPlease execute each repair and report the results.`
+    const repairPrompt = `Execute the following approved repairs:\n${approvedRepairs.map(r =>
+      `- ${r.action}: ${r.description} (risk: ${r.risk})`
+    ).join('\n')}\n\nPlease execute each repair and report the results.`
 
+    try {
+      setPhase('repairing')
       sendMessage(missionIdRef.current, repairPrompt)
+    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        phase: 'failed',
+        error: error instanceof Error ? error.message : 'Repair could not start. Please try again.',
+      }))
+      return
     }
 
     // #7291 — Repair completion is now driven by mission status.

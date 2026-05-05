@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import React from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { useApiKeyCheck, ANTHROPIC_KEY_STORAGE } from './shared'
@@ -16,8 +16,14 @@ vi.mock('../../../hooks/useLocalAgent', () => ({
   isAgentConnected: () => mockIsAgentConnected(),
 }))
 
+const mockShowToast = vi.fn()
 vi.mock('../../ui/Toast', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
+  useToast: () => ({ showToast: mockShowToast }),
+}))
+
+const mockAgentFetch = vi.fn()
+vi.mock('../../../hooks/mcp/shared', () => ({
+  agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
 }))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -29,6 +35,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
+  mockAgentFetch.mockRejectedValue(new Error('offline'))
   // Default: no WS-reported agents, no stored key.
   mockUseMissions.mockReturnValue({
     agents: [],
@@ -82,5 +89,45 @@ describe('useApiKeyCheck.hasAvailableAgent', () => {
     const { result } = renderHook(() => useApiKeyCheck(), { wrapper })
 
     expect(result.current.hasAvailableAgent()).toBe(false)
+  })
+
+  it('blocks repair when the agent is connected but no key is configured', async () => {
+    mockIsAgentConnected.mockReturnValue(true)
+    mockAgentFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ keys: [{ configured: false }] }),
+    })
+
+    const onSuccess = vi.fn()
+    const { result } = renderHook(() => useApiKeyCheck(), { wrapper })
+
+    result.current.checkKeyAndRun(onSuccess)
+
+    await waitFor(() => {
+      expect(onSuccess).not.toHaveBeenCalled()
+      expect(result.current.showKeyPrompt).toBe(true)
+      expect(mockShowToast).toHaveBeenCalledWith(
+        'No AI API key configured. Add one in Settings to use AI-powered repair.',
+        'error',
+      )
+    })
+  })
+
+  it('allows repair when the connected agent reports a configured valid key', async () => {
+    mockIsAgentConnected.mockReturnValue(true)
+    mockAgentFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ keys: [{ configured: true, valid: true }] }),
+    })
+
+    const onSuccess = vi.fn()
+    const { result } = renderHook(() => useApiKeyCheck(), { wrapper })
+
+    result.current.checkKeyAndRun(onSuccess)
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledTimes(1)
+      expect(result.current.showKeyPrompt).toBe(false)
+    })
   })
 })

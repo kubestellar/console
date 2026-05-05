@@ -3,9 +3,12 @@ import { Bot } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useMissions } from '../../../hooks/useMissions'
 import { isAgentConnected } from '../../../hooks/useLocalAgent'
+import { agentFetch } from '../../../hooks/mcp/shared'
 import { useToast } from '../../ui/Toast'
 import { getSettingsWithHash } from '../../../config/routes'
 import { emitError } from '../../../lib/analytics'
+import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 
 export const ANTHROPIC_KEY_STORAGE = 'kubestellar-anthropic-key'
 
@@ -13,6 +16,16 @@ export const ANTHROPIC_KEY_STORAGE = 'kubestellar-anthropic-key'
 // Matches `id="api-keys-settings"` in components/settings/sections/APIKeysSection.tsx.
 // Settings.tsx scrolls to the matching element on mount when the URL hash is set.
 const SETTINGS_API_KEYS_HASH = 'api-keys-settings'
+
+interface KeyStatus {
+  configured: boolean
+  valid?: boolean
+  error?: string
+}
+
+interface KeysStatusResponse {
+  keys: KeyStatus[]
+}
 
 // Hook to check if any AI agent is available (API-based or CLI-based)
 export function useApiKeyCheck() {
@@ -41,21 +54,77 @@ export function useApiKeyCheck() {
     return !!key && key.trim().length > 0
   }
 
+  async function resolveAgentAvailability(): Promise<{ available: boolean; message?: string }> {
+    if (agents.some(a => a.available)) {
+      return { available: true }
+    }
+
+    const key = localStorage.getItem(ANTHROPIC_KEY_STORAGE)
+    if (key && key.trim().length > 0) {
+      return { available: true }
+    }
+
+    if (!isAgentConnected()) {
+      return {
+        available: false,
+        message: 'No AI API key configured. Add one in Settings to use AI-powered repair.',
+      }
+    }
+
+    try {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
+      if (response.ok) {
+        const data: KeysStatusResponse = await response.json()
+        const configuredKey = (data.keys || []).find(keyStatus => keyStatus.configured && keyStatus.valid !== false)
+        if (configuredKey) {
+          return { available: true }
+        }
+
+        const invalidKey = (data.keys || []).find(keyStatus => keyStatus.configured && keyStatus.valid === false)
+        if (invalidKey) {
+          return {
+            available: false,
+            message: invalidKey.error
+              ? `AI API key is invalid: ${invalidKey.error}. Update it in Settings and try again.`
+              : 'AI API key is invalid. Update it in Settings and try again.',
+          }
+        }
+
+        return {
+          available: false,
+          message: 'No AI API key configured. Add one in Settings to use AI-powered repair.',
+        }
+      }
+    } catch {
+      // Preserve the previous connected-agent fallback if key inspection is unavailable.
+    }
+
+    return { available: hasAvailableAgent() }
+  }
+
   // Deprecated: for backwards compatibility
   const hasApiKey = hasAvailableAgent
 
   const checkKeyAndRun = (onSuccess: () => void | Promise<void>) => {
-    if (hasAvailableAgent()) {
-      // Wrap in Promise.resolve so async callbacks (returning Promise) have their
-      // rejections caught — without this, an unhandled rejection is created when
-      // the caller passes an async function and the promise is discarded.
-      Promise.resolve(onSuccess()).catch((err) => {
-        console.error('[checkKeyAndRun] Mission callback failed:', err)
-        showToast(err instanceof Error ? err.message : String(err) || 'Mission action failed. Please try again.', 'error')
-      })
-    } else {
+    void resolveAgentAvailability().then(({ available, message }) => {
+      if (available) {
+        // Wrap in Promise.resolve so async callbacks (returning Promise) have their
+        // rejections caught — without this, an unhandled rejection is created when
+        // the caller passes an async function and the promise is discarded.
+        Promise.resolve(onSuccess()).catch((err) => {
+          console.error('[checkKeyAndRun] Mission callback failed:', err)
+          showToast(err instanceof Error ? err.message : String(err) || 'Mission action failed. Please try again.', 'error')
+        })
+        return
+      }
+
+      if (message) {
+        showToast(message, 'error')
+      }
       setShowKeyPrompt(true)
-    }
+    })
   }
 
   const goToSettings = () => {

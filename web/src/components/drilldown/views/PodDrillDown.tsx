@@ -24,6 +24,7 @@ import {
 import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useToast } from '../../ui/Toast'
+import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
 
 /** Keys that must never be used as object property names (prototype pollution prevention). */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
@@ -85,6 +86,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   // #5945 — Track AI analysis errors so failures are surfaced in the UI instead of silently swallowed
   const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null)
   const { showToast } = useToast()
+  const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const [labels, setLabels] = useState<Record<string, string> | null>(cache.labels || null)
   const [annotations, setAnnotations] = useState<Record<string, string> | null>(cache.annotations || null)
   const [showAllLabels, setShowAllLabels] = useState(false)
@@ -748,13 +750,14 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
   }, [cluster, namespace, podName, describeOutput, logsOutput, eventsOutput, yamlOutput, podStatusOutput, aiAnalysis, labels, annotations, configMaps, secrets, pvcs, serviceAccount, ownerChain])
 
   const handleRepairPod = () => {
-    closeDrillDown() // Close panel so mission sidebar is visible
-    startMission({
-      title: `Repair Pod ${podName}`,
-      description: `Diagnose and fix issues with pod ${podName}`,
-      type: 'repair',
-      cluster,
-      initialPrompt: `I need help diagnosing and repairing issues with pod "${podName}" in namespace "${namespace}" on cluster "${cluster}".
+    checkKeyAndRun(() => {
+      closeDrillDown() // Close panel so mission sidebar is visible
+      startMission({
+        title: `Repair Pod ${podName}`,
+        description: `Diagnose and fix issues with pod ${podName}`,
+        type: 'repair',
+        cluster,
+        initialPrompt: `I need help diagnosing and repairing issues with pod "${podName}" in namespace "${namespace}" on cluster "${cluster}".
 
 Current Status: ${status}
 Restarts: ${restarts}
@@ -769,14 +772,15 @@ Please:
 3. If I say fix it, apply and verify. Then ask:
    - "Should I check for related issues?"
    - "All done"`,
-      context: {
-        podName,
-        namespace,
-        cluster,
-        status,
-        restarts,
-        issues
-      }
+        context: {
+          podName,
+          namespace,
+          cluster,
+          status,
+          restarts,
+          issues
+        }
+      })
     })
   }
 
@@ -1647,6 +1651,12 @@ Please:
           />
         </div>
       )}
+
+      <ApiKeyPromptModal
+        isOpen={showKeyPrompt}
+        onDismiss={dismissPrompt}
+        onGoToSettings={goToSettings}
+      />
     </div>
   )
 }
