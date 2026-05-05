@@ -442,13 +442,26 @@ export const CardWrapper = memo(function CardWrapper({
   // Exception: if the card has a saved collapse state, apply it immediately (#4895)
   const savedCollapsedState = externalCollapsed ?? hookCollapsed
   const isCollapsed = (hasCompletedInitialLoad && collapseDelayPassed) ? savedCollapsedState : false
-  const setCollapsed = (collapsed: boolean) => {
-    if (onCollapsedChange) {
-      onCollapsedChange(collapsed)
-    }
+  const isCollapsedRef = useRef(isCollapsed)
+  const onCollapsedChangeRef = useRef(onCollapsedChange)
+
+  useEffect(() => {
+    isCollapsedRef.current = isCollapsed
+  }, [isCollapsed])
+
+  useEffect(() => {
+    onCollapsedChangeRef.current = onCollapsedChange
+  }, [onCollapsedChange])
+
+  const setCollapsed = useCallback((collapsed: boolean | ((prev: boolean) => boolean)) => {
+    const nextCollapsed = typeof collapsed === 'function'
+      ? collapsed(isCollapsedRef.current)
+      : collapsed
+
+    onCollapsedChangeRef.current?.(nextCollapsed)
     // Always update the hook state for persistence
-    hookSetCollapsed(collapsed)
-  }
+    hookSetCollapsed(nextCollapsed)
+  }, [hookSetCollapsed])
 
   const [showSummary, setShowSummary] = useState(false)
   const [__timeRemaining, setTimeRemaining] = useState<number | null>(null)
@@ -627,6 +640,25 @@ export const CardWrapper = memo(function CardWrapper({
     }
   }
 
+  const handleToggleCollapse = useCallback(() => {
+    setCollapsed(prev => !prev)
+  }, [setCollapsed])
+
+  const handleRefresh = useCallback(() => {
+    onRefresh?.()
+    emitCardRefreshed(cardType)
+  }, [onRefresh, cardType])
+
+  const handleExpandFullscreen = useCallback(() => {
+    emitCardExpanded(cardType)
+    setIsExpanded(true)
+  }, [cardType])
+
+  const handleOpenBugReport = useCallback(() => {
+    setFullScreen(false)
+    setShowBugReport(true)
+  }, [setFullScreen])
+
   // Silence unused variable warnings for future chat implementation
   void messages
   void onChatMessage
@@ -764,7 +796,7 @@ export const CardWrapper = memo(function CardWrapper({
               <div className="flex items-center gap-1.5 shrink-0" role="toolbar" aria-label={t('cardWrapper.cardControls', { title })}>
                 {/* Collapse/expand button */}
                 <button
-                  onClick={() => setCollapsed(!isCollapsed)}
+                  onClick={handleToggleCollapse}
                   className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={isCollapsed ? t('cardWrapper.expandCard') : t('cardWrapper.collapseCard')}
                   aria-expanded={!isCollapsed}
@@ -775,7 +807,7 @@ export const CardWrapper = memo(function CardWrapper({
                 {/* Manual refresh button */}
                 {onRefresh && (
                   <button
-                    onClick={() => { onRefresh(); emitCardRefreshed(cardType) }}
+                    onClick={handleRefresh}
                     disabled={isRefreshing || isVisuallySpinning || effectiveIsLoading || forceSkeletonForOffline}
                     className={cn(
                       'p-1.5 rounded-lg transition-colors',
@@ -801,7 +833,7 @@ export const CardWrapper = memo(function CardWrapper({
             </button>
             */}
                 <button
-                  onClick={() => { emitCardExpanded(cardType); setIsExpanded(true) }}
+                  onClick={handleExpandFullscreen}
                   className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={t('cardWrapper.expandFullScreen')}
                   title={t('cardWrapper.expandFullScreen')}
@@ -809,7 +841,7 @@ export const CardWrapper = memo(function CardWrapper({
                   <Maximize2 className="w-4 h-4" aria-hidden="true" />
                 </button>
                 <button
-                  onClick={() => { setFullScreen(false); setShowBugReport(true) }}
+                  onClick={handleOpenBugReport}
                   className="p-1.5 rounded-lg hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
                   aria-label={t('cardWrapper.reportIssue')}
                   title={t('cardWrapper.reportIssue')}
