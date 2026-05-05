@@ -9,6 +9,7 @@
  * - Animated value transitions
  */
 import { motion } from 'framer-motion'
+import { useId } from 'react'
 interface GaugeConfig {
   value: number
   max: number
@@ -93,14 +94,14 @@ export function PremiumGauge({
   const primaryColors = getGradientColors(primary.color)
   const secondaryColors = secondary ? getGradientColors(secondary.color) : null
 
-  const uniqueId = Math.random().toString(36).substr(2, 9)
+  const uniqueId = useId().replace(/:/g, '')
 
   return (
     <div className="relative" style={{ width: size, height: size }}>
       <svg
         viewBox={`0 0 ${viewSize} ${viewSize}`}
         className="w-full h-full"
-        style={{ filter: 'url(#gauge-shadow)' }}
+        style={{ filter: `url(#gauge-shadow-${uniqueId})` }}
       >
         <defs>
           {/* Glow filter */}
@@ -157,7 +158,7 @@ export function PremiumGauge({
           </radialGradient>
 
           {/* Drop shadow */}
-          <filter id="gauge-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id={`gauge-shadow-${uniqueId}`} x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.3" />
           </filter>
         </defs>
