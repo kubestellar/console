@@ -42,7 +42,7 @@ import { prefetchDashboard } from '../../lib/prefetchDashboard'
 import { useVersionCheck } from '../../hooks/useVersionCheck'
 import { useUpgradeState } from '../../hooks/useUpgradeState'
 import { STORAGE_KEY_GROUND_CONTROL_DASHBOARDS } from '../../lib/constants/storage'
-import { SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/constants/ui'
+import { NAVBAR_HEIGHT_PX, SIDEBAR_CONTROLS_LEFT_OFFSET_PX } from '../../lib/constants/ui'
 import { safeGetJSON } from '../../lib/utils/localStorage'
 
 // ---------------------------------------------------------------------------
@@ -580,11 +580,16 @@ export function SidebarShell({
   // ---- Main render ----
   return (
     <>
-      {/* Mobile backdrop — closes sidebar when tapped outside the sidebar panel */}
+      {/* Mobile backdrop — keep the navbar close control tappable while the
+          drawer is open, and close immediately on touch/pointer interaction. */}
       {isMobile && config.isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
+          className="fixed inset-x-0 bottom-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
+          style={{ top: NAVBAR_HEIGHT_PX }}
           onClick={closeMobileSidebar}
+          onPointerDown={closeMobileSidebar}
+          tabIndex={-1}
+          aria-hidden="true"
         />
       )}
 
