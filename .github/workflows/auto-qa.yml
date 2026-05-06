@@ -1032,7 +1032,7 @@ jobs:
             fi
 
             # Check for essential sections
-            for SECTION_ENTRY in "Near-Term\|Short-Term\|Q[1-4]::Near-term / short-term" "Mid-Term\|Medium-Term::Mid-term" "Long-Term\|Future::Long-term / future" "Non-Goals\|Out of Scope::Non-goals / out of scope"; do
+            for SECTION_ENTRY in "Near-Term|Short-Term|Q[1-4]::Near-term / short-term" "Mid-Term|Medium-Term::Mid-term" "Long-Term|Future::Long-term / future" "Non-Goals|Out of Scope::Non-goals / out of scope"; do
               SECTION_REGEX="${SECTION_ENTRY%%::*}"
               SECTION_LABEL="${SECTION_ENTRY#*::}"
               if ! grep -qiE "$SECTION_REGEX" ROADMAP.md; then
