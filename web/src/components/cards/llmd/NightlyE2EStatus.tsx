@@ -730,7 +730,7 @@ function generateNightlySummary(guides: NightlyGuideStatus[]): [string, string] 
 
 function NightlySummaryPanel({ guides }: { guides: NightlyGuideStatus[] }) {
   const { t } = useTranslation(['cards'])
-  const [para1, para2] = generateNightlySummary(guides)
+  const [para1, para2] = useMemo(() => generateNightlySummary(guides), [guides])
 
   return (
     <div className="h-full flex flex-col">
