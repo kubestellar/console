@@ -47,8 +47,8 @@ function isAllowedOrigin(req: Request): boolean {
       /* ignore parse errors */
     }
   }
-  // Allow if neither header present — non-browser clients (curl, server-side trackers) legitimately omit both (#12308)
-  return true;
+  // Reject if neither header present — non-browser clients (curl, scripts) omit both
+  return false;
 }
 
 export default async (req: Request) => {
