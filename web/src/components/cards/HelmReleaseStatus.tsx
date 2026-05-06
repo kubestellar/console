@@ -103,6 +103,7 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
   // Use shared card data hook for filtering, sorting, and pagination
   const {
     items: releases,
+    allFilteredItems,
     totalItems,
     currentPage,
     totalPages,
@@ -177,9 +178,9 @@ export function HelmReleaseStatus({ config }: HelmReleaseStatusProps) {
 
   const UNKNOWN_TIME_LABEL = 'Unknown'
 
-  // Counts from namespace-filtered releases (pre-pagination summary)
-  const deployedCount = namespacedReleases.filter(r => r.status === 'deployed').length
-  const failedCount = namespacedReleases.filter(r => r.status === 'failed').length
+  // Counts from the fully-filtered set so all three summary boxes describe the same population
+  const deployedCount = allFilteredItems.filter(r => r.status === 'deployed').length
+  const failedCount = allFilteredItems.filter(r => r.status === 'failed').length
 
   if (showSkeleton) {
     return (
