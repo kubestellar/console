@@ -80,6 +80,7 @@ describe('__testables direct tests', () => {
       const timestamp = 1700000000000
 
       __testables.ssWrite('test-key', testData, timestamp)
+      __testables.ssFlush()
 
       const raw = sessionStorage.getItem(`${SS_PREFIX}test-key`)
       expect(raw).toBeTruthy()

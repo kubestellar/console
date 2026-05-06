@@ -164,6 +164,7 @@ describe('cache — CacheStore', () => {
       const mod = await importFresh()
       const data = { clusters: ['a', 'b'] }
       await mod.prefetchCache('sswrite-direct', async () => data, {})
+      mod.__testables.ssFlush()
 
       const raw = sessionStorage.getItem('kcc:sswrite-direct')
       expect(raw).not.toBeNull()
@@ -219,6 +220,7 @@ describe('cache — CacheStore', () => {
       const mod = await importFresh()
       // Create a store that would try to read this key
       await mod.prefetchCache('old-version', async () => 'new', '')
+      mod.__testables.ssFlush()
       // ssRead removes the stale v:3 entry, then the fetcher runs and
       // saveToStorage writes the new data back with CACHE_VERSION=4.
       const remaining = sessionStorage.getItem('kcc:old-version')

@@ -1736,6 +1736,7 @@ export type { CreateCachedHookConfig } from './createCachedHook'
 
 export const __testables = {
   ssWrite,
+  ssFlush,
   ssRead,
   clearSessionSnapshots,
   isEquivalentToInitial,

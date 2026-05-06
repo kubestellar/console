@@ -317,6 +317,7 @@ describe('cache — migrations/edge cases', () => {
     it('clears store state and removes from preloadedMetaMap', async () => {
       const mod = await importFresh()
       await mod.prefetchCache('inv-full', async () => ({ data: 'test' }), {})
+      mod.__testables.ssFlush()
 
       // Verify meta and sessionStorage exist
       expect(localStorage.getItem('kc_meta:inv-full')).not.toBeNull()

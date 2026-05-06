@@ -534,6 +534,7 @@ describe('cache module', () => {
     it('saves successful fetch results to sessionStorage', async () => {
       const mod = await importFresh()
       await mod.prefetchCache('fetch-save', async () => ({ result: 'saved' }), {})
+      mod.__testables.ssFlush()
 
       // Check sessionStorage was written
       const raw = sessionStorage.getItem('kcc:fetch-save')
@@ -565,6 +566,7 @@ describe('cache module', () => {
       const mod = await importFresh()
       // First fetch with real data
       await mod.prefetchCache('guard-empty', async () => [1, 2, 3], [])
+      mod.__testables.ssFlush()
 
       // Verify data was cached
       const raw1 = sessionStorage.getItem('kcc:guard-empty')
@@ -643,6 +645,7 @@ describe('cache module', () => {
       const mod = await importFresh()
       // Populate
       await mod.prefetchCache('inv-test', async () => ({ x: 1 }), {})
+      mod.__testables.ssFlush()
       expect(sessionStorage.getItem('kcc:inv-test')).not.toBeNull()
 
       await mod.invalidateCache('inv-test')
@@ -939,6 +942,7 @@ describe('cache module', () => {
     it('clearAndRefetch resets store state and refetches', async () => {
       const mod = await importFresh()
       await mod.prefetchCache('clear-refetch', async () => ({ a: 1 }), {})
+      mod.__testables.ssFlush()
 
       // Verify data was stored
       const raw = sessionStorage.getItem('kcc:clear-refetch')
@@ -960,6 +964,7 @@ describe('cache module', () => {
 
       // 2. Fetch and save
       await mod.prefetchCache('lifecycle', async () => ({ items: [1, 2, 3] }), { items: [] })
+      mod.__testables.ssFlush()
 
       // 3. Data should be in sessionStorage
       const raw = sessionStorage.getItem('kcc:lifecycle')
