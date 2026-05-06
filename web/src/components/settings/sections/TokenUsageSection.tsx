@@ -144,7 +144,7 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
               type="number"
               value={tokenLimit}
               onChange={(e) => setTokenLimit(parseInt(e.target.value) || 0)}
-              aria-label="Monthly token limit"
+              aria-label={t('settings.tokens.monthlyLimit')}
               className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
             />
             <p className="mt-1 text-xs text-muted-foreground">

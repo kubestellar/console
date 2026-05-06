@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -63,6 +64,7 @@ func TestUpdateUserTokenUsage_RoundTrip(t *testing.T) {
 
 	got, err := store.GetUserTokenUsage(ctx, testTokenUsageUserID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	assert.Equal(t, testTokenDelta1Plus2, got.TotalTokens)
 	assert.Equal(t, testTokenDelta1, got.TokensByCategory[testCategoryMissions])
 	assert.Equal(t, testTokenDelta2, got.TokensByCategory[testCategoryDiagnose])
@@ -87,8 +89,36 @@ func TestUpdateUserTokenUsage_ClampsNegativesToZero(t *testing.T) {
 
 	got, err := store.GetUserTokenUsage(ctx, testTokenUsageUserID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	assert.Equal(t, int64(0), got.TotalTokens)
 	assert.Equal(t, int64(0), got.TokensByCategory[testCategoryMissions])
+}
+
+func TestGetUserTokenUsage_ResetsStaleDayTotals(t *testing.T) {
+	store := newTestStore(t)
+
+	u := &UserTokenUsage{
+		UserID:      testTokenUsageUserID,
+		TotalTokens: testTokenDelta1Plus2,
+		TokensByCategory: map[string]int64{
+			testCategoryMissions: testTokenDelta1,
+			testCategoryDiagnose: testTokenDelta2,
+		},
+		LastAgentSessionID: testSessionA,
+	}
+	require.NoError(t, store.UpdateUserTokenUsage(ctx, u))
+
+	staleTime := time.Now().Add(-24 * time.Hour)
+	_, err := store.db.ExecContext(ctx, `UPDATE user_token_usage SET updated_at = ? WHERE user_id = ?`, staleTime, testTokenUsageUserID)
+	require.NoError(t, err)
+
+	got, err := store.GetUserTokenUsage(ctx, testTokenUsageUserID)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, int64(0), got.TotalTokens)
+	assert.Equal(t, int64(0), got.TokensByCategory[testCategoryMissions])
+	assert.Equal(t, int64(0), got.TokensByCategory[testCategoryDiagnose])
+	assert.Equal(t, testSessionA, got.LastAgentSessionID)
 }
 
 func TestAddUserTokenDelta_AccumulatesAcrossCalls(t *testing.T) {
@@ -96,12 +126,14 @@ func TestAddUserTokenDelta_AccumulatesAcrossCalls(t *testing.T) {
 
 	r1, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, testTokenDelta1, testSessionA)
 	require.NoError(t, err)
+	require.NotNil(t, r1)
 	assert.Equal(t, testTokenDelta1, r1.TotalTokens)
 	assert.Equal(t, testTokenDelta1, r1.TokensByCategory[testCategoryMissions])
 	assert.Equal(t, testSessionA, r1.LastAgentSessionID)
 
 	r2, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryDiagnose, testTokenDelta2, testSessionA)
 	require.NoError(t, err)
+	require.NotNil(t, r2)
 	assert.Equal(t, testTokenDelta1Plus2, r2.TotalTokens)
 	assert.Equal(t, testTokenDelta1, r2.TokensByCategory[testCategoryMissions])
 	assert.Equal(t, testTokenDelta2, r2.TokensByCategory[testCategoryDiagnose])
@@ -118,6 +150,7 @@ func TestAddUserTokenDelta_SessionChangeResetsBaseline(t *testing.T) {
 	// the delta (baseline reset semantics) and must rewrite the marker.
 	got, err := store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, testTokenDelta2, testSessionB)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	assert.Equal(t, testTokenDelta1, got.TotalTokens, "session change must skip the delta add")
 	assert.Equal(t, testTokenDelta1, got.TokensByCategory[testCategoryMissions])
 	assert.Equal(t, testSessionB, got.LastAgentSessionID)
@@ -125,6 +158,7 @@ func TestAddUserTokenDelta_SessionChangeResetsBaseline(t *testing.T) {
 	// Third call on the new session continues to accumulate normally.
 	got, err = store.AddUserTokenDelta(context.Background(), testTokenUsageUserID, testCategoryMissions, testTokenDelta2, testSessionB)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	assert.Equal(t, testTokenDelta1+testTokenDelta2, got.TotalTokens)
 }
 
@@ -161,6 +195,7 @@ func TestAddUserTokenDelta_ConcurrentIncrementsAreAtomic(t *testing.T) {
 
 	got, err := store.GetUserTokenUsage(ctx, testTokenUsageUserID)
 	require.NoError(t, err)
+	require.NotNil(t, got)
 	wantTotal := int64(testConcurrentWorkers) * testConcurrentDelta
 	assert.Equal(t, wantTotal, got.TotalTokens, "concurrent deltas must sum without lost updates")
 	assert.Equal(t, wantTotal, got.TokensByCategory[testCategoryMissions])

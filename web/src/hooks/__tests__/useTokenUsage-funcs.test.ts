@@ -207,10 +207,15 @@ describe('getNextResetDate', () => {
     expect(parsed.getTime()).not.toBeNaN()
   })
 
-  it('returns first day of next month', () => {
+  it('returns the next calendar day', () => {
     const result = getNextResetDate()
     const parsed = new Date(result)
-    expect(parsed.getDate()).toBe(1)
+    const expected = new Date()
+    expected.setHours(0, 0, 0, 0)
+    expected.setDate(expected.getDate() + 1)
+    expect(parsed.getFullYear()).toBe(expected.getFullYear())
+    expect(parsed.getMonth()).toBe(expected.getMonth())
+    expect(parsed.getDate()).toBe(expected.getDate())
   })
 
   it('returns a date in the future', () => {
@@ -220,17 +225,17 @@ describe('getNextResetDate', () => {
     expect(parsed.getTime()).toBeGreaterThan(now.getTime())
   })
 
-  it('returns the correct next month', () => {
+  it('returns a reset time at local midnight', () => {
     const result = getNextResetDate()
     const parsed = new Date(result)
-    const now = new Date()
-    const expectedMonth = (now.getMonth() + 1) % 12
-    expect(parsed.getMonth()).toBe(expectedMonth)
+    expect(parsed.getHours()).toBe(0)
+    expect(parsed.getMinutes()).toBe(0)
+    expect(parsed.getSeconds()).toBe(0)
   })
 
   it('rolls over year boundary correctly when mocked to December', () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date(2025, 11, 15))
+    vi.setSystemTime(new Date(2025, 11, 31, 12))
     const result = getNextResetDate()
     const parsed = new Date(result)
     expect(parsed.getFullYear()).toBe(2026)
@@ -244,13 +249,13 @@ describe('getNextResetDate', () => {
     const result = getNextResetDate()
     const parsed = new Date(result)
     expect(parsed.getFullYear()).toBe(2025)
-    expect(parsed.getMonth()).toBe(1)
-    expect(parsed.getDate()).toBe(1)
+    expect(parsed.getMonth()).toBe(0)
+    expect(parsed.getDate()).toBe(21)
   })
 
   it('handles last day of month', () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date(2025, 2, 31))
+    vi.setSystemTime(new Date(2025, 2, 31, 18))
     const result = getNextResetDate()
     const parsed = new Date(result)
     expect(parsed.getFullYear()).toBe(2025)
@@ -260,11 +265,11 @@ describe('getNextResetDate', () => {
 
   it('handles first day of month', () => {
     vi.useFakeTimers()
-    vi.setSystemTime(new Date(2025, 5, 1))
+    vi.setSystemTime(new Date(2025, 5, 1, 8))
     const result = getNextResetDate()
     const parsed = new Date(result)
     expect(parsed.getFullYear()).toBe(2025)
-    expect(parsed.getMonth()).toBe(6)
-    expect(parsed.getDate()).toBe(1)
+    expect(parsed.getMonth()).toBe(5)
+    expect(parsed.getDate()).toBe(2)
   })
 })

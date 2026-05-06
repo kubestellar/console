@@ -92,9 +92,14 @@ describe('getNextResetDate', () => {
     expect(result.getTime()).toBeGreaterThan(Date.now())
   })
 
-  it('returns the first day of next month', () => {
+  it('returns the next calendar day', () => {
     const result = new Date(getNextResetDate())
-    expect(result.getDate()).toBe(1)
+    const expected = new Date()
+    expected.setHours(0, 0, 0, 0)
+    expected.setDate(expected.getDate() + 1)
+    expect(result.getFullYear()).toBe(expected.getFullYear())
+    expect(result.getMonth()).toBe(expected.getMonth())
+    expect(result.getDate()).toBe(expected.getDate())
   })
 })
 
