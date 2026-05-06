@@ -134,7 +134,7 @@ export function ClusterFocus({ config }: ClusterFocusProps) {
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-sm font-medium text-foreground truncate">{clusterName}</span>
-          <div className={`w-2 h-2 rounded-full shrink-0 ${cluster?.healthy ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div className={`w-2 h-2 rounded-full shrink-0 ${cluster?.healthy ? 'bg-green-400' : 'bg-red-400'}`} />
           {/* #6217: freshness indicator using the OLDEST of the 4 cache
               timestamps so users see the staler half of the data.
               #6244: include cluster cache timestamp — ClusterFocus reads
