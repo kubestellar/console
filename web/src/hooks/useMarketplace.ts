@@ -189,13 +189,14 @@ function notifyInstalledChange() {
   installedListeners.forEach(cb => cb())
 }
 
-// Listen for cross-tab localStorage changes (#7542)
-let _storageListenerRegistered = false
-if (typeof window !== 'undefined' && !_storageListenerRegistered) {
-  _storageListenerRegistered = true
-  window.addEventListener('storage', (e) => {
-    if (e.key === INSTALLED_KEY) notifyInstalledChange()
-  })
+// Listen for cross-tab localStorage changes (#7542).
+// Uses a named handler so HMR module re-evaluation does not stack listeners.
+function handleStorageForMarketplace(e: StorageEvent) {
+  if (e.key === INSTALLED_KEY) notifyInstalledChange()
+}
+if (typeof window !== 'undefined') {
+  window.removeEventListener('storage', handleStorageForMarketplace)
+  window.addEventListener('storage', handleStorageForMarketplace)
 }
 
 export interface InstallResult {

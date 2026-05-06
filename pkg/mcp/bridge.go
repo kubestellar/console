@@ -223,7 +223,7 @@ func (b *Bridge) startOpsClient(ctx context.Context) error {
 		args = append(args, "--kubeconfig", b.config.Kubeconfig)
 	}
 
-	client, err := NewClient("kubestellar-ops", b.config.KubestellarOpsPath, args...)
+	client, err := NewClient(ctx, "kubestellar-ops", b.config.KubestellarOpsPath, args...)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func (b *Bridge) startGadgetClient(ctx context.Context) error {
 		args = append(args, "--kubeconfig", b.config.Kubeconfig)
 	}
 
-	client, err := NewClient("inspektor-gadget", b.config.InspektorGadgetPath, args...)
+	client, err := NewClient(ctx, "inspektor-gadget", b.config.InspektorGadgetPath, args...)
 	if err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func (b *Bridge) startDeployClient(ctx context.Context) error {
 		args = append(args, "--kubeconfig", b.config.Kubeconfig)
 	}
 
-	client, err := NewClient("kubestellar-deploy", b.config.KubestellarDeployPath, args...)
+	client, err := NewClient(ctx, "kubestellar-deploy", b.config.KubestellarDeployPath, args...)
 	if err != nil {
 		return err
 	}

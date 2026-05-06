@@ -170,9 +170,11 @@ type ContentItem struct {
 // and bounds worst-case memory per message.
 const mcpMaxResponseBytes = 1 << 20 // 1 MiB
 
-// NewClient creates a new MCP client for the given binary
-func NewClient(name, binaryPath string, args ...string) (*Client, error) {
-	cmd := exec.Command(binaryPath, args...)
+// NewClient creates a new MCP client for the given binary.
+// The provided context is attached to the child process — when the context
+// is canceled, the child receives a kill signal, enabling graceful shutdown.
+func NewClient(ctx context.Context, name, binaryPath string, args ...string) (*Client, error) {
+	cmd := exec.CommandContext(ctx, binaryPath, args...)
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
