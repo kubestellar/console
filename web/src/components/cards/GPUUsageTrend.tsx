@@ -33,6 +33,8 @@ import { MS_PER_MINUTE, MS_PER_HOUR } from '../../lib/constants/time'
  * windows stay consistent.
  */
 const GPU_SNAPSHOT_STALENESS_MS = 30 * MS_PER_MINUTE // 30 min
+const GPU_CHART_CONTAINER_STYLE = { width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD } as const
+const GPU_CHART_STYLE = { height: CHART_HEIGHT_STANDARD, width: '100%' } as const
 
 /**
  * Bucket size for the staleness-tick that forces the fallback memo to
@@ -496,10 +498,10 @@ const GPUUsageTrend = memo(function GPUUsageTrend() {
             Collecting data...
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`GPU usage trend chart: ${currentTotals.allocated} of ${currentTotals.available} GPUs in use (${usagePercent}% utilization)`}>
+          <div style={GPU_CHART_CONTAINER_STYLE} role="img" aria-label={`GPU usage trend chart: ${currentTotals.allocated} of ${currentTotals.available} GPUs in use (${usagePercent}% utilization)`}>
             <LazyEChart
               option={chartOption}
-              style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
+              style={GPU_CHART_STYLE}
               notMerge={true}
               opts={{ renderer: 'svg' }}
             />

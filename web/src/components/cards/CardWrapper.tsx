@@ -35,6 +35,9 @@ const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestMod
 // Minimum duration to show spin animation (ensures at least one full rotation)
 const MIN_SPIN_DURATION = 500
 
+/** CSS container query style for card content responsive breakpoints */
+const CONTAINER_QUERY_STYLE = { containerType: 'inline-size' } as const
+
 /** Number of consecutive failures before showing the "Remove card" prompt */
 const REMOVE_CARD_FAILURE_THRESHOLD = 3
 
@@ -939,7 +942,7 @@ export const CardWrapper = memo(function CardWrapper({
                     card width (which shrinks when side panels expand).
                     Must be INSIDE overflow-auto (CSS spec: container-type and
                     overflow conflict on the same element). */}
-                <div className="@container flex-1 flex flex-col min-h-0" style={{ containerType: 'inline-size' }}>
+                <div className="@container flex-1 flex flex-col min-h-0" style={CONTAINER_QUERY_STYLE}>
                 {(isVisible || isExpanded) ? (
                   <>
                     {/* Show skeleton overlay when loading with no cached data */}

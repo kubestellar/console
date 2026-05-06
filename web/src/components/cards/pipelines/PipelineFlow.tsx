@@ -37,6 +37,7 @@ import { cn } from '../../../lib/cn'
 const FLOW_DOT_RADIUS_PX = 2.5
 /** Per-segment animation duration */
 const FLOW_DUR_S = 2.2
+const PIPELINE_FLOW_GRID_STYLE = { gridTemplateColumns: '100px 180px 1fr 1fr' } as const
 /** Max jobs rendered per run before "+N more" truncation (visual cap) */
 const MAX_JOBS_VISIBLE = 5
 /** Max steps per job rendered in the flow */

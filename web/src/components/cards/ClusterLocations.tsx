@@ -23,6 +23,9 @@ const MAX_CLUSTER_NAME_DISPLAY = 12
 /** Length to truncate cluster names to when they exceed the display threshold */
 const TRUNCATED_NAME_LENGTH = 10
 
+/** Ping animation style for healthy/unhealthy cluster indicators */
+const PING_ANIMATION_STYLE = { animationDuration: '3s', width: 24, height: 24, marginLeft: -4, marginTop: -4 } as const
+
 interface ClusterLocationsProps {
   config?: Record<string, unknown>
 }
@@ -552,12 +555,7 @@ export function ClusterLocations({ config: _config }: ClusterLocationsProps) {
                     {/* Subtle ping animation */}
                     <div
                       className={`absolute inset-0 rounded-full animate-pulse opacity-20 ${cluster.healthy ? 'bg-green-400' : 'bg-red-400'}`}
-                      style={{
-                        animationDuration: '3s',
-                        width: 24,
-                        height: 24,
-                        marginLeft: -4,
-                        marginTop: -4 }}
+                      style={PING_ANIMATION_STYLE}
                     />
 
                     {/* Cluster badge */}
