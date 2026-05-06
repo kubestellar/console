@@ -1,6 +1,5 @@
-import { useCache } from '../../../lib/cache'
+import { createCachedHook } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 import {
   HARBOR_DEMO_DATA,
   type HarborDemoData,
@@ -150,7 +149,18 @@ async function fetchHarborStatus(): Promise<HarborStatus> {
 }
 
 // ---------------------------------------------------------------------------
-// Hook
+// Hook (using createCachedHook factory)
+// ---------------------------------------------------------------------------
+
+const useCachedHarbor = createCachedHook<HarborStatus>({
+  key: CACHE_KEY,
+  initialData: INITIAL_DATA,
+  demoData: HARBOR_DEMO_DATA,
+  fetcher: fetchHarborStatus,
+})
+
+// ---------------------------------------------------------------------------
+// Legacy wrapper (preserves existing return shape for consumers)
 // ---------------------------------------------------------------------------
 
 export interface UseHarborStatusResult {
@@ -166,50 +176,38 @@ export interface UseHarborStatusResult {
 }
 
 export function useHarborStatus(): UseHarborStatusResult {
-  const { isDemoMode } = useDemoMode()
-
   const {
-    data: liveData,
+    data,
     isLoading,
     isRefreshing,
     isFailed,
     consecutiveFailures,
     isDemoFallback,
     lastRefresh,
-  } = useCache<HarborStatus>({
-    key: CACHE_KEY,
-    category: 'default',
-    initialData: INITIAL_DATA,
-    demoData: HARBOR_DEMO_DATA,
-    persist: true,
-    fetcher: fetchHarborStatus,
-  })
-
-  const data = isDemoMode ? HARBOR_DEMO_DATA : liveData
-  const effectiveIsDemoData = isDemoMode || (isDemoFallback && !isLoading)
+  } = useCachedHarbor()
 
   const hasAnyData =
     (data.projects || []).length > 0 ||
     (data.repositories || []).length > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !isDemoMode,
+    isLoading,
     isRefreshing,
     hasAnyData,
     isFailed,
     consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
+    isDemoData: isDemoFallback,
   })
 
   return {
     data,
-    loading: isLoading && !isDemoMode,
+    loading: isLoading,
     isRefreshing,
-    error: isFailed && !hasAnyData && !isDemoMode,
+    error: isFailed && !hasAnyData,
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
     lastRefresh,
-    isDemoFallback: effectiveIsDemoData,
+    isDemoFallback,
   }
 }

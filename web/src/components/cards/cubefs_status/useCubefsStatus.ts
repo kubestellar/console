@@ -1,6 +1,5 @@
-import { useCache } from '../../../lib/cache'
+import { createCachedHook } from '../../../lib/cache'
 import { useCardLoadingState } from '../CardDataContext'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 import {
   CUBEFS_DEMO_DATA,
   type CubefsDemoData,
@@ -303,7 +302,18 @@ async function fetchCubefsStatus(): Promise<CubefsStatus> {
 }
 
 // ---------------------------------------------------------------------------
-// Hook
+// Hook (using createCachedHook factory)
+// ---------------------------------------------------------------------------
+
+const useCachedCubefs = createCachedHook<CubefsStatus>({
+  key: CACHE_KEY,
+  initialData: INITIAL_DATA,
+  demoData: CUBEFS_DEMO_DATA,
+  fetcher: fetchCubefsStatus,
+})
+
+// ---------------------------------------------------------------------------
+// Legacy wrapper (preserves existing return shape for consumers)
 // ---------------------------------------------------------------------------
 
 export interface UseCubefsStatusResult {
@@ -319,50 +329,38 @@ export interface UseCubefsStatusResult {
 }
 
 export function useCubefsStatus(): UseCubefsStatusResult {
-  const { isDemoMode } = useDemoMode()
-
   const {
-    data: liveData,
+    data,
     isLoading,
     isRefreshing,
     isFailed,
     consecutiveFailures,
     isDemoFallback,
     lastRefresh,
-  } = useCache<CubefsStatus>({
-    key: CACHE_KEY,
-    category: 'default',
-    initialData: INITIAL_DATA,
-    demoData: CUBEFS_DEMO_DATA,
-    persist: true,
-    fetcher: fetchCubefsStatus,
-  })
-
-  const data = isDemoMode ? CUBEFS_DEMO_DATA : liveData
-  const effectiveIsDemoData = isDemoMode || (isDemoFallback && !isLoading)
+  } = useCachedCubefs()
 
   const hasAnyData =
     (data.volumes || []).length > 0 ||
     (data.nodes || []).length > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoading && !isDemoMode,
+    isLoading,
     isRefreshing,
     hasAnyData,
     isFailed,
     consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
+    isDemoData: isDemoFallback,
   })
 
   return {
     data,
-    loading: isLoading && !isDemoMode,
+    loading: isLoading,
     isRefreshing,
-    error: isFailed && !hasAnyData && !isDemoMode,
+    error: isFailed && !hasAnyData,
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
     lastRefresh,
-    isDemoFallback: effectiveIsDemoData,
+    isDemoFallback,
   }
 }
