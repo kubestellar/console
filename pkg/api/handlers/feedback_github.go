@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os/exec"
 	"strings"
+	"time"
 
 	"runtime/debug"
 
@@ -1104,7 +1105,10 @@ func vcsRevision() string {
 			}
 		}
 	}
-	out, err := exec.Command("git", "rev-parse", "HEAD").Output()
+	const gitCmdTimeout = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
 	if err != nil {
 		return ""
 	}

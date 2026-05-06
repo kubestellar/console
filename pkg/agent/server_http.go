@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -261,7 +262,10 @@ func (s *Server) killBackendProcess() bool {
 		return false
 	}
 	portArg := fmt.Sprintf(":%d", resolveBackendPort())
-	out, err := exec.Command("lsof", "-ti", portArg, "-sTCP:LISTEN").Output()
+	const lsofTimeout = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), lsofTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "lsof", "-ti", portArg, "-sTCP:LISTEN").Output()
 	if err != nil || len(strings.TrimSpace(string(out))) == 0 {
 		// No process found — return false so callers know nothing was killed (#7264)
 		return false

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -217,7 +218,10 @@ func fetchPlaylistViaYTDLP() ([]PlaylistVideo, error) {
 	}
 
 	playlistURL := fmt.Sprintf("https://www.youtube.com/playlist?list=%s", playlistID)
-	cmd := exec.Command(ytdlp, "--flat-playlist", "--dump-json", "--no-warnings", playlistURL)
+	const ytdlpTimeout = 30 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), ytdlpTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, ytdlp, "--flat-playlist", "--dump-json", "--no-warnings", playlistURL)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("yt-dlp failed: %w", err)

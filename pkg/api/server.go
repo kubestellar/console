@@ -1815,7 +1815,10 @@ func generateRandomSecret() string {
 // Used as a fallback when debug.ReadBuildInfo() doesn't include VCS metadata
 // (e.g. when running with `go run` outside a module-aware build).
 func gitFallbackRevision() string {
-	out, err := exec.Command("git", "rev-parse", "HEAD").Output()
+	const gitCmdTimeout = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "git", "rev-parse", "HEAD").Output()
 	if err != nil {
 		return ""
 	}
@@ -1825,7 +1828,10 @@ func gitFallbackRevision() string {
 // gitFallbackTime returns the commit time of HEAD by shelling out to git.
 // Used as a fallback when debug.ReadBuildInfo() doesn't include VCS metadata.
 func gitFallbackTime() string {
-	out, err := exec.Command("git", "log", "-1", "--format=%cI").Output()
+	const gitCmdTimeout = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), gitCmdTimeout)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "git", "log", "-1", "--format=%cI").Output()
 	if err != nil {
 		return ""
 	}

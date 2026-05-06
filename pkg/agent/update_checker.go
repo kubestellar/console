@@ -1208,7 +1208,10 @@ func (uc *UpdateChecker) resilientNpmInstall(webDir string, step, totalSteps int
 		})
 
 		// Clean npm cache (fixes EACCES, sha512 corruption)
-		cacheClean := exec.Command("npm", "cache", "clean", "--force")
+		const npmCacheTimeout = 30 * time.Second
+		cacheCtx, cacheCancel := context.WithTimeout(context.Background(), npmCacheTimeout)
+		defer cacheCancel()
+		cacheClean := exec.CommandContext(cacheCtx, "npm", "cache", "clean", "--force")
 		cacheClean.Stdout = os.Stdout
 		cacheClean.Stderr = os.Stderr
 		if cleanErr := cacheClean.Run(); cleanErr != nil {
@@ -1424,7 +1427,10 @@ func hasUncommittedChanges(repoPath string) bool {
 	if repoPath == "" {
 		return false
 	}
-	cmd := exec.Command("git", "status", "--porcelain", "-uno")
+	const gitStatusTimeout = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), gitStatusTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "status", "--porcelain", "-uno")
 	cmd.Dir = repoPath
 	out, err := cmd.Output()
 	if err != nil {

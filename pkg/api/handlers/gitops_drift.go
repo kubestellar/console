@@ -562,11 +562,14 @@ func cloneRepo(ctx context.Context, repoURL, branch string) (string, error) {
 
 // isKustomizeDir checks if a directory contains kustomization.yaml or kustomization.yml
 func isKustomizeDir(path string) bool {
-	cmd := exec.Command("test", "-f", path+"/kustomization.yaml")
+	const kustomizeCheckTimeout = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), kustomizeCheckTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "test", "-f", path+"/kustomization.yaml")
 	if cmd.Run() == nil {
 		return true
 	}
-	cmd = exec.Command("test", "-f", path+"/kustomization.yml")
+	cmd = exec.CommandContext(ctx, "test", "-f", path+"/kustomization.yml")
 	return cmd.Run() == nil
 }
 
