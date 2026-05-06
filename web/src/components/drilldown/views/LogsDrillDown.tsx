@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Loader2, AlertCircle, Server, Layers, Box, RefreshCw } from 'lucide-react'
+import { Loader2, AlertCircle, Server, Layers, Box, RefreshCw, Filter } from 'lucide-react'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useTranslation } from 'react-i18next'
@@ -25,6 +25,13 @@ const TAIL_LINE_OPTIONS = [50, 100, 500, 1000] as const
 /** Default tail lines on mount. */
 const DEFAULT_TAIL_LINES = 100
 
+/** Log severity levels for filtering, inspired by CNCF Headlamp PR #5338 */
+const LOG_LEVELS = ['ALL', 'DEBUG', 'INFO', 'WARN', 'ERROR'] as const
+type LogLevel = typeof LOG_LEVELS[number]
+
+/** Default log level filter */
+const DEFAULT_LOG_LEVEL: LogLevel = 'ALL'
+
 /** Build the seed (static placeholder) log body. Extracted so Refresh can
  *  regenerate the timestamp and tail slicing can operate on an array. */
 function buildSeedLogLines(pod: string, container: string | undefined, generatedAtISO: string): string[] {
@@ -34,13 +41,47 @@ function buildSeedLogLines(pod: string, container: string | undefined, generated
     `# Fetching logs for pod: ${pod}`,
     `# Container: ${container || 'all'}`,
     `# Generated: ${generatedAtISO}`,
-    `[${fmt(0)}] Starting application...`,
-    `[${fmt(1_000)}] Initializing components...`,
-    `[${fmt(2_000)}] Server listening on port 8080`,
-    `[${fmt(3_000)}] Connected to database`,
-    `[${fmt(4_000)}] Health check passed`,
-    `[${fmt(5_000)}] Ready to accept connections`,
+    `[${fmt(0)}] [INFO] Starting application...`,
+    `[${fmt(1_000)}] [DEBUG] Initializing components...`,
+    `[${fmt(2_000)}] [INFO] Server listening on port 8080`,
+    `[${fmt(3_000)}] [INFO] Connected to database`,
+    `[${fmt(4_000)}] [WARN] High memory usage detected`,
+    `[${fmt(5_000)}] [INFO] Health check passed`,
+    `[${fmt(6_000)}] [DEBUG] Processing request queue`,
+    `[${fmt(7_000)}] [ERROR] Failed to connect to cache server`,
+    `[${fmt(8_000)}] [WARN] Retrying cache connection...`,
+    `[${fmt(9_000)}] [INFO] Cache connection restored`,
+    `[${fmt(10_000)}] [INFO] Ready to accept connections`,
   ]
+}
+
+/** Extract log level from a log line */
+function extractLogLevel(line: string): LogLevel | null {
+  const match = line.match(/\[(DEBUG|INFO|WARN|ERROR)\]/)
+  return match ? (match[1] as LogLevel) : null
+}
+
+/** Filter log lines by severity level */
+function filterLogsByLevel(lines: string[], level: LogLevel): string[] {
+  if (level === 'ALL') return lines
+  
+  // Define severity hierarchy
+  const levelPriority: Record<LogLevel, number> = {
+    ALL: 0,
+    DEBUG: 1,
+    INFO: 2,
+    WARN: 3,
+    ERROR: 4,
+  }
+  
+  const minPriority = levelPriority[level]
+  
+  return lines.filter(line => {
+    const lineLevel = extractLogLevel(line)
+    // Include header lines (without level) and lines matching/exceeding severity
+    if (!lineLevel || line.startsWith('#')) return true
+    return levelPriority[lineLevel] >= minPriority
+  })
 }
 
 export function LogsDrillDown({ data }: Props) {
@@ -52,6 +93,7 @@ export function LogsDrillDown({ data }: Props) {
   const { drillToCluster, drillToNamespace, drillToPod } = useDrillDownActions()
   const clusterShort = cluster?.split('/').pop() || cluster
   const [tailLines, setTailLines] = useState<number>(DEFAULT_TAIL_LINES)
+  const [logLevel, setLogLevel] = useState<LogLevel>(DEFAULT_LOG_LEVEL)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [follow, setFollow] = useState(false)
@@ -71,12 +113,13 @@ export function LogsDrillDown({ data }: Props) {
     [pod, container, generatedAt],
   )
 
-  // Combined view = seed + follow heartbeats, sliced to the requested tail.
+  // Combined view = seed + follow heartbeats, filtered by level, sliced to the requested tail.
   const visibleLogLines = useMemo(() => {
     const all = [...seedLines, ...followLines]
-    if (tailLines >= all.length) return all
-    return all.slice(all.length - tailLines)
-  }, [seedLines, followLines, tailLines])
+    const filtered = filterLogsByLevel(all, logLevel)
+    if (tailLines >= filtered.length) return filtered
+    return filtered.slice(filtered.length - tailLines)
+  }, [seedLines, followLines, tailLines, logLevel])
 
   const visibleLog = visibleLogLines.join('\n')
 
@@ -194,6 +237,22 @@ export function LogsDrillDown({ data }: Props) {
               <option key={n} value={n}>{t('drilldown.logs.tailLinesOption', { count: n })}</option>
             ))}
           </select>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <select
+              value={logLevel}
+              onChange={(e) => setLogLevel(e.target.value as LogLevel)}
+              disabled={isLoading}
+              className="px-3 py-2 rounded-lg bg-card/50 border border-border text-foreground text-sm disabled:opacity-50"
+              aria-label={t('drilldown.logs.severityFilterLabel')}
+            >
+              {LOG_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {level === 'ALL' ? t('drilldown.logs.allLevels') : level}
+                </option>
+              ))}
+            </select>
+          </div>
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"

@@ -2465,6 +2465,8 @@
       "tailLinesOption": "Last {{count}} lines",
       "tailLinesOption_one": "Last {{count}} line",
       "tailLinesOption_other": "Last {{count}} lines",
+      "severityFilterLabel": "Filter by severity",
+      "allLevels": "All Levels",
       "showing": "Showing {{lines}} of last {{tail}} lines",
       "generatedAt": "Generated at {{time}}",
       "mockNotice": "Live log streaming is not yet available — showing placeholder content. Connect the local agent to stream real logs when available."
