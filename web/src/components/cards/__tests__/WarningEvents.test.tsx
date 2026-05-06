@@ -42,17 +42,12 @@ vi.mock('../CardDataContext', () => ({
 
 const mockEvents = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedEvents: () => mockEvents(),
+  useCachedEvents: (...args: unknown[]) => mockEvents(...args),
 }))
 
+const mockUseCardData = vi.fn()
 vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: () => ({
-    items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
-    goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
-    filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
-    sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
-    containerRef: { current: null }, containerStyle: undefined,
-  }),
+  useCardData: (...args: unknown[]) => mockUseCardData(...args),
   commonComparators: { string: () => () => 0, number: () => () => 0, statusOrder: () => () => 0, date: () => () => 0, boolean: () => () => 0 },
 }))
 
@@ -64,6 +59,13 @@ describe('WarningEvents', () => {
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockEvents.mockReturnValue({ events: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
+    mockUseCardData.mockReturnValue({
+      items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 5,
+      goToPage: vi.fn(), needsPagination: false, setItemsPerPage: vi.fn(),
+      filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
+      sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
+      containerRef: { current: null }, containerStyle: undefined,
+    })
   })
 
   it('renders without crashing', () => {
@@ -119,6 +121,28 @@ describe('WarningEvents', () => {
     mockEvents.mockReturnValue({ events: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     render(<WarningEvents />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('uses configured show limit for fetch and pagination defaults', () => {
+    render(<WarningEvents config={{ limit: 5 }} />)
+
+    expect(mockEvents).toHaveBeenCalledWith(undefined, undefined, { limit: 5, category: 'realtime' })
+    expect(mockUseCardData).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ defaultLimit: 5 }))
+  })
+
+  it('overrides persisted itemsPerPage with configured show limit', () => {
+    const setItemsPerPage = vi.fn()
+    mockUseCardData.mockReturnValue({
+      items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 17,
+      goToPage: vi.fn(), needsPagination: true, setItemsPerPage,
+      filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
+      sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
+      containerRef: { current: null }, containerStyle: undefined,
+    })
+
+    render(<WarningEvents config={{ limit: 5 }} />)
+
+    expect(setItemsPerPage).toHaveBeenCalledWith(5)
   })
 
 })

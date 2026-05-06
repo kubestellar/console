@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useEffect } from 'react'
 import { useCachedEvents } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
@@ -12,14 +13,21 @@ import { formatTimeAgo } from '../../lib/formatters'
 
 type SortByOption = 'time' | 'count' | 'reason'
 
+const DEFAULT_API_FETCH_LIMIT = 100
+const DEFAULT_DISPLAY_LIMIT = 5
+
 const SORT_OPTIONS = [
   { value: 'time' as const, label: 'Time' },
   { value: 'count' as const, label: 'Count' },
   { value: 'reason' as const, label: 'Reason' },
 ]
 
-export function WarningEvents() {
+export function WarningEvents({ config }: { config?: Record<string, unknown> } = {}) {
   const { t } = useTranslation()
+  const userLimit =
+    typeof config?.limit === 'number' && config.limit > 0 ? config.limit : null
+  const apiFetchLimit = userLimit ?? DEFAULT_API_FETCH_LIMIT
+  const displayLimit = userLimit ?? DEFAULT_DISPLAY_LIMIT
   const {
     events,
     isLoading,
@@ -28,7 +36,7 @@ export function WarningEvents() {
     refetch,
     isFailed,
     consecutiveFailures,
-    lastRefresh } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
+    lastRefresh } = useCachedEvents(undefined, undefined, { limit: apiFetchLimit, category: 'realtime' })
 
   // Pre-filter to only warning events before passing to useCardData
   const warningOnly = events.filter(e => e.type === 'Warning')
@@ -80,7 +88,13 @@ export function WarningEvents() {
         },
         count: commonComparators.number<ClusterEvent>('count'),
         reason: commonComparators.string<ClusterEvent>('reason') } },
-    defaultLimit: 5 })
+    defaultLimit: displayLimit })
+
+  useEffect(() => {
+    if (typeof userLimit === 'number') {
+      setItemsPerPage(userLimit)
+    }
+  }, [setItemsPerPage, userLimit])
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader showSearch />
