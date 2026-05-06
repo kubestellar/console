@@ -19,11 +19,12 @@ const CARD_LOAD_ERROR = 'Failed to load'
 const ERROR_TEXT_CLASS = 'text-red-400 text-sm'
 const LOADING_TEXT_CLASS = 'text-gray-500 text-sm'
 
-function useSummaryData<T>(endpoint: string) {
+function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    setError(null)
     authFetch(endpoint)
       .then((response) => {
         if (!response.ok) {
@@ -35,7 +36,7 @@ function useSummaryData<T>(endpoint: string) {
       .then(setData)
       .catch((err: unknown) => {
         console.error(`[EnterpriseComplianceCards] ${endpoint} fetch failed:`, err)
-        setError(err instanceof Error ? err.message : CARD_LOAD_ERROR)
+        setError(CARD_LOAD_ERROR)
       })
   }, [endpoint])
 
