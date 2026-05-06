@@ -65,6 +65,11 @@ type userTokenUsageResponse struct {
 }
 
 func toTokenUsageResponse(u *store.UserTokenUsage) userTokenUsageResponse {
+	if u == nil {
+		return userTokenUsageResponse{
+			TokensByCategory: map[string]int64{},
+		}
+	}
 	// Always materialize a non-nil map so the frontend can treat the
 	// response as a JS object without a null-check dance.
 	cats := u.TokensByCategory
@@ -94,7 +99,7 @@ func resolveTokenUsageUserID(c *fiber.Ctx) string {
 	return ""
 }
 
-// GetUserTokenUsage returns the current user's persisted token-usage row.
+// GetUserTokenUsage returns the current user's token usage for the active daily window.
 // GET /api/token-usage/me
 func (h *TokenUsageHandler) GetUserTokenUsage(c *fiber.Ctx) error {
 	userID := resolveTokenUsageUserID(c)

@@ -319,6 +319,30 @@ func scanUserTokenUsageRow(row interface {
 	return &u, nil
 }
 
+func isSameUTCDay(a, b time.Time) bool {
+	aYear, aMonth, aDay := a.UTC().Date()
+	bYear, bMonth, bDay := b.UTC().Date()
+	return aYear == bYear && aMonth == bMonth && aDay == bDay
+}
+
+func normalizeCurrentDayTokenUsage(u *UserTokenUsage, now time.Time) *UserTokenUsage {
+	if u == nil {
+		return nil
+	}
+	if u.TokensByCategory == nil {
+		u.TokensByCategory = map[string]int64{}
+	}
+	if u.UpdatedAt.IsZero() || isSameUTCDay(u.UpdatedAt, now) {
+		return u
+	}
+	return &UserTokenUsage{
+		UserID:             u.UserID,
+		TokensByCategory:   map[string]int64{},
+		LastAgentSessionID: u.LastAgentSessionID,
+		UpdatedAt:          now,
+	}
+}
+
 // GetUserTokenUsage returns the persisted token-usage row for userID, or a
 // zero-value struct (UserID set, TotalTokens=0, empty category map, empty
 // session marker) when no row exists yet. A missing row is NOT an error —
@@ -343,7 +367,7 @@ func (s *SQLiteStore) GetUserTokenUsage(ctx context.Context, userID string) (*Us
 	if err != nil {
 		return nil, fmt.Errorf("get user token usage: %w", err)
 	}
-	return u, nil
+	return normalizeCurrentDayTokenUsage(u, time.Now()), nil
 }
 
 // UpdateUserTokenUsage upserts the full token-usage row. Callers pass the
@@ -451,6 +475,15 @@ func (s *SQLiteStore) AddUserTokenDelta(ctx context.Context, userID string, cate
 		return nil, fmt.Errorf("read current token usage: %w", scanErr)
 	}
 
+	now := time.Now()
+	current = normalizeCurrentDayTokenUsage(current, now)
+	if current == nil {
+		current = &UserTokenUsage{
+			UserID:           userID,
+			TokensByCategory: map[string]int64{},
+		}
+	}
+
 	// Restart detection (mirrors #6020 frontend): if the incoming session
 	// marker differs from the one we last stored, treat the current totals
 	// as a fresh baseline for the new session and skip the delta add.
@@ -473,7 +506,6 @@ func (s *SQLiteStore) AddUserTokenDelta(ctx context.Context, userID string, cate
 	if err != nil {
 		return nil, fmt.Errorf("encode tokens_by_category: %w", err)
 	}
-	now := time.Now()
 	current.UpdatedAt = now
 
 	if _, err := conn.ExecContext(ctx,

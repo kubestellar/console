@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +23,7 @@ const testTokenUsageFiberTimeoutMs = 5000
 // newTokenUsageTestApp builds a Fiber app backed by an on-disk SQLite store
 // wired to the token-usage handler. The auth shim sets a stable githubLogin
 // local so resolveTokenUsageUserID returns the dev-mode user id.
-func newTokenUsageTestApp(t *testing.T) (*fiber.App, store.Store, string) {
+func newTokenUsageTestApp(t *testing.T) (*fiber.App, store.Store, string, string) {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "token-usage-test.db")
 	sqlStore, err := store.NewSQLiteStore(dbPath)
@@ -41,7 +43,7 @@ func newTokenUsageTestApp(t *testing.T) (*fiber.App, store.Store, string) {
 	app.Post("/api/token-usage/me", h.UpdateUserTokenUsage)
 	app.Post("/api/token-usage/delta", h.AddTokenDelta)
 
-	return app, sqlStore, testUserID
+	return app, sqlStore, testUserID, dbPath
 }
 
 func decodeTokenUsageResponse(t *testing.T, resp *http.Response) userTokenUsageResponse {
@@ -53,7 +55,7 @@ func decodeTokenUsageResponse(t *testing.T, resp *http.Response) userTokenUsageR
 }
 
 func TestTokenUsageHandler_GetReturnsZeroForNewUser(t *testing.T) {
-	app, _, _ := newTokenUsageTestApp(t)
+	app, _, _, _ := newTokenUsageTestApp(t)
 
 	req, _ := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
 	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
@@ -68,7 +70,7 @@ func TestTokenUsageHandler_GetReturnsZeroForNewUser(t *testing.T) {
 }
 
 func TestTokenUsageHandler_PutThenGetRoundTrip(t *testing.T) {
-	app, _, _ := newTokenUsageTestApp(t)
+	app, _, _, _ := newTokenUsageTestApp(t)
 
 	const wantTotal int64 = 1234
 	const wantMissions int64 = 800
@@ -105,7 +107,7 @@ func TestTokenUsageHandler_PutThenGetRoundTrip(t *testing.T) {
 }
 
 func TestTokenUsageHandler_DeltaIncrementsAtomically(t *testing.T) {
-	app, _, _ := newTokenUsageTestApp(t)
+	app, _, _, _ := newTokenUsageTestApp(t)
 
 	const delta1 int64 = 50
 	const delta2 int64 = 75
@@ -134,7 +136,7 @@ func TestTokenUsageHandler_DeltaIncrementsAtomically(t *testing.T) {
 }
 
 func TestTokenUsageHandler_DeltaSessionChangeSkipsAdd(t *testing.T) {
-	app, _, _ := newTokenUsageTestApp(t)
+	app, _, _, _ := newTokenUsageTestApp(t)
 
 	const delta1 int64 = 100
 	const delta2 int64 = 250
@@ -168,8 +170,41 @@ func TestTokenUsageHandler_DeltaSessionChangeSkipsAdd(t *testing.T) {
 	assert.Equal(t, "session-B", got.LastAgentSessionID)
 }
 
+func TestTokenUsageHandler_GetResetsStaleDayTotals(t *testing.T) {
+	app, _, testUserID, dbPath := newTokenUsageTestApp(t)
+
+	body, _ := json.Marshal(putUserTokenUsageRequest{
+		TotalTokens: 1000,
+		TokensByCategory: map[string]int64{
+			"missions": 1000,
+		},
+		LastAgentSessionID: "session-stale",
+	})
+	req, err := http.NewRequest(http.MethodPost, "/api/token-usage/me", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, testTokenUsageFiberTimeoutMs)
+	require.NoError(t, err)
+	resp.Body.Close()
+
+	db, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	_, err = db.Exec(`UPDATE user_token_usage SET updated_at = ? WHERE user_id = ?`, time.Now().Add(-24*time.Hour), testUserID)
+	require.NoError(t, err)
+
+	getReq, err := http.NewRequest(http.MethodGet, "/api/token-usage/me", nil)
+	require.NoError(t, err)
+	getResp, err := app.Test(getReq, testTokenUsageFiberTimeoutMs)
+	require.NoError(t, err)
+	got := decodeTokenUsageResponse(t, getResp)
+	assert.Equal(t, int64(0), got.TotalTokens)
+	assert.Equal(t, int64(0), got.TokensByCategory["missions"])
+	assert.Equal(t, "session-stale", got.LastAgentSessionID)
+}
+
 func TestTokenUsageHandler_DeltaRejectsNegative(t *testing.T) {
-	app, _, _ := newTokenUsageTestApp(t)
+	app, _, _, _ := newTokenUsageTestApp(t)
 
 	body, _ := json.Marshal(postTokenDeltaRequest{
 		Category:       "missions",
@@ -186,7 +221,7 @@ func TestTokenUsageHandler_DeltaRejectsNegative(t *testing.T) {
 }
 
 func TestTokenUsageHandler_DeltaRejectsOverLimit(t *testing.T) {
-	app, _, _ := newTokenUsageTestApp(t)
+	app, _, _, _ := newTokenUsageTestApp(t)
 
 	body, _ := json.Marshal(postTokenDeltaRequest{
 		Category:       "missions",
@@ -203,7 +238,7 @@ func TestTokenUsageHandler_DeltaRejectsOverLimit(t *testing.T) {
 }
 
 func TestTokenUsageHandler_PutRejectsTooManyCategories(t *testing.T) {
-	app, _, _ := newTokenUsageTestApp(t)
+	app, _, _, _ := newTokenUsageTestApp(t)
 
 	cats := make(map[string]int64, maxTokenCategories+1)
 	for i := 0; i <= maxTokenCategories; i++ {

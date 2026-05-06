@@ -122,7 +122,7 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
           )}
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">{t('common.used')}</span>
+              <span className="text-muted-foreground">{t('layout.navbar.usedToday')}</span>
               <span className="text-foreground font-mono">{usage.used.toLocaleString()}</span>
             </div>
             <div className="flex justify-between text-xs">
@@ -152,14 +152,14 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
                   : t('common.normal')}
               </span>
               <span className="text-muted-foreground">
-                {t('layout.navbar.resets', { date: new Date(usage.resetDate).toLocaleDateString() })}
+                {t('layout.navbar.resetsDaily')}
               </span>
             </div>
           </div>
           {/* Category breakdown - always show all features */}
           {usage.byCategory && (
             <div className="mt-3 pt-3 border-t border-border">
-              <div className="text-xs text-muted-foreground mb-2">{t('layout.navbar.breakdownByFeature')}</div>
+              <div className="text-xs text-muted-foreground mb-2">{t('layout.navbar.breakdownByFeatureToday')}</div>
               {/* Category list with token counts */}
               <div className="space-y-1.5">
                 {(['missions', 'diagnose', 'insights', 'predictions', 'other'] as TokenCategory[])

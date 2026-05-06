@@ -242,6 +242,7 @@ describe('useTokenUsage', () => {
     // After addTokens, category data should be persisted
     act(() => { result.current.resetUsage() })
     expect(localStorage.getItem('kubestellar-token-categories')).toBeNull()
+    expect(localStorage.getItem('kubestellar-token-period')).not.toBeNull()
   })
 
   it('updateSettings dispatches custom events for cross-component sync', () => {
@@ -293,13 +294,18 @@ describe('useTokenUsage', () => {
     }
   })
 
-  it('resetDate is a valid ISO date string in the future', () => {
+  it('resetDate is a valid ISO date string for the next daily reset', () => {
     const { result } = renderHook(() => useTokenUsage())
     act(() => { result.current.resetUsage() })
     const resetDate = new Date(result.current.usage.resetDate)
+    const expectedResetDate = new Date()
+    expectedResetDate.setHours(0, 0, 0, 0)
+    expectedResetDate.setDate(expectedResetDate.getDate() + 1)
+
     expect(resetDate.getTime()).not.toBeNaN()
-    // Reset date should be the 1st of next month (in the future or very near future)
-    expect(resetDate.getDate()).toBe(1)
+    expect(resetDate.getFullYear()).toBe(expectedResetDate.getFullYear())
+    expect(resetDate.getMonth()).toBe(expectedResetDate.getMonth())
+    expect(resetDate.getDate()).toBe(expectedResetDate.getDate())
   })
 
   // ── getAlertLevel returns 'normal' when limit <= 0 ───────────────
@@ -428,22 +434,19 @@ describe('useTokenUsage', () => {
     expect(() => unmount()).not.toThrow()
   })
 
-  // ── resetUsage sets resetDate to first of next month ─────────────
-  it('resetUsage sets resetDate to the first day of next month', () => {
+  // ── resetUsage sets resetDate to the next daily reset ────────────
+  it('resetUsage sets resetDate to the next day', () => {
     const { result } = renderHook(() => useTokenUsage())
     act(() => { result.current.resetUsage() })
 
     const resetDate = new Date(result.current.usage.resetDate)
-    const now = new Date()
-    const expectedMonth = (now.getMonth() + 1) % 12
-    // Check the month is the next month (handle December -> January)
-    expect(resetDate.getDate()).toBe(1)
-    if (now.getMonth() === 11) {
-      expect(resetDate.getMonth()).toBe(0) // January
-      expect(resetDate.getFullYear()).toBe(now.getFullYear() + 1)
-    } else {
-      expect(resetDate.getMonth()).toBe(expectedMonth)
-    }
+    const expectedResetDate = new Date()
+    expectedResetDate.setHours(0, 0, 0, 0)
+    expectedResetDate.setDate(expectedResetDate.getDate() + 1)
+
+    expect(resetDate.getFullYear()).toBe(expectedResetDate.getFullYear())
+    expect(resetDate.getMonth()).toBe(expectedResetDate.getMonth())
+    expect(resetDate.getDate()).toBe(expectedResetDate.getDate())
   })
 
   // ── addTokens with negative value still increments (no guard) ────

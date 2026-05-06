@@ -29,7 +29,7 @@ type UserRewards struct {
 // the browser cache or switching devices lost the running totals and the
 // agent-session restart marker.
 //
-// TotalTokens is the lifetime running sum attributed to the user across
+// TotalTokens is the current-day running sum attributed to the user across
 // all categories. TokensByCategory breaks the total out per category
 // (missions, diagnose, insights, predictions, other) and is stored as
 // JSON so new categories can be added without a schema migration.

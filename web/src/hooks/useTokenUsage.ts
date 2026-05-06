@@ -77,15 +77,19 @@ export function getTokenAlertLevel(usage: Pick<TokenUsage, 'used' | 'limit' | 'w
 
 const SETTINGS_KEY = 'kubestellar-token-settings'
 const CATEGORY_KEY = 'kubestellar-token-categories'
+const PERIOD_KEY = 'kubestellar-token-period'
 const SETTINGS_CHANGED_EVENT = 'kubestellar-token-settings-changed'
 const POLL_INTERVAL = 30000 // Poll every 30 seconds
+const LOCAL_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' })
 
 const DEFAULT_SETTINGS = {
-  limit: 500000000, // 500M tokens monthly default
+  limit: 500000000, // 500M tokens daily default
   warningThreshold: 0.7, // 70%
   criticalThreshold: 0.9, // 90%
   stopThreshold: 1.0, // 100%
 }
+
+const NEXT_RESET_DAY_OFFSET = 1
 
 const DEFAULT_BY_CATEGORY: TokenUsageByCategory = {
   missions: 0,
@@ -109,6 +113,7 @@ let sharedUsage: TokenUsage = {
   ...DEFAULT_SETTINGS,
   resetDate: getNextResetDate(),
   byCategory: { ...DEFAULT_BY_CATEGORY } }
+let currentUsagePeriod = getUsagePeriodKey()
 let pollStarted = false
 let pollIntervalId: ReturnType<typeof setInterval> | null = null
 const subscribers = new Set<(usage: TokenUsage) => void>()
@@ -191,6 +196,41 @@ function persistUsage(lastKnown: number, sessionId: string | null): void {
   }
 }
 
+function getUsagePeriodKey(now = new Date()): string {
+  return LOCAL_DATE_FORMATTER.format(now)
+}
+
+function resetUsagePeriodState(nextPeriod: string, forceNotify = false): void {
+  currentUsagePeriod = nextPeriod
+  sharedUsage = {
+    ...sharedUsage,
+    used: 0,
+    resetDate: getNextResetDate(),
+    byCategory: { ...DEFAULT_BY_CATEGORY },
+  }
+  lastKnownUsage = null
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(CATEGORY_KEY)
+    localStorage.removeItem(LAST_KNOWN_USAGE_KEY)
+    localStorage.setItem(PERIOD_KEY, currentUsagePeriod)
+  }
+  if (flushTimerId !== null) {
+    clearTimeout(flushTimerId)
+    flushTimerId = null
+  }
+  pendingDeltas.clear()
+  pendingDeltaTotal = 0
+  if (forceNotify) {
+    notifySubscribers()
+  }
+}
+
+function rollOverUsagePeriodIfNeeded(forceNotify = false): void {
+  const nextPeriod = getUsagePeriodKey()
+  if (currentUsagePeriod === nextPeriod) return
+  resetUsagePeriodState(nextPeriod, forceNotify)
+}
+
 // Hydrate the in-memory baseline from localStorage at module init so that
 // page reloads and new tabs don't mis-attribute the entire current usage
 // count as fresh delta on the first poll.
@@ -250,7 +290,7 @@ async function hydrateFromBackend(): Promise<void> {
     if (record.last_agent_session_id) {
       lastKnownSessionId = record.last_agent_session_id
     }
-    updateSharedUsage({ byCategory: merged }, true)
+    updateSharedUsage({ byCategory: merged, resetDate: getNextResetDate() }, true)
   } catch (err: unknown) {
     if (err instanceof TokenUsageUnauthenticatedError) {
       backendUnauthenticated = true
@@ -367,6 +407,7 @@ if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
 
 // Initialize from localStorage
 if (typeof window !== 'undefined') {
+  currentUsagePeriod = localStorage.getItem(PERIOD_KEY) || getUsagePeriodKey()
   try {
     const settings = localStorage.getItem(SETTINGS_KEY)
     if (settings) {
@@ -388,12 +429,16 @@ if (typeof window !== 'undefined') {
   } catch {
     // Corrupted settings JSON — fall back to defaults.
   }
-  // Load persisted category data
+  // Load persisted category data only for the active day.
   try {
-    const categoryData = localStorage.getItem(CATEGORY_KEY)
-    if (categoryData) {
-      const parsedCategories = JSON.parse(categoryData)
-      sharedUsage.byCategory = { ...DEFAULT_BY_CATEGORY, ...parsedCategories }
+    if (currentUsagePeriod === getUsagePeriodKey()) {
+      const categoryData = localStorage.getItem(CATEGORY_KEY)
+      if (categoryData) {
+        const parsedCategories = JSON.parse(categoryData)
+        sharedUsage.byCategory = { ...DEFAULT_BY_CATEGORY, ...parsedCategories }
+      }
+    } else {
+      resetUsagePeriodState(getUsagePeriodKey())
     }
   } catch {
     // Ignore invalid data — start from zeroed byCategory.
@@ -430,12 +475,14 @@ function updateSharedUsage(updates: Partial<TokenUsage>, forceNotify = false) {
     prevUsage.warningThreshold !== sharedUsage.warningThreshold ||
     prevUsage.criticalThreshold !== sharedUsage.criticalThreshold ||
     prevUsage.stopThreshold !== sharedUsage.stopThreshold ||
+    prevUsage.resetDate !== sharedUsage.resetDate ||
     byCategoryChanged
 
   if (hasChanged) {
     // Persist category data to localStorage
     if (byCategoryChanged && typeof window !== 'undefined' && !getDemoMode()) {
       localStorage.setItem(CATEGORY_KEY, JSON.stringify(sharedUsage.byCategory))
+      localStorage.setItem(PERIOD_KEY, currentUsagePeriod)
     }
     notifySubscribers()
   }
@@ -443,11 +490,16 @@ function updateSharedUsage(updates: Partial<TokenUsage>, forceNotify = false) {
 
 // Fetch token usage from local agent (singleton - only runs once)
 async function fetchTokenUsage() {
+  rollOverUsagePeriodIfNeeded(true)
+
   // Use demo data when in demo mode
   if (getDemoMode()) {
     // Simulate slow token accumulation in demo mode
     const randomIncrease = Math.floor(Math.random() * 5000) // 0-5000 tokens
-    updateSharedUsage({ used: DEMO_TOKEN_USAGE + randomIncrease })
+    updateSharedUsage({
+      used: DEMO_TOKEN_USAGE + randomIncrease,
+      resetDate: getNextResetDate(),
+    })
     return
   }
 
@@ -475,6 +527,7 @@ async function fetchTokenUsage() {
       if (!data) throw new Error('Invalid JSON response from health endpoint')
       if (data.claude?.tokenUsage?.today) {
         const todayTokens = data.claude.tokenUsage.today
+        const resetDate = getNextResetDate()
         // Track both input and output tokens
         const totalUsed = (todayTokens.input || 0) + (todayTokens.output || 0)
 
@@ -502,7 +555,7 @@ async function fetchTokenUsage() {
           // Reset baseline without attributing any delta. On first init
           // (lastKnownUsage === null) we also take this branch to establish
           // a baseline without pretending all current usage happened just now.
-          updateSharedUsage({ used: totalUsed })
+          updateSharedUsage({ used: totalUsed, resetDate })
         } else if (totalUsed > lastKnownUsage) {
           const delta = totalUsed - lastKnownUsage
           // Sanity check: don't attribute more than MAX_SINGLE_DELTA_TOKENS
@@ -513,14 +566,14 @@ async function fetchTokenUsage() {
               // No active operation — attribute to the default category.
               const newByCategory = { ...sharedUsage.byCategory }
               newByCategory[DEFAULT_CATEGORY] += delta
-              updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory, resetDate })
               queueBackendDelta(DEFAULT_CATEGORY, delta)
             } else if (activeCount === 1) {
               // Single operation — attribute the entire delta to it.
               const category = activeCategoriesByOp.values().next().value as TokenCategory
               const newByCategory = { ...sharedUsage.byCategory }
               newByCategory[category] += delta
-              updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory, resetDate })
               queueBackendDelta(category, delta)
             } else {
               // Multiple concurrent operations — split the delta evenly
@@ -538,15 +591,15 @@ async function fetchTokenUsage() {
                 queueBackendDelta(category, portion)
                 first = false
               }
-              updateSharedUsage({ used: totalUsed, byCategory: newByCategory })
+              updateSharedUsage({ used: totalUsed, byCategory: newByCategory, resetDate })
             }
           } else {
             console.warn(`[TokenUsage] Skipping large delta ${delta} - likely initialization`)
-            updateSharedUsage({ used: totalUsed })
+            updateSharedUsage({ used: totalUsed, resetDate })
           }
         } else {
           // totalUsed === lastKnownUsage — nothing to attribute.
-          updateSharedUsage({ used: totalUsed })
+          updateSharedUsage({ used: totalUsed, resetDate })
         }
 
         lastKnownUsage = totalUsed
@@ -668,6 +721,7 @@ export function useTokenUsage() {
     // Clear persisted category data
     if (typeof window !== 'undefined') {
       localStorage.removeItem(CATEGORY_KEY)
+      localStorage.setItem(PERIOD_KEY, currentUsagePeriod)
     }
   }
 
@@ -695,8 +749,8 @@ export function useTokenUsage() {
 
 function getNextResetDate(): string {
   const now = new Date()
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  return nextMonth.toISOString()
+  const nextReset = new Date(now.getFullYear(), now.getMonth(), now.getDate() + NEXT_RESET_DAY_OFFSET)
+  return nextReset.toISOString()
 }
 
 /**
@@ -730,4 +784,6 @@ export const __testables = {
   DEFAULT_BY_CATEGORY,
   DEMO_TOKEN_USAGE,
   DEMO_BY_CATEGORY,
+  PERIOD_KEY,
+  getUsagePeriodKey,
 }
