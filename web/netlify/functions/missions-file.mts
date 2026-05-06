@@ -83,8 +83,10 @@ export default async (request: Request): Promise<Response> => {
       resp = await fetch(rawUrl, {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
-      // Don't retry 4xx (client errors) — only transient 5xx
-      if (resp.ok || resp.status === 404 || resp.status < 500) break;
+      const isRateLimited = resp.status === 403 && resp.headers.get("x-ratelimit-remaining") === "0";
+      const isPermanentClientError = !resp.ok && resp.status < 500 && !isRateLimited;
+      // Retry transient 5xx responses and GitHub rate-limit 403s only.
+      if (resp.ok || resp.status === 404 || isPermanentClientError) break;
       console.warn(`[missions-file] Upstream ${resp.status}, attempt ${attempt + 1}/${MAX_RETRIES + 1}`);
     }
 
