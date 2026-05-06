@@ -419,17 +419,17 @@ test.describe('Dashboard Page', () => {
       const demoBadge = cardsGrid.getByText('Demo').first()
 
       // Demo badge should appear after API fallback (optional check with soft assertion)
-      try {
-        await expect(demoBadge).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
-      } catch {
-        expect.soft(
-          false,
-          'Expected at least one Demo badge in the dashboard cards after API fallback',
-        ).toBe(true)
+      const demoBadgeAppeared = await demoBadge
+        .isVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
+        .catch(() => false)
 
-        if (!demoBadgeAppeared) {
-          console.warn('Dashboard API fallback did not render a visible Demo badge after /api/mcp/clusters returned 500.')
-        }
+      expect.soft(
+        demoBadgeAppeared,
+        'Expected at least one Demo badge in the dashboard cards after API fallback',
+      ).toBe(true)
+
+      if (!demoBadgeAppeared) {
+        console.warn('Dashboard API fallback did not render a visible Demo badge — check isDemoData flag and CardWrapper yellow-outline rendering')
       }
     })
 
