@@ -56,9 +56,9 @@ test.describe('Error Recovery', () => {
 
     await setupDemoAndNavigate(page, '/')
     await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
-
-    // Give the page time for async operations
-    await page.waitForTimeout(2000)
+    await expect(page.locator('[data-card-type]').first()).toBeVisible({
+      timeout: NETWORK_IDLE_TIMEOUT_MS,
+    })
 
     // Should have zero unexpected console errors
     checkErrors()

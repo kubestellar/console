@@ -55,7 +55,12 @@ const NAV_CARD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : IS_CI ? 20_000 : 15_000
 const APP_LOAD_TIMEOUT_MS = REAL_BACKEND ? 30_000 : IS_CI ? 20_000 : 15_000
 // Real-backend tests need much longer timeouts (25 dashboards, some taking 30s+)
 const REAL_BACKEND_TEST_TIMEOUT = 5 * 60_000 // 5 minutes
-
+const URL_CHANGE_TIMEOUT_MS = 5_000
+const DASHBOARD_SETTLE_TIMEOUT_MS = REAL_BACKEND ? 30_000 : IS_CI ? 20_000 : 15_000
+const CARD_COUNT_STABLE_MS = 500
+const ZERO_CARD_SETTLE_TIMEOUT_MS = 8_000
+const DASHBOARD_SETTLE_POLL_MS = 100
+const DASHBOARD_SETTLE_GRACE_MS = 3_000
 
 // Mock data, setupAuth, setupLiveMocks imported from ../mocks/liveMocks
 
@@ -108,6 +113,86 @@ async function setMode(page: Page) {
  * 2. URL change → first card has content
  * 3. URL change → all cards have content
  */
+async function waitForRoute(page: Page, route: string, timeout = URL_CHANGE_TIMEOUT_MS): Promise<boolean> {
+  try {
+    if (route === '/') {
+      await page.waitForURL((url) => url.pathname === '/', { timeout })
+    } else {
+      await page.waitForURL(`**${route}`, { timeout })
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function waitForDashboardToSettle(page: Page, timeout = DASHBOARD_SETTLE_TIMEOUT_MS): Promise<void> {
+  try {
+    await page.waitForFunction(
+      ({ stableMs, zeroCardTimeoutMs, timeoutMs }) => {
+        const win = window as Window & {
+          __dashboardSettle?: {
+            startedAt: number
+            lastCount: number
+            stableAt: number
+          }
+        }
+
+        const now = performance.now()
+        if (!win.__dashboardSettle) {
+          win.__dashboardSettle = {
+            startedAt: now,
+            lastCount: -1,
+            stableAt: now,
+          }
+        }
+
+        const state = win.__dashboardSettle
+        const cards = Array.from(document.querySelectorAll('[data-card-type]'))
+        const count = cards.length
+        if (count !== state.lastCount) {
+          state.lastCount = count
+          state.stableAt = now
+        }
+
+        const stable = now - state.stableAt >= stableMs
+        const allLoaded = count > 0 && cards.every((card) => {
+          const element = card as HTMLElement
+          if (element.getAttribute('data-loading') === 'true') return false
+          if (element.querySelector('[data-card-skeleton="true"]')) return false
+          return true
+        })
+
+        if (allLoaded && stable) {
+          return true
+        }
+
+        if (count === 0 && stable && now - state.startedAt >= zeroCardTimeoutMs) {
+          return true
+        }
+
+        if (now - state.startedAt >= timeoutMs) {
+          return true
+        }
+
+        return false
+      },
+      {
+        stableMs: CARD_COUNT_STABLE_MS,
+        zeroCardTimeoutMs: ZERO_CARD_SETTLE_TIMEOUT_MS,
+        timeoutMs: timeout,
+      },
+      { timeout: timeout + DASHBOARD_SETTLE_GRACE_MS, polling: DASHBOARD_SETTLE_POLL_MS }
+    )
+  } catch {
+    // Best effort only: perf tests should continue collecting partial metrics.
+  } finally {
+    await page.evaluate(() => {
+      delete (window as Window & { __dashboardSettle?: unknown }).__dashboardSettle
+    }).catch(() => {})
+  }
+}
+
 async function measureNavigation(
   page: Page,
   fromRoute: string,
@@ -195,15 +280,12 @@ async function measureNavigation(
     urlChangeTime = clickTime
   } else {
     try {
-      // For "/" route, wait for exact path match
-      if (target.route === '/') {
-        await page.waitForURL((url) => url.pathname === '/', { timeout: 5_000 })
-      } else {
-        await page.waitForURL(`**${target.route}`, { timeout: 5_000 })
-      }
+      const urlChanged = await waitForRoute(page, target.route)
       urlChangeTime = Date.now()
+      if (!urlChanged) {
+        console.log(`  TIMEOUT ${target.name}: URL did not change to ${target.route} within ${URL_CHANGE_TIMEOUT_MS}ms`)
+      }
     } catch {
-      console.log(`  TIMEOUT ${target.name}: URL did not change to ${target.route} within 5s`)
       urlChangeTime = Date.now()
     }
   }
@@ -447,10 +529,8 @@ test('cold-nav — first visit to each dashboard via sidebar', async ({ page }, 
   await page.goto('/', { waitUntil: 'domcontentloaded' })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
-    // Wait for home dashboard cards to settle
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-    // perf measurement: intentional delay to establish stable data flow baseline before navigation measurements
-    await page.waitForTimeout(1_000)
+    await waitForDashboardToSettle(page)
   } catch { /* continue */ }
 
   let currentRoute = '/'
@@ -498,8 +578,6 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
     const dashboard = DASHBOARDS[i]
     if (i > 0 && i % 5 === 0) {
       await page.goto('about:blank', { waitUntil: 'domcontentloaded' })
-      // perf measurement: intentional delay for timing baseline between warmup navigations
-      await page.waitForTimeout(200)
     }
     await page.goto(dashboard.route, { waitUntil: 'domcontentloaded' })
     try {
@@ -512,8 +590,7 @@ test('warm-nav — revisit dashboards (chunks already cached)', async ({ page },
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-    // perf measurement: intentional delay to let dashboard fully settle before measuring warm navigations
-    await page.waitForTimeout(500)
+    await waitForDashboardToSettle(page)
   } catch { /* continue */ }
 
   let currentRoute = '/'
@@ -574,8 +651,7 @@ test('from-main — navigate away from Main Dashboard to various dashboards', as
       try {
         await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
         await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-        // perf measurement: intentional delay to let Main Dashboard fully settle before measuring navigation
-        await page.waitForTimeout(500)
+        await waitForDashboardToSettle(page)
       } catch { /* continue */ }
 
       // Now measure the navigation FROM / TO the target
@@ -636,8 +712,7 @@ test('from-clusters — navigate away from My Clusters to various dashboards', a
       try {
         await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
         await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-        // perf measurement: intentional delay to let My Clusters fully settle before measuring navigation
-        await page.waitForTimeout(500)
+        await waitForDashboardToSettle(page)
       } catch { /* continue */ }
 
       // Now measure the navigation FROM /clusters TO the target
@@ -688,11 +763,10 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: APP_LOAD_TIMEOUT_MS })
     await page.waitForSelector('[data-card-type]', { timeout: 10_000 })
-    // perf measurement: intentional delay to let dashboard settle before rapid navigation test
-    await page.waitForTimeout(500)
+    await waitForDashboardToSettle(page)
   } catch { /* continue */ }
 
-  // Rapid-click through 10 dashboards with 200ms between clicks
+  // Rapid-click through 10 dashboards, advancing as soon as each route changes.
   // Pick a diverse set of dashboards
   const rapidTargets = DASHBOARDS.filter((d) =>
     ['clusters', 'pods', 'deployments', 'security', 'ai-ml', 'events', 'helm', 'compliance', 'deploy', 'workloads'].includes(d.id)
@@ -701,7 +775,7 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
   let currentRoute = '/'
 
   for (const dashboard of rapidTargets) {
-    // Click rapidly — only wait 200ms between clicks
+    // Click rapidly and proceed as soon as the router confirms the target route.
     const linkSelector = `[data-testid="sidebar-primary-nav"] a[href="${dashboard.route}"]`
     const link = page.locator(linkSelector).first()
     try {
@@ -712,19 +786,19 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
 
     const clickTime = Date.now()
     await link.click()
-    // perf measurement: intentional delay simulating rapid user clicks between dashboards
-    await page.waitForTimeout(200)
+    const urlChanged = await waitForRoute(page, dashboard.route, 2_000)
+    const urlChangeMs = Date.now() - clickTime
 
     // After clicking, quickly record where we are
-    const urlAfterClick = new URL(page.url()).pathname
+    const urlAfterClick = urlChanged ? dashboard.route : new URL(page.url()).pathname
 
     // Now measure if the final dashboard loaded
     // Only measure the last dashboard we clicked (the one that should actually render)
     if (dashboard === rapidTargets[rapidTargets.length - 1]) {
       const metric = await measureNavigation(page, currentRoute, dashboard, 'rapid-nav')
       if (metric) {
-        // Adjust: we already clicked, so set clickToUrlChange from our earlier measurement
-        metric.clickToUrlChangeMs = Date.now() - clickTime - 200 // subtract the waitForTimeout
+        // Adjust: we already clicked, so preserve the first click→route timing.
+        metric.clickToUrlChangeMs = urlChangeMs
         navReport.metrics.push(metric)
       }
     } else {
@@ -734,7 +808,7 @@ test('rapid-nav — quick clicks through dashboards', async ({ page }, testInfo)
         to: dashboard.route,
         targetName: dashboard.name,
         scenario: 'rapid-nav',
-        clickToUrlChangeMs: urlAfterClick === dashboard.route ? Date.now() - clickTime : -1,
+        clickToUrlChangeMs: urlAfterClick === dashboard.route ? urlChangeMs : -1,
         urlChangeToFirstCardMs: -1,
         urlChangeToAllCardsMs: -1,
         totalMs: Date.now() - clickTime,
@@ -771,8 +845,7 @@ test('back-button navigation through 10 dashboards', async ({ page }) => {
   const forwardTargets = DASHBOARDS.slice(0, 10)
   for (const dashboard of forwardTargets) {
     await page.goto(dashboard.route, { waitUntil: 'domcontentloaded', timeout: 15_000 })
-    // perf measurement: intentional delay to ensure browser history entry is created before back-nav test
-    await page.waitForTimeout(500)
+    await waitForDashboardToSettle(page)
   }
 
   console.log(`[NAV] Navigated forward through ${forwardTargets.length} dashboards, now going back`)
