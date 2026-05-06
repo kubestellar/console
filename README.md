@@ -88,10 +88,10 @@ curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | 
 >
 > ```powershell
 > # Option 1 — use curl.exe (the real curl shipped with Windows 10+)
-> curl.exe -s http://localhost:8080/api/health
+> curl.exe -s http://localhost:8080/health
 >
 > # Option 2 — use PowerShell native cmdlet
-> Invoke-RestMethod http://localhost:8080/api/health
+> Invoke-RestMethod http://localhost:8080/health
 > ```
 
 **Building `kc-agent` from source is a separate path** — only needed if you want a development build of the agent rather than the prebuilt binary that `start.sh` already installs. It requires Go **1.25+** (the version pinned in `go.mod`) and `git`. Ubuntu's `golang-go` package usually lags the current release; use the [official Go install](https://go.dev/doc/install) or the `longsleep/golang-backports` PPA to get a recent version:
