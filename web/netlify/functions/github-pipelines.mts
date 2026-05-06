@@ -230,14 +230,16 @@ async function gh(path: string, token: string, init: RequestInit = {}): Promise<
   for (let attempt = 0; attempt < GH_RETRY_MAX_ATTEMPTS; attempt++) {
     const resp = await fetch(url, { ...init, headers });
     if (resp.status !== 429 && resp.status !== 403) return resp;
-    if (attempt === GH_RETRY_MAX_ATTEMPTS - 1) return resp;
+    if (attempt === GH_RETRY_MAX_ATTEMPTS - 1) {
+      console.warn(`[github-pipelines] retries exhausted for ${path}, status=${resp.status}`);
+      return resp;
+    }
     const retryAfter = resp.headers.get("Retry-After");
     const waitMs = retryAfter
       ? Math.min(parseInt(retryAfter, 10) * 1000, 10_000)
       : GH_RETRY_BASE_DELAY_MS * Math.pow(2, attempt);
     await new Promise((r) => setTimeout(r, waitMs));
   }
-  return fetch(url, { ...init, headers });
 }
 
 /** Matches `owner/repo` format — allows any valid GitHub repo, not just
