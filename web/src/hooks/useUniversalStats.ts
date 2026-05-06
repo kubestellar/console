@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import {
   useClusters,
   usePodIssues,
@@ -159,23 +159,25 @@ export function useUniversalStats() {
       .reduce((sum, n) => sum + (n.gpuCount || 0), 0)
   }, [safeClusters, gpuNodes])
 
-  // ─── Alert-derived values ───
+  // ─── Alert-derived values (memoized) ───
   const firingAlerts = alertStats?.firing || 0
   const resolvedAlerts = alertStats?.resolved || 0
   const allRules = alertRules || []
-  const enabledRules = allRules.filter(r => r.enabled !== false).length
-  const disabledRules = allRules.filter(r => r.enabled === false).length
+  const { enabledRules, disabledRules } = useMemo(() => ({
+    enabledRules: allRules.filter(r => r.enabled !== false).length,
+    disabledRules: allRules.filter(r => r.enabled === false).length,
+  }), [allRules])
 
-  // ─── Cost estimates (demo) ───
-  const totalCost = (() => {
+  // ─── Cost estimates (memoized) ───
+  const totalCost = useMemo(() => {
     const cpu = totalCPUs * COST_PER_CPU
     const mem = totalMemoryGB * COST_PER_GB_MEMORY
     const stor = totalStorageGB * COST_PER_GB_STORAGE
     const gpu = realGPUCount * COST_PER_GPU
     return { total: cpu + mem + stor + gpu, cpu, mem, stor, gpu, network: 0 }
-  })()
+  }, [totalCPUs, totalMemoryGB, totalStorageGB, realGPUCount])
 
-  const getStatValue = (blockId: string): StatBlockValue | undefined => {
+  const getStatValue = useCallback((blockId: string): StatBlockValue | undefined => {
     switch (blockId) {
 
       // ══════════════════════════════════════════
@@ -450,7 +452,24 @@ export function useUniversalStats() {
       default:
         return undefined
     }
-  }
+  }, [
+    totalClusters, healthyClusters, unhealthyClusters, unreachableClusters,
+    totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
+    podIssuesList, pendingPods, highRestartPods,
+    allDeployments, allDeploymentIssues,
+    allPVCs, boundPVCs, storageClassCount,
+    allServices, lbCount, npCount, cipCount, ingresses,
+    allEvents, allWarningEvents, normalEvents, recentEvents,
+    secIssues, highSeverity, mediumSeverity, lowSeverity, privilegedContainers, rootContainers,
+    allHelm, deployedHelm, failedHelm,
+    allOps, allSubs, installedOps, installingOps, failingOps, upgradesAvailable,
+    firingAlerts, resolvedAlerts, enabledRules, disabledRules,
+    realGPUCount, totalCost,
+    drillToAllClusters, drillToAllNodes, drillToAllPods,
+    drillToAllDeployments, drillToAllServices, drillToAllEvents,
+    drillToAllAlerts, drillToAllHelm, drillToAllOperators,
+    drillToAllSecurity, drillToAllGPU, drillToAllStorage,
+  ])
 
   return {
     getStatValue,
