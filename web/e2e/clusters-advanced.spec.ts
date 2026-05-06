@@ -288,16 +288,17 @@ test.describe('Clusters: Stale kubeconfig banner and Prune flow (#11778)', () =>
     await page.goto('/clusters')
     await page.waitForLoadState('domcontentloaded')
     
-    // Look for stale kubeconfig warning banner
-    const banner = page.locator('[class*="bg-yellow"], [class*="bg-orange"]').filter({ hasText: /stale|kubeconfig|context/i })
+    // Look for the stale kubeconfig warning banner by its content instead of theme classes.
+    const banner = page.getByText(/kubeconfig context.*never connected|never connected.*deleted clusters/i)
     const hasBanner = await banner.first().isVisible({ timeout: 5000 }).catch(() => false)
     
     if (!hasBanner) {
       test.skip(true, 'Stale kubeconfig banner not visible')
       return
     }
-    
+
     await expect(banner.first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /prune kubeconfig/i })).toBeVisible()
   })
 
   test('Prune Kubeconfig button appears in stale banner', async ({ page }) => {

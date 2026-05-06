@@ -92,8 +92,8 @@ test.describe('CI/CD Workflow Matrix interactions (#11769)', () => {
       return
     }
 
-    // Look for status indicators (success/failure/pending badges or colored cells)
-    const statusIndicators = matrixCard.locator('[class*="bg-green"], [class*="bg-red"], [class*="bg-yellow"], [class*="bg-orange"], [data-testid*="status"]')
+    // Look for status indicators by their accessible labels instead of color classes.
+    const statusIndicators = matrixCard.getByLabel(/: (success|failure|timed out|timed_out|cancelled|skipped|action required|action_required)/i)
     const indicatorCount = await statusIndicators.count()
 
     // Matrix should show at least some status indicators if it has data
