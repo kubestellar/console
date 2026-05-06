@@ -38,6 +38,8 @@ const TREND_CHANGE_THRESHOLD = 1
 const HIGH_USAGE_PCT = 80
 /** Percentage threshold to classify usage level as medium */
 const MEDIUM_USAGE_PCT = 50
+const GPU_INVENTORY_HISTORY_CHART_CONTAINER_STYLE = { width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD } as const
+const GPU_INVENTORY_HISTORY_CHART_STYLE = { height: CHART_HEIGHT_STANDARD, width: '100%' } as const
 /** Number of demo data points to generate */
 const DEMO_POINT_COUNT = 24
 /** Base total GPUs in demo data */
@@ -323,7 +325,7 @@ function GPUInventoryChart({ displayChartData, chartMode, chartGPUTypes, t }: {
   return (
     <LazyEChart
       option={chartOption}
-      style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
+      style={GPU_INVENTORY_HISTORY_CHART_STYLE}
       notMerge={true}
       opts={{ renderer: 'svg' }}
     />
@@ -976,7 +978,7 @@ export function GPUInventoryHistory() {
               </div>
             ) : (
               <div
-                style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }}
+                style={GPU_INVENTORY_HISTORY_CHART_CONTAINER_STYLE}
                 role="img"
                 aria-label={`GPU inventory history chart: ${currentTotals.allocated} of ${currentTotals.total} GPUs in use (${usagePercent}% utilization), trend: ${trend}`}
               >

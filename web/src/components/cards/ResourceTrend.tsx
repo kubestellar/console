@@ -38,6 +38,9 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
   { value: '24h', label: '24 hours', points: 24 },
 ]
 
+const RESOURCE_TREND_CHART_CONTAINER_STYLE = { width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD } as const
+const RESOURCE_TREND_CHART_STYLE = { height: CHART_HEIGHT_STANDARD, width: '100%' } as const
+
 export const ResourceTrend = memo(function ResourceTrend() {
   const { t } = useTranslation()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
@@ -370,10 +373,10 @@ export const ResourceTrend = memo(function ResourceTrend() {
             )}
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`Resource trend chart showing ${lines.map(l => l.name).join(', ')} over time`}>
+          <div style={RESOURCE_TREND_CHART_CONTAINER_STYLE} role="img" aria-label={`Resource trend chart showing ${lines.map(l => l.name).join(', ')} over time`}>
             <LazyEChart
               option={chartOption}
-              style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
+              style={RESOURCE_TREND_CHART_STYLE}
               notMerge={true}
               opts={{ renderer: 'svg' }}
             />

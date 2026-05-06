@@ -24,6 +24,10 @@ import {
 import { PURPLE_600, hexToRgba } from '../../lib/theme/chartColors'
 
 const GPU_RING_SIZE_PX = 80
+const GPU_RING_CONTAINER_STYLE = { minWidth: GPU_RING_SIZE_PX, minHeight: GPU_RING_SIZE_PX } as const
+const GPU_RING_CHART_STYLE = { height: GPU_RING_SIZE_PX, width: GPU_RING_SIZE_PX } as const
+const GPU_TREND_CHART_CONTAINER_STYLE = { width: '100%', minHeight: CHART_HEIGHT_COMPACT, height: CHART_HEIGHT_COMPACT } as const
+const GPU_TREND_CHART_STYLE = { height: CHART_HEIGHT_COMPACT, width: '100%' } as const
 
 interface GPUPoint {
   time: string
@@ -347,10 +351,10 @@ const GPUUtilization = memo(function GPUUtilization() {
 
       {/* Stats and pie chart row */}
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-20 h-20 relative" style={{ minWidth: GPU_RING_SIZE_PX, minHeight: GPU_RING_SIZE_PX }}>
+        <div className="w-20 h-20 relative" style={GPU_RING_CONTAINER_STYLE}>
           <LazyEChart
             option={pieOption}
-            style={{ height: GPU_RING_SIZE_PX, width: GPU_RING_SIZE_PX }}
+            style={GPU_RING_CHART_STYLE}
             notMerge={true}
             opts={{ renderer: 'svg' }}
           />
@@ -385,10 +389,10 @@ const GPUUtilization = memo(function GPUUtilization() {
             Collecting data...
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: CHART_HEIGHT_COMPACT, height: CHART_HEIGHT_COMPACT }}>
+          <div style={GPU_TREND_CHART_CONTAINER_STYLE}>
             <LazyEChart
               option={trendOption}
-              style={{ height: CHART_HEIGHT_COMPACT, width: '100%' }}
+              style={GPU_TREND_CHART_STYLE}
               notMerge={true}
               opts={{ renderer: 'svg' }}
             />
