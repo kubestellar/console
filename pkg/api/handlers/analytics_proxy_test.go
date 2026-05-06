@@ -30,6 +30,8 @@ func TestIsAllowedNetlifyHost(t *testing.T) {
 }
 
 func TestIsAllowedOrigin(t *testing.T) {
+	t.Setenv(analyticsProxyAuthTokenEnv, "test-analytics-token")
+
 	app := fiber.New()
 	app.Get("/test", func(c *fiber.Ctx) error {
 		if isAllowedOrigin(c) {
@@ -42,13 +44,18 @@ func TestIsAllowedOrigin(t *testing.T) {
 		name    string
 		origin  string
 		host    string
+		xAuth   string
+		authz   string
 		allowed bool
 	}{
-		{"Allowed Explicit", "http://localhost", "any-host", true},
-		{"Allowed Netlify", "https://kubestellar-console.netlify.app", "any-host", true},
-		{"Same Origin", "https://console.custom.com", "console.custom.com", true},
-		{"Missing Origin", "", "localhost", false},
-		{"Forbidden Origin", "https://evil.com", "localhost", false},
+		{"Allowed Explicit", "http://localhost", "any-host", "", "", true},
+		{"Allowed Netlify", "https://kubestellar-console.netlify.app", "any-host", "", "", true},
+		{"Same Origin", "https://console.custom.com", "console.custom.com", "", "", true},
+		{"Missing Origin No Auth", "", "localhost", "", "", false},
+		{"Missing Origin X-KC-Client-Auth", "", "localhost", "test-analytics-token", "", true},
+		{"Missing Origin Bearer", "", "localhost", "", "Bearer test-analytics-token", true},
+		{"Missing Origin Wrong Auth", "", "localhost", "bad-token", "", false},
+		{"Forbidden Origin", "https://evil.com", "localhost", "", "", false},
 	}
 
 	for _, tt := range tests {
@@ -56,6 +63,12 @@ func TestIsAllowedOrigin(t *testing.T) {
 			req := httptest.NewRequest("GET", "/test", nil)
 			if tt.origin != "" {
 				req.Header.Set("Origin", tt.origin)
+			}
+			if tt.xAuth != "" {
+				req.Header.Set("X-KC-Client-Auth", tt.xAuth)
+			}
+			if tt.authz != "" {
+				req.Header.Set("Authorization", tt.authz)
 			}
 			req.Host = tt.host
 

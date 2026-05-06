@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"crypto/subtle"
 	"encoding/base64"
 	"io"
 	"log/slog"
@@ -29,6 +30,8 @@ var allowedOrigins = map[string]bool{
 	"127.0.0.1":              true,
 	"console.kubestellar.io": true,
 }
+
+const analyticsProxyAuthTokenEnv = "ANALYTICS_PROXY_AUTH_TOKEN"
 
 const (
 	// gtagCacheTTL is how long the gtag.js script is cached server-side.
@@ -232,20 +235,44 @@ func isAllowedNetlifyHost(host string) bool {
 	return false
 }
 
-// isAllowedOrigin checks if the request comes from an allowed hostname.
+// hasValidAnalyticsServerAuth returns true when a non-browser caller provides
+// a valid shared secret via either X-KC-Client-Auth or Authorization: Bearer.
+// The expected secret is configured in ANALYTICS_PROXY_AUTH_TOKEN.
+func hasValidAnalyticsServerAuth(c *fiber.Ctx) bool {
+	expected := strings.TrimSpace(os.Getenv(analyticsProxyAuthTokenEnv))
+	if expected == "" {
+		return false
+	}
+
+	if token := strings.TrimSpace(c.Get("X-KC-Client-Auth")); token != "" {
+		if subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1 {
+			return true
+		}
+	}
+
+	auth := strings.TrimSpace(c.Get("Authorization"))
+	if strings.HasPrefix(auth, bearerPrefix) && len(auth) > bearerPrefixLen {
+		token := strings.TrimSpace(auth[bearerPrefixLen:])
+		return subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1
+	}
+
+	return false
+}
+
+// isAllowedOrigin checks if the request comes from an allowed browser origin.
 // In addition to the explicit allowlist, same-origin requests are always
 // permitted — this ensures OpenShift and other dynamic deployments work
 // without maintaining an exhaustive hostname list.
 //
-// Security: only the Origin header is checked — Referer is not used because
-// it is trivially forgeable by non-browser HTTP clients (#7031).
+// For non-browser calls that legitimately omit Origin, a server-to-server
+// fallback is allowed only when ANALYTICS_PROXY_AUTH_TOKEN is configured and
+// the request includes a matching shared secret header.
+//
+// Security: Referer is not used for auth because it is trivially forgeable.
 func isAllowedOrigin(c *fiber.Ctx) bool {
 	origin := c.Get("Origin")
 	if origin == "" {
-		// Reject requests without an Origin header. Browsers always send Origin
-		// for XHR/fetch cross-origin requests. Requests without it are likely
-		// from non-browser clients attempting to bypass origin checks (#7031).
-		return false
+		return hasValidAnalyticsServerAuth(c)
 	}
 
 	u, err := url.Parse(origin)
