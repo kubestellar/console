@@ -90,7 +90,7 @@ func PingHandler(c *fiber.Ctx) error {
 
 	// Perform the HEAD request and measure latency
 	start := time.Now()
-	req, err := http.NewRequest("HEAD", rawURL, nil)
+	req, err := http.NewRequestWithContext(c.UserContext(), "HEAD", rawURL, nil)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid request: %v", err)})
 	}

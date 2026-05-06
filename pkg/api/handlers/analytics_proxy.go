@@ -185,7 +185,7 @@ func GA4CollectProxy(c *fiber.Ctx) error {
 	// for geolocation. The /g/collect endpoint ignores _uip in query params
 	// when the request comes from a server IP.
 	target := "https://www.google-analytics.com/g/collect"
-	req, err := http.NewRequest(http.MethodPost, target, bytes.NewReader([]byte(qs)))
+	req, err := http.NewRequestWithContext(c.UserContext(), http.MethodPost, target, bytes.NewReader([]byte(qs)))
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
@@ -399,7 +399,7 @@ func UmamiCollectProxy(c *fiber.Ctx) error {
 	}
 
 	target := umamiUpstreamBase + "/api/send"
-	req, err := http.NewRequest(http.MethodPost, target, bytes.NewReader(c.Body()))
+	req, err := http.NewRequestWithContext(c.UserContext(), http.MethodPost, target, bytes.NewReader(c.Body()))
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadGateway)
 	}
