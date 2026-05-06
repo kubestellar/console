@@ -14,6 +14,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
+import { Button } from '../../ui/Button'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useHarborStatus } from './useHarborStatus'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
@@ -387,13 +388,15 @@ export function HarborStatus() {
           }
         }}
       >
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           role="tab"
           data-tab={PROJECTS_TAB}
           aria-selected={activeTab === PROJECTS_TAB}
           tabIndex={activeTab === PROJECTS_TAB ? 0 : -1}
           aria-label={t('harbor.projectsTabLabel', 'Projects ({{count}})', { count: totalProjects })}
-          className={`pb-2 text-sm font-medium transition-colors relative whitespace-nowrap ${
+          className={`relative whitespace-nowrap rounded-none px-0 pb-2 ${
             activeTab === PROJECTS_TAB ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80'
           }`}
           onClick={() => {
@@ -408,14 +411,16 @@ export function HarborStatus() {
           {activeTab === PROJECTS_TAB && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
           )}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           role="tab"
           data-tab={REPOSITORIES_TAB}
           aria-selected={activeTab === REPOSITORIES_TAB}
           tabIndex={activeTab === REPOSITORIES_TAB ? 0 : -1}
           aria-label={t('harbor.repositoriesTabLabel', 'Repositories ({{count}})', { count: totalRepos })}
-          className={`pb-2 text-sm font-medium transition-colors relative whitespace-nowrap ${
+          className={`relative whitespace-nowrap rounded-none px-0 pb-2 ${
             activeTab === REPOSITORIES_TAB ? 'text-foreground' : 'text-muted-foreground hover:text-foreground/80'
           }`}
           onClick={() => {
@@ -430,7 +435,7 @@ export function HarborStatus() {
           {activeTab === REPOSITORIES_TAB && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full" />
           )}
-        </button>
+        </Button>
 
         <div className="ml-auto mb-1 flex items-center">
           <CardSearchInput

@@ -3,6 +3,7 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { Skeleton } from '../ui/Skeleton'
+import { Button } from '../ui/Button'
 import { K8S_DOCS } from '../../config/externalApis'
 import type { ServiceExport, ServiceExportStatus } from '../../types/mcs'
 import { useCardLoadingState } from './CardDataContext'
@@ -134,13 +135,13 @@ function ServiceExportsInternal({ config: _config }: ServiceExportsProps) {
       <div className="h-full flex flex-col items-center justify-center min-h-card p-6">
         <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
         <p className="text-sm text-muted-foreground mb-4">{t('serviceExports.loadFailed')}</p>
-        <button
+        <Button
           onClick={() => refetch()}
-          className="px-4 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white text-sm"
+          className="bg-purple-500 hover:bg-purple-600 text-white"
           aria-label={t('common:common.retry')}
         >
           {t('common:common.retry')}
-        </button>
+        </Button>
       </div>
     )
   }

@@ -5,6 +5,7 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { Skeleton } from '../ui/Skeleton'
 import { useArgoCDApplications, useArgoCDTriggerSync, type ArgoApplication } from '../../hooks/useArgoCD'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Button } from '../ui/Button'
 import { useCardLoadingState } from './CardDataContext'
 import { useCardData, commonComparators, type SortDirection } from '../../lib/cards/cardHooks'
 import {
@@ -276,14 +277,16 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       {selectedFilter !== 'all' && (
         <div className="flex items-center gap-2 mb-3">
           <span className="text-xs text-muted-foreground">{t('argoCDApplications.showing')}:</span>
-          <button
+          <Button
+            variant="accent"
+            size="sm"
             onClick={() => setSelectedFilter('all')}
-            className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-400 flex items-center gap-1"
+            className="px-2 py-0.5"
             aria-label={`Clear filter: ${selectedFilter === 'outOfSync' ? t('argoCDApplications.outOfSync') : t('argoCDApplications.unhealthy')}`}
           >
             {selectedFilter === 'outOfSync' ? t('argoCDApplications.outOfSync') : t('argoCDApplications.unhealthy')}
             <XCircle className="w-3 h-3" />
-          </button>
+          </Button>
         </div>
       )}
 
@@ -324,14 +327,15 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     {app.syncStatus === 'OutOfSync' && (
-                      <button
+                      <Button
+                        size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
                           addSyncingApp(appKey)
                           triggerSync(app.name, app.namespace).finally(() => removeSyncingApp(appKey))
                         }}
                         disabled={isThisAppSyncing}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded text-xs bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="bg-orange-500/20 px-2 py-0.5 text-orange-400 hover:bg-orange-500/30"
                         title={t('argoCDApplications.syncNow')}
                         aria-label={t('argoCDApplications.syncNow') + ': ' + app.name}
                       >
@@ -341,7 +345,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
                           <Play className="w-3 h-3" />
                         )}
                         {t('argoCDApplications.syncNow')}
-                      </button>
+                      </Button>
                     )}
                     <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
