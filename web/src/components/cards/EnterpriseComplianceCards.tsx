@@ -374,7 +374,7 @@ export function SIEMIntegrationCard() {
 
 export function IncidentResponseCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, unknown> | null>('/api/v1/compliance/incidents/metrics')
+  const { data, error } = useSummaryData<Record<string, unknown>>('/api/v1/compliance/incidents/metrics')
   return (
     <CardShell title="Incident Response" icon={Shield} onClick={() => nav('/enterprise/incident-response')}>
       {data ? (
@@ -415,7 +415,7 @@ export function ThreatIntelCard() {
 
 export function FedRAMPCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, unknown> | null>('/api/compliance/fedramp/score')
+  const { data, error } = useSummaryData<Record<string, unknown>>('/api/compliance/fedramp/score')
   return (
     <CardShell title="FedRAMP Readiness" icon={Award} onClick={() => nav('/fedramp')}>
       {data ? (
