@@ -34,6 +34,9 @@ const LEGACY_6H_INTERVAL_MS = 15 * MS_PER_MINUTE
 const LEGACY_24H_POINTS = 24
 const LEGACY_24H_INTERVAL_MS = MS_PER_HOUR
 
+/** Height (px) of the chart area — used for both the chart and its Suspense fallback */
+const CHART_AREA_MIN_HEIGHT = 160
+
 const CHART_AREA_STYLE = { minHeight: CHART_AREA_MIN_HEIGHT } as const
 const CHART_FALLBACK_STYLE = { height: CHART_AREA_MIN_HEIGHT } as const
 
@@ -113,9 +116,6 @@ interface MetricPoint {
 // chart subtrees are deferred behind React.lazy + Suspense.
 const LazyTimeSeriesChart = safeLazy(() => import('../charts/TimeSeriesChart'), 'TimeSeriesChart')
 const LazyMultiSeriesChart = safeLazy(() => import('../charts/TimeSeriesChart'), 'MultiSeriesChart')
-
-/** Height (px) of the chart area — used for both the chart and its Suspense fallback */
-const CHART_AREA_MIN_HEIGHT = 160
 
 const STORAGE_KEY = 'cluster-metrics-history'
 // Keep saved history at least as long as the live buffer can span, so that a
