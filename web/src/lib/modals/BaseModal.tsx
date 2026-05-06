@@ -177,7 +177,7 @@ export function BaseModal({
       onClick={handleBackdropClick}
     >
       <div
-        className="min-h-full flex items-center justify-center"
+        className="min-h-full flex items-start justify-center py-4 sm:items-center"
         onMouseDown={handleBackdropMouseDown}
         onClick={handleBackdropClick}
       >
