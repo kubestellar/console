@@ -41,6 +41,18 @@ vi.mock('../../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }))
 
+vi.mock('../../charts/StatusIndicator', () => ({
+  StatusIndicator: ({ status, size }: { status: string; size?: string }) => <div data-testid="status-indicator">{status}</div>,
+}))
+
+vi.mock('../../ui/ClusterBadge', () => ({
+  ClusterBadge: ({ cluster, size }: { cluster: string; size?: string }) => <span data-testid="cluster-badge">{cluster}</span>,
+}))
+
+vi.mock('../../../hooks/mcp/shared', () => ({
+  agentFetch: vi.fn(() => Promise.resolve({ ok: false, json: () => Promise.resolve({ events: [] }) })),
+}))
+
 import { EventsDrillDown } from '../EventsDrillDown'
 
 describe('EventsDrillDown', () => {
