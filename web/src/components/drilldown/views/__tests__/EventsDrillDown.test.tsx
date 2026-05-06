@@ -41,15 +41,15 @@ vi.mock('../../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }))
 
-vi.mock('../../charts/StatusIndicator', () => ({
+vi.mock('../../../charts/StatusIndicator', () => ({
   StatusIndicator: ({ status, size }: { status: string; size?: string }) => <div data-testid="status-indicator">{status}</div>,
 }))
 
-vi.mock('../../ui/ClusterBadge', () => ({
+vi.mock('../../../ui/ClusterBadge', () => ({
   ClusterBadge: ({ cluster, size }: { cluster: string; size?: string }) => <span data-testid="cluster-badge">{cluster}</span>,
 }))
 
-vi.mock('../../../hooks/mcp/shared', () => ({
+vi.mock('../../../../hooks/mcp/shared', () => ({
   agentFetch: vi.fn(() => Promise.resolve({ ok: false, json: () => Promise.resolve({ events: [] }) })),
 }))
 
@@ -57,8 +57,9 @@ import { EventsDrillDown } from '../EventsDrillDown'
 
 describe('EventsDrillDown', () => {
   it('renders without crashing', () => {
-    const { container, getByText } = render(<EventsDrillDown data={{ cluster: 'c1', namespace: 'ns1', events: [] }} />)
+    const { container } = render(<EventsDrillDown data={{ cluster: 'c1', namespace: 'ns1', events: [] }} />)
     expect(container).toBeTruthy()
-    expect(getByText('drilldown.goBack')).toBeTruthy()
+    // Component renders EventsSkeleton on initial mount (isLoading=true)
+    expect(container.querySelector('.animate-pulse')).toBeTruthy()
   })
 })
