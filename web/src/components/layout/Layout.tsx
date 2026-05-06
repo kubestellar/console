@@ -357,6 +357,13 @@ export function Layout({ children: _children }: LayoutProps) {
     !['idle', 'done', 'failed', 'cancelled'].includes(updateProgress.status)
   const showBackendBanner =
     (backendDown || wasBackendDown) && !isUpdateInProgress
+  const backendRecovering = backendDown && (
+    Boolean(watchdogStage) ||
+    restartState === 'restarting' ||
+    restartState === 'waiting' ||
+    restartState === 'copied'
+  )
+  const backendUnavailable = backendDown && !backendRecovering
   const prevBackendDown = useRef(backendDown)
   useEffect(() => {
     const wasDown = prevBackendDown.current
@@ -713,14 +720,24 @@ export function Layout({ children: _children }: LayoutProps) {
           <div className={cn(
             "flex items-center gap-2 px-4 py-3 rounded-lg border shadow-lg text-sm",
             backendDown
-              ? "bg-blue-950/90 border-blue-800/50 text-blue-200"
-              : "bg-green-900/80 border-green-700/50 text-green-200"
+              ? backendUnavailable
+                ? 'bg-red-950/90 border-red-800/50 text-red-200'
+                : 'bg-blue-950/90 border-blue-800/50 text-blue-200'
+              : 'bg-green-900/80 border-green-700/50 text-green-200'
           )}>
             {backendDown ? (
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-                  <span>{watchdogStage ? t(WATCHDOG_STAGE_LABELS[watchdogStage] ?? 'layout.consoleRestarting', { defaultValue: 'Console restarting…' }) : t('layout.connectionLost')}</span>
+                  {backendUnavailable ? (
+                    <AlertTriangle className="w-4 h-4 text-red-400" />
+                  ) : (
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                  )}
+                  <span>{backendUnavailable
+                    ? t('layout.backendUnavailable')
+                    : watchdogStage
+                      ? t(WATCHDOG_STAGE_LABELS[watchdogStage] ?? 'layout.consoleRestarting', { defaultValue: 'Console restarting…' })
+                      : t('layout.consoleRestarting')}</span>
                   {!watchdogStage && (
                     restartState === 'restarting' ? (
                       <button disabled className="ml-1 flex items-center gap-1.5 px-2.5 py-2 min-h-11 bg-muted text-muted-foreground rounded text-xs cursor-wait">
@@ -752,7 +769,10 @@ export function Layout({ children: _children }: LayoutProps) {
                 {!watchdogStage && (restartError ? (
                   <span className="text-xs text-muted-foreground">{restartError}</span>
                 ) : (
-                  <span className="text-xs text-blue-300/70">{t('layout.connectionLostHint')}</span>
+                  <span className={cn(
+                    'text-xs',
+                    backendUnavailable ? 'text-red-300/70' : 'text-blue-300/70'
+                  )}>{backendUnavailable ? t('layout.backendUnavailableHint') : t('layout.consoleRestartingHint')}</span>
                 ))}
               </div>
             ) : (

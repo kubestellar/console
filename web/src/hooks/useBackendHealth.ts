@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { triggerAllRefetches } from '../lib/modeTransition'
+import {
+  subscribeToBackendHealthEvents,
+  type BackendHealthEventDetail,
+} from '../lib/backendHealthEvents'
 
 export type BackendStatus = 'connected' | 'disconnected' | 'connecting'
 
@@ -60,10 +64,14 @@ class BackendHealthManager {
   private isChecking = false
   private initialVersion: string | null = null
   private isFastRetrying = false
+  private unsubscribeObservedHealth: (() => void) | null = null
 
   start() {
     if (this.isStarted) return
     this.isStarted = true
+    this.unsubscribeObservedHealth = subscribeToBackendHealthEvents((detail) => {
+      this.handleObservedHealth(detail)
+    })
     this.checkBackend()
     this.pollInterval = setInterval(() => this.checkBackend(), POLL_INTERVAL_MS)
   }
@@ -73,6 +81,8 @@ class BackendHealthManager {
       clearInterval(this.pollInterval)
       this.pollInterval = null
     }
+    this.unsubscribeObservedHealth?.()
+    this.unsubscribeObservedHealth = null
     this.isStarted = false
     this.isFastRetrying = false
   }
@@ -103,6 +113,27 @@ class BackendHealthManager {
         this.stop()
       }
     }
+  }
+
+  private handleObservedHealth(detail: BackendHealthEventDetail) {
+    if (detail.isAvailable) {
+      this.failureCount = 0
+      this.switchToNormalPoll()
+      this.setState({
+        status: 'connected',
+        lastCheck: new Date(),
+        watchdogStage: null,
+      })
+      return
+    }
+
+    this.failureCount = FAILURE_THRESHOLD
+    this.switchToFastRetry()
+    this.setState({
+      status: 'disconnected',
+      lastCheck: new Date(),
+      watchdogStage: null,
+    })
   }
 
   private notify() {

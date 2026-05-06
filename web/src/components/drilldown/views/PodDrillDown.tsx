@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
 import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
@@ -28,6 +27,7 @@ import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useToast } from '../../ui/Toast'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../cards/console-missions/shared'
+import { useBackendHealth } from '../../../hooks/useBackendHealth'
 
 /** Keys that must never be used as object property names (prototype pollution prevention). */
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
@@ -88,7 +88,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const podName = data.pod as string
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()
-  const { isConnected: backendConnected } = useBackendHealth()
+  const { status: backendStatus, inCluster } = useBackendHealth()
   const { drillToNamespace, drillToCluster, drillToDeployment, drillToReplicaSet, drillToConfigMap, drillToSecret, drillToServiceAccount, drillToPVC } = useDrillDownActions()
 
   // Get cached data - first check module-level cache, then fall back to view cache
@@ -133,6 +133,8 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null)
   const { showToast } = useToast()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt, errorMessage } = useApiKeyCheck()
+  const backendActionUnavailable = inCluster && backendStatus === 'disconnected'
+  const backendUnavailableMessage = t('drilldown.status.backendUnavailableActions')
   const [labels, setLabels] = useState<Record<string, string> | null>(cache.labels || null)
   const [annotations, setAnnotations] = useState<Record<string, string> | null>(cache.annotations || null)
   const [showAllLabels, setShowAllLabels] = useState(false)
@@ -478,7 +480,12 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
 
   // Fetch AI analysis for pod issues - gathers comprehensive context
   const fetchAiAnalysis = async () => {
-    if (!agentConnected || !backendConnected || aiAnalysisLoading) return
+    if (backendActionUnavailable) {
+      setAiAnalysisError(backendUnavailableMessage)
+      showToast(backendUnavailableMessage, 'error')
+      return
+    }
+    if (!agentConnected || aiAnalysisLoading) return
     setAiAnalysisLoading(true)
     // #5945 — Clear any previous error when starting a new analysis so stale
     // failures don't linger in the UI while the new request is in flight.
@@ -829,6 +836,10 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
   }, [cluster, namespace, podName, describeOutput, logsOutput, eventsOutput, yamlOutput, podStatusOutput, aiAnalysis, labels, annotations, configMaps, secrets, pvcs, serviceAccount, ownerChain])
 
   const handleRepairPod = () => {
+    if (backendActionUnavailable) {
+      showToast(backendUnavailableMessage, 'error')
+      return
+    }
     checkKeyAndRun(() => {
       closeDrillDown() // Close panel so mission sidebar is visible
       startMission({
@@ -865,6 +876,10 @@ Please:
 
   // Check if user can delete pods in this namespace
   const checkDeletePermission = useCallback(async () => {
+    if (backendActionUnavailable) {
+      setCanDeletePod(false)
+      return
+    }
     try {
       const result = await checkPermission({
         cluster,
@@ -876,7 +891,7 @@ Please:
     } catch {
       setCanDeletePod(false)
     }
-  }, [cluster, namespace, checkPermission])
+  }, [backendActionUnavailable, cluster, namespace, checkPermission])
 
   // Check delete permission on mount
   useEffect(() => {
@@ -890,7 +905,12 @@ Please:
 
   // Delete pod handler
   const handleDeletePod = async () => {
-    if (!agentConnected || !backendConnected || !canDeletePod) return
+    if (backendActionUnavailable) {
+      setDeleteError(backendUnavailableMessage)
+      showToast(backendUnavailableMessage, 'error')
+      return
+    }
+    if (!agentConnected || !canDeletePod) return
 
     setDeletingPod(true)
     setDeleteError(null)
@@ -1795,18 +1815,28 @@ Please:
       {/* AI Actions Footer - Always visible */}
       {agentConnected && issues.length > 0 && (
         <div className="border-t border-border bg-card">
+          {backendActionUnavailable && (
+            <div className="px-4 pt-4">
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{backendUnavailableMessage}</span>
+              </div>
+            </div>
+          )}
           <PodAiAnalysis
             aiAnalysis={aiAnalysis}
             aiAnalysisLoading={aiAnalysisLoading}
             aiAnalysisError={aiAnalysisError}
-            backendUnavailable={!backendConnected}
+            actionsDisabled={backendActionUnavailable}
+            actionsDisabledReason={backendUnavailableMessage}
             fetchAiAnalysis={fetchAiAnalysis}
             handleRepairPod={handleRepairPod}
           />
           <PodDeleteSection
             podName={podName}
             agentConnected={agentConnected}
-            backendUnavailable={!backendConnected}
+            backendUnavailable={backendActionUnavailable}
+            backendUnavailableReason={backendUnavailableMessage}
             canDeletePod={canDeletePod}
             deletingPod={deletingPod}
             deleteError={deleteError}

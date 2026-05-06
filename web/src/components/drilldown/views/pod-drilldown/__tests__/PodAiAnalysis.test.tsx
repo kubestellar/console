@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -42,5 +42,21 @@ describe('PodAiAnalysis', () => {
   it('renders without crashing', () => {
     const { container } = render(<PodAiAnalysis aiAnalysis={null} aiAnalysisLoading={false} fetchAiAnalysis={vi.fn()} handleRepairPod={vi.fn()} />)
     expect(container).toBeTruthy()
+  })
+
+  it('disables action buttons when backend actions are unavailable', () => {
+    render(
+      <PodAiAnalysis
+        aiAnalysis={null}
+        aiAnalysisLoading={false}
+        actionsDisabled
+        actionsDisabledReason="backend down"
+        fetchAiAnalysis={vi.fn()}
+        handleRepairPod={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'drilldown.actions.diagnose' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'drilldown.actions.repair' })).toBeDisabled()
   })
 })

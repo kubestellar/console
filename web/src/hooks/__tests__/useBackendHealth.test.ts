@@ -8,6 +8,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 } })
 
 import { useBackendHealth, isBackendConnected, isInClusterMode } from '../useBackendHealth'
+import { reportBackendUnavailable, reportBackendAvailable } from '../../lib/backendHealthEvents'
 
 describe('useBackendHealth', () => {
   beforeEach(() => {
@@ -52,6 +53,23 @@ describe('useBackendHealth', () => {
     const { result } = renderHook(() => useBackendHealth())
     await waitFor(() => expect(result.current.inCluster).toBe(true))
     expect(result.current.isInClusterMode).toBe(true)
+  })
+
+  it('keeps inCluster true while disconnected so backend-backed actions can stay disabled', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ status: 'ok', version: '1.0.0', in_cluster: true }), { status: 200 })
+    )
+    const { result } = renderHook(() => useBackendHealth())
+    await waitFor(() => expect(result.current.inCluster).toBe(true))
+
+    reportBackendUnavailable('http', 502)
+
+    await waitFor(() => expect(result.current.status).toBe('disconnected'))
+    expect(result.current.inCluster).toBe(true)
+    expect(result.current.isInClusterMode).toBe(false)
+
+    reportBackendAvailable('http', 200)
+    await waitFor(() => expect(result.current.status).toBe('connected'))
   })
 
   // --- Disconnected after consecutive failures ---

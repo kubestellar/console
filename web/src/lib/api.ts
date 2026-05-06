@@ -8,6 +8,11 @@ import {
   FETCH_DEFAULT_TIMEOUT_MS,
 } from './constants'
 import { emitSessionExpired, emitHttpError } from './analytics'
+import {
+  reportBackendAvailable,
+  reportBackendUnavailable,
+  shouldMarkBackendUnavailable,
+} from './backendHealthEvents'
 
 const API_BASE = ''
 const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
@@ -349,9 +354,10 @@ export async function checkOAuthConfigured(): Promise<{ backendUp: boolean; oaut
   }
 }
 
-function markBackendFailure(): void {
+function markBackendFailure(status?: number): void {
   backendAvailable = false
   backendLastCheckTime = Date.now()
+  reportBackendUnavailable('http', status)
   // Don't persist false to localStorage — only keep in memory.
   // Persisting false causes fresh page loads to inherit stale "backend down" state.
   try {
@@ -359,15 +365,22 @@ function markBackendFailure(): void {
   } catch (e: unknown) { console.error('[api] failed to clear backend status cache:', e) }
 }
 
-function markBackendSuccess(): void {
+function markBackendSuccess(status?: number): void {
   backendAvailable = true
   backendLastCheckTime = Date.now()
+  reportBackendAvailable('http', status)
   try {
     localStorage.setItem(BACKEND_STATUS_KEY, JSON.stringify({
       available: true,
       timestamp: backendLastCheckTime,
     }))
   } catch (e: unknown) { console.error('[api] failed to cache backend success:', e) }
+}
+
+function createErrorWithCause(message: string, cause: unknown): Error {
+  const error = new Error(message) as Error & { cause?: unknown }
+  error.cause = cause
+  return error
 }
 
 /**
@@ -541,7 +554,7 @@ class ApiClient {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
-        throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
+        throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
@@ -597,7 +610,7 @@ class ApiClient {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
-        throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
+        throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
@@ -653,7 +666,7 @@ class ApiClient {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
-        throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
+        throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
@@ -705,7 +718,7 @@ class ApiClient {
       clearTimeout(timeoutId)
       if (err instanceof Error && err.name === 'AbortError') {
         emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
-        throw new Error(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`)
+        throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
       }
       if (err instanceof TypeError && err.message.includes('fetch')) {
         markBackendFailure()
@@ -746,7 +759,7 @@ export async function safeJson<T = unknown>(response: Response): Promise<T> {
   return response.json() as Promise<T>
 }
 
-export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const token = localStorage.getItem(STORAGE_KEY_TOKEN)
   const headers = new Headers(init?.headers)
 
@@ -763,5 +776,16 @@ export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise
   // Use caller-provided signal if present, otherwise apply default timeout
   const signal = init?.signal ?? AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
 
-  return fetch(input, { ...init, headers, signal })
+  try {
+    const response = await fetch(input, { ...init, headers, signal })
+    if (shouldMarkBackendUnavailable(response.status)) {
+      markBackendFailure(response.status)
+    } else {
+      markBackendSuccess(response.status)
+    }
+    return response
+  } catch (error) {
+    markBackendFailure()
+    throw error
+  }
 }

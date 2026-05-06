@@ -16,6 +16,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useDiagnoseRepairLoop } from '../../../hooks/useDiagnoseRepairLoop'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../console-missions/shared'
 import { useTranslation } from 'react-i18next'
+import { useBackendHealth } from '../../../hooks/useBackendHealth'
 import type { MonitoredResource, MonitorIssue, DiagnoseRepairPhase, RepairRisk } from '../../../types/workloadMonitor'
 
 interface DiagnoseProps {
@@ -57,9 +58,10 @@ export function WorkloadMonitorDiagnose({
   repairable,
   workloadContext,
 }: DiagnoseProps) {
-  const { t } = useTranslation('cards')
+  const { t } = useTranslation(['cards', 'common'])
   const [expanded, setExpanded] = useState(false)
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
+  const { status: backendStatus, inCluster } = useBackendHealth()
   const prevPhaseRef = useRef<DiagnoseRepairPhase>('idle')
 
   const {
@@ -94,8 +96,13 @@ export function WorkloadMonitorDiagnose({
   const isActive = state.phase !== 'idle' && state.phase !== 'complete' && state.phase !== 'failed'
   const hasApprovedRepairs = state.proposedRepairs.some(r => r.approved)
   const allApproved = state.proposedRepairs.length > 0 && state.proposedRepairs.every(r => r.approved)
+  const backendUnavailable = inCluster && backendStatus === 'disconnected'
+  const backendUnavailableMessage = t('common:layout.backendUnavailableHint')
 
   const handleStartDiagnose = () => {
+    if (backendUnavailable) {
+      return
+    }
     checkKeyAndRun(() => {
       setExpanded(true)
       startDiagnose(resources, issues, workloadContext)
@@ -103,6 +110,9 @@ export function WorkloadMonitorDiagnose({
   }
 
   const handleExecuteRepairs = () => {
+    if (backendUnavailable) {
+      return
+    }
     checkKeyAndRun(() => {
       executeRepairs()
     })
@@ -137,10 +147,14 @@ export function WorkloadMonitorDiagnose({
           {state.phase === 'idle' && (
             <button
               onClick={handleStartDiagnose}
-              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+              disabled={backendUnavailable}
+              title={backendUnavailable ? backendUnavailableMessage : undefined}
+              className={backendUnavailable
+                ? 'flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground cursor-not-allowed opacity-60'
+                : 'flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors'}
             >
               <Stethoscope className="w-3 h-3" />
-              Diagnose
+              {t('workloadMonitor.diagnose')}
             </button>
           )}
           {isActive && (
@@ -167,6 +181,12 @@ export function WorkloadMonitorDiagnose({
       {/* Expanded content */}
       {expanded && (
         <div className="mt-3 space-y-3">
+          {backendUnavailable && (
+            <div className="flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>{backendUnavailableMessage}</span>
+            </div>
+          )}
           {/* Phase progress stepper */}
           {state.phase !== 'idle' && (
             <div className="flex items-center gap-1">
@@ -251,7 +271,11 @@ export function WorkloadMonitorDiagnose({
               {hasApprovedRepairs && (
                 <button
                   onClick={handleExecuteRepairs}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors text-xs font-medium"
+                  disabled={backendUnavailable}
+                  title={backendUnavailable ? backendUnavailableMessage : undefined}
+                  className={backendUnavailable
+                    ? 'w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-secondary text-muted-foreground cursor-not-allowed opacity-60 text-xs font-medium'
+                    : 'w-full flex items-center justify-center gap-1.5 py-1.5 rounded-md bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 transition-colors text-xs font-medium'}
                 >
                   <Wrench className="w-3.5 h-3.5" />
                   Execute {state.proposedRepairs.filter(r => r.approved).length} Repair{state.proposedRepairs.filter(r => r.approved).length !== 1 ? 's' : ''}

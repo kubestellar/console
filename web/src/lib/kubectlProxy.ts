@@ -21,6 +21,7 @@ import {
   POD_RESTART_ISSUE_THRESHOLD,
   FOCUS_DELAY_MS,
 } from './constants'
+import { reportBackendAvailable, reportBackendUnavailable } from './backendHealthEvents'
 
 type MessageType = 'kubectl' | 'health' | 'clusters' | 'result' | 'error'
 
@@ -225,6 +226,9 @@ class KubectlProxy {
             this.isConnecting = false
             this.lastConnectionFailureAt = 0
             this.wsMode = wsURL === LOCAL_AGENT_WS_URL ? 'local' : 'backend'
+            if (this.wsMode === 'backend') {
+              reportBackendAvailable('ws')
+            }
             finalize(() => resolve())
           }
 
@@ -254,11 +258,15 @@ class KubectlProxy {
           }
 
           this.ws.onclose = () => {
+            const wasBackendSocket = this.wsMode === 'backend'
             this.ws = null
             this.connectPromise = null
             this.isConnecting = false
             this.lastConnectionFailureAt = Date.now()
             this.wsMode = 'unknown'
+            if (wasBackendSocket) {
+              reportBackendUnavailable('ws')
+            }
 
             // Reject all pending requests
             this.pendingRequests.forEach((pending, id) => {
@@ -274,6 +282,9 @@ class KubectlProxy {
             this.connectPromise = null
             this.lastConnectionFailureAt = Date.now()
             this.wsMode = 'unknown'
+            if (!isLocalTarget) {
+              reportBackendUnavailable('ws')
+            }
             finalize(() =>
               reject(
                 new Error(

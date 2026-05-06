@@ -7,6 +7,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
 })
 
 import { useBackendHealth, isBackendConnected, isInClusterMode } from '../useBackendHealth'
+import { reportBackendUnavailable } from '../../lib/backendHealthEvents'
 
 describe('useBackendHealth — expanded edge cases', () => {
   beforeEach(() => {
@@ -115,8 +116,7 @@ describe('useBackendHealth — expanded edge cases', () => {
       new Response(JSON.stringify({ status: 'ok', version: '1.0.0', in_cluster: true }), { status: 200 })
     )
     const { result } = renderHook(() => useBackendHealth())
-    await waitFor(() => expect(result.current.status).toBe('connected'))
-    expect(result.current.isInClusterMode).toBe(true)
+    await waitFor(() => expect(result.current.isInClusterMode).toBe(true))
   })
 
   // 7. Response with no version field
@@ -186,5 +186,18 @@ describe('useBackendHealth — expanded edge cases', () => {
     const callCountBefore = fetchSpy.mock.calls.length
     await vi.advanceTimersByTimeAsync(100) // Too short for a new poll
     expect(fetchSpy.mock.calls.length).toBe(callCountBefore)
+  })
+
+  it('responds immediately to observed backend failures', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ status: 'ok', version: '1.0.0', in_cluster: true }), { status: 200 })
+    )
+    const { result } = renderHook(() => useBackendHealth())
+    await waitFor(() => expect(result.current.status).toBe('connected'))
+
+    reportBackendUnavailable('http', 502)
+
+    await waitFor(() => expect(result.current.status).toBe('disconnected'))
+    expect(result.current.inCluster).toBe(true)
   })
 })

@@ -45,10 +45,11 @@ vi.mock('../../../hooks/useTokenUsage', () => ({
 
 // Mock DashboardPage to isolate the component under test from the deeply nested dependency tree
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
-  DashboardPage: ({ title, subtitle, children }: { title: string; subtitle?: string; children?: React.ReactNode }) => (
+  DashboardPage: ({ title, subtitle, beforeCards, children }: { title: string; subtitle?: string; beforeCards?: React.ReactNode; children?: React.ReactNode }) => (
     <div data-testid="dashboard-page" data-title={title} data-subtitle={subtitle}>
       <h1>{title}</h1>
       {subtitle && <p>{subtitle}</p>}
+      {beforeCards}
       {children}
     </div>
   ),
@@ -113,6 +114,16 @@ vi.mock('../../../hooks/useUniversalStats', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+}))
+
+const mockBackendHealth = {
+  status: 'connected',
+  inCluster: false,
+  isInClusterMode: false,
+}
+
+vi.mock('../../../hooks/useBackendHealth', () => ({
+  useBackendHealth: () => mockBackendHealth,
 }))
 
 const showToastSpy = vi.fn()
@@ -185,20 +196,33 @@ describe('Pods Component', () => {
   beforeEach(() => {
     showToastSpy.mockClear()
     mockPodIssues = [{ name: 'my-pod', namespace: 'default', cluster: 'ctx/prod', status: 'Error', reason: 'CrashLoopBackOff', restarts: 3, issues: [] }]
+    mockBackendHealth.status = 'connected'
+    mockBackendHealth.inCluster = false
+    mockBackendHealth.isInClusterMode = false
   })
 
   it('renders the action buttons (Restart, Logs, Delete)', () => {
     renderPods()
-    expect(screen.getByLabelText('Restart pod')).toBeTruthy()
+    expect(screen.getByLabelText('common.restart')).toBeTruthy()
     expect(screen.getByLabelText('View logs')).toBeTruthy()
-    expect(screen.getByLabelText('Delete pod')).toBeTruthy()
+    expect(screen.getByLabelText('common.delete')).toBeTruthy()
   })
 
   it('calls kubectlProxy and showToast when Restart is clicked', async () => {
     renderPods()
-    const restartBtn = screen.getByLabelText('Restart pod')
+    const restartBtn = screen.getByLabelText('common.restart')
     fireEvent.click(restartBtn)
     expect(showToastSpy).toHaveBeenCalledWith('pods.restarting', 'info')
+  })
+
+  it('disables pod actions and shows stale-status warning when backend is unavailable in-cluster', () => {
+    mockBackendHealth.status = 'disconnected'
+    mockBackendHealth.inCluster = true
+    renderPods()
+
+    expect(screen.getByText('pods.backendStatusStale')).toBeTruthy()
+    expect(screen.getByLabelText('common.restart')).toBeDisabled()
+    expect(screen.getByLabelText('common.delete')).toBeDisabled()
   })
 
   it('calls drillToPod when Logs is clicked', () => {
@@ -212,7 +236,7 @@ describe('Pods Component', () => {
 
   it('shows confirmation dialog when Delete is clicked', async () => {
     renderPods()
-    const deleteBtn = screen.getByLabelText('Delete pod')
+    const deleteBtn = screen.getByLabelText('common.delete')
     fireEvent.click(deleteBtn)
     // After i18n PR #10487 window.confirm was replaced with ConfirmDialog
     expect(screen.getByTestId('confirm-dialog')).toBeTruthy()

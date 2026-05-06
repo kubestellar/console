@@ -7,7 +7,8 @@ export interface PodAiAnalysisProps {
   aiAnalysis: string | null
   aiAnalysisLoading: boolean
   aiAnalysisError?: string | null
-  backendUnavailable?: boolean
+  actionsDisabled?: boolean
+  actionsDisabledReason?: string
   fetchAiAnalysis: () => void
   handleRepairPod: () => void
 }
@@ -16,7 +17,8 @@ export function PodAiAnalysis({
   aiAnalysis,
   aiAnalysisLoading,
   aiAnalysisError,
-  backendUnavailable,
+  actionsDisabled = false,
+  actionsDisabledReason,
   fetchAiAnalysis,
   handleRepairPod,
 }: PodAiAnalysisProps) {
@@ -24,17 +26,6 @@ export function PodAiAnalysis({
 
   return (
     <>
-      {/* Backend unavailable warning */}
-      {backendUnavailable && (
-        <div className="p-4 pb-0">
-          <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3">
-            <div className="flex items-center gap-2 text-sm text-yellow-400">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{t('layout.connectionLostHint')}</span>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Error state */}
       {aiAnalysisError && !aiAnalysisLoading && (
         <div className="p-4 pb-0">
@@ -45,7 +36,14 @@ export function PodAiAnalysis({
             </div>
             <button
               onClick={fetchAiAnalysis}
-              className="mt-2 flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+              disabled={actionsDisabled}
+              title={actionsDisabledReason}
+              className={cn(
+                'mt-2 flex items-center gap-1.5 text-xs text-red-400 transition-colors',
+                actionsDisabled
+                  ? 'cursor-not-allowed opacity-60'
+                  : 'hover:text-red-300'
+              )}
             >
               <RefreshCw className="w-3 h-3" />
               <span>{t('common.retry')}</span>
@@ -87,13 +85,14 @@ export function PodAiAnalysis({
       <div className="flex items-center gap-2 p-4">
         <button
           onClick={fetchAiAnalysis}
-          disabled={aiAnalysisLoading || backendUnavailable}
+          disabled={aiAnalysisLoading || actionsDisabled}
+          title={actionsDisabledReason}
           className={cn(
             'flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
-            'bg-purple-600/20 text-purple-200 hover:bg-purple-500/30 border border-purple-500/50',
-            'shadow-[0_0_15px_rgba(147,51,234,0.2)] hover:shadow-[0_0_20px_rgba(147,51,234,0.3)]',
-            aiAnalysisLoading && 'opacity-70 cursor-wait',
-            backendUnavailable && 'opacity-50 cursor-not-allowed'
+            actionsDisabled
+              ? 'bg-secondary/30 text-muted-foreground border border-border cursor-not-allowed opacity-60 shadow-none'
+              : 'bg-purple-600/20 text-purple-200 hover:bg-purple-500/30 border border-purple-500/50 shadow-[0_0_15px_rgba(147,51,234,0.2)] hover:shadow-[0_0_20px_rgba(147,51,234,0.3)]',
+            aiAnalysisLoading && 'opacity-70 cursor-wait'
           )}
         >
           {aiAnalysisLoading ? (
@@ -113,12 +112,13 @@ export function PodAiAnalysis({
         </button>
         <button
           onClick={handleRepairPod}
-          disabled={backendUnavailable}
+          disabled={actionsDisabled}
+          title={actionsDisabledReason}
           className={cn(
             'flex-1 py-2 px-3 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
-            'bg-orange-600/20 text-orange-200 hover:bg-orange-500/30 border border-orange-500/50',
-            'shadow-[0_0_15px_rgba(234,88,12,0.2)] hover:shadow-[0_0_20px_rgba(234,88,12,0.3)]',
-            backendUnavailable && 'opacity-50 cursor-not-allowed'
+            actionsDisabled
+              ? 'bg-secondary/30 text-muted-foreground border border-border cursor-not-allowed opacity-60 shadow-none'
+              : 'bg-orange-600/20 text-orange-200 hover:bg-orange-500/30 border border-orange-500/50 shadow-[0_0_15px_rgba(234,88,12,0.2)] hover:shadow-[0_0_20px_rgba(234,88,12,0.3)]'
           )}
         >
           <div className="relative">

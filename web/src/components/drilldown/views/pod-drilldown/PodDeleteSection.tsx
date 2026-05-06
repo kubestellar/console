@@ -7,6 +7,7 @@ export interface PodDeleteSectionProps {
   podName: string
   agentConnected: boolean
   backendUnavailable?: boolean
+  backendUnavailableReason?: string
   canDeletePod: boolean | null
   deletingPod: boolean
   deleteError: string | null
@@ -19,7 +20,8 @@ export interface PodDeleteSectionProps {
 export function PodDeleteSection({
   podName,
   agentConnected,
-  backendUnavailable,
+  backendUnavailable = false,
+  backendUnavailableReason,
   canDeletePod,
   deletingPod,
   deleteError,
@@ -41,10 +43,10 @@ export function PodDeleteSection({
         )}
         <button
           onClick={() => setShowDeletePodConfirm(true)}
-          disabled={!agentConnected || backendUnavailable || canDeletePod === false || deletingPod}
+          disabled={backendUnavailable || !agentConnected || canDeletePod === false || deletingPod}
           title={
             backendUnavailable
-              ? t('layout.connectionLostHint')
+              ? backendUnavailableReason
               : !agentConnected
               ? 'Agent not connected'
               : canDeletePod === false
@@ -58,7 +60,7 @@ export function PodDeleteSection({
           className={cn(
             'w-full py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 text-sm font-medium',
             canDeletePod === false || !agentConnected || backendUnavailable
-              ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed opacity-50'
+              ? 'bg-secondary/30 text-muted-foreground cursor-not-allowed opacity-50 border border-border'
               : 'bg-red-600/20 text-red-300 hover:bg-red-500/30 border border-red-500/40 hover:border-red-500/60'
           )}
         >

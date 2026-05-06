@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useRef, useState } from 'react'
-import { ChevronRight, RefreshCw, Trash2, Terminal } from 'lucide-react'
+import { ChevronRight, RefreshCw, Trash2, Terminal, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
@@ -19,6 +19,7 @@ import { PortalTooltip } from '../cards/llmd/shared/PortalTooltip'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { useToast } from '../ui/Toast'
 import { ConfirmDialog } from '../../lib/modals/ConfirmDialog'
+import { useBackendHealth } from '../../hooks/useBackendHealth'
 
 /** Target pod metadata for the delete confirmation dialog */
 interface PendingDeleteTarget {
@@ -43,6 +44,10 @@ export function Pods() {
   const handleRefresh = () => { refetchPodIssues(); refetchClusters() }
   const { drillToPod, drillToAllPods, drillToAllClusters } = useDrillDownActions()
   const { showToast } = useToast()
+  const { status: backendStatus, inCluster } = useBackendHealth()
+  const backendActionUnavailable = inCluster && backendStatus === 'disconnected'
+  const backendUnavailableMessage = t('pods.backendUnavailable', 'Backend unavailable — pod actions are disabled until the connection returns.')
+  const backendStaleStatusMessage = t('pods.backendStatusStale', 'Pod status is showing the last successful backend snapshot until the connection returns.')
 
   // State for the custom delete-confirmation dialog
   const deleteConfirm = useModal()
@@ -85,6 +90,10 @@ export function Pods() {
 
   const handleRestartPod = async (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
     e.stopPropagation()
+    if (backendActionUnavailable) {
+      showToast(backendUnavailableMessage, 'error')
+      return
+    }
     try {
       showToast(t('pods.restarting', 'Restarting pod...'), 'info')
       await kubectlProxy.exec(['delete', 'pod', name, '-n', namespace], { context: cluster })
@@ -99,6 +108,10 @@ export function Pods() {
   /** Open the custom confirm dialog instead of window.confirm() */
   const handleDeletePod = (e: React.MouseEvent, cluster: string, namespace: string, name: string) => {
     e.stopPropagation()
+    if (backendActionUnavailable) {
+      showToast(backendUnavailableMessage, 'error')
+      return
+    }
     pendingDeleteRef.current = { cluster, namespace, name }
     deleteConfirm.open()
   }
@@ -107,6 +120,12 @@ export function Pods() {
   const executeDeletePod = useCallback(async () => {
     const target = pendingDeleteRef.current
     if (!target) return
+    if (backendActionUnavailable) {
+      showToast(backendUnavailableMessage, 'error')
+      deleteConfirm.close()
+      pendingDeleteRef.current = null
+      return
+    }
     setIsDeleting(true)
     try {
       showToast(t('pods.deleting', 'Deleting pod...'), 'info')
@@ -121,7 +140,7 @@ export function Pods() {
       deleteConfirm.close()
       pendingDeleteRef.current = null
     }
-  }, [showToast, t, refetchPodIssues, deleteConfirm.close])
+  }, [backendActionUnavailable, backendUnavailableMessage, showToast, t, refetchPodIssues, deleteConfirm])
 
   // Filter pod issues by global cluster selection
   const filteredPodIssues = useMemo(() => {
@@ -195,6 +214,12 @@ export function Pods() {
       subtitle="Monitor pod health and issues across clusters"
       icon="Hexagon"
       rightExtra={<RotatingTip page="pods" />}
+      beforeCards={backendActionUnavailable ? (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <span>{backendStaleStatusMessage}</span>
+        </div>
+      ) : null}
       storageKey={PODS_CARDS_KEY}
       defaultCards={DEFAULT_POD_CARDS}
       statsType="pods"
@@ -210,6 +235,11 @@ export function Pods() {
       }}
     >
       {/* Pod Issues List */}
+      {backendActionUnavailable && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {backendUnavailableMessage}
+        </div>
+      )}
       {showSkeletons ? (
         <div className="space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
@@ -294,11 +324,15 @@ export function Pods() {
                   )}
 
                   <div className="flex items-center gap-1">
-                    <PortalTooltip content={t('common.restart', 'Restart')}>
+                    <PortalTooltip content={backendActionUnavailable ? backendUnavailableMessage : t('common.restart', 'Restart')}>
                       <button
                         onClick={(e) => issue.cluster && handleRestartPod(e, issue.cluster, issue.namespace, issue.name)}
-                        className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-blue-400 transition-colors"
-                        aria-label="Restart pod"
+                        disabled={backendActionUnavailable}
+                        className={backendActionUnavailable
+                          ? 'p-1.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed'
+                          : 'p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-blue-400 transition-colors'}
+                        aria-label={t('common.restart', 'Restart')}
+                        title={backendActionUnavailable ? backendUnavailableMessage : t('common.restart', 'Restart')}
                       >
                         <RefreshCw className="w-4 h-4" />
                       </button>
@@ -314,11 +348,15 @@ export function Pods() {
                       </button>
                     </PortalTooltip>
 
-                    <PortalTooltip content={t('common.delete', 'Delete')}>
+                    <PortalTooltip content={backendActionUnavailable ? backendUnavailableMessage : t('common.delete', 'Delete')}>
                       <button
                         onClick={(e) => issue.cluster && handleDeletePod(e, issue.cluster, issue.namespace, issue.name)}
-                        className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-red-400 transition-colors"
-                        aria-label="Delete pod"
+                        disabled={backendActionUnavailable}
+                        className={backendActionUnavailable
+                          ? 'p-1.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed'
+                          : 'p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-red-400 transition-colors'}
+                        aria-label={t('common.delete', 'Delete')}
+                        title={backendActionUnavailable ? backendUnavailableMessage : t('common.delete', 'Delete')}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

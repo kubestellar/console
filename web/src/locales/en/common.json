@@ -2329,6 +2329,7 @@
       "fetchingPodStatus": "Fetching pod status...",
       "loadingLabels": "Loading labels and annotations...",
       "discoveringRelated": "Discovering related resources...",
+      "backendUnavailableActions": "Backend unavailable — pod actions are disabled until the connection returns.",
       "willBeRecreated": "(will be recreated)",
       "nodeNotAccepting": "This node is not accepting new workloads",
       "nodeNotHealthy": "Node is not healthy"
@@ -3743,6 +3744,8 @@
     "demo": "Demo",
     "connectionLost": "Connection lost",
     "connectionLostHint": "Could not reach the backend — restart the server to reconnect",
+    "backendUnavailable": "Backend unavailable",
+    "backendUnavailableHint": "Actions that require the backend are disabled until the connection returns.",
     "consoleRestarting": "Console restarting…",
     "consoleRestartingHint": "Reconnecting automatically — no action needed",
     "copiedRestartCommand": "Copied — run this in your project root terminal",
@@ -3974,7 +3977,9 @@
   },
   "pods": {
     "noPodIssues": "No Pod Issues",
-    "restarts": "Restarts"
+    "restarts": "Restarts",
+    "backendUnavailable": "Backend unavailable — pod actions are disabled until the connection returns.",
+    "backendStatusStale": "Pod status is showing the last successful backend snapshot until the connection returns."
   },
   "drafts": {
     "noSavedDrafts": "No saved drafts",

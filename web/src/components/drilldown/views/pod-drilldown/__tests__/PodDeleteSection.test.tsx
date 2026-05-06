@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -42,5 +42,25 @@ describe('PodDeleteSection', () => {
   it('renders without crashing', () => {
     const { container } = render(<PodDeleteSection podName="pod1" agentConnected={false} canDeletePod={null} deletingPod={false} deleteError={null} showDeletePodConfirm={false} setShowDeletePodConfirm={vi.fn()} isManagedPod={false} handleDeletePod={vi.fn()} />)
     expect(container).toBeTruthy()
+  })
+
+  it('disables delete when backend is unavailable', () => {
+    render(
+      <PodDeleteSection
+        podName="pod1"
+        agentConnected
+        backendUnavailable
+        backendUnavailableReason="backend down"
+        canDeletePod
+        deletingPod={false}
+        deleteError={null}
+        showDeletePodConfirm={false}
+        setShowDeletePodConfirm={vi.fn()}
+        isManagedPod={false}
+        handleDeletePod={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'drilldown.actions.deletePod' })).toBeDisabled()
   })
 })
