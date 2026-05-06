@@ -1,6 +1,6 @@
-import { Box, Cpu, ChevronRight } from 'lucide-react'
+import { Box, Cpu, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useGPUNodes, useAllPods } from '../../../hooks/useMCP'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { StatusIndicator, type Status } from '../../charts/StatusIndicator'
 import { hasGPUResourceRequest, normalizeClusterName } from '../../../lib/gpu'
@@ -25,6 +25,7 @@ export function GPUNamespaceDrillDown({ data }: Props) {
 
   const { nodes: gpuNodes } = useGPUNodes()
   const { pods: allPods } = useAllPods()
+  const { state, pop, close } = useDrillDown()
   const { drillToPod, drillToGPUNode, drillToCluster } = useDrillDownActions()
 
   // Find GPU pods in this namespace
@@ -78,6 +79,11 @@ export function GPUNamespaceDrillDown({ data }: Props) {
 
   return (
     <div className="space-y-6">
+      <button onClick={() => state.stack.length > 1 ? pop() : close()} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ChevronLeft className="w-4 h-4" />
+        Back
+      </button>
+
       {/* Summary */}
       <div className="p-6 rounded-lg bg-card/50 border border-border">
         <div className="flex items-center gap-3 mb-4">

@@ -5,7 +5,7 @@ import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import {
   Shield, Info, Loader2,
-  Layers, Server, RefreshCw, Stethoscope,
+  Layers, Server, RefreshCw, Stethoscope, ChevronLeft,
   CheckCircle, XCircle, AlertTriangle,
   FileText, AlertCircle
 } from 'lucide-react'
@@ -85,7 +85,7 @@ export function PolicyDrillDown({ data }: Props) {
 
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod } = useDrillDownActions()
-  const { close: closeDrillDown } = useDrillDown()
+  const { state, pop, close: closeDrillDown } = useDrillDown()
   const { startMission } = useMissions()
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
@@ -318,6 +318,10 @@ Please:
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6 text-sm">
+            <button onClick={() => state.stack.length > 1 ? pop() : closeDrillDown()} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+              {t('drilldown.goBack', 'Back')}
+            </button>
             {namespace && (
               <button
                 onClick={() => drillToNamespace(cluster, namespace)}

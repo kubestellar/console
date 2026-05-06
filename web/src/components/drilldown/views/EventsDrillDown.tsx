@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
-import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle, Server, Layers } from 'lucide-react'
+import { AlertCircle, RefreshCw, Terminal, Copy, CheckCircle, Server, Layers, ChevronLeft } from 'lucide-react'
 import { StatusIndicator } from '../../charts/StatusIndicator'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { getDemoMode } from '../../../hooks/useDemoMode'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useTranslation } from 'react-i18next'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
 import { POLL_INTERVAL_MS, UI_FEEDBACK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
@@ -58,6 +58,7 @@ export function EventsDrillDown({ data }: Props) {
   const namespace = data.namespace as string | undefined
   const objectName = data.objectName as string | undefined
   const clusterShort = cluster.split('/').pop() || cluster
+  const { state, pop, close } = useDrillDown()
   const { drillToCluster, drillToNamespace } = useDrillDownActions()
 
   const [events, setEvents] = useState<ClusterEvent[]>([])
@@ -203,6 +204,10 @@ export function EventsDrillDown({ data }: Props) {
     <div className="space-y-4">
       {/* Contextual Navigation */}
       <div className="flex items-center gap-6 text-sm">
+        <button onClick={() => state.stack.length > 1 ? pop() : close()} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+          {t('drilldown.goBack', 'Back')}
+        </button>
         {namespace && (
           <button
             onClick={() => drillToNamespace(cluster, namespace)}

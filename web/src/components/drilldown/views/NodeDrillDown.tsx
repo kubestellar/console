@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink, Server, Loader2 } from 'lucide-react'
+import { AlertTriangle, Terminal, Stethoscope, Wrench, CheckCircle, Copy, ExternalLink, Server, Loader2, ChevronLeft } from 'lucide-react'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { useMissions } from '../../../hooks/useMissions'
@@ -55,7 +55,7 @@ export function NodeDrillDown({ data }: Props) {
   const roles = passedRoles || cachedNode?.roles || undefined
 
   const { drillToEvents, drillToCluster } = useDrillDownActions()
-  const { close: closeDialog } = useDrillDown()
+  const { state, pop, close: closeDialog } = useDrillDown()
   const { startMission } = useMissions()
   const [copied, setCopied] = useState<string | null>(null)
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -111,6 +111,10 @@ Please:
     <div className="space-y-6">
       {/* Contextual Navigation */}
       <div className="flex items-center gap-6 text-sm">
+        <button onClick={() => state.stack.length > 1 ? pop() : closeDialog()} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+          {t('drilldown.goBack', 'Back')}
+        </button>
         <button
           onClick={() => drillToCluster(cluster)}
           className="flex items-center gap-2 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/30 px-3 py-1.5 rounded-lg transition-all group cursor-pointer"
