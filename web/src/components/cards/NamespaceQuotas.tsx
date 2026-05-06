@@ -105,10 +105,10 @@ function QuotaModal({
   const [cluster, setCluster] = useState(editingQuota?.cluster || (selectedCluster !== 'all' ? selectedCluster : ''))
   const [namespace, setNamespace] = useState(editingQuota?.namespace || (selectedNamespace !== 'all' ? selectedNamespace : ''))
   const [name, setName] = useState(editingQuota?.name || '')
-  const [resources, setResources] = useState<Array<{ key: string; value: string }>>(
+  const [resources, setResources] = useState<Array<{ id: string; key: string; value: string }>>(
     editingQuota
-      ? Object.entries(editingQuota.hard).map(([key, value]) => ({ key, value }))
-      : [{ key: 'limits.nvidia.com/gpu', value: '4' }]
+      ? Object.entries(editingQuota.hard).map(([key, value]) => ({ id: crypto.randomUUID(), key, value }))
+      : [{ id: crypto.randomUUID(), key: 'limits.nvidia.com/gpu', value: '4' }]
   )
   const [showGpuPresets, setShowGpuPresets] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -118,7 +118,7 @@ function QuotaModal({
   const availableNamespaces = cluster ? clusterNamespaces : namespaces
 
   const addResource = () => {
-    setResources([...resources, { key: '', value: '' }])
+    setResources([...resources, { id: crypto.randomUUID(), key: '', value: '' }])
   }
 
   const removeResource = (index: number) => {
@@ -133,7 +133,7 @@ function QuotaModal({
 
   const addGpuPreset = (resourceKey: string) => {
     if (!resources.some(r => r.key === resourceKey)) {
-      setResources([...resources, { key: resourceKey, value: '4' }])
+      setResources([...resources, { id: crypto.randomUUID(), key: resourceKey, value: '4' }])
     }
     setShowGpuPresets(false)
   }
@@ -268,7 +268,7 @@ function QuotaModal({
 
             <div className="space-y-2">
               {resources.map((resource, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={resource.id} className="flex items-center gap-2">
                   <select
                     value={resource.key}
                     onChange={(e) => updateResource(index, 'key', e.target.value)}
