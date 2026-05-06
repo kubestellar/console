@@ -356,7 +356,7 @@ export function Layout({ children: _children }: LayoutProps) {
     updateProgress != null &&
     !['idle', 'done', 'failed', 'cancelled'].includes(updateProgress.status)
   const showBackendBanner =
-    (backendDown || wasBackendDown) && !isUpdateInProgress
+    (backendDown || wasBackendDown) && !isUpdateInProgress && !isDemoModeForced
   const backendRecovering = backendDown && (
     Boolean(watchdogStage) ||
     restartState === 'restarting' ||
