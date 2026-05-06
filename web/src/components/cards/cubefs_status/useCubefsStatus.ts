@@ -344,7 +344,7 @@ export function useCubefsStatus(): UseCubefsStatusResult {
     (data.nodes || []).length > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,
