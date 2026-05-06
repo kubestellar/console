@@ -144,7 +144,7 @@ function computeLevel(rawDetectedIds: Set<string>): { level: number; totalDetect
 async function readBlobCache(repo: string): Promise<{ detectedIds: string[]; fresh: boolean } | null> {
   try {
     const store = getStore(BLOB_CACHE_STORE);
-    const cacheKey = `scan:${repo}`;
+    const cacheKey = `acmm-badge:scan:${repo}`;
     const raw = await store.get(cacheKey, { type: "json" });
     if (raw) {
       const entry = raw as { scannedAt?: string; detectedIds?: string[] };
@@ -164,7 +164,7 @@ async function readBlobCache(repo: string): Promise<{ detectedIds: string[]; fre
 async function writeBlobCache(repo: string, detectedIds: string[]): Promise<void> {
   try {
     const store = getStore(BLOB_CACHE_STORE);
-    const cacheKey = `scan:${repo}`;
+    const cacheKey = `acmm-badge:scan:${repo}`;
     await store.setJSON(cacheKey, {
       scannedAt: new Date().toISOString(),
       detectedIds,
