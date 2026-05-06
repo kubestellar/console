@@ -50,6 +50,12 @@ const STORE_NAME = 'cache'
 const MAX_FAILURES = 3
 
 /**
+ * Debounce window for sessionStorage writes (ms).
+ * Multiple cache saves within this window are batched into a single write per key.
+ */
+const SS_DEBOUNCE_MS = 500
+
+/**
  * sessionStorage prefix for sync cache snapshots.
  * sessionStorage is synchronous, survives page reload (same tab), and is
  * automatically cleared when the tab closes — no stale data accumulation.
@@ -57,21 +63,41 @@ const MAX_FAILURES = 3
  */
 const SS_PREFIX = 'kcc:'
 
-/** Try to write a cache entry to sessionStorage (best-effort, quota-safe). */
+/** Pending sessionStorage writes, keyed by cache key. */
+const ssPending = new Map<string, { data: unknown; timestamp: number }>()
+let ssFlushTimer: ReturnType<typeof setTimeout> | null = null
+
+/** Flush all pending sessionStorage writes in one batch. */
+function ssFlush(): void {
+  ssFlushTimer = null
+  for (const [key, { data, timestamp }] of ssPending) {
+    try {
+      sessionStorage.setItem(
+        SS_PREFIX + key,
+        JSON.stringify({ d: data, t: timestamp, v: CACHE_VERSION }),
+      )
+    } catch {
+      // QuotaExceededError — silently skip, IDB is the durable fallback
+    }
+  }
+  ssPending.clear()
+}
+
+/** Debounced write to sessionStorage. Batches writes within SS_DEBOUNCE_MS. */
 function ssWrite(key: string, data: unknown, timestamp: number): void {
-  try {
-    // Store cache version alongside data to avoid hydrating incompatible shapes after deploys.
-    sessionStorage.setItem(
-      SS_PREFIX + key,
-      JSON.stringify({ d: data, t: timestamp, v: CACHE_VERSION }),
-    )
-  } catch {
-    // QuotaExceededError — silently skip, IDB is the durable fallback
+  ssPending.set(key, { data, timestamp })
+  if (!ssFlushTimer) {
+    ssFlushTimer = setTimeout(ssFlush, SS_DEBOUNCE_MS)
   }
 }
 
 /** Synchronous read from sessionStorage. Returns null on miss, version mismatch, or parse error. */
 function ssRead<T>(key: string): { data: T; timestamp: number } | null {
+  // Check pending (not-yet-flushed) writes first to avoid returning stale data.
+  const pending = ssPending.get(key)
+  if (pending) {
+    return { data: pending.data as T, timestamp: pending.timestamp }
+  }
   try {
     const storageKey = SS_PREFIX + key
     const raw = sessionStorage.getItem(storageKey)
