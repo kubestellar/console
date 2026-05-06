@@ -8,7 +8,8 @@ import {
   ELEMENT_VISIBLE_TIMEOUT_MS,
 } from './helpers/setup'
 
-test.describe('Hardware Health retry functionality (#11772)', () => {
+// Skip: Hardware Health card not present on /ai-ml dashboard in demo mode (tracking: #12315)
+test.describe.skip('Hardware Health retry functionality (#11772)', () => {
   test.beforeEach(async ({ page }) => {
     await setupDemoAndNavigate(page, '/ai-ml')
   })
@@ -20,14 +21,7 @@ test.describe('Hardware Health retry functionality (#11772)', () => {
 
     // Look for Hardware Health card
     const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
-    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-
-    if (!hasCard) {
-      test.skip(true, 'Hardware Health card not visible')
-      return
-    }
-
-    expect(hwCard).toBeVisible()
+    await expect(hwCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
   })
 
   test('retry button appears when device fetch fails', async ({ page }) => {
@@ -45,16 +39,11 @@ test.describe('Hardware Health retry functionality (#11772)', () => {
 
     // Wait for Hardware Health card
     const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
-    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-
-    if (!hasCard) {
-      test.skip(true, 'Hardware Health card not visible')
-      return
-    }
+    await expect(hwCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     // Look for error message or retry button
     const retryButton = hwCard.getByRole('button', { name: /retry/i })
-    const errorMessage = hwCard.locator('[class*="bg-red"], [class*="text-red"]')
+    const errorMessage = hwCard.locator('[role="alert"], [data-testid="card-error"]').or(hwCard.getByText(/error|failed|unavailable/i))
 
     // Either retry button or error message should appear when fetch fails
     const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
@@ -80,15 +69,10 @@ test.describe('Hardware Health retry functionality (#11772)', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
-    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    await expect(hwCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
-    if (!hasCard) {
-      test.skip(true, 'Hardware Health card not visible')
-      return
-    }
-
-    // Wait for initial fetch
-    await page.waitForTimeout(1000)
+    // Wait for initial fetch to complete
+    await page.waitForResponse(resp => resp.url().includes('/api/hardware/health'))
     const initialFetchCount = fetchCount
 
     // Find and click retry button
@@ -102,8 +86,8 @@ test.describe('Hardware Health retry functionality (#11772)', () => {
 
     await retryButton.click()
 
-    // Wait for retry fetch
-    await page.waitForTimeout(1000)
+    // Wait for retry fetch to complete
+    await page.waitForResponse(resp => resp.url().includes('/api/hardware/health'))
 
     // Verify fetch was called again
     expect(fetchCount).toBeGreaterThan(initialFetchCount)
@@ -124,12 +108,7 @@ test.describe('Hardware Health retry functionality (#11772)', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
-    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-
-    if (!hasCard) {
-      test.skip(true, 'Hardware Health card not visible')
-      return
-    }
+    await expect(hwCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const retryButton = hwCard.getByRole('button', { name: /retry/i })
     const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
@@ -172,12 +151,7 @@ test.describe('Hardware Health retry functionality (#11772)', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const hwCard = page.locator('[data-card-type="hardware_health"], [data-testid*="hardware-health"]').first()
-    const hasCard = await hwCard.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
-
-    if (!hasCard) {
-      test.skip(true, 'Hardware Health card not visible')
-      return
-    }
+    await expect(hwCard).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
 
     const retryButton = hwCard.getByRole('button', { name: /retry/i })
     const hasRetry = await retryButton.isVisible({ timeout: 5000 }).catch(() => false)
@@ -188,10 +162,10 @@ test.describe('Hardware Health retry functionality (#11772)', () => {
 
     // Click retry
     await retryButton.click()
-    await page.waitForTimeout(1000)
+    await page.waitForResponse(resp => resp.url().includes('/api/hardware/health'))
 
     // Verify error message is displayed
-    const errorDisplay = hwCard.locator('[class*="bg-red"], [class*="text-red"]')
+    const errorDisplay = hwCard.locator('[role="alert"], [data-testid="card-error"]').or(hwCard.getByText(/error|failed|unavailable/i))
     const errorText = await errorDisplay.textContent()
 
     // Error should contain some meaningful text (not just "Error" or empty)
