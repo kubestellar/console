@@ -249,8 +249,9 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 		return h.fetchAllWithContext(c.Context())
 	})
 	if err != nil {
+		slog.Error("failed to fetch nightly E2E data", "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error": fmt.Sprintf("failed to fetch nightly E2E data: %v", err),
+			"error": "failed to fetch nightly E2E data",
 		})
 	}
 	resp := v.(*NightlyE2EResponse)
@@ -904,7 +905,8 @@ func (h *NightlyE2EHandler) fetchJobLog(repo string, jobID int64) string {
 
 	req, err := http.NewRequest("GET", logURL, nil)
 	if err != nil {
-		return fmt.Sprintf("[error creating request: %v]", err)
+		slog.Error("failed to create log request", "repo", repo, "jobID", jobID, "error", err)
+		return "[error creating request]"
 	}
 	if h.githubToken != "" {
 		req.Header.Set("Authorization", "Bearer "+h.githubToken)
@@ -920,7 +922,8 @@ func (h *NightlyE2EHandler) fetchJobLog(repo string, jobID int64) string {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Sprintf("[error fetching log: %v]", err)
+		slog.Error("failed to fetch log", "repo", repo, "jobID", jobID, "error", err)
+		return "[error fetching log]"
 	}
 	defer resp.Body.Close()
 
@@ -932,11 +935,13 @@ func (h *NightlyE2EHandler) fetchJobLog(repo string, jobID int64) string {
 		}
 		redirectReq, err := http.NewRequest("GET", location, nil)
 		if err != nil {
-			return fmt.Sprintf("[error following redirect: %v]", err)
+			slog.Error("failed to create redirect request", "repo", repo, "jobID", jobID, "location", location, "error", err)
+			return "[error following redirect]"
 		}
 		redirectResp, err := h.httpClient.Do(redirectReq)
 		if err != nil {
-			return fmt.Sprintf("[error fetching redirected log: %v]", err)
+			slog.Error("failed to fetch redirected log", "repo", repo, "jobID", jobID, "error", err)
+			return "[error fetching redirected log]"
 		}
 		defer redirectResp.Body.Close()
 		return readTruncatedLog(redirectResp.Body)
@@ -953,7 +958,8 @@ func (h *NightlyE2EHandler) fetchJobLog(repo string, jobID int64) string {
 func readTruncatedLog(body io.Reader) string {
 	data, err := io.ReadAll(io.LimitReader(body, int64(maxLogBytes*2)))
 	if err != nil {
-		return fmt.Sprintf("[error reading log: %v]", err)
+		slog.Error("failed to read log body", "error", err)
+		return "[error reading log]"
 	}
 	if len(data) > maxLogBytes {
 		// Take the tail — failure info is at the end
