@@ -57,7 +57,7 @@ import { EventsDrillDown } from '../EventsDrillDown'
 
 describe('EventsDrillDown', () => {
   it('renders without crashing', () => {
-    const { container, getByText } = render(<EventsDrillDown data={{ cluster: 'c1', namespace: 'ns1', events: [] }} />)
+    const { container } = render(<EventsDrillDown data={{ cluster: 'c1', namespace: 'ns1', events: [] }} />)
     expect(container).toBeTruthy()
     // In demo mode, component skips loading and shows empty state immediately
     // Check for the "No events found" message or Back button navigation
