@@ -289,7 +289,7 @@ export function ComplianceReportsCard() {
 
 export function NISTCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/compliance/nist/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/compliance/nist/summary')
   return (
     <CardShell title="NIST 800-53" icon={Shield} onClick={() => nav('/nist')}>
       {data ? (
@@ -311,7 +311,7 @@ export function NISTCard() {
 
 export function STIGCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/compliance/stig/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/compliance/stig/summary')
   return (
     <CardShell title="DISA STIG" icon={Shield} onClick={() => nav('/stig')}>
       {data ? (
@@ -333,7 +333,7 @@ export function STIGCard() {
 
 export function AirGapCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/compliance/airgap/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/compliance/airgap/summary')
   return (
     <CardShell title="Air-Gap Readiness" icon={WifiOff} onClick={() => nav('/air-gap')}>
       {data ? (
@@ -355,7 +355,7 @@ export function AirGapCard() {
 
 export function SIEMIntegrationCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/siem/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/siem/summary')
   return (
     <CardShell title="SIEM Integration" icon={Activity} onClick={() => nav('/enterprise/siem')}>
       {data ? (
@@ -393,7 +393,7 @@ export function IncidentResponseCard() {
 
 export function ThreatIntelCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/threat-intel/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/threat-intel/summary')
   return (
     <CardShell title="Threat Intelligence" icon={Shield} onClick={() => nav('/enterprise/threat-intel')}>
       {data ? (
@@ -439,7 +439,7 @@ export function FedRAMPCard() {
 
 export function OIDCFederationCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/identity/oidc/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/identity/oidc/summary')
   return (
     <CardShell title="OIDC Federation" icon={KeyRound} onClick={() => nav('/enterprise/oidc')}>
       {data ? (
@@ -458,7 +458,7 @@ export function OIDCFederationCard() {
 
 export function RBACAuditCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/identity/rbac/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/identity/rbac/summary')
   return (
     <CardShell title="RBAC Audit" icon={Lock} onClick={() => nav('/enterprise/rbac-audit')}>
       {data ? (
@@ -480,7 +480,7 @@ export function RBACAuditCard() {
 
 export function SessionManagementCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/identity/sessions/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/identity/sessions/summary')
   return (
     <CardShell title="Session Management" icon={Clock} onClick={() => nav('/enterprise/sessions')}>
       {data ? (
@@ -499,7 +499,7 @@ export function SessionManagementCard() {
 
 export function SBOMManagerCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/sbom/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/sbom/summary')
   return (
     <CardShell title="SBOM Manager" icon={Package} onClick={() => nav('/enterprise/sbom')}>
       {data ? (
@@ -518,7 +518,7 @@ export function SBOMManagerCard() {
 
 export function SigstoreVerifyCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/sigstore/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/sigstore/summary')
   return (
     <CardShell title="Sigstore Verify" icon={Shield} onClick={() => nav('/enterprise/sigstore')}>
       {data ? (
@@ -537,7 +537,7 @@ export function SigstoreVerifyCard() {
 
 export function SLSAProvenanceCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/slsa/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/slsa/summary')
   return (
     <CardShell title="SLSA Provenance" icon={Lock} onClick={() => nav('/enterprise/slsa')}>
       {data ? (
@@ -556,7 +556,7 @@ export function SLSAProvenanceCard() {
 
 export function RiskMatrixCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/erm/risk-matrix/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-matrix/summary')
   return (
     <CardShell title="Risk Matrix" icon={Scale} onClick={() => nav('/enterprise/risk-matrix')}>
       {data ? (
@@ -575,7 +575,7 @@ export function RiskMatrixCard() {
 
 export function RiskRegisterCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/erm/risk-register/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-register/summary')
   return (
     <CardShell title="Risk Register" icon={Scale} onClick={() => nav('/enterprise/risk-register')}>
       {data ? (
@@ -594,7 +594,7 @@ export function RiskRegisterCard() {
 
 export function RiskAppetiteCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/erm/risk-appetite/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/erm/risk-appetite/summary')
   return (
     <CardShell title="Risk Appetite" icon={Scale} onClick={() => nav('/enterprise/risk-appetite')}>
       {data ? (
