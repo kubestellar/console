@@ -730,131 +730,131 @@ export function useDrillDownActions() {
   }
 
   // Multi-cluster summary drill actions (for stat blocks)
-  const drillToAllClusters = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllClusters = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Clusters` : 'All Clusters'
     openOrPush({
       type: 'all-clusters',
       title,
       subtitle: 'Multi-cluster overview',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllNamespaces = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllNamespaces = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Namespaces` : 'All Namespaces'
     openOrPush({
       type: 'all-namespaces',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllDeployments = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllDeployments = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Deployments` : 'All Deployments'
     openOrPush({
       type: 'all-deployments',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllPods = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllPods = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Pods` : 'All Pods'
     openOrPush({
       type: 'all-pods',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllServices = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllServices = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Services` : 'All Services'
     openOrPush({
       type: 'all-services',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllNodes = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllNodes = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Nodes` : 'All Nodes'
     openOrPush({
       type: 'all-nodes',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllEvents = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllEvents = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Events` : 'All Events'
     openOrPush({
       type: 'all-events',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllAlerts = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllAlerts = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Alerts` : 'All Alerts'
     openOrPush({
       type: 'all-alerts',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllHelm = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllHelm = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Helm Releases` : 'All Helm Releases'
     openOrPush({
       type: 'all-helm',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllOperators = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllOperators = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Operators` : 'All Operators'
     openOrPush({
       type: 'all-operators',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllSecurity = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllSecurity = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Security Issues` : 'Security Issues'
     openOrPush({
       type: 'all-security',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllGPU = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllGPU = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} GPUs` : 'All GPUs'
     openOrPush({
       type: 'all-gpu',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllStorage = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllStorage = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Storage` : 'All Storage'
     openOrPush({
       type: 'all-storage',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
-  const drillToAllJobs = (filter?: string, filterData?: Record<string, unknown>) => {
+  const drillToAllJobs = useCallback((filter?: string, filterData?: Record<string, unknown>) => {
     const title = filter ? `${filter.charAt(0).toUpperCase() + filter.slice(1)} Jobs` : 'All Jobs'
     openOrPush({
       type: 'all-jobs',
       title,
       subtitle: 'Across all clusters',
       data: { filter, ...filterData } })
-  }
+  }, [openOrPush])
 
   return {
     drillToCluster,
