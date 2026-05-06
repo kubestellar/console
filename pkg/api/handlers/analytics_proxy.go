@@ -242,10 +242,11 @@ func isAllowedNetlifyHost(host string) bool {
 func isAllowedOrigin(c *fiber.Ctx) bool {
 	origin := c.Get("Origin")
 	if origin == "" {
-		// Reject requests without an Origin header. Browsers always send Origin
-		// for XHR/fetch cross-origin requests. Requests without it are likely
-		// from non-browser clients attempting to bypass origin checks (#7031).
-		return false
+		// Allow requests without an Origin header. Non-browser clients (server-side
+		// trackers, embedded integrations, curl) legitimately omit Origin. When
+		// present, we validate it; when absent, we permit the request to avoid
+		// breaking automated analytics submission (#12308).
+		return true
 	}
 
 	u, err := url.Parse(origin)
