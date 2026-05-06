@@ -452,13 +452,19 @@ func (h *Hub) BroadcastAll(msg Message) {
 			slog.Warn("[WebSocket] slow client buffer full, disconnecting",
 				"user", client.userID, "type", msg.Type)
 			go func(c *Client) {
-				// Non-blocking send to unregister; if the channel is full
-				// the hub loop will pick it up eventually.
+				// #12112 — Use a timeout instead of default case so
+				// the unregister is never silently dropped. If the
+				// unregister channel is full for >1s, forcibly close
+				// the connection to prevent goroutine/FD leaks.
+				// This matches the fix applied to Broadcast() in #11877.
 				select {
 				case h.unregister <- c:
-				default:
+				case <-time.After(1 * time.Second):
+					slog.Warn("[WebSocket] unregister channel full, force-closing client",
+						"user", c.userID, "type", msg.Type)
+					c.closeConn()
+				case <-h.done:
 				}
-				// #7434 — Do not call c.closeConn() directly from here.
 			}(client)
 		}
 	}
