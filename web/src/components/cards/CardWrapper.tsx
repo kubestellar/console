@@ -41,6 +41,9 @@ const COLLAPSED_CARDS_STORAGE_KEY = 'kubestellar-collapsed-cards'
 /** CSS container query style for card content responsive breakpoints */
 const CONTAINER_QUERY_STYLE = { containerType: 'inline-size' } as const
 
+/** CSS container query style for card content responsive breakpoints */
+const CONTAINER_QUERY_STYLE = { containerType: 'inline-size' } as const
+
 /** Number of consecutive failures before showing the "Remove card" prompt */
 const REMOVE_CARD_FAILURE_THRESHOLD = 3
 
