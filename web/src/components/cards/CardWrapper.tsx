@@ -864,68 +864,70 @@ export const CardWrapper = memo(function CardWrapper({
 
             {/* Failure detail banner — shown when card has failed to refresh */}
             {effectiveIsFailed && !isCollapsed && (
-              <div className="px-4 py-2 border-b border-red-500/20 bg-red-500/5" data-testid="card-failure-banner">
-                <div className="flex items-start gap-2 text-xs">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" aria-hidden="true" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-red-400 font-medium">
-                      {t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
-                    </p>
-                    {effectiveErrorMessage && (
-                      <p className="text-muted-foreground mt-0.5 truncate" title={effectiveErrorMessage}>
-                        {t('cardWrapper.failureReasonLabel')}: {effectiveErrorMessage}
+              <div className="px-3 pt-2" data-testid="card-failure-banner">
+                <div className="rounded-lg border border-amber-500/10 bg-amber-500/5 px-3 py-2 backdrop-blur-sm">
+                  <div className="flex items-start gap-2 text-xs">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-300/90" aria-hidden="true" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-amber-200/90">
+                        {t('cardWrapper.refreshFailedCount', { count: effectiveConsecutiveFailures })}
                       </p>
-                    )}
+                      {effectiveErrorMessage && (
+                        <p className="mt-0.5 truncate text-muted-foreground/90" title={effectiveErrorMessage}>
+                          {t('cardWrapper.failureReasonLabel')}: {effectiveErrorMessage}
+                        </p>
+                      )}
+                    </div>
+                    <div className="shrink-0 flex items-center gap-1.5">
+                      {effectiveErrorMessage && (
+                        <button
+                          onClick={() => setShowFailureLogs(prev => !prev)}
+                          className="no-underline flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs text-muted-foreground transition-colors hover:bg-background/40 hover:text-foreground"
+                          aria-label={showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
+                          aria-expanded={showFailureLogs}
+                        >
+                          <FileText className="h-3 w-3" aria-hidden="true" />
+                          {showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
+                          {showFailureLogs
+                            ? <ChevronUp className="h-3 w-3" aria-hidden="true" />
+                            : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
+                        </button>
+                      )}
+                      {onRefresh && (
+                        <button
+                          onClick={onRefresh}
+                          className="no-underline flex items-center gap-1 rounded-md border border-amber-500/10 bg-background/30 px-1.5 py-0.5 text-2xs text-amber-200/90 transition-colors hover:bg-background/50 hover:text-amber-100"
+                          aria-label={t('cardWrapper.failureRetry')}
+                        >
+                          <RefreshCw className="h-3 w-3" aria-hidden="true" />
+                          {t('cardWrapper.failureRetry')}
+                        </button>
+                      )}
+                      {onRemove && effectiveConsecutiveFailures >= REMOVE_CARD_FAILURE_THRESHOLD && (
+                        <button
+                          onClick={onRemove}
+                          className="no-underline flex items-center gap-1 rounded-md border border-red-500/10 bg-red-500/5 px-1.5 py-0.5 text-2xs text-red-300/90 transition-colors hover:bg-red-500/10 hover:text-red-200"
+                          aria-label={t('cardWrapper.removeCardLabel')}
+                          data-testid="card-remove-button"
+                        >
+                          <Trash2 className="h-3 w-3" aria-hidden="true" />
+                          {t('cardWrapper.removeCardButton')}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {effectiveErrorMessage && (
-                      <button
-                        onClick={() => setShowFailureLogs(prev => !prev)}
-                        className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors"
-                        aria-label={showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
-                        aria-expanded={showFailureLogs}
-                      >
-                        <FileText className="w-3 h-3" aria-hidden="true" />
-                        {showFailureLogs ? t('cardWrapper.hideLogs') : t('cardWrapper.viewLogs')}
-                        {showFailureLogs
-                          ? <ChevronUp className="w-3 h-3" aria-hidden="true" />
-                          : <ChevronDown className="w-3 h-3" aria-hidden="true" />}
-                      </button>
-                    )}
-                    {onRefresh && (
-                      <button
-                        onClick={onRefresh}
-                        className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-                        aria-label={t('cardWrapper.failureRetry')}
-                      >
-                        <RefreshCw className="w-3 h-3" aria-hidden="true" />
-                        {t('cardWrapper.failureRetry')}
-                      </button>
-                    )}
-                    {onRemove && effectiveConsecutiveFailures >= REMOVE_CARD_FAILURE_THRESHOLD && (
-                      <button
-                        onClick={onRemove}
-                        className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors"
-                        aria-label={t('cardWrapper.removeCardLabel')}
-                        data-testid="card-remove-button"
-                      >
-                        <Trash2 className="w-3 h-3" aria-hidden="true" />
-                        {t('cardWrapper.removeCardButton')}
-                      </button>
-                    )}
-                  </div>
+                  {/* Expandable log detail */}
+                  {showFailureLogs && effectiveErrorMessage && (
+                    <div className="mt-2 rounded-md border border-amber-500/10 bg-background/30 p-2" data-testid="card-failure-logs">
+                      <p className="mb-1 text-2xs font-medium text-muted-foreground">
+                        {t('cardWrapper.failureLogTitle')}
+                      </p>
+                      <pre className="text-2xs whitespace-pre-wrap break-all font-mono leading-relaxed text-amber-100/80">
+                        {effectiveErrorMessage}
+                      </pre>
+                    </div>
+                  )}
                 </div>
-                {/* Expandable log detail */}
-                {showFailureLogs && effectiveErrorMessage && (
-                  <div className="mt-2 p-2 rounded bg-secondary/50 border border-border/50" data-testid="card-failure-logs">
-                    <p className="text-2xs text-muted-foreground font-medium mb-1">
-                      {t('cardWrapper.failureLogTitle')}
-                    </p>
-                    <pre className="text-2xs text-red-400/80 whitespace-pre-wrap break-all font-mono leading-relaxed">
-                      {effectiveErrorMessage}
-                    </pre>
-                  </div>
-                )}
               </div>
             )}
 
