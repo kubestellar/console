@@ -10,6 +10,11 @@ import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useToast } from '../ui/Toast'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const MATCH_GAME_CANVAS_STYLE_1: CSSProperties = { width: '100%', height: '100%' }
+
 
 // Kubernetes/Cloud themed icons for matching
 const CARD_ICONS = [
@@ -297,7 +302,7 @@ export function MatchGame(_props: CardComponentProps) {
       <canvas
         ref={canvasRef}
         className="absolute inset-0 pointer-events-none z-50"
-        style={{ width: '100%', height: '100%' }}
+        style={MATCH_GAME_CANVAS_STYLE_1}
       />
 
       {/* Header with controls */}

@@ -1,4 +1,18 @@
 import type { AgentProvider } from '../../types/agent'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const AGENT_ICON_PATH_STYLE_1: CSSProperties = { fill: 'var(--agent-openai)' }
+const AGENT_ICON_PATH_STYLE_2: CSSProperties = { fill: 'var(--agent-google-blue)' }
+const AGENT_ICON_PATH_STYLE_3: CSSProperties = { fill: 'var(--agent-google-green)' }
+const AGENT_ICON_PATH_STYLE_4: CSSProperties = { fill: 'var(--agent-google-red)' }
+const AGENT_ICON_PATH_STYLE_5: CSSProperties = { fill: 'var(--agent-microsoft)' }
+const AGENT_ICON_PATH_STYLE_6: CSSProperties = { fill: 'var(--agent-codeium)' }
+const AGENT_ICON_RECT_STYLE_1: CSSProperties = { fill: 'var(--agent-cline-bg)' }
+const AGENT_ICON_PATH_STYLE_7: CSSProperties = { stroke: 'var(--agent-cline-accent)' }
+const AGENT_ICON_PATH_STYLE_8: CSSProperties = { stroke: 'var(--agent-raycast)' }
+const AGENT_ICON_CIRCLE_STYLE_1: CSSProperties = { fill: 'var(--agent-raycast)' }
+
 
 interface AgentIconProps {
   provider: AgentProvider | string
@@ -24,14 +38,14 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* OpenAI icon - simplified logo */}
-          <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08-4.778 2.758a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z" style={{ fill: 'var(--agent-openai)' }} />
+          <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08-4.778 2.758a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.607-1.5z" style={AGENT_ICON_PATH_STYLE_1} />
         </svg>
       )
     case 'openai-cli':
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* Codex - OpenAI logo with terminal indicator */}
-          <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z" style={{ fill: 'var(--agent-openai)' }} />
+          <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073z" style={AGENT_ICON_PATH_STYLE_1} />
           <circle cx="18" cy="6" r="4" className="fill-yellow-500" />
           <text x="18" y="8" textAnchor="middle" fill="white" fontSize="5" fontWeight="bold">&gt;</text>
         </svg>
@@ -40,16 +54,16 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* Google/Gemini icon - simplified star */}
-          <path d="M12 2L9.19 9.19L2 12l7.19 2.81L12 22l2.81-7.19L22 12l-7.19-2.81L12 2z" style={{ fill: 'var(--agent-google-blue)' }} />
-          <path d="M12 8l1.5 3.5L17 13l-3.5 1.5L12 18l-1.5-3.5L7 13l3.5-1.5L12 8z" style={{ fill: 'var(--agent-google-green)' }} />
+          <path d="M12 2L9.19 9.19L2 12l7.19 2.81L12 22l2.81-7.19L22 12l-7.19-2.81L12 2z" style={AGENT_ICON_PATH_STYLE_2} />
+          <path d="M12 8l1.5 3.5L17 13l-3.5 1.5L12 18l-1.5-3.5L7 13l3.5-1.5L12 8z" style={AGENT_ICON_PATH_STYLE_3} />
         </svg>
       )
     case 'google-cli':
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* Gemini CLI - star with terminal */}
-          <path d="M12 2L9.19 9.19L2 12l7.19 2.81L12 22l2.81-7.19L22 12l-7.19-2.81L12 2z" style={{ fill: 'var(--agent-google-blue)' }} />
-          <circle cx="18" cy="6" r="4" style={{ fill: 'var(--agent-google-green)' }} />
+          <path d="M12 2L9.19 9.19L2 12l7.19 2.81L12 22l2.81-7.19L22 12l-7.19-2.81L12 2z" style={AGENT_ICON_PATH_STYLE_2} />
+          <circle cx="18" cy="6" r="4" style={AGENT_ICON_PATH_STYLE_3} />
           <text x="18" y="8" textAnchor="middle" fill="white" fontSize="5" fontWeight="bold">&gt;</text>
         </svg>
       )
@@ -57,7 +71,7 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* Antigravity - upward arrow with Google colors */}
-          <path d="M12 2L9.19 9.19L2 12l7.19 2.81L12 22l2.81-7.19L22 12l-7.19-2.81L12 2z" style={{ fill: 'var(--agent-google-red)' }} />
+          <path d="M12 2L9.19 9.19L2 12l7.19 2.81L12 22l2.81-7.19L22 12l-7.19-2.81L12 2z" style={AGENT_ICON_PATH_STYLE_4} />
           <path d="M12 7l2 5h-4l2-5z" fill="white" />
         </svg>
       )
@@ -80,24 +94,24 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* VS Code icon - simplified */}
-          <path d="M17.583 2L7.258 10.2L3 7.608V16.392l4.258-2.592L17.583 22 21 20.4V3.6L17.583 2zM17 17.2l-7-5.2 7-5.2v10.4z" style={{ fill: 'var(--agent-microsoft)' }} />
+          <path d="M17.583 2L7.258 10.2L3 7.608V16.392l4.258-2.592L17.583 22 21 20.4V3.6L17.583 2zM17 17.2l-7-5.2 7-5.2v10.4z" style={AGENT_ICON_PATH_STYLE_5} />
         </svg>
       )
     case 'codeium':
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* Windsurf/Codeium icon - wave */}
-          <path d="M2 12c2-4 5-6 8-6s4 2 6 2 4-2 6-2v4c-2 0-4 2-6 2s-4-2-6-2-6 2-8 6V12z" style={{ fill: 'var(--agent-codeium)' }} />
-          <path d="M2 16c2-4 5-6 8-6s4 2 6 2 4-2 6-2v4c-2 0-4 2-6 2s-4-2-6-2-6 2-8 6V16z" style={{ fill: 'var(--agent-codeium)' }} opacity="0.5" />
+          <path d="M2 12c2-4 5-6 8-6s4 2 6 2 4-2 6-2v4c-2 0-4 2-6 2s-4-2-6-2-6 2-8 6V12z" style={AGENT_ICON_PATH_STYLE_6} />
+          <path d="M2 16c2-4 5-6 8-6s4 2 6 2 4-2 6-2v4c-2 0-4 2-6 2s-4-2-6-2-6 2-8 6V16z" style={AGENT_ICON_PATH_STYLE_6} opacity="0.5" />
         </svg>
       )
     case 'cline':
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* Cline icon - terminal with AI spark */}
-          <rect x="2" y="4" width="20" height="16" rx="2" style={{ fill: 'var(--agent-cline-bg)' }} />
-          <path d="M6 10l3 2-3 2" style={{ stroke: 'var(--agent-cline-accent)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          <path d="M12 14 H18" style={{ stroke: 'var(--agent-cline-accent)' }} strokeWidth="2" strokeLinecap="round" fill="none" />
+          <rect x="2" y="4" width="20" height="16" rx="2" style={AGENT_ICON_RECT_STYLE_1} />
+          <path d="M6 10l3 2-3 2" style={AGENT_ICON_PATH_STYLE_7} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <path d="M12 14 H18" style={AGENT_ICON_PATH_STYLE_7} strokeWidth="2" strokeLinecap="round" fill="none" />
         </svg>
       )
     case 'jetbrains':
@@ -128,8 +142,8 @@ export function AgentIcon({ provider, className = 'w-5 h-5' }: AgentIconProps) {
       return (
         <svg className={className} viewBox="0 0 24 24" fill="currentColor">
           {/* Raycast icon - ray burst */}
-          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" style={{ stroke: 'var(--agent-raycast)' }} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-          <circle cx="12" cy="12" r="3" style={{ fill: 'var(--agent-raycast)' }} />
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" style={AGENT_ICON_PATH_STYLE_8} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <circle cx="12" cy="12" r="3" style={AGENT_ICON_CIRCLE_STYLE_1} />
         </svg>
       )
     case 'open-webui':

@@ -21,6 +21,16 @@ import {
 import { generateWidget, getWidgetFilename, type WidgetConfig } from '../../lib/widgets/codeGenerator'
 import { copyToClipboard } from '../../lib/clipboard'
 import { safeRevokeObjectURL } from '../../lib/download'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const WIDGET_EXPORT_MODAL_DIV_STYLE_1: CSSProperties = { transform: 'scale(1.5)', transformOrigin: 'center center' }
+const WIDGET_EXPORT_MODAL_SPAN_STYLE_1: CSSProperties = { fontWeight: 500, maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
+const WIDGET_EXPORT_MODAL_SPAN_STYLE_2: CSSProperties = { fontWeight: 500 }
+const WIDGET_EXPORT_MODAL_SPAN_STYLE_3: CSSProperties = { fontWeight: 500, flex: 1 }
+const WIDGET_EXPORT_MODAL_DIV_STYLE_2: CSSProperties = { flex: 1 }
+const WIDGET_EXPORT_MODAL_SPAN_STYLE_4: CSSProperties = { width: '24px', fontWeight: 600, color: '#94a3b8' }
+
 
 interface WidgetExportModalProps {
   isOpen: boolean
@@ -316,7 +326,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
               </div>
             ) : (
               <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-center justify-center overflow-hidden min-w-0 min-h-0">
-                <div className="max-w-full max-h-full overflow-hidden" style={{ transform: 'scale(1.5)', transformOrigin: 'center center' }}>
+                <div className="max-w-full max-h-full overflow-hidden" style={WIDGET_EXPORT_MODAL_DIV_STYLE_1}>
                   <WidgetPreview config={exportConfig} />
                 </div>
               </div>
@@ -808,7 +818,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'elasticsearch-data-1', cpu: '1.4 cores', mem: '6.1 Gi' },
             ].map((p) => (
               <div key={p.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
-                <span style={{ fontWeight: 500, maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_1}>{p.name}</span>
                 <span style={{ color: PREV_CLR_CPU }}>{p.cpu}</span>
                 <span style={{ color: PREV_CLR_MEM }}>{p.mem}</span>
               </div>
@@ -939,7 +949,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'GCP', status: 'operational', color: ps.colors.healthy },
             ].map((p) => (
               <div key={p.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
-                <span style={{ fontWeight: 500 }}>{p.name}</span>
+                <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_2}>{p.name}</span>
                 <span style={{ color: p.color }}>{p.status}</span>
               </div>
             ))}
@@ -975,7 +985,7 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={ps.col}>
             {['build', 'test', 'lint', 'deploy'].map((wf) => (
               <div key={wf} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
-                <span style={{ fontWeight: 500 }}>{wf}</span>
+                <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_2}>{wf}</span>
                 <div style={{ display: 'flex', gap: PREV_DOTS_GAP }}>
                   {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: i === 3 && wf === 'deploy' ? ps.colors.error : ps.colors.healthy }} />
@@ -999,7 +1009,7 @@ function CardPreview({ cardType }: { cardType: string }) {
             ].map((r) => (
               <div key={r.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(30,41,59,0.5)', borderRadius: PREV_XS }}>
                 <span style={ps.dot(r.status === 'running' ? ps.colors.info : r.status === 'success' ? ps.colors.healthy : PREV_CLR_MUTED)} />
-                <span style={{ fontWeight: 500, flex: 1 }}>{r.name}</span>
+                <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_3}>{r.name}</span>
                 <span style={{ color: PREV_CLR_MUTED, fontSize: PREV_FS_MICRO }}>{r.time}</span>
               </div>
             ))}
@@ -1017,7 +1027,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { wf: 'build', step: 'lint', ago: '5h ago' },
             ].map((f) => (
               <div key={f.wf} style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}` }}>
-                <div style={{ flex: 1 }}>
+                <div style={WIDGET_EXPORT_MODAL_DIV_STYLE_2}>
                   <div style={{ fontSize: PREV_FS_CAPTION, fontWeight: 600, color: ps.colors.error }}>{f.wf}</div>
                   <div style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED }}>Failed at: {f.step}</div>
                 </div>
@@ -1121,7 +1131,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'DaemonSets', running: 4, total: 5, color: ps.colors.warning },
             ].map((w) => (
               <div key={w.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD }}>
-                <span style={{ fontWeight: 500 }}>{w.name}</span>
+                <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_2}>{w.name}</span>
                 <span style={{ color: w.running === w.total ? ps.colors.healthy : ps.colors.warning }}>
                   {w.running}/{w.total} ready
                 </span>
@@ -1143,7 +1153,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'scheduler', clusters: 1, status: 'healthy' },
             ].map((a) => (
               <div key={a.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
-                <span style={{ fontWeight: 500 }}>{a.name}</span>
+                <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_2}>{a.name}</span>
                 <span style={{ color: PREV_CLR_MUTED, fontSize: PREV_FS_MICRO }}>{a.clusters} clusters</span>
                 <span style={ps.dot(a.status === 'healthy' ? ps.colors.healthy : ps.colors.warning)} />
               </div>
@@ -1370,7 +1380,7 @@ function NightlyE2EPreview() {
           <div style={{ color: p.color, fontWeight: 600, fontSize: PREV_FS_MICRO, marginBottom: PREV_XS }}>{p.name}</div>
           {p.guides.map((g) => (
             <div key={`${p.name}-${g.acronym}`} style={{ display: 'flex', alignItems: 'center', gap: PREV_XS, marginBottom: PREV_HAIRLINE_GAP }}>
-              <span style={{ width: '24px', fontWeight: 600, color: '#94a3b8' }}>{g.acronym}</span>
+              <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_4}>{g.acronym}</span>
               <div style={{ display: 'flex', gap: PREV_DOTS_GAP }}>
                 {g.dots.length > 0 ? g.dots.map((d, i) => (
                   <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: dotColor[d], display: 'inline-block', ...(d === 'b' ? { animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' } : {}) }} />

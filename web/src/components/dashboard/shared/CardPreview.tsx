@@ -5,6 +5,16 @@
  */
 import { useTranslation } from 'react-i18next'
 import type { HoveredCard } from './cardCatalog'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const CARD_PREVIEW_DIV_STYLE_1: CSSProperties = { height: '60%' }
+const CARD_PREVIEW_DIV_STYLE_2: CSSProperties = { height: '45%' }
+const CARD_PREVIEW_DIV_STYLE_3: CSSProperties = { height: '80%' }
+const CARD_PREVIEW_DIV_STYLE_4: CSSProperties = { height: '55%' }
+const CARD_PREVIEW_DIV_STYLE_5: CSSProperties = { height: '70%' }
+const CARD_PREVIEW_DIV_STYLE_6: CSSProperties = { height: '40%' }
+
 
 export function CardPreview({ card }: { card: HoveredCard }) {
   const { t } = useTranslation()
@@ -51,12 +61,12 @@ export function CardPreview({ card }: { card: HoveredCard }) {
       case 'bar':
         return (
           <div className="flex-1 px-2 flex items-end justify-center gap-1 pb-2">
-            <div className="w-3 bg-purple-400 rounded-t" style={{ height: '60%' }} />
-            <div className="w-3 bg-purple-400 rounded-t" style={{ height: '45%' }} />
-            <div className="w-3 bg-purple-400 rounded-t" style={{ height: '80%' }} />
-            <div className="w-3 bg-purple-400 rounded-t" style={{ height: '55%' }} />
-            <div className="w-3 bg-purple-400 rounded-t" style={{ height: '70%' }} />
-            <div className="w-3 bg-purple-400 rounded-t" style={{ height: '40%' }} />
+            <div className="w-3 bg-purple-400 rounded-t" style={CARD_PREVIEW_DIV_STYLE_1} />
+            <div className="w-3 bg-purple-400 rounded-t" style={CARD_PREVIEW_DIV_STYLE_2} />
+            <div className="w-3 bg-purple-400 rounded-t" style={CARD_PREVIEW_DIV_STYLE_3} />
+            <div className="w-3 bg-purple-400 rounded-t" style={CARD_PREVIEW_DIV_STYLE_4} />
+            <div className="w-3 bg-purple-400 rounded-t" style={CARD_PREVIEW_DIV_STYLE_5} />
+            <div className="w-3 bg-purple-400 rounded-t" style={CARD_PREVIEW_DIV_STYLE_6} />
           </div>
         )
       case 'timeseries':

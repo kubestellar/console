@@ -20,6 +20,15 @@ import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 import { POLL_INTERVAL_FAST_MS } from '../../../lib/constants/network'
 import { StatusBadge } from '../../ui/StatusBadge'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const EPPROUTING_DIV_STYLE_1: CSSProperties = { boxShadow: '0 0 6px #9333ea' }
+const EPPROUTING_DIV_STYLE_2: CSSProperties = { boxShadow: '0 0 6px #22c55e' }
+const EPPROUTING_SVG_STYLE_1: CSSProperties = { overflow: 'visible' }
+const EPPROUTING_DIV_STYLE_3: CSSProperties = { boxShadow: '0 0 4px rgba(147,51,234,0.4)' }
+const EPPROUTING_DIV_STYLE_4: CSSProperties = { boxShadow: '0 0 4px rgba(34,197,94,0.4)' }
+
 
 type MetricType = 'load' | 'rps'
 type ViewMode = 'default' | 'horseshoe'
@@ -926,11 +935,11 @@ function EPPRoutingInternal() {
           <span className="text-white font-mono">{metrics.totalRps} <Acronym term="RPS" /></span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-purple-500" style={{ boxShadow: '0 0 6px #9333ea' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-purple-500" style={EPPROUTING_DIV_STYLE_1} />
           <span className="text-purple-400 font-mono">{metrics.prefillPercent}%</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-green-500" style={{ boxShadow: '0 0 6px #22c55e' }} />
+          <div className="w-2.5 h-2.5 rounded-full bg-green-500" style={EPPROUTING_DIV_STYLE_2} />
           <span className="text-green-400 font-mono">{metrics.decodePercent}%</span>
         </div>
       </div>
@@ -941,7 +950,7 @@ function EPPRoutingInternal() {
           viewBox={isExpanded ? '-10 -10 240 110' : '-5 -10 120 130'}
           className="w-full h-full overflow-visible"
           preserveAspectRatio="xMidYMid meet"
-          style={{ overflow: 'visible' }}
+          style={EPPROUTING_SVG_STYLE_1}
         >
           <defs>
             <linearGradient id={`${uniqueId}-prefillGrad`} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -1193,15 +1202,15 @@ function EPPRoutingInternal() {
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 mt-3 text-xs">
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-1 bg-linear-to-r from-yellow-500/60 to-purple-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(147,51,234,0.4)' }} />
+          <div className="w-6 h-1 bg-linear-to-r from-yellow-500/60 to-purple-500/60 rounded" style={EPPROUTING_DIV_STYLE_3} />
           <span className="text-muted-foreground">{t('llmd.prefill')}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-1 bg-linear-to-r from-yellow-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
+          <div className="w-6 h-1 bg-linear-to-r from-yellow-500/60 to-green-500/60 rounded" style={EPPROUTING_DIV_STYLE_4} />
           <span className="text-muted-foreground">{t('llmd.decode')}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-6 h-1 bg-linear-to-r from-purple-500/60 to-green-500/60 rounded" style={{ boxShadow: '0 0 4px rgba(34,197,94,0.4)' }} />
+          <div className="w-6 h-1 bg-linear-to-r from-purple-500/60 to-green-500/60 rounded" style={EPPROUTING_DIV_STYLE_4} />
           <span className="text-muted-foreground">{t('llmd.handoff')}</span>
         </div>
       </div>

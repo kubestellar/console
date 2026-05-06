@@ -16,6 +16,11 @@ import { MarketplaceThumbnail } from './MarketplaceThumbnail'
 import { NAV_AFTER_ANIMATION_MS } from '../../lib/constants/network'
 import { suggestIconSync } from '../../lib/iconSuggester'
 import { useTranslation } from 'react-i18next'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const MARKETPLACE_DIV_STYLE_1: CSSProperties = { gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }
+
 
 type ViewMode = 'grid' | 'list'
 type SortField = 'name' | 'author' | 'type' | 'difficulty'
@@ -905,7 +910,7 @@ export function Marketplace() {
                   ))}
                 </div>
               ) : (
-                <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+                <div className="grid gap-4" style={MARKETPLACE_DIV_STYLE_1}>
                   {categoryItems.map(item => (
                     <MarketplaceCard
                       key={item.id}
@@ -933,7 +938,7 @@ export function Marketplace() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+        <div className="grid gap-4" style={MARKETPLACE_DIV_STYLE_1}>
           {sortedItems.map(item => (
             <MarketplaceCard
               key={item.id}

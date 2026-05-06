@@ -6,6 +6,13 @@ import {
 } from 'lucide-react'
 import { useCardExpanded } from './CardWrapper'
 import { POLL_INTERVAL_SLOW_MS } from '../../lib/constants/network'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const MOBILE_BROWSER_IFRAME_STYLE_1: CSSProperties = {
+                      transform: 'scale(1)',
+                      transformOrigin: 'top left' }
+
 
 interface Tab {
   id: string
@@ -302,9 +309,7 @@ export function MobileBrowser() {
                     src={activeTab.url}
                     title="Mobile Browser"
                     className="w-full h-full border-none"
-                    style={{
-                      transform: 'scale(1)',
-                      transformOrigin: 'top left' }}
+                    style={MOBILE_BROWSER_IFRAME_STYLE_1}
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                     onLoad={() => setIsLoading(false)}
                     onError={() => setIsLoading(false)}

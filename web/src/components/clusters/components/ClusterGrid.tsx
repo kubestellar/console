@@ -25,6 +25,18 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const CLUSTER_GRID_DIV_STYLE_1: CSSProperties = {
+            opacity: 0.25,
+            maskImage: 'linear-gradient(45deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 80%)',
+            WebkitMaskImage: 'linear-gradient(45deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 80%)' }
+const CLUSTER_GRID_DIV_STYLE_2: CSSProperties = {
+            opacity: 0.15,
+            maskImage: 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%)',
+            WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%)' }
+
 
 /** Minimum duration (ms) the refresh spinner must stay visible for a full rotation */
 const MIN_SPIN_DURATION_MS = 1_000
@@ -336,10 +348,7 @@ const FullClusterCard = memo(function FullClusterCard({
         {/* Background provider icon */}
         <div
           className="absolute -bottom-2 -left-2 pointer-events-none"
-          style={{
-            opacity: 0.25,
-            maskImage: 'linear-gradient(45deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 80%)',
-            WebkitMaskImage: 'linear-gradient(45deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 80%)' }}
+          style={CLUSTER_GRID_DIV_STYLE_1}
         >
           <CloudProviderIcon provider={provider} size={100} />
         </div>
@@ -589,10 +598,7 @@ const ListClusterCard = memo(function ListClusterCard({
         {/* Vendor watermark on right side - large with gradient fade */}
         <div
           className="absolute -right-4 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{
-            opacity: 0.15,
-            maskImage: 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%)',
-            WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%)' }}
+          style={CLUSTER_GRID_DIV_STYLE_2}
         >
           <CloudProviderIcon provider={provider} size={64} />
         </div>

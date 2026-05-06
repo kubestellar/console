@@ -7,6 +7,11 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const IFRAME_EMBED_IFRAME_STYLE_1: CSSProperties = { border: 'none', display: 'block' }
+
 
 interface IframeEmbedConfig {
   url?: string
@@ -419,7 +424,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
                 title={title}
                 width="100%"
                 height={displayHeight}
-                style={{ border: 'none', display: 'block' }}
+                style={IFRAME_EMBED_IFRAME_STYLE_1}
                 sandbox={DEFAULT_SANDBOX.join(' ')}
                 onLoad={handleLoad}
                 onError={handleError}

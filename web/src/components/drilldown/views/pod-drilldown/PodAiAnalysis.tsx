@@ -2,6 +2,13 @@ import { Loader2, Stethoscope, Wrench, Sparkles, AlertTriangle, RefreshCw } from
 import { cn } from '../../../../lib/cn'
 import { ConsoleAIIcon } from '../../../ui/ConsoleAIIcon'
 import { useTranslation } from 'react-i18next'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const POD_AI_ANALYSIS_SPAN_STYLE_1: CSSProperties = { animationDelay: '0ms' }
+const POD_AI_ANALYSIS_SPAN_STYLE_2: CSSProperties = { animationDelay: '150ms' }
+const POD_AI_ANALYSIS_SPAN_STYLE_3: CSSProperties = { animationDelay: '300ms' }
+
 
 export interface PodAiAnalysisProps {
   aiAnalysis: string | null
@@ -60,9 +67,9 @@ export function PodAiAnalysis({
               <div className="p-4">
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <div className="flex gap-1">
-                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={POD_AI_ANALYSIS_SPAN_STYLE_1} />
+                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={POD_AI_ANALYSIS_SPAN_STYLE_2} />
+                    <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={POD_AI_ANALYSIS_SPAN_STYLE_3} />
                   </div>
                   <span className="font-mono text-xs">Analyzing pod status, events, logs, owner resources...</span>
                 </div>

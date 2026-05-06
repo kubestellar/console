@@ -56,6 +56,13 @@ import {
   ExpandModal, RowDetailDrawer, SourceConfigModal, QueryConfigModal, ConnectionsModal,
 } from './DrasiModals'
 import { StreamSampleDrawer } from './DrasiStreamSamples'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const DRASI_REACTIVE_GRAPH_DIV_STYLE_1: CSSProperties = { gridColumn: 1, gridRow: 1 }
+const DRASI_REACTIVE_GRAPH_DIV_STYLE_2: CSSProperties = { gridColumn: 3, gridRow: 1 }
+const DRASI_REACTIVE_GRAPH_DIV_STYLE_3: CSSProperties = { gridColumn: 6, gridRow: 1 }
+
 
 // ---------------------------------------------------------------------------
 // buildStreamEndpoint — lives here because it joins connection + liveData
@@ -909,7 +916,7 @@ export function DrasiReactiveGraph() {
           {/* Column headers (row 1) — each has an inline "+" button that
               opens the matching create modal (or, for reactions, creates a
               default SSE reaction inline). */}
-          <div className="flex items-center gap-1.5" style={{ gridColumn: 1, gridRow: 1 }}>
+          <div className="flex items-center gap-1.5" style={DRASI_REACTIVE_GRAPH_DIV_STYLE_1}>
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Sources</span>
             <button
               type="button"
@@ -921,7 +928,7 @@ export function DrasiReactiveGraph() {
               <Plus className="w-2.5 h-2.5" />
             </button>
           </div>
-          <div className="flex items-center gap-1.5" style={{ gridColumn: 3, gridRow: 1 }}>
+          <div className="flex items-center gap-1.5" style={DRASI_REACTIVE_GRAPH_DIV_STYLE_2}>
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Continuous Queries</span>
             <button
               type="button"
@@ -933,7 +940,7 @@ export function DrasiReactiveGraph() {
               <Plus className="w-2.5 h-2.5" />
             </button>
           </div>
-          <div className="flex items-center gap-1.5" style={{ gridColumn: 6, gridRow: 1 }}>
+          <div className="flex items-center gap-1.5" style={DRASI_REACTIVE_GRAPH_DIV_STYLE_3}>
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Reactions</span>
             <button
               type="button"

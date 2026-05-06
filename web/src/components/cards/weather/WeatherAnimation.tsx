@@ -1,5 +1,47 @@
 import { Sun, Cloud, CloudRain, CloudSnow, CloudFog } from 'lucide-react'
 import type { WeatherCondition } from './types'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const WEATHER_ANIMATION_DIV_STYLE_1: CSSProperties = {
+              background: 'linear-gradient(180deg, transparent 0%, rgba(255,250,230,0.1) 30%, rgba(255,245,200,0.2) 60%, rgba(255,250,230,0.15) 100%)',
+            }
+const WEATHER_ANIMATION_DIV_STYLE_2: CSSProperties = {
+              background: 'radial-gradient(circle, rgba(255,220,120,0.6) 0%, rgba(255,200,80,0.3) 40%, rgba(255,180,60,0.1) 70%, transparent 100%)',
+            }
+const WEATHER_ANIMATION_DIV_STYLE_3: CSSProperties = { opacity: 0.5 }
+const WEATHER_ANIMATION_DIV_STYLE_4: CSSProperties = {
+              background: 'radial-gradient(circle, rgba(255,250,200,1) 0%, rgba(255,230,120,0.95) 40%, rgba(255,200,80,0.8) 70%, rgba(255,180,60,0.5) 100%)',
+              boxShadow: '0 0 30px rgba(255,220,100,0.8), 0 0 60px rgba(255,200,80,0.5), 0 0 90px rgba(255,180,60,0.3)',
+            }
+const WEATHER_ANIMATION_DIV_STYLE_5: CSSProperties = {
+              background: 'radial-gradient(circle, rgba(255,255,240,0.9) 0%, rgba(255,245,180,0.6) 50%, transparent 100%)',
+            }
+const WEATHER_ANIMATION_DIV_STYLE_6: CSSProperties = {
+              background: 'linear-gradient(90deg, transparent 0%, rgba(255,250,200,0.8) 30%, rgba(255,255,255,0.9) 50%, rgba(255,250,200,0.8) 70%, transparent 100%)',
+            }
+const WEATHER_ANIMATION_DIV_STYLE_7: CSSProperties = {
+              background: 'radial-gradient(circle at 35% 35%, rgba(250,252,255,1) 0%, rgba(230,240,250,0.95) 40%, rgba(200,215,235,0.9) 70%, rgba(180,195,220,0.85) 100%)',
+              boxShadow: '0 0 25px rgba(200,220,255,0.5), 0 0 50px rgba(180,200,240,0.3)',
+            }
+const WEATHER_ANIMATION_DIV_STYLE_8: CSSProperties = { top: '25%', left: '20%' }
+const WEATHER_ANIMATION_DIV_STYLE_9: CSSProperties = { top: '50%', left: '60%' }
+const WEATHER_ANIMATION_DIV_STYLE_10: CSSProperties = { top: '65%', left: '30%' }
+const WEATHER_ANIMATION_DIV_STYLE_11: CSSProperties = {
+              background: 'radial-gradient(circle, rgba(200,220,255,0.5) 0%, rgba(180,200,240,0.2) 50%, transparent 100%)',
+              filter: 'blur(4px)',
+            }
+const WEATHER_ANIMATION_DIV_STYLE_12: CSSProperties = {
+                background: 'radial-gradient(circle, rgba(255,245,180,0.95) 0%, rgba(255,220,100,0.7) 50%, rgba(255,200,80,0.3) 100%)',
+                boxShadow: '0 0 20px rgba(255,220,100,0.6)',
+              }
+const WEATHER_ANIMATION_DIV_STYLE_13: CSSProperties = {
+              background: 'radial-gradient(circle at 35% 35%, rgba(240,245,255,1) 0%, rgba(200,215,235,0.9) 100%)',
+              boxShadow: '0 0 15px rgba(200,220,255,0.4)',
+            }
+const WEATHER_ANIMATION_DIV_STYLE_14: CSSProperties = { animationDelay: '0s' }
+const WEATHER_ANIMATION_DIV_STYLE_15: CSSProperties = { animationDelay: '-2s', opacity: 0.7 }
+
 
 // WMO Weather interpretation codes to condition mapping
 export function getWeatherCondition(code: number): WeatherCondition {
@@ -94,43 +136,32 @@ export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { we
           {/* Heat shimmer effect at bottom */}
           <div
             className="absolute bottom-0 left-0 right-0 h-1/3 weather-heat-shimmer"
-            style={{
-              background: 'linear-gradient(180deg, transparent 0%, rgba(255,250,230,0.1) 30%, rgba(255,245,200,0.2) 60%, rgba(255,250,230,0.15) 100%)',
-            }}
+            style={WEATHER_ANIMATION_DIV_STYLE_1}
           />
           {/* Corona glow (outer) */}
           <div
             className="absolute top-0 right-0 w-32 h-32 rounded-full weather-corona"
-            style={{
-              background: 'radial-gradient(circle, rgba(255,220,120,0.6) 0%, rgba(255,200,80,0.3) 40%, rgba(255,180,60,0.1) 70%, transparent 100%)',
-            }}
+            style={WEATHER_ANIMATION_DIV_STYLE_2}
           />
           {/* Dynamic rotating rays */}
           <div
             className="absolute top-2 right-2 w-24 h-24 weather-sun-ray"
-            style={{ opacity: 0.5 }}
+            style={WEATHER_ANIMATION_DIV_STYLE_3}
           />
           {/* Main sun */}
           <div
             className="absolute top-4 right-4 w-14 h-14 rounded-full weather-sun"
-            style={{
-              background: 'radial-gradient(circle, rgba(255,250,200,1) 0%, rgba(255,230,120,0.95) 40%, rgba(255,200,80,0.8) 70%, rgba(255,180,60,0.5) 100%)',
-              boxShadow: '0 0 30px rgba(255,220,100,0.8), 0 0 60px rgba(255,200,80,0.5), 0 0 90px rgba(255,180,60,0.3)',
-            }}
+            style={WEATHER_ANIMATION_DIV_STYLE_4}
           />
           {/* Inner sun glow pulse */}
           <div
             className="absolute top-5 right-5 w-12 h-12 rounded-full weather-sun-pulse"
-            style={{
-              background: 'radial-gradient(circle, rgba(255,255,240,0.9) 0%, rgba(255,245,180,0.6) 50%, transparent 100%)',
-            }}
+            style={WEATHER_ANIMATION_DIV_STYLE_5}
           />
           {/* Lens flare */}
           <div
             className="absolute top-16 right-12 w-24 h-0.5 weather-sun-flare rounded-full"
-            style={{
-              background: 'linear-gradient(90deg, transparent 0%, rgba(255,250,200,0.8) 30%, rgba(255,255,255,0.9) 50%, rgba(255,250,200,0.8) 70%, transparent 100%)',
-            }}
+            style={WEATHER_ANIMATION_DIV_STYLE_6}
           />
           <WindOverlay />
         </div>
@@ -142,23 +173,17 @@ export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { we
           {/* Moon with crater shadows */}
           <div
             className="absolute top-4 right-4 w-12 h-12 rounded-full weather-moon"
-            style={{
-              background: 'radial-gradient(circle at 35% 35%, rgba(250,252,255,1) 0%, rgba(230,240,250,0.95) 40%, rgba(200,215,235,0.9) 70%, rgba(180,195,220,0.85) 100%)',
-              boxShadow: '0 0 25px rgba(200,220,255,0.5), 0 0 50px rgba(180,200,240,0.3)',
-            }}
+            style={WEATHER_ANIMATION_DIV_STYLE_7}
           >
             {/* Crater shadows */}
-            <div className="absolute w-2 h-2 rounded-full bg-gray-300/20" style={{ top: '25%', left: '20%' }} />
-            <div className="absolute w-1.5 h-1.5 rounded-full bg-gray-300/15" style={{ top: '50%', left: '60%' }} />
-            <div className="absolute w-1 h-1 rounded-full bg-gray-300/20" style={{ top: '65%', left: '30%' }} />
+            <div className="absolute w-2 h-2 rounded-full bg-gray-300/20" style={WEATHER_ANIMATION_DIV_STYLE_8} />
+            <div className="absolute w-1.5 h-1.5 rounded-full bg-gray-300/15" style={WEATHER_ANIMATION_DIV_STYLE_9} />
+            <div className="absolute w-1 h-1 rounded-full bg-gray-300/20" style={WEATHER_ANIMATION_DIV_STYLE_10} />
           </div>
           {/* Moon glow */}
           <div
             className="absolute top-2 right-2 w-16 h-16 rounded-full opacity-40"
-            style={{
-              background: 'radial-gradient(circle, rgba(200,220,255,0.5) 0%, rgba(180,200,240,0.2) 50%, transparent 100%)',
-              filter: 'blur(4px)',
-            }}
+            style={WEATHER_ANIMATION_DIV_STYLE_11}
           />
           {/* Twinkling stars - varied sizes and timings */}
           {generateParticles(15).map((i) => {
@@ -198,10 +223,7 @@ export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { we
           <>
             <div
               className="absolute top-2 right-8 w-12 h-12 rounded-full weather-sun-pulse"
-              style={{
-                background: 'radial-gradient(circle, rgba(255,245,180,0.95) 0%, rgba(255,220,100,0.7) 50%, rgba(255,200,80,0.3) 100%)',
-                boxShadow: '0 0 20px rgba(255,220,100,0.6)',
-              }}
+              style={WEATHER_ANIMATION_DIV_STYLE_12}
             />
             <div
               className="absolute top-0 right-6 w-16 h-16 rounded-full weather-corona opacity-40"
@@ -210,10 +232,7 @@ export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { we
         ) : (
           <div
             className="absolute top-3 right-10 w-8 h-8 rounded-full weather-moon opacity-70"
-            style={{
-              background: 'radial-gradient(circle at 35% 35%, rgba(240,245,255,1) 0%, rgba(200,215,235,0.9) 100%)',
-              boxShadow: '0 0 15px rgba(200,220,255,0.4)',
-            }}
+            style={WEATHER_ANIMATION_DIV_STYLE_13}
           />
         )}
         {/* Layered clouds with parallax */}
@@ -376,11 +395,11 @@ export function WeatherAnimation({ weatherCode, isDaytime, windSpeed = 0 }: { we
           <>
             <div
               className="absolute inset-0 weather-rain-sheet"
-              style={{ animationDelay: '0s' }}
+              style={WEATHER_ANIMATION_DIV_STYLE_14}
             />
             <div
               className="absolute inset-0 weather-rain-sheet"
-              style={{ animationDelay: '-2s', opacity: 0.7 }}
+              style={WEATHER_ANIMATION_DIV_STYLE_15}
             />
           </>
         )}

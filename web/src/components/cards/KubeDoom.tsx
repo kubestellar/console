@@ -6,6 +6,11 @@ import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const KUBE_DOOM_H3_STYLE_1: CSSProperties = { fontFamily: 'monospace' }
+
 
 // Canvas dimensions
 const CANVAS_WIDTH = 480
@@ -613,7 +618,7 @@ export function KubeDoom() {
           {/* Overlays */}
           {gameState === 'idle' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 rounded">
-              <h3 className="text-3xl font-bold text-red-500 mb-1 tracking-wider" style={{ fontFamily: 'monospace' }}>{t('kubeDoom.title')}</h3>
+              <h3 className="text-3xl font-bold text-red-500 mb-1 tracking-wider" style={KUBE_DOOM_H3_STYLE_1}>{t('kubeDoom.title')}</h3>
               <p className="text-xs text-muted-foreground mb-1">{t('kubeDoom.tagline')}</p>
               <p className="text-xs text-muted-foreground mb-4">{t('kubeDoom.controls')}</p>
               <button

@@ -12,6 +12,11 @@ import { Skeleton } from '../ui/Skeleton'
 import { StatusBadge } from '../ui/StatusBadge'
 import { emitMissionSuggestionsShown, emitMissionSuggestionActioned } from '../../lib/analytics'
 import { safeSetItem } from '../../lib/utils/localStorage'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const MISSION_SUGGESTIONS_DIV_STYLE_1: CSSProperties = { isolation: 'isolate' }
+
 
 /** localStorage key to persist that the user has seen (and auto-collapsed) the panel */
 const STORAGE_KEY_MISSIONS_COLLAPSED = 'kc-missions-collapsed'
@@ -280,7 +285,7 @@ export function MissionSuggestions() {
                     id={`mission-dropdown-${suggestion.id}`}
                     role="menu"
                     className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
-                    style={{ isolation: 'isolate' }}
+                    style={MISSION_SUGGESTIONS_DIV_STYLE_1}
                     onKeyDown={(e) => {
                       if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                       e.preventDefault()
@@ -438,7 +443,7 @@ export function MissionSuggestions() {
                   id={`mission-dropdown-${suggestion.id}`}
                   role="menu"
                   className="absolute top-full left-0 mt-1 z-dropdown w-72 rounded-lg border border-border/50 bg-card shadow-xl"
-                  style={{ isolation: 'isolate' }}
+                  style={MISSION_SUGGESTIONS_DIV_STYLE_1}
                   onKeyDown={(e) => {
                     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                     e.preventDefault()

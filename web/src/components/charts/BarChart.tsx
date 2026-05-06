@@ -10,6 +10,11 @@ import {
   CHART_AXIS_FONT_SIZE,
   CHART_BODY_FONT_SIZE,
 } from '../../lib/constants'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const BAR_CHART_DIV_STYLE_1: CSSProperties = { minWidth: 0 }
+
 
 interface DataItem {
   name: string
@@ -83,7 +88,7 @@ export function BarChart({
   }, [data, color, horizontal, showGrid, unit])
 
   return (
-    <div className="w-full overflow-hidden" style={{ minWidth: 0 }}>
+    <div className="w-full overflow-hidden" style={BAR_CHART_DIV_STYLE_1}>
       {title && (
         <h4 className="text-sm font-medium text-muted-foreground mb-2">{title}</h4>
       )}
@@ -152,7 +157,7 @@ export function StackedBarChart({
   }), [data, categories, xAxisKey])
 
   return (
-    <div className="w-full overflow-hidden" style={{ minWidth: 0 }}>
+    <div className="w-full overflow-hidden" style={BAR_CHART_DIV_STYLE_1}>
       {title && (
         <h4 className="text-sm font-medium text-muted-foreground mb-2">{title}</h4>
       )}

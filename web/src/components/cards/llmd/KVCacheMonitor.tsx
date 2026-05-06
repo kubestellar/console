@@ -19,6 +19,12 @@ import { useCardExpanded } from '../CardWrapper'
 import { useTranslation } from 'react-i18next'
 import { KV_CACHE_UPDATE_INTERVAL_MS } from '../../../lib/constants/network'
 import { StatusBadge } from '../../ui/StatusBadge'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const KVCACHE_MONITOR_DIV_STYLE_1: CSSProperties = { textShadow: '0 0 10px rgba(34,197,94,0.5)' }
+const KVCACHE_MONITOR_DIV_STYLE_2: CSSProperties = { textShadow: '0 0 10px rgba(6,182,212,0.5)' }
+
 
 const GRID_BREAKPOINT_FEW = 2
 const GRID_BREAKPOINT_SMALL = 3
@@ -656,13 +662,13 @@ export function KVCacheMonitor() {
           <div className="text-xs text-muted-foreground">{t('common:common.used')}</div>
         </div>
         <div className="bg-secondary/60 backdrop-blur-xs rounded-lg p-2 text-center border border-border/50">
-          <div className="text-lg font-bold text-green-400" style={{ textShadow: '0 0 10px rgba(34,197,94,0.5)' }}>
+          <div className="text-lg font-bold text-green-400" style={KVCACHE_MONITOR_DIV_STYLE_1}>
             {aggregateMetrics.avgHitRate}%
           </div>
           <div className="text-xs text-muted-foreground">{t('llmd.hitRate')}</div>
         </div>
         <div className="bg-secondary/60 backdrop-blur-xs rounded-lg p-2 text-center border border-border/50">
-          <div className="text-lg font-bold text-cyan-400" style={{ textShadow: '0 0 10px rgba(6,182,212,0.5)' }}>
+          <div className="text-lg font-bold text-cyan-400" style={KVCACHE_MONITOR_DIV_STYLE_2}>
             {stats.length}
           </div>
           <div className="text-xs text-muted-foreground">{t('common:common.pods')}</div>

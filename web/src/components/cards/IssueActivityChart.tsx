@@ -41,6 +41,11 @@ import {
 import { hexToRgba } from '../../lib/theme/chartColors'
 import { MS_PER_DAY } from '../../lib/constants/time'
 import { TOOLTIP_INLINE_GAP_PX } from '../../lib/llmd/tooltipSpacing'
+import type { CSSProperties } from 'react'
+
+// Inline style constants
+const ISSUE_ACTIVITY_CHART_DIV_STYLE_1: CSSProperties = { minWidth: 0 }
+
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -601,7 +606,7 @@ const IssueActivityChart = memo(function IssueActivityChart(props: { config?: Is
       )}
 
       {/* Chart */}
-      <div className="w-full overflow-hidden" style={{ minWidth: 0 }}>
+      <div className="w-full overflow-hidden" style={ISSUE_ACTIVITY_CHART_DIV_STYLE_1}>
         <LazyEChart
           ref={chartRef}
           option={chartOption}
