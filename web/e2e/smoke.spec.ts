@@ -132,9 +132,7 @@ test.describe('Smoke Tests', () => {
               .catch(() => false)
             if (hamburgerVisible) {
               await hamburger.evaluate((el) => (el as HTMLElement).click())
-              // Wait for sidebar slide-in animation on mobile-safari (#11660)
-              const SIDEBAR_ANIMATION_MS = 1500
-              await page.waitForTimeout(SIDEBAR_ANIMATION_MS)
+              await expect(sidebar).toBeVisible({ timeout: 3000 })
             }
           }
         }
