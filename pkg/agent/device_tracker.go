@@ -200,7 +200,6 @@ func (t *DeviceTracker) scanDevices() {
 	// Evict entries for nodes that no longer appear in the API response (#7274).
 	// This prevents unbounded map growth on autoscaling clusters.
 	t.mu.Lock()
-	defer t.mu.Unlock()
 	for key := range t.history {
 		if !observedKeys[key] {
 			delete(t.history, key)
@@ -213,6 +212,7 @@ func (t *DeviceTracker) scanDevices() {
 			}
 		}
 	}
+	t.mu.Unlock()
 
 	if newAlerts && t.broadcast != nil {
 		t.broadcast("device_alerts_updated", t.GetAlerts()) //nolint:nilaway // broadcast nil-checked above
