@@ -15,6 +15,32 @@ const SCORE_GOOD = 'hsl(var(--chart-success, 142 71% 45%))'
 const SCORE_WARN = 'hsl(var(--chart-warning, 45 93% 47%))'
 const SCORE_BAD = 'hsl(var(--chart-danger, 0 84% 60%))'
 const RING_BG = 'hsl(var(--muted) / 0.4)'
+const CARD_LOAD_ERROR = 'Failed to load'
+const ERROR_TEXT_CLASS = 'text-red-400 text-sm'
+const LOADING_TEXT_CLASS = 'text-gray-500 text-sm'
+
+function useSummaryData<T>(endpoint: string) {
+  const [data, setData] = useState<T | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    authFetch(endpoint)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`)
+        }
+
+        return safeJson<T>(response)
+      })
+      .then(setData)
+      .catch((err: unknown) => {
+        console.error(`[EnterpriseComplianceCards] ${endpoint} fetch failed:`, err)
+        setError(err instanceof Error ? err.message : CARD_LOAD_ERROR)
+      })
+  }, [endpoint])
+
+  return { data, error }
+}
 
 function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
   const r = (size - 8) / 2
@@ -262,10 +288,7 @@ export function ComplianceReportsCard() {
 
 export function NISTCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/compliance/nist/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] compliance/nist/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/compliance/nist/summary')
   return (
     <CardShell title="NIST 800-53" icon={Shield} onClick={() => nav('/nist')}>
       {data ? (
@@ -278,7 +301,7 @@ export function NISTCard() {
             <MiniStat label="Total" value={data.total_controls ?? 0} />
           </div>
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -287,10 +310,7 @@ export function NISTCard() {
 
 export function STIGCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/compliance/stig/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] compliance/stig/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/compliance/stig/summary')
   return (
     <CardShell title="DISA STIG" icon={Shield} onClick={() => nav('/stig')}>
       {data ? (
@@ -303,7 +323,7 @@ export function STIGCard() {
             <MiniStat label="Not a Finding" value={data.not_a_finding ?? 0} color="text-green-400" />
           </div>
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -312,10 +332,7 @@ export function STIGCard() {
 
 export function AirGapCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/compliance/airgap/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] compliance/airgap/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/compliance/airgap/summary')
   return (
     <CardShell title="Air-Gap Readiness" icon={WifiOff} onClick={() => nav('/air-gap')}>
       {data ? (
@@ -328,7 +345,7 @@ export function AirGapCard() {
             <MiniStat label="Met" value={data.met_requirements ?? 0} color="text-green-400" />
           </div>
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -337,10 +354,7 @@ export function AirGapCard() {
 
 export function SIEMIntegrationCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/siem/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/siem/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/siem/summary')
   return (
     <CardShell title="SIEM Integration" icon={Activity} onClick={() => nav('/enterprise/siem')}>
       {data ? (
@@ -350,7 +364,7 @@ export function SIEMIntegrationCard() {
           <MiniStat label="Critical" value={data.critical_alerts ?? 0} color="text-red-400" />
           <MiniStat label="Active" value={data.active_alerts ?? 0} color="text-yellow-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -359,10 +373,7 @@ export function SIEMIntegrationCard() {
 
 export function IncidentResponseCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, unknown> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/incidents/metrics').then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/incidents/metrics fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, unknown> | null>('/api/v1/compliance/incidents/metrics')
   return (
     <CardShell title="Incident Response" icon={Shield} onClick={() => nav('/enterprise/incident-response')}>
       {data ? (
@@ -372,7 +383,7 @@ export function IncidentResponseCard() {
           <MiniStat label="Resolved (30d)" value={Number(data.resolved_last_30d ?? 0)} color="text-green-400" />
           <MiniStat label="Escalation" value={`${Number(data.escalation_rate ?? 0)}%`} color="text-yellow-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -381,10 +392,7 @@ export function IncidentResponseCard() {
 
 export function ThreatIntelCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/threat-intel/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/threat-intel/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/threat-intel/summary')
   return (
     <CardShell title="Threat Intelligence" icon={Shield} onClick={() => nav('/enterprise/threat-intel')}>
       {data ? (
@@ -397,7 +405,7 @@ export function ThreatIntelCard() {
             <MiniStat label="Risk Score" value={data.risk_score ?? 0} color="text-yellow-400" />
           </div>
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -406,10 +414,7 @@ export function ThreatIntelCard() {
 
 export function FedRAMPCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, unknown> | null>(null)
-  useEffect(() => {
-    authFetch('/api/compliance/fedramp/score').then(r => r.ok ? safeJson<Record<string, unknown>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] compliance/fedramp/score fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, unknown> | null>('/api/compliance/fedramp/score')
   return (
     <CardShell title="FedRAMP Readiness" icon={Award} onClick={() => nav('/fedramp')}>
       {data ? (
@@ -424,7 +429,7 @@ export function FedRAMPCard() {
             } />
           </div>
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -433,10 +438,7 @@ export function FedRAMPCard() {
 
 export function OIDCFederationCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/identity/oidc/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] identity/oidc/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/identity/oidc/summary')
   return (
     <CardShell title="OIDC Federation" icon={KeyRound} onClick={() => nav('/enterprise/oidc')}>
       {data ? (
@@ -446,7 +448,7 @@ export function OIDCFederationCard() {
           <MiniStat label="Sessions" value={data.active_sessions ?? 0} color="text-green-400" />
           <MiniStat label="MFA" value={`${data.mfa_adoption ?? 0}%`} color="text-cyan-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -455,10 +457,7 @@ export function OIDCFederationCard() {
 
 export function RBACAuditCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/identity/rbac/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] identity/rbac/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/identity/rbac/summary')
   return (
     <CardShell title="RBAC Audit" icon={Lock} onClick={() => nav('/enterprise/rbac-audit')}>
       {data ? (
@@ -471,7 +470,7 @@ export function RBACAuditCard() {
             <MiniStat label="Score" value={`${data.compliance_score ?? 0}%`} color="text-green-400" />
           </div>
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -480,10 +479,7 @@ export function RBACAuditCard() {
 
 export function SessionManagementCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/identity/sessions/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] identity/sessions/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/identity/sessions/summary')
   return (
     <CardShell title="Session Management" icon={Clock} onClick={() => nav('/enterprise/sessions')}>
       {data ? (
@@ -493,7 +489,7 @@ export function SessionManagementCard() {
           <MiniStat label="Avg Duration" value={`${data.avg_duration_minutes ?? 0}m`} />
           <MiniStat label="Violations" value={data.policy_violations ?? 0} color={data.policy_violations > 0 ? 'text-red-400' : 'text-green-400'} />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -502,10 +498,7 @@ export function SessionManagementCard() {
 
 export function SBOMManagerCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/sbom/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/sbom/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/sbom/summary')
   return (
     <CardShell title="SBOM Manager" icon={Package} onClick={() => nav('/enterprise/sbom')}>
       {data ? (
@@ -515,7 +508,7 @@ export function SBOMManagerCard() {
           <MiniStat label="Critical" value={data.critical_vulns ?? 0} color="text-red-500" />
           <MiniStat label="Compliant" value={data.license_compliant ?? 0} color="text-green-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -524,10 +517,7 @@ export function SBOMManagerCard() {
 
 export function SigstoreVerifyCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/sigstore/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/sigstore/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/sigstore/summary')
   return (
     <CardShell title="Sigstore Verify" icon={Shield} onClick={() => nav('/enterprise/sigstore')}>
       {data ? (
@@ -537,7 +527,7 @@ export function SigstoreVerifyCard() {
           <MiniStat label="Verified" value={data.verified_signatures ?? 0} color="text-green-400" />
           <MiniStat label="Failed" value={data.failed_verifications ?? 0} color="text-red-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -546,10 +536,7 @@ export function SigstoreVerifyCard() {
 
 export function SLSAProvenanceCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/slsa/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/slsa/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/slsa/summary')
   return (
     <CardShell title="SLSA Provenance" icon={Lock} onClick={() => nav('/enterprise/slsa')}>
       {data ? (
@@ -559,7 +546,7 @@ export function SLSAProvenanceCard() {
           <MiniStat label="L3+" value={(data.level_3 ?? 0) + (data.level_4 ?? 0)} color="text-emerald-400" />
           <MiniStat label="Verified" value={data.verified_attestations ?? 0} color="text-green-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -568,10 +555,7 @@ export function SLSAProvenanceCard() {
 
 export function RiskMatrixCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/erm/risk-matrix/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/erm/risk-matrix/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/erm/risk-matrix/summary')
   return (
     <CardShell title="Risk Matrix" icon={Scale} onClick={() => nav('/enterprise/risk-matrix')}>
       {data ? (
@@ -581,7 +565,7 @@ export function RiskMatrixCard() {
           <MiniStat label="High" value={data.high ?? 0} color="text-red-300" />
           <MiniStat label="Medium" value={data.medium ?? 0} color="text-orange-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -590,10 +574,7 @@ export function RiskMatrixCard() {
 
 export function RiskRegisterCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/erm/risk-register/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/erm/risk-register/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/erm/risk-register/summary')
   return (
     <CardShell title="Risk Register" icon={Scale} onClick={() => nav('/enterprise/risk-register')}>
       {data ? (
@@ -603,7 +584,7 @@ export function RiskRegisterCard() {
           <MiniStat label="Total" value={data.total_risks ?? 0} />
           <MiniStat label="Avg Score" value={Number(data.avg_risk_score ?? 0).toFixed(1)} color="text-orange-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }
@@ -612,10 +593,7 @@ export function RiskRegisterCard() {
 
 export function RiskAppetiteCard() {
   const nav = useNavigate()
-  const [data, setData] = useState<Record<string, number> | null>(null)
-  useEffect(() => {
-    authFetch('/api/v1/compliance/erm/risk-appetite/summary').then(r => r.ok ? safeJson<Record<string, number>>(r) : null).then(setData).catch((err) => { console.warn("[EnterpriseComplianceCards] v1/compliance/erm/risk-appetite/summary fetch failed:", err) })
-  }, [])
+  const { data, error } = useSummaryData<Record<string, number> | null>('/api/v1/compliance/erm/risk-appetite/summary')
   return (
     <CardShell title="Risk Appetite" icon={Scale} onClick={() => nav('/enterprise/risk-appetite')}>
       {data ? (
@@ -625,7 +603,7 @@ export function RiskAppetiteCard() {
           <MiniStat label="Within" value={data.within_appetite ?? 0} color="text-green-400" />
           <MiniStat label="KRI Breach" value={data.kri_breaches ?? 0} color="text-red-400" />
         </div>
-      ) : <p className="text-gray-500 text-sm">Loading…</p>}
+      ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
   )
 }

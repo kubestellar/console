@@ -29,11 +29,11 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
   const [selectedCluster, setSelectedCluster] = useState<string>(() => {
     if (config?.cluster) return config.cluster
-    try { return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER) || '' } catch { return '' }
+    try { return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER) || '' } catch (e: unknown) { console.error('[NamespaceOverview] failed to restore cluster selection:', e); return '' }
   })
   const [selectedNamespace, setSelectedNamespace] = useState<string>(() => {
     if (config?.namespace) return config.namespace
-    try { return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE) || '' } catch { return '' }
+    try { return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE) || '' } catch (e: unknown) { console.error('[NamespaceOverview] failed to restore namespace selection:', e); return '' }
   })
 
   const {
@@ -63,12 +63,12 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   // Persist cluster selection so it survives page navigation (#3115)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster) } catch (e: unknown) { console.warn('[NamespaceOverview] failed to persist cluster selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
+    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster) } catch (e: unknown) { console.error('[NamespaceOverview] failed to persist cluster selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
   }, [selectedCluster, showToast, t])
 
   // Persist namespace selection so it survives page navigation (#3115)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace) } catch (e: unknown) { console.warn('[NamespaceOverview] failed to persist namespace selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
+    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace) } catch (e: unknown) { console.error('[NamespaceOverview] failed to persist namespace selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
   }, [selectedNamespace, showToast, t])
 
   // Auto-select first available cluster when none is selected (#3113 — works in both demo and live mode)
