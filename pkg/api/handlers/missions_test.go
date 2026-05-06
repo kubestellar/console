@@ -77,9 +77,18 @@ func TestMissions_BrowseConsoleKB_NoPath(t *testing.T) {
 // ---------- ValidateMission ----------
 
 func TestMissions_ValidateMission_ValidMission(t *testing.T) {
-	app, _ := setupMissionsTest()
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/kubestellar/console-kb/master/fixes/index.json", r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"version":1,"count":1,"missions":[{"path":"fixes/demo/install.json","qualityPass":true,"qualityScore":97,"testedOn":["kind"],"qualityIssues":[]}]}`))
+	}))
+	defer mock.Close()
 
-	payload := `{"apiVersion":"kc-mission-v1","kind":"Mission","metadata":{"name":"test-mission"},"spec":{"description":"A test mission"}}`
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	payload := `{"mission":{"apiVersion":"kc-mission-v1","kind":"Mission","metadata":{"name":"test-mission"},"spec":{"description":"A test mission"}},"path":"fixes/demo/install.json"}`
 	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
@@ -91,13 +100,70 @@ func TestMissions_ValidateMission_ValidMission(t *testing.T) {
 	var body map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&body)
 	assert.Equal(t, true, body["valid"])
+	assert.Equal(t, true, body["qualityPass"])
+	assert.Equal(t, float64(97), body["qualityScore"])
+	assert.Equal(t, []interface{}{"kind"}, body["testedOn"])
+}
+
+func TestMissions_ValidateMission_QualityFailure(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"version":1,"count":1,"missions":[{"path":"fixes/demo/install.json","qualityPass":false,"qualityScore":61,"testedOn":["kind"],"qualityIssues":["Missing validation steps"]}]}`))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	payload := `{"mission":{"apiVersion":"kc-mission-v1","kind":"Mission","metadata":{"name":"test-mission"},"spec":{"description":"A test mission"}},"path":"fixes/demo/install.json"}`
+	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
+
+	var body map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&body)
+	assert.Equal(t, false, body["valid"])
+	assert.Equal(t, false, body["qualityPass"])
+	assert.Equal(t, float64(61), body["qualityScore"])
+	assert.Equal(t, []interface{}{"Missing validation steps"}, body["errors"])
+}
+
+func TestMissions_ValidateMission_MissionNotInIndex(t *testing.T) {
+	mock := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"version":1,"count":0,"missions":[]}`))
+	}))
+	defer mock.Close()
+
+	app, handler := setupMissionsTest()
+	handler.githubRawURL = mock.URL
+
+	payload := `{"mission":{"apiVersion":"kc-mission-v1","kind":"Mission","metadata":{"name":"test-mission"},"spec":{"description":"A test mission"}},"path":"fixes/demo/install.json"}`
+	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, 5000)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusUnprocessableEntity, resp.StatusCode)
+
+	var body map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&body)
+	assert.Equal(t, false, body["valid"])
+	assert.Equal(t, []interface{}{"Mission not found in validated KB index"}, body["errors"])
 }
 
 func TestMissions_ValidateMission_InvalidMission(t *testing.T) {
 	app, _ := setupMissionsTest()
 
 	// Missing apiVersion, kind, metadata.name
-	payload := `{"apiVersion":"wrong","spec":{}}`
+	payload := `{"mission":{"apiVersion":"wrong","spec":{}},"path":"fixes/demo/install.json"}`
 	req, err := http.NewRequest("POST", "/api/missions/validate", strings.NewReader(payload))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")

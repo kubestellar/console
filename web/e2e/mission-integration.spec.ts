@@ -18,7 +18,8 @@ import { test, expect } from '@playwright/test'
 // ── Named constants (no magic numbers per CLAUDE.md) ────────────────────────
 const API_REQUEST_TIMEOUT_MS = 15_000
 const EXPECTED_HTTP_OK = 200
-const EXPECTED_HTTP_BAD_REQUEST = 400
+const EXPECTED_HTTP_UNPROCESSABLE_ENTITY = 422
+const EXPECTED_HTTP_BAD_GATEWAY = 502
 
 const FULLSTACK_BASE = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:8080'
 
@@ -59,16 +60,29 @@ test.describe('mission integration (real backend)', () => {
   })
 
   test('POST /api/missions/validate accepts or rejects a payload', async ({ request }) => {
-    const minimalPayload = { title: 'test-mission', steps: [] }
+    const minimalPayload = {
+      mission: {
+        apiVersion: 'kc-mission-v1',
+        kind: 'Mission',
+        metadata: { name: 'test-mission' },
+        spec: { description: 'A test mission' },
+      },
+      path: 'fixes/demo/install.json',
+    }
 
     const res = await request.post(`${FULLSTACK_BASE}/api/missions/validate`, {
       data: minimalPayload,
       timeout: API_REQUEST_TIMEOUT_MS,
     })
-    // The validate endpoint should return 200 (valid) or 400 (invalid).
-    // A 404 means the route is missing; 401/403 means auth middleware
-    // is blocking a route that should be reachable in this test config.
-    const acceptableStatuses = [EXPECTED_HTTP_OK, EXPECTED_HTTP_BAD_REQUEST]
+    // The validate endpoint should return 200 (valid), 422 (index lookup or
+    // nightly quality rejection), or 502 if the KB index cannot be fetched.
+    // A 404 means the route is missing; 401/403 means auth middleware is
+    // blocking a route that should be reachable in this test config.
+    const acceptableStatuses = [
+      EXPECTED_HTTP_OK,
+      EXPECTED_HTTP_UNPROCESSABLE_ENTITY,
+      EXPECTED_HTTP_BAD_GATEWAY,
+    ]
     expect(acceptableStatuses).toContain(res.status())
   })
 

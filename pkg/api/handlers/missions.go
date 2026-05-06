@@ -673,7 +673,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	// #6421 — Any dot-prefixed entry is hidden by the dotfile check below,
 	// so this map only needs to cover non-dot files.
 	hiddenFiles := map[string]bool{
-		"index.json":       true,
+		"index.json":        true,
 		"search-state.json": true,
 	}
 
@@ -808,6 +808,11 @@ type MissionSpec struct {
 	} `json:"spec"`
 }
 
+type validateMissionRequest struct {
+	Mission json.RawMessage `json:"mission"`
+	Path    string          `json:"path"`
+}
+
 // ValidateMission validates a kc-mission-v1 JSON payload.
 // POST /api/missions/validate
 func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
@@ -821,9 +826,21 @@ func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
 		return c.Status(413).JSON(fiber.Map{"valid": false, "errors": []string{"payload too large"}})
 	}
 
-	var mission MissionSpec
-	if err := json.Unmarshal(body, &mission); err != nil {
+	var req validateMissionRequest
+	if err := json.Unmarshal(body, &req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"invalid JSON format"}})
+	}
+	if len(req.Mission) == 0 {
+		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"mission is required"}})
+	}
+	req.Path = strings.TrimSpace(req.Path)
+	if req.Path == "" {
+		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"path is required"}})
+	}
+
+	var mission MissionSpec
+	if err := json.Unmarshal(req.Mission, &mission); err != nil {
+		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"invalid mission JSON format"}})
 	}
 
 	var errs []string
@@ -840,7 +857,41 @@ func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
 	if len(errs) > 0 {
 		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": errs})
 	}
-	return c.JSON(fiber.Map{"valid": true})
+
+	index, err := h.fetchMissionIndex(c)
+	if err != nil {
+		return c.Status(502).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	for _, entry := range index.Missions {
+		if entry.Path != req.Path {
+			continue
+		}
+		if entry.QualityPass != nil && !*entry.QualityPass {
+			qualityErrs := append([]string(nil), entry.QualityIssues...)
+			if len(qualityErrs) == 0 {
+				qualityErrs = []string{"Mission failed nightly KB validation"}
+			}
+			return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{
+				"valid":        false,
+				"qualityPass":  false,
+				"qualityScore": entry.QualityScore,
+				"testedOn":     entry.TestedOn,
+				"errors":       qualityErrs,
+			})
+		}
+		return c.JSON(fiber.Map{
+			"valid":        true,
+			"qualityPass":  entry.QualityPass,
+			"qualityScore": entry.QualityScore,
+			"testedOn":     entry.TestedOn,
+		})
+	}
+
+	return c.Status(http.StatusUnprocessableEntity).JSON(fiber.Map{
+		"valid":  false,
+		"errors": []string{"Mission not found in validated KB index"},
+	})
 }
 
 // ---------- Score Exposure ----------
@@ -854,6 +905,7 @@ type indexJsonFormat struct {
 		Description        string      `json:"description"`
 		QualityScore       *int        `json:"qualityScore"`
 		QualityPass        *bool       `json:"qualityPass"`
+		TestedOn           interface{} `json:"testedOn"`
 		QualityIssues      []string    `json:"qualityIssues"`
 		QualitySuggestions []string    `json:"qualitySuggestions"`
 		QualityBreakdown   interface{} `json:"qualityBreakdown"`
