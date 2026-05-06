@@ -34,6 +34,8 @@ export function isChunkLoadMessage(msg: string): boolean {
     msg.includes('Importing a module script failed') ||
     // safeLazy() throws this when a named export is missing from a stale chunk
     msg.includes('chunk may be stale') ||
+    // safeLazy() timeout — chunk server unreachable after deploy (old chunk URL 404s)
+    msg.includes('timed out') ||
     // Generic fetch failure — often occurs when a chunk 404s on the CDN
     msg.includes('Failed to fetch') ||
     // Network error variant seen in Firefox for missing chunks
