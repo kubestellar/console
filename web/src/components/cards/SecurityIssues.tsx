@@ -175,8 +175,8 @@ function SecurityIssuesInternal({ config }: SecurityIssuesProps) {
       severity: issue.severity })
   }
 
-  const highCount = rawIssues.filter(i => i.severity === 'high').length
-  const mediumCount = rawIssues.filter(i => i.severity === 'medium').length
+  const highCount = (rawIssues || []).filter(i => i.severity === 'high').length
+  const mediumCount = (rawIssues || []).filter(i => i.severity === 'medium').length
 
   // Show skeleton only on initial load (no cached data)
   if (showSkeleton) {

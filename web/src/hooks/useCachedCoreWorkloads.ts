@@ -298,7 +298,7 @@ export function useCachedEvents(
         const clusters = getAgentClusters()
         const allEvents: ClusterEvent[] = []
         const results = await settledWithConcurrency(
-          clusters.map((ci) => async () => {
+          (clusters || []).map((ci) => async () => {
             const ctx = ci.context || ci.name
             const events = await kubectlProxy.getEvents(ctx, namespace, limit)
             return events.map(e => ({ ...e, cluster: ci.name }))

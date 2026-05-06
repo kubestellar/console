@@ -62,10 +62,10 @@ interface StrimziStatusResponse {
 // ---------------------------------------------------------------------------
 
 function summarize(clusters: StrimziKafkaCluster[]): StrimziSummary {
-  const totalClusters = clusters.length
-  const healthyClusters = clusters.filter(c => c.health === 'healthy').length
-  const totalBrokers = clusters.reduce((sum, c) => sum + c.brokers.total, 0)
-  const readyBrokers = clusters.reduce((sum, c) => sum + c.brokers.ready, 0)
+  const totalClusters = (clusters || []).length
+  const healthyClusters = (clusters || []).filter(c => c.health === 'healthy').length
+  const totalBrokers = (clusters || []).reduce((sum, c) => sum + c.brokers.total, 0)
+  const readyBrokers = (clusters || []).reduce((sum, c) => sum + c.brokers.ready, 0)
   return { totalClusters, healthyClusters, totalBrokers, readyBrokers }
 }
 
