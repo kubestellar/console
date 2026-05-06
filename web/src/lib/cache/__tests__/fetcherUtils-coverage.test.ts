@@ -535,6 +535,19 @@ describe('fetcherUtils extended coverage', () => {
       })
       expect(progressCalls.length).toBe(2)
     })
+
+    it('throws on partial SSE failure with throwIfPartialFailureEmpty', async () => {
+      localStorage.setItem('token', 'real-token')
+      mockIsBackendUnavailable.mockReturnValue(false)
+      mockFetchSSE.mockImplementation(async (opts: { onClusterError?: () => void }) => {
+        opts.onClusterError?.()
+        return []
+      })
+
+      await expect(
+        fetchViaGitOpsSSE('repos', 'repos', undefined, undefined, { throwIfPartialFailureEmpty: true })
+      ).rejects.toThrow('Partial SSE failure yielded empty result')
+    })
   })
 
   // ==========================================================================
