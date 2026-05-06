@@ -191,7 +191,7 @@ export function useHarborStatus(): UseHarborStatusResult {
     (data.repositories || []).length > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
+    isLoading: isLoading && !hasAnyData,
     isRefreshing,
     hasAnyData,
     isFailed,
