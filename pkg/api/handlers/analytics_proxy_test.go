@@ -47,7 +47,7 @@ func TestIsAllowedOrigin(t *testing.T) {
 		{"Allowed Explicit", "http://localhost", "any-host", true},
 		{"Allowed Netlify", "https://kubestellar-console.netlify.app", "any-host", true},
 		{"Same Origin", "https://console.custom.com", "console.custom.com", true},
-		{"Missing Origin", "", "localhost", true},
+		{"Missing Origin", "", "localhost", false},
 		{"Forbidden Origin", "https://evil.com", "localhost", false},
 	}
 
