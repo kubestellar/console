@@ -12,7 +12,12 @@
  */
 
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
-import { fetchGitOpsAPI, fetchViaGitOpsSSE, fetchRbacAPI } from '../lib/cache/fetcherUtils'
+import {
+  fetchGitOpsAPI,
+  fetchViaGitOpsSSE,
+  fetchRbacAPI,
+  type FetchFromAllClustersOptions,
+} from '../lib/cache/fetcherUtils'
 import {
   getDemoHelmReleases,
   getDemoHelmHistory,
@@ -48,10 +53,19 @@ interface GitOpsSseConfig<T> {
   aliasKey: string
   defaultCategory: RefreshCategory
   getDemoData: () => T[]
+  fetchOptions?: FetchFromAllClustersOptions
 }
 
 function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
-  const { cacheKeyPrefix, apiEndpoint, responseKey, aliasKey, defaultCategory, getDemoData } = config
+  const {
+    cacheKeyPrefix,
+    apiEndpoint,
+    responseKey,
+    aliasKey,
+    defaultCategory,
+    getDemoData,
+    fetchOptions,
+  } = config
 
   return function useCachedGitOpsResource(
     cluster?: string,
@@ -73,10 +87,17 @@ function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
       fetcher: restFetcher,
       progressiveFetcher: cluster ? undefined : async (onProgress) => {
         try {
-          return await fetchViaGitOpsSSE<T>(apiEndpoint, responseKey, {}, onProgress)
+          return await fetchViaGitOpsSSE<T>(apiEndpoint, responseKey, {}, onProgress, fetchOptions)
         } catch (err: unknown) {
-          // Auth/availability errors should not fall back to REST (it will also fail)
-          if (err instanceof Error && err.message.includes('No data source available')) {
+          // Auth/availability errors should not fall back to REST (it will also fail).
+          // Partial empty SSE failures should also stay on the error path so useCache
+          // preserves any prior data instead of overwriting it with an ambiguous [].
+          if (
+            err instanceof Error && (
+              err.message.includes('No data source available') ||
+              (fetchOptions?.throwIfPartialFailureEmpty && err.message.includes('preserving existing cache'))
+            )
+          ) {
             throw err
           }
           // SSE stream failed — fall back to REST endpoint
@@ -176,6 +197,7 @@ export const useCachedOperators = createGitOpsSseHook<Operator>({
   aliasKey: 'operators',
   defaultCategory: 'operators',
   getDemoData: getDemoOperators,
+  fetchOptions: { throwIfPartialFailureEmpty: true },
 })
 
 export const useCachedOperatorSubscriptions = createGitOpsSseHook<OperatorSubscription>({
@@ -185,6 +207,7 @@ export const useCachedOperatorSubscriptions = createGitOpsSseHook<OperatorSubscr
   aliasKey: 'subscriptions',
   defaultCategory: 'operators',
   getDemoData: getDemoOperatorSubscriptions,
+  fetchOptions: { throwIfPartialFailureEmpty: true },
 })
 
 // ============================================================================

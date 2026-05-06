@@ -450,7 +450,8 @@ export async function fetchViaGitOpsSSE<T>(
   endpoint: string,
   resultKey: string,
   params?: Record<string, string | number | undefined>,
-  onProgress?: (partial: T[]) => void
+  onProgress?: (partial: T[]) => void,
+  options?: FetchFromAllClustersOptions
 ): Promise<T[]> {
   const token = getToken()
   if (!token || token === 'demo-token' || isBackendUnavailable()) {
@@ -458,14 +459,31 @@ export async function fetchViaGitOpsSSE<T>(
   }
 
   const accumulated: T[] = []
-  return await fetchSSE<T>({
+  let clusterErrorCount = 0
+  const result = await fetchSSE<T>({
     url: `/api/gitops/${endpoint}/stream`,
     params,
     itemsKey: resultKey,
     onClusterData: (_cluster, items) => {
       accumulated.push(...items)
       onProgress?.([...accumulated])
-    } })
+    },
+    onClusterError: () => {
+      clusterErrorCount += 1
+    },
+  })
+
+  if (
+    options?.throwIfPartialFailureEmpty &&
+    result.length === 0 &&
+    clusterErrorCount > 0
+  ) {
+    throw new Error(
+      `Partial SSE failure yielded empty result (${clusterErrorCount} cluster_error events) — preserving existing cache`,
+    )
+  }
+
+  return result
 }
 
 export const fetchGitOpsAPI = makeRestFetcher({

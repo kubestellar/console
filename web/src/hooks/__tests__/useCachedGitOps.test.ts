@@ -47,6 +47,7 @@ import {
   useCachedK8sRoleBindings,
   useCachedK8sServiceAccounts,
 } from '../useCachedGitOps'
+import { fetchGitOpsAPI, fetchViaGitOpsSSE } from '../../lib/cache/fetcherUtils'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -139,6 +140,24 @@ describe('useCachedOperators', () => {
     const { result } = renderHook(() => useCachedOperators())
     expect(result.current.operators).toEqual(operators)
   })
+
+  it('rethrows partial empty SSE failures instead of falling back to REST', async () => {
+    renderHook(() => useCachedOperators())
+    const cacheConfig = mockUseCache.mock.calls[0][0]
+    vi.mocked(fetchViaGitOpsSSE).mockRejectedValueOnce(
+      new Error('Partial SSE failure yielded empty result (1 cluster_error events) — preserving existing cache')
+    )
+
+    await expect(cacheConfig.progressiveFetcher(vi.fn())).rejects.toThrow('preserving existing cache')
+    expect(fetchViaGitOpsSSE).toHaveBeenCalledWith(
+      'operators',
+      'operators',
+      {},
+      expect.any(Function),
+      { throwIfPartialFailureEmpty: true },
+    )
+    expect(fetchGitOpsAPI).not.toHaveBeenCalled()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -151,6 +170,16 @@ describe('useCachedOperatorSubscriptions', () => {
     const { result } = renderHook(() => useCachedOperatorSubscriptions())
     expect(result.current).toHaveProperty('subscriptions')
     expect(Array.isArray(result.current.subscriptions)).toBe(true)
+  })
+
+  it('falls back to REST for non-partial SSE failures', async () => {
+    renderHook(() => useCachedOperatorSubscriptions())
+    const cacheConfig = mockUseCache.mock.calls[0][0]
+    vi.mocked(fetchViaGitOpsSSE).mockRejectedValueOnce(new Error('SSE connection failed'))
+    vi.mocked(fetchGitOpsAPI).mockResolvedValueOnce({ subscriptions: [] })
+
+    await expect(cacheConfig.progressiveFetcher(vi.fn())).resolves.toEqual([])
+    expect(fetchGitOpsAPI).toHaveBeenCalledWith('operator-subscriptions', undefined)
   })
 })
 
