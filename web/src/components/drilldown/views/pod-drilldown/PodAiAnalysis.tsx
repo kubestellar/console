@@ -33,17 +33,6 @@ export function PodAiAnalysis({
 
   return (
     <>
-      {/* Backend unavailable warning */}
-      {backendUnavailable && (
-        <div className="p-4 pb-0">
-          <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/30 p-3">
-            <div className="flex items-center gap-2 text-sm text-yellow-400">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{t('layout.connectionLostHint')}</span>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Error state */}
       {aiAnalysisError && !aiAnalysisLoading && (
         <div className="p-4 pb-0">
