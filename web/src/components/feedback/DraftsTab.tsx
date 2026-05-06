@@ -226,7 +226,7 @@ export function DraftsTab({
                 ) : (
                   /* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */
                   <span
-                    className="text-xs text-muted-foreground hover:text-red-400 flex items-center gap-1 transition-colors"
+                    className="text-xs text-muted-foreground hover:text-red-400 inline-flex min-h-11 min-w-11 items-center justify-center gap-1 px-2 transition-colors"
                     onClick={(e) => { e.stopPropagation(); setShowEmptyAllConfirm(true) }}
                   >
                     <Trash2 className="w-3 h-3" />
