@@ -1101,7 +1101,7 @@ func (s *Server) setupRoutes() {
 	if orbitDataDir == "" || orbitDataDir == "." {
 		orbitDataDir = "./data"
 	}
-	orbit := handlers.NewOrbitHandler(orbitDataDir, s.bridge)
+	orbit := handlers.NewOrbitHandler(orbitDataDir, nil)
 	orbit.RegisterRoutes(api.Group("/orbit"))
 	orbit.StartScheduler(s.done)
 

@@ -56,6 +56,9 @@ const orbitDefaultDataFile = "orbit_missions.json"
 // orbitMaxHistoryEntries is the maximum number of run records kept per orbit mission.
 const orbitMaxHistoryEntries = 50
 
+const orbitRunMissionNoExecutorSummary = "No executor configured — mission steps were not run"
+const orbitSchedulerNoExecutorSummary = "No executor configured"
+
 // ─── Types ──────────────────────────────────────────────────────────
 
 // OrbitMission represents a recurring maintenance mission.
@@ -87,6 +90,11 @@ type OrbitRunRecord struct {
 	Summary   string `json:"summary,omitempty"`
 }
 
+// OrbitExecutor runs mission steps for an orbit mission.
+type OrbitExecutor interface {
+	Execute(ctx context.Context, mission *OrbitMission) (result string, summary string, err error)
+}
+
 // OrbitScheduleEntry describes a mission that is due or upcoming.
 type OrbitScheduleEntry struct {
 	MissionID string `json:"missionId"`
@@ -105,12 +113,12 @@ type OrbitHandler struct {
 	mu       sync.RWMutex
 	missions map[string]*OrbitMission
 	dataFile string
-	executor MissionExecutor
+	executor OrbitExecutor
 }
 
 // NewOrbitHandler creates an OrbitHandler, loading any persisted missions
 // from disk. dataDir is the console data directory (e.g. "./data").
-func NewOrbitHandler(dataDir string, executor MissionExecutor) *OrbitHandler {
+func NewOrbitHandler(dataDir string, executor OrbitExecutor) *OrbitHandler {
 	h := &OrbitHandler{
 		missions: make(map[string]*OrbitMission),
 		dataFile: filepath.Join(dataDir, orbitDefaultDataFile),
@@ -199,10 +207,16 @@ func (h *OrbitHandler) RunMission(c *fiber.Ctx) error {
 	mission := cloneOrbitMission(m)
 	h.mu.RUnlock()
 
-	execution := h.executeMission(c.UserContext(), mission)
-	h.recordMissionRun(id, &execution)
+	result, summary := h.executeMission(c.Context(), mission, orbitRunMissionNoExecutorSummary)
+	runAt := time.Now().UTC().Format(time.RFC3339)
+	h.recordMissionRun(id, runAt, result, summary)
 
-	return c.JSON(execution)
+	return c.JSON(fiber.Map{
+		"missionId": id,
+		"runAt":     runAt,
+		"result":    result,
+		"summary":   summary,
+	})
 }
 
 // GetSchedule returns which missions are due based on their cadence.
@@ -307,21 +321,32 @@ func (h *OrbitHandler) checkDueMissions() {
 	}
 	h.mu.RUnlock()
 
-	if len(dueMissions) == 0 {
-		return
+	for idx, mission := range dueMissions {
+		result, summary := h.executeMission(context.Background(), mission, orbitSchedulerNoExecutorSummary)
+		runAt := time.Now().UTC().Format(time.RFC3339)
+		h.recordMissionRun(dueMissionIDs[idx], runAt, result, summary)
+		slog.Info("orbit auto-run triggered", "mission", mission.ID, "type", mission.OrbitType, "result", result, "summary", summary)
+	}
+}
+
+func (h *OrbitHandler) executeMission(ctx context.Context, mission *OrbitMission, noExecutorSummary string) (string, string) {
+	if h.executor == nil {
+		return "skipped", noExecutorSummary
 	}
 
-	for idx, mission := range dueMissions {
-		execution := h.executeMission(context.Background(), mission)
-		h.recordMissionRun(dueMissionIDs[idx], &execution)
-		slog.Info("orbit auto-run triggered", "mission", mission.ID, "type", mission.OrbitType, "result", execution.Result, "summary", execution.Summary, "executionTime", execution.ExecutionTime)
+	result, summary, err := h.executor.Execute(ctx, mission)
+	if err != nil {
+		return "failed", err.Error()
 	}
+
+	return result, summary
 }
 
 func cloneOrbitMission(m *OrbitMission) *OrbitMission {
 	if m == nil {
 		return nil
 	}
+
 	cloned := *m
 	cloned.Clusters = append([]string(nil), m.Clusters...)
 	cloned.Steps = append([]OrbitStep(nil), m.Steps...)
@@ -329,30 +354,17 @@ func cloneOrbitMission(m *OrbitMission) *OrbitMission {
 	return &cloned
 }
 
-func (h *OrbitHandler) recordMissionRun(id string, execution *orbitMissionExecution) {
-	now := time.Now().UTC().Format(time.RFC3339)
-
-	if execution != nil {
-		execution.MissionID = id
-		execution.RunAt = now
-	}
-
+func (h *OrbitHandler) recordMissionRun(id, runAt, result, summary string) {
 	h.mu.Lock()
 	mission, ok := h.missions[id]
 	if !ok {
 		h.mu.Unlock()
 		return
 	}
-	mission.LastRunAt = &now
-	result := "skipped"
-	summary := ""
-	if execution != nil {
-		result = execution.Result
-		summary = execution.Summary
-	}
+	mission.LastRunAt = &runAt
 	mission.LastRunResult = &result
 	mission.History = append(mission.History, OrbitRunRecord{
-		Timestamp: now,
+		Timestamp: runAt,
 		Result:    result,
 		Summary:   summary,
 	})
