@@ -38,14 +38,16 @@ vi.mock('../../../../hooks/useMCP', () => ({
 }))
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
-  useDrillDownActions: () => ({ drillToPod: vi.fn(), drillToGPUNode: null }),
+  useDrillDownActions: () => ({ drillToPod: vi.fn(), drillToGPUNode: vi.fn(), drillToCluster: vi.fn() }),
+  useDrillDown: () => ({ state: { stack: [] }, pop: vi.fn(), close: vi.fn() }),
 }))
 
 import { GPUNamespaceDrillDown } from '../GPUNamespaceDrillDown'
 
 describe('GPUNamespaceDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<GPUNamespaceDrillDown data={{ namespace: 'ns1', clusters: ['c1'] }} />)
+    const { container, getByText } = render(<GPUNamespaceDrillDown data={{ namespace: 'ns1', clusters: ['c1'] }} />)
     expect(container).toBeTruthy()
+    expect(getByText('Back')).toBeTruthy()
   })
 })

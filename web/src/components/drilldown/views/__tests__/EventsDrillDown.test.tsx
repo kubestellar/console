@@ -34,6 +34,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToCluster: vi.fn(), drillToNamespace: vi.fn() }),
+  useDrillDown: () => ({ state: { stack: [] }, pop: vi.fn(), close: vi.fn() }),
 }))
 
 vi.mock('../../../../lib/clipboard', () => ({
@@ -44,7 +45,8 @@ import { EventsDrillDown } from '../EventsDrillDown'
 
 describe('EventsDrillDown', () => {
   it('renders without crashing', () => {
-    const { container } = render(<EventsDrillDown data={{ cluster: 'c1', namespace: 'ns1', events: [] }} />)
+    const { container, getByText } = render(<EventsDrillDown data={{ cluster: 'c1', namespace: 'ns1', events: [] }} />)
     expect(container).toBeTruthy()
+    expect(getByText('drilldown.goBack')).toBeTruthy()
   })
 })
