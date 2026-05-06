@@ -16,6 +16,7 @@ import { kubectlProxy } from '../lib/kubectlProxy'
 import { useDemoMode } from './useDemoMode'
 import { useCertManager } from './useCertManager'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
+import { deduplicateClustersByServer } from './mcp/shared'
 import { registerRefetch, registerCacheReset, unregisterCacheReset } from '../lib/modeTransition'
 
 /** Timeout for kubectl resource fetches */
@@ -261,7 +262,7 @@ export function useDataCompliance() {
         reachableClusters: clusters.length }
 
       // (#6857) Return data from each callback to avoid shared mutation.
-      const tasks = clusters.map(cluster => async () => {
+      const tasks = deduplicateClustersByServer(clusters).map(cluster => async () => {
         const data = await fetchClusterCompliance(cluster.name)
         return { cluster: cluster.name, data }
       })

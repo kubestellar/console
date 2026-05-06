@@ -9,6 +9,7 @@ import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/ca
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { KUBECTL_DEFAULT_TIMEOUT_MS, KUBECTL_MEDIUM_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
+import { clusterCacheRef, deduplicateClustersByServer } from './mcp/shared'
 import type { LLMdServer, LLMdStatus, LLMdModel } from './useLLMd'
 
 // ============================================================================
@@ -299,7 +300,13 @@ export async function fetchLLMdServers(
 ): Promise<LLMdServer[]> {
   // (#6857) Each callback returns its own items; aggregation happens after
   // all tasks settle to avoid shared-mutation hazards.
-  const tasks = clusters.map((cluster) => async () => {
+  // Deduplicate cluster names by looking up ClusterInfo and deduping by server
+  const allClusters = clusterCacheRef.clusters || []
+  const matchedClusters = allClusters.filter(ci => clusters.includes(ci.name))
+  const dedupedClusters = deduplicateClustersByServer(matchedClusters)
+  const dedupedNames = dedupedClusters.map(ci => ci.name)
+  
+  const tasks = dedupedNames.map((cluster) => async () => {
     try {
       return await fetchLLMdServersForCluster(cluster)
     } catch (err: unknown) {
@@ -377,7 +384,13 @@ export async function fetchLLMdModels(
   onProgress?: (partial: LLMdModel[]) => void
 ): Promise<LLMdModel[]> {
   // useCache prevents calling fetchers in demo mode via effectiveEnabled
-  const tasks = clusters.map((cluster) => async () => {
+  // Deduplicate cluster names by looking up ClusterInfo and deduping by server
+  const allClusters = clusterCacheRef.clusters || []
+  const matchedClusters = allClusters.filter(ci => clusters.includes(ci.name))
+  const dedupedClusters = deduplicateClustersByServer(matchedClusters)
+  const dedupedNames = dedupedClusters.map(ci => ci.name)
+  
+  const tasks = dedupedNames.map((cluster) => async () => {
     try {
       const response = await kubectlProxy.exec(['get', 'inferencepools', '-A', '-o', 'json'], { context: cluster, timeout: KUBECTL_EXTENDED_TIMEOUT_MS })
       if (response.exitCode !== 0) return []

@@ -9,7 +9,7 @@
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { clusterCacheRef, agentFetch } from './mcp/shared'
+import { clusterCacheRef, agentFetch, deduplicateClustersByServer } from './mcp/shared'
 import { isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS, KUBECTL_EXTENDED_TIMEOUT_MS } from '../lib/constants/network'
@@ -298,7 +298,7 @@ export function useCachedEvents(
         const clusters = getAgentClusters()
         const allEvents: ClusterEvent[] = []
         const results = await settledWithConcurrency(
-          (clusters || []).map((ci) => async () => {
+          deduplicateClustersByServer(clusters || []).map((ci) => async () => {
             const ctx = ci.context || ci.name
             const events = await kubectlProxy.getEvents(ctx, namespace, limit)
             return events.map(e => ({ ...e, cluster: ci.name }))
