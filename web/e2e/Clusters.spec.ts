@@ -137,14 +137,9 @@ test.describe('Clusters Page', () => {
     test('shows cluster health status indicators', async ({ page }) => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
-      // Health status should be displayed - look for healthy/unhealthy text or status dots
-      // We have 2 healthy clusters and 1 unhealthy
-      // StatusIndicator uses text-green-400 and bg-green-500 for healthy status
-      const healthyIndicators = page.locator('.bg-green-500, .text-green-400, [class*="bg-green"], [class*="text-green"]')
-      
-      // Use Playwright's auto-retrying expect().toHaveCount() instead of immediate count() (#12097)
-      // count() returns immediately and may execute before DOM is fully rendered
-      await expect(healthyIndicators).not.toHaveCount(0, { timeout: 10000 })
+      // Health status should be reflected in the semantic stat blocks.
+      await expect(page.getByTestId('stat-block-healthy-count')).toHaveText('2', { timeout: 10000 })
+      await expect(page.getByTestId('stat-block-unhealthy-count')).toHaveText('1', { timeout: 10000 })
     })
   })
 
