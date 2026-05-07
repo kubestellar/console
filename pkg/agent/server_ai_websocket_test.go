@@ -40,12 +40,13 @@ func TestServer_HandleWebSocket_Upgrade(t *testing.T) {
 		t.Errorf("Expected status 101, got %d", resp.StatusCode)
 	}
 
-	// Verify client registration
-	s.clientsMux.Lock()
-	if len(s.clients) != 1 {
-		t.Errorf("Expected 1 registered client, got %d", len(s.clients))
-	}
-	s.clientsMux.Unlock()
+	// Verify client registration — poll because the server goroutine may not
+	// have reached s.clients[conn] yet when Dial returns.
+	require.Eventually(t, func() bool {
+		s.clientsMux.Lock()
+		defer s.clientsMux.Unlock()
+		return len(s.clients) == 1
+	}, 2*time.Second, 10*time.Millisecond, "Expected 1 registered client")
 
 	// Wait for cleanup on close — poll instead of a fixed sleep to avoid flakiness.
 	conn.Close()
