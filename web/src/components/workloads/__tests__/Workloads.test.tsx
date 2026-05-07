@@ -107,6 +107,7 @@ vi.mock('../../ui/Toast', () => ({
     ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
+const kubectlExecSpy = vi.fn().mockResolvedValue({ output: 'success', exitCode: 0 })
 vi.mock('../../../lib/kubectlProxy', () => ({
     kubectlProxy: {
         exec: kubectlExecSpy,
