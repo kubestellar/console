@@ -329,7 +329,9 @@ export function useWorkloads(options?: {
     }, POLL_INTERVAL_MS)
     return () => {
       clearInterval(interval)
+      // Abort both the initial controller and any in-flight poll request
       controller.abort()
+      abortControllerRef.current?.abort()
     }
   }, [fetchData, enabled])
 
