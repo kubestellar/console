@@ -46,9 +46,17 @@ export function ResourceMarshall() {
   const [selectedNamespace, setSelectedNamespace] = useState<string>('')
   const [selectedWorkload, setSelectedWorkload] = useState<string>('')
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const selectedClusterInfo = clusters.find(cluster => cluster.name === selectedCluster)
+  const isSelectedClusterOffline = selectedClusterInfo?.reachable === false
 
   // Fetch namespaces for selected cluster
-  const { namespaces, isLoading: nsLoading, isDemoFallback } = useCachedNamespaces(selectedCluster || undefined)
+  const {
+    namespaces,
+    isLoading: nsLoading,
+    isDemoFallback,
+    isFailed: namespacesFailed,
+    error: namespacesError,
+  } = useCachedNamespaces(selectedCluster || undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = clusters.length > 0
@@ -62,7 +70,7 @@ export function ResourceMarshall() {
 
   // Fetch workloads only when both cluster and namespace are selected.
   // Passing enabled=false prevents fetching all workloads across clusters.
-  const hasSelection = !!selectedCluster && !!selectedNamespace
+  const hasSelection = !!selectedCluster && !!selectedNamespace && !isSelectedClusterOffline
   const workloadOpts = (() => {
     if (!selectedCluster || !selectedNamespace) return undefined
     return { cluster: selectedCluster, namespace: selectedNamespace }
@@ -150,7 +158,7 @@ export function ResourceMarshall() {
             clusters={clusters}
             value={selectedCluster}
             onChange={handleClusterChange}
-            placeholder="Select cluster..."
+            placeholder={t('common.selectCluster', 'Select cluster...')}
             className="flex-1"
           />
         </div>
@@ -161,14 +169,18 @@ export function ResourceMarshall() {
           <select
             value={selectedNamespace}
             onChange={(e) => handleNamespaceChange(e.target.value)}
-            disabled={!selectedCluster || nsLoading}
+            disabled={!selectedCluster || nsLoading || isSelectedClusterOffline}
             className={cn(
               'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50',
-              (!selectedCluster || nsLoading) && 'opacity-50 cursor-not-allowed',
+              (!selectedCluster || nsLoading || isSelectedClusterOffline) && 'opacity-50 cursor-not-allowed',
             )}
           >
             <option value="">
-              {nsLoading ? t('common.loading') : 'Select namespace...'}
+              {isSelectedClusterOffline
+                  ? t('common.clusterOffline', 'Cluster offline')
+                  : nsLoading
+                    ? t('common.loading')
+                    : t('common.selectNamespace', 'Select namespace...')}
             </option>
             {namespaces.map(ns => (
               <option key={ns} value={ns}>{ns}</option>
@@ -178,18 +190,22 @@ export function ResourceMarshall() {
 
         {/* Workload selector */}
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground w-20 shrink-0">Workload</label>
+          <label className="text-xs text-muted-foreground w-20 shrink-0">{t('cards:resourceMarshall.workloadLabel', 'Workload')}</label>
           <select
             value={selectedWorkload}
             onChange={(e) => handleWorkloadChange(e.target.value)}
-            disabled={!selectedNamespace || wlLoading}
+            disabled={!selectedNamespace || wlLoading || isSelectedClusterOffline}
             className={cn(
               'flex-1 text-sm rounded-md bg-secondary/50 border border-border px-2 py-1.5 text-foreground focus:outline-hidden focus:ring-1 focus:ring-blue-500/50',
-              (!selectedNamespace || wlLoading) && 'opacity-50 cursor-not-allowed',
+              (!selectedNamespace || wlLoading || isSelectedClusterOffline) && 'opacity-50 cursor-not-allowed',
             )}
           >
             <option value="">
-              {wlLoading ? t('common.loading') : 'Select workload...'}
+              {isSelectedClusterOffline
+                  ? t('common.clusterOffline', 'Cluster offline')
+                  : wlLoading
+                    ? t('common.loading')
+                    : t('cards:resourceMarshall.selectWorkload', 'Select workload...')}
             </option>
             {workloads?.map(w => (
               <option key={`${w.type}-${w.name}`} value={w.name}>
@@ -200,12 +216,34 @@ export function ResourceMarshall() {
         </div>
       </div>
 
+      {isSelectedClusterOffline && (
+        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-yellow-400 font-medium">{t('common.clusterOffline', 'Cluster offline')}</p>
+            <p className="text-xs text-yellow-400/70 mt-0.5">
+              {namespacesError || t('cards:resourceMarshall.offlineMessage', 'Reconnect the cluster or choose a reachable cluster to load namespaces and dependencies.')}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {selectedCluster && namespacesFailed && !isSelectedClusterOffline && !selectedNamespace && (
+        <div className="rounded-lg bg-yellow-500/10 border border-yellow-500/20 p-3 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm text-yellow-400 font-medium">{t('common.loadFailed', 'Failed to load')}</p>
+            <p className="text-xs text-yellow-400/70 mt-0.5">{namespacesError || t('common.loadingTimedOut', 'Loading timed out. The cluster may be unreachable.')}</p>
+          </div>
+        </div>
+      )}
+
       {/* Empty state */}
-      {!selectedWorkload && !depLoading && (
+      {!selectedWorkload && !depLoading && !isSelectedClusterOffline && (
         <div className="flex flex-col items-center justify-center py-6 text-center">
           <Search className="w-8 h-8 text-muted-foreground/40 mb-2" />
           <p className="text-sm text-muted-foreground">
-            Select a cluster, namespace, and workload to explore its dependency tree.
+            {t('cards:resourceMarshall.emptyState', 'Select a cluster, namespace, and workload to explore its dependency tree.')}
           </p>
         </div>
       )}

@@ -5,8 +5,9 @@ import { renderHook } from '@testing-library/react'
 // Hoisted mocks
 // ---------------------------------------------------------------------------
 
-const { mockUseCache } = vi.hoisted(() => ({
+const { mockUseCache, mockClusterCacheRef } = vi.hoisted(() => ({
   mockUseCache: vi.fn(),
+  mockClusterCacheRef: { clusters: [] as Array<{ name: string; reachable?: boolean }> },
 }))
 
 vi.mock('../../lib/cache', () => ({
@@ -42,6 +43,10 @@ vi.mock('../useCachedData/demoData', () => ({
   getDemoCronJobs: () => [],
   getDemoIngresses: () => [],
   getDemoNetworkPolicies: () => [],
+}))
+
+vi.mock('../mcp/shared', () => ({
+  clusterCacheRef: mockClusterCacheRef,
 }))
 
 import {
@@ -81,6 +86,7 @@ function defaultCache(overrides = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockClusterCacheRef.clusters = []
   mockUseCache.mockReturnValue(defaultCache())
 })
 
@@ -104,6 +110,17 @@ describe('useCachedNamespaces', () => {
   it('exposes namespaces field', () => {
     const { result } = renderHook(() => useCachedNamespaces())
     expect(result.current).toHaveProperty('namespaces')
+  })
+
+  it('marks offline clusters as failed without leaving loading state active', () => {
+    mockClusterCacheRef.clusters = [{ name: 'offline-cluster', reachable: false }]
+
+    const { result } = renderHook(() => useCachedNamespaces('offline-cluster'))
+
+    expect(result.current.namespaces).toEqual([])
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.isFailed).toBe(true)
+    expect(result.current.error).toBe('Cluster is offline')
   })
 })
 

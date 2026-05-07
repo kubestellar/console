@@ -38,6 +38,7 @@ import type {
   Ingress,
   NetworkPolicy,
 } from './useMCP'
+import { clusterCacheRef } from './mcp/shared'
 
 // ============================================================================
 // Factory
@@ -214,6 +215,10 @@ export function useCachedNamespaces(
 ): CachedHookResult<string[]> & { namespaces: string[] } {
   const { category = 'namespaces' } = options || {}
   const key = `namespaces:${cluster || 'all'}`
+  const isClusterOffline = !!clusterCacheRef.clusters.find(
+    currentCluster => currentCluster.name === cluster && currentCluster.reachable === false,
+  )
+  const offlineError = 'Cluster is offline'
 
   const result = useCache({
     key,
@@ -222,6 +227,7 @@ export function useCachedNamespaces(
     demoData: getDemoNamespaces(),
     fetcher: async () => {
       if (!cluster) return getDemoNamespaces()
+      if (isClusterOffline) return []
       const token = getToken()
       if (!token) throw new Error('No authentication token')
       const response = await fetch(`/api/mcp/namespaces?cluster=${encodeURIComponent(cluster)}`, {
@@ -234,15 +240,17 @@ export function useCachedNamespaces(
     },
   })
 
+  const namespaceData: string[] = isClusterOffline ? [] : result.data
+
   return {
-    namespaces: result.data,
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback && !result.isLoading,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
+    namespaces: namespaceData,
+    data: namespaceData,
+    isLoading: isClusterOffline ? false : result.isLoading,
+    isRefreshing: isClusterOffline ? false : result.isRefreshing,
+    isDemoFallback: isClusterOffline ? false : result.isDemoFallback && !result.isLoading,
+    error: isClusterOffline ? offlineError : result.error,
+    isFailed: isClusterOffline ? true : result.isFailed,
+    consecutiveFailures: isClusterOffline ? Math.max(result.consecutiveFailures, 1) : result.consecutiveFailures,
     lastRefresh: result.lastRefresh,
     refetch: result.refetch, retryFetch: result.retryFetch,
   }
