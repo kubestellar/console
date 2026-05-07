@@ -1,6 +1,6 @@
 import { startTransition } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
-import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable } from '../useLocalAgent'
+import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable, getAgentClusterCount } from '../useLocalAgent'
 import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
 import { isInClusterMode } from '../useBackendHealth'
 import { kubectlProxy } from '../../lib/kubectlProxy'
@@ -892,7 +892,23 @@ const OFFLINE_THRESHOLD_MS = 5 * MS_PER_MINUTE // 5 minutes before marking as of
 export function shouldMarkOffline(clusterName: string): boolean {
   const firstFailure = clusterHealthFailureStart.get(clusterName)
   if (!firstFailure) return false
-  return Date.now() - firstFailure >= OFFLINE_THRESHOLD_MS
+  
+  // If failures haven't reached the threshold yet, don't mark offline
+  if (Date.now() - firstFailure < OFFLINE_THRESHOLD_MS) return false
+  
+  // Trust the agent's health status (#12410, #12419)
+  // If the agent is connected and reports clusters > 0, the cluster is online
+  // even if individual health checks fail (e.g., direct node fetching errors)
+  if (!isAgentUnavailable()) {
+    const agentClusterCount = getAgentClusterCount()
+    if (agentClusterCount > 0) {
+      // Agent confirms at least one cluster is connected - trust it
+      return false
+    }
+  }
+  
+  // Agent is disconnected or reports 0 clusters, and we've had 5+ minutes of failures
+  return true
 }
 
 // Helper to record a failure (only sets timestamp if not already set)

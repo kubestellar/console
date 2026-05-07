@@ -455,6 +455,16 @@ export function wasAgentEverConnected(): boolean {
 }
 
 /**
+ * Get the number of clusters reported by the agent's health endpoint.
+ * Returns 0 if the agent is disconnected or has no health data.
+ * Used to trust agent connectivity over individual cluster health failures (#12410, #12419).
+ */
+export function getAgentClusterCount(): number {
+  const state = agentManager.getState()
+  return state.health?.clusters ?? 0
+}
+
+/**
  * Trigger aggressive agent detection from non-hook code.
  * Call this when the user toggles demo mode OFF to immediately
  * attempt to find the kc-agent without waiting for the next poll cycle.
