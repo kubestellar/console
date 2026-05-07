@@ -151,7 +151,7 @@ export function Nodes() {
               <div className="flex items-center justify-center gap-2 text-amber-400 text-sm bg-amber-500/10 p-3 rounded-lg border border-amber-500/20">
                 <ShieldAlert className="w-4 h-4" />
                 <span>{t('gpuReservations.inventory.hiddenGpus', '{{count}} GPUs hidden', { count: hiddenGPUCount })}</span>
-                <button onClick={clear} className="underline hover:text-amber-300 ml-2">{t('nodes.clearFilters')}</button>
+                <button onClick={clear} className="underline hover:text-amber-300 ml-2">{t('common:nodes.clearFilters')}</button>
               </div>
             )}
           </div>
