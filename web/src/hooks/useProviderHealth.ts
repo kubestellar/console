@@ -8,8 +8,6 @@ import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isInClusterMode } from './useBackendHealth'
 
-type HealthStatus = 'operational' | 'degraded' | 'down' | 'unknown'
-
 /** Health status of a single provider */
 export interface ProviderHealthInfo {
   id: string
