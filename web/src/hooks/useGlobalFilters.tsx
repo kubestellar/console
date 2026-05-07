@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react'
 // Import directly from mcp/clusters to avoid pulling in the full MCP barrel
 // (~254 KB). Only clusters.ts + shared.ts are needed here.
 import { useClusters } from './mcp/clusters'
@@ -319,13 +319,13 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(SAVED_FILTER_SETS_KEY, JSON.stringify(savedFilterSets))
   }, [savedFilterSets])
 
-  // Cluster filtering
-  const setSelectedClusters = (clusters: string[]) => {
+  // Cluster filtering — callbacks stabilized with useCallback
+  const setSelectedClusters = useCallback((clusters: string[]) => {
     setSelectedClustersState(clusters)
     emitGlobalClusterFilterChanged(clusters.length, availableClusters.length)
-  }
+  }, [availableClusters.length])
 
-  const toggleCluster = (cluster: string) => {
+  const toggleCluster = useCallback((cluster: string) => {
     setSelectedClustersState(prev => {
       // If currently "all" (empty), switch to all except this one
       if (prev.length === 0) {
@@ -352,16 +352,15 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
         return newSelection
       }
     })
-  }
+  }, [availableClusters])
 
-  const selectAllClusters = () => {
+  const selectAllClusters = useCallback(() => {
     setSelectedClustersState([])
-  }
+  }, [])
 
-  const deselectAllClusters = () => {
-    // Select none (but we need at least one, so this actually clears to show nothing)
+  const deselectAllClusters = useCallback(() => {
     setSelectedClustersState(['__none__'])
-  }
+  }, [])
 
   const isAllClustersSelected = selectedClusters.length === 0
   const isClustersFiltered = !isAllClustersSelected
@@ -369,34 +368,34 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   // Get effective selected clusters (for filtering)
   const effectiveSelectedClusters = isAllClustersSelected ? availableClusters : selectedClusters
 
-  // Cluster groups
-  const addClusterGroup = (group: Omit<ClusterGroup, 'id'>) => {
+  // Cluster groups — stabilized with useCallback
+  const addClusterGroup = useCallback((group: Omit<ClusterGroup, 'id'>) => {
     const id = `group-${Date.now()}`
     setClusterGroups(prev => [...prev, { ...group, id }])
-  }
+  }, [])
 
-  const updateClusterGroup = (id: string, updates: Partial<ClusterGroup>) => {
+  const updateClusterGroup = useCallback((id: string, updates: Partial<ClusterGroup>) => {
     setClusterGroups(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g))
-  }
+  }, [])
 
-  const deleteClusterGroup = (id: string) => {
+  const deleteClusterGroup = useCallback((id: string) => {
     setClusterGroups(prev => prev.filter(g => g.id !== id))
-  }
+  }, [])
 
-  const selectClusterGroup = (groupId: string) => {
+  const selectClusterGroup = useCallback((groupId: string) => {
     const group = clusterGroups.find(g => g.id === groupId)
     if (group) {
       setSelectedClustersState(group.clusters)
     }
-  }
+  }, [clusterGroups])
 
-  // Severity filtering
-  const setSelectedSeverities = (severities: SeverityLevel[]) => {
+  // Severity filtering — stabilized with useCallback
+  const setSelectedSeverities = useCallback((severities: SeverityLevel[]) => {
     setSelectedSeveritiesState(severities)
     emitGlobalSeverityFilterChanged(severities.length)
-  }
+  }, [])
 
-  const toggleSeverity = (severity: SeverityLevel) => {
+  const toggleSeverity = useCallback((severity: SeverityLevel) => {
     setSelectedSeveritiesState(prev => {
       // If currently "all" (empty), switch to all except this one
       if (prev.length === 0) {
@@ -423,15 +422,15 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
         return newSelection
       }
     })
-  }
+  }, [])
 
-  const selectAllSeverities = () => {
+  const selectAllSeverities = useCallback(() => {
     setSelectedSeveritiesState([])
-  }
+  }, [])
 
-  const deselectAllSeverities = () => {
+  const deselectAllSeverities = useCallback(() => {
     setSelectedSeveritiesState(['__none__' as SeverityLevel])
-  }
+  }, [])
 
   const isAllSeveritiesSelected = selectedSeverities.length === 0
   const isSeveritiesFiltered = !isAllSeveritiesSelected
@@ -440,12 +439,13 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
   const effectiveSelectedSeverities = isAllSeveritiesSelected ? SEVERITY_LEVELS : selectedSeverities
 
   // Status filtering
-  const setSelectedStatuses = (statuses: StatusLevel[]) => {
+  // Status filtering — stabilized with useCallback
+  const setSelectedStatuses = useCallback((statuses: StatusLevel[]) => {
     setSelectedStatusesState(statuses)
     emitGlobalStatusFilterChanged(statuses.length)
-  }
+  }, [])
 
-  const toggleStatus = (status: StatusLevel) => {
+  const toggleStatus = useCallback((status: StatusLevel) => {
     setSelectedStatusesState(prev => {
       // If currently "all" (empty), switch to all except this one
       if (prev.length === 0) {
@@ -472,15 +472,15 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
         return newSelection
       }
     })
-  }
+  }, [])
 
-  const selectAllStatuses = () => {
+  const selectAllStatuses = useCallback(() => {
     setSelectedStatusesState([])
-  }
+  }, [])
 
-  const deselectAllStatuses = () => {
+  const deselectAllStatuses = useCallback(() => {
     setSelectedStatusesState(['__none__' as StatusLevel])
-  }
+  }, [])
 
   const isAllStatusesSelected = selectedStatuses.length === 0
   const isStatusesFiltered = !isAllStatusesSelected
@@ -509,7 +509,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     }
   }, [availableDistributions, selectedDistributions])
 
-  const toggleDistribution = (distribution: string) => {
+  const toggleDistribution = useCallback((distribution: string) => {
     setSelectedDistributionsState(prev => {
       if (prev.length === 0) {
         // Currently "all" → switch to all except this one
@@ -523,39 +523,39 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
         return next.length === availableDistributions.length ? [] : next
       }
     })
-  }
+  }, [availableDistributions])
 
-  const selectAllDistributions = () => setSelectedDistributionsState([])
-  const deselectAllDistributions = () => setSelectedDistributionsState(['__none__'])
+  const selectAllDistributions = useCallback(() => setSelectedDistributionsState([]), [])
+  const deselectAllDistributions = useCallback(() => setSelectedDistributionsState(['__none__']), [])
 
   const isAllDistributionsSelected = selectedDistributions.length === 0
   const isDistributionsFiltered = !isAllDistributionsSelected
   const effectiveSelectedDistributions = isAllDistributionsSelected ? availableDistributions : selectedDistributions
 
   // Custom text filter
-  const setCustomFilter = (filter: string) => {
+  const setCustomFilter = useCallback((filter: string) => {
     setCustomFilterState(filter)
-  }
+  }, [])
 
-  const clearCustomFilter = () => {
+  const clearCustomFilter = useCallback(() => {
     setCustomFilterState('')
-  }
+  }, [])
 
   const hasCustomFilter = customFilter.trim().length > 0
 
   // Combined filter state
   const isFiltered = isClustersFiltered || isSeveritiesFiltered || isStatusesFiltered || isDistributionsFiltered || hasCustomFilter
 
-  const clearAllFilters = () => {
+  const clearAllFilters = useCallback(() => {
     setSelectedClustersState([])
     setSelectedSeveritiesState([])
     setSelectedStatusesState([])
     setSelectedDistributionsState([])
     setCustomFilterState('')
-  }
+  }, [])
 
-  // Saved filter sets
-  const saveCurrentFilters = (name: string, color: string) => {
+  // Saved filter sets — stabilized with useCallback
+  const saveCurrentFilters = useCallback((name: string, color: string) => {
     const id = `filterset-${Date.now()}`
     const newSet: SavedFilterSet = {
       id,
@@ -567,9 +567,9 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       distributions: [...selectedDistributions],
       customText: customFilter }
     setSavedFilterSets(prev => [...prev, newSet])
-  }
+  }, [selectedClusters, selectedSeverities, selectedStatuses, selectedDistributions, customFilter])
 
-  const applySavedFilterSet = (id: string) => {
+  const applySavedFilterSet = useCallback((id: string) => {
     const filterSet = savedFilterSets.find(fs => fs.id === id)
     if (!filterSet) return
     setSelectedClustersState(filterSet.clusters)
@@ -577,14 +577,14 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
     setSelectedStatusesState(filterSet.statuses as StatusLevel[])
     setSelectedDistributionsState(filterSet.distributions || [])
     setCustomFilterState(filterSet.customText)
-  }
+  }, [savedFilterSets])
 
-  const deleteSavedFilterSet = (id: string) => {
+  const deleteSavedFilterSet = useCallback((id: string) => {
     setSavedFilterSets(prev => prev.filter(fs => fs.id !== id))
-  }
+  }, [])
 
   // Detect which saved filter set matches the current state
-  const activeFilterSetId = (() => {
+  const activeFilterSetId = useMemo(() => {
     for (const fs of savedFilterSets) {
       const clustersMatch = JSON.stringify([...fs.clusters].sort()) === JSON.stringify([...selectedClusters].sort())
       const severitiesMatch = JSON.stringify([...fs.severities].sort()) === JSON.stringify([...selectedSeverities].sort())
@@ -594,40 +594,41 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
       if (clustersMatch && severitiesMatch && statusesMatch && distributionsMatch && textMatch) return fs.id
     }
     return null
-  })()
+  }, [savedFilterSets, selectedClusters, selectedSeverities, selectedStatuses, selectedDistributions, customFilter])
 
-  // Filter functions for cards to use
-  const filterByCluster = <T extends { cluster?: string }>(items: T[]): T[] => {
+  // Filter functions for cards to use — stabilized with useCallback to prevent
+  // context consumers from re-rendering on every provider render.
+  const filterByCluster = useCallback(<T extends { cluster?: string }>(items: T[]): T[] => {
     if (isAllClustersSelected) return items
     if (selectedClusters.includes('__none__')) return []
     return items.filter(item => {
-      // Only include items that have a cluster defined and match the selected clusters
       return item.cluster && effectiveSelectedClusters.includes(item.cluster)
     })
-  }
+  }, [isAllClustersSelected, selectedClusters, effectiveSelectedClusters])
 
-  const filterBySeverity = <T extends { severity?: string }>(items: T[]): T[] => {
+  const filterBySeverity = useCallback(<T extends { severity?: string }>(items: T[]): T[] => {
     if (isAllSeveritiesSelected) return items
     if ((selectedSeverities as string[]).includes('__none__')) return []
     return items.filter(item => {
       const severity = (item.severity || 'info').toLowerCase()
       return effectiveSelectedSeverities.includes(severity as SeverityLevel)
     })
-  }
+  }, [isAllSeveritiesSelected, selectedSeverities, effectiveSelectedSeverities])
 
-  const filterByStatus = <T extends { status?: string }>(items: T[]): T[] => {
+  const filterByStatus = useCallback(<T extends { status?: string }>(items: T[]): T[] => {
     if (isAllStatusesSelected) return items
     if ((selectedStatuses as string[]).includes('__none__')) return []
     return items.filter(item => {
       const status = (item.status || '').toLowerCase()
-      // Use exact match instead of substring to avoid false positives
       return effectiveSelectedStatuses.includes(status as StatusLevel)
     })
-  }
+  }, [isAllStatusesSelected, selectedStatuses, effectiveSelectedStatuses])
 
-  const filterByCustomText = <T extends Record<string, unknown>>(
+  const DEFAULT_SEARCH_FIELDS = useMemo(() => ['name', 'namespace', 'cluster', 'message'], [])
+
+  const filterByCustomText = useCallback(<T extends Record<string, unknown>>(
     items: T[],
-    searchFields: string[] = ['name', 'namespace', 'cluster', 'message']
+    searchFields: string[] = DEFAULT_SEARCH_FIELDS
   ): T[] => {
     if (!customFilter.trim()) return items
     const query = customFilter.toLowerCase()
@@ -637,16 +638,16 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
         return typeof value === 'string' && value.toLowerCase().includes(query)
       })
     )
-  }
+  }, [customFilter, DEFAULT_SEARCH_FIELDS])
 
-  const filterItems = <T extends { cluster?: string; severity?: string; status?: string } & Record<string, unknown>>(items: T[]): T[] => {
+  const filterItems = useCallback(<T extends { cluster?: string; severity?: string; status?: string } & Record<string, unknown>>(items: T[]): T[] => {
     let filtered = items
     filtered = filterByCluster(filtered)
     filtered = filterBySeverity(filtered)
     filtered = filterByStatus(filtered)
     filtered = filterByCustomText(filtered)
     return filtered
-  }
+  }, [filterByCluster, filterBySeverity, filterByStatus, filterByCustomText])
 
   const contextValue = useMemo(() => ({
     // Cluster filtering
