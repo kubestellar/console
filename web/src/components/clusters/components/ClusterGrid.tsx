@@ -23,9 +23,10 @@ import { isClusterUnreachable, isClusterLoading, isClusterHealthy } from '../uti
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, getProviderColor, getConsoleUrl } from '../../ui/CloudProviderIcon'
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { Tooltip } from '../../ui/Tooltip'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 // Inline style constants
 const CLUSTER_GRID_DIV_STYLE_1: CSSProperties = {
@@ -40,6 +41,7 @@ const CLUSTER_GRID_DIV_STYLE_2: CSSProperties = {
 
 /** Minimum duration (ms) the refresh spinner must stay visible for a full rotation */
 const MIN_SPIN_DURATION_MS = 1_000
+const DISABLED_CLUSTER_ACTION_CLASS = 'bg-secondary/30 text-muted-foreground/50 cursor-not-allowed opacity-60'
 
 // Guarantees spinner runs for at least 1 full rotation (1s) even if data returns faster.
 // Uses refs for condition checks to avoid stale closure issues when refreshing
@@ -160,14 +162,17 @@ const LocalClusterControls = memo(function LocalClusterControls({
   provider: string
   unreachable: boolean
 }) {
+  const { t } = useTranslation()
   const { clusterLifecycle, clusters } = useLocalClusterTools()
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
   const tool = providerToTool(provider)
+  const controlsDisabled = unreachable
+  const disabledTooltip = t('cluster.controlsDisabledOffline')
 
   if (!tool) return null
 
   // Try to find the cluster in local clusters list for accurate tool/name mapping
-  const localCluster = clusters.find(c =>
+  const localCluster = (clusters || []).find(c =>
     clusterName.includes(c.name) || c.name.includes(clusterName.replace(/^kind-/, ''))
   )
   const effectiveTool = localCluster?.tool || tool
@@ -184,47 +189,56 @@ const LocalClusterControls = memo(function LocalClusterControls({
   return (
     <div className="flex items-center gap-0.5" role="presentation">
       {isStopped ? (
-        <button
-          onClick={(e) => handleAction('start', e)}
-          disabled={!!actionInProgress}
-          className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
-            actionInProgress === 'start'
-              ? 'text-green-400 bg-green-500/20'
-              : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/20'
-          }`}
-          title="Start cluster"
-          aria-label="Start cluster"
-        >
-          <Play className={`w-3.5 h-3.5 ${actionInProgress === 'start' ? 'animate-pulse' : ''}`} aria-hidden="true" />
-        </button>
+        <ActionTooltipWrapper tooltip={controlsDisabled ? disabledTooltip : t('cluster.startCluster')}>
+          <button
+            onClick={(e) => handleAction('start', e)}
+            disabled={controlsDisabled || !!actionInProgress}
+            className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
+              controlsDisabled
+                ? DISABLED_CLUSTER_ACTION_CLASS
+                : actionInProgress === 'start'
+                  ? 'text-green-400 bg-green-500/20'
+                  : 'text-muted-foreground hover:text-green-400 hover:bg-green-500/20'
+            }`}
+            aria-label={controlsDisabled ? disabledTooltip : t('cluster.startCluster')}
+          >
+            <Play className={`w-3.5 h-3.5 ${actionInProgress === 'start' ? 'animate-pulse' : ''}`} aria-hidden="true" />
+          </button>
+        </ActionTooltipWrapper>
       ) : (
-        <button
-          onClick={(e) => handleAction('stop', e)}
-          disabled={!!actionInProgress}
-          className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
-            actionInProgress === 'stop'
-              ? 'text-red-400 bg-red-500/20'
-              : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/20'
-          }`}
-          title="Stop cluster"
-          aria-label="Stop cluster"
-        >
-          <Square className={`w-3 h-3 ${actionInProgress === 'stop' ? 'animate-pulse' : ''}`} aria-hidden="true" />
-        </button>
+        <ActionTooltipWrapper tooltip={controlsDisabled ? disabledTooltip : t('cluster.stopCluster')}>
+          <button
+            onClick={(e) => handleAction('stop', e)}
+            disabled={controlsDisabled || !!actionInProgress}
+            className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
+              controlsDisabled
+                ? DISABLED_CLUSTER_ACTION_CLASS
+                : actionInProgress === 'stop'
+                  ? 'text-red-400 bg-red-500/20'
+                  : 'text-muted-foreground hover:text-red-400 hover:bg-red-500/20'
+            }`}
+            aria-label={controlsDisabled ? disabledTooltip : t('cluster.stopCluster')}
+          >
+            <Square className={`w-3 h-3 ${actionInProgress === 'stop' ? 'animate-pulse' : ''}`} aria-hidden="true" />
+          </button>
+        </ActionTooltipWrapper>
       )}
-      <button
-        onClick={(e) => handleAction('restart', e)}
-        disabled={!!actionInProgress}
-        className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
-          actionInProgress === 'restart'
-            ? 'text-blue-400 bg-blue-500/20'
-            : 'text-muted-foreground hover:text-blue-400 hover:bg-blue-500/20'
-        }`}
-        title="Restart cluster"
-        aria-label="Restart cluster"
-      >
-        <RotateCcw className={`w-3.5 h-3.5 ${actionInProgress === 'restart' ? 'animate-spin' : ''}`} aria-hidden="true" />
-      </button>
+      <ActionTooltipWrapper tooltip={controlsDisabled ? disabledTooltip : t('cluster.restartCluster')}>
+        <button
+          onClick={(e) => handleAction('restart', e)}
+          disabled={controlsDisabled || !!actionInProgress}
+          className={`p-2 min-h-11 min-w-11 flex items-center justify-center rounded transition-colors ${
+            controlsDisabled
+              ? DISABLED_CLUSTER_ACTION_CLASS
+              : actionInProgress === 'restart'
+                ? 'text-blue-400 bg-blue-500/20'
+                : 'text-muted-foreground hover:text-blue-400 hover:bg-blue-500/20'
+          }`}
+          aria-label={controlsDisabled ? disabledTooltip : t('cluster.restartCluster')}
+        >
+          <RotateCcw className={`w-3.5 h-3.5 ${actionInProgress === 'restart' ? 'animate-spin' : ''}`} aria-hidden="true" />
+        </button>
+      </ActionTooltipWrapper>
     </div>
   )
 })
@@ -292,6 +306,26 @@ const RemoveClusterButton = memo(function RemoveClusterButton({
     </button>
   )
 })
+
+function ActionTooltipWrapper({
+  tooltip,
+  children,
+}: {
+  tooltip: string
+  children: ReactNode
+}) {
+  return (
+    <span
+      className="inline-flex"
+      onClick={(event) => event.stopPropagation()}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <Tooltip content={tooltip}>
+        {children}
+      </Tooltip>
+    </span>
+  )
+}
 
 // Keyboard handler for clickable card divs: activates on Enter or Space
 function handleCardKeyDown(callback: () => void) {
@@ -385,21 +419,32 @@ const FullClusterCard = memo(function FullClusterCard({
               ) : (
                 <StatusIndicator status="healthy" size="lg" showLabel={false} />
               )}
-              {onRefreshCluster && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); onRefreshCluster() }}
-                  disabled={spinning}
-                  className={`flex items-center p-1 rounded transition-colors ${
-                    spinning ? 'bg-blue-500/20 text-blue-400' :
-                    unreachable ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30' :
-                    'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
-                  }`}
-                  title={spinning ? t('common.refreshing') : unreachable ? t('common.retryConnection') : t('common.refreshClusterData')}
-                  aria-label={spinning ? t('common.refreshing') : unreachable ? t('common.retryConnection') : t('common.refreshClusterData')}
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} aria-hidden="true" />
-                </button>
-              )}
+              {onRefreshCluster && (() => {
+                const refreshTooltip = spinning
+                  ? t('common.refreshing')
+                  : unreachable
+                    ? t('cluster.controlsDisabledOffline')
+                    : t('common.refreshClusterData')
+
+                return (
+                  <ActionTooltipWrapper tooltip={refreshTooltip}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onRefreshCluster() }}
+                      disabled={spinning || unreachable}
+                      className={`flex items-center p-1 rounded transition-colors ${
+                        spinning
+                          ? 'bg-blue-500/20 text-blue-400'
+                          : unreachable
+                            ? DISABLED_CLUSTER_ACTION_CLASS
+                            : 'bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground'
+                      }`}
+                      aria-label={refreshTooltip}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} aria-hidden="true" />
+                    </button>
+                  </ActionTooltipWrapper>
+                )
+              })()}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
@@ -719,21 +764,32 @@ const ListClusterCard = memo(function ListClusterCard({
                 unreachable={unreachable}
               />
             )}
-            {onRefreshCluster && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onRefreshCluster() }}
-                disabled={spinning}
-                className={`p-1.5 rounded transition-colors ${
-                  spinning ? 'text-blue-400' :
-                  unreachable ? 'text-yellow-400 hover:bg-yellow-500/20' :
-                  'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                }`}
-                title={spinning ? t('common.refreshing') : t('common.refresh')}
-                aria-label={spinning ? t('common.refreshing') : t('common.refresh')}
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} aria-hidden="true" />
-              </button>
-            )}
+            {onRefreshCluster && (() => {
+              const refreshTooltip = spinning
+                ? t('common.refreshing')
+                : unreachable
+                  ? t('cluster.controlsDisabledOffline')
+                  : t('common.refresh')
+
+              return (
+                <ActionTooltipWrapper tooltip={refreshTooltip}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRefreshCluster() }}
+                    disabled={spinning || unreachable}
+                    className={`p-1.5 rounded transition-colors ${
+                      spinning
+                        ? 'text-blue-400'
+                        : unreachable
+                          ? DISABLED_CLUSTER_ACTION_CLASS
+                          : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                    }`}
+                    aria-label={refreshTooltip}
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${spinning ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  </button>
+                </ActionTooltipWrapper>
+              )
+            })()}
             {/* Remove cluster button — only for unreachable clusters (#5901) */}
             {isConnected && unreachable && onRemoveCluster && (cluster.source === 'kubeconfig' || !cluster.source) && (
               <RemoveClusterButton onRemove={onRemoveCluster} />
@@ -906,17 +962,19 @@ export const ClusterGrid = memo(function ClusterGrid({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
+  const safeClusters = clusters || []
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id || !onReorder) return
-    const oldIndex = clusters.findIndex(c => c.name === active.id)
-    const newIndex = clusters.findIndex(c => c.name === over.id)
+    const oldIndex = safeClusters.findIndex(c => c.name === active.id)
+    const newIndex = safeClusters.findIndex(c => c.name === over.id)
     if (oldIndex === -1 || newIndex === -1) return
-    const reordered = arrayMove(clusters, oldIndex, newIndex)
-    onReorder(reordered.map(c => c.name))
+    const reordered = arrayMove(safeClusters, oldIndex, newIndex)
+    onReorder((reordered || []).map(c => c.name))
   }
 
-  if (clusters.length === 0) {
+  if (safeClusters.length === 0) {
     return (
       <div className="text-center py-12 mb-6">
         <p className="text-muted-foreground">{t('cluster.noClustersMatchFilter')}</p>
@@ -932,13 +990,13 @@ export const ClusterGrid = memo(function ClusterGrid({
     wide: 'grid grid-cols-1 lg:grid-cols-2 gap-4' }
 
   const sortingStrategy = layoutMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy
-  const clusterIds = clusters.map(c => c.name)
+  const clusterIds = (safeClusters || []).map(c => c.name)
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <SortableContext items={clusterIds} strategy={sortingStrategy}>
         <div className={`${gridClasses[layoutMode]} mb-6 pt-1`}>
-          {clusters.map((cluster) => {
+          {(safeClusters || []).map((cluster) => {
             const clusterKey = cluster.name.split('/')[0]
             const gpuInfo = gpuByCluster[clusterKey] || gpuByCluster[cluster.name]
             const clusterIsAdmin = isClusterAdmin(cluster.name)
