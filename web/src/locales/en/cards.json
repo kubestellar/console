@@ -1803,7 +1803,9 @@
     "medium": "Medium",
     "low": "Low",
     "checkNode": "Check Node",
-    "dismissPrediction": "Dismiss Prediction"
+    "dismissPrediction": "Dismiss Prediction",
+    "aiRenderErrorTitle": "Failed to load AI response",
+    "aiRenderErrorDescription": "The AI output could not be rendered safely. Try again after refreshing the analysis."
   },
   "paretoFrontier": {
     "allConfigurations": "All configurations",

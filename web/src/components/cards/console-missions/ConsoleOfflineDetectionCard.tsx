@@ -22,6 +22,7 @@ import type { PredictedRisk } from '../../../types/predictions'
 import { CardControlsRow, CardSearchInput, CardPaginationFooter } from '../../../lib/cards/CardComponents'
 import { useTranslation } from 'react-i18next'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants'
+import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { POLL_INTERVAL_MS } from '../../../lib/constants/network'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { agentFetch } from '../../../hooks/mcp/shared'
@@ -907,29 +908,35 @@ ${aiEnabled ? '\nClick to run AI analysis now' : ''}`}
 
       {/* Items - List or Grouped View */}
       <div className="flex-1 space-y-1.5 overflow-y-auto mb-2">
-        {viewMode === 'grouped' ? (
-          <RootCauseAnalyzer
-            rootCauseGroups={rootCauseGroups}
-            expandedGroups={expandedGroups}
-            toggleGroupExpand={toggleGroupExpand}
-            search={search}
-            localClusterFilter={localClusterFilter}
-            drillToNode={drillToNode}
-            drillToCluster={drillToCluster}
-            startMission={startMission as (config: { title: string; description: string; type: string; initialPrompt: string; context: Record<string, unknown> }) => void}
-          />
-        ) : (
-          <UnifiedItemsList
-            paginatedItems={paginatedItems}
-            sortedItemsLength={sortedItems.length}
-            search={search}
-            localClusterFilter={localClusterFilter}
-            drillToNode={drillToNode}
-            drillToCluster={drillToCluster}
-            getFeedback={getFeedback}
-            submitFeedback={submitFeedback as (id: string, feedback: string, type: string, provider?: string) => void}
-          />
-        )}
+        <DynamicCardErrorBoundary
+          cardId="ConsoleOfflineDetectionAI"
+          fallbackTitle={t('cards:consoleOfflineDetection.aiRenderErrorTitle')}
+          fallbackMessage={t('cards:consoleOfflineDetection.aiRenderErrorDescription')}
+        >
+          {viewMode === 'grouped' ? (
+            <RootCauseAnalyzer
+              rootCauseGroups={rootCauseGroups}
+              expandedGroups={expandedGroups}
+              toggleGroupExpand={toggleGroupExpand}
+              search={search}
+              localClusterFilter={localClusterFilter}
+              drillToNode={drillToNode}
+              drillToCluster={drillToCluster}
+              startMission={startMission as (config: { title: string; description: string; type: string; initialPrompt: string; context: Record<string, unknown> }) => void}
+            />
+          ) : (
+            <UnifiedItemsList
+              paginatedItems={paginatedItems}
+              sortedItemsLength={sortedItems.length}
+              search={search}
+              localClusterFilter={localClusterFilter}
+              drillToNode={drillToNode}
+              drillToCluster={drillToCluster}
+              getFeedback={getFeedback}
+              submitFeedback={submitFeedback as (id: string, feedback: string, type: string, provider?: string) => void}
+            />
+          )}
+        </DynamicCardErrorBoundary>
       </div>
 
       {/* Pagination */}

@@ -10,6 +10,8 @@ const MAX_RETRY_ATTEMPTS = 3
 interface Props {
   cardId: string
   children: ReactNode
+  fallbackTitle?: string
+  fallbackMessage?: string
   onError?: (error: Error, errorInfo: ErrorInfo) => void
 }
 
@@ -80,9 +82,11 @@ export class DynamicCardErrorBoundary extends Component<Props, State> {
       return (
         <div className="h-full flex flex-col items-center justify-center p-4 text-center">
           <AlertTriangle className="w-8 h-8 text-red-400 mb-2" />
-          <p className="text-sm font-medium text-red-400 mb-1">Card Render Error</p>
+          <p className="text-sm font-medium text-red-400 mb-1">
+            {this.props.fallbackTitle || 'Card Render Error'}
+          </p>
           <p className="text-xs text-muted-foreground mb-3 max-w-xs">
-            {this.state.error?.message || 'An unexpected error occurred while rendering this card.'}
+            {this.props.fallbackMessage || this.state.error?.message || 'An unexpected error occurred while rendering this card.'}
           </p>
           {retriesExhausted ? (
             <p className="text-xs text-muted-foreground">Reload the page to try again.</p>

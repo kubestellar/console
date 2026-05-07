@@ -17,6 +17,8 @@ vi.mock('../../lib/utils/wsAuth', () => ({
 const mod = await import('../useAIPredictions')
 const {
   aiPredictionToRisk,
+  coercePredictionText,
+  sanitizeAIPrediction,
   DEMO_AI_PREDICTIONS,
   DEGRADED_RECONNECT_INTERVAL_MS,
   POLL_INTERVAL_MS,
@@ -71,6 +73,52 @@ describe('aiPredictionToRisk', () => {
     expect(risk.id).toBe('pred-2')
     expect(risk.namespace).toBeUndefined()
     expect(risk.trend).toBeUndefined()
+  })
+
+  it('sanitizes malformed AI text payloads before converting to PredictedRisk', () => {
+    const prediction = {
+      id: 'pred-3',
+      category: 'anomaly',
+      severity: 'warning',
+      name: 'api-pod',
+      cluster: 'cluster-a',
+      reason: { malformed: true },
+      reasonDetailed: { nested: { value: 'bad-payload' } },
+      confidence: 75,
+      generatedAt: '2026-01-01T00:00:00Z',
+      provider: 'claude',
+    }
+    const risk = aiPredictionToRisk(prediction as never)
+    expect(risk.reason).toBe('{"malformed":true}')
+    expect(risk.reasonDetailed).toBe('{"nested":{"value":"bad-payload"}}')
+  })
+})
+
+describe('sanitizeAIPrediction helpers', () => {
+  it('falls back when a circular AI payload cannot be stringified', () => {
+    const circular: Record<string, unknown> = {}
+    circular.self = circular
+
+    expect(coercePredictionText(circular, 'AI response unavailable')).toBe('AI response unavailable')
+  })
+
+  it('sanitizes malformed name and reasonDetailed fields', () => {
+    const prediction = sanitizeAIPrediction({
+      id: 'pred-4',
+      category: 'anomaly',
+      severity: 'warning',
+      name: { raw: 'pod-1' },
+      cluster: null,
+      reason: 'Summary',
+      reasonDetailed: ['detail-a', 'detail-b'],
+      confidence: 60,
+      generatedAt: '2026-01-01T00:00:00Z',
+      provider: 'claude',
+    } as never)
+
+    expect(prediction.name).toBe('{"raw":"pod-1"}')
+    expect(prediction.cluster).toBe('unknown')
+    expect(prediction.reasonDetailed).toBe('["detail-a","detail-b"]')
   })
 })
 

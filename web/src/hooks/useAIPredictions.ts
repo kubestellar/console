@@ -15,6 +15,9 @@ import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 
 const DEGRADED_RECONNECT_INTERVAL_MS = 60_000
+const FALLBACK_AI_RESOURCE_NAME = 'Unknown resource'
+const FALLBACK_AI_CLUSTER_NAME = 'unknown'
+const FALLBACK_AI_REASON = 'AI response unavailable'
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds as fallback
@@ -123,24 +126,60 @@ function reconnectWebSocket(): void {
   connectWebSocket()
 }
 
+function coercePredictionText(value: unknown, fallback: string): string {
+  if (typeof value === 'string') {
+    return value
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value)
+  }
+  if (value == null) {
+    return fallback
+  }
+  try {
+    const serialized = JSON.stringify(value)
+    return serialized || fallback
+  } catch {
+    return fallback
+  }
+}
+
+function sanitizeAIPrediction(prediction: AIPrediction): AIPrediction {
+  const rawPrediction = prediction as unknown as Record<string, unknown>
+  const safeReason = coercePredictionText(rawPrediction.reason, FALLBACK_AI_REASON)
+
+  return {
+    ...prediction,
+    name: coercePredictionText(rawPrediction.name, FALLBACK_AI_RESOURCE_NAME),
+    cluster: coercePredictionText(rawPrediction.cluster, FALLBACK_AI_CLUSTER_NAME),
+    reason: safeReason,
+    reasonDetailed: coercePredictionText(rawPrediction.reasonDetailed, safeReason),
+  }
+}
+
+function sanitizeAIPredictions(predictions: AIPrediction[]): AIPrediction[] {
+  return predictions.map(sanitizeAIPrediction)
+}
+
 /**
  * Convert AI prediction from backend to PredictedRisk format
  */
 function aiPredictionToRisk(prediction: AIPrediction): PredictedRisk {
+  const sanitizedPrediction = sanitizeAIPrediction(prediction)
   return {
-    id: prediction.id,
-    type: prediction.category,
-    severity: prediction.severity,
-    name: prediction.name,
-    cluster: prediction.cluster,
-    namespace: prediction.namespace,
-    reason: prediction.reason,
-    reasonDetailed: prediction.reasonDetailed,
+    id: sanitizedPrediction.id,
+    type: sanitizedPrediction.category,
+    severity: sanitizedPrediction.severity,
+    name: sanitizedPrediction.name,
+    cluster: sanitizedPrediction.cluster,
+    namespace: sanitizedPrediction.namespace,
+    reason: sanitizedPrediction.reason,
+    reasonDetailed: sanitizedPrediction.reasonDetailed,
     source: 'ai',
-    confidence: prediction.confidence,
-    generatedAt: new Date(prediction.generatedAt),
-    provider: prediction.provider,
-    trend: prediction.trend
+    confidence: sanitizedPrediction.confidence,
+    generatedAt: new Date(sanitizedPrediction.generatedAt),
+    provider: sanitizedPrediction.provider,
+    trend: sanitizedPrediction.trend
   }
 }
 
@@ -183,6 +222,7 @@ async function fetchAIPredictions(): Promise<void> {
     if (response.ok) {
       reportAgentDataSuccess()
       const data: AIPredictionsResponse = await response.json()
+      const sanitizedPredictions = sanitizeAIPredictions(Array.isArray(data.predictions) ? data.predictions : [])
 
       // Successful HTTP fetch means backend is reachable — reset WS reconnect
       // so it retries with fast backoff if currently in degraded mode.
@@ -193,10 +233,10 @@ async function fetchAIPredictions(): Promise<void> {
 
       // Filter by confidence threshold
       const settings = getPredictionSettings()
-      aiPredictions = data.predictions.filter(p => p.confidence >= settings.minConfidence)
+      aiPredictions = sanitizedPredictions.filter(p => p.confidence >= settings.minConfidence)
       lastAnalyzed = new Date(data.lastAnalyzed)
-      providers = data.providers
-      isStale = data.stale
+      providers = Array.isArray(data.providers) ? data.providers.filter((provider): provider is string => typeof provider === 'string') : []
+      isStale = Boolean(data.stale)
       notifySubscribers()
     } else if (response.status === 404) {
       // Endpoint not implemented yet, use empty predictions
@@ -249,11 +289,17 @@ function connectWebSocket(): void {
         const message = JSON.parse(event.data)
         if (message.type === 'ai_predictions_updated') {
           const settings = getPredictionSettings()
-          aiPredictions = message.payload.predictions.filter(
+          const payload = (message.payload ?? {}) as {
+            predictions?: AIPrediction[]
+            timestamp?: string
+            providers?: string[]
+          }
+          const sanitizedPredictions = sanitizeAIPredictions(Array.isArray(payload.predictions) ? payload.predictions : [])
+          aiPredictions = sanitizedPredictions.filter(
             (p: AIPrediction) => p.confidence >= settings.minConfidence
           )
-          lastAnalyzed = new Date(message.payload.timestamp)
-          providers = message.payload.providers || []
+          lastAnalyzed = new Date(payload.timestamp || new Date().toISOString())
+          providers = Array.isArray(payload.providers) ? payload.providers.filter((provider): provider is string => typeof provider === 'string') : []
           isStale = false
           notifySubscribers()
         } else if (message.type === 'clusters_updated') {
@@ -543,6 +589,9 @@ export function syncSettingsToBackend(): void {
 
 export const __testables = {
   aiPredictionToRisk,
+  coercePredictionText,
+  sanitizeAIPrediction,
+  sanitizeAIPredictions,
   DEMO_AI_PREDICTIONS,
   DEGRADED_RECONNECT_INTERVAL_MS,
   POLL_INTERVAL_MS,

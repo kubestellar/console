@@ -54,6 +54,20 @@ describe('DynamicCardErrorBoundary', () => {
     expect(screen.getByText('TSX execution crash')).toBeTruthy()
   })
 
+  it('renders custom fallback copy when provided', () => {
+    render(
+      <DynamicCardErrorBoundary
+        cardId="ai-card"
+        fallbackTitle="Failed to load AI response"
+        fallbackMessage="The AI output could not be rendered safely."
+      >
+        <CrashingComponent />
+      </DynamicCardErrorBoundary>,
+    )
+    expect(screen.getByText('Failed to load AI response')).toBeTruthy()
+    expect(screen.getByText('The AI output could not be rendered safely.')).toBeTruthy()
+  })
+
   it('does not crash the parent when a child throws', () => {
     const { container } = render(
       <div data-testid="parent">
