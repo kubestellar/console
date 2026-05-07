@@ -87,6 +87,9 @@ export function MissionBrowserTopBar({
               ? 'bg-purple-500/20 text-purple-400'
               : 'text-muted-foreground hover:text-foreground',
           )}
+          title="Grid view"
+          aria-label="Grid view"
+          aria-pressed={viewMode === 'grid'}
         >
           <Grid3X3 className="w-4 h-4" />
         </button>
@@ -98,6 +101,9 @@ export function MissionBrowserTopBar({
               ? 'bg-purple-500/20 text-purple-400'
               : 'text-muted-foreground hover:text-foreground',
           )}
+          title="List view"
+          aria-label="List view"
+          aria-pressed={viewMode === 'list'}
         >
           <List className="w-4 h-4" />
         </button>

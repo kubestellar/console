@@ -190,12 +190,13 @@ export function MissionBrowserRecommendedTab({
               {filteredRecommendations.length > 0 && (
                 <VirtualizedMissionGrid
                   items={filteredRecommendations}
-                  viewMode="grid"
+                  viewMode={viewMode}
                   maxColumns={3}
                   className="flex-1 h-[calc(90vh-360px)]"
                   renderItem={(match) => (
                     <RecommendationCard
                       match={match}
+                      compact={viewMode === 'list'}
                       onSelect={() => onSelectMission(match.mission)}
                       onImport={() => onImportMission(match.mission)}
                       onCopyLink={(e) => onCopyLink(match.mission, e)}
@@ -207,12 +208,13 @@ export function MissionBrowserRecommendedTab({
           ) : (
             <VirtualizedMissionGrid
               items={filteredRecommendations}
-              viewMode="grid"
+              viewMode={viewMode}
               maxColumns={3}
               className="flex-1 h-[calc(90vh-360px)]"
               renderItem={(match) => (
                 <RecommendationCard
                   match={match}
+                  compact={viewMode === 'list'}
                   onSelect={() => onSelectMission(match.mission)}
                   onImport={() => onImportMission(match.mission)}
                 />

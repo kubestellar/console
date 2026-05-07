@@ -5,21 +5,100 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import type { MissionMatch } from '../../../lib/missions/types'
 
+interface RecommendationCardProps {
+  match: MissionMatch
+  onSelect: () => void
+  onImport: () => void
+  onCopyLink?: (e: React.MouseEvent) => void
+  compact?: boolean
+}
+
 export function RecommendationCard({
   match,
   onSelect,
   onImport,
   onCopyLink,
-}: {
-  match: MissionMatch
-  onSelect: () => void
-  onImport: () => void
-  onCopyLink?: (e: React.MouseEvent) => void
-}) {
+  compact = false,
+}: RecommendationCardProps) {
   const { mission, score, matchPercent, matchReasons } = match
   const isClusterMatch = score > 1
   const [linkCopied, setLinkCopied] = useState(false)
   const linkCopyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scoreBadgeClassName = cn(
+    'flex items-center gap-1 px-1.5 py-0.5 text-2xs rounded-full shrink-0 font-medium tabular-nums',
+    matchPercent >= 80
+      ? 'bg-green-500/15 text-green-400 border border-green-500/20'
+      : matchPercent >= 50
+        ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/20'
+        : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+  )
+
+  if (compact) {
+    return (
+      <div
+        className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border bg-card hover:border-purple-500/30 transition-colors cursor-pointer group"
+        onClick={onSelect}
+      >
+        <span className={scoreBadgeClassName} title={`Match score: ${score}`}>
+          {isClusterMatch && <CheckCircle className="w-3 h-3" />}
+          {matchPercent}%
+        </span>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-medium text-foreground truncate group-hover:text-purple-400 transition-colors">
+            {mission.title}
+          </h4>
+          <div className="flex items-center gap-1 flex-wrap mt-1">
+            <span className="px-1.5 py-0.5 text-2xs rounded bg-secondary text-muted-foreground">
+              {mission.type}
+            </span>
+            {matchReasons.length > 0 && (
+              <span className="text-2xs text-muted-foreground truncate">
+                {matchReasons[0]}
+              </span>
+            )}
+          </div>
+        </div>
+        {mission.metadata?.maturity && (
+          <span className={cn(
+            'px-1.5 py-0.5 text-2xs rounded border font-medium shrink-0',
+            mission.metadata.maturity === 'graduated'
+              ? 'bg-green-500/10 text-green-400 border-green-500/20'
+              : mission.metadata.maturity === 'incubating'
+                ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+          )}>
+            {mission.metadata.maturity}
+          </span>
+        )}
+        <div className="flex items-center gap-1 shrink-0">
+          {onCopyLink && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onCopyLink(e)
+                setLinkCopied(true)
+                if (linkCopyTimerRef.current) clearTimeout(linkCopyTimerRef.current)
+                linkCopyTimerRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
+              }}
+              className="p-1 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
+              title="Copy shareable link"
+            >
+              {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onImport()
+            }}
+            className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+          >
+            Import
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -47,14 +126,7 @@ export function RecommendationCard({
             </button>
           )}
         </div>
-        <span className={cn(
-          'flex items-center gap-1 px-1.5 py-0.5 text-2xs rounded-full shrink-0 font-medium tabular-nums',
-          matchPercent >= 80
-            ? 'bg-green-500/15 text-green-400 border border-green-500/20'
-            : matchPercent >= 50
-              ? 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/20'
-              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-        )} title={`Match score: ${score}`}>
+        <span className={scoreBadgeClassName} title={`Match score: ${score}`}>
           {isClusterMatch && <CheckCircle className="w-3 h-3" />}
           {matchPercent}%
         </span>

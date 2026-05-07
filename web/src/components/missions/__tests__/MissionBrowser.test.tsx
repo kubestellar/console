@@ -101,8 +101,10 @@ vi.mock('../../ui/CollapsibleSection', () => ({
 vi.mock('../browser', () => ({
   TreeNodeItem: () => null,
   DirectoryListing: () => null,
-  RecommendationCard: ({ match, onSelect }: { match: any; onSelect: () => void }) => (
-    <button type="button" onClick={onSelect}>{match.mission.title}</button>
+  RecommendationCard: ({ match, onSelect, compact }: { match: any; onSelect: () => void; compact?: boolean }) => (
+    <button type="button" onClick={onSelect} data-testid="recommendation-card" data-compact={compact ? 'true' : 'false'}>
+      {match.mission.title}
+    </button>
   ),
   EmptyState: ({ message }: { message: string }) => <div data-testid="empty-state">{message}</div>,
   MissionFetchErrorBanner: ({ message }: { message: string }) => <div data-testid="fetch-error">{message}</div>,
@@ -135,8 +137,10 @@ vi.mock('../browser', () => ({
     { id: 'installers', label: 'Installers', icon: '📦' },
     { id: 'fixes', label: 'Fixes', icon: '🔧' },
   ],
-  VirtualizedMissionGrid: ({ items, renderItem }: { items: any[]; renderItem: (item: any) => React.ReactNode }) => (
-    <div>{items.map((item, index) => <div key={item.mission?.title ?? index}>{renderItem(item)}</div>)}</div>
+  VirtualizedMissionGrid: ({ items, renderItem, viewMode }: { items: any[]; renderItem: (item: any) => React.ReactNode; viewMode?: 'grid' | 'list' }) => (
+    <div data-testid="virtualized-mission-grid" data-view-mode={viewMode ?? 'grid'}>
+      {items.map((item, index) => <div key={item.mission?.title ?? index}>{renderItem(item)}</div>)}
+    </div>
   ),
   getCachedRecommendations: vi.fn(() => null),
   setCachedRecommendations: vi.fn(),
@@ -197,6 +201,18 @@ describe('MissionBrowser', () => {
     browserMockState.fetchTreeChildren.mockImplementation(async () => [])
   })
 
+  const addRecommendedMission = () => {
+    browserMockState.missionCache.fixes = [
+      {
+        title: 'Recommended fix',
+        description: 'Recommended description',
+        type: 'repair',
+        tags: ['networking'],
+        metadata: { maturity: 'graduated', projectVersion: '1.0.0' },
+      },
+    ]
+  }
+
   it('renders nothing when isOpen is false', () => {
     const { container } = render(
       <MissionBrowser isOpen={false} onClose={vi.fn()} onImport={vi.fn()} />,
@@ -253,6 +269,21 @@ describe('MissionBrowser', () => {
     // The empty state should be rendered for the file browser area
     const emptyStates = screen.getAllByTestId('empty-state')
     expect(emptyStates.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('switches recommended missions to list layout when list view is selected', async () => {
+    addRecommendedMission()
+    render(<MissionBrowser {...defaultProps} />)
+
+    expect(screen.getByTestId('virtualized-mission-grid')).toHaveAttribute('data-view-mode', 'grid')
+    expect(screen.getByTestId('recommendation-card')).toHaveAttribute('data-compact', 'false')
+
+    await userEvent.click(screen.getByRole('button', { name: 'List view' }))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('virtualized-mission-grid')).toHaveAttribute('data-view-mode', 'list')
+      expect(screen.getByTestId('recommendation-card')).toHaveAttribute('data-compact', 'true')
+    })
   })
 
   it('handles undefined/empty initialMission gracefully', () => {
