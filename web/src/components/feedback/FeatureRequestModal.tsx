@@ -278,6 +278,8 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
             setShowLoginPrompt(false)
             setShowSetupDialog(true)
           }}
+          description={description}
+          targetRepo={targetRepo}
         />
       )}
 

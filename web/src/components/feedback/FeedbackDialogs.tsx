@@ -71,14 +71,30 @@ interface LoginPromptDialogProps {
   onClose: () => void
   onLoginRedirect: () => void
   onSetupOAuth: () => void
+  description?: string
+  targetRepo?: 'console' | 'docs'
 }
 
 export function LoginPromptDialog({
   onClose,
   onLoginRedirect,
   onSetupOAuth,
+  description = '',
+  targetRepo = 'console',
 }: LoginPromptDialogProps) {
   const { t } = useTranslation()
+  
+  // Build GitHub issue URL with draft content as query parameters
+  const repoName = targetRepo === 'docs' ? 'docs' : 'console'
+  const trimmed = description.trim()
+  const lines = trimmed ? trimmed.split('\n') : []
+  const title = lines[0]?.trim().substring(0, 256) || ''
+  const body = lines.length > 1 ? lines.slice(1).join('\n').trim() : ''
+  const params = new URLSearchParams()
+  if (title) params.set('title', title)
+  if (body) params.set('body', body)
+  const query = params.toString()
+  const githubIssueUrl = `https://github.com/kubestellar/${repoName}/issues/new${query ? `?${query}` : ''}`
   return (
     <>
       <div
@@ -179,7 +195,7 @@ export function LoginPromptDialog({
                   Cancel
                 </Button>
                 <a
-                  href="https://github.com/kubestellar/console/issues/new"
+                  href={githubIssueUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors flex items-center justify-center gap-2"
