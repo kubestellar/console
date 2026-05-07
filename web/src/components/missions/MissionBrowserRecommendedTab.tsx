@@ -19,6 +19,7 @@ import {
   MissionFetchErrorBanner,
   VirtualizedMissionGrid,
   DirectoryListing,
+  buildDirectoryEntryNode,
   resetMissionCache,
 } from './browser'
 import type { TreeNode, ViewMode } from './browser'
@@ -47,6 +48,7 @@ interface MissionBrowserRecommendedTabProps {
   loading: boolean
   filteredEntries: BrowseEntry[]
   selectedPath: string | null
+  selectedNode: TreeNode | null
   viewMode: ViewMode
   /** Called when the user imports a file from the directory listing (parent handles API fetch) */
   onImportDirectoryEntry: (entry: BrowseEntry) => void
@@ -68,6 +70,7 @@ export function MissionBrowserRecommendedTab({
   loading,
   filteredEntries,
   selectedPath,
+  selectedNode,
   viewMode,
   onImportDirectoryEntry,
   onToggleNode,
@@ -251,15 +254,7 @@ export function MissionBrowserRecommendedTab({
           entries={filteredEntries}
           viewMode={viewMode}
           onSelect={(entry) => {
-            const entrySource = selectedPath?.startsWith('github/') ? ('github' as const) : ('community' as const)
-            const node: TreeNode = {
-              id: entry.path,
-              name: entry.name,
-              path: entry.path,
-              type: entry.type,
-              source: entrySource,
-              loaded: entry.type === 'file',
-            }
+            const node = buildDirectoryEntryNode(entry, selectedNode, selectedPath)
             if (entry.type === 'file') {
               onSelectNode(node)
             } else {

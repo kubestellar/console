@@ -1050,6 +1050,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // ============================================================================
 
   const filteredEntries = filterDirectoryEntries(directoryEntries, searchQuery)
+  const selectedTreeNode = useMemo(
+    () => (selectedPath ? findTreeNodeById(treeNodes, selectedPath) : null),
+    [selectedPath, treeNodes]
+  )
 
   // ============================================================================
   // Filtered recommendations
@@ -1395,6 +1399,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
                 loading={loading}
                 filteredEntries={filteredEntries}
                 selectedPath={selectedPath}
+                selectedNode={selectedTreeNode}
                 viewMode={viewMode}
                 onImportDirectoryEntry={handleImportDirectoryEntry}
                 onToggleNode={toggleNode}

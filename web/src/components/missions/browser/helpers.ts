@@ -1,4 +1,4 @@
-import type { MissionExport } from '../../../lib/missions/types'
+import type { MissionExport, BrowseEntry } from '../../../lib/missions/types'
 import { getMissionRoute } from '../../../config/routes'
 import type { TreeNode } from './types'
 
@@ -35,6 +35,24 @@ const SHARE_UTM_PARAMS = 'utm_source=mission-explorer&utm_medium=share-link&utm_
 /** Build a full shareable URL for a mission (includes UTM campaign params) */
 export function getMissionShareUrl(mission: MissionExport): string {
   return `${window.location.origin}${getMissionRoute(getMissionSlug(mission))}?${SHARE_UTM_PARAMS}`
+}
+
+export function buildDirectoryEntryNode(entry: BrowseEntry, selectedNode: TreeNode | null, selectedPath: string | null): TreeNode {
+  const source = selectedNode?.source
+    ?? (selectedPath?.startsWith('github/') || selectedPath?.startsWith('kubara/')
+      ? 'github'
+      : 'community')
+
+  return {
+    id: selectedNode ? `${selectedNode.id}/${entry.name}` : entry.path,
+    name: entry.name,
+    path: entry.path,
+    type: entry.type,
+    source,
+    repoOwner: source === 'github' ? selectedNode?.repoOwner : undefined,
+    repoName: source === 'github' ? selectedNode?.repoName : undefined,
+    loaded: entry.type === 'file',
+  }
 }
 
 export function updateNodeInTree(
