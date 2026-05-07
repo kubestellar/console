@@ -22,7 +22,8 @@
     "refreshFailed": "Failed to refresh",
     "noPermission": "You don't have permission for this action",
     "sessionExpired": "Your session has expired. Please log in again.",
-    "clusterUnreachable": "Cluster is offline"
+    "clusterUnreachable": "Cluster is offline",
+    "storageRestoreFailed": "Failed to restore saved selection"
   },
   "validation": {
     "required": "This field is required",

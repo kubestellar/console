@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
@@ -26,14 +26,35 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { showToast } = useToast()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
 
+  // Track if we've shown restore error toast (prevent duplicate toasts on re-render)
+  const hasShownRestoreErrorRef = useRef(false)
+
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
   const [selectedCluster, setSelectedCluster] = useState<string>(() => {
     if (config?.cluster) return config.cluster
-    try { return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER) || '' } catch (e: unknown) { console.error('[NamespaceOverview] failed to restore cluster selection:', e); return '' }
+    try { 
+      return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER) || '' 
+    } catch (e: unknown) { 
+      console.error('[NamespaceOverview] failed to restore cluster selection:', e)
+      if (!hasShownRestoreErrorRef.current) {
+        hasShownRestoreErrorRef.current = true
+        setTimeout(() => showToast(t('errors:messages.storageRestoreFailed', { defaultValue: 'Failed to restore saved selection' }), 'warning'), 0)
+      }
+      return '' 
+    }
   })
   const [selectedNamespace, setSelectedNamespace] = useState<string>(() => {
     if (config?.namespace) return config.namespace
-    try { return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE) || '' } catch (e: unknown) { console.error('[NamespaceOverview] failed to restore namespace selection:', e); return '' }
+    try { 
+      return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE) || '' 
+    } catch (e: unknown) { 
+      console.error('[NamespaceOverview] failed to restore namespace selection:', e)
+      if (!hasShownRestoreErrorRef.current) {
+        hasShownRestoreErrorRef.current = true
+        setTimeout(() => showToast(t('errors:messages.storageRestoreFailed', { defaultValue: 'Failed to restore saved selection' }), 'warning'), 0)
+      }
+      return '' 
+    }
   })
 
   const {

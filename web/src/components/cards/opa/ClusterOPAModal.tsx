@@ -157,6 +157,7 @@ What would you like to modify about this policy?`,
     } catch (err: unknown) {
       console.error('[OPA] Failed to fetch policy YAML:', err)
       setYamlContent(`# Failed to fetch policy YAML\n# Error: ${err}\n\n# You can write new YAML here`)
+      showToast(t('common:errors.fetchPolicyFailed', { defaultValue: 'Failed to fetch policy YAML from cluster' }), 'error')
     }
   }
 
