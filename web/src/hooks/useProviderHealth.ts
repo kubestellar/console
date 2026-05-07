@@ -157,7 +157,6 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
   }
 
   // --- AI Providers from /settings/keys ---
-  const unconfiguredProviders: string[] = []
   try {
     const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
@@ -165,6 +164,14 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
       const data: KeysStatusResponse = await response.json()
       const seen = new Set<string>()
       for (const key of (data.keys || [])) {
+        // Skip unconfigured providers — they shouldn't appear in the health card.
+        // Local LLM runners (Ollama, LM Studio, etc.) are always registered in
+        // the backend but should only show up here if explicitly configured via
+        // API key or base URL env var/config (#12377).
+        if (!key.configured) {
+          continue
+        }
+
         const normalized = normalizeAIProvider(key.provider)
         if (seen.has(normalized)) continue
         seen.add(normalized)
@@ -172,25 +179,16 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
         const name = AI_PROVIDER_NAMES[key.provider] || key.displayName || key.provider
         let status: ProviderHealthInfo['status'] = 'unknown'
         let detail: string | undefined
-        let configured = false
 
-        if (key.configured) {
-          configured = true
-          if (key.valid === true) {
-            status = 'operational'
-            detail = 'API key configured and valid'
-          } else if (key.valid === false) {
-            status = 'down'
-            detail = key.error || 'API key invalid'
-          } else {
-            status = 'operational'
-            detail = 'API key configured'
-          }
+        if (key.valid === true) {
+          status = 'operational'
+          detail = 'API key configured and valid'
+        } else if (key.valid === false) {
+          status = 'down'
+          detail = key.error || 'API key invalid'
         } else {
-          configured = false
-          status = 'unknown'
-          detail = 'API key not configured'
-          unconfiguredProviders.push(normalized)
+          status = 'operational'
+          detail = 'API key configured'
         }
 
         result.push({
@@ -198,24 +196,13 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
           name,
           category: 'ai',
           status,
-          configured,
+          configured: true,
           statusUrl: STATUS_PAGES[normalized],
           detail })
       }
     }
   } catch {
     // Agent unreachable — no AI providers to show
-  }
-
-  // Check actual service health for unconfigured providers
-  if (unconfiguredProviders.length > 0) {
-    const healthMap = await checkServiceHealth(unconfiguredProviders)
-    for (const id of unconfiguredProviders) {
-      const provider = result.find(p => p.id === id)
-      if (provider && healthMap.has(id)) {
-        provider.status = healthMap.get(id)!
-      }
-    }
   }
 
   // --- Cloud Providers from cluster distributions ---
