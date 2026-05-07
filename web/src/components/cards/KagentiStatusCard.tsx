@@ -46,27 +46,32 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
   const {
     data: agents,
     isLoading: agentsLoading,
+    isRefreshing: agentsRefreshing,
     isDemoFallback: agentDemo,
     consecutiveFailures: agentFailures } = useKagentiAgents({ cluster: config?.cluster })
 
   const {
     data: builds,
     isLoading: buildsLoading,
+    isRefreshing: buildsRefreshing,
     isDemoFallback: buildDemo,
     consecutiveFailures: buildFailures } = useKagentiBuilds({ cluster: config?.cluster })
 
   const {
     data: tools,
     isLoading: toolsLoading,
+    isRefreshing: toolsRefreshing,
     isDemoFallback: toolDemo,
     consecutiveFailures: toolFailures } = useKagentiTools({ cluster: config?.cluster })
 
   const isLoading = agentsLoading || buildsLoading || toolsLoading
+  const isRefreshing = agentsRefreshing || buildsRefreshing || toolsRefreshing
   const hasAnyData = agents.length > 0 || builds.length > 0 || tools.length > 0
   const maxFailures = Math.max(agentFailures, buildFailures, toolFailures)
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
+    isRefreshing,
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,
