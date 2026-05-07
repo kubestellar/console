@@ -37,6 +37,7 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
   const {
     data: agents,
     isLoading: agentsLoading,
+    isRefreshing: agentsRefreshing,
     isDemoFallback: agentDemo,
     consecutiveFailures: agentFailures,
   } = useKagentCRDAgents({ cluster: config?.cluster })
@@ -44,6 +45,7 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
   const {
     data: tools,
     isLoading: toolsLoading,
+    isRefreshing: toolsRefreshing,
     isDemoFallback: toolDemo,
     consecutiveFailures: toolFailures,
   } = useKagentCRDTools({ cluster: config?.cluster })
@@ -51,16 +53,19 @@ export function KagentStatusCard({ config }: KagentStatusCardProps) {
   const {
     data: models,
     isLoading: modelsLoading,
+    isRefreshing: modelsRefreshing,
     isDemoFallback: modelDemo,
     consecutiveFailures: modelFailures,
   } = useKagentCRDModels({ cluster: config?.cluster })
 
   const isLoading = agentsLoading || toolsLoading || modelsLoading
+  const isRefreshing = agentsRefreshing || toolsRefreshing || modelsRefreshing
   const hasAnyData = agents.length > 0 || tools.length > 0 || models.length > 0
   const maxFailures = Math.max(agentFailures, toolFailures, modelFailures)
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
+    isRefreshing,
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,
