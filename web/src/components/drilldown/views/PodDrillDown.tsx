@@ -1552,7 +1552,7 @@ Please:
 
             </div>
 
-            {podDiagnosis && (
+            {podDiagnosis && issues.length > 0 && (
               <div className="rounded-xl border border-orange-500/30 bg-orange-500/5 p-4 space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
