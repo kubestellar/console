@@ -14,7 +14,12 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8sfake "k8s.io/client-go/kubernetes/fake"
+	k8stesting "k8s.io/client-go/testing"
 )
 
 func TestNamespaceHandlers(t *testing.T) {
@@ -67,6 +72,25 @@ func TestNamespaceHandlers(t *testing.T) {
 
 		req := httptest.NewRequest("GET", "/api/namespaces?cluster=test-cluster", nil)
 		resp, _ := app.Test(req)
+
+		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("ListNamespaces - Cluster RBAC Forbidden", func(t *testing.T) {
+		rbacEnv := setupTestEnv(t)
+		rbacHandler := NewNamespaceHandler(rbacEnv.Store, rbacEnv.K8sClient)
+		rbacEnv.App.Get("/api/namespaces", rbacHandler.ListNamespaces)
+
+		rbacClient, err := rbacEnv.K8sClient.GetClient("test-cluster")
+		require.NoError(t, err)
+		require.NotNil(t, rbacClient)
+
+		rbacClient.(*k8sfake.Clientset).PrependReactor("list", "namespaces", func(action k8stesting.Action) (bool, runtime.Object, error) {
+			return true, nil, apierrors.NewForbidden(schema.GroupResource{Resource: "namespaces"}, "", assert.AnError)
+		})
+
+		req := httptest.NewRequest("GET", "/api/namespaces?cluster=test-cluster", nil)
+		resp, _ := rbacEnv.App.Test(req)
 
 		assert.Equal(t, http.StatusForbidden, resp.StatusCode)
 	})

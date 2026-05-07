@@ -211,8 +211,8 @@ export function NamespaceManager() {
           }
         }
 
-        // Try backend API fallback if agent didn't return data and didn't auth-fail
-        if (clusterNamespaces.length === 0 && !agentAuthFailed) {
+        // Try backend API fallback if the agent did not return namespace data.
+        if (clusterNamespaces.length === 0) {
           try {
             const response = await authFetch(`/api/namespaces?cluster=${encodeURIComponent(cluster)}`, {
               headers: { Accept: 'application/json' }
@@ -234,8 +234,8 @@ export function NamespaceManager() {
           }
         }
 
-        // Try building namespaces from pods if we have non-auth failures
-        if (clusterNamespaces.length === 0 && !agentAuthFailed && !backendAuthFailed && (agentFailed || backendFailed)) {
+        // Try building namespaces from pods if we have non-auth failures.
+        if (clusterNamespaces.length === 0 && !backendAuthFailed && (agentFailed || agentAuthFailed || backendFailed)) {
           try {
             clusterNamespaces = await buildNamespacesFromPods(cluster)
           } catch {
@@ -243,16 +243,10 @@ export function NamespaceManager() {
           }
         }
 
-        // Classify the failure type
         if (clusterNamespaces.length === 0) {
-          if (agentAuthFailed || (backendAuthFailed && !agentFailed && !backendFailed)) {
-            // Auth failure ONLY if:
-            // - Agent returned 401/403, OR
-            // - Backend returned 401/403 AND agent had no errors at all (not even 404/timeout)
+          if (backendAuthFailed) {
             authFailedClusters.push(cluster)
-          } else if (agentFailed || backendFailed || backendAuthFailed) {
-            // Connectivity/other failure if agent had non-auth errors (404, timeout, etc.)
-            // Even if backend returns 403, if agent had 404/timeout, it's a connectivity issue
+          } else if (agentFailed || agentAuthFailed || backendFailed) {
             failedClusters.push(cluster)
           }
         }

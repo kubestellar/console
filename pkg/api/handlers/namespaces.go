@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -32,6 +34,18 @@ func NewNamespaceHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *Name
 	return &NamespaceHandler{store: s, k8sClient: k8sClient}
 }
 
+func namespaceListError(err error) error {
+	switch {
+	case apierrors.IsForbidden(err), apierrors.IsUnauthorized(err):
+		return fiber.NewError(fiber.StatusForbidden, "forbidden")
+	case apierrors.IsServiceUnavailable(err), apierrors.IsTimeout(err), apierrors.IsServerTimeout(err),
+		errors.Is(err, context.DeadlineExceeded):
+		return fiber.NewError(fiber.StatusServiceUnavailable, "cluster temporarily unavailable")
+	default:
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
+	}
+}
+
 // ListNamespaces returns namespaces for a cluster
 func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 	// SECURITY (#7485): namespace listing exposes cluster structure; require a
@@ -54,8 +68,8 @@ func (h *NamespaceHandler) ListNamespaces(c *fiber.Ctx) error {
 
 	namespaces, err := h.k8sClient.ListNamespacesWithDetails(ctx, cluster)
 	if err != nil {
-		slog.Error("[Namespaces] failed to list namespaces", "error", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
+		slog.Warn("[Namespaces] failed to list namespaces", "cluster", cluster, "error", err)
+		return namespaceListError(err)
 	}
 
 	return c.JSON(namespaces)
