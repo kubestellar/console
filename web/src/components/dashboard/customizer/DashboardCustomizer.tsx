@@ -156,14 +156,12 @@ export function DashboardCustomizer({
               isOpen={true}
               onClose={() => setUserSelectedSection('dashboards')}
               onCreate={async (name, _template, _description) => {
-                // Add sidebar item and navigate immediately
                 const localId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
                 const href = `/custom-dashboard/${localId}`
                 addItem({ name, icon: suggestIconSync(name), href, type: 'link' }, 'primary')
+                await _createDashboard(name).catch(() => { /* offline — sidebar item already added */ })
                 onClose()
                 navigate(href)
-                // Persist to backend in background
-                _createDashboard(name).catch(() => { /* offline — sidebar item already added */ })
               }}
               existingNames={dashboards.map(d => d.name)}
               embedded

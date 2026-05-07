@@ -19,7 +19,7 @@ interface ConfigureCardModalProps {
   isOpen: boolean
   card: Card | null
   onClose: () => void
-  onSave: (cardId: string, config: Record<string, unknown>, title?: string) => void
+  onSave: (cardId: string, config: Record<string, unknown>, title?: string) => void | Promise<void>
   onCreateCard?: (cardType: string, config: Record<string, unknown>, title?: string) => void
 }
 
@@ -519,6 +519,7 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   const [title, setTitle] = useState('')
   const [nlPrompt, setNlPrompt] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'settings' | 'behaviors' | 'ai'>('settings')
   const [aiChanges, setAiChanges] = useState<string[]>([])
   const [aiError, setAiError] = useState<string | null>(null)
@@ -553,9 +554,15 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
   const fields = CARD_CONFIG_FIELDS[card.card_type] || CARD_CONFIG_FIELDS.default || []
   const cardBehaviors = CARD_BEHAVIORS[card.card_type] || CARD_BEHAVIORS.default || []
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return
     const finalConfig = { ...config, ...behaviors }
-    onSave(card.id, finalConfig, title || undefined)
+    setIsSaving(true)
+    try {
+      await onSave(card.id, finalConfig, title || undefined)
+    } finally {
+      if (isMountedRef.current) setIsSaving(false)
+    }
   }
 
   const updateConfig = (key: string, value: unknown) => {
@@ -1004,15 +1011,17 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+              disabled={isSaving}
+              className="px-4 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('actions.cancel')}
             </button>
             <button
               onClick={handleSave}
-              className="px-4 py-2 rounded-lg bg-purple-500 text-foreground hover:bg-purple-600"
+              disabled={isSaving}
+              className="px-4 py-2 rounded-lg bg-purple-500 text-foreground hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {t('dashboard.configure.saveChanges')}
+              {isSaving ? t('dashboard.configure.saving', 'Saving...') : t('dashboard.configure.saveChanges')}
             </button>
           </div>
         </BaseModal.Footer>
