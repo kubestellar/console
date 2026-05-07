@@ -400,6 +400,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   }
 
   const config = STATUS_CONFIG[mission.status] || STATUS_CONFIG.pending
+  const showHeaderStatus = mission.status !== 'blocked'
   const StatusIcon = config.icon
   const TypeIcon = TYPE_ICONS[mission.type] || TYPE_ICONS.custom
 
@@ -493,19 +494,21 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           )}
           {/* issue 6741 — aria-live=polite so status transitions (running → completed,
               blocked, failed, etc.) are announced by screen readers. */}
-          <div
-            className={cn('flex items-center gap-1', config.color)}
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-            aria-label={`Mission status: ${config.label}`}
-          >
-            <StatusIcon
-              className={cn('w-4 h-4', (mission.status === 'running' || mission.status === 'cancelling') && 'animate-spin')}
-              aria-hidden="true"
-            />
-            <span className="text-xs">{config.label}</span>
-          </div>
+          {showHeaderStatus && (
+            <div
+              className={cn('flex items-center gap-1', config.color)}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-label={`Mission status: ${config.label}`}
+            >
+              <StatusIcon
+                className={cn('w-4 h-4', (mission.status === 'running' || mission.status === 'cancelling') && 'animate-spin')}
+                aria-hidden="true"
+              />
+              <span className="text-xs">{config.label}</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-xs text-muted-foreground flex-1 line-clamp-2">{mission.description}</p>
