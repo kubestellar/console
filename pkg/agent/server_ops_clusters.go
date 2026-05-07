@@ -62,10 +62,14 @@ func sanitizeClusterError(err error) string {
 	return msg
 }
 
-// handleLocalClusterTools returns detected local cluster tools
+// handleLocalClusterTools returns detected local cluster tools. When one or
+// more ?tool=name query params are provided it returns the requested tool list
+// instead, which lets AI mission preflight checks re-detect kubectl/helm on
+// every retry without changing the Local Clusters UI payload.
 func (s *Server) handleLocalClusterTools(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusNoContent)
@@ -77,7 +81,12 @@ func (s *Server) handleLocalClusterTools(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	requestedTools := r.URL.Query()["tool"]
 	tools := s.localClusters.DetectTools()
+	if len(requestedTools) > 0 {
+		tools = s.localClusters.DetectNamedTools(requestedTools)
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"tools": tools,
 	})

@@ -86,7 +86,8 @@ describe('runToolPreflightCheck', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => [
-        { name: 'helm', installed: true, version: 'v3.14.0' },
+        { name: 'kubectl', installed: true, path: '/usr/local/bin/kubectl' },
+        { name: 'helm', installed: true, version: 'v3.14.0', path: '/usr/local/bin/helm' },
       ],
     } as Response)
 
@@ -109,17 +110,27 @@ describe('runToolPreflightCheck', () => {
     expect(result.error?.details?.missingTools).toContain('helm')
   })
 
-  it('reports kubectl as installed when agent is reachable (kubectl always on PATH via agent)', async () => {
+  it('requests fresh detection for the required tools on every run', async () => {
     const mockFetch = vi.mocked(fetch)
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [],
-    } as Response)
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ name: 'helm', installed: false }],
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [{ name: 'helm', installed: true, path: '/usr/local/bin/helm' }],
+      } as Response)
 
-    const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
-    expect(result.ok).toBe(true)
-    expect(result.tools[0].name).toBe('kubectl')
-    expect(result.tools[0].installed).toBe(true)
+    const first = await runToolPreflightCheck('http://localhost:8585', ['helm'])
+    const second = await runToolPreflightCheck('http://localhost:8585', ['helm'])
+
+    expect(first.ok).toBe(false)
+    expect(second.ok).toBe(true)
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(String(mockFetch.mock.calls[0]?.[0])).toContain('tool=helm')
+    expect(mockFetch.mock.calls[0]?.[1]).toMatchObject({ cache: 'no-store' })
+    expect(String(mockFetch.mock.calls[1]?.[0])).toContain('tool=helm')
   })
 
   it('handles API response wrapped in a tools array', async () => {
@@ -127,7 +138,10 @@ describe('runToolPreflightCheck', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        tools: [{ name: 'helm', installed: true, version: 'v3.14.0' }],
+        tools: [
+          { name: 'kubectl', installed: true, path: '/usr/local/bin/kubectl' },
+          { name: 'helm', installed: true, version: 'v3.14.0', path: '/usr/local/bin/helm' },
+        ],
       }),
     } as Response)
 
@@ -178,7 +192,7 @@ describe('runToolPreflightCheck', () => {
     )
   })
 
-  it('handles non-array, non-tools-wrapped API response as empty tool list', async () => {
+  it('treats unexpected response shapes as missing required tools', async () => {
     const mockFetch = vi.mocked(fetch)
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -186,7 +200,8 @@ describe('runToolPreflightCheck', () => {
     } as Response)
 
     const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
-    expect(result.ok).toBe(true)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('MISSING_TOOLS')
   })
 })
 

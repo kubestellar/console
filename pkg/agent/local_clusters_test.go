@@ -1,10 +1,13 @@
 package agent
 
 import (
+	"errors"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestLocalClusterManager(t *testing.T) {
@@ -260,3 +263,45 @@ func TestDisconnectVCluster_DoesNotUnsetWhenDifferentContextActive(t *testing.T)
 		}
 	}
 }
+
+func TestLocalClusterManager_DetectNamedTools_FallbackStandardLocation(t *testing.T) {
+	oldLookPath := lookPath
+	oldStatFile := statFile
+	oldStandardToolCandidates := standardToolCandidates
+	defer func() {
+		lookPath = oldLookPath
+		statFile = oldStatFile
+		standardToolCandidates = oldStandardToolCandidates
+	}()
+
+	lookPath = func(file string) (string, error) {
+		return "", errors.New("not on PATH")
+	}
+	standardToolCandidates = func(name string) []string {
+		return []string{"/usr/local/bin/" + name}
+	}
+	statFile = func(name string) (os.FileInfo, error) {
+		if name == "/usr/local/bin/helm" {
+			return fakeExecutableInfo{name: "helm"}, nil
+		}
+		return nil, os.ErrNotExist
+	}
+
+	m := NewLocalClusterManager(nil)
+	tools := m.DetectNamedTools([]string{"helm"})
+	if len(tools) != 1 {
+		t.Fatalf("expected one tool, got %d", len(tools))
+	}
+	if !tools[0].Installed || tools[0].Path != "/usr/local/bin/helm" {
+		t.Fatalf("expected fallback helm detection, got %#v", tools[0])
+	}
+}
+
+type fakeExecutableInfo struct{ name string }
+
+func (f fakeExecutableInfo) Name() string       { return f.name }
+func (f fakeExecutableInfo) Size() int64        { return 0 }
+func (f fakeExecutableInfo) Mode() os.FileMode  { return 0o755 }
+func (f fakeExecutableInfo) ModTime() time.Time { return time.Time{} }
+func (f fakeExecutableInfo) IsDir() bool        { return false }
+func (f fakeExecutableInfo) Sys() interface{}   { return nil }

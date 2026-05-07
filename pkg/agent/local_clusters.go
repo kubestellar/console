@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -36,7 +39,10 @@ const minikubeStatusTimeout = 5 * time.Second
 
 var (
 	// execCommand is already declared in kubectl.go
-	lookPath = exec.LookPath
+	lookPath               = exec.LookPath
+	statFile               = os.Stat
+	userHomeDir            = os.UserHomeDir
+	standardToolCandidates = defaultStandardToolCandidates
 )
 
 // LocalClusterTool represents a detected local cluster tool
@@ -112,35 +118,148 @@ func (m *LocalClusterManager) checkDockerRunning() error {
 	return nil
 }
 
-// DetectTools returns all detected local cluster tools
+func isExecutableTool(info os.FileInfo) bool {
+	if info == nil || info.IsDir() {
+		return false
+	}
+	if runtime.GOOS == "windows" {
+		return true
+	}
+	return info.Mode()&0o111 != 0
+}
+
+func defaultStandardToolCandidates(name string) []string {
+	candidateNames := []string{name}
+	if runtime.GOOS == "windows" && filepath.Ext(name) == "" {
+		candidateNames = append(candidateNames, name+".exe", name+".cmd", name+".bat")
+	}
+
+	dirs := make([]string, 0, 8)
+	if home, err := userHomeDir(); err == nil && home != "" {
+		if runtime.GOOS == "windows" {
+			dirs = append(dirs, filepath.Join(home, "scoop", "shims"))
+		} else {
+			dirs = append(dirs, filepath.Join(home, ".local", "bin"), filepath.Join(home, "bin"))
+		}
+	}
+
+	switch runtime.GOOS {
+	case "darwin":
+		dirs = append(dirs, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin")
+	case "windows":
+		programFiles := os.Getenv("ProgramFiles")
+		localAppData := os.Getenv("LOCALAPPDATA")
+		if programFiles != "" {
+			dirs = append(dirs, filepath.Join(programFiles, "Helm"), filepath.Join(programFiles, "Kubernetes"))
+		}
+		if localAppData != "" {
+			dirs = append(dirs, filepath.Join(localAppData, "Microsoft", "WinGet", "Links"))
+		}
+	default:
+		dirs = append(dirs, "/usr/local/bin", "/home/linuxbrew/.linuxbrew/bin", "/usr/bin", "/snap/bin")
+	}
+
+	candidates := make([]string, 0, len(dirs)*len(candidateNames))
+	seen := make(map[string]struct{}, len(dirs)*len(candidateNames))
+	for _, dir := range dirs {
+		if dir == "" {
+			continue
+		}
+		for _, candidateName := range candidateNames {
+			candidate := filepath.Join(dir, candidateName)
+			if _, exists := seen[candidate]; exists {
+				continue
+			}
+			seen[candidate] = struct{}{}
+			candidates = append(candidates, candidate)
+		}
+	}
+	return candidates
+}
+
+func findExecutablePath(name string) (string, error) {
+	if path, err := lookPath(name); err == nil {
+		return path, nil
+	}
+
+	for _, candidate := range standardToolCandidates(name) {
+		info, err := statFile(candidate)
+		if err != nil {
+			continue
+		}
+		if isExecutableTool(info) {
+			return candidate, nil
+		}
+	}
+
+	return "", &exec.Error{Name: name, Err: exec.ErrNotFound}
+}
+
+func (m *LocalClusterManager) detectNamedTool(name string) *LocalClusterTool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "kind":
+		return m.detectKind()
+	case "k3d":
+		return m.detectK3d()
+	case "minikube":
+		return m.detectMinikube()
+	case "vcluster":
+		return m.detectVCluster()
+	default:
+		path, err := findExecutablePath(name)
+		if err != nil {
+			return nil
+		}
+		return &LocalClusterTool{
+			Name:      strings.ToLower(strings.TrimSpace(name)),
+			Installed: true,
+			Path:      path,
+		}
+	}
+}
+
+// DetectTools returns installed local cluster tools for the Local Clusters UI.
 func (m *LocalClusterManager) DetectTools() []LocalClusterTool {
-	tools := []LocalClusterTool{}
-
-	// Check kind
-	if tool := m.detectKind(); tool != nil {
-		tools = append(tools, *tool)
+	allTools := m.DetectNamedTools([]string{"kind", "k3d", "minikube", "vcluster"})
+	tools := make([]LocalClusterTool, 0, len(allTools))
+	for _, tool := range allTools {
+		if tool.Installed {
+			tools = append(tools, tool)
+		}
 	}
+	return tools
+}
 
-	// Check k3d
-	if tool := m.detectK3d(); tool != nil {
-		tools = append(tools, *tool)
-	}
+// DetectNamedTools detects the requested tools in order, including tools that
+// are not part of the local-cluster UI (for example kubectl and helm for AI
+// mission preflight checks). Missing tools are included with Installed=false so
+// callers can render a complete checklist.
+func (m *LocalClusterManager) DetectNamedTools(names []string) []LocalClusterTool {
+	tools := make([]LocalClusterTool, 0, len(names))
+	seen := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		normalized := strings.ToLower(strings.TrimSpace(name))
+		if normalized == "" {
+			continue
+		}
+		if _, exists := seen[normalized]; exists {
+			continue
+		}
+		seen[normalized] = struct{}{}
 
-	// Check minikube
-	if tool := m.detectMinikube(); tool != nil {
-		tools = append(tools, *tool)
-	}
+		if tool := m.detectNamedTool(normalized); tool != nil {
+			tools = append(tools, *tool)
+			continue
+		}
 
-	// Check vcluster
-	if tool := m.detectVCluster(); tool != nil {
-		tools = append(tools, *tool)
+		tools = append(tools, LocalClusterTool{Name: normalized, Installed: false})
 	}
 
 	return tools
 }
 
 func (m *LocalClusterManager) detectKind() *LocalClusterTool {
-	path, err := lookPath("kind")
+	path, err := findExecutablePath("kind")
 	if err != nil {
 		return nil
 	}
@@ -167,7 +286,7 @@ func (m *LocalClusterManager) detectKind() *LocalClusterTool {
 }
 
 func (m *LocalClusterManager) detectK3d() *LocalClusterTool {
-	path, err := lookPath("k3d")
+	path, err := findExecutablePath("k3d")
 	if err != nil {
 		return nil
 	}
@@ -197,7 +316,7 @@ func (m *LocalClusterManager) detectK3d() *LocalClusterTool {
 }
 
 func (m *LocalClusterManager) detectMinikube() *LocalClusterTool {
-	path, err := lookPath("minikube")
+	path, err := findExecutablePath("minikube")
 	if err != nil {
 		return nil
 	}
@@ -656,7 +775,7 @@ func (m *LocalClusterManager) deleteMinikubeCluster(name string) error {
 
 // detectVCluster checks if the vcluster CLI is installed and returns tool info
 func (m *LocalClusterManager) detectVCluster() *LocalClusterTool {
-	path, err := lookPath("vcluster")
+	path, err := findExecutablePath("vcluster")
 	if err != nil {
 		return nil
 	}
@@ -860,12 +979,12 @@ func runWithTimeout(cmd *exec.Cmd, timeout time.Duration) error {
 
 // VClusterClusterStatus represents vCluster status on a specific host cluster
 type VClusterClusterStatus struct {
-	Context    string `json:"context"`
-	Name       string `json:"name"`
-	HasCRD     bool   `json:"hasCRD"`
-	Version    string `json:"version,omitempty"`
-	Instances  int    `json:"instances"`
-	VClusters  []VClusterInstance `json:"vclusters,omitempty"`
+	Context   string             `json:"context"`
+	Name      string             `json:"name"`
+	HasCRD    bool               `json:"hasCRD"`
+	Version   string             `json:"version,omitempty"`
+	Instances int                `json:"instances"`
+	VClusters []VClusterInstance `json:"vclusters,omitempty"`
 }
 
 /** Timeout for CRD check operations */

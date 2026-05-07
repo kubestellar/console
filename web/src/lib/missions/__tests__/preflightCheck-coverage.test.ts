@@ -297,6 +297,7 @@ describe('runToolPreflightCheck', () => {
     const mockResponse = {
       ok: true,
       json: vi.fn().mockResolvedValue([
+        { name: 'kubectl', installed: true, path: '/usr/local/bin/kubectl' },
         { name: 'helm', installed: true, version: '3.14.0', path: '/usr/local/bin/helm' },
       ]),
     }
@@ -336,6 +337,28 @@ describe('runToolPreflightCheck', () => {
     expect(result.error?.message).toContain('500')
   })
 
+  it('requests no-store tool detection on every retry', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    fetchSpy
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue([{ name: 'helm', installed: false }]),
+      } as unknown as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue([{ name: 'helm', installed: true, path: '/usr/local/bin/helm' }]),
+      } as unknown as Response)
+
+    const first = await runToolPreflightCheck('http://localhost:8585', ['helm'])
+    const second = await runToolPreflightCheck('http://localhost:8585', ['helm'])
+
+    expect(first.ok).toBe(false)
+    expect(second.ok).toBe(true)
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(String(fetchSpy.mock.calls[0][0])).toContain('tool=helm')
+    expect(fetchSpy.mock.calls[0][1]).toMatchObject({ cache: 'no-store' })
+  })
+
   it('handles fetch error (agent unavailable)', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('fetch failed'))
 
@@ -350,7 +373,8 @@ describe('runToolPreflightCheck', () => {
       ok: true,
       json: vi.fn().mockResolvedValue({
         tools: [
-          { name: 'helm', installed: true, version: '3.14.0' },
+          { name: 'kubectl', installed: true, path: '/usr/local/bin/kubectl' },
+          { name: 'helm', installed: true, version: '3.14.0', path: '/usr/local/bin/helm' },
         ],
       }),
     }
@@ -360,16 +384,16 @@ describe('runToolPreflightCheck', () => {
     expect(result.ok).toBe(true)
   })
 
-  it('handles response with unexpected shape', async () => {
+  it('treats unexpected response shapes as missing required tools', async () => {
     const mockResponse = {
       ok: true,
       json: vi.fn().mockResolvedValue({ unexpected: 'data' }),
     }
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse as unknown as Response)
 
-    // kubectl is always added as installed, so only kubectl is fine
     const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
-    expect(result.ok).toBe(true)
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('MISSING_TOOLS')
   })
 
   it('handles non-Error thrown exceptions', async () => {

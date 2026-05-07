@@ -438,7 +438,12 @@ export async function runToolPreflightCheck(
 ): Promise<ToolPreflightResult> {
   const TOOL_CHECK_TIMEOUT_MS = 10_000
   try {
-    const resp = await fetchFn(`${agentBaseUrl}/local-cluster-tools`, {
+    const url = new URL('/local-cluster-tools', agentBaseUrl)
+    const normalizedRequiredTools = [...new Set(requiredTools.map(tool => tool.toLowerCase()))]
+    normalizedRequiredTools.forEach(tool => url.searchParams.append('tool', tool))
+
+    const resp = await fetchFn(url.toString(), {
+      cache: 'no-store',
       signal: AbortSignal.timeout(TOOL_CHECK_TIMEOUT_MS),
     })
     if (!resp.ok) {
@@ -465,10 +470,6 @@ export async function runToolPreflightCheck(
         .map((t: ToolCheckResult) => t.name.toLowerCase()),
     )
 
-    // kubectl is always on PATH if kc-agent can shell out, but the endpoint
-    // only returns cluster-tool binaries.  Add kubectl as installed if the
-    // agent itself is reachable (it proxies kubectl).
-    installedSet.add('kubectl')
 
     const missing = requiredTools.filter(t => !installedSet.has(t.toLowerCase()))
 
