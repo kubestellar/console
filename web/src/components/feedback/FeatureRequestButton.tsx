@@ -10,9 +10,6 @@ import { cn } from '../../lib/cn'
 // Lazy-load the modal (~67 KB) — only needed when the user clicks the bug icon
 const FeatureRequestModal = safeLazy(() => import('./FeatureRequestModal'), 'FeatureRequestModal')
 
-/** Badge displays "99+" for counts above this threshold. */
-const MAX_BADGE_DISPLAY = 99
-
 interface FeatureRequestButtonProps {
   /** Force label text to be visible (used in overflow menu) */
   showLabel?: boolean
@@ -65,8 +62,8 @@ export function FeatureRequestButton({ showLabel = false }: FeatureRequestButton
           <span className="text-sm font-medium">{t('feedback.feedback')}</span>
         )}
         {!summariesLoading && requestCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center text-2xs font-bold text-white rounded-full bg-purple-500">
-            {requestCount > MAX_BADGE_DISPLAY ? `${MAX_BADGE_DISPLAY}+` : requestCount}
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1.5 flex items-center justify-center whitespace-nowrap text-2xs font-bold leading-none text-white rounded-full bg-purple-500">
+            {requestCount}
           </span>
         )}
       </button>
