@@ -291,6 +291,32 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     else if (state.phase === 'blueprint') mc.setPhase('assign')
   }
 
+  const handleLaunch = useCallback((dryRun: boolean) => {
+    if (launchSubmittingRef.current) return
+
+    launchSubmittingRef.current = true
+    setIsSubmittingLaunch(true)
+
+    try {
+      const hasAssignedClusters = state.assignments.some(
+        (assignment) => (assignment.projectNames ?? []).length > 0
+      )
+      if (!hasAssignedClusters) {
+        showToast('No clusters have project assignments. Go back to Chart Course to assign projects before launching.', 'warning')
+        launchSubmittingRef.current = false
+        setIsSubmittingLaunch(false)
+        return
+      }
+
+      mc.setDryRun(dryRun)
+      mc.setPhase('launching')
+    } catch (error) {
+      launchSubmittingRef.current = false
+      setIsSubmittingLaunch(false)
+      throw error
+    }
+  }, [mc, showToast, state.assignments])
+
   const handleNewMission = () => {
     mc.reset()
     // Reset the stepper's "highest reached" state so only Phase 1 is
