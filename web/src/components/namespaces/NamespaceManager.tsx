@@ -86,10 +86,17 @@ export function NamespaceManager() {
   // Fetch namespaces from all available clusters and cache them
   // Uses progressive loading - updates UI as each cluster completes
   const fetchNamespaces = useCallback(async (force = false) => {
+    const offlineClusters = new Set(
+      clusters
+        .filter(cluster => cluster.reachable === false)
+        .map(cluster => cluster.name)
+    )
+
     // Determine which clusters to fetch
-    const clustersToFetch = force
-      ? allClusterNames // Force refresh fetches all clusters
-      : allClusterNames.filter(c => !namespaceCache.has(c)) // Only fetch uncached clusters
+    const clustersToFetch = (force
+      ? allClusterNames
+      : allClusterNames.filter(c => !namespaceCache.has(c)))
+      .filter(clusterName => !offlineClusters.has(clusterName))
 
     // If nothing to fetch and we have cache, use cached data
     if (clustersToFetch.length === 0 && !force) {
@@ -133,28 +140,56 @@ export function NamespaceManager() {
       setAllNamespaces(newAllNamespaces)
     }
 
+    const buildNamespacesFromPods = async (cluster: string): Promise<NamespaceDetails[]> => {
+      const response = await authFetch(
+        `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`,
+        { headers: { Accept: 'application/json' } }
+      )
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+      const data = await response.json() as { pods?: Array<{ namespace?: string }> }
+      const namespaces = new Set<string>()
+      for (const pod of (data.pods || [])) {
+        if (pod.namespace) namespaces.add(pod.namespace)
+      }
+      return Array.from(namespaces).map(namespace => ({
+        name: namespace,
+        cluster,
+        status: 'Active',
+        createdAt: new Date().toISOString()
+      }))
+    }
+
     // Fetch namespaces from clusters progressively (not waiting for all)
     const fetchPromises = clustersToFetch.map(async (cluster) => {
       try {
         let clusterNamespaces: NamespaceDetails[] = []
         let agentFailed = false
         let agentAuthFailed = false
-        let apiFailed = false
+        let backendFailed = false
+        let backendAuthFailed = false
 
-        // Always try local agent first (works without backend auth)
         try {
           const controller = new AbortController()
           const timeoutId = setTimeout(() => controller.abort(), NAMESPACE_ABORT_TIMEOUT_MS)
-          const response = await fetch(
+          const response = await authFetch(
             `${LOCAL_AGENT_HTTP_URL}/namespaces?cluster=${encodeURIComponent(cluster)}`,
-            { signal: controller.signal, headers: { 'Accept': 'application/json' } }
+            { signal: controller.signal, headers: { Accept: 'application/json' } }
           )
           clearTimeout(timeoutId)
 
           if (response.ok) {
-            const data = await response.json()
-            if (data.namespaces && Array.isArray(data.namespaces)) {
-              clusterNamespaces = data.namespaces.map((ns: { name: string; status?: string; labels?: Record<string, string>; createdAt?: string }) => ({
+            const data = await response.json() as {
+              namespaces?: Array<{
+                name: string
+                status?: string
+                labels?: Record<string, string>
+                createdAt?: string
+              }>
+            }
+            if (Array.isArray(data.namespaces)) {
+              clusterNamespaces = data.namespaces.map(ns => ({
                 name: ns.name,
                 cluster,
                 status: ns.status || 'Active',
@@ -174,42 +209,52 @@ export function NamespaceManager() {
           } else if (err instanceof TypeError) {
             console.warn(`[NamespaceManager] ${t('namespaces.errors.agentNotReachable')}`, cluster)
           }
-          // Local agent failed, will fall back to API
         }
 
-        // Fall back to API if local agent didn't return data (skip fallback for auth errors - they'll fail the same way)
+        // Try backend API fallback if agent didn't return data and didn't auth-fail
         if (clusterNamespaces.length === 0 && !agentAuthFailed) {
           try {
-            const response = await api.get<{ pods: Array<{ namespace: string; status: string }> }>(
-              `${LOCAL_AGENT_HTTP_URL}/pods?cluster=${encodeURIComponent(cluster)}&limit=1000`
-            )
-
-            // Extract unique namespaces from pods
-            const nsSet = new Set<string>()
-            ;(response.data.pods || []).forEach(pod => {
-              if (pod.namespace) nsSet.add(pod.namespace)
+            const response = await authFetch(`/api/namespaces?cluster=${encodeURIComponent(cluster)}`, {
+              headers: { Accept: 'application/json' }
             })
 
-            nsSet.forEach(ns => {
-              clusterNamespaces.push({
-                name: ns,
-                cluster,
-                status: 'Active',
-                createdAt: new Date().toISOString()
-              })
-            })
+            if (response.ok) {
+              const data = await response.json() as NamespaceDetails[]
+              clusterNamespaces = (Array.isArray(data) ? data : []).map(namespace => ({
+                ...namespace,
+                cluster: namespace.cluster || cluster,
+              }))
+            } else if (response.status === 401 || response.status === 403) {
+              backendAuthFailed = true
+            } else {
+              backendFailed = true
+            }
           } catch {
-            apiFailed = true
-            // API also failed - cluster is likely unreachable
+            backendFailed = true
           }
         }
 
-        // Track as failed if both data sources returned no data due to errors
-        if (clusterNamespaces.length === 0 && agentAuthFailed) {
-          // Auth failure is distinct from connectivity failure
-          authFailedClusters.push(cluster)
-        } else if (clusterNamespaces.length === 0 && agentFailed && apiFailed) {
-          failedClusters.push(cluster)
+        // Try building namespaces from pods if we have non-auth failures
+        if (clusterNamespaces.length === 0 && !agentAuthFailed && !backendAuthFailed && (agentFailed || backendFailed)) {
+          try {
+            clusterNamespaces = await buildNamespacesFromPods(cluster)
+          } catch {
+            failedClusters.push(cluster)
+          }
+        }
+
+        // Classify the failure type
+        if (clusterNamespaces.length === 0) {
+          if (agentAuthFailed || (backendAuthFailed && !agentFailed && !backendFailed)) {
+            // Auth failure ONLY if:
+            // - Agent returned 401/403, OR
+            // - Backend returned 401/403 AND agent had no errors at all (not even 404/timeout)
+            authFailedClusters.push(cluster)
+          } else if (agentFailed || backendFailed || backendAuthFailed) {
+            // Connectivity/other failure if agent had non-auth errors (404, timeout, etc.)
+            // Even if backend returns 403, if agent had 404/timeout, it's a connectivity issue
+            failedClusters.push(cluster)
+          }
         }
 
         // Only cache if we got data
@@ -282,7 +327,7 @@ export function NamespaceManager() {
     setLoading(false)
     setLoadingClusters(new Set())
     setLastUpdated(new Date())
-  }, [allClusterNames, t])
+  }, [allClusterNames, clusters, t])
 
   const handleRefreshNamespaces = () => fetchNamespaces(true)
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshNamespaces)
