@@ -4,16 +4,22 @@ import { ActiveAlerts } from '../ActiveAlerts'
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockAcknowledgeAlert = vi.fn()
+const mockAcknowledgeAlerts = vi.fn()
 const mockRunAIDiagnosis = vi.fn()
 const mockDrillToAlert = vi.fn()
 
+const mockAlertsState = {
+  activeAlerts: [] as Array<Record<string, unknown>>,
+  acknowledgedAlerts: [] as Array<Record<string, unknown>>,
+  stats: { firing: 0, critical: 0, warning: 0, acknowledged: 0 },
+  isLoadingData: false,
+  dataError: null as string | null,
+}
+
 vi.mock('../../../hooks/useAlerts', () => ({
   useAlerts: () => ({
-    activeAlerts: [],
-    acknowledgedAlerts: [],
-    stats: { firing: 0, critical: 0, warning: 0, acknowledged: 0 },
-    acknowledgeAlert: mockAcknowledgeAlert,
+    ...mockAlertsState,
+    acknowledgeAlerts: mockAcknowledgeAlerts,
     runAIDiagnosis: mockRunAIDiagnosis,
   }),
 }))
@@ -43,9 +49,9 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 }))
 
 vi.mock('../../../lib/cards/cardHooks', () => ({
-  useCardData: (_items: unknown[], _opts: unknown) => ({
-    items: [],
-    totalItems: 0,
+  useCardData: (items: unknown[], _opts: unknown) => ({
+    items,
+    totalItems: items.length,
     currentPage: 1,
     totalPages: 1,
     itemsPerPage: 5,
@@ -102,8 +108,17 @@ vi.mock('../NotificationVerifyIndicator', () => ({
 }))
 
 vi.mock('../AlertListItem', () => ({
-  AlertListItem: ({ alert }: { alert: { ruleName: string } }) => (
-    <div data-testid="alert-item">{alert.ruleName}</div>
+  AlertListItem: ({ alert, duplicateCount, onAcknowledge, alertIds }: { alert: { ruleName: string }; duplicateCount?: number; onAcknowledge: (e: React.MouseEvent, alertIds: string[]) => void; alertIds?: string[] }) => (
+    <div>
+      <div data-testid="alert-item">{alert.ruleName}:{duplicateCount ?? 1}</div>
+      <button onClick={(event) => onAcknowledge(event, alertIds || [])}>ack</button>
+    </div>
+  ),
+}))
+
+vi.mock('../../ui/VirtualizedList', () => ({
+  VirtualizedList: ({ items, renderItem }: { items: unknown[]; renderItem: (item: unknown, index: number) => React.ReactNode }) => (
+    <div data-testid="virtualized-list">{items.map((item, index) => renderItem(item, index))}</div>
   ),
 }))
 
@@ -112,6 +127,11 @@ vi.mock('../AlertListItem', () => ({
 describe('ActiveAlerts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockAlertsState.activeAlerts = []
+    mockAlertsState.acknowledgedAlerts = []
+    mockAlertsState.stats = { firing: 0, critical: 0, warning: 0, acknowledged: 0 }
+    mockAlertsState.isLoadingData = false
+    mockAlertsState.dataError = null
   })
 
   describe('Empty state', () => {
@@ -176,31 +196,85 @@ describe('ActiveAlerts', () => {
   })
 
   describe('Alert list rendering', () => {
-    it('renders alert items when provided', () => {
-      const alert = {
-        id: '1',
-        ruleName: 'CPUHigh',
-        message: 'CPU too high',
-        severity: 'critical' as const,
-        status: 'firing',
-        firedAt: new Date().toISOString(),
-        cluster: 'prod',
-        namespace: 'default',
-        details: {},
-      }
+    it('renders grouped alerts through the virtualized list', () => {
+      const firedAt = new Date().toISOString()
+      mockAlertsState.activeAlerts = [
+        {
+          id: '1',
+          ruleId: 'rule-1',
+          ruleName: 'CPUHigh',
+          message: 'CPU too high',
+          severity: 'critical',
+          status: 'firing',
+          firedAt,
+          cluster: 'prod',
+          namespace: 'default',
+          resource: 'pod-a',
+          resourceKind: 'Pod',
+          details: {},
+        },
+        {
+          id: '2',
+          ruleId: 'rule-1',
+          ruleName: 'CPUHigh',
+          message: 'CPU too high',
+          severity: 'critical',
+          status: 'firing',
+          firedAt,
+          cluster: 'prod',
+          namespace: 'default',
+          resource: 'pod-a',
+          resourceKind: 'Pod',
+          details: {},
+        },
+      ]
+      mockAlertsState.stats = { firing: 2, critical: 2, warning: 0, acknowledged: 0 }
 
-      vi.mocked(vi.importMock('../../../hooks/useAlerts') as never)
+      render(<ActiveAlerts />)
 
-      // Re-mock useAlerts with an alert
-      vi.doMock('../../../hooks/useAlerts', () => ({
-        useAlerts: () => ({
-          activeAlerts: [alert],
-          acknowledgedAlerts: [],
-          stats: { firing: 1, critical: 1, warning: 0, acknowledged: 0 },
-          acknowledgeAlert: mockAcknowledgeAlert,
-          runAIDiagnosis: mockRunAIDiagnosis,
-        }),
-      }))
+      expect(screen.getByTestId('virtualized-list')).toBeInTheDocument()
+      expect(screen.getAllByTestId('alert-item')).toHaveLength(1)
+      expect(screen.getByText('CPUHigh:2')).toBeInTheDocument()
+    })
+
+    it('acknowledges every alert ID in a grouped row', () => {
+      const firedAt = new Date().toISOString()
+      mockAlertsState.activeAlerts = [
+        {
+          id: '1',
+          ruleId: 'rule-1',
+          ruleName: 'CPUHigh',
+          message: 'CPU too high',
+          severity: 'critical',
+          status: 'firing',
+          firedAt,
+          cluster: 'prod',
+          namespace: 'default',
+          resource: 'pod-a',
+          resourceKind: 'Pod',
+          details: {},
+        },
+        {
+          id: '2',
+          ruleId: 'rule-1',
+          ruleName: 'CPUHigh',
+          message: 'CPU too high',
+          severity: 'critical',
+          status: 'firing',
+          firedAt,
+          cluster: 'prod',
+          namespace: 'default',
+          resource: 'pod-a',
+          resourceKind: 'Pod',
+          details: {},
+        },
+      ]
+      mockAlertsState.stats = { firing: 2, critical: 2, warning: 0, acknowledged: 0 }
+
+      render(<ActiveAlerts />)
+      fireEvent.click(screen.getByText('ack'))
+
+      expect(mockAcknowledgeAlerts).toHaveBeenCalledWith(['1', '2'])
     })
   })
 })

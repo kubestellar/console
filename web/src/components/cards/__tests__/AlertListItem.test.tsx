@@ -143,7 +143,7 @@ describe('AlertListItem', () => {
     const ackBtn = screen.getByText('activeAlerts.acknowledge')
     fireEvent.click(ackBtn)
 
-    expect(mockOnAcknowledge).toHaveBeenCalledWith(expect.any(Object), 'alert-1')
+    expect(mockOnAcknowledge).toHaveBeenCalledWith(expect.any(Object), ['alert-1'])
   })
 
   it('shows AI Diagnose button when no mission exists', () => {
@@ -178,6 +178,12 @@ describe('AlertListItem', () => {
     renderAlertListItem({ mission })
 
     expect(screen.getByText('AI')).toBeInTheDocument()
+  })
+
+  it('renders duplicate count badge when alerts are grouped', () => {
+    renderAlertListItem({ duplicateCount: 47 })
+
+    expect(screen.getByText('47 activeAlerts.duplicateCount')).toBeInTheDocument()
   })
 
   it('renders severity colors for different severities', () => {

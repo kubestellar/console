@@ -16,6 +16,7 @@ import type { TFunction } from 'i18next'
 import type { Mission } from '../../hooks/useMissions'
 import { useSnoozedAlerts, SNOOZE_DURATIONS, formatSnoozeRemaining, type SnoozeDuration } from '../../hooks/useSnoozedAlerts'
 import { MS_PER_MINUTE, MINUTES_PER_HOUR, HOURS_PER_DAY } from '../../lib/constants/time'
+import { cn } from '../../lib/cn'
 
 // Severity color map — defined at module level to avoid re-creation on each render
 const SEVERITY_COLORS: Record<AlertSeverity, string> = {
@@ -52,8 +53,10 @@ function formatRelativeTime(dateString: string, t: TFunction<'cards'>): string {
 interface AlertListItemProps {
   alert: Alert
   mission: Mission | null
+  alertIds?: string[]
+  duplicateCount?: number
   onAlertClick: (alert: Alert) => void
-  onAcknowledge: (e: React.MouseEvent, alertId: string) => void
+  onAcknowledge: (e: React.MouseEvent, alertIds: string[]) => void
   onAIDiagnose: (e: React.MouseEvent, alertId: string) => void
   onOpenMission: (e: React.MouseEvent, alert: Alert) => void
 }
@@ -65,6 +68,8 @@ interface AlertListItemProps {
 export function AlertListItem({
   alert,
   mission,
+  alertIds = [alert.id],
+  duplicateCount = 1,
   onAlertClick,
   onAcknowledge,
   onAIDiagnose,
@@ -138,6 +143,15 @@ export function AlertListItem({
                 {alert.ruleName}
               </span>
               <SeverityBadge severity={alert.severity} />
+              {duplicateCount > 1 && (
+                <span
+                  className={cn(
+                    'shrink-0 rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground'
+                  )}
+                >
+                  {t('activeAlerts.duplicateCount', { count: duplicateCount })}
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted-foreground line-clamp-2">
               {alert.message}
@@ -222,7 +236,7 @@ export function AlertListItem({
           <Button
             variant="secondary"
             size="sm"
-            onClick={e => onAcknowledge(e, alert.id)}
+            onClick={e => onAcknowledge(e, alertIds)}
             className="rounded"
           >
             {t('activeAlerts.acknowledge')}

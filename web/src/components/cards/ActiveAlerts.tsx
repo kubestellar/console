@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle,
@@ -15,7 +15,7 @@ import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilte
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { ALERT_SEVERITY_ORDER } from '../../types/alerts'
-import type { Alert, AlertSeverity } from '../../types/alerts'
+import type { AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { CardClusterFilter, CardSearchInput } from '../../lib/cards/CardComponents'
@@ -26,6 +26,8 @@ import { useDemoMode } from '../../hooks/useDemoMode'
 import { NotificationVerifyIndicator } from './NotificationVerifyIndicator'
 import { AlertListItem } from './AlertListItem'
 import { useDoNotDisturb, type TimedDuration } from '../../hooks/useDoNotDisturb'
+import { groupAlertsForDisplay, type GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
+import { VirtualizedList } from '../ui/VirtualizedList'
 
 /** Format remaining DND time as "Xh Ym" or "Ym" */
 function formatRemaining(ms: number): string {
@@ -68,13 +70,17 @@ function AlertStatsRow({ critical, warning, acknowledged }: { critical: number; 
 
 type SortField = 'severity' | 'time'
 
+const ALERT_ROW_ESTIMATED_HEIGHT_PX = 144
+const ALERT_LIST_OVERSCAN_COUNT = 8
+const ALERT_LIST_ITEM_GAP_PX = 8
+
 export function ActiveAlerts() {
   const { t } = useTranslation('cards')
   const {
     activeAlerts,
     acknowledgedAlerts,
     stats,
-    acknowledgeAlert,
+    acknowledgeAlerts,
     runAIDiagnosis,
     isLoadingData,
     dataError,
@@ -144,6 +150,11 @@ export function ActiveAlerts() {
     return result
   })()
 
+  const groupedAlerts = useMemo(
+    () => groupAlertsForDisplay(severityFilteredAlerts),
+    [severityFilteredAlerts]
+  )
+
   // Use shared card data hook for filtering, sorting, and pagination
   const {
     items: displayedAlerts,
@@ -168,7 +179,7 @@ export function ActiveAlerts() {
       sortBy,
       setSortBy },
     containerRef,
-    containerStyle } = useCardData<Alert, SortField>(severityFilteredAlerts, {
+    containerStyle } = useCardData<GroupedAlert, SortField>(groupedAlerts, {
     filter: {
       searchFields: ['ruleName', 'message', 'cluster'],
       clusterField: 'cluster',
@@ -221,9 +232,9 @@ export function ActiveAlerts() {
     runAIDiagnosis(alertId)
   }
 
-  const handleAcknowledge = (e: React.MouseEvent, alertId: string) => {
+  const handleAcknowledge = (e: React.MouseEvent, alertIds: string[]) => {
     e.stopPropagation()
-    acknowledgeAlert(alertId)
+    acknowledgeAlerts(alertIds)
   }
 
   // Check if a mission exists for an alert
@@ -373,27 +384,39 @@ export function ActiveAlerts() {
       <AlertStatsRow critical={stats.critical} warning={stats.warning} acknowledged={stats.acknowledged} />
 
       {/* Alerts List */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2" style={containerStyle}>
-        {displayedAlerts.length === 0 ? (
+      {displayedAlerts.length === 0 ? (
+        <div ref={containerRef} className="flex-1 overflow-y-auto" style={containerStyle}>
           <div className="h-full flex flex-col items-center justify-center text-muted-foreground text-sm">
             <CheckCircle className="w-8 h-8 mb-2 text-green-400" />
             <span>{t('activeAlerts.noActiveAlerts')}</span>
             <span className="text-xs">{t('activeAlerts.allSystemsOperational')}</span>
           </div>
-        ) : (
-          displayedAlerts.map((alert: Alert) => (
+        </div>
+      ) : (
+        <VirtualizedList
+          items={displayedAlerts}
+          estimateSize={() => ALERT_ROW_ESTIMATED_HEIGHT_PX}
+          overscan={ALERT_LIST_OVERSCAN_COUNT}
+          itemGap={ALERT_LIST_ITEM_GAP_PX}
+          scrollRef={containerRef}
+          className="flex-1 overflow-y-auto"
+          style={containerStyle}
+          getItemKey={(alert) => `${alert.id}-${alert.duplicateCount}`}
+          renderItem={(alert) => (
             <AlertListItem
               key={alert.id}
               alert={alert}
+              alertIds={alert.alertIds}
+              duplicateCount={alert.duplicateCount}
               mission={getMissionForAlert(alert)}
               onAlertClick={handleAlertClick}
               onAcknowledge={handleAcknowledge}
               onAIDiagnose={handleAIDiagnose}
               onOpenMission={handleOpenMission}
             />
-          ))
-        )}
-      </div>
+          )}
+        />
+      )}
 
       {/* Pagination */}
       {needsPagination && itemsPerPage !== 'unlimited' && (

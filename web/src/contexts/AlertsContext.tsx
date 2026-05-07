@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense, startTransition, type ReactNode } from 'react'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
@@ -44,6 +44,7 @@ import { executeRunbook } from '../lib/runbooks/executor'
 // the main chunk.  The provider renders immediately with empty data; once
 // the fetcher chunk loads, it starts pushing live data via onData callback.
 const AlertsDataFetcher = lazy(() => import('./AlertsDataFetcher'))
+const MCP_UPDATE_BATCH_FRAME_FALLBACK_MS = 16
 
 // Generate unique ID
 function generateId(): string {
@@ -319,10 +320,39 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     clusters: [],
     isLoading: true,
     error: null })
+  const pendingMCPDataRef = useRef<AlertsMCPData | null>(null)
+  const mcpFlushHandleRef = useRef<number | ReturnType<typeof setTimeout> | null>(null)
 
   const { startMission, missions: allMissions } = useMissions()
   const { isDemoMode } = useDemoMode()
   const previousDemoMode = useRef(isDemoMode)
+
+  const flushPendingMCPData = useCallback(() => {
+    mcpFlushHandleRef.current = null
+    const pendingMCPData = pendingMCPDataRef.current
+    if (!pendingMCPData) return
+
+    pendingMCPDataRef.current = null
+    startTransition(() => {
+      setMCPData(pendingMCPData)
+    })
+  }, [])
+
+  const enqueueMCPData = useCallback((nextMCPData: AlertsMCPData) => {
+    pendingMCPDataRef.current = nextMCPData
+    if (mcpFlushHandleRef.current !== null) return
+
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      mcpFlushHandleRef.current = window.requestAnimationFrame(() => {
+        flushPendingMCPData()
+      })
+      return
+    }
+
+    mcpFlushHandleRef.current = globalThis.setTimeout(() => {
+      flushPendingMCPData()
+    }, MCP_UPDATE_BATCH_FRAME_FALLBACK_MS)
+  }, [flushPendingMCPData])
 
   // Refs for polling data — lets evaluateConditions read latest data
   // without being recreated on every poll cycle
@@ -506,6 +536,17 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const dataError = loadingTimedOut && mcpData.isLoading
     ? (mcpData.error || 'MCP data fetch timed out')
     : mcpData.error
+
+  useEffect(() => () => {
+    if (mcpFlushHandleRef.current === null) return
+
+    if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+      window.cancelAnimationFrame(mcpFlushHandleRef.current as number)
+      return
+    }
+
+    globalThis.clearTimeout(mcpFlushHandleRef.current)
+  }, [])
 
   // Save rules whenever they change
   useEffect(() => {
@@ -1724,7 +1765,7 @@ Please provide:
   return (
     <AlertsContext.Provider value={value}>
       <Suspense fallback={null}>
-        <AlertsDataFetcher onData={setMCPData} />
+        <AlertsDataFetcher onData={enqueueMCPData} />
       </Suspense>
       {children}
     </AlertsContext.Provider>

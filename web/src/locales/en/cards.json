@@ -2307,6 +2307,7 @@
     "no": "No",
     "checkSystemSettings": "Check System Settings → Notifications → Chrome",
     "viewAlertDetailsAria": "View alert details: {{rule}}",
+    "duplicateCount": "×{{count}}",
     "unsnoozeAlertAria": "Unsnooze alert",
     "snoozeAlertAria": "Snooze this alert",
     "snoozeForAria": "Snooze for {{duration}}"

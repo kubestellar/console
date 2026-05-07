@@ -8,17 +8,21 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { useMobile } from '../../hooks/useMobile'
 import { getSeverityIcon, ALERT_SEVERITY_ORDER } from '../../types/alerts'
-import type { Alert, AlertSeverity } from '../../types/alerts'
+import type { AlertSeverity } from '../../types/alerts'
 import { CardAIActions } from '../../lib/cards/CardComponents'
 import { ROUTES } from '../../config/routes'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useModalState } from '../../lib/modals'
 import { Button } from './Button'
+import { groupAlertsForDisplay, type GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
+import { VirtualizedList } from './VirtualizedList'
 
 /** Maximum numeric value to display in the badge before switching to overflow text (e.g. "99+") */
 const BADGE_MAX_COUNT = 99
 /** Duration of the exit animation before swapping the counter value in milliseconds */
 const ANIMATION_EXIT_DELAY_MS = 150
+const ALERT_BADGE_ROW_ESTIMATED_HEIGHT_PX = 144
+const ALERT_BADGE_OVERSCAN_COUNT = 8
 
 // Animated counter component for the badge - exported for future use
 interface AnimationState {
@@ -34,13 +38,10 @@ export function AnimatedCounter({ value, className }: { value: number; className
 
   useEffect(() => {
     if (value !== prevValueRef.current) {
-      // Batch direction + isAnimating into a single state update
       setAnimState({ isAnimating: true, direction: value > prevValueRef.current ? 'up' : 'down' })
-      // Wait for exit animation, then update value
       const exitTimer = setTimeout(() => {
         setDisplayValue(value)
         prevValueRef.current = value
-        // Reset animation after enter completes
         enterTimerRef.current = setTimeout(() => {
           setAnimState(prev => ({ ...prev, isAnimating: false }))
           enterTimerRef.current = null
@@ -78,7 +79,7 @@ export function AnimatedCounter({ value, className }: { value: number; className
 export function AlertBadge() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { activeAlerts, stats, acknowledgeAlert, acknowledgeAlerts, runAIDiagnosis } = useAlerts()
+  const { activeAlerts, stats, acknowledgeAlerts, runAIDiagnosis } = useAlerts()
   const { drillToCluster } = useDrillDownActions()
   const { missions, setActiveMission, openSidebar } = useMissions()
   const { isMobile } = useMobile()
@@ -114,13 +115,13 @@ export function AlertBadge() {
   }, [isOpen, close])
 
   // Check if a mission exists for an alert
-  const getMissionForAlert = (alert: Alert) => {
+  const getMissionForAlert = (alert: GroupedAlert) => {
     if (!alert.aiDiagnosis?.missionId) return null
     return missions.find(m => m.id === alert.aiDiagnosis?.missionId) || null
   }
 
   // Open mission sidebar for an alert
-  const handleOpenMission = (e: React.MouseEvent, alert: Alert) => {
+  const handleOpenMission = (e: React.MouseEvent, alert: GroupedAlert) => {
     e.stopPropagation()
     const mission = getMissionForAlert(alert)
     if (mission) {
@@ -157,23 +158,26 @@ export function AlertBadge() {
     })
   }, [activeAlerts, searchQuery, severityFilter])
 
-  // Show all filtered alerts (scrollable container handles overflow)
-  const displayedAlerts = filteredAlerts
+  const displayedAlerts = useMemo(
+    () => groupAlertsForDisplay(filteredAlerts),
+    [filteredAlerts]
+  )
 
-  const handleAlertClick = (alert: Alert) => {
+  const handleAlertClick = (alert: GroupedAlert) => {
     close()
     if (alert.cluster) {
       drillToCluster(alert.cluster, { alert })
     }
   }
 
-  const handleAcknowledge = (e: React.MouseEvent, alertId: string) => {
+  const handleAcknowledge = (e: React.MouseEvent, alertIds: string[]) => {
     e.stopPropagation()
-    acknowledgeAlert(alertId)
-    // Remove from selection after acknowledging
+    acknowledgeAlerts(alertIds)
     setSelectedAlertIds(prev => {
       const next = new Set(prev)
-      next.delete(alertId)
+      for (const alertId of alertIds) {
+        next.delete(alertId)
+      }
       return next
     })
   }
@@ -184,22 +188,29 @@ export function AlertBadge() {
     close() // Close dialog after starting diagnosis
   }
 
-  // Toggle selection for a single alert
-  const toggleAlertSelection = (e: React.MouseEvent, alertId: string) => {
+  const isGroupSelected = (alertIds: string[]) => alertIds.every(alertId => selectedAlertIds.has(alertId))
+
+  // Toggle selection for a single alert group
+  const toggleAlertSelection = (e: React.MouseEvent, alertIds: string[]) => {
     e.stopPropagation()
     setSelectedAlertIds(prev => {
       const next = new Set(prev)
-      if (next.has(alertId)) {
-        next.delete(alertId)
-      } else {
-        next.add(alertId)
+      const shouldDeselect = alertIds.every(alertId => next.has(alertId))
+      for (const alertId of alertIds) {
+        if (shouldDeselect) {
+          next.delete(alertId)
+        } else {
+          next.add(alertId)
+        }
       }
       return next
     })
   }
 
   // Get IDs of unacknowledged alerts in the current view
-  const unacknowledgedDisplayedIds = displayedAlerts.filter(a => !a.acknowledgedAt).map(a => a.id)
+  const unacknowledgedDisplayedIds = displayedAlerts.flatMap(alert => (
+    alert.acknowledgedAt ? [] : alert.alertIds
+  ))
 
   // Select all unacknowledged alerts in current view
   const handleSelectAll = () => {
@@ -409,8 +420,8 @@ export function AlertBadge() {
             )}
 
             {/* Alerts List */}
-            <div className="max-h-64 overflow-y-auto scroll-enhanced">
-              {displayedAlerts.length === 0 ? (
+            {displayedAlerts.length === 0 ? (
+              <div className="max-h-64 overflow-y-auto scroll-enhanced">
                 <div className="p-6 text-center text-muted-foreground">
                   {stats.firing === 0 ? (
                     <>
@@ -425,81 +436,92 @@ export function AlertBadge() {
                     </>
                   )}
                 </div>
-              ) : displayedAlerts.map(alert => (
-                <div
-                  key={alert.id}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`View ${alert.severity} alert: ${alert.ruleName}`}
-                  onClick={() => handleAlertClick(alert)}
-                  onKeyDown={(e) => {
-                    if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
-                      e.preventDefault()
-                      handleAlertClick(alert)
-                    }
-                  }}
-                  className="p-3 border-b border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-start gap-2">
-                    {/* Selection checkbox for unacknowledged alerts */}
-                    {!alert.acknowledgedAt && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => toggleAlertSelection(e, alert.id)}
-                        className="mt-0.5 p-0"
-                        title={selectedAlertIds.has(alert.id) ? 'Deselect' : 'Select'}
-                        aria-label={selectedAlertIds.has(alert.id) ? `Deselect alert: ${alert.ruleName}` : `Select alert: ${alert.ruleName}`}
-                        icon={selectedAlertIds.has(alert.id) ? (
-                          <CheckSquare className="w-4 h-4 text-purple-400" />
-                        ) : (
-                          <Square className="w-4 h-4" />
-                        )}
-                      />
-                    )}
-                    <span className="text-lg" title={`${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)} severity`} aria-label={`${alert.severity} severity`}>{getSeverityIcon(alert.severity)}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-foreground truncate">
-                          {alert.ruleName}
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                        {alert.message}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1">
-                        {alert.cluster && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Server className="w-3 h-3" />
-                            {alert.cluster}
-                          </span>
-                        )}
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {formatTimeAgo(alert.firedAt)}
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
+              </div>
+            ) : (
+              <VirtualizedList
+                items={displayedAlerts}
+                estimateSize={() => ALERT_BADGE_ROW_ESTIMATED_HEIGHT_PX}
+                overscan={ALERT_BADGE_OVERSCAN_COUNT}
+                className="max-h-64 overflow-y-auto scroll-enhanced"
+                getItemKey={(alert) => `${alert.id}-${alert.duplicateCount}`}
+                renderItem={(alert) => {
+                  const mission = getMissionForAlert(alert)
+                  const groupSelected = isGroupSelected(alert.alertIds)
 
-                  {/* Quick Actions */}
-                  <div className="flex items-center gap-2 mt-2">
-                    {!alert.acknowledgedAt && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={e => handleAcknowledge(e, alert.id)}
-                        className="rounded-md"
-                      >
-                        Acknowledge
-                      </Button>
-                    )}
-                    {(() => {
-                      const mission = getMissionForAlert(alert)
-                      if (mission) {
-                        // Mission exists - show link to view it
-                        return (
+                  return (
+                    <div
+                      key={alert.id}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`View ${alert.severity} alert: ${alert.ruleName}`}
+                      onClick={() => handleAlertClick(alert)}
+                      onKeyDown={(e) => {
+                        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault()
+                          handleAlertClick(alert)
+                        }
+                      }}
+                      className="border-b border-border/50 p-3 transition-colors group hover:bg-secondary/30 cursor-pointer"
+                    >
+                      <div className="flex items-start gap-2">
+                        {!alert.acknowledgedAt && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => toggleAlertSelection(e, alert.alertIds)}
+                            className="mt-0.5 p-0"
+                            title={groupSelected ? 'Deselect' : 'Select'}
+                            aria-label={groupSelected ? `Deselect alert: ${alert.ruleName}` : `Select alert: ${alert.ruleName}`}
+                            icon={groupSelected ? (
+                              <CheckSquare className="w-4 h-4 text-purple-400" />
+                            ) : (
+                              <Square className="w-4 h-4" />
+                            )}
+                          />
+                        )}
+                        <span className="text-lg" title={`${alert.severity.charAt(0).toUpperCase() + alert.severity.slice(1)} severity`} aria-label={`${alert.severity} severity`}>{getSeverityIcon(alert.severity)}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-foreground truncate">
+                              {alert.ruleName}
+                            </span>
+                            {alert.duplicateCount > 1 && (
+                              <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                {t('cards:activeAlerts.duplicateCount', { count: alert.duplicateCount })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                            {alert.message}
+                          </div>
+                          <div className="flex items-center gap-3 mt-1">
+                            {alert.cluster && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Server className="w-3 h-3" />
+                                {alert.cluster}
+                              </span>
+                            )}
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatTimeAgo(alert.firedAt)}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+
+                      <div className="mt-2 flex items-center gap-2">
+                        {!alert.acknowledgedAt && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={e => handleAcknowledge(e, alert.alertIds)}
+                            className="rounded-md"
+                          >
+                            Acknowledge
+                          </Button>
+                        )}
+                        {mission ? (
                           <Button
                             variant="accent"
                             size="sm"
@@ -509,29 +531,26 @@ export function AlertBadge() {
                           >
                             View Diagnosis
                           </Button>
-                        )
-                      } else {
-                        // No mission or mission was deleted - show diagnose button
-                        return (
+                        ) : (
                           <CardAIActions
                             resource={{ kind: 'Alert', name: alert.ruleName, cluster: alert.cluster, status: alert.severity }}
                             issues={[{ name: alert.ruleName, message: alert.message }]}
                             showRepair={false}
                             onDiagnose={e => handleDiagnose(e, alert.id)}
                           />
-                        )
-                      }
-                    })()}
-                    {alert.acknowledgedAt && (
-                      <span className="px-2 py-1 text-xs text-green-400 flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        Acknowledged
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                        )}
+                        {alert.acknowledgedAt && (
+                          <span className="flex items-center gap-1 px-2 py-1 text-xs text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            Acknowledged
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                }}
+              />
+            )}
 
             {/* Footer */}
             <div className="p-2 border-t border-border text-center">
