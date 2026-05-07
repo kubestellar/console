@@ -224,6 +224,8 @@ export default defineConfig(({ mode }) => ({
         '/health': { ...opts },
         '/auth/github': { ...opts },
         '/auth/github/callback': { ...opts },
+        '/auth/manifest/setup': { ...opts },
+        '/auth/manifest/callback': { ...opts },
         '/auth/refresh': { ...opts },
         '/api/m': { ...opts },
         '/ws': { target: wsTarget, ws: true },
