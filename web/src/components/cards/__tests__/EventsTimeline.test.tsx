@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
@@ -128,6 +128,34 @@ describe('EventsTimeline', () => {
     mockEvents.mockReturnValue({ events: [], isLoading: false, isRefreshing: false, isDemoFallback: true, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     render(<EventsTimeline />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('uses filtered events for summary counts even when timestamps are outside the selected range', () => {
+    mockEvents.mockReturnValue({
+      events: [
+        { type: 'warning', reason: 'BackOff', message: 'Pod is backing off', object: 'Pod/app-1', namespace: 'default', cluster: 'prod-cluster', count: 3, lastSeen: '2026-01-01T00:00:00Z' },
+        { type: 'Normal', reason: 'Started', message: 'Pod started', object: 'Pod/app-2', namespace: 'default', cluster: 'prod-cluster', count: 2, lastSeen: '2026-01-01T00:05:00Z' },
+      ],
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      error: null,
+      lastRefresh: Date.now(),
+    })
+    mockUseClusters.mockReturnValue({
+      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
+      deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      lastRefresh: Date.now(),
+    })
+
+    render(<EventsTimeline />)
+
+    expect(screen.getByLabelText('Events timeline chart showing 3 warnings and 2 normal events, peak 3 events')).toBeTruthy()
   })
 
   it('handles undefined hook data without crashing', () => {

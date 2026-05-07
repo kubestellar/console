@@ -39,6 +39,13 @@ const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: TimeRangeTranslatio
   { value: '24h', labelKey: 'cards:eventsTimeline.range24h', bucketMinutes: 60, numBuckets: 24 },
 ]
 
+const TIME_RANGE_BUCKETS: Record<TimeRange, { bucketMinutes: number; numBuckets: number }> = {
+  '15m': { bucketMinutes: 1, numBuckets: 15 },
+  '1h': { bucketMinutes: 5, numBuckets: 12 },
+  '6h': { bucketMinutes: 30, numBuckets: 12 },
+  '24h': { bucketMinutes: 60, numBuckets: 24 },
+}
+
 // Group events by time buckets
 function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firstSeen?: string; count: number }>, bucketMinutes = 5, numBuckets = 12): TimePoint[] {
   const now = Date.now()
@@ -94,7 +101,7 @@ function EventsTimelineInternal() {
     lastRefresh,
     isFailed,
     consecutiveFailures } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
-  const events = rawEvents || []
+  const events = useMemo(() => rawEvents || [], [rawEvents])
 
   const { deduplicatedClusters: rawClusters } = useClusters()
   const clusters = rawClusters || []
@@ -176,14 +183,11 @@ function EventsTimelineInternal() {
     return result
   }, [events, clusterInfoMap, isAllClustersSelected, selectedClusters, localClusterFilter])
 
-  // Get time range config
-  const timeRangeConfig = TIME_RANGE_OPTIONS.find(t => t.value === timeRange) || TIME_RANGE_OPTIONS[1]
-
   // Group events into time buckets
-  const timeSeriesData = useMemo(
-    () => groupEventsByTime(filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets),
-    [filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets],
-  )
+  const timeSeriesData = useMemo(() => {
+    const { bucketMinutes, numBuckets } = TIME_RANGE_BUCKETS[timeRange]
+    return groupEventsByTime(filteredEvents, bucketMinutes, numBuckets)
+  }, [filteredEvents, timeRange])
 
   // Calculate totals from all filtered events (not just those in time buckets)
   const totalWarnings = useMemo(() => 
