@@ -15,7 +15,7 @@
  * Duplicated from demoMode.ts to avoid circular imports (demoMode → constants → network).
  */
 const _isNetlify = typeof window !== 'undefined' && (
-  import.meta.env.VITE_DEMO_MODE === 'true' ||
+  (import.meta.env?.VITE_DEMO_MODE === 'true') ||
   window.location.hostname.includes('netlify.app') ||
   window.location.hostname.includes('deploy-preview-') ||
   window.location.hostname === 'console.kubestellar.io'
@@ -30,7 +30,7 @@ const _isNetlify = typeof window !== 'undefined' && (
  * The runtime flag (set via suppressLocalAgent()) covers pre-built images
  * deployed in-cluster where Vite env vars cannot be injected at runtime.
  */
-let _suppressAgent = _isNetlify || import.meta.env.VITE_NO_LOCAL_AGENT === 'true'
+let _suppressAgent = _isNetlify || import.meta.env?.VITE_NO_LOCAL_AGENT === 'true'
 
 /**
  * Called by the BrandingProvider after fetching /health to suppress agent
