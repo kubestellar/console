@@ -144,6 +144,7 @@ export interface UseServiceImportsCardResult {
   imports: ServiceImport[]
   isDemoData: boolean
   isLoading: boolean
+  isRefreshing: boolean
   isFailed: boolean
   consecutiveFailures: number
   lastRefresh: number | null
@@ -159,6 +160,7 @@ export function useServiceImportsCard(): UseServiceImportsCardResult {
   const [imports, setImports] = useState<ServiceImport[]>(cachedSnapshot?.data || [])
   const [isDemoData, setIsDemoData] = useState(cachedSnapshot?.isDemoData ?? true)
   const [isLoading, setIsLoading] = useState(!cachedSnapshot)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<number | null>(
     cachedSnapshot?.timestamp || null
@@ -168,6 +170,9 @@ export function useServiceImportsCard(): UseServiceImportsCardResult {
   const refetch = useCallback(async (silent = false) => {
     if (!silent && !initialLoadDone.current) {
       setIsLoading(true)
+    }
+    if (initialLoadDone.current) {
+      setIsRefreshing(true)
     }
 
     try {
@@ -207,6 +212,7 @@ export function useServiceImportsCard(): UseServiceImportsCardResult {
       saveToCache(demoImports, true)
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [clusters])
 
@@ -232,6 +238,7 @@ export function useServiceImportsCard(): UseServiceImportsCardResult {
     imports,
     isDemoData,
     isLoading: isLoading || clustersLoading,
+    isRefreshing,
     isFailed: consecutiveFailures >= FAILURE_THRESHOLD,
     consecutiveFailures,
     lastRefresh,
