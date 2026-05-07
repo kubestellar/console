@@ -453,7 +453,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleYamlImport}
-          disabled={!yamlText.trim()}
+          disabled={!yamlText.trim() || importSuccess}
         >
           {t('workloadImport.import')}
         </Button>
@@ -530,7 +530,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleHelmImport}
-          disabled={!helmRepoUrl.trim() || !helmChartName.trim() || !helmReleaseName.trim()}
+          disabled={!helmRepoUrl.trim() || !helmChartName.trim() || !helmReleaseName.trim() || importSuccess}
         >
           {t('workloadImport.import')}
         </Button>
@@ -578,7 +578,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleGithubImport}
-          disabled={!githubUrl.trim()}
+          disabled={!githubUrl.trim() || importSuccess}
         >
           {t('workloadImport.import')}
         </Button>
@@ -617,7 +617,7 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
           size="sm"
           icon={<Download className="h-3.5 w-3.5" />}
           onClick={handleKustomizeImport}
-          disabled={!kustomizeUrl.trim()}
+          disabled={!kustomizeUrl.trim() || importSuccess}
         >
           {t('workloadImport.import')}
         </Button>
@@ -674,7 +674,19 @@ export function WorkloadImportDialog({ isOpen, onClose, onImport }: WorkloadImpo
         {tabContent[activeTab]()}
       </BaseModal.Content>
 
-      <BaseModal.Footer />
+      <BaseModal.Footer>
+        {importSuccess && (
+          <div className="flex-1 flex justify-end">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleClose}
+            >
+              {t('workloadImport.done')}
+            </Button>
+          </div>
+        )}
+      </BaseModal.Footer>
     </BaseModal>
   )
 }

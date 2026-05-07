@@ -4219,6 +4219,7 @@
     "preview": "Preview",
     "import": "Import",
     "close": "close",
+    "done": "Done",
     "importSuccess": "Workload imported successfully. It now appears in your workload list.",
     "addWorkload": "Add",
     "yamlDescription": "Paste raw Kubernetes YAML for a Deployment, StatefulSet, DaemonSet, Job, or CronJob. Multi-document YAML (separated by ---) is supported.",
