@@ -51,8 +51,8 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
 
   test.describe('Page Structure', () => {
     test('loads without console errors', async ({ page }) => {
+      // Set up error collector BEFORE navigation to capture cold-load errors
       const { errors } = setupErrorCollector(page)
-      // Re-navigate to capture errors from a fresh load
       await setupDemoAndNavigate(page, WORKLOADS_ROUTE)
       await waitForSubRoute(page)
       expect(errors).toHaveLength(0)
