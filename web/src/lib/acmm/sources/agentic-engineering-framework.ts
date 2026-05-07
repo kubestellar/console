@@ -10,7 +10,7 @@ const CRITERIA: Criterion[] = [
     description: 'Every agent task is logged with intent, inputs, and outputs.',
     rationale: 'The framework argues that without a traceable record of what an agent was asked to do, post-hoc review is impossible.',
     details: 'A task traceability ledger is a log file or directory where every AI agent task is recorded with what it was asked to do, what inputs it used, and what outputs it produced. Without this record, you cannot audit AI behavior after the fact or understand why a change was made. An AI mission will create a task logging directory and add hooks that record each agent session\'s intent and results.',
-    detection: { type: 'any-of', pattern: ['.agent/tasks/', 'docs/agent-tasks/', '.github/agent-log/', 'agent-tasks.md'] },
+    detection: { type: 'any-of', pattern: ['.agent/tasks/', 'docs/agent-tasks/', '.github/agent-log/', 'agent-tasks.md', '.tasks/active/', '.tasks/completed/', '.tasks/templates/', '.context/episodic/'] },
   },
   {
     id: 'aef:structural-gates',
@@ -21,7 +21,7 @@ const CRITERIA: Criterion[] = [
     description: 'Config-enforced gates that block agents from touching protected areas without review.',
     rationale: 'The framework treats structural gates as the primary mechanism for scoping agent authority — code can lie, config cannot.',
     details: 'Structural gates are config files (like CODEOWNERS or boundary definitions) that prevent AI agents from modifying protected areas — such as auth modules, database migrations, or deployment configs — without explicit human review. They scope what the AI is allowed to touch. An AI mission will create a CODEOWNERS file or agent boundary config based on your project\'s sensitive directories.',
-    detection: { type: 'any-of', pattern: ['CODEOWNERS', '.github/CODEOWNERS', '.agent/boundaries.yml', 'docs/agent-boundaries.md'] },
+    detection: { type: 'any-of', pattern: ['CODEOWNERS', '.github/CODEOWNERS', '.agent/boundaries.yml', 'docs/agent-boundaries.md', 'policy/escalation-patterns.yaml', '.context/bypass-log.yaml'] },
   },
   {
     id: 'aef:session-continuity',
@@ -32,7 +32,7 @@ const CRITERIA: Criterion[] = [
     description: 'A persistent record the agent reads at session start to recover prior context.',
     rationale: 'The framework: agents without session continuity repeat mistakes and lose alignment between invocations.',
     details: 'A session continuity document is a file that AI agents read at the start of every session to recover context from prior sessions — what was decided, what was tried, what failed. Without it, each session starts from zero and the agent may repeat mistakes or contradict previous decisions. An AI mission will create or enhance your instruction files to include session-persistent context.',
-    detection: { type: 'any-of', pattern: ['CLAUDE.md', 'AGENTS.md', '.cursorrules', '.github/copilot-instructions.md', 'docs/agent-context.md'] },
+    detection: { type: 'any-of', pattern: ['CLAUDE.md', 'AGENTS.md', '.cursorrules', '.github/copilot-instructions.md', 'docs/agent-context.md', 'CONTEXT.md', '.context/handovers/', '.context/working/', '.context/project/', '.context/sessions/'] },
   },
   {
     id: 'aef:audit-trail',
@@ -43,7 +43,7 @@ const CRITERIA: Criterion[] = [
     description: 'A workflow that records agent-generated PRs and attributes them for later review.',
     rationale: 'The framework: the governance claim rests on being able to answer "which agent did this, when, and why" after the fact.',
     details: 'An audit trail workflow automatically labels and logs every AI-generated pull request with metadata: which agent created it, what issue it addresses, and what model was used. This lets you answer "who did this and why" for any AI-generated change during incident review or compliance audits. An AI mission will add a workflow that tags AI PRs with an "ai-generated" label and records attribution details.',
-    detection: { type: 'any-of', pattern: ['.github/workflows/ai-audit.yml', '.github/workflows/agent-audit.yml', 'scripts/ai-audit-report.mjs'] },
+    detection: { type: 'any-of', pattern: ['.github/workflows/ai-audit.yml', '.github/workflows/agent-audit.yml', 'scripts/ai-audit-report.mjs', '.context/audits/', '.context/cron/', '.context/cron-registry.yaml', 'action.yml'] },
   },
   {
     id: 'aef:cross-tool-config',
@@ -65,7 +65,18 @@ const CRITERIA: Criterion[] = [
     description: 'A documented policy that classifies changes by risk tier and routes them to appropriate review.',
     rationale: 'The framework: uniform review gates on all PRs are either too strict or too loose — classification lets the policy be tier-appropriate.',
     details: 'A change classification policy is a documented set of rules that sorts PRs into risk tiers (trivial, standard, critical) and applies different review requirements to each. A typo fix should not need the same review as a database migration. This prevents both over-gatekeeping (slow) and under-gatekeeping (risky). An AI mission will create a classification policy document based on your project\'s file structure and historical PR patterns.',
-    detection: { type: 'any-of', pattern: ['docs/change-classification.md', '.github/change-tiers.yml', 'docs/risk-tiers.md'] },
+    detection: { type: 'any-of', pattern: ['docs/change-classification.md', '.github/change-tiers.yml', 'docs/risk-tiers.md', 'policy/anti-patterns.yaml', 'policy/escalation-patterns.yaml'] },
+  },
+  {
+    id: 'aef:component-fabric',
+    source: 'agentic-engineering-framework',
+    level: 4,
+    category: 'governance',
+    name: 'Component dependency fabric',
+    description: 'Structural mapping of file-level dependencies with automated blast-radius and impact analysis.',
+    rationale: 'The framework: understanding what a change will break before making it is foundational to safe agent operations — behavioral tests catch failures after the fact, structural analysis prevents them.',
+    details: 'A component dependency fabric is a registry of YAML component cards that map file-level dependencies, reverse-dependencies, subsystems, and interfaces. Commands like blast-radius and impact analysis reveal the transitive downstream chain before any change is made. This goes beyond static risk tiers (which files are dangerous) to dynamic dependency tracking (which files are connected). An AI mission will create a component registry and dependency analysis tooling for your project.',
+    detection: { type: 'any-of', pattern: ['.fabric/subsystems.yaml', '.fabric/components/', '.fabric/watch-patterns.yaml', 'agents/fabric/'] },
   },
 ]
 
