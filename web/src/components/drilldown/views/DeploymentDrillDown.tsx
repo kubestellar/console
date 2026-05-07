@@ -337,10 +337,14 @@ export function DeploymentDrillDown({ data }: Props) {
         })
         setCanScale(result.allowed)
       } catch {
-        setCanScale(false)
+        // When kc-agent is connected, default to allowed when permission check
+        // fails. The agent uses the user's own kubeconfig, so if kubectl scale
+        // works, the check failure is likely a transient API error, not a real
+        // permission denial. Fixes #12417.
+        setCanScale(agentConnected)
       }
     }
-  }, [cluster, namespace, checkPermission])
+  }, [cluster, namespace, checkPermission, agentConnected])
 
   // Check scale permission on mount
   useEffect(() => {
