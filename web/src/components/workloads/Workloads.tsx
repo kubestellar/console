@@ -54,10 +54,19 @@ export function Workloads() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   // Data fetching
-  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated, refetch: refetchPodIssues } = usePodIssues()
-  const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, refetch: refetchDeploymentIssues } = useDeploymentIssues()
-  const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, refetch: refetchDeployments } = useDeployments()
-  const { deduplicatedClusters: clusters, isLoading: clustersLoading, refetch: refetchClusters } = useClusters()
+  const { issues: podIssues, isLoading: podIssuesLoading, isRefreshing: podIssuesRefreshing, lastUpdated: podLastUpdated, refetch: refetchPodIssues } = usePodIssues()
+  const { issues: deploymentIssues, isLoading: deploymentIssuesLoading, isRefreshing: deploymentIssuesRefreshing, lastUpdated: deploymentLastUpdated, refetch: refetchDeploymentIssues } = useDeploymentIssues()
+  const { deployments: allDeployments, isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated: deploymentsLastUpdated, refetch: refetchDeployments } = useDeployments()
+  const { deduplicatedClusters: clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated, refetch: refetchClusters } = useClusters()
+
+  // Combine lastUpdated from all sources - use the most recent one
+  const lastUpdated = useMemo(() => {
+    const timestamps = [podLastUpdated, deploymentLastUpdated, deploymentsLastUpdated, clustersLastUpdated].filter(
+      (t): t is Date => t !== null && t !== undefined
+    )
+    if (timestamps.length === 0) return null
+    return timestamps.reduce((latest, current) => (current > latest ? current : latest))
+  }, [podLastUpdated, deploymentLastUpdated, deploymentsLastUpdated, clustersLastUpdated])
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
   const isModeSwitching = useIsModeSwitching()
@@ -224,7 +233,10 @@ export function Workloads() {
       }
       const app = appMap.get(key)!
       app.deploymentIssues++
-      if (app.status !== 'error') {
+      // Allow deployment issues to escalate namespace to error (matching pod issue threshold)
+      if (app.deploymentIssues > 3) {
+        app.status = 'error'
+      } else if (app.status === 'healthy') {
         app.status = 'warning'
       }
     })
