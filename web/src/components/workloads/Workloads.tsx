@@ -470,7 +470,7 @@ export function Workloads() {
       {/* Clusters Summary */}
       <div className="mt-8">
         <h2 className="text-lg font-semibold text-foreground mb-4">Clusters Overview</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div data-testid="clusters-overview-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {forceSkeletonForOffline ? (
             // Show skeleton when agent is offline and demo mode is OFF
             Array.from({ length: WORKLOAD_SKELETON_COUNT }, (_, i) => (
@@ -486,7 +486,7 @@ export function Workloads() {
             clusters
               .filter(cluster => isAllClustersSelected || globalSelectedClusters.includes(cluster.name))
               .map((cluster) => (
-                <div key={cluster.name} className="glass p-3 rounded-lg">
+                <div key={cluster.name} data-testid="cluster-card" className="glass p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <StatusIndicator
                       status={cluster.reachable === false ? 'unreachable' : cluster.healthy ? 'healthy' : 'error'}

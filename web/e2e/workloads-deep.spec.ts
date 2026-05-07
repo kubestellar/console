@@ -127,6 +127,41 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
   })
 
   // -------------------------------------------------------------------------
+  // Clusters Overview
+  // -------------------------------------------------------------------------
+
+  test.describe('Clusters Overview', () => {
+    test('renders clusters overview heading', async ({ page }) => {
+      const heading = page.locator('text=' + CLUSTERS_OVERVIEW_HEADING).first()
+      await expect(heading).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    })
+
+    test('renders clusters overview grid with cluster cards', async ({ page }) => {
+      const grid = page.getByTestId('clusters-overview-grid')
+      await expect(grid).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+      // In demo mode at least one cluster card must be present
+      const cards = grid.getByTestId('cluster-card')
+      const cardCount = await cards.count()
+      expect(cardCount).toBeGreaterThan(0)
+    })
+
+    test('cluster cards show pod and node counts', async ({ page }) => {
+      const grid = page.getByTestId('clusters-overview-grid')
+      await expect(grid).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+      const cards = grid.getByTestId('cluster-card')
+      const cardCount = await cards.count()
+      expect(cardCount).toBeGreaterThan(0)
+
+      // Each card should display pod and node stats
+      const firstCard = cards.first()
+      await expect(firstCard.locator('text=/pods/')).toBeVisible()
+      await expect(firstCard.locator('text=/nodes/')).toBeVisible()
+    })
+  })
+
+  // -------------------------------------------------------------------------
   // Refresh
   // -------------------------------------------------------------------------
 
