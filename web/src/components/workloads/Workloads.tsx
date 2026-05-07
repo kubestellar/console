@@ -332,7 +332,7 @@ export function Workloads() {
       {showSkeletons ? (
         <div className="space-y-3">
           {Array.from({ length: WORKLOAD_SKELETON_COUNT }, (_, i) => (
-            <div key={i} className="glass p-4 rounded-lg border-l-4 border-l-gray-500/50">
+            <div key={i} data-testid="workload-row" className="glass p-4 rounded-lg border-l-4 border-l-gray-500/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <Skeleton variant="circular" width={24} height={24} />
@@ -373,6 +373,7 @@ export function Workloads() {
             return (
               <div
                 key={i}
+                data-testid="workload-row"
                 onClick={() => isDeployment
                   ? drillToDeployment(deploy.cluster, deploy.namespace, deploy.name)
                   : drillToNamespace(app.cluster, app.namespace)

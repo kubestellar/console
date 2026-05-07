@@ -88,26 +88,17 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
   test.describe('Stats', () => {
     test('shows namespace count stat', async ({ page }) => {
       const stat = page.locator('text=' + STAT_NAMESPACES_SUBLABEL).first()
-      const isVisible = await stat.isVisible().catch(() => false)
-      if (isVisible) {
-        await expect(stat).toBeVisible()
-      }
+      await expect(stat).toBeVisible()
     })
 
     test('shows deployment count stat', async ({ page }) => {
       const stat = page.locator('text=' + STAT_DEPLOYMENTS_SUBLABEL).first()
-      const isVisible = await stat.isVisible().catch(() => false)
-      if (isVisible) {
-        await expect(stat).toBeVisible()
-      }
+      await expect(stat).toBeVisible()
     })
 
     test('shows pod issues stat', async ({ page }) => {
       const stat = page.locator('text=' + STAT_POD_ISSUES_SUBLABEL).first()
-      const isVisible = await stat.isVisible().catch(() => false)
-      if (isVisible) {
-        await expect(stat).toBeVisible()
-      }
+      await expect(stat).toBeVisible()
     })
   })
 
@@ -116,19 +107,17 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
   // -------------------------------------------------------------------------
 
   test.describe('Content', () => {
-    test('renders cards or content area', async ({ page }) => {
+    test('renders workload rows or empty state', async ({ page }) => {
       // In demo mode we should see either workload rows or the empty state
-      // Workload rows have a border-l-4 style, or the empty state has the deploy button
-      const workloadRows = page.locator('.border-l-4')
+      // Workload rows have data-testid="workload-row"
+      const workloadRows = page.getByTestId('workload-row')
       const emptyState = page.locator('text=' + EMPTY_STATE_TEXT).first()
-      const clustersHeading = page.locator('text=' + CLUSTERS_OVERVIEW_HEADING).first()
 
       const hasRows = (await workloadRows.count()) > 0
       const hasEmpty = await emptyState.isVisible().catch(() => false)
-      const hasClusters = await clustersHeading.isVisible().catch(() => false)
 
       // At least one of these should be present
-      expect(hasRows || hasEmpty || hasClusters).toBe(true)
+      expect(hasRows || hasEmpty).toBe(true)
     })
 
     test('page has meaningful content', async ({ page }) => {
