@@ -21,6 +21,7 @@ const mockIsBackendUnavailable = vi.hoisted(() => vi.fn(() => false))
 const mockReportAgentDataError = vi.hoisted(() => vi.fn())
 const mockReportAgentDataSuccess = vi.hoisted(() => vi.fn())
 const mockIsAgentUnavailable = vi.hoisted(() => vi.fn(() => true))
+const mockGetAgentClusterCount = vi.hoisted(() => vi.fn(() => 0))
 const mockRegisterCacheReset = vi.hoisted(() => vi.fn())
 const mockTriggerAllRefetches = vi.hoisted(() => vi.fn())
 const mockResetFailuresForCluster = vi.hoisted(() => vi.fn())
@@ -53,6 +54,7 @@ vi.mock('../../useLocalAgent', () => ({
   reportAgentDataError: mockReportAgentDataError,
   reportAgentDataSuccess: mockReportAgentDataSuccess,
   isAgentUnavailable: mockIsAgentUnavailable,
+  getAgentClusterCount: mockGetAgentClusterCount,
 }))
 
 vi.mock('../../../lib/modeTransition', () => ({
@@ -757,6 +759,7 @@ describe('refreshSingleCluster', () => {
     mockIsNetlifyDeployment.value = false
     mockIsDemoToken.mockReturnValue(false)
     setHealthCheckFailures(0)
+    mockGetAgentClusterCount.mockReturnValue(0)
 
     // Seed cache with a cluster
     updateClusterCache({

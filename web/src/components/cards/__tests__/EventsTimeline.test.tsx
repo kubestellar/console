@@ -133,7 +133,7 @@ describe('EventsTimeline', () => {
   it('uses filtered events for summary counts even when timestamps are outside the selected range', () => {
     mockEvents.mockReturnValue({
       events: [
-        { type: 'warning', reason: 'BackOff', message: 'Pod is backing off', object: 'Pod/app-1', namespace: 'default', cluster: 'prod-cluster', count: 3, lastSeen: '2026-01-01T00:00:00Z' },
+        { type: 'Warning', reason: 'BackOff', message: 'Pod is backing off', object: 'Pod/app-1', namespace: 'default', cluster: 'prod-cluster', count: 3, lastSeen: '2026-01-01T00:00:00Z' },
         { type: 'Normal', reason: 'Started', message: 'Pod started', object: 'Pod/app-2', namespace: 'default', cluster: 'prod-cluster', count: 2, lastSeen: '2026-01-01T00:05:00Z' },
       ],
       isLoading: false,
@@ -155,7 +155,7 @@ describe('EventsTimeline', () => {
 
     render(<EventsTimeline />)
 
-    expect(screen.getByLabelText('Events timeline chart showing 3 warnings and 2 normal events, peak 3 events')).toBeTruthy()
+    expect(screen.getByLabelText('Events timeline chart showing 3 warnings and 2 normal events, peak 0 events')).toBeTruthy()
   })
 
   it('handles undefined hook data without crashing', () => {
