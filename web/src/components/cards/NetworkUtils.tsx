@@ -99,7 +99,6 @@ export function NetworkUtils() {
   const { isDemoMode } = useDemoMode()
   const [activeTab, setActiveTab] = useState<'ping' | 'ports' | 'info'>('ping')
   const [isInitialized, setIsInitialized] = useState(false)
-  useCardLoadingState({ isLoading: !isInitialized, hasAnyData: isInitialized, isDemoData: isDemoMode })
   const [savedHosts, setSavedHosts] = useState<SavedHost[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
@@ -120,6 +119,13 @@ export function NetworkUtils() {
   const pingIntervalRef = useRef<number | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const isPingingRef = useRef(false) // Ref to track pinging state for stable callback
+
+  useCardLoadingState({ 
+    isLoading: !isInitialized, 
+    isRefreshing: isPinging,
+    hasAnyData: isInitialized, 
+    isDemoData: isDemoMode 
+  })
 
   // Update network info and mark as initialized
   useEffect(() => {
