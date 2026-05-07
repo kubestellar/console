@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import {
   Server,
@@ -32,6 +32,7 @@ import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { ConfirmDialog } from '../../lib/modals'
 import { useFederationAwareness, getProviderLabel } from '../../hooks/useFederation'
+import { useToast } from '../ui/Toast'
 import { formatTimeAgo } from '../../lib/formatters'
 
 interface ClusterGroupsProps {
@@ -106,6 +107,7 @@ function formatFilter(f: ClusterFilter): string {
 
 export function ClusterGroups(_props: ClusterGroupsProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const { showToast } = useToast()
   const { groups: liveGroups, createGroup, updateGroup, deleteGroup, isPersisted } = useClusterGroups()
   const { deduplicatedClusters: clusters, isLoading, isRefreshing, isFailed, consecutiveFailures } = useClusters()
   const { isDemoMode: demoMode } = useDemoMode()
@@ -258,6 +260,7 @@ export function ClusterGroups(_props: ClusterGroupsProps) {
         onConfirm={() => {
           if (deleteConfirmName) {
             deleteGroup(deleteConfirmName)
+            showToast(t('cards:clusterGroups.deleteSuccess', { defaultValue: 'Cluster group deleted' }), 'success')
             setDeleteConfirmName(null)
           }
         }}
