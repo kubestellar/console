@@ -35,7 +35,6 @@ import { clusterCacheRef, agentFetch } from '../../hooks/mcp/shared'
 import { WorkloadImportDialog } from './WorkloadImportDialog'
 import { BaseModal } from '../../lib/modals/BaseModal'
 import { Button } from '../ui/Button'
-import { ConfirmDialog } from '../../lib/modals'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
