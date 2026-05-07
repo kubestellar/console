@@ -86,12 +86,14 @@ function makeRule(overrides: Partial<AlertRule> = {}): Omit<AlertRule, 'id' | 'c
   }
 }
 
-/** Flush microtasks and timers for a given duration */
+/** Flush microtasks and deferred MCP updates after render/evaluation. */
+const MCP_DATA_FLUSH_MS = 20
+
 async function flushTimers() {
   await act(async () => {
-    vi.advanceTimersByTime(0)
-    // Let microtasks resolve (queueMicrotask, Promises)
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await vi.advanceTimersByTimeAsync(MCP_DATA_FLUSH_MS)
+    await Promise.resolve()
+    await Promise.resolve()
   })
 }
 
@@ -150,7 +152,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -198,7 +200,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -235,7 +237,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -283,7 +285,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -320,7 +322,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -367,7 +369,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -406,7 +408,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -445,7 +447,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -486,7 +488,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -531,7 +533,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -570,7 +572,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -610,7 +612,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -650,7 +652,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -686,7 +688,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -724,7 +726,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -763,7 +765,7 @@ describe('AlertsContext — additional coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
