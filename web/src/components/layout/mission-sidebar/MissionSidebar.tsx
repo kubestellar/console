@@ -48,6 +48,8 @@ import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { useTranslation } from 'react-i18next'
+import { useAlertsContext } from '../../../contexts/AlertsContext'
+import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
 import { isDemoMode } from '../../../lib/demoMode'
@@ -1553,15 +1555,11 @@ export function MissionSidebarToggle() {
   const { t } = useTranslation(['common'])
   const { missions, isSidebarOpen, openSidebar } = useMissions()
   const { isMobile } = useMobile()
+  const { activeAlerts } = useAlertsContext()
+  const { drillToAllAlerts } = useDrillDownActions()
 
-  // Blocked missions are stuck on preflight failure / missing credentials /
-  // RBAC denial (#5933). `failed` is deliberately excluded (#7918): failed
-  // missions are terminal and are filtered out of the active list by
-  // `isActiveMission`, so including them here produced a badge count the
-  // user could not reconcile with the visible active list.
-  const needsAttention = missions.filter(m =>
-    m.status === 'waiting_input' || m.status === 'blocked'
-  ).length
+  // Count active alerts that need attention (firing alerts, not acknowledged)
+  const needsAttention = activeAlerts.length
 
   const runningCount = missions.filter(m => m.status === 'running').length
   /**
@@ -1578,7 +1576,7 @@ export function MissionSidebarToggle() {
 
   return (
     <button
-      onClick={openSidebar}
+      onClick={needsAttention > 0 ? () => drillToAllAlerts() : openSidebar}
       data-tour="ai-missions-toggle"
       data-testid="mission-sidebar-toggle"
       className={cn(
