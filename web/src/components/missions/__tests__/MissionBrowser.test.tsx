@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MissionBrowser } from '../MissionBrowser'
+import type { TreeNode } from '../browser'
 
 const browserMockState = vi.hoisted(() => ({
   missionCache: {
@@ -147,13 +148,39 @@ vi.mock('../browser', () => ({
 }))
 
 vi.mock('../MissionBrowserSidebar', () => ({
-  MissionBrowserSidebar: ({ selectedPath, expandedNodes }: { selectedPath: string | null; expandedNodes: Set<string> }) => (
-    <div
-      data-testid="mission-sidebar"
-      data-selected-path={selectedPath ?? ''}
-      data-expanded={Array.from(expandedNodes).sort().join('|')}
-    />
-  ),
+  MissionBrowserSidebar: ({
+    treeNodes,
+    selectedPath,
+    expandedNodes,
+    onSelectNode,
+    onFileSelect,
+  }: {
+    treeNodes: TreeNode[]
+    selectedPath: string | null
+    expandedNodes: Set<string>
+    onSelectNode: (node: TreeNode) => void
+    onFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void
+  }) => {
+    const renderNodes = (nodes: TreeNode[]) => nodes.map((node) => (
+      <div key={node.id}>
+        <button type="button" data-testid={`tree-node-${node.id}`} onClick={() => onSelectNode(node)}>
+          {node.name}
+        </button>
+        {node.children ? renderNodes(node.children) : null}
+      </div>
+    ))
+
+    return (
+      <div
+        data-testid="mission-sidebar"
+        data-selected-path={selectedPath ?? ''}
+        data-expanded={Array.from(expandedNodes).sort().join('|')}
+      >
+        <input data-testid="mission-file-input" type="file" onChange={onFileSelect} />
+        {renderNodes(treeNodes)}
+      </div>
+    )
+  },
 }))
 
 vi.mock('../ScanProgressOverlay', () => ({
@@ -253,6 +280,30 @@ describe('MissionBrowser', () => {
     await userEvent.click(closeButton)
 
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('reopens an imported local file after navigating away', async () => {
+    const user = userEvent.setup()
+    render(<MissionBrowser {...defaultProps} />)
+
+    const localFile = new File(['{"title":"Local mission"}'], 'local-mission.json', {
+      type: 'application/json',
+    })
+
+    await user.upload(screen.getByTestId('mission-file-input'), localFile)
+    await waitFor(() => {
+      expect(screen.getByTestId('mission-detail')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTestId('tree-node-kubara'))
+    await waitFor(() => {
+      expect(screen.queryByTestId('mission-detail')).not.toBeInTheDocument()
+    })
+
+    await user.click(screen.getByTestId('tree-node-local/local-mission.json'))
+    await waitFor(() => {
+      expect(screen.getByTestId('mission-detail')).toBeInTheDocument()
+    })
   })
 
   it('calls onClose on Escape key when no mission is selected', async () => {

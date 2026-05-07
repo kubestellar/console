@@ -826,6 +826,46 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   // Select a node (directory → show listing, file → show preview)
   // ============================================================================
 
+  const applySelectedFileContent = useCallback((node: TreeNode, raw: string) => {
+    setRawContent(raw)
+    setUnstructuredContent(null)
+
+    // External repo files (e.g., Kubara Helm charts) are not missions —
+    // show as raw YAML/content instead of trying to parse as a mission
+    if (node.repoOwner) {
+      const format = node.name.endsWith('.yaml') || node.name.endsWith('.yml') ? 'yaml' as const : 'markdown' as const
+      setUnstructuredContent({ content: raw, format, preview: { detectedTitle: node.name, detectedSections: [], detectedCommands: [], detectedYamlBlocks: 1, detectedApiGroups: [], totalLines: raw.split('\n').length }, detectedProjects: [] })
+      setSelectedMission(null)
+      return
+    }
+
+    try {
+      const parseResult = parseFileContent(raw, node.name)
+      if (parseResult.type === 'structured') {
+        const validation = validateMissionExport(parseResult.mission)
+        if (validation.valid) {
+          setSelectedMission(validation.data)
+          emitFixerViewed(validation.data.title, validation.data.cncfProject)
+        } else {
+          setSelectedMission(parseResult.mission)
+          emitFixerViewed(parseResult.mission.title ?? node.name, parseResult.mission.cncfProject)
+        }
+      } else {
+        setUnstructuredContent(parseResult)
+        setSelectedMission(null)
+      }
+    } catch {
+      // Fallback: try JSON parse for backwards compatibility
+      try {
+        const parsed = JSON.parse(raw)
+        const validation = validateMissionExport(parsed)
+        setSelectedMission(validation.valid ? validation.data : (parsed as MissionExport))
+      } catch {
+        setSelectedMission(null)
+      }
+    }
+  }, [])
+
   const selectNode = async (node: TreeNode) => {
     setSelectedPath(node.id)
     setSelectedMission(null)
@@ -846,46 +886,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       // File selected → fetch and preview
       setLoading(true)
       try {
-        const content = await fetchNodeFileContent(node)
+        const content = node.source === 'local' ? (node.content ?? null) : await fetchNodeFileContent(node)
         if (content === null) return
 
-        const raw = content
-        setRawContent(raw)
-        setUnstructuredContent(null)
-
-        // External repo files (e.g., Kubara Helm charts) are not missions —
-        // show as raw YAML/content instead of trying to parse as a mission
-        if (node.repoOwner) {
-          const format = node.name.endsWith('.yaml') || node.name.endsWith('.yml') ? 'yaml' as const : 'markdown' as const
-          setUnstructuredContent({ content: raw, format, preview: { detectedTitle: node.name, detectedSections: [], detectedCommands: [], detectedYamlBlocks: 1, detectedApiGroups: [], totalLines: raw.split('\n').length }, detectedProjects: [] })
-          setSelectedMission(null)
-        } else {
-        try {
-          const parseResult = parseFileContent(raw, node.name)
-          if (parseResult.type === 'structured') {
-            const validation = validateMissionExport(parseResult.mission)
-            if (validation.valid) {
-              setSelectedMission(validation.data)
-              emitFixerViewed(validation.data.title, validation.data.cncfProject)
-            } else {
-              setSelectedMission(parseResult.mission)
-              emitFixerViewed(parseResult.mission.title ?? node.name, parseResult.mission.cncfProject)
-            }
-          } else {
-            setUnstructuredContent(parseResult)
-            setSelectedMission(null)
-          }
-        } catch {
-          // Fallback: try JSON parse for backwards compatibility
-          try {
-            const parsed = JSON.parse(raw)
-            const validation = validateMissionExport(parsed)
-            setSelectedMission(validation.valid ? validation.data : (parsed as MissionExport))
-          } catch {
-            setSelectedMission(null)
-          }
-        }
-        }
+        applySelectedFileContent(node, content)
       } catch {
         setRawContent(null)
         setSelectedMission(null)
@@ -996,34 +1000,29 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
         path: file.name,
         type: 'file',
         source: 'local',
-        loaded: true }
+        loaded: true,
+        content,
+      }
 
       setTreeNodes((prev) =>
         prev.map((n) =>
           n.id === 'local'
-            ? { ...n, children: [...(n.children || []), localNode] }
+            ? {
+                ...n,
+                children: [
+                  ...(n.children || []).filter((child) => child.id !== localNode.id),
+                  localNode,
+                ],
+              }
             : n
         )
       )
       setExpandedNodes((prev) => new Set(prev).add('local'))
-      setRawContent(content)
-      setSelectedPath(`local/${file.name}`)
+      setSelectedPath(localNode.id)
       setDirectoryEntries([])
-      setUnstructuredContent(null)
+      setShowRaw(false)
 
-      try {
-        const parseResult = parseFileContent(content, file.name)
-
-        if (parseResult.type === 'structured') {
-          const validation = validateMissionExport(parseResult.mission)
-          setSelectedMission(validation.valid ? validation.data : parseResult.mission)
-        } else {
-          setUnstructuredContent(parseResult)
-          setSelectedMission(null)
-        }
-      } catch {
-        setSelectedMission(null)
-      }
+      applySelectedFileContent(localNode, content)
     }
     reader.readAsText(file)
   }

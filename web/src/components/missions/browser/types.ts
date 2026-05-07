@@ -10,6 +10,8 @@ export interface TreeNode {
   description?: string
   /** True once the directory has been loaded and found to contain no missions */
   isEmpty?: boolean
+  /** Cached content for imported local files so they can be re-opened from the tree. */
+  content?: string
   /** GitHub repo owner (for external sources like Kubara) */
   repoOwner?: string
   /** GitHub repo name (for external sources like Kubara) */
