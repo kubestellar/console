@@ -11,7 +11,7 @@
  * JS-readable JWT exists.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
+import { act, render } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -91,13 +91,22 @@ function renderAuthCallback(search = '') {
 // Setup / Teardown
 // ---------------------------------------------------------------------------
 
+const flushTimers = async () => {
+  await act(async () => {
+    await vi.runAllTimersAsync()
+  })
+}
+
 beforeEach(() => {
+  vi.useFakeTimers()
   vi.clearAllMocks()
   // Reset the hasProcessed ref by clearing module state
   vi.stubGlobal('fetch', vi.fn())
 })
 
 afterEach(() => {
+  vi.runOnlyPendingTimers()
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -114,18 +123,14 @@ describe('AuthCallback /auth/refresh contract (#6590)', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     renderAuthCallback()
+    await flushTimers()
 
     // #6590 — setToken is intentionally NOT called: there is no JS-readable
     // JWT in the response. The cookie-only session is bootstrapped by
     // refreshUser(), which calls /api/me with cookie credentials.
-    await waitFor(() => {
-      expect(mockRefreshUser).toHaveBeenCalled()
-    })
+    expect(mockRefreshUser).toHaveBeenCalled()
     expect(mockSetToken).not.toHaveBeenCalled()
-
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/')
-    })
+    expect(mockNavigate).toHaveBeenCalledWith('/')
   })
 
   it('navigates to login error when response is missing the refreshed flag', async () => {
@@ -136,10 +141,9 @@ describe('AuthCallback /auth/refresh contract (#6590)', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     renderAuthCallback()
+    await flushTimers()
 
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/login?error=token_exchange_failed')
-    })
+    expect(mockNavigate).toHaveBeenCalledWith('/login?error=token_exchange_failed')
   })
 
   it('navigates to login error on 401 response', async () => {
@@ -150,10 +154,9 @@ describe('AuthCallback /auth/refresh contract (#6590)', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     renderAuthCallback()
+    await flushTimers()
 
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/login?error=token_exchange_failed')
-    })
+    expect(mockNavigate).toHaveBeenCalledWith('/login?error=token_exchange_failed')
   })
 
   it('navigates to login error on 403 response', async () => {
@@ -164,10 +167,9 @@ describe('AuthCallback /auth/refresh contract (#6590)', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     renderAuthCallback()
+    await flushTimers()
 
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/login?error=token_exchange_failed')
-    })
+    expect(mockNavigate).toHaveBeenCalledWith('/login?error=token_exchange_failed')
   })
 
   it('handles onboarded=false from the response without crashing', async () => {
@@ -178,10 +180,9 @@ describe('AuthCallback /auth/refresh contract (#6590)', () => {
     vi.stubGlobal('fetch', mockFetch)
 
     renderAuthCallback()
+    await flushTimers()
 
-    await waitFor(() => {
-      expect(mockRefreshUser).toHaveBeenCalled()
-    })
+    expect(mockRefreshUser).toHaveBeenCalled()
     expect(mockSetToken).not.toHaveBeenCalled()
   })
 })

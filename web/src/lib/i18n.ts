@@ -1,6 +1,10 @@
 import i18n from 'i18next'
-import { initReactI18next } from 'react-i18next'
+import * as ReactI18next from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
+
+const initReactI18next = 'initReactI18next' in ReactI18next
+  ? ReactI18next.initReactI18next
+  : undefined
 
 // Import translations
 import commonEN from '../locales/en/common.json'
@@ -91,10 +95,13 @@ export const languages = [
 export const defaultNS = 'common'
 export const namespaces = ['common', 'cards', 'status', 'errors'] as const
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
+const configuredI18n = i18n.use(LanguageDetector)
+
+if (initReactI18next) {
+  configuredI18n.use(initReactI18next)
+}
+
+configuredI18n.init({
     resources,
     defaultNS,
     ns: namespaces,
