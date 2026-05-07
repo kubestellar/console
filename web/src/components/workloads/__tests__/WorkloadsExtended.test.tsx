@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 // ---------------------------------------------------------------------------
@@ -21,9 +21,9 @@ vi.mock('../../../lib/demoMode', () => ({
 }))
 
 vi.mock('../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true,
-  default: () => true,
-  useDemoMode: () => true,
+  getDemoMode: () => mockIsDemoMode,
+  default: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  useDemoMode: () => ({ isDemoMode: mockIsDemoMode, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
   isDemoModeForced: false,
 }))
 
@@ -48,6 +48,7 @@ let mockDeploymentIssues: any[] = []
 let mockDeployments: any[] = []
 let mockClusters: any[] = []
 let mockIsLoading = false
+let mockIsDemoMode = true
 
 vi.mock('../../../hooks/useMCP', () => ({
   usePodIssues: () => ({ issues: mockPodIssues, isLoading: mockIsLoading, isRefreshing: false, lastUpdated: null, refetch: vi.fn() }),
@@ -128,6 +129,10 @@ const renderWorkloads = () =>
     </MemoryRouter>
   )
 
+const getWorkloadRow = (name: string) => screen.getByText(name).closest('[data-testid="workload-row"]') as HTMLElement
+
+const getConfirmDeleteButton = () => within(screen.getByRole('dialog')).getByRole('button', { name: /Delete/i })
+
 const setupDeploymentView = () => {
   vi.mocked(useGlobalFilters).mockReturnValue({
     selectedClusters: [],
@@ -150,13 +155,14 @@ describe('Restart deployment verifies kubectl command (#12478)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsLoading = false
+    mockIsDemoMode = true
     setupDeploymentView()
   })
 
   it('calls kubectlProxy.exec with rollout restart command', async () => {
     renderWorkloads()
 
-    const restartBtn = screen.getAllByLabelText('Restart deployment')[0]
+    const restartBtn = within(getWorkloadRow('nginx-web')).getByLabelText('Restart deployment')
     fireEvent.click(restartBtn)
 
     await waitFor(() => {
@@ -170,8 +176,8 @@ describe('Restart deployment verifies kubectl command (#12478)', () => {
   it('passes correct cluster context for each deployment', async () => {
     renderWorkloads()
 
-    const restartBtns = screen.getAllByLabelText('Restart deployment')
-    fireEvent.click(restartBtns[1])
+    const restartBtn = within(getWorkloadRow('nginx-api')).getByLabelText('Restart deployment')
+    fireEvent.click(restartBtn)
 
     await waitFor(() => {
       expect(kubectlExecSpy).toHaveBeenCalledWith(
@@ -184,7 +190,7 @@ describe('Restart deployment verifies kubectl command (#12478)', () => {
   it('shows success toast after successful restart', async () => {
     renderWorkloads()
 
-    const restartBtn = screen.getAllByLabelText('Restart deployment')[0]
+    const restartBtn = within(getWorkloadRow('nginx-web')).getByLabelText('Restart deployment')
     fireEvent.click(restartBtn)
 
     await waitFor(() => {
@@ -197,7 +203,7 @@ describe('Restart deployment verifies kubectl command (#12478)', () => {
 
     renderWorkloads()
 
-    const restartBtn = screen.getAllByLabelText('Restart deployment')[0]
+    const restartBtn = within(getWorkloadRow('nginx-web')).getByLabelText('Restart deployment')
     fireEvent.click(restartBtn)
 
     await waitFor(() => {
@@ -335,13 +341,14 @@ describe('Delete confirmation flow (#12480)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsLoading = false
+    mockIsDemoMode = true
     setupDeploymentView()
   })
 
   it('clicking Delete button opens confirmation dialog', () => {
     renderWorkloads()
 
-    const deleteBtn = screen.getAllByLabelText('Delete deployment')[0]
+    const deleteBtn = within(getWorkloadRow('nginx-web')).getByLabelText('Delete deployment')
     fireEvent.click(deleteBtn)
 
     // ConfirmDialog should appear with deployment name in message
@@ -352,11 +359,10 @@ describe('Delete confirmation flow (#12480)', () => {
   it('confirming delete calls kubectlProxy with delete command', async () => {
     renderWorkloads()
 
-    const deleteBtn = screen.getAllByLabelText('Delete deployment')[0]
+    const deleteBtn = within(getWorkloadRow('nginx-web')).getByLabelText('Delete deployment')
     fireEvent.click(deleteBtn)
 
-    // Click the confirm button in the dialog
-    const confirmBtn = screen.getByRole('button', { name: /Delete/i })
+    const confirmBtn = getConfirmDeleteButton()
     fireEvent.click(confirmBtn)
 
     await waitFor(() => {
@@ -370,10 +376,10 @@ describe('Delete confirmation flow (#12480)', () => {
   it('shows success toast after successful delete', async () => {
     renderWorkloads()
 
-    const deleteBtn = screen.getAllByLabelText('Delete deployment')[0]
+    const deleteBtn = within(getWorkloadRow('nginx-web')).getByLabelText('Delete deployment')
     fireEvent.click(deleteBtn)
 
-    const confirmBtn = screen.getByRole('button', { name: /Delete/i })
+    const confirmBtn = getConfirmDeleteButton()
     fireEvent.click(confirmBtn)
 
     await waitFor(() => {
@@ -386,10 +392,10 @@ describe('Delete confirmation flow (#12480)', () => {
 
     renderWorkloads()
 
-    const deleteBtn = screen.getAllByLabelText('Delete deployment')[0]
+    const deleteBtn = within(getWorkloadRow('nginx-web')).getByLabelText('Delete deployment')
     fireEvent.click(deleteBtn)
 
-    const confirmBtn = screen.getByRole('button', { name: /Delete/i })
+    const confirmBtn = getConfirmDeleteButton()
     fireEvent.click(confirmBtn)
 
     await waitFor(() => {
@@ -400,7 +406,7 @@ describe('Delete confirmation flow (#12480)', () => {
   it('cancelling delete does not call kubectl', () => {
     renderWorkloads()
 
-    const deleteBtn = screen.getAllByLabelText('Delete deployment')[0]
+    const deleteBtn = within(getWorkloadRow('nginx-web')).getByLabelText('Delete deployment')
     fireEvent.click(deleteBtn)
 
     // Close the dialog (ConfirmDialog has an onClose that is called by cancel/close button)
@@ -421,6 +427,7 @@ describe('Delete confirmation flow (#12480)', () => {
 describe('Loading skeleton and agent-offline states (#12481)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockIsDemoMode = true
     vi.mocked(useGlobalFilters).mockReturnValue({
       selectedClusters: [],
       isAllClustersSelected: true,
@@ -453,8 +460,7 @@ describe('Loading skeleton and agent-offline states (#12481)', () => {
     mockDeploymentIssues = []
     mockAgentStatus = 'disconnected'
 
-    // useDemoMode returns false for this test
-    vi.mocked(vi.importActual('../../../hooks/useDemoMode') as any)
+    mockIsDemoMode = false
 
     renderWorkloads()
 
@@ -491,7 +497,7 @@ describe('Loading skeleton and agent-offline states (#12481)', () => {
 
     renderWorkloads()
 
-    // In demo mode (mocked as true), forceSkeletonForOffline should be false
+    // In demo mode, forceSkeletonForOffline should stay false.
     expect(screen.getByText('demo-ns')).toBeTruthy()
   })
 })
