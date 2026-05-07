@@ -18,19 +18,21 @@ const mockUseAllPods = vi.fn()
 const mockUseDeployments = vi.fn()
 const mockUseNamespaces = vi.fn()
 const mockUseEvents = vi.fn()
+const mockUseWarningEvents = vi.fn()
 const mockUseHelmReleases = vi.fn()
 const mockUseOperatorSubscriptions = vi.fn()
 const mockUseSecurityIssues = vi.fn()
 
 vi.mock('../useMCP', () => ({
-  useClusters: () => mockUseClusters(),
-  useAllPods: () => mockUseAllPods(),
-  useDeployments: () => mockUseDeployments(),
-  useNamespaces: () => mockUseNamespaces(),
-  useEvents: () => mockUseEvents(),
-  useHelmReleases: () => mockUseHelmReleases(),
-  useOperatorSubscriptions: () => mockUseOperatorSubscriptions(),
-  useSecurityIssues: () => mockUseSecurityIssues(),
+  useClusters: (...args: unknown[]) => mockUseClusters(...args),
+  useAllPods: (...args: unknown[]) => mockUseAllPods(...args),
+  useDeployments: (...args: unknown[]) => mockUseDeployments(...args),
+  useNamespaces: (...args: unknown[]) => mockUseNamespaces(...args),
+  useEvents: (...args: unknown[]) => mockUseEvents(...args),
+  useWarningEvents: (...args: unknown[]) => mockUseWarningEvents(...args),
+  useHelmReleases: (...args: unknown[]) => mockUseHelmReleases(...args),
+  useOperatorSubscriptions: (...args: unknown[]) => mockUseOperatorSubscriptions(...args),
+  useSecurityIssues: (...args: unknown[]) => mockUseSecurityIssues(...args),
 }))
 
 // ---------------------------------------------------------------------------
@@ -47,6 +49,7 @@ function setDefaults(overrides: Record<string, unknown> = {}) {
   mockUseDeployments.mockReturnValue({ deployments: overrides.deployments ?? [{ name: 'd1' }] })
   mockUseNamespaces.mockReturnValue({ namespaces: overrides.namespaces ?? [{ name: 'ns1' }] })
   mockUseEvents.mockReturnValue({ events: overrides.events ?? [{ reason: 'Scheduled' }] })
+  mockUseWarningEvents.mockReturnValue({ events: overrides.warningEvents ?? [{ reason: 'BackOff', type: 'Warning' }] })
   mockUseHelmReleases.mockReturnValue({ releases: overrides.releases ?? [{ name: 'h1' }] })
   mockUseOperatorSubscriptions.mockReturnValue({ subscriptions: overrides.subscriptions ?? [{ name: 'o1' }] })
   mockUseSecurityIssues.mockReturnValue({ issues: overrides.issues ?? [{ id: 's1' }] })
@@ -73,7 +76,9 @@ describe('useClusterData', () => {
     expect(result.current.deployments).toEqual([{ name: 'd1' }])
     expect(result.current.namespaces).toEqual([{ name: 'ns1' }])
     expect(result.current.events).toEqual([{ reason: 'Scheduled' }])
+    expect(result.current.warningEvents).toEqual([{ reason: 'BackOff', type: 'Warning' }])
     expect(result.current.helmReleases).toEqual([{ name: 'h1' }])
+    expect(mockUseWarningEvents).toHaveBeenCalledWith(undefined, undefined, 100)
     expect(result.current.operatorSubscriptions).toEqual([{ name: 'o1' }])
     expect(result.current.securityIssues).toEqual([{ id: 's1' }])
   })
@@ -85,6 +90,7 @@ describe('useClusterData', () => {
     mockUseDeployments.mockReturnValue({ deployments: undefined })
     mockUseNamespaces.mockReturnValue({ namespaces: undefined })
     mockUseEvents.mockReturnValue({ events: undefined })
+    mockUseWarningEvents.mockReturnValue({ events: undefined })
     mockUseHelmReleases.mockReturnValue({ releases: undefined })
     mockUseOperatorSubscriptions.mockReturnValue({ subscriptions: undefined })
     mockUseSecurityIssues.mockReturnValue({ issues: undefined })
@@ -98,6 +104,7 @@ describe('useClusterData', () => {
     expect(result.current.deployments).toEqual([])
     expect(result.current.namespaces).toEqual([])
     expect(result.current.events).toEqual([])
+    expect(result.current.warningEvents).toEqual([])
     expect(result.current.helmReleases).toEqual([])
     expect(result.current.operatorSubscriptions).toEqual([])
     expect(result.current.securityIssues).toEqual([])
@@ -122,6 +129,7 @@ describe('useClusterData', () => {
   it('handles mixed defined and undefined upstream values', async () => {
     mockUseAllPods.mockReturnValue({ pods: undefined })
     mockUseEvents.mockReturnValue({ events: undefined })
+    mockUseWarningEvents.mockReturnValue({ events: undefined })
     // Rest keep their defaults from setDefaults()
 
     const { useClusterData } = await import('../useClusterData')
@@ -134,6 +142,7 @@ describe('useClusterData', () => {
     // Undefined values coalesced
     expect(result.current.pods).toEqual([])
     expect(result.current.events).toEqual([])
+    expect(result.current.warningEvents).toEqual([])
   })
 
   // 5. Issue 9353 — podClusterErrors forwarded from useAllPods
