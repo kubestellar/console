@@ -167,6 +167,12 @@ function EventsTimelineInternal() {
     if (localClusterFilter.length > 0) {
       result = result.filter(e => e.cluster && localClusterFilter.includes(e.cluster))
     }
+    // Sort by lastSeen descending (newest first) to ensure recent events are prioritized
+    result.sort((a, b) => {
+      const timeA = a.lastSeen ? new Date(a.lastSeen).getTime() : a.firstSeen ? new Date(a.firstSeen).getTime() : 0
+      const timeB = b.lastSeen ? new Date(b.lastSeen).getTime() : b.firstSeen ? new Date(b.firstSeen).getTime() : 0
+      return timeB - timeA
+    })
     return result
   }, [events, clusterInfoMap, isAllClustersSelected, selectedClusters, localClusterFilter])
 
@@ -179,9 +185,15 @@ function EventsTimelineInternal() {
     [filteredEvents, timeRangeConfig.bucketMinutes, timeRangeConfig.numBuckets],
   )
 
-  // Calculate totals
-  const totalWarnings = timeSeriesData.reduce((sum, d) => sum + d.warnings, 0)
-  const totalNormal = timeSeriesData.reduce((sum, d) => sum + d.normal, 0)
+  // Calculate totals from all filtered events (not just those in time buckets)
+  const totalWarnings = useMemo(() => 
+    filteredEvents.reduce((sum, e) => sum + (e.type === 'Warning' ? (e.count || 1) : 0), 0),
+    [filteredEvents]
+  )
+  const totalNormal = useMemo(() =>
+    filteredEvents.reduce((sum, e) => sum + (e.type !== 'Warning' ? (e.count || 1) : 0), 0),
+    [filteredEvents]
+  )
   const peakEvents = Math.max(0, ...timeSeriesData.map(d => d.total))
 
   const chartOption = useMemo(() => ({
