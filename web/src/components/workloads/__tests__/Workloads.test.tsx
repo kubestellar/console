@@ -78,8 +78,12 @@ vi.mock('../../../lib/unified/demo', () => ({
     useIsModeSwitching: () => false,
 }))
 
-const drillToNamespaceSpy = vi.fn()
-const drillToDeploymentSpy = vi.fn()
+const { drillToNamespaceSpy, drillToDeploymentSpy, showToastSpy, kubectlExecSpy } = vi.hoisted(() => ({
+    drillToNamespaceSpy: vi.fn(),
+    drillToDeploymentSpy: vi.fn(),
+    showToastSpy: vi.fn(),
+    kubectlExecSpy: vi.fn().mockResolvedValue({ output: 'success', exitCode: 0 }),
+}))
 
 vi.mock('../../../hooks/useDrillDown', () => ({
     useDrillDownActions: () => ({
@@ -95,7 +99,6 @@ vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
 }))
 
-const showToastSpy = vi.fn()
 vi.mock('../../ui/Toast', () => ({
     useToast: () => ({
         showToast: showToastSpy,
@@ -103,7 +106,6 @@ vi.mock('../../ui/Toast', () => ({
     ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-const kubectlExecSpy = vi.fn().mockResolvedValue({ output: 'success', exitCode: 0 })
 vi.mock('../../../lib/kubectlProxy', () => ({
     kubectlProxy: {
         exec: kubectlExecSpy,
@@ -280,7 +282,7 @@ describe('Workloads Component', () => {
             renderWorkloads()
             
             // Namespace card should show deployment count
-            const namespaceCard = screen.getByText('dev').closest('.glass')
+            const namespaceCard = screen.getByRole('heading', { name: 'dev' }).closest('.glass')
             expect(namespaceCard?.textContent).toContain('3')
             expect(namespaceCard?.textContent).toMatch(/common\.deployments/i)
         })
@@ -294,7 +296,7 @@ describe('Workloads Component', () => {
             
             renderWorkloads()
             
-            const namespaceCard = screen.getByText('staging').closest('.glass')
+            const namespaceCard = screen.getByRole('heading', { name: 'staging' }).closest('.glass')
             expect(namespaceCard?.textContent).toContain('2')
         })
 
@@ -306,7 +308,7 @@ describe('Workloads Component', () => {
             
             renderWorkloads()
             
-            const namespaceCard = screen.getByText('qa').closest('.glass')
+            const namespaceCard = screen.getByRole('heading', { name: 'qa' }).closest('.glass')
             expect(namespaceCard?.textContent).toContain('1')
         })
     })
