@@ -433,7 +433,7 @@ const CRITERIA: Criterion[] = [
     description: 'Scheduled workflow that re-validates the codebase against its rules every night.',
     rationale: 'L4 drift detection: noticing when the loop itself has broken.',
     details: 'A nightly compliance scan is a scheduled CI workflow that runs your full test suite, linters, and security checks on a cron schedule (typically every night). It catches regressions that slip through PR-level checks — like a dependency update that passes its own tests but breaks an unrelated feature. An AI mission will add a nightly GitHub Actions workflow that runs your complete validation pipeline and opens issues on failure.',
-    detection: { type: 'any-of', pattern: ['.github/workflows/nightly-compliance.yml', '.github/workflows/nightly.yml', '.github/workflows/nightly-test.yml', '.github/workflows/nightly-test-suite.yml', '.context/cron/', 'cron-registry.yaml'] },
+    detection: { type: 'any-of', pattern: ['.github/workflows/nightly-compliance.yml', '.github/workflows/nightly.yml', '.github/workflows/nightly-test.yml', '.github/workflows/nightly-test-suite.yml', '.context/cron/', 'cron-registry.yaml', '.context/cron/agentic-audit.crontab'] },
   },
   {
     id: 'acmm:copilot-review-apply',
@@ -772,7 +772,7 @@ const CRITERIA: Criterion[] = [
     description: 'A workflow or script that coordinates multiple AI agents on one task, decomposing work and managing parallel execution.',
     rationale: 'L6 composition: single agents become units of a larger autonomous system.',
     details: 'Multi-agent orchestration uses a dispatcher script or workflow to coordinate multiple AI agents working on different parts of one task — for example, one agent fixes the bug while another writes the test and a third updates the docs. This parallelism is what makes L5 codebases productive beyond what a single agent can achieve. An AI mission will add an orchestration script that decomposes tasks and dispatches sub-agents.',
-    detection: { type: 'any-of', pattern: ['scripts/orchestrate.mjs', '.github/workflows/orchestrate.yml', 'orchestrator/', '.mcp.json', 'agents/dispatch/', '.framework.yaml'] },
+    detection: { type: 'any-of', pattern: ['scripts/orchestrate.mjs', '.github/workflows/orchestrate.yml', 'orchestrator/', '.mcp.json', 'agents/dispatch/', 'tl-dispatch.sh', '.framework.yaml', '.termlink-task'] },
   },
   {
     id: 'acmm:merge-queue',

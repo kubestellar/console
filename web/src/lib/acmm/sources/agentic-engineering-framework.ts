@@ -21,7 +21,7 @@ const CRITERIA: Criterion[] = [
     description: 'Config-enforced gates that block agents from touching protected areas without review.',
     rationale: 'The framework treats structural gates as the primary mechanism for scoping agent authority — code can lie, config cannot.',
     details: 'Structural gates are config files (like CODEOWNERS or boundary definitions) that prevent AI agents from modifying protected areas — such as auth modules, database migrations, or deployment configs — without explicit human review. They scope what the AI is allowed to touch. An AI mission will create a CODEOWNERS file or agent boundary config based on your project\'s sensitive directories.',
-    detection: { type: 'any-of', pattern: ['CODEOWNERS', '.github/CODEOWNERS', '.agent/boundaries.yml', 'docs/agent-boundaries.md', 'policy/escalation-patterns.yaml', '.context/bypass-log.yaml'] },
+    detection: { type: 'any-of', pattern: ['CODEOWNERS', '.github/CODEOWNERS', '.agent/boundaries.yml', 'docs/agent-boundaries.md', '.claude/settings.json', 'policy/escalation-patterns.yaml', '.context/bypass-log.yaml'] },
   },
   {
     id: 'aef:session-continuity',
