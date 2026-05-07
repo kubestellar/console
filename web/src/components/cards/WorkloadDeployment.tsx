@@ -33,6 +33,8 @@ import { isAgentUnavailable } from '../../hooks/useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants'
 import { clusterCacheRef, agentFetch } from '../../hooks/mcp/shared'
 import { WorkloadImportDialog } from './WorkloadImportDialog'
+import { BaseModal } from '../../lib/modals/BaseModal'
+import { Button } from '../ui/Button'
 
 // Workload types
 type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'Job' | 'CronJob'
@@ -248,6 +250,74 @@ async function scaleViaAgent(
   }
 }
 
+// Scale to zero confirmation dialog
+interface ScaleToZeroConfirmDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  onConfirm: () => void
+  workloadName: string
+  namespace: string
+}
+
+function ScaleToZeroConfirmDialog({
+  isOpen,
+  onClose,
+  onConfirm,
+  workloadName,
+  namespace,
+}: ScaleToZeroConfirmDialogProps) {
+  const { t } = useTranslation()
+
+  return (
+    <BaseModal isOpen={isOpen} onClose={onClose} size="md">
+      <BaseModal.Header
+        title={t('workloads.scaleToZero.title')}
+        description={t('workloads.scaleToZero.description')}
+        icon={AlertTriangle}
+        onClose={onClose}
+        showBack={false}
+      />
+
+      <BaseModal.Content>
+        <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+          <p className="text-sm text-yellow-300">
+            {t('workloads.scaleToZero.warning', { workload: workloadName, namespace })}
+          </p>
+        </div>
+
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>{t('workloads.scaleToZero.impact')}</p>
+          <ul className="list-disc list-inside space-y-1 pl-2">
+            <li>{t('workloads.scaleToZero.impactItem1')}</li>
+            <li>{t('workloads.scaleToZero.impactItem2')}</li>
+            <li>{t('workloads.scaleToZero.impactItem3')}</li>
+          </ul>
+        </div>
+      </BaseModal.Content>
+
+      <BaseModal.Footer>
+        <div className="flex-1" />
+        <div className="flex gap-3">
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={onClose}
+          >
+            {t('common.cancel')}
+          </Button>
+          <Button
+            variant="danger"
+            size="lg"
+            onClick={onConfirm}
+          >
+            {t('workloads.scaleToZero.confirm')}
+          </Button>
+        </div>
+      </BaseModal.Footer>
+    </BaseModal>
+  )
+}
+
 // Draggable workload item component
 interface DraggableWorkloadItemProps {
   workload: Workload
@@ -261,6 +331,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
   const [isScaling, setIsScaling] = useState(false)
   const [scaleError, setScaleError] = useState<string | null>(null)
   const [scaleSuccess, setScaleSuccess] = useState(false)
+  const [showScaleToZeroDialog, setShowScaleToZeroDialog] = useState(false)
   const { mutate: scaleWorkload } = useScaleWorkload()
   const { t } = useTranslation()
 
@@ -269,7 +340,7 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
     if (!isScaling) setDesiredReplicas(workload.replicas)
   }, [workload.replicas, isScaling])
 
-  const handleApplyScale = async () => {
+  const performScale = async () => {
     if (desiredReplicas === workload.replicas || isScaling) return
     setIsScaling(true)
     setScaleError(null)
@@ -325,6 +396,20 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
     } finally {
       setIsScaling(false)
     }
+  }
+
+  const handleApplyScale = () => {
+    // Show confirmation dialog when scaling to zero
+    if (desiredReplicas === 0) {
+      setShowScaleToZeroDialog(true)
+    } else {
+      performScale()
+    }
+  }
+
+  const handleConfirmScaleToZero = () => {
+    setShowScaleToZeroDialog(false)
+    performScale()
   }
   // Source cluster is the first cluster in the list (where we'll copy from)
   const sourceCluster = (workload.targetClusters || [])[0] || 'unknown'
@@ -506,6 +591,15 @@ function DraggableWorkloadItem({ workload, isSelected, onSelect, onScaled }: Dra
           </p>
         </div>
       )}
+
+      {/* Scale to Zero Confirmation Dialog */}
+      <ScaleToZeroConfirmDialog
+        isOpen={showScaleToZeroDialog}
+        onClose={() => setShowScaleToZeroDialog(false)}
+        onConfirm={handleConfirmScaleToZero}
+        workloadName={workload.name}
+        namespace={workload.namespace}
+      />
     </div>
   )
 }

@@ -3990,7 +3990,17 @@
     "deleteError": "Failed to delete deployment",
     "restarting": "Restarting deployment...",
     "restartSuccess": "Restart triggered",
-    "restartError": "Failed to restart deployment"
+    "restartError": "Failed to restart deployment",
+    "scaleToZero": {
+      "title": "Scale to Zero Replicas?",
+      "description": "This will shut down the workload",
+      "warning": "You are about to scale workload \"{{workload}}\" in namespace \"{{namespace}}\" to 0 replicas. This will shut down all pods for this workload.",
+      "impact": "This will have the following impact:",
+      "impactItem1": "All running pods will be terminated",
+      "impactItem2": "The workload will stop serving traffic",
+      "impactItem3": "The workload can be restarted by scaling back up",
+      "confirm": "Scale to Zero"
+    }
   },
   "nodeDetail": {
     "showAll": "Show all",
