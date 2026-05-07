@@ -103,7 +103,7 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
   const needsLogin = await loginSubmit.isVisible().catch(() => false)
 
   let issueNumber = ''
-  let issueUrl = ''
+  let issueUrl: string | undefined
 
   if (isAuthenticated) {
     console.log('  Authenticated! Submitting via UI...')
@@ -153,10 +153,10 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
       `--label "bug" --label "ai-fix-requested" --label "needs-triage"`
     )
 
-    issueUrl = createResult.match(/https:\/\/github\.com\/[^\s]+/)?.[0] || ''
-    issueNumber = issueUrl.match(/\/issues\/(\d+)/)?.[1] || ''
+    issueUrl = createResult.match(/https:\/\/github\.com\/[^\s]+/)?.[0]
+    issueNumber = issueUrl?.match(/\/issues\/(\d+)/)?.[1] || ''
 
-    if (!issueNumber) {
+    if (!issueNumber || !issueUrl) {
       console.error('  Failed to create issue via API either!')
       console.error('  Output:', createResult)
       await browser.close()
@@ -184,7 +184,6 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
 
   // Step 8: Monitor pipeline
   console.log('\nStep 8: Monitoring pipeline (checking every 10s for 2 min)...')
-  let copilotAssigned = false
 
   for (let i = 0; i < 12; i++) {
     await sleep(10000)
@@ -198,7 +197,7 @@ Actual: Status badge stays red/unhealthy indefinitely until a full page refresh.
 
       console.log(`  [${new Date().toLocaleTimeString()}] Check ${i + 1}/12: Labels=[${labels.join(', ')}] Assignees=[${assignees.join(', ')}]`)
 
-      copilotAssigned = assignees.some((a: string) =>
+      const copilotAssigned = assignees.some((a: string) =>
         a.toLowerCase().includes('copilot') || a.includes('[bot]')
       )
 

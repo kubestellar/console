@@ -24,12 +24,52 @@ import { safeRevokeObjectURL } from '../../lib/download'
 import type { CSSProperties } from 'react'
 
 // Inline style constants
-const WIDGET_EXPORT_MODAL_DIV_STYLE_1: CSSProperties = { transform: 'scale(1.5)', transformOrigin: 'center center' }
+const WIDGET_EXPORT_MODAL_PREVIEW_MAX_WIDTH_PX = 260
+const WIDGET_EXPORT_MODAL_PREVIEW_MAX_HEIGHT_PX = 220
+const WIDGET_EXPORT_MODAL_DIV_STYLE_2: CSSProperties = { flex: 1 }
 const WIDGET_EXPORT_MODAL_SPAN_STYLE_1: CSSProperties = { fontWeight: 500, maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }
 const WIDGET_EXPORT_MODAL_SPAN_STYLE_2: CSSProperties = { fontWeight: 500 }
 const WIDGET_EXPORT_MODAL_SPAN_STYLE_3: CSSProperties = { fontWeight: 500, flex: 1 }
-const WIDGET_EXPORT_MODAL_DIV_STYLE_2: CSSProperties = { flex: 1 }
 const WIDGET_EXPORT_MODAL_SPAN_STYLE_4: CSSProperties = { width: '24px', fontWeight: 600, color: '#94a3b8' }
+
+function getWidgetPreviewDimensions(config: WidgetConfig | null): { width: number; height: number } | null {
+  if (!config) return null
+
+  if (config.type === 'card' && config.cardType) {
+    const card = WIDGET_CARDS[config.cardType]
+    return card ? card.defaultSize : null
+  }
+
+  if (config.type === 'stat' && config.statIds) {
+    const selectedStats = config.statIds
+      .map((statId) => WIDGET_STATS[statId])
+      .filter((stat): stat is NonNullable<(typeof WIDGET_STATS)[keyof typeof WIDGET_STATS]> => Boolean(stat))
+
+    if (selectedStats.length === 0) return null
+
+    return {
+      width: selectedStats.reduce((totalWidth, stat) => totalWidth + stat.size.width, 0),
+      height: Math.max(...selectedStats.map((stat) => stat.size.height)),
+    }
+  }
+
+  if (config.type === 'template' && config.templateId) {
+    const template = WIDGET_TEMPLATES[config.templateId]
+    return template ? template.size : null
+  }
+
+  return null
+}
+
+function getWidgetPreviewScale(dimensions: { width: number; height: number } | null): number {
+  if (!dimensions) return 1
+
+  return Math.min(
+    1,
+    WIDGET_EXPORT_MODAL_PREVIEW_MAX_WIDTH_PX / dimensions.width,
+    WIDGET_EXPORT_MODAL_PREVIEW_MAX_HEIGHT_PX / dimensions.height,
+  )
+}
 
 
 interface WidgetExportModalProps {
@@ -119,6 +159,13 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
     }
   }, [exportConfig])
 
+  const previewDimensions = useMemo(() => getWidgetPreviewDimensions(exportConfig), [exportConfig])
+  const previewScale = useMemo(() => getWidgetPreviewScale(previewDimensions), [previewDimensions])
+  const previewStyle = useMemo<CSSProperties>(() => ({
+    transform: `scale(${previewScale})`,
+    transformOrigin: 'top center',
+  }), [previewScale])
+
   const filename = exportConfig ? getWidgetFilename(exportConfig) : 'widget.jsx'
 
   // Download widget file
@@ -156,7 +203,7 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
   }
 
   const widgetContent = (
-      <div className="flex flex-col h-full min-h-0 overflow-hidden">
+      <div className="flex flex-col h-full min-h-0">
         {/* Tabs */}
         <div className="flex border-b border-border mb-4">
           <button
@@ -191,9 +238,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
           </button>
         </div>
 
-        <div className="flex-1 flex gap-4 overflow-hidden">
+        <div className="flex-1 flex items-start gap-4 min-h-0">
           {/* Left: Selection */}
-          <div className="w-1/2 flex flex-col overflow-hidden">
+          <div className="w-1/2 flex flex-col overflow-hidden min-h-0">
             <div ref={cardListRef} className="flex-1 overflow-y-auto pr-2">
               {activeTab === 'templates' && (
                 <div className="space-y-2">
@@ -305,9 +352,9 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
             </div>
           </div>
 
-          {/* Right: Preview & Code — overflow-hidden + min-h-0 keeps the preview
-              pinned in view while the left card list scrolls independently */}
-          <div className="w-1/2 flex flex-col overflow-hidden min-h-0">
+          {/* Right: Preview & Code — sticky positioning keeps the preview visible
+              while the left selection list scrolls independently. */}
+          <div className="sticky top-0 self-start w-1/2 flex flex-col overflow-hidden min-h-0">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">{t('common.preview')}</span>
               <button
@@ -325,8 +372,8 @@ export function WidgetExportModal({ isOpen, onClose, cardType, mode: _mode = 'pi
                 </pre>
               </div>
             ) : (
-              <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-center justify-center overflow-hidden min-w-0 min-h-0">
-                <div className="max-w-full max-h-full overflow-hidden" style={WIDGET_EXPORT_MODAL_DIV_STYLE_1}>
+              <div className="flex-1 bg-secondary/50 rounded-lg p-4 flex items-start justify-center overflow-hidden min-w-0 min-h-[16rem]">
+                <div className="max-w-full overflow-hidden origin-top" style={previewStyle}>
                   <WidgetPreview config={exportConfig} />
                 </div>
               </div>
