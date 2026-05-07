@@ -555,6 +555,54 @@ describe('useClusterCapabilities', () => {
     })
   })
 
+  it('tracks isRefreshing during refetch when data already exists', async () => {
+    const capabilities = [
+      { cluster: 'prod', nodeCount: 5, cpuCapacity: '32', memCapacity: '128Gi', available: true },
+    ]
+    let resolveSecondFetch: ((value: Response) => void) | undefined
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(capabilities), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockImplementationOnce(() => new Promise<Response>((resolve) => {
+        resolveSecondFetch = resolve
+      }))
+    const { useClusterCapabilities } = await importFresh()
+
+    const { result } = renderHook(() => useClusterCapabilities())
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(capabilities)
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.isRefreshing).toBe(false)
+    })
+
+    act(() => {
+      void result.current.refetch()
+    })
+
+    await waitFor(() => {
+      expect(result.current.isRefreshing).toBe(true)
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    act(() => {
+      resolveSecondFetch?.(
+        new Response(JSON.stringify(capabilities), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    })
+
+    await waitFor(() => {
+      expect(result.current.isRefreshing).toBe(false)
+    })
+  })
+
   it('sets error on fetch failure', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Failed'))
     const { useClusterCapabilities } = await importFresh()

@@ -342,15 +342,25 @@ export function useWorkloads(options?: {
 export function useClusterCapabilities(enabled = true) {
   const [data, setData] = useState<ClusterCapability[] | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(enabled)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
   // Use a ref to always have the latest enabled value, avoiding stale closures
   const enabledRef = useRef(enabled)
   enabledRef.current = enabled
 
+  const dataRef = useRef<ClusterCapability[] | undefined>(undefined)
+  dataRef.current = data
+
   const fetchData = useCallback(async () => {
     if (!enabledRef.current) return
-    setIsLoading(true)
+
+    const hasExistingData = dataRef.current !== undefined
+    if (hasExistingData) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     setError(null)
 
     try {
@@ -364,6 +374,7 @@ export function useClusterCapabilities(enabled = true) {
       setError(err instanceof Error ? err : new Error('Unknown error'))
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [])
 
@@ -371,6 +382,7 @@ export function useClusterCapabilities(enabled = true) {
     if (!enabled) {
       setData(undefined)
       setIsLoading(false)
+      setIsRefreshing(false)
       return
     }
     fetchData()
@@ -378,7 +390,7 @@ export function useClusterCapabilities(enabled = true) {
     return () => clearInterval(interval)
   }, [fetchData, enabled])
 
-  return { data, isLoading, error, refetch: fetchData }
+  return { data, isLoading, isRefreshing, error, refetch: fetchData }
 }
 
 // Deploy workload to clusters
