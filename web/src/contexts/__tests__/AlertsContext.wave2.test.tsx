@@ -86,12 +86,14 @@ function makeRule(overrides: Partial<AlertRule> = {}): Omit<AlertRule, 'id' | 'c
   }
 }
 
-/** Flush microtasks and timers for a given duration */
+/** Flush microtasks and deferred MCP updates after render/evaluation. */
+const MCP_DATA_FLUSH_MS = 20
+
 async function flushTimers() {
   await act(async () => {
-    vi.advanceTimersByTime(0)
-    // Let microtasks resolve (queueMicrotask, Promises)
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await vi.advanceTimersByTimeAsync(MCP_DATA_FLUSH_MS)
+    await Promise.resolve()
+    await Promise.resolve()
   })
 }
 
@@ -183,7 +185,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     )
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     // Advance past INITIAL_FETCH_DELAY_MS (5000ms) so CronJob data gets fetched
     await act(async () => { vi.advanceTimersByTime(6000) })
@@ -246,7 +248,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     )
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
     await act(async () => { vi.advanceTimersByTime(6000) })
 
     await act(async () => {
@@ -304,7 +306,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     )
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
     await act(async () => { vi.advanceTimersByTime(6000) })
 
     await act(async () => {
@@ -380,7 +382,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     // Advance past SECONDARY_FETCH_DELAY_MS (8000ms) to populate nightlyE2ERef
     await act(async () => { vi.advanceTimersByTime(9000) })
@@ -442,7 +444,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
     await act(async () => { vi.advanceTimersByTime(9000) })
 
     await act(async () => {
@@ -501,7 +503,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
     await act(async () => { vi.advanceTimersByTime(9000) })
 
     await act(async () => {
@@ -540,7 +542,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -576,7 +578,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -613,7 +615,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -649,7 +651,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -685,7 +687,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -733,7 +735,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -775,7 +777,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     // First evaluation — should notify
     await act(async () => {
@@ -825,7 +827,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -867,7 +869,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -911,7 +913,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -955,7 +957,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -1157,7 +1159,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -1229,7 +1231,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'))
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     // Advance past initial CronJob fetch delay
     await act(async () => { vi.advanceTimersByTime(6000) })
@@ -1258,7 +1260,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     )
 
     renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
     await act(async () => { vi.advanceTimersByTime(6000) })
 
     // CronJob fetch should not have been called (no token)
@@ -1368,7 +1370,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     // First evaluation
     await act(async () => {
@@ -1435,7 +1437,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -1481,7 +1483,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     await act(async () => {
       result.current.evaluateConditions()
@@ -1535,7 +1537,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     mockMCPData = { gpuNodes: [], podIssues: [], clusters: [], isLoading: false, error: null }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
     await act(async () => { vi.advanceTimersByTime(9000) })
 
     // First evaluation
@@ -1594,7 +1596,7 @@ describe('AlertsContext — wave 2 deep coverage', () => {
     }
 
     const { result } = renderHook(() => useAlertsContext(), { wrapper })
-    await act(async () => { vi.advanceTimersByTime(0) })
+    await flushTimers()
 
     expect(result.current.isLoadingData).toBe(true)
     expect(result.current.dataError).toBeNull()
