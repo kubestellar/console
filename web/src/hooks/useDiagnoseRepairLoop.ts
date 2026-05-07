@@ -50,7 +50,7 @@ const INITIAL_STATE: DiagnoseRepairState = {
  */
 export function useDiagnoseRepairLoop(options: UseDiagnoseRepairLoopOptions): UseDiagnoseRepairLoopResult {
   const { monitorType, repairable = true, maxLoops = DEFAULT_MAX_LOOPS } = options
-  const { startMission, sendMessage, missions } = useMissions()
+  const { startMission, sendMessage, cancelMission, missions } = useMissions()
   const [state, setState] = useState<DiagnoseRepairState>({ ...INITIAL_STATE, maxLoops })
   const missionIdRef = useRef<string | null>(null)
   // #7290/#7291/#7292 — Track all active timers so cancel() can clear them
@@ -330,7 +330,7 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
     activeTimers.current.clear()
 
     if (missionIdRef.current) {
-      // The mission will continue but we disconnect from it
+      cancelMission(missionIdRef.current)
       missionIdRef.current = null
     }
     setState(prev => ({ ...prev, phase: 'idle', error: 'Cancelled by user' }))

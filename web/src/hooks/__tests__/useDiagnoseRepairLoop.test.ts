@@ -4,6 +4,7 @@ import { renderHook, act } from '@testing-library/react'
 // Mock useMissions before importing the hook
 const mockStartMission = vi.fn(() => 'mission-123')
 const mockSendMessage = vi.fn()
+const mockCancelMission = vi.fn()
 // Mutable missions store — completeMission() replaces this with a new array
 // so that React detects a reference change and re-triggers the useEffect
 // that drives the diagnosing → proposing-repair transition (#7290).
@@ -13,6 +14,7 @@ vi.mock('../useMissions', () => ({
   useMissions: vi.fn(() => ({
     startMission: mockStartMission,
     sendMessage: mockSendMessage,
+    cancelMission: mockCancelMission,
     get missions() { return mockMissionsStore },
     activeMission: null,
     isSidebarOpen: false,
@@ -326,6 +328,7 @@ describe('useDiagnoseRepairLoop', () => {
       result.current.cancel()
     })
 
+    expect(mockCancelMission).toHaveBeenCalledWith('mission-123')
     expect(result.current.state.phase).toBe('idle')
     expect(result.current.state.error).toBe('Cancelled by user')
   })

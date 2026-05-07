@@ -74,6 +74,32 @@ function notifySubscribers() {
   subscribers.forEach(fn => fn())
 }
 
+function getRequestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs)
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+}
+
+async function delayWithSignal(timeoutMs: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) {
+    throw signal.reason ?? new DOMException('Aborted', 'AbortError')
+  }
+
+  return new Promise((resolve, reject) => {
+    const handleAbort = () => {
+      clearTimeout(timeoutId)
+      signal?.removeEventListener('abort', handleAbort)
+      reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'))
+    }
+
+    const timeoutId = setTimeout(() => {
+      signal?.removeEventListener('abort', handleAbort)
+      resolve()
+    }, timeoutMs)
+
+    signal?.addEventListener('abort', handleAbort, { once: true })
+  })
+}
+
 /**
  * Reset WebSocket reconnect state so the next attempt uses fast exponential backoff.
  * Called when evidence suggests the backend is reachable again (e.g. successful HTTP fetch).
@@ -186,7 +212,7 @@ function aiPredictionToRisk(prediction: AIPrediction): PredictedRisk {
 /**
  * Fetch AI predictions from HTTP endpoint
  */
-async function fetchAIPredictions(): Promise<void> {
+async function fetchAIPredictions(signal?: AbortSignal): Promise<void> {
   if (getDemoMode()) {
     aiPredictions = DEMO_AI_PREDICTIONS
     lastAnalyzed = new Date()
@@ -209,19 +235,18 @@ async function fetchAIPredictions(): Promise<void> {
   }
 
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), AI_PREDICTION_TIMEOUT_MS)
-
     const response = await fetch(`${AGENT_HTTP_URL}/predictions/ai`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
-      signal: controller.signal
+      signal: getRequestSignal(AI_PREDICTION_TIMEOUT_MS, signal)
     })
-    clearTimeout(timeoutId)
+
+    if (signal?.aborted) return
 
     if (response.ok) {
       reportAgentDataSuccess()
       const data: AIPredictionsResponse = await response.json()
+      if (signal?.aborted) return
       const sanitizedPredictions = sanitizeAIPredictions(Array.isArray(data.predictions) ? data.predictions : [])
 
       // Successful HTTP fetch means backend is reachable — reset WS reconnect
@@ -251,11 +276,13 @@ async function fetchAIPredictions(): Promise<void> {
       notifySubscribers()
     }
   } catch (error: unknown) {
-    // Network error, timeout, or AbortError — backend is unreachable. Mark
-    // predictions stale and notify subscribers so the UI updates immediately
-    // rather than continuing to show data as if it were fresh (#5937, #5938).
-    // Existing prediction data is intentionally preserved (not cleared) so
-    // users can still see the last known state, clearly labeled as stale.
+    if (signal?.aborted) return
+
+    // Network error or timeout — backend is unreachable. Mark predictions
+    // stale and notify subscribers so the UI updates immediately rather than
+    // continuing to show data as if it were fresh (#5937, #5938). Existing
+    // prediction data is intentionally preserved (not cleared) so users can
+    // still see the last known state, clearly labeled as stale.
     reportAgentDataError('/predictions/ai', error instanceof Error ? error.message : 'fetch_failed')
     isStale = true
     notifySubscribers()
@@ -350,10 +377,12 @@ function connectWebSocket(): void {
 /**
  * Trigger manual AI analysis
  */
-async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
+async function triggerAnalysis(specificProviders?: string[], signal?: AbortSignal): Promise<boolean> {
   if (getDemoMode()) {
     // Simulate analysis in demo mode
-    await new Promise(resolve => setTimeout(resolve, UI_FEEDBACK_TIMEOUT_MS))
+    await delayWithSignal(UI_FEEDBACK_TIMEOUT_MS, signal)
+    if (signal?.aborted) return false
+
     aiPredictions = DEMO_AI_PREDICTIONS.map(p => ({
       ...p,
       id: `demo-ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -369,15 +398,18 @@ async function triggerAnalysis(specificProviders?: string[]): Promise<boolean> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ providers: specificProviders }),
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
+      signal: getRequestSignal(FETCH_DEFAULT_TIMEOUT_MS, signal)
     })
+
+    if (signal?.aborted) return false
 
     if (response.ok) {
       // Analysis started, results will come via WebSocket or next poll
       return true
     }
     return false
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error
     return false
   }
 }
@@ -468,21 +500,63 @@ export function useAIPredictions() {
     }
   }, [])
 
-  // Ref to track active polling so cleanup on unmount can cancel it
+  // Refs to track active analysis so unmount/cancel can abort it cleanly
   const analysisPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const analysisTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const analysisAbortRef = useRef<AbortController | null>(null)
+  const analysisOpIdRef = useRef<string | null>(null)
+  const isMountedRef = useRef(true)
 
-  // Cleanup polling on unmount
+  const clearAnalysisTimers = () => {
+    if (analysisPollRef.current) {
+      clearInterval(analysisPollRef.current)
+      analysisPollRef.current = null
+    }
+    if (analysisTimeoutRef.current) {
+      clearTimeout(analysisTimeoutRef.current)
+      analysisTimeoutRef.current = null
+    }
+  }
+
+  const cancelActiveAnalysis = () => {
+    clearAnalysisTimers()
+
+    if (analysisOpIdRef.current) {
+      clearActiveTokenCategory(analysisOpIdRef.current)
+      analysisOpIdRef.current = null
+    }
+
+    if (analysisAbortRef.current) {
+      const controller = analysisAbortRef.current
+      analysisAbortRef.current = null
+      if (!controller.signal.aborted) {
+        controller.abort()
+      }
+    }
+  }
+
+  const finishAnalysis = (controller: AbortController, opId: string) => {
+    const isCurrentAnalysis = analysisAbortRef.current === controller
+
+    if (isCurrentAnalysis) {
+      clearAnalysisTimers()
+      analysisAbortRef.current = null
+      if (analysisOpIdRef.current === opId) {
+        analysisOpIdRef.current = null
+      }
+      if (isMountedRef.current) {
+        setIsAnalyzing(false)
+      }
+    }
+
+    clearActiveTokenCategory(opId)
+  }
+
+  // Cleanup polling and in-flight requests on unmount
   useEffect(() => {
     return () => {
-      if (analysisPollRef.current) {
-        clearInterval(analysisPollRef.current)
-        analysisPollRef.current = null
-      }
-      if (analysisTimeoutRef.current) {
-        clearTimeout(analysisTimeoutRef.current)
-        analysisTimeoutRef.current = null
-      }
+      isMountedRef.current = false
+      cancelActiveAnalysis()
     }
   }, [])
 
@@ -497,52 +571,77 @@ export function useAIPredictions() {
       typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID()
         : `predictions-${Date.now()}-${Math.random().toString(36).slice(2)}`
+
+    cancelActiveAnalysis()
+
+    const controller = new AbortController()
+    analysisAbortRef.current = controller
+    analysisOpIdRef.current = opId
     setIsAnalyzing(true)
     setActiveTokenCategory(opId, 'predictions')
 
     const timestampBeforeTrigger = lastAnalyzed ? lastAnalyzed.getTime() : 0
-    const triggered = await triggerAnalysis(specificProviders)
 
-    if (!triggered) {
-      setIsAnalyzing(false)
-      clearActiveTokenCategory(opId)
-      return
-    }
+    try {
+      const triggered = await triggerAnalysis(specificProviders, controller.signal)
 
-    // Poll until we detect newer predictions or hit the timeout.
-    // A WebSocket `ai_predictions_updated` message will also update
-    // `lastAnalyzed` via the singleton subscriber, so the poll check
-    // will pick that up on its next tick.
-    return new Promise<void>(resolve => {
-      const cleanup = () => {
-        if (analysisPollRef.current) {
-          clearInterval(analysisPollRef.current)
-          analysisPollRef.current = null
-        }
-        if (analysisTimeoutRef.current) {
-          clearTimeout(analysisTimeoutRef.current)
-          analysisTimeoutRef.current = null
-        }
-        setIsAnalyzing(false)
-        clearActiveTokenCategory(opId)
-        resolve()
+      if (controller.signal.aborted) {
+        return
       }
 
-      // Max timeout — stop waiting regardless
-      analysisTimeoutRef.current = setTimeout(() => {
-        // One final fetch attempt before giving up
-        fetchAIPredictions().finally(cleanup)
-      }, ANALYSIS_MAX_TIMEOUT_MS)
+      if (!triggered) {
+        finishAnalysis(controller, opId)
+        return
+      }
 
-      // Poll at a regular interval for updated predictions
-      analysisPollRef.current = setInterval(async () => {
-        await fetchAIPredictions()
-        const currentTimestamp = lastAnalyzed ? lastAnalyzed.getTime() : 0
-        if (currentTimestamp > timestampBeforeTrigger) {
-          cleanup()
+      // Poll until we detect newer predictions or hit the timeout.
+      // A WebSocket `ai_predictions_updated` message will also update
+      // `lastAnalyzed` via the singleton subscriber, so the poll check
+      // will pick that up on its next tick.
+      return new Promise<void>(resolve => {
+        let settled = false
+
+        const settle = () => {
+          if (settled) return
+          settled = true
+          controller.signal.removeEventListener('abort', handleAbort)
+          finishAnalysis(controller, opId)
+          resolve()
         }
-      }, ANALYSIS_POLL_INTERVAL_MS)
-    })
+
+        const handleAbort = () => {
+          settle()
+        }
+
+        controller.signal.addEventListener('abort', handleAbort, { once: true })
+
+        // Max timeout — stop waiting regardless
+        analysisTimeoutRef.current = setTimeout(() => {
+          // One final fetch attempt before giving up
+          fetchAIPredictions(controller.signal).finally(() => {
+            if (!controller.signal.aborted) {
+              settle()
+            }
+          })
+        }, ANALYSIS_MAX_TIMEOUT_MS)
+
+        // Poll at a regular interval for updated predictions
+        analysisPollRef.current = setInterval(async () => {
+          await fetchAIPredictions(controller.signal)
+          if (controller.signal.aborted) return
+
+          const currentTimestamp = lastAnalyzed ? lastAnalyzed.getTime() : 0
+          if (currentTimestamp > timestampBeforeTrigger) {
+            settle()
+          }
+        }, ANALYSIS_POLL_INTERVAL_MS)
+      })
+    } catch {
+      if (!controller.signal.aborted) {
+        finishAnalysis(controller, opId)
+      }
+      return
+    }
   }
 
   // Check if AI predictions are enabled

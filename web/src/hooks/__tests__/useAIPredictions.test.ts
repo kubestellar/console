@@ -762,6 +762,62 @@ describe('useAIPredictions', () => {
     clearIntervalSpy.mockRestore()
   })
 
+  it('aborts in-flight analyze requests on unmount without setState warnings', async () => {
+    mockGetDemoMode.mockReturnValue(false)
+    mockIsAgentUnavailable.mockReturnValue(false)
+
+    let analyzeSignal: AbortSignal | undefined
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (typeof url === 'string' && url.includes('/predictions/analyze') && opts?.method === 'POST') {
+        analyzeSignal = opts.signal as AbortSignal | undefined
+        return new Promise((_, reject) => {
+          analyzeSignal?.addEventListener('abort', () => {
+            const abortError = new Error('Aborted')
+            abortError.name = 'AbortError'
+            reject(abortError)
+          }, { once: true })
+        })
+      }
+
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          predictions: [],
+          lastAnalyzed: new Date().toISOString(),
+          providers: [],
+          stale: false,
+        }),
+      })
+    })
+
+    const { result, unmount } = renderHook(() => useAIPredictions())
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+
+    act(() => {
+      void result.current.analyze()
+    })
+
+    unmount()
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    expect(analyzeSignal?.aborted).toBe(true)
+    expect(mockClearActiveTokenCategory).toHaveBeenCalledWith(expect.any(String))
+    expect(consoleErrorSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("Can't perform a React state update on an unmounted component")
+    )
+
+    consoleErrorSpy.mockRestore()
+  })
+
   // ---------- settings change event listener cleanup ----------
 
   it('removes settings change event listener on unmount', () => {
