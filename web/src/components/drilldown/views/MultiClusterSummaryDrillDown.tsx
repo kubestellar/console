@@ -177,6 +177,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     podClusterErrors,
     deployments,
     events,
+    warningEvents,
     helmReleases,
     operatorSubscriptions,
     securityIssues,
@@ -300,7 +301,11 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           kubeletVersion: n.kubeletVersion,
           internalIP: n.internalIP }))
       case 'all-events':
-        return events.map(e => ({
+        // Issue #12371 — When filter='warning', use warningEvents (same source
+        // as the stat block) instead of filtering the general events list. The
+        // stat block shows warningEvents.length, so the drill-down must show
+        // the same data to avoid count/list mismatches.
+        return (filter === 'warning' ? warningEvents : events).map(e => ({
           ...e,
           status: e.type || 'Normal' }))
       case 'all-alerts':
@@ -357,7 +362,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       default:
         return []
     }
-  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, helmReleases, operatorSubscriptions, securityIssues, cachedNodes, cachedPVCs, contextAlerts])
+  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, warningEvents, filter, helmReleases, operatorSubscriptions, securityIssues, cachedNodes, cachedPVCs, contextAlerts])
 
   // Apply initial filter from data prop
   const preFilteredItems = (() => {
