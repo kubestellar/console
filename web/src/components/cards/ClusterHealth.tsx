@@ -192,7 +192,7 @@ export function ClusterHealth() {
   // Show skeleton structure during loading to prevent layout shift
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col min-h-card">
+      <div className="h-full flex flex-col">
         {/* Header skeleton */}
         <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
           <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export function ClusterHealth() {
   }
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded">
+    <div className="h-full flex flex-col content-loaded">
       {/* Header with controls */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
