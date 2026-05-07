@@ -52,7 +52,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   const SORT_OPTIONS = SORT_OPTIONS_KEYS.map(opt => ({ value: opt.value, label: String(t(opt.labelKey)) }))
 
   // Fetch real ServiceImport data with demo fallback
-  const { imports: allImports, isLoading, isDemoData, isFailed, consecutiveFailures, refetch } = useServiceImportsCard()
+  const { imports: allImports, isLoading, isRefreshing, isDemoData, isFailed, consecutiveFailures, refetch } = useServiceImportsCard()
   const hasError = isFailed
 
   // Compute stats from real data
@@ -71,6 +71,7 @@ function ServiceImportsInternal({ config: _config }: ServiceImportsProps) {
   const hasData = (allImports || []).length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: hasData,
     isDemoData,
     isFailed,
