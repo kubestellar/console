@@ -229,7 +229,11 @@ export function AppStatus(_props: AppStatusProps) {
         return (
           <div
             key={`${app.name}-${app.namespace}`}
-            onClick={() => handleAppClick(app, app.clusters[0])}
+            onClick={() => {
+              if (app.clusters.length > 0) {
+                handleAppClick(app, app.clusters[0])
+              }
+            }}
             className={`p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer group ${idx % 2 === 0 ? 'bg-secondary/20' : 'bg-secondary/40'}`}
             title={`Click to view details for ${app.name}`}
           >
@@ -249,7 +253,7 @@ export function AppStatus(_props: AppStatusProps) {
                       kind: 'Deployment',
                       name: app.name,
                       namespace: app.namespace,
-                      cluster: app.clusters[0],
+                      cluster: app.clusters[0] || '',
                       status: app.status.warning > 0 ? 'Warning' : 'Pending' }}
                     issues={[
                       ...(app.status.warning > 0 ? [{ name: 'Warning', message: `${app.status.warning} instance(s) with warnings across ${app.clusters.length} cluster(s)` }] : []),
