@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
@@ -32,13 +32,18 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+const mockUseCardLoadingState = vi.fn()
+const mockUseNightlyE2EData = vi.fn()
+
 vi.mock('../../CardDataContext', () => ({
-  useCardLoadingState: () => ({ showSkeleton: false }),
-  useCardLoadingState: () => ({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }),
+  useCardLoadingState: (opts: unknown) => {
+    mockUseCardLoadingState(opts)
+    return { showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false }
+  },
 }))
 
 vi.mock('../../../../hooks/useNightlyE2EData', () => ({
-  useNightlyE2EData: () => ({ guides: [], isDemoFallback: null, isFailed: false, consecutiveFailures: 0, isLoading: false }),
+  useNightlyE2EData: () => mockUseNightlyE2EData(),
 }))
 
 vi.mock('../../../../hooks/useAIMode', () => ({
@@ -52,8 +57,21 @@ vi.mock('../../../../hooks/useMissions', () => ({
 import NightlyE2EStatus from '../NightlyE2EStatus'
 
 describe('NightlyE2EStatus', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseNightlyE2EData.mockReturnValue({ guides: [], isDemoFallback: false, isFailed: false, consecutiveFailures: 0, isLoading: false, isRefreshing: false })
+  })
+
   it('renders without crashing', () => {
     const { container } = render(<NightlyE2EStatus />)
     expect(container).toBeTruthy()
+  })
+
+  it('passes isRefreshing through to useCardLoadingState', () => {
+    mockUseNightlyE2EData.mockReturnValue({ guides: [], isDemoFallback: false, isFailed: false, consecutiveFailures: 0, isLoading: false, isRefreshing: true })
+
+    render(<NightlyE2EStatus />)
+
+    expect(mockUseCardLoadingState).toHaveBeenCalledWith(expect.objectContaining({ isRefreshing: true }))
   })
 })

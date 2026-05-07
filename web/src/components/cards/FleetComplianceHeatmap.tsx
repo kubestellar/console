@@ -219,11 +219,16 @@ export function FleetComplianceHeatmap({ config: _config }: CardConfig) {
     }
   }
 
+  const hasAnyData =
+    Object.values(kyvernoStatuses || {}).some(s => !s.error) ||
+    Object.values(trivyStatuses || {}).some(s => !s.error) ||
+    Object.values(kubescapeStatuses || {}).some(s => !s.error)
+
   // #6219: pass `hasError` through as `isFailed` so CardWrapper enters its
   // error render path when all 3 underlying hooks (kyverno, trivy,
   // kubescape) finished but found no clusters to scan / no installations.
   // hasError is computed above from `clustersChecked` totals.
-  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData, isFailed: hasError, consecutiveFailures: clusterFailures })
+  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData, isDemoData, isFailed: hasError, consecutiveFailures: clusterFailures })
 
   const rows = useMemo((): HeatmapRow[] => {
     // Collect all cluster names from compliance hooks + useClusters fallback

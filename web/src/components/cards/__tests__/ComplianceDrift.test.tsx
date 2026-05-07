@@ -35,6 +35,10 @@ vi.mock('react-i18next', () => ({
 }))
 
 const mockUseCardLoadingState = vi.fn()
+const mockUseKyverno = vi.fn()
+const mockUseTrivy = vi.fn()
+const mockUseKubescape = vi.fn()
+
 vi.mock('../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
@@ -44,11 +48,11 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
 }))
 
-vi.mock('../../../hooks/useKyverno', () => ({ useKyverno: () => ({ policies: [], isLoading: false, error: null }) }))
+vi.mock('../../../hooks/useKyverno', () => ({ useKyverno: () => mockUseKyverno() }))
 
-vi.mock('../../../hooks/useTrivy', () => ({ useTrivy: () => ({ reports: [], isLoading: false, error: null }) }))
+vi.mock('../../../hooks/useTrivy', () => ({ useTrivy: () => mockUseTrivy() }))
 
-vi.mock('../../../hooks/useKubescape', () => ({ useKubescape: () => ({ reports: [], isLoading: false, error: null }) }))
+vi.mock('../../../hooks/useKubescape', () => ({ useKubescape: () => mockUseKubescape() }))
 
 import { ComplianceDrift } from '../ComplianceDrift'
 
@@ -57,6 +61,9 @@ describe('ComplianceDrift', () => {
     vi.clearAllMocks()
     mockUseDemoMode.mockReturnValue({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
+    mockUseKyverno.mockReturnValue({ statuses: {}, isLoading: false, isRefreshing: false, lastRefresh: null, isDemoData: false, refetch: vi.fn(), clustersChecked: 0, totalClusters: 0 })
+    mockUseTrivy.mockReturnValue({ statuses: {}, isLoading: false, isRefreshing: false, isDemoData: false, refetch: vi.fn(), clustersChecked: 0, totalClusters: 0 })
+    mockUseKubescape.mockReturnValue({ statuses: {}, isLoading: false, isRefreshing: false, isDemoData: false, refetch: vi.fn(), clustersChecked: 0, totalClusters: 0 })
   })
 
   it('renders without crashing', () => {
@@ -67,6 +74,16 @@ describe('ComplianceDrift', () => {
   it('calls useCardLoadingState during render', () => {
     render(<ComplianceDrift />)
     expect(mockUseCardLoadingState).toHaveBeenCalled()
+  })
+
+  it('passes hasAnyData=false when all tool statuses are errors', () => {
+    mockUseKyverno.mockReturnValue({ statuses: { a: { error: 'kyverno failed', installed: true, policies: [] } }, isLoading: false, isRefreshing: false, lastRefresh: null, isDemoData: false, refetch: vi.fn(), clustersChecked: 1, totalClusters: 1 })
+    mockUseTrivy.mockReturnValue({ statuses: { a: { error: 'trivy failed', installed: true, vulnerabilities: { critical: 0, high: 0, medium: 0, low: 0, unknown: 0 } } }, isLoading: false, isRefreshing: false, isDemoData: false, refetch: vi.fn(), clustersChecked: 1, totalClusters: 1 })
+    mockUseKubescape.mockReturnValue({ statuses: { a: { error: 'kubescape failed', installed: true, overallScore: 0 } }, isLoading: false, isRefreshing: false, isDemoData: false, refetch: vi.fn(), clustersChecked: 1, totalClusters: 1 })
+
+    render(<ComplianceDrift />)
+
+    expect(mockUseCardLoadingState).toHaveBeenCalledWith(expect.objectContaining({ hasAnyData: false }))
   })
 
   it('renders correctly in demo mode', () => {

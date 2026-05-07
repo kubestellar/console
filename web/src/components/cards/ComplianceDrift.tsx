@@ -80,7 +80,12 @@ export function ComplianceDrift({ config: _config }: CardConfig) {
     setModal({ tool: toolKey, cluster: d.cluster })
   }
 
-  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData: true, isDemoData })
+  const hasAnyData =
+    Object.values(kyvernoStatuses || {}).some(s => !s.error) ||
+    Object.values(trivyStatuses || {}).some(s => !s.error) ||
+    Object.values(kubescapeStatuses || {}).some(s => !s.error)
+
+  useCardLoadingState({ isLoading: isLoading && !isDemoData, isRefreshing, hasAnyData, isDemoData })
 
   const drifts = useMemo((): DriftEntry[] => {
     const result: DriftEntry[] = []
