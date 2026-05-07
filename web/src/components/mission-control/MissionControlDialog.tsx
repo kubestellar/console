@@ -501,7 +501,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
 
             {/* ── Content ────────────────────────────────────────────── */}
             <div
-              className="flex-1 overflow-hidden"
+              className="flex-1 min-h-0 overflow-hidden"
               id={`mission-control-phase-panel-${state.phase}`}
               role="tabpanel"
             >
@@ -696,7 +696,7 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
 function PhaseWrapper({ children }: { children: React.ReactNode }) {
   return (
     <motion.div
-      className="h-full overflow-auto"
+      className="h-full min-h-0 overflow-auto"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}

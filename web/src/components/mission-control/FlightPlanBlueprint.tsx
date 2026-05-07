@@ -419,7 +419,7 @@ export function FlightPlanBlueprint({
   const visiblePanel = infoPanel ?? stickyPanel
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-h-0 flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-border">
         <div>
@@ -503,9 +503,9 @@ export function FlightPlanBlueprint({
       )}
 
       {/* Main content: SVG left + Info panel right */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {/* SVG Blueprint */}
-        <div className="flex-1 p-4 overflow-hidden relative">
+        <div className="flex-1 min-h-0 p-4 overflow-hidden relative">
           {/* Zoom & sidebar controls */}
           <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
             <button
@@ -561,7 +561,7 @@ export function FlightPlanBlueprint({
 
           <div
             ref={svgContainerRef}
-            className="w-full max-w-full h-full overflow-x-auto overflow-y-auto"
+            className="w-full max-w-full max-h-full h-full overflow-x-auto overflow-y-auto"
             style={{ cursor: zoom > 1 ? 'grab' : 'default' }}
             onMouseDown={handlePanStart}
           >
@@ -573,6 +573,7 @@ export function FlightPlanBlueprint({
           >
             <svg
               viewBox={`0 0 ${layout.viewBox.width} ${layout.viewBox.height}`}
+              preserveAspectRatio="xMidYMid meet"
               className="w-full h-full"
             >
               <BlueprintDefs id={svgId} />
