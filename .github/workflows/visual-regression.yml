@@ -19,7 +19,7 @@ jobs:
     name: App Visual Regression
     if: github.repository == 'kubestellar/console'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: web
