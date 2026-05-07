@@ -2,6 +2,20 @@ import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
+// Mock react-i18next globally to prevent i18n.ts from failing when imported
+// by vite.config.ts or other modules. Uses importOriginal to get the real
+// initReactI18next object that i18n.ts needs.
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+    Trans: ({ children }: { children: React.ReactNode }) => children,
+    // initReactI18next is imported from the actual module above, so tests that import
+    // i18n.ts (via vite.config.ts) don't crash
+  }
+})
+
 // Cleanup after each test
 afterEach(() => {
   cleanup()

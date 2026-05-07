@@ -12,9 +12,13 @@ import type { MultiClusterInsight } from '../../../types/insights'
 
 // ----- shared mocks -----
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
-}))
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (k: string) => k, i18n: { language: 'en' } }),
+  }
+})
 vi.mock('../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
 }))
