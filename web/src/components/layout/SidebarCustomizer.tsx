@@ -86,16 +86,17 @@ function SortableItem({ item, onRemove, renderIcon }: SortableItemProps) {
       )}
     >
       <GripVertical className="w-4 h-4 text-muted-foreground shrink-0" />
-      {renderIcon(item.icon, 'w-4 h-4 text-muted-foreground')}
-      <span className="text-sm text-foreground">{item.name}</span>
-      <span className="text-xs text-muted-foreground/50">{item.href}</span>
-      <span className="flex-1" />
+      {renderIcon(item.icon, 'w-4 h-4 text-muted-foreground shrink-0')}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <span className="text-sm text-foreground truncate">{item.name}</span>
+        <span className="text-xs text-muted-foreground/50 truncate">{item.href}</span>
+      </div>
       {/* Allow removing any item except the main Dashboard (/) */}
       {item.href !== '/' && (
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(item.id) }}
           onPointerDown={(e) => e.stopPropagation()}
-          className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400"
+          className="p-1 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 shrink-0"
           title={t('sidebar.removeFromSidebar')}
         >
           <Trash2 className="w-4 h-4" />
