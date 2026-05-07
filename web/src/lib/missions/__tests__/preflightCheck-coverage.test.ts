@@ -365,7 +365,7 @@ describe('runToolPreflightCheck', () => {
     const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
     expect(result.ok).toBe(false)
     expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
-    expect(result.error?.message).toContain('fetch failed')
+    expect(result.error?.message).toBe('Agent is not reachable. Is kc-agent running on port 8585?')
   })
 
   it('handles response with tools nested under "tools" key', async () => {

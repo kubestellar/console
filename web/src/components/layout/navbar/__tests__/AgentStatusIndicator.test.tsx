@@ -2,18 +2,18 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
-  isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
+  isDemoMode: () => false, getDemoMode: () => false, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
   toggleDemoMode: vi.fn(), subscribeDemoMode: () => () => {},
-  isDemoToken: () => true, hasRealToken: () => false, setDemoToken: vi.fn(),
+  isDemoToken: () => false, hasRealToken: () => true, setDemoToken: vi.fn(),
   isFeatureEnabled: () => true,
 }))
 
 vi.mock('../../../../hooks/useDemoMode', () => ({
-  getDemoMode: () => true, default: () => true,
-  useDemoMode: () => ({ isDemoMode: true, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
-  hasRealToken: () => false, isDemoModeForced: false, isNetlifyDeployment: false,
-  canToggleDemoMode: () => true, isDemoToken: () => true, setDemoToken: vi.fn(),
+  getDemoMode: () => false, default: () => false,
+  useDemoMode: () => ({ isDemoMode: false, toggleDemoMode: vi.fn(), setDemoMode: vi.fn() }),
+  hasRealToken: () => true, isDemoModeForced: false, isNetlifyDeployment: false,
+  canToggleDemoMode: () => true, isDemoToken: () => false, setDemoToken: vi.fn(),
   setGlobalDemoMode: vi.fn(),
 }))
 
