@@ -34,13 +34,18 @@ vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
 }))
 
-vi.mock('../useDemoMode', () => ({
-  useDemoMode: () => ({
-    isDemoMode: mockDemoMode,
-    toggleDemoMode: vi.fn(),
-    setDemoMode: vi.fn(),
-  }),
-}))
+vi.mock('../useDemoMode', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    isDemoModeForced: false,
+    useDemoMode: () => ({
+      isDemoMode: mockDemoMode,
+      toggleDemoMode: vi.fn(),
+      setDemoMode: vi.fn(),
+    }),
+  }
+})
 
 vi.mock('../useCertManager', () => ({
   useCertManager: () => ({
@@ -53,6 +58,10 @@ vi.mock('../../lib/modeTransition', () => ({
   registerRefetch: vi.fn(() => vi.fn()),
   registerCacheReset: vi.fn(),
   unregisterCacheReset: vi.fn(),
+}))
+
+vi.mock('../mcp/shared', () => ({
+  deduplicateClustersByServer: (clusters: unknown[]) => clusters,
 }))
 
 // settledWithConcurrency: execute all task functions immediately and resolve

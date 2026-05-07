@@ -45,13 +45,18 @@ vi.mock('../../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: (...args: unknown[]) => mockExec(...args) },
 }))
 
-vi.mock('../useDemoMode', () => ({
-  useDemoMode: () => ({
-    isDemoMode: mockDemoMode,
-    toggleDemoMode: vi.fn(),
-    setDemoMode: vi.fn(),
-  }),
-}))
+vi.mock('../useDemoMode', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    isDemoModeForced: false,
+    useDemoMode: () => ({
+      isDemoMode: mockDemoMode,
+      toggleDemoMode: vi.fn(),
+      setDemoMode: vi.fn(),
+    }),
+  }
+})
 
 vi.mock('../useCertManager', () => ({
   useCertManager: () => ({
@@ -64,6 +69,10 @@ vi.mock('../../lib/modeTransition', () => ({
   registerRefetch: vi.fn(() => vi.fn()),
   registerCacheReset: vi.fn(),
   unregisterCacheReset: vi.fn(),
+}))
+
+vi.mock('../mcp/shared', () => ({
+  deduplicateClustersByServer: (clusters: unknown[]) => clusters,
 }))
 
 vi.mock('../../lib/utils/concurrency', () => ({
@@ -136,7 +145,7 @@ describe('useDataCompliance extended coverage', () => {
       mockDemoMode = true
       mockCertStatus = { installed: false, totalCertificates: 0, validCertificates: 0, expiringSoon: 0, expired: 0 }
 
-      const { result, unmount } = renderHook(() => useDataCompliance())
+      const { unmount } = renderHook(() => useDataCompliance())
 
       // In demo mode posture is hardcoded, but certStatus comes from mock
       // Actually in demo mode it uses DEMO_POSTURE which has certManagerInstalled: true

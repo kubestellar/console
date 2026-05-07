@@ -15,6 +15,12 @@ import { renderHook } from '@testing-library/react'
 // Mocks — declared BEFORE importing the module under test
 // ---------------------------------------------------------------------------
 
+const { mockClusterCacheRef } = vi.hoisted(() => ({
+  mockClusterCacheRef: {
+    clusters: [] as Array<{ name: string; server?: string }>,
+  },
+}))
+
 const mockUseCache = vi.fn()
 const mockKubectlProxy = { exec: vi.fn() }
 const mockSettledWithConcurrency = vi.fn()
@@ -51,6 +57,18 @@ vi.mock('../../lib/utils/concurrency', () => ({
     }
     return result
   },
+}))
+
+vi.mock('../mcp/shared', () => ({
+  clusterCacheRef: mockClusterCacheRef,
+  deduplicateClustersByServer: (clusters: unknown[]) => clusters,
+}))
+
+vi.mock('../mcp/clusterCacheRef', () => ({
+  clusterCacheRef: mockClusterCacheRef,
+  setClusterCacheRefClusters: vi.fn((clusters: Array<{ name: string; server?: string }>) => {
+    mockClusterCacheRef.clusters = clusters
+  }),
 }))
 
 // ---------------------------------------------------------------------------
@@ -124,6 +142,16 @@ function mockExecJson(items: unknown[], exitCode = 0) {
 let mod: typeof import('../useCachedLLMd')
 
 async function loadModule() {
+  const shared = await import('../mcp/shared') as {
+    clusterCacheRef: { clusters: Array<{ name: string; server?: string }> }
+  }
+  shared.clusterCacheRef.clusters = mockClusterCacheRef.clusters
+
+  const clusterCacheRefModule = await import('../mcp/clusterCacheRef') as {
+    setClusterCacheRefClusters: (clusters: Array<{ name: string; server?: string }>) => void
+  }
+  clusterCacheRefModule.setClusterCacheRefClusters(mockClusterCacheRef.clusters)
+
   mod = await import('../useCachedLLMd')
   return mod
 }
@@ -136,6 +164,18 @@ describe('useCachedLLMd', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
+    mockClusterCacheRef.clusters = [
+      { name: 'vllm-d', server: 'https://vllm-d.example.com' },
+      { name: 'platform-eval', server: 'https://platform-eval.example.com' },
+      { name: 'cluster-1', server: 'https://cluster-1.example.com' },
+      { name: 'cluster-2', server: 'https://cluster-2.example.com' },
+      { name: 'cluster-a', server: 'https://cluster-a.example.com' },
+      { name: 'cluster-b', server: 'https://cluster-b.example.com' },
+      { name: 'my-cluster', server: 'https://my-cluster.example.com' },
+      { name: 'bad-cluster', server: 'https://bad-cluster.example.com' },
+      { name: 'c1', server: 'https://c1.example.com' },
+      { name: 'c2', server: 'https://c2.example.com' },
+    ]
 
     // Default useCache: return whatever initialData is provided
     mockUseCache.mockImplementation((opts: { initialData: unknown }) =>
