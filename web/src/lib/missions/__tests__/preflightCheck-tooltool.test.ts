@@ -115,10 +115,12 @@ describe('runToolPreflightCheck', () => {
     mockFetch
       .mockResolvedValueOnce({
         ok: true,
+        status: 200,
         json: async () => [{ name: 'helm', installed: false }],
       } as Response)
       .mockResolvedValueOnce({
         ok: true,
+        status: 200,
         json: async () => [{ name: 'helm', installed: true, path: '/usr/local/bin/helm' }],
       } as Response)
 
@@ -151,7 +153,21 @@ describe('runToolPreflightCheck', () => {
     expect(helmResult?.installed).toBe(true)
   })
 
-  it('returns UNKNOWN_EXECUTION_FAILURE when agent returns non-ok HTTP status', async () => {
+  it.each([401, 403])('returns auth-specific error for HTTP %s', async (status) => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status,
+      json: async () => ({}),
+    } as Response)
+
+    const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
+    expect(result.error?.message).toBe('Agent authentication failed. Check that KC_AGENT_TOKEN is correctly set and matches between the console and kc-agent.')
+  })
+
+  it('returns reachability-specific error for HTTP 503', async () => {
     const mockFetch = vi.mocked(fetch)
     mockFetch.mockResolvedValueOnce({
       ok: false,
@@ -162,17 +178,51 @@ describe('runToolPreflightCheck', () => {
     const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
     expect(result.ok).toBe(false)
     expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
-    expect(result.error?.message).toContain('503')
+    expect(result.error?.message).toBe('Agent is not reachable. Is kc-agent running on port 8585?')
   })
 
-  it('returns UNKNOWN_EXECUTION_FAILURE on fetch network error', async () => {
+  it('returns generic HTTP error for other status codes', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+    } as Response)
+
+    const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
+    expect(result.error?.message).toBe('Tool check request failed (HTTP 500).')
+  })
+
+  it('returns reachability-specific error on fetch network error', async () => {
     const mockFetch = vi.mocked(fetch)
     mockFetch.mockRejectedValueOnce(new Error('Failed to fetch'))
 
     const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
     expect(result.ok).toBe(false)
     expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
-    expect(result.error?.message).toContain('Failed to fetch')
+    expect(result.error?.message).toBe('Agent is not reachable. Is kc-agent running on port 8585?')
+  })
+
+  it('returns reachability-specific error on timeout', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockRejectedValueOnce(new Error('Connection timed out'))
+
+    const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
+    expect(result.error?.message).toBe('Agent is not reachable. Is kc-agent running on port 8585?')
+  })
+
+  it('returns generic error on unexpected fetch failures', async () => {
+    const mockFetch = vi.mocked(fetch)
+    mockFetch.mockRejectedValueOnce(new Error('Unexpected parser failure'))
+
+    const result = await runToolPreflightCheck('http://localhost:8585', ['kubectl'])
+    expect(result.ok).toBe(false)
+    expect(result.error?.code).toBe('UNKNOWN_EXECUTION_FAILURE')
+    expect(result.error?.message).toBe('Failed to check required tools: Unexpected parser failure')
   })
 
   it('includes per-tool details matching detected tools', async () => {

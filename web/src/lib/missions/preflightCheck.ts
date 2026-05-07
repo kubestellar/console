@@ -1,3 +1,5 @@
+import i18n from '../i18n'
+
 /**
  * Mission Preflight Check
  *
@@ -398,6 +400,22 @@ export interface ToolPreflightResult {
 /** Default tools every mission needs. */
 const DEFAULT_REQUIRED_TOOLS = ['kubectl']
 
+const HTTP_UNAUTHORIZED = 401
+const HTTP_FORBIDDEN = 403
+const HTTP_SERVICE_UNAVAILABLE = 503
+const TOOL_CHECK_TIMEOUT_MS = 10_000
+const AGENT_UNREACHABLE_ERROR_PATTERNS = [
+  'failed to fetch',
+  'fetch failed',
+  'networkerror',
+  'connection refused',
+  'econnrefused',
+  'timeout',
+  'timed out',
+  'aborterror',
+  'the operation was aborted',
+]
+
 /** Extra tools required by specific mission types. */
 const MISSION_TOOL_MAP: Record<string, string[]> = {
   deploy: ['kubectl', 'helm'],
@@ -423,6 +441,39 @@ export function resolveRequiredTools(
   return [...merged]
 }
 
+function isAgentAuthenticationStatus(status: number): boolean {
+  return status === HTTP_UNAUTHORIZED || status === HTTP_FORBIDDEN
+}
+
+function isAgentUnreachableStatus(status: number): boolean {
+  return status === HTTP_SERVICE_UNAVAILABLE
+}
+
+function isAgentUnreachableError(message: string): boolean {
+  const normalizedMessage = message.toLowerCase()
+  return AGENT_UNREACHABLE_ERROR_PATTERNS.some(pattern => normalizedMessage.includes(pattern))
+}
+
+function getToolCheckHttpErrorMessage(status: number): string {
+  if (isAgentAuthenticationStatus(status)) {
+    return i18n.t('missions.preflight.toolCheck.agentAuthFailed')
+  }
+
+  if (isAgentUnreachableStatus(status)) {
+    return i18n.t('missions.preflight.toolCheck.agentUnreachable')
+  }
+
+  return i18n.t('missions.preflight.toolCheck.requestFailedHttp', { status })
+}
+
+function getToolCheckRequestErrorMessage(message: string): string {
+  if (isAgentUnreachableError(message)) {
+    return i18n.t('missions.preflight.toolCheck.agentUnreachable')
+  }
+
+  return i18n.t('missions.preflight.toolCheck.requestFailedGeneric', { message })
+}
+
 /**
  * Fetch detected tools from the kc-agent and verify every required tool is
  * present.  Returns a structured result the UI can render as a checklist.
@@ -436,7 +487,6 @@ export async function runToolPreflightCheck(
   requiredTools: string[],
   fetchFn: typeof fetch = fetch,
 ): Promise<ToolPreflightResult> {
-  const TOOL_CHECK_TIMEOUT_MS = 10_000
   try {
     const url = new URL('/local-cluster-tools', agentBaseUrl)
     const normalizedRequiredTools = [...new Set(requiredTools.map(tool => tool.toLowerCase()))]
@@ -451,7 +501,7 @@ export async function runToolPreflightCheck(
         ok: false,
         error: {
           code: 'UNKNOWN_EXECUTION_FAILURE',
-          message: `Tool check request failed (HTTP ${resp.status}). Is the local agent running?`,
+          message: getToolCheckHttpErrorMessage(resp.status),
         },
         tools: [],
       }
@@ -500,7 +550,7 @@ export async function runToolPreflightCheck(
       ok: false,
       error: {
         code: 'UNKNOWN_EXECUTION_FAILURE',
-        message: `Failed to check required tools: ${message}`,
+        message: getToolCheckRequestErrorMessage(message),
       },
       tools: [],
     }

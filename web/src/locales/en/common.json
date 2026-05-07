@@ -3880,6 +3880,14 @@
     }
   },
   "missions": {
+    "preflight": {
+      "toolCheck": {
+        "agentAuthFailed": "Agent authentication failed. Check that KC_AGENT_TOKEN is correctly set and matches between the console and kc-agent.",
+        "agentUnreachable": "Agent is not reachable. Is kc-agent running on port 8585?",
+        "requestFailedHttp": "Tool check request failed (HTTP {{status}}).",
+        "requestFailedGeneric": "Failed to check required tools: {{message}}"
+      }
+    },
     "detail": {
       "tabs": {
         "install": "Install",
