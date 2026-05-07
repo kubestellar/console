@@ -2,7 +2,13 @@ package handlers
 
 import (
 	"net"
+	"net/http"
 	"testing"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
 )
 
 func TestIsBlockedIP(t *testing.T) {
@@ -34,5 +40,103 @@ func TestIsBlockedIP(t *testing.T) {
 				t.Errorf("isBlockedIP(%s) = %v, want %v", tt.ip, got, tt.blocked)
 			}
 		})
+	}
+}
+
+func TestCardProxyAuthorization_ViewerForbidden(t *testing.T) {
+	viewerID := uuid.New()
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", viewerID).Return(&models.User{
+		ID:   viewerID,
+		Role: models.UserRoleViewer,
+	}, nil).Maybe()
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", viewerID)
+		return c.Next()
+	})
+
+	handler := NewCardProxyHandler(mockStore)
+	app.Get("/api/card-proxy", handler.Proxy)
+
+	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy?url=https://example.com", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != fiber.StatusForbidden {
+		t.Errorf("expected 403 Forbidden for viewer, got %d", resp.StatusCode)
+	}
+}
+
+func TestCardProxyAuthorization_EditorAllowed(t *testing.T) {
+	editorID := uuid.New()
+	mockStore := new(test.MockStore)
+	mockStore.On("GetUser", editorID).Return(&models.User{
+		ID:   editorID,
+		Role: models.UserRoleEditor,
+	}, nil).Maybe()
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", editorID)
+		return c.Next()
+	})
+
+	handler := NewCardProxyHandler(mockStore)
+	app.Get("/api/card-proxy", handler.Proxy)
+
+	// Use a missing url param so we get 400 (proves we passed the RBAC check)
+	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	// Editor passes RBAC check, gets 400 for missing url — not 403
+	if resp.StatusCode == fiber.StatusForbidden {
+		t.Errorf("editor should not be forbidden, got %d", resp.StatusCode)
+	}
+}
+
+func TestCardProxyAuthorization_NilStoreSkipsCheck(t *testing.T) {
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", uuid.New())
+		return c.Next()
+	})
+
+	handler := NewCardProxyHandler(nil)
+	app.Get("/api/card-proxy", handler.Proxy)
+
+	// nil store = dev/demo mode, RBAC skipped → expect 400 for missing url
+	req, err := http.NewRequest(http.MethodGet, "/api/card-proxy", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == fiber.StatusForbidden {
+		t.Errorf("nil store should skip RBAC check, got %d", resp.StatusCode)
+	}
+	if resp.StatusCode != fiber.StatusBadRequest {
+		t.Errorf("expected 400 for missing url param, got %d", resp.StatusCode)
 	}
 }

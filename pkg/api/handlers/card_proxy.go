@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/store"
 )
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -101,15 +103,23 @@ func isBlockedIP(ip net.IP) bool {
 // CardProxyHandler proxies external HTTP GET requests for custom card code.
 // Cards call useCardFetch(url) in the sandbox, which routes through this
 // endpoint: GET /api/card-proxy?url=<encoded-url>
-type CardProxyHandler struct{}
+type CardProxyHandler struct {
+	store store.Store
+}
 
 // NewCardProxyHandler creates a new card proxy handler.
-func NewCardProxyHandler() *CardProxyHandler {
-	return &CardProxyHandler{}
+func NewCardProxyHandler(s store.Store) *CardProxyHandler {
+	return &CardProxyHandler{store: s}
 }
 
 // Proxy handles GET /api/card-proxy?url=<encoded-url>.
 func (h *CardProxyHandler) Proxy(c *fiber.Ctx) error {
+	// Require at least editor role — viewers and anonymous users must not be
+	// able to trigger outbound requests through the proxy (#12436).
+	if err := requireEditorOrAdmin(c, h.store); err != nil {
+		return err
+	}
+
 	rawURL := c.Query("url")
 	if rawURL == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
