@@ -15,7 +15,7 @@ import { useGlobalFilters, type SeverityLevel } from '../../hooks/useGlobalFilte
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useMissions } from '../../hooks/useMissions'
 import { ALERT_SEVERITY_ORDER } from '../../types/alerts'
-import type { AlertSeverity } from '../../types/alerts'
+import type { Alert, AlertSeverity } from '../../types/alerts'
 import { CardControls } from '../ui/CardControls'
 import { Pagination } from '../ui/Pagination'
 import { CardClusterFilter, CardSearchInput } from '../../lib/cards/CardComponents'
