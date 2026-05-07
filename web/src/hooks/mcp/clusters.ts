@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, useSyncExternalStore } from 'react'
 import { useDemoMode } from '../useDemoMode'
 import { isDemoMode } from '../../lib/demoMode'
 import { triggerAggressiveDetection } from '../useLocalAgent'
@@ -86,51 +86,65 @@ export function useClusters() {
   // Split local state into data + UI slices (#7865).
   // Data updates arrive via startTransition (interruptible) and drive the
   // heavy re-render; UI updates arrive urgently so the refresh spinner
-  // commits on every fetch tick. Merged back into a single return value
-  // below for consumer backward compatibility.
-  const [dataState, setDataState] = useState<ClusterDataSlice>(() => ({
+  // commits on every fetch tick. Use useSyncExternalStore for the shared
+  // subscriptions so React can safely coordinate transition-driven updates
+  // without flooding the queue with subscription setState calls (#12542).
+  const dataSnapshotRef = useRef<ClusterDataSlice>({
     clusters: clusterCache.clusters,
     lastUpdated: clusterCache.lastUpdated,
     consecutiveFailures: clusterCache.consecutiveFailures,
     isFailed: clusterCache.isFailed,
-  }))
-  const [uiState, setUIState] = useState<ClusterUISlice>(() => ({
+  })
+  const uiSnapshotRef = useRef<ClusterUISlice>({
     isLoading: clusterCache.isLoading,
     isRefreshing: clusterCache.isRefreshing,
     error: clusterCache.error,
     lastRefresh: clusterCache.lastRefresh,
-  }))
+  })
+  const getDataSnapshot = useCallback((): ClusterDataSlice => {
+    const current = dataSnapshotRef.current
+    if (
+      current.clusters === clusterCache.clusters &&
+      current.lastUpdated === clusterCache.lastUpdated &&
+      current.consecutiveFailures === clusterCache.consecutiveFailures &&
+      current.isFailed === clusterCache.isFailed
+    ) {
+      return current
+    }
+
+    const nextSnapshot = {
+      clusters: clusterCache.clusters,
+      lastUpdated: clusterCache.lastUpdated,
+      consecutiveFailures: clusterCache.consecutiveFailures,
+      isFailed: clusterCache.isFailed,
+    }
+    dataSnapshotRef.current = nextSnapshot
+    return nextSnapshot
+  }, [])
+  const getUISnapshot = useCallback((): ClusterUISlice => {
+    const current = uiSnapshotRef.current
+    if (
+      current.isLoading === clusterCache.isLoading &&
+      current.isRefreshing === clusterCache.isRefreshing &&
+      current.error === clusterCache.error &&
+      current.lastRefresh === clusterCache.lastRefresh
+    ) {
+      return current
+    }
+
+    const nextSnapshot = {
+      isLoading: clusterCache.isLoading,
+      isRefreshing: clusterCache.isRefreshing,
+      error: clusterCache.error,
+      lastRefresh: clusterCache.lastRefresh,
+    }
+    uiSnapshotRef.current = nextSnapshot
+    return nextSnapshot
+  }, [])
+  const dataState = useSyncExternalStore(subscribeClusterData, getDataSnapshot, getDataSnapshot)
+  const uiState = useSyncExternalStore(subscribeClusterUI, getUISnapshot, getUISnapshot)
   // Track demo mode to re-fetch when it changes
   const { isDemoMode } = useDemoMode()
-
-  // Subscribe to shared cache updates — two subscriptions, one per slice.
-  useEffect(() => {
-    const handleData = (cache: typeof clusterCache) => {
-      setDataState({
-        clusters: cache.clusters,
-        lastUpdated: cache.lastUpdated,
-        consecutiveFailures: cache.consecutiveFailures,
-        isFailed: cache.isFailed,
-      })
-    }
-    const handleUI = (cache: typeof clusterCache) => {
-      setUIState({
-        isLoading: cache.isLoading,
-        isRefreshing: cache.isRefreshing,
-        error: cache.error,
-        lastRefresh: cache.lastRefresh,
-      })
-    }
-    // Sync with any updates that happened between initial render and effect.
-    handleData(clusterCache)
-    handleUI(clusterCache)
-    const unsubData = subscribeClusterData(handleData)
-    const unsubUI = subscribeClusterUI(handleUI)
-    return () => {
-      unsubData()
-      unsubUI()
-    }
-  }, [])
 
   // Re-fetch when demo mode actually changes (not on initial mount).
   // Uses prev-value ref instead of initialMountRef to survive React 18

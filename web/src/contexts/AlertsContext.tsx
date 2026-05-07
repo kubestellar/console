@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense, startTransition, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense, type ReactNode } from 'react'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
@@ -333,9 +333,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     if (!pendingMCPData) return
 
     pendingMCPDataRef.current = null
-    startTransition(() => {
-      setMCPData(pendingMCPData)
-    })
+    setMCPData(pendingMCPData)
   }, [])
 
   const enqueueMCPData = useCallback((nextMCPData: AlertsMCPData) => {
