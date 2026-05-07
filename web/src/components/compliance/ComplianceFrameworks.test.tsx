@@ -75,8 +75,8 @@ describe('ComplianceFrameworks', () => {
 
   it('renders page header', () => {
     render(<ComplianceFrameworks />)
-    expect(screen.getByText('Compliance Frameworks')).toBeDefined()
-    expect(screen.getByText(/PCI-DSS 4.0, SOC 2 Type II/)).toBeDefined()
+    expect(screen.getByText('compliance.title')).toBeDefined()
+    expect(screen.getByText('compliance.subtitle')).toBeDefined()
   })
 
   it('shows framework cards', () => {
@@ -90,20 +90,20 @@ describe('ComplianceFrameworks', () => {
   it('shows loading state', () => {
     mockFrameworksReturn.isLoading = true
     render(<ComplianceFrameworks />)
-    expect(screen.getByText('Loading frameworks…')).toBeDefined()
+    expect(screen.getByText('compliance.loadingFrameworks')).toBeDefined()
   })
 
   it('shows error state', () => {
     mockFrameworksReturn.error = 'Connection failed'
     render(<ComplianceFrameworks />)
-    expect(screen.getByText('Failed to load frameworks')).toBeDefined()
+    expect(screen.getByText('compliance.failedToLoad')).toBeDefined()
     expect(screen.getByText('Connection failed')).toBeDefined()
   })
 
   it('shows retry button on error', () => {
     mockFrameworksReturn.error = 'Timeout'
     render(<ComplianceFrameworks />)
-    const retryBtn = screen.getByText('Retry')
+    const retryBtn = screen.getByText('compliance.retry')
     expect(retryBtn).toBeDefined()
     fireEvent.click(retryBtn)
     expect(mockRefetch).toHaveBeenCalled()
@@ -111,7 +111,7 @@ describe('ComplianceFrameworks', () => {
 
   it('shows evaluate bar with cluster selector', () => {
     render(<ComplianceFrameworks />)
-    expect(screen.getByRole('button', { name: /Run Evaluation/i })).toBeDefined()
+    expect(screen.getByRole('button', { name: /compliance.runEvaluation/i })).toBeDefined()
     const select = document.querySelector('select') as HTMLSelectElement
     expect(select).not.toBeNull()
     expect(select.value).toBe('prod-east')
@@ -119,7 +119,7 @@ describe('ComplianceFrameworks', () => {
 
   it('calls evaluate on button click', () => {
     render(<ComplianceFrameworks />)
-    const btn = screen.getByRole('button', { name: /Run Evaluation/i })
+    const btn = screen.getByRole('button', { name: /compliance.runEvaluation/i })
     fireEvent.click(btn)
     expect(mockEvaluate).toHaveBeenCalledWith('pci-dss-4.0', 'prod-east')
   })
@@ -179,6 +179,6 @@ describe('ComplianceFrameworks', () => {
   it('shows evaluating state', () => {
     mockEvalReturn.isEvaluating = true
     render(<ComplianceFrameworks />)
-    expect(screen.getByText('Evaluating…')).toBeDefined()
+    expect(screen.getByText('compliance.evaluating')).toBeDefined()
   })
 })
