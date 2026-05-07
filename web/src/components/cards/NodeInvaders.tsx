@@ -21,6 +21,13 @@ const INVADER_COLS = 8
 const INVADER_WIDTH = 24
 const INVADER_HEIGHT = 16
 const SHOOT_COOLDOWN_MS = 300
+const GAME_LOOP_INTERVAL_MS = 33
+const INVADER_MOVE_STEP = 3
+const INVADER_DROP_DISTANCE = 10
+const INVADER_SHOOT_TICK_INTERVAL = 60
+const INVADER_MIN_MOVE_TICKS = 5
+const INVADER_BASE_MOVE_TICKS = 20
+const INVADER_ALIVE_TICK_DIVISOR = 2
 
 interface Player {
   x: number
@@ -81,13 +88,13 @@ export function NodeInvaders(_props: CardComponentProps) {
     }
   }, [gameOver, score, highScore])
 
-  const gameStateRef = useRef({ player, bullets, invaders, shields, invaderDir })
+  const gameStateRef = useRef({ player, bullets, invaders, shields, invaderDir, invaderSpeed, canShoot, score })
   useEffect(() => {
-    gameStateRef.current = { player, bullets, invaders, shields, invaderDir }
-  }, [player, bullets, invaders, shields, invaderDir])
+    gameStateRef.current = { player, bullets, invaders, shields, invaderDir, invaderSpeed, canShoot, score }
+  }, [player, bullets, invaders, shields, invaderDir, invaderSpeed, canShoot, score])
 
   // Initialize invaders
-  const initInvaders = (lvl: number) => {
+  const initInvaders = useCallback((lvl: number) => {
     const newInvaders: Invader[] = []
     for (let row = 0; row < INVADER_ROWS; row++) {
       for (let col = 0; col < INVADER_COLS; col++) {
@@ -101,10 +108,10 @@ export function NodeInvaders(_props: CardComponentProps) {
     setInvaders(newInvaders)
     setInvaderDir(1)
     setInvaderSpeed(1 + (lvl - 1) * 0.3)
-  }
+  }, [])
 
   // Initialize shields
-  const initShields = () => {
+  const initShields = useCallback(() => {
     const newShields: Shield[] = []
     for (let i = 0; i < 4; i++) {
       newShields.push({
@@ -113,7 +120,7 @@ export function NodeInvaders(_props: CardComponentProps) {
         health: 4 })
     }
     setShields(newShields)
-  }
+  }, [])
 
   // Draw
   const draw = useCallback(() => {
@@ -194,6 +201,11 @@ export function NodeInvaders(_props: CardComponentProps) {
     ctx.restore()
   }, [player, bullets, invaders, shields, isExpanded])
 
+  const drawRef = useRef(draw)
+  useEffect(() => {
+    drawRef.current = draw
+  }, [draw])
+
   // Game loop — also stops on pause so requestAnimationFrame/interval
   // halts and stats freeze (issue #8943).
   useEffect(() => {
@@ -227,7 +239,7 @@ export function NodeInvaders(_props: CardComponentProps) {
       })
 
       // Shooting
-      if ((keys.has(' ') || keys.has('ArrowUp')) && canShoot) {
+      if ((keys.has(' ') || keys.has('ArrowUp')) && state.canShoot) {
         setBullets(bs => [...bs, {
           x: state.player.x + PLAYER_WIDTH / 2,
           y: CANVAS_HEIGHT - 45,
@@ -249,7 +261,7 @@ export function NodeInvaders(_props: CardComponentProps) {
 
       // Move invaders
       invaderMoveCounter++
-      if (invaderMoveCounter >= Math.max(5, 20 - state.invaders.filter(i => i.alive).length / 2)) {
+      if (invaderMoveCounter >= Math.max(INVADER_MIN_MOVE_TICKS, INVADER_BASE_MOVE_TICKS - state.invaders.filter(i => i.alive).length / INVADER_ALIVE_TICK_DIVISOR)) {
         invaderMoveCounter = 0
 
         let shouldDrop = false
@@ -270,8 +282,8 @@ export function NodeInvaders(_props: CardComponentProps) {
           if (!inv.alive) return inv
           return {
             ...inv,
-            x: shouldDrop ? inv.x : inv.x + newDir * invaderSpeed * 3,
-            y: shouldDrop ? inv.y + 10 : inv.y }
+            x: shouldDrop ? inv.x : inv.x + newDir * state.invaderSpeed * INVADER_MOVE_STEP,
+            y: shouldDrop ? inv.y + INVADER_DROP_DISTANCE : inv.y }
         }))
 
         if (shouldDrop) {
@@ -280,7 +292,7 @@ export function NodeInvaders(_props: CardComponentProps) {
       }
 
       // Invader shooting
-      if (tick % 60 === 0) {
+      if (tick % INVADER_SHOOT_TICK_INTERVAL === 0) {
         const aliveInvaders = state.invaders.filter(i => i.alive)
         if (aliveInvaders.length > 0) {
           const shooter = aliveInvaders[Math.floor(Math.random() * aliveInvaders.length)]
@@ -328,7 +340,7 @@ export function NodeInvaders(_props: CardComponentProps) {
             if (p.lives <= 1) {
               setGameOver(true)
               setIsPlaying(false)
-              emitGameEnded('node_invaders', 'loss', score)
+              emitGameEnded('node_invaders', 'loss', state.score)
               return { ...p, lives: 0 }
             }
             return { ...p, lives: p.lives - 1 }
@@ -358,7 +370,7 @@ export function NodeInvaders(_props: CardComponentProps) {
             setWon(true)
             setGameOver(true)
             setIsPlaying(false)
-            emitGameEnded('node_invaders', 'win', score)
+            emitGameEnded('node_invaders', 'win', state.score)
           } else {
             initInvaders(newLevel)
             initShields()
@@ -372,20 +384,20 @@ export function NodeInvaders(_props: CardComponentProps) {
         if (inv.alive && inv.y + INVADER_HEIGHT > CANVAS_HEIGHT - 50) {
           setGameOver(true)
           setIsPlaying(false)
-          emitGameEnded('node_invaders', 'loss', score)
+          emitGameEnded('node_invaders', 'loss', state.score)
           break
         }
       }
 
-      draw()
-    }, 33)
+      drawRef.current()
+    }, GAME_LOOP_INTERVAL_MS)
 
     return () => {
       if (gameLoopRef.current) {
         clearInterval(gameLoopRef.current)
       }
     }
-  }, [isPlaying, gameOver, isPaused, draw, initInvaders, initShields, canShoot, invaderSpeed])
+  }, [isPlaying, gameOver, isPaused, initInvaders, initShields])
 
   // Keyboard — scoped to visible game container (KeepAlive-safe)
   useGameKeyTracking(gameContainerRef, keysRef, {
