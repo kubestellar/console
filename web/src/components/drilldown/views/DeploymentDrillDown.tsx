@@ -199,9 +199,13 @@ export function DeploymentDrillDown({ data }: Props) {
         }))
       }
       ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          output = msg.payload.output
+        try {
+          const msg = JSON.parse(event.data)
+          if (msg.id === requestId && msg.payload?.output) {
+            output = msg.payload.output
+          }
+        } catch (err) {
+          console.warn('[DeploymentDrillDown] Non-JSON WebSocket message:', event.data)
         }
         clearTimeout(timeout)
         ws.close()
