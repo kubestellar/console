@@ -6,7 +6,7 @@ import { isDemoMode } from '../lib/demoMode'
 import { isInClusterMode } from './useBackendHealth'
 import { api } from '../lib/api'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
-import { MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
+import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 
 // Types
 export interface Workload {
