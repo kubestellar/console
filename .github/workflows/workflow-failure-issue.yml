@@ -27,6 +27,7 @@ on:
 
 permissions:
   issues: write
+  actions: read
 
 jobs:
   open-issue:
@@ -65,6 +66,19 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Fetch failed jobs for comment
+        if: steps.check.outputs.exists == 'true'
+        id: comment-details
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          FAILED_JOBS=$(gh run view "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --json jobs \
+            --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")' 2>/dev/null || echo "")
+          echo "failed_jobs=${FAILED_JOBS}" >> "$GITHUB_OUTPUT"
+
       - name: Comment on existing issue
         if: steps.check.outputs.exists == 'true'
         env:
@@ -72,7 +86,12 @@ jobs:
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           RUN_ID: ${{ github.event.workflow_run.id }}
+          FAILED_JOBS: ${{ steps.comment-details.outputs.failed_jobs }}
         run: |
+          JOBS_LINE=""
+          if [ -n "$FAILED_JOBS" ]; then
+            JOBS_LINE="- **Failed jobs:** \`${FAILED_JOBS}\`"
+          fi
           gh issue comment "${{ steps.check.outputs.issue_number }}" \
             --repo "${{ github.repository }}" \
             --body "$(cat <<EOF
@@ -80,6 +99,7 @@ jobs:
 
           - **Run:** [#${RUN_ID}](${RUN_URL})
           - **Time:** $(date -u '+%Y-%m-%d %H:%M UTC')
+          ${JOBS_LINE}
           EOF
           )"
 
@@ -94,6 +114,19 @@ jobs:
             --color "d93f0b" \
             2>/dev/null || true
 
+      - name: Fetch failed job details
+        if: steps.check.outputs.exists == 'false'
+        id: details
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          FAILED_JOBS=$(gh run view "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --json jobs \
+            --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")' 2>/dev/null || echo "")
+          echo "failed_jobs=${FAILED_JOBS}" >> "$GITHUB_OUTPUT"
+
       - name: Open new issue
         if: steps.check.outputs.exists == 'false'
         env:
@@ -102,7 +135,13 @@ jobs:
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           WORKFLOW_FILE: ${{ github.event.workflow_run.path }}
+          FAILED_JOBS: ${{ steps.details.outputs.failed_jobs }}
         run: |
+          FAILED_LINE=""
+          if [ -n "$FAILED_JOBS" ]; then
+            FAILED_LINE="| **Failed jobs** | \`${FAILED_JOBS}\` |"
+          fi
+
           gh issue create \
             --repo "${{ github.repository }}" \
             --title "Workflow failure: ${WORKFLOW_NAME}" \
@@ -118,11 +157,12 @@ jobs:
           | **Run** | [#${RUN_ID}](${RUN_URL}) |
           | **File** | \`${WORKFLOW_FILE}\` |
           | **Time** | $(date -u '+%Y-%m-%d %H:%M UTC') |
+          ${FAILED_LINE}
 
           ### Next Steps
           1. Check the [failed run](${RUN_URL}) for error details
           2. Fix the underlying issue
-          3. Close this issue once the workflow passes again
+          3. **Do not close** this issue until the workflow passes on \`main\`
 
           ---
           *This issue was automatically created by the workflow failure monitor.*
