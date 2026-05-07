@@ -10,6 +10,7 @@ import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { HorseshoeGauge } from '../llmd/shared/HorseshoeGauge'
+import { getClusterHealthState, summarizeClusterHealth } from '../../clusters/utils'
 
 // Card 3: Cluster Health Check - Overall health assessment
 export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
@@ -71,9 +72,10 @@ export function ConsoleHealthCheckCard(_props: ConsoleMissionCardProps) {
     return result
   })()
 
-  const healthyClusters = clusters.filter(c => c.healthy && c.reachable !== false).length
-  const unhealthyClusters = clusters.filter(c => !c.healthy && c.reachable !== false).length
-  const unreachableClusters = clusters.filter(c => c.reachable === false).length
+  const clusterSummary = summarizeClusterHealth(clusters)
+  const healthyClusters = clusterSummary.healthy
+  const unhealthyClusters = clusterSummary.unhealthy
+  const unreachableClusters = clusterSummary.unreachable
 
   const totalNodes = clusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
   const totalPods = clusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
@@ -100,7 +102,11 @@ Resource Summary:
 - Known issues: ${totalIssues}
 
 Clusters by status:
-${clusters.map(c => `- ${c.name}: ${c.healthy ? '\u2713 healthy' : c.reachable === false ? '\u2717 offline' : '\u26A0 unhealthy'} (${c.nodeCount || 0} nodes, ${c.podCount || 0} pods)`).join('\n')}
+${clusters.map(c => {
+  const state = getClusterHealthState(c)
+  const statusLabel = state === 'unreachable' ? '✗ offline' : state === 'healthy' ? '✓ healthy' : state === 'unhealthy' ? '⚠ unhealthy' : `… ${state}`
+  return `- ${c.name}: ${statusLabel} (${c.nodeCount || 0} nodes, ${c.podCount || 0} pods)`
+}).join('\n')}
 
 Please provide:
 1. Overall infrastructure health score (1-10)
@@ -170,7 +176,7 @@ Please provide:
             healthyClusters > 0 && "cursor-pointer hover:bg-green-500/20 transition-colors"
           )}
           onClick={() => {
-            const healthyCluster = clusters.find(c => c.healthy && c.reachable !== false)
+            const healthyCluster = clusters.find(c => getClusterHealthState(c) === 'healthy')
             if (healthyCluster) drillToCluster(healthyCluster.name)
           }}
           title={t('healthCheck.healthyClusterTooltip', { count: healthyClusters })}
@@ -184,7 +190,7 @@ Please provide:
             unhealthyClusters > 0 && "cursor-pointer hover:bg-red-500/20 transition-colors"
           )}
           onClick={() => {
-            const unhealthyCluster = clusters.find(c => !c.healthy && c.reachable !== false)
+            const unhealthyCluster = clusters.find(c => getClusterHealthState(c) === 'unhealthy')
             if (unhealthyCluster) drillToCluster(unhealthyCluster.name)
           }}
           title={t('healthCheck.unhealthyClusterTooltip', { count: unhealthyClusters })}
@@ -198,7 +204,7 @@ Please provide:
             unreachableClusters > 0 && "cursor-pointer hover:bg-yellow-500/20 transition-colors"
           )}
           onClick={() => {
-            const unreachableCluster = clusters.find(c => c.reachable === false)
+            const unreachableCluster = clusters.find(c => getClusterHealthState(c) === 'unreachable')
             if (unreachableCluster) drillToCluster(unreachableCluster.name)
           }}
           title={t('healthCheck.offlineClusterTooltip', { count: unreachableClusters })}

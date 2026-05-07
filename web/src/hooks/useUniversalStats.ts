@@ -17,6 +17,7 @@ import { useCachedPVCs } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
 import { useDrillDownActions } from './useDrillDown'
+import { isClusterUnreachable, summarizeClusterHealth } from '../components/clusters/utils'
 import { MS_PER_HOUR } from '../lib/constants/time'
 
 // Cost estimation constants (per-month, rough cloud averages)
@@ -67,18 +68,22 @@ export function useUniversalStats() {
   const {
     totalClusters, healthyClusters, unhealthyClusters, unreachableClusters,
     totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
-  } = useMemo(() => ({
-    totalClusters: safeClusters.length,
-    healthyClusters: safeClusters.filter(c => c.healthy).length,
-    unhealthyClusters: safeClusters.filter(c => !c.healthy).length,
-    unreachableClusters: safeClusters.filter(c => c.reachable === false).length,
-    totalNodes: safeClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
-    totalPods: safeClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
-    totalCPUs: safeClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
-    totalMemoryGB: safeClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
-    totalStorageGB: safeClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0),
-    uniqueNamespaces: new Set(safeClusters.flatMap(c => c.namespaces || [])),
-  }), [safeClusters])
+  } = useMemo(() => {
+    const summary = summarizeClusterHealth(safeClusters)
+
+    return {
+      totalClusters: safeClusters.length,
+      healthyClusters: summary.healthy,
+      unhealthyClusters: summary.unhealthy,
+      unreachableClusters: summary.unreachable,
+      totalNodes: safeClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
+      totalPods: safeClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
+      totalCPUs: safeClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
+      totalMemoryGB: safeClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
+      totalStorageGB: safeClusters.reduce((sum, c) => sum + (c.storageGB || 0), 0),
+      uniqueNamespaces: new Set(safeClusters.flatMap(c => c.namespaces || [])),
+    }
+  }, [safeClusters])
 
   // ─── Pod-derived values ───
   const podIssuesList = podIssues || []
@@ -151,7 +156,7 @@ export function useUniversalStats() {
   const realGPUCount = useMemo(() => {
     const unreachableClusterNames = new Set(
       safeClusters
-        .filter(c => c.reachable === false)
+        .filter(c => isClusterUnreachable(c))
         .map(c => c.name)
     )
     return (gpuNodes || [])

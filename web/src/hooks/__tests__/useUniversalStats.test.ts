@@ -304,13 +304,25 @@ describe('useUniversalStats', () => {
       expect(getStatValue('healthy')?.value).toBe(1)
     })
 
-    it('counts unhealthy clusters', () => {
-      expect(getStatValue('unhealthy')?.value).toBe(1)
+    it('counts only explicitly unhealthy clusters', () => {
+      expect(getStatValue('unhealthy')?.value).toBe(0)
     })
 
     it('counts unreachable clusters', () => {
       expect(getStatValue('unreachable')?.value).toBe(1)
       expect(getStatValue('unreachable')?.sublabel).toBe('offline')
+    })
+
+    it('counts confirmed errorType failures as unreachable even before reachable flips false', () => {
+      mockUseClusters.mockReturnValue({
+        deduplicatedClusters: [makeCluster({ name: 'c3', healthy: false, reachable: true, errorType: 'network' })],
+        clusters: [makeCluster({ name: 'c3', healthy: false, reachable: true, errorType: 'network' })],
+        isLoading: false,
+      })
+
+      expect(getStatValue('healthy')?.value).toBe(0)
+      expect(getStatValue('unhealthy')?.value).toBe(0)
+      expect(getStatValue('unreachable')?.value).toBe(1)
     })
 
     it('sums total nodes across clusters', () => {

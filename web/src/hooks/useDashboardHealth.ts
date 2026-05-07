@@ -3,6 +3,7 @@ import { ROUTES } from '@/config/routes'
 import { useAlerts } from './useAlerts'
 import { useBackendHealth } from './useBackendHealth'
 import { useClusters, usePodIssues } from './useMCP'
+import { summarizeClusterHealth } from '../components/clusters/utils'
 
 export type DashboardHealthStatus = 'healthy' | 'warning' | 'critical'
 
@@ -63,24 +64,14 @@ export function useDashboardHealth(): DashboardHealthInfo {
 
     // Check cluster health (only if data is loaded)
     if (!clustersLoading && deduplicatedClusters.length > 0) {
-      let unhealthyClusters = 0
-      let unreachableClusters = 0
-      
-      // Single pass through clusters
-      deduplicatedClusters.forEach(c => {
-        if (c.reachable === false) {
-          unreachableClusters++
-        } else if (!c.healthy) {
-          unhealthyClusters++
-        }
-      })
-      
-      if (unreachableClusters > 0) {
-        criticalCount += unreachableClusters
-        details.push(`${unreachableClusters} cluster${unreachableClusters > 1 ? 's' : ''} offline`)
-      } else if (unhealthyClusters > 0) {
-        warningCount += unhealthyClusters
-        details.push(`${unhealthyClusters} cluster${unhealthyClusters > 1 ? 's' : ''} degraded`)
+      const clusterSummary = summarizeClusterHealth(deduplicatedClusters)
+
+      if (clusterSummary.unreachable > 0) {
+        criticalCount += clusterSummary.unreachable
+        details.push(`${clusterSummary.unreachable} cluster${clusterSummary.unreachable > 1 ? 's' : ''} offline`)
+      } else if (clusterSummary.unhealthy > 0) {
+        warningCount += clusterSummary.unhealthy
+        details.push(`${clusterSummary.unhealthy} cluster${clusterSummary.unhealthy > 1 ? 's' : ''} degraded`)
       }
     }
 

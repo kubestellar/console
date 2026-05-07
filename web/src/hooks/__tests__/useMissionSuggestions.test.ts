@@ -266,6 +266,19 @@ describe('useMissionSuggestions', () => {
     expect(result.current.suggestions.find(s => s.type === 'health')).toBeDefined()
   })
 
+  it('treats confirmed network failures as unreachable for health missions', () => {
+    mockClusters.mockReturnValue({
+      clusters: [makeCluster({ name: 'prod', healthy: false, reachable: true, errorType: 'network', errorMessage: 'dial tcp timeout' })],
+      deduplicatedClusters: [makeCluster({ name: 'prod', healthy: false, reachable: true, errorType: 'network', errorMessage: 'dial tcp timeout' })],
+    })
+    const { result } = renderHook(() => useMissionSuggestions())
+
+    const health = result.current.suggestions.find(s => s.type === 'health')
+    expect(health).toBeDefined()
+    expect(health!.description).toContain('1 cluster is unhealthy or unreachable')
+    expect(health!.context.details![0]).toContain('dial tcp timeout')
+  })
+
   it('does not generate a health mission for healthy clusters', () => {
     mockClusters.mockReturnValue({
       clusters: [makeCluster({ reachable: true, healthy: true })],

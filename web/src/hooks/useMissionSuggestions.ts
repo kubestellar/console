@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { usePodIssues, useDeploymentIssues, useSecurityIssues, useClusters, useNodes, usePods } from './useMCP'
 import { useSnoozedMissions } from './useSnoozedMissions'
 import { MISSION_SUGGEST_INTERVAL_MS } from '../lib/constants/network'
+import { getClusterHealthState } from '../components/clusters/utils'
 
 export type MissionType =
   | 'scale'           // Workloads that may need scaling
@@ -140,9 +141,13 @@ export function useMissionSuggestions() {
     }
 
     // 4. Check for unhealthy clusters
-    const unhealthyClusters = clusters.filter(c => c.reachable === false || !c.healthy)
+    const unhealthyClusters = clusters
+      .map(cluster => ({ cluster, state: getClusterHealthState(cluster) }))
+      .filter(({ state }) => state === 'unreachable' || state === 'unhealthy')
     if (unhealthyClusters.length > 0) {
-      const clusterDetails = unhealthyClusters.map(c => `- ${c.name}: ${c.reachable === false ? 'unreachable' : 'unhealthy'}${c.errorMessage ? ` (${c.errorMessage})` : ''}`).join('\n')
+      const clusterDetails = unhealthyClusters
+        .map(({ cluster, state }) => `- ${cluster.name}: ${state}${cluster.errorMessage ? ` (${cluster.errorMessage})` : ''}`)
+        .join('\n')
       newSuggestions.push({
         id: 'mission-unhealthy-clusters',
         type: 'health',
@@ -155,7 +160,7 @@ export function useMissionSuggestions() {
           label: 'Diagnose' },
         context: {
           count: unhealthyClusters.length,
-          details: unhealthyClusters.map(c => `${c.name}: ${c.errorMessage || 'unhealthy'}`) },
+          details: unhealthyClusters.map(({ cluster, state }) => `${cluster.name}: ${cluster.errorMessage || state}`) },
         detectedAt: now })
     }
 

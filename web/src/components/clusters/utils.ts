@@ -103,6 +103,55 @@ export const isClusterNetworkOffline = (c: ClusterInfo): boolean => {
   return c.errorType !== 'auth'
 }
 
+export interface ClusterHealthSummaryCounts {
+  healthy: number
+  unhealthy: number
+  unreachable: number
+  loading: number
+  unknown: number
+  tokenExpired: number
+  networkOffline: number
+}
+
+export const summarizeClusterHealth = (clusters: ClusterInfo[]): ClusterHealthSummaryCounts => {
+  return clusters.reduce<ClusterHealthSummaryCounts>((summary, cluster) => {
+    const state = getClusterHealthState(cluster)
+
+    switch (state) {
+      case 'healthy':
+        summary.healthy += 1
+        break
+      case 'unhealthy':
+        summary.unhealthy += 1
+        break
+      case 'unreachable':
+        summary.unreachable += 1
+        if (isClusterTokenExpired(cluster)) {
+          summary.tokenExpired += 1
+        } else {
+          summary.networkOffline += 1
+        }
+        break
+      case 'loading':
+        summary.loading += 1
+        break
+      case 'unknown':
+        summary.unknown += 1
+        break
+    }
+
+    return summary
+  }, {
+    healthy: 0,
+    unhealthy: 0,
+    unreachable: 0,
+    loading: 0,
+    unknown: 0,
+    tokenExpired: 0,
+    networkOffline: 0,
+  })
+}
+
 // Helper to determine if cluster health is still loading
 // Returns true only when actively refreshing - keeps left/right indicators in sync
 export const isClusterLoading = (c: ClusterInfo): boolean => {

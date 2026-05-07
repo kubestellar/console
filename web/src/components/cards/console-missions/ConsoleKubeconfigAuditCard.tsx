@@ -8,6 +8,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from './shared'
 import type { ConsoleMissionCardProps } from './shared'
 import { useCardLoadingState } from '../CardDataContext'
 import { useDemoMode } from '../../../hooks/useDemoMode'
+import { getClusterHealthState, isClusterUnreachable } from '../../clusters/utils'
 
 // Card 2: Kubeconfig Audit - Detect stale/unreachable clusters
 export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
@@ -49,7 +50,7 @@ export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
     return result
   })()
 
-  const unreachableClusters = clusters.filter(c => c.reachable === false || c.nodeCount === 0)
+  const unreachableClusters = clusters.filter(c => isClusterUnreachable(c))
 
   const runningAuditMission = missions.find(m => m.title.includes('Kubeconfig') && m.status === 'running')
 
@@ -61,7 +62,11 @@ export function ConsoleKubeconfigAuditCard(_props: ConsoleMissionCardProps) {
       initialPrompt: `Please audit my kubeconfig and help me clean it up.
 
 Current clusters (${clusters.length} total):
-${clusters.map(c => `- ${c.name}: ${c.reachable === false ? 'OFFLINE' : c.healthy ? 'healthy' : 'unhealthy'} (${c.nodeCount || 0} nodes)`).join('\n')}
+${clusters.map(c => {
+  const state = getClusterHealthState(c)
+  const statusLabel = state === 'unreachable' ? 'OFFLINE' : state === 'healthy' ? 'healthy' : state === 'unhealthy' ? 'unhealthy' : state.toUpperCase()
+  return `- ${c.name}: ${statusLabel} (${c.nodeCount || 0} nodes)`
+}).join('\n')}
 
 Offline clusters (${unreachableClusters.length}):
 ${unreachableClusters.map(c => `- ${c.name}: ${c.errorMessage || 'Connection failed'}`).join('\n') || 'None'}

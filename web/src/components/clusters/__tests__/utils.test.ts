@@ -18,6 +18,7 @@ import {
   isClusterNetworkOffline,
   isClusterLoading,
   getClusterHealthState,
+  summarizeClusterHealth,
   formatMetadata,
   loadClusterCards,
   saveClusterCards,
@@ -209,6 +210,29 @@ describe('isClusterLoading', () => {
 
   it('returns false when not refreshing', () => {
     expect(isClusterLoading(makeCluster({ refreshing: false }) as never)).toBe(false)
+  })
+})
+
+describe('summarizeClusterHealth', () => {
+  it('counts clusters by the shared health state machine', () => {
+    const summary = summarizeClusterHealth([
+      makeCluster({ name: 'healthy', healthy: true }),
+      makeCluster({ name: 'unhealthy', healthy: false, reachable: true }),
+      makeCluster({ name: 'network-offline', healthy: false, reachable: true, errorType: 'network' }),
+      makeCluster({ name: 'token-expired', healthy: false, reachable: false, errorType: 'auth' }),
+      makeCluster({ name: 'loading', healthy: undefined, reachable: undefined, nodeCount: undefined, refreshing: true }),
+      makeCluster({ name: 'unknown', healthy: false, neverConnected: true }),
+    ] as never)
+
+    expect(summary).toEqual({
+      healthy: 1,
+      unhealthy: 1,
+      unreachable: 2,
+      loading: 1,
+      unknown: 1,
+      tokenExpired: 1,
+      networkOffline: 1,
+    })
   })
 })
 
