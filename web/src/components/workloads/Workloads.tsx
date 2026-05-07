@@ -289,6 +289,7 @@ export function Workloads() {
       rightExtra={
         <div className="flex items-center gap-2">
           <button
+            data-testid="add-workload-btn"
             onClick={() => navigate(ROUTES.DEPLOY)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
             title={t('workloads.addWorkload', 'Deploy a new workload')}
@@ -358,6 +359,7 @@ export function Workloads() {
             return (
               <div
                 key={i}
+                data-testid="workload-row"
                 onClick={() => isDeployment
                   ? drillToDeployment(deploy.cluster, deploy.namespace, deploy.name)
                   : drillToNamespace(app.cluster, app.namespace)
@@ -389,6 +391,7 @@ export function Workloads() {
                         <div className="flex items-center gap-1">
                           <PortalTooltip content={t('common.restart', 'Restart')}>
                             <button
+                              data-testid="action-btn-restart"
                               onClick={(e) => handleRestartDeployment(e, deploy.cluster, deploy.namespace, deploy.name)}
                               className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-blue-400 transition-colors"
                               aria-label="Restart deployment"
@@ -399,6 +402,7 @@ export function Workloads() {
 
                           <PortalTooltip content={t('common.logs', 'Logs')}>
                             <button
+                              data-testid="action-btn-logs"
                               onClick={(e) => handleShowLogs(e, deploy.cluster, deploy.namespace, deploy.name)}
                               className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-purple-400 transition-colors"
                               aria-label="View logs"
@@ -409,6 +413,7 @@ export function Workloads() {
 
                           <PortalTooltip content={t('common.delete', 'Delete')}>
                             <button
+                              data-testid="action-btn-delete"
                               onClick={(e) => handleDeleteDeployment(e, deploy.cluster, deploy.namespace, deploy.name)}
                               className="p-1.5 hover:bg-white/10 rounded-md text-muted-foreground hover:text-red-400 transition-colors"
                               aria-label="Delete deployment"

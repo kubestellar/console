@@ -171,4 +171,137 @@ test.describe('Workloads Deep Tests (/workloads)', () => {
       expect((bodyText ?? '').length).toBeGreaterThan(MIN_PAGE_CONTENT_LENGTH)
     })
   })
+
+  // -------------------------------------------------------------------------
+  // Workload Interactions (#12475, #12476, #12477)
+  // -------------------------------------------------------------------------
+
+  test.describe('Workload Row Click (#12475)', () => {
+    test('clicking a workload row opens the drill-down panel', async ({ page }) => {
+      // Look for workload rows
+      const workloadRow = page.getByTestId('workload-row').first()
+      const hasRow = await workloadRow.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+      if (!hasRow) {
+        test.skip(true, 'No workload rows found in demo mode')
+        return
+      }
+
+      // Click the first workload row
+      await workloadRow.click()
+
+      // Wait for drill-down modal to appear
+      const drilldownModal = page.getByTestId('drilldown-modal')
+      await expect(drilldownModal).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    })
+  })
+
+  test.describe('Add Workload Button (#12476)', () => {
+    test('clicking Add Workload button navigates to deploy page', async ({ page }) => {
+      // Find the Add Workload button
+      const addBtn = page.getByTestId('add-workload-btn')
+      await expect(addBtn).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+
+      // Click the button
+      await addBtn.click()
+
+      // Wait for navigation to complete
+      await page.waitForLoadState('domcontentloaded')
+
+      // Verify we navigated to the deploy route
+      expect(page.url()).toContain('/deploy')
+    })
+  })
+
+  test.describe('Action Buttons (#12477)', () => {
+    test('Restart button is visible and clickable on deployment rows', async ({ page }) => {
+      // Look for workload rows
+      const workloadRow = page.getByTestId('workload-row').first()
+      const hasRow = await workloadRow.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+      if (!hasRow) {
+        test.skip(true, 'No workload rows found in demo mode')
+        return
+      }
+
+      // Look for the restart action button
+      const restartBtn = page.getByTestId('action-btn-restart').first()
+      const hasRestartBtn = await restartBtn.isVisible({ timeout: 5000 }).catch(() => false)
+
+      if (!hasRestartBtn) {
+        test.skip(true, 'No deployment rows with Restart button found')
+        return
+      }
+
+      // Verify button is clickable
+      await expect(restartBtn).toBeEnabled()
+      await expect(restartBtn).toBeVisible()
+    })
+
+    test('Logs button is visible and clickable on deployment rows', async ({ page }) => {
+      // Look for workload rows
+      const workloadRow = page.getByTestId('workload-row').first()
+      const hasRow = await workloadRow.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+      if (!hasRow) {
+        test.skip(true, 'No workload rows found in demo mode')
+        return
+      }
+
+      // Look for the logs action button
+      const logsBtn = page.getByTestId('action-btn-logs').first()
+      const hasLogsBtn = await logsBtn.isVisible({ timeout: 5000 }).catch(() => false)
+
+      if (!hasLogsBtn) {
+        test.skip(true, 'No deployment rows with Logs button found')
+        return
+      }
+
+      // Verify button is clickable
+      await expect(logsBtn).toBeEnabled()
+      await expect(logsBtn).toBeVisible()
+    })
+
+    test('Delete button is visible and clickable on deployment rows', async ({ page }) => {
+      // Look for workload rows
+      const workloadRow = page.getByTestId('workload-row').first()
+      const hasRow = await workloadRow.isVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS }).catch(() => false)
+
+      if (!hasRow) {
+        test.skip(true, 'No workload rows found in demo mode')
+        return
+      }
+
+      // Look for the delete action button
+      const deleteBtn = page.getByTestId('action-btn-delete').first()
+      const hasDeleteBtn = await deleteBtn.isVisible({ timeout: 5000 }).catch(() => false)
+
+      if (!hasDeleteBtn) {
+        test.skip(true, 'No deployment rows with Delete button found')
+        return
+      }
+
+      // Verify button is clickable
+      await expect(deleteBtn).toBeEnabled()
+      await expect(deleteBtn).toBeVisible()
+    })
+
+    test('clicking Logs button opens drill-down panel', async ({ page }) => {
+      // Look for the logs action button
+      const logsBtn = page.getByTestId('action-btn-logs').first()
+      const hasLogsBtn = await logsBtn.isVisible({ timeout: 5000 }).catch(() => false)
+
+      if (!hasLogsBtn) {
+        test.skip(true, 'No deployment rows with Logs button found')
+        return
+      }
+
+      // Click the logs button
+      await logsBtn.click()
+
+      // Verify drill-down modal appears
+      const drilldownModal = page.getByTestId('drilldown-modal')
+      await expect(drilldownModal).toBeVisible({ timeout: ELEMENT_VISIBLE_TIMEOUT_MS })
+    })
+  })
 })
