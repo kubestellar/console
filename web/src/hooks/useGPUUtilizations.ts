@@ -29,6 +29,8 @@ export interface GPUUtilizationSnapshot {
 export function useGPUUtilizations(reservationIds: string[]) {
   const [data, setData] = useState<Record<string, GPUUtilizationSnapshot[]>>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isFailed, setIsFailed] = useState(false)
 
   // Keep the latest id list in a ref so the polling interval always
   // fetches the current set without needing to be re-created.
@@ -46,14 +48,20 @@ export function useGPUUtilizations(reservationIds: string[]) {
 
     try {
       setIsLoading(true)
+      setIsFailed(false)
+      setError(null)
       const params = new URLSearchParams({ ids: (ids || []).join(',') })
       const { data: result } = await api.get<Record<string, GPUUtilizationSnapshot[]>>(
         `/api/gpu/utilizations?${params.toString()}`,
         { timeout: GPU_UTIL_FETCH_TIMEOUT_MS },
       )
       setData(result || {})
-    } catch {
-      // Silently fail — utilization is supplementary data
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'GPU utilization fetch failed'
+      console.warn('[useGPUUtilizations] Fetch failed:', message)
+      setError(message)
+      setIsFailed(true)
+      setData({})
     } finally {
       setIsLoading(false)
     }
@@ -79,5 +87,5 @@ export function useGPUUtilizations(reservationIds: string[]) {
     // (by value, not by array identity) or the memoized fetcher changes.
   }, [idsKey, fetchData])
 
-  return { utilizations: data, isLoading }
+  return { utilizations: data, isLoading, error, isFailed }
 }
