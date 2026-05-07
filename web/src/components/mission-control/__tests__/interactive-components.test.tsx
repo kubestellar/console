@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import type { HTMLAttributes, ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AssignmentMatrix } from '../AssignmentMatrix'
 import { ClusterAssignmentPanel } from '../ClusterAssignmentPanel'
 import { LaunchSequence } from '../LaunchSequence'
@@ -227,7 +227,7 @@ describe('RequestApprovalModal', () => {
     vi.mocked(global.fetch).mockResolvedValue(createMockResponse({ hasToken: true }))
   })
 
-  it('validates repo format', () => {
+  it('validates repo format', async () => {
     render(
       <RequestApprovalModal
         isOpen={true}
@@ -236,7 +236,9 @@ describe('RequestApprovalModal', () => {
         installedProjects={new Set()}
       />
     )
-    
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(1))
+
     const input = screen.getByPlaceholderText('org/repo')
     fireEvent.change(input, { target: { value: 'invalid-repo' } })
     expect(screen.getByText('Enter a valid repository in owner/repo format')).toBeDefined()
@@ -256,21 +258,61 @@ describe('RequestApprovalModal', () => {
         installedProjects={new Set()}
       />
     )
-    
+
     const input = screen.getByPlaceholderText('org/repo')
     fireEvent.change(input, { target: { value: 'org/repo' } })
-    
+
     await waitFor(() => {
       const submitBtn = screen.getByText('Create Issue')
       expect(submitBtn).not.toBeDisabled()
       fireEvent.click(submitBtn)
     })
-    
+
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/repos/org/repo/issues'),
         expect.objectContaining({ method: 'POST' })
       )
+      expect(screen.getByText('View on GitHub')).toBeDefined()
+    })
+  })
+
+  it('prevents duplicate approval submission on rapid double click', async () => {
+    let resolveIssueRequest: ((value: Response) => void) | undefined
+    const issueRequest = new Promise<Response>((resolve) => {
+      resolveIssueRequest = resolve
+    })
+    const mockFetch = vi.mocked(global.fetch)
+    mockFetch
+      .mockResolvedValueOnce(createMockResponse({ hasToken: true }))
+      .mockImplementationOnce(() => issueRequest)
+
+    render(
+      <RequestApprovalModal
+        isOpen={true}
+        onClose={vi.fn()}
+        state={mockState}
+        installedProjects={new Set()}
+      />
+    )
+
+    fireEvent.change(screen.getByPlaceholderText('org/repo'), { target: { value: 'org/repo' } })
+
+    const submitBtn = await screen.findByText('Create Issue')
+    await waitFor(() => expect(submitBtn).not.toBeDisabled())
+
+    await act(async () => {
+      fireEvent.click(submitBtn)
+      fireEvent.click(submitBtn)
+    })
+
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(submitBtn).toBeDisabled()
+    expect(screen.getByText('Creating…')).toBeDefined()
+
+    resolveIssueRequest?.(createMockResponse({ html_url: 'https://github.com/org/repo/issues/1' }))
+
+    await waitFor(() => {
       expect(screen.getByText('View on GitHub')).toBeDefined()
     })
   })

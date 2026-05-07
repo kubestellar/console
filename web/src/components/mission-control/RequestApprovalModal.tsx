@@ -34,6 +34,7 @@ export function RequestApprovalModal({
   const [issueUrl, setIssueUrl] = useState<string | null>(null)
   const [hasGitHubToken, setHasGitHubToken] = useState(false)
   const tokenCheckedRef = useRef(false)
+  const submittingRef = useRef(false)
 
   const isValidRepo = REPO_PATTERN.test(repo.trim())
 
@@ -59,8 +60,9 @@ export function RequestApprovalModal({
 
   const handleSubmit = useCallback(async () => {
     const trimmedRepo = repo.trim()
-    if (!isValidRepo || !token) return
+    if (submittingRef.current || !isValidRepo || !token) return
 
+    submittingRef.current = true
     setSubmitting(true)
     try {
       const title = `[Mission Control] Deployment Approval: ${state.title || 'Untitled Mission'}`
@@ -119,11 +121,13 @@ export function RequestApprovalModal({
     } catch (err: unknown) {
       showToast(`Network error: ${err instanceof Error ? err.message : 'unknown'}`, 'error')
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
     }
   }, [repo, isValidRepo, token, state, installedProjects, showToast])
 
   const handleClose = useCallback(() => {
+    submittingRef.current = false
     setRepo('')
     setNotes('')
     setIssueUrl(null)

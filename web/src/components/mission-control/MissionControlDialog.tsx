@@ -26,6 +26,7 @@ import {
   Monitor,
   ArrowLeft,
   GitPullRequestArrow,
+  Loader2,
 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
@@ -84,6 +85,8 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
   const { state } = mc
   const [isReviewMode, setIsReviewMode] = useState(false)
   const [reviewNotes, setReviewNotes] = useState<string | undefined>()
+  const [isSubmittingLaunch, setIsSubmittingLaunch] = useState(false)
+  const launchSubmittingRef = useRef(false)
 
   useEffect(() => {
     if (!open || !reviewPlanEncoded) return
@@ -172,6 +175,13 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     setHighestReached(prev => Math.max(prev, currentStepIndex))
   }, [currentStepIndex])
 
+  useEffect(() => {
+    if (!open || state.phase !== 'blueprint') {
+      launchSubmittingRef.current = false
+      setIsSubmittingLaunch(false)
+    }
+  }, [open, state.phase])
+
   // #6787 — Use capture phase so child stopPropagation cannot swallow Escape
   useEffect(() => {
     if (!open) return
@@ -254,6 +264,32 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
     if (state.phase === 'assign') mc.setPhase('define')
     else if (state.phase === 'blueprint') mc.setPhase('assign')
   }
+
+  const handleLaunch = useCallback((dryRun: boolean) => {
+    if (launchSubmittingRef.current) return
+
+    launchSubmittingRef.current = true
+    setIsSubmittingLaunch(true)
+
+    try {
+      const hasAssignedClusters = state.assignments.some(
+        (assignment) => (assignment.projectNames ?? []).length > 0
+      )
+      if (!hasAssignedClusters) {
+        showToast('No clusters have project assignments. Go back to Chart Course to assign projects before launching.', 'warning')
+        launchSubmittingRef.current = false
+        setIsSubmittingLaunch(false)
+        return
+      }
+
+      mc.setDryRun(dryRun)
+      mc.setPhase('launching')
+    } catch (error) {
+      launchSubmittingRef.current = false
+      setIsSubmittingLaunch(false)
+      throw error
+    }
+  }, [mc, showToast, state.assignments])
 
   const handleNewMission = () => {
     mc.reset()
@@ -610,43 +646,22 @@ export function MissionControlDialog({ open, onClose, initialKubaraChart, review
                         variant="primary"
                         size="sm"
                         data-testid="mission-control-launch"
-                        onClick={() => {
-                          // #7190 — Block launch when no clusters have project assignments.
-                          // This can happen when the user excludes all clusters in Phase 2.
-                          const hasAssignedClusters = state.assignments.some(
-                            (a) => (a.projectNames ?? []).length > 0
-                          )
-                          if (!hasAssignedClusters) {
-                            showToast('No clusters have project assignments. Go back to Chart Course to assign projects before launching.', 'warning')
-                            return
-                          }
-                          mc.setDryRun(false)
-                          mc.setPhase('launching')
-                        }}
+                        onClick={() => handleLaunch(false)}
+                        disabled={isSubmittingLaunch}
                         className="bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white border-0 shadow-lg shadow-purple-500/25"
-                        icon={<Rocket className="w-4 h-4" />}
+                        icon={isSubmittingLaunch ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
                       >
-                        Deploy to Clusters
+                        {isSubmittingLaunch ? 'Starting…' : 'Deploy to Clusters'}
                       </Button>
                       <Button
                         variant="secondary"
                         size="sm"
-                        onClick={() => {
-                          // #7190 — Same validation as Deploy button above
-                          const hasAssignedClusters = state.assignments.some(
-                            (a) => (a.projectNames ?? []).length > 0
-                          )
-                          if (!hasAssignedClusters) {
-                            showToast('No clusters have project assignments. Go back to Chart Course to assign projects before launching.', 'warning')
-                            return
-                          }
-                          mc.setDryRun(true)
-                          mc.setPhase('launching')
-                        }}
-                        icon={<FlaskConical className="w-3.5 h-3.5" />}
+                        onClick={() => handleLaunch(true)}
+                        disabled={isSubmittingLaunch}
+                        icon={isSubmittingLaunch ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
                         title="Run against live clusters without deploying — report only"
                       >
-                        Dry Run
+                        {isSubmittingLaunch ? 'Starting…' : 'Dry Run'}
                       </Button>
                     </>
                   ) : (

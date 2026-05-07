@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { MissionControlDialog } from '../MissionControlDialog'
 import { useMissionControl } from '../useMissionControl'
 import { decodePlan } from '../missionPlanCodec'
@@ -66,11 +66,13 @@ describe('MissionControlDialog', () => {
     },
     setPhase: vi.fn(),
     setTitle: vi.fn(),
+    setDryRun: vi.fn(),
     reset: vi.fn(),
     addProject: vi.fn(),
     staleClusterNames: [],
     acknowledgeStaleClusters: vi.fn(),
     hydrateFromPlan: vi.fn(),
+    installedProjects: new Set<string>(),
   }
 
   beforeEach(() => {
@@ -100,7 +102,7 @@ describe('MissionControlDialog', () => {
     vi.mocked(useMissionControl).mockReturnValue(mcWithProjects as any)
 
     render(<MissionControlDialog open={true} onClose={vi.fn()} />)
-    
+
     const nextBtn = screen.getByText('Next')
     fireEvent.click(nextBtn)
     expect(mcWithProjects.setPhase).toHaveBeenCalledWith('assign')
@@ -153,9 +155,40 @@ describe('MissionControlDialog', () => {
         reviewPlanEncoded="base64data" 
       />
     )
-    
+
     expect(decodePlan).toHaveBeenCalledWith('base64data')
     expect(mockMC.hydrateFromPlan).toHaveBeenCalledWith(mockPlan)
     expect(screen.getByText('REVIEW')).toBeDefined()
+  })
+
+  it('prevents duplicate launch submission on rapid double click', () => {
+    const mcBlueprint = {
+      ...mockMC,
+      state: {
+        ...mockMC.state,
+        phase: 'blueprint',
+        projects: [{ name: 'falco' }],
+        assignments: [{ clusterName: 'cluster-1', projectNames: ['falco'] }],
+      },
+      setPhase: vi.fn(),
+      setDryRun: vi.fn(),
+    }
+    vi.mocked(useMissionControl).mockReturnValue(mcBlueprint as any)
+
+    render(<MissionControlDialog open={true} onClose={vi.fn()} />)
+
+    const deployBtn = screen.getByTestId('mission-control-launch')
+
+    act(() => {
+      fireEvent.click(deployBtn)
+      fireEvent.click(deployBtn)
+    })
+
+    expect(mcBlueprint.setDryRun).toHaveBeenCalledTimes(1)
+    expect(mcBlueprint.setDryRun).toHaveBeenCalledWith(false)
+    expect(mcBlueprint.setPhase).toHaveBeenCalledTimes(1)
+    expect(mcBlueprint.setPhase).toHaveBeenCalledWith('launching')
+    expect(deployBtn).toBeDisabled()
+    expect(screen.getAllByText('Starting…')).toHaveLength(2)
   })
 })
