@@ -77,7 +77,7 @@ export function AnimatedCounter({ value, className }: { value: number; className
 
 
 export function AlertBadge() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['common', 'cards'])
   const navigate = useNavigate()
   const { activeAlerts, stats, acknowledgeAlerts, runAIDiagnosis } = useAlerts()
   const { drillToCluster } = useDrillDownActions()
