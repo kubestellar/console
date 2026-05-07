@@ -1021,7 +1021,7 @@ func (s *Server) setupRoutes() {
 	api.Get("/card-history", cards.GetHistory)
 
 	// Card proxy — allows Tier 2 custom cards to fetch external API data
-	cardProxy := handlers.NewCardProxyHandler()
+	cardProxy := handlers.NewCardProxyHandler(s.store)
 	api.Get("/card-proxy", cardProxy.Proxy)
 
 	// Swap routes

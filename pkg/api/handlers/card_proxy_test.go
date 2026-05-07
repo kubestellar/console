@@ -2,7 +2,14 @@ package handlers
 
 import (
 	"net"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/test"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIsBlockedIP(t *testing.T) {
@@ -35,4 +42,46 @@ func TestIsBlockedIP(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCardProxyAuthorization(t *testing.T) {
+	t.Run("viewer forbidden", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		userID := uuid.New()
+		mockStore.On("GetUser", userID).Return(&models.User{Role: models.UserRoleViewer}, nil)
+
+		handler := NewCardProxyHandler(mockStore)
+		app.Get("/card-proxy", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return handler.Proxy(c)
+		})
+
+		req := httptest.NewRequest("GET", "/card-proxy?url=https%3A%2F%2Fexample.com", nil)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("app.Test: %v", err)
+		}
+		assert.Equal(t, fiber.StatusForbidden, resp.StatusCode)
+	})
+
+	t.Run("admin reaches normal validation", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		userID := uuid.New()
+		mockStore.On("GetUser", userID).Return(&models.User{Role: models.UserRoleAdmin}, nil)
+
+		handler := NewCardProxyHandler(mockStore)
+		app.Get("/card-proxy", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return handler.Proxy(c)
+		})
+
+		req := httptest.NewRequest("GET", "/card-proxy?url=http%3A%2F%2F%25", nil)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("app.Test: %v", err)
+		}
+		assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+	})
 }
