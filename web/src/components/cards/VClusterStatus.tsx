@@ -127,7 +127,8 @@ export function VClusterStatus({ config: _config }: VClusterStatusProps) {
   const hasData = vclusters.length > 0
   const isLoading = isVClusterLoading && vclusterInstances.length === 0
   const hasError = isLive && !!vclustersError && vclusterInstances.length === 0
-  useCardLoadingState({ isLoading: isVClusterLoading && !hasData, hasAnyData: hasData, isDemoData: !isLive })
+  const isRefreshing = isVClusterLoading && hasData
+  useCardLoadingState({ isLoading: isVClusterLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: !isLive })
   const {
     items: paginatedVClusters, totalItems, currentPage, totalPages, itemsPerPage,
     goToPage, needsPagination, setItemsPerPage,
