@@ -4,6 +4,9 @@ import { cn } from '../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { useToast } from './Toast'
 
+const COMPACT_ACTION_BUTTON_CLASS = 'h-10 w-10 shrink-0 p-0 inline-flex items-center justify-center'
+const DEFAULT_ACTION_BUTTON_CLASS = 'p-3'
+
 interface FileAttachmentButtonProps {
   /** Called with selected file when user picks one */
   onFileSelected?: (file: File) => void
@@ -45,7 +48,7 @@ export function FileAttachmentButton({ onFileSelected, disabled = false, compact
     setSelectedFile(null)
   }
 
-  const buttonSize = compact ? 'p-2' : 'p-3'
+  const buttonSize = compact ? COMPACT_ACTION_BUTTON_CLASS : DEFAULT_ACTION_BUTTON_CLASS
   const iconSize = compact ? 'w-4 h-4' : 'w-5 h-5'
 
   return (

@@ -41,15 +41,16 @@ import { OrbitMonitorOffer } from '../../missions/OrbitMonitorOffer'
 import type { OrbitResourceFilter } from '../../../lib/missions/types'
 import { MicrophoneButton } from '../../ui/MicrophoneButton'
 import { FileAttachmentButton } from '../../ui/FileAttachmentButton'
-/** Pixels from the bottom edge within which the chat is considered "at bottom" */
-const SCROLL_BOTTOM_THRESHOLD_PX = 50
-/** Duration in ms for the scroll-to-bottom button fade animation */
-const SCROLL_BTN_FADE_MS = 200
-
 import { STATUS_CONFIG, TYPE_ICONS } from './types'
 import type { FontSize } from './types'
 import { TypingIndicator } from './TypingIndicator'
 import { MemoizedMessage } from './MemoizedMessage'
+
+/** Pixels from the bottom edge within which the chat is considered "at bottom" */
+const SCROLL_BOTTOM_THRESHOLD_PX = 50
+/** Duration in ms for the scroll-to-bottom button fade animation */
+const SCROLL_BTN_FADE_MS = 200
+const COMPACT_ACTION_BUTTON_CLASS = 'h-10 w-10 shrink-0 p-0 inline-flex items-center justify-center rounded-lg'
 
 export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' as FontSize, onToggleFullScreen, onOpenOrbitDialog }: { mission: Mission; isFullScreen?: boolean; fontSize?: FontSize; onToggleFullScreen?: () => void; onOpenOrbitDialog?: (prefill: { clusters?: string[]; resourceFilters?: Record<string, OrbitResourceFilter[]> }) => void }) {
   const { t } = useTranslation('common')
@@ -1007,7 +1008,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="px-3 py-3 min-h-[44px] rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 transition-colors"
+                className={cn(
+                  COMPACT_ACTION_BUTTON_CLASS,
+                  'bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 transition-colors'
+                )}
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -1064,7 +1068,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={cn(
+                  COMPACT_ACTION_BUTTON_CLASS,
+                  'bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -1087,7 +1094,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <button
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="shrink-0 px-3 py-3 min-h-[44px] bg-primary text-primary-foreground rounded-lg hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={cn(
+                  COMPACT_ACTION_BUTTON_CLASS,
+                  'bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
               >
                 <Send className="w-4 h-4" />
               </button>
