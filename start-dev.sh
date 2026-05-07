@@ -117,6 +117,7 @@ if [ -f .env ]; then
 fi
 
 export DEV_MODE=${DEV_MODE:-true}
+export VITE_DEV_MODE=${VITE_DEV_MODE:-true}  # Pass to Vite so __DEV_MODE__ is true in the frontend
 export FRONTEND_URL=${FRONTEND_URL:-http://localhost:5174}
 # Tell Vite proxy to target port 8080 where the backend actually listens.
 # Without this, the proxy defaults to 8081 (used when a TLS watchdog sits on 8080).

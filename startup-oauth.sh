@@ -196,9 +196,11 @@ unset CLAUDECODE  # Allow AI Missions to spawn claude-code even when started fro
 export SKIP_ONBOARDING=true
 if [ "$USE_DEV_SERVER" = true ]; then
     export DEV_MODE=true
+    export VITE_DEV_MODE=true  # Pass to Vite so __DEV_MODE__ is true in the frontend
     export FRONTEND_URL=http://localhost:5174
 else
     export DEV_MODE=false
+    export VITE_DEV_MODE=false
     # Frontend served by Go backend on same port — no separate Vite process needed
     export FRONTEND_URL=http://localhost:8080
 fi

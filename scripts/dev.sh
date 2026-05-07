@@ -43,6 +43,7 @@ fi
 
 # Set development defaults
 export DEV_MODE=true
+export VITE_DEV_MODE=true  # Pass to Vite so __DEV_MODE__ is true in the frontend
 export PORT=${PORT:-8080}
 export FRONTEND_URL=${FRONTEND_URL:-http://localhost:5174}
 

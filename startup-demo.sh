@@ -26,6 +26,7 @@ echo ""
 # Environment
 unset CLAUDECODE  # Allow AI Missions to spawn claude-code even when started from a Claude Code session
 export DEV_MODE=true
+export VITE_DEV_MODE=true  # Pass to Vite so __DEV_MODE__ is true in the frontend
 export SKIP_ONBOARDING=true
 export FRONTEND_URL=http://localhost:5174
 
