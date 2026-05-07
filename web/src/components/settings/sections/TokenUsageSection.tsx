@@ -170,9 +170,9 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
                 min="0"
                 max="100"
                 aria-label="Warning threshold percentage"
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+                className="w-full pl-3 pr-10 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-yellow-400 text-sm" aria-hidden="true">%</span>
+              <span className="absolute right-8 top-1/2 -translate-y-1/2 text-yellow-400 text-sm pointer-events-none" aria-hidden="true">%</span>
             </div>
             <p className="mt-1 text-xs text-yellow-400/70">
               {t('settings.tokens.warningAtHint', { percent: warningThreshold })}
@@ -189,9 +189,9 @@ export function TokenUsageSection({ usage, updateSettings, resetUsage, isDemoDat
                 min="0"
                 max="100"
                 aria-label="Critical threshold percentage"
-                className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
+                className="w-full pl-3 pr-10 py-2 rounded-lg bg-secondary border border-border text-foreground text-sm"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-400 text-sm" aria-hidden="true">%</span>
+              <span className="absolute right-8 top-1/2 -translate-y-1/2 text-red-400 text-sm pointer-events-none" aria-hidden="true">%</span>
             </div>
             <p className="mt-1 text-xs text-red-400/70">
               {t('settings.tokens.criticalAtHint', { percent: criticalThreshold })}
