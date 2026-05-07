@@ -27,6 +27,12 @@ const WORKLOADS_CARDS_KEY = 'kubestellar-workloads-cards'
 // Default cards for the workloads dashboard
 const DEFAULT_WORKLOAD_CARDS = getDefaultCards('workloads')
 
+// Pod issues severity threshold - namespaces with more than this many issues are marked as error
+const POD_ISSUES_ERROR_THRESHOLD = 3
+
+// Number of skeleton placeholder items to display while loading workload data
+const WORKLOAD_SKELETON_COUNT = 5
+
 interface AppSummary {
   namespace: string
   cluster: string
@@ -206,7 +212,7 @@ export function Workloads() {
       }
       const app = appMap.get(key)!
       app.podIssues++
-      app.status = app.podIssues > 3 ? 'error' : 'warning'
+      app.status = app.podIssues > POD_ISSUES_ERROR_THRESHOLD ? 'error' : 'warning'
     })
 
     filteredDeploymentIssues.forEach(issue => {
@@ -310,7 +316,7 @@ export function Workloads() {
       {/* Workloads List */}
       {showSkeletons ? (
         <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
+          {Array.from({ length: WORKLOAD_SKELETON_COUNT }, (_, i) => (
             <div key={i} className="glass p-4 rounded-lg border-l-4 border-l-gray-500/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -447,7 +453,7 @@ export function Workloads() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {forceSkeletonForOffline ? (
             // Show skeleton when agent is offline and demo mode is OFF
-            [1, 2, 3, 4, 5].map((i) => (
+            Array.from({ length: WORKLOAD_SKELETON_COUNT }, (_, i) => (
               <div key={i} className="glass p-3 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Skeleton variant="circular" width={16} height={16} />
