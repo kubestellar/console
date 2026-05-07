@@ -7,7 +7,7 @@
  * Uses live stack data when available, demo data when in demo mode.
  * Note: kvCacheUsage refers to GPU KV-cache (AI inference), not UI data timestamp tracking.
  */
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, ArrowRight, CircleDot } from 'lucide-react'
 import { Acronym } from './shared/PortalTooltip'
@@ -690,16 +690,33 @@ function EPPRoutingInternal() {
     return map
   }, [selectedStack])
 
+  // Store latest values in refs to avoid stale closures in interval
+  const dynamicNodesRef = useRef(dynamicNodes)
+  const nodePodMapRef = useRef(nodePodMap)
+  const prometheusMetricsRef = useRef(prometheusMetrics)
+
+  useEffect(() => {
+    dynamicNodesRef.current = dynamicNodes
+  }, [dynamicNodes])
+
+  useEffect(() => {
+    nodePodMapRef.current = nodePodMap
+  }, [nodePodMap])
+
+  useEffect(() => {
+    prometheusMetricsRef.current = prometheusMetrics
+  }, [prometheusMetrics])
+
   // Update metrics — uses Prometheus when available, falls back to simulated
   useEffect(() => {
     const updateMetrics = () => {
       const newMetrics: Record<string, { load: number; rps: number }> = {}
-      dynamicNodes.forEach(node => {
+      dynamicNodesRef.current.forEach(node => {
         if (node.type !== 'source') {
           // Try to get real metrics from Prometheus
-          const pods = nodePodMap[node.id]
+          const pods = nodePodMapRef.current[node.id]
           const pod = pods?.[0]
-          const prom = pod && prometheusMetrics?.[pod]
+          const prom = pod && prometheusMetricsRef.current?.[pod]
           if (prom) {
             newMetrics[node.id] = {
               load: Math.round(prom.kvCacheUsage * 100),

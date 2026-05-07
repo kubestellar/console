@@ -12,7 +12,7 @@
  * accent indicators that read on both light and dark backgrounds — not
  * candidates for `dark:` variants.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Split, ArrowRight, Cpu, Zap, Clock, Activity, AlertCircle } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -259,9 +259,15 @@ export function PDDisaggregation() {
   const hasDisaggregation = selectedStack?.hasDisaggregation ??
     (stackServers.some(s => s.type === 'prefill') && stackServers.some(s => s.type === 'decode'))
 
+  // Store latest value in ref to avoid stale closure in interval
+  const stackServersRef = useRef(stackServers)
+  useEffect(() => {
+    stackServersRef.current = stackServers
+  }, [stackServers])
+
   // Update stats periodically
   useEffect(() => {
-    const update = () => setServers(stackServers.length > 0 ? stackServers : generateServerStats())
+    const update = () => setServers(stackServersRef.current.length > 0 ? stackServersRef.current : generateServerStats())
     update()
     const interval = setInterval(update, POLL_INTERVAL_FAST_MS)
     return () => clearInterval(interval)
