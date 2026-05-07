@@ -49,6 +49,8 @@ let pollStarted = false
 let pollInterval: ReturnType<typeof setInterval> | null = null
 let consecutiveFailures = 0
 let hasFetchedOnce = false
+/** Pending recovery timer — tracked to prevent duplicate recovery loops on rapid failures */
+let recoveryTimer: ReturnType<typeof setTimeout> | null = null
 const MAX_FAILURES = 3
 const subscribers = new Set<(info: ActiveUsersInfo) => void>()
 const stateSubscribers = new Set<(state: { loading?: boolean; error?: boolean }) => void>()
@@ -78,6 +80,7 @@ const SMOOTHING_WINDOW = 5 // Keep last 5 counts
 export function __resetForTest(): void {
   sharedInfo = { activeUsers: 0, totalConnections: 0 }
   if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
+  if (recoveryTimer) { clearTimeout(recoveryTimer); recoveryTimer = null }
   pollStarted = false
   consecutiveFailures = 0
   hasFetchedOnce = false
@@ -204,6 +207,8 @@ function startPresenceConnection() {
       // Read token fresh to avoid stale closure on reconnects
       const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
       presenceWs?.send(JSON.stringify({ type: 'auth', token: currentToken }))
+      // Clear any existing ping interval before starting a new one (prevents zombie intervals on reconnect)
+      if (presencePingInterval) clearInterval(presencePingInterval)
       // Keep-alive ping every 30 seconds
       presencePingInterval = setInterval(() => {
         if (presenceWs?.readyState === WebSocket.OPEN) {
@@ -272,8 +277,10 @@ async function fetchActiveUsers() {
       pollStarted = false
     }
     notifySubscribers({ error: true })
-    // Schedule a recovery attempt instead of dying permanently
-    setTimeout(() => {
+    // Schedule a single recovery attempt — clear any pending one first to prevent duplicates
+    if (recoveryTimer) clearTimeout(recoveryTimer)
+    recoveryTimer = setTimeout(() => {
+      recoveryTimer = null
       consecutiveFailures = 0
       startPolling()
     }, RECOVERY_DELAY)
@@ -328,13 +335,17 @@ function startPolling() {
   pollStarted = true
   consecutiveFailures = 0 // Reset failures on new start
 
+  // Cancel any pending recovery timer since we're starting fresh
+  if (recoveryTimer) { clearTimeout(recoveryTimer); recoveryTimer = null }
+
   // Notify loading state
   notifySubscribers({ loading: true, error: false })
 
   // Initial fetch
   fetchActiveUsers()
 
-  // Poll at interval (keep reference to clear if needed)
+  // Clear any orphaned interval before creating a new one (guards against zombie loops)
+  if (pollInterval) clearInterval(pollInterval)
   pollInterval = setInterval(fetchActiveUsers, POLL_INTERVAL)
 }
 
@@ -407,6 +418,10 @@ export function useActiveUsers() {
           clearInterval(pollInterval)
           pollInterval = null
           pollStarted = false
+        }
+        if (recoveryTimer) {
+          clearTimeout(recoveryTimer)
+          recoveryTimer = null
         }
         stopHeartbeat()
         stopPresenceConnection()
