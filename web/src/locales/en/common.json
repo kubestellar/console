@@ -4041,7 +4041,10 @@
       "impactItem2": "The workload will stop serving traffic",
       "impactItem3": "The workload can be restarted by scaling back up",
       "confirm": "Scale to Zero"
-    }
+    },
+    "scaleToZeroTitle": "Scale to Zero Replicas",
+    "scaleToZeroMessage": "Scaling {{name}} to 0 replicas will shut down all pods. The workload will stop serving traffic until scaled back up. Are you sure?",
+    "confirmScaleToZero": "Scale to Zero"
   },
   "nodeDetail": {
     "showAll": "Show all",
