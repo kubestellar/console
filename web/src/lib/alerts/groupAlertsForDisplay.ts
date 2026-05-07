@@ -1,5 +1,7 @@
 import type { Alert } from '../../types/alerts'
 
+export const ALERT_GROUP_WINDOW_MS = 60_000
+
 export interface GroupedAlert extends Alert {
   alertIds: string[]
   duplicateCount: number
@@ -25,9 +27,7 @@ function buildAlertSimilarityKey(alert: Alert): string {
     alert.status,
     alert.acknowledgedAt ? 'acknowledged' : 'active',
     normalizeAlertText(alert.cluster),
-    normalizeAlertText(alert.namespace),
     normalizeAlertText(alert.resourceKind),
-    normalizeAlertText(alert.resource),
     normalizeAlertSource(alert),
     normalizeAlertText(alert.message),
   ].join('::')
@@ -43,11 +43,16 @@ export function groupAlertsForDisplay(alerts: Alert[]): GroupedAlert[] {
   for (const alert of sortedAlerts) {
     const similarityKey = buildAlertSimilarityKey(alert)
     const existingGroup = groupedAlertsByKey.get(similarityKey)
+    const firedAtMs = new Date(alert.firedAt).getTime()
 
     if (existingGroup) {
-      existingGroup.alertIds.push(alert.id)
-      existingGroup.duplicateCount += 1
-      continue
+      const existingFiredAtMs = new Date(existingGroup.firedAt).getTime()
+      const isWithinGroupingWindow = existingFiredAtMs - firedAtMs <= ALERT_GROUP_WINDOW_MS
+      if (isWithinGroupingWindow) {
+        existingGroup.alertIds.push(alert.id)
+        existingGroup.duplicateCount += 1
+        continue
+      }
     }
 
     const nextGroup: GroupedAlert = {

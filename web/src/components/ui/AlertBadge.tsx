@@ -14,6 +14,7 @@ import { ROUTES } from '../../config/routes'
 import { TRANSITION_DELAY_MS } from '../../lib/constants/network'
 import { useModalState } from '../../lib/modals'
 import { Button } from './Button'
+import { Input } from './Input'
 import { groupAlertsForDisplay, type GroupedAlert } from '../../lib/alerts/groupAlertsForDisplay'
 import { VirtualizedList } from './VirtualizedList'
 
@@ -38,6 +39,8 @@ export function AnimatedCounter({ value, className }: { value: number; className
 
   useEffect(() => {
     if (value !== prevValueRef.current) {
+      // Animation state must flip immediately when the badge count changes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnimState({ isAnimating: true, direction: value > prevValueRef.current ? 'up' : 'down' })
       const exitTimer = setTimeout(() => {
         setDisplayValue(value)
@@ -324,16 +327,15 @@ export function AlertBadge() {
             {/* Search - only show when there are alerts */}
             {stats.firing > 0 && (
               <div className="p-2 border-b border-border">
-                <div className="relative">
-                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={t('common.searchAlerts')}
-                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
-                  />
-                </div>
+                <Input
+                  type="text"
+                  inputSize="sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('common.searchAlerts')}
+                  leadingIcon={<Search className="h-3.5 w-3.5" />}
+                  className="bg-secondary/50"
+                />
               </div>
             )}
 
@@ -487,7 +489,7 @@ export function AlertBadge() {
                             </span>
                             {alert.duplicateCount > 1 && (
                               <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                {t('cards:activeAlerts.duplicateCount', { count: alert.duplicateCount })}
+                                {t('activeAlerts.duplicateCount', { ns: 'cards', count: alert.duplicateCount })}
                               </span>
                             )}
                           </div>

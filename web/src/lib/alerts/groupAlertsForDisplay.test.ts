@@ -58,10 +58,14 @@ describe('groupAlertsForDisplay', () => {
     expect(groups).toHaveLength(2)
   })
 
-  it('does not merge alerts for different resources', () => {
+  it('does not merge alerts outside the grouping window', () => {
     const alerts = [
-      makeAlert({ id: 'alert-1', resource: 'pod-a', resourceKind: 'Pod' }),
-      makeAlert({ id: 'alert-2', resource: 'pod-b', resourceKind: 'Pod' }),
+      makeAlert({ id: 'alert-1', details: { source: 'prometheus' } }),
+      makeAlert({
+        id: 'alert-2',
+        details: { source: 'prometheus' },
+        firedAt: new Date(BASE_TIME_MS - 120_000).toISOString(),
+      }),
     ]
 
     const groups = groupAlertsForDisplay(alerts)
