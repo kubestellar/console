@@ -166,6 +166,8 @@ const LocalClusterControls = memo(function LocalClusterControls({
   const { clusterLifecycle, clusters } = useLocalClusterTools()
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
   const tool = providerToTool(provider)
+  const controlsDisabled = unreachable
+  const disabledTooltip = t('cluster.controlsDisabledOffline')
 
   if (!tool) return null
 
