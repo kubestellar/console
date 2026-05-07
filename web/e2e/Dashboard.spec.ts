@@ -49,6 +49,8 @@ const DEFAULT_MAIN_DASHBOARD_CARDS = getDefaultCardsForDashboard('main').map((ca
   title: CARD_TITLES[card.card_type] ?? formatCardTitle(card.card_type),
 }))
 const DEFAULT_MAIN_DASHBOARD_CARD_COUNT = DEFAULT_MAIN_DASHBOARD_CARDS.length
+const DEFAULT_CLUSTER_HEALTH_CARD_ID =
+  DEFAULT_MAIN_DASHBOARD_CARDS.find((card) => card.cardType === 'cluster_health')?.id ?? 'default-1'
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
@@ -64,6 +66,7 @@ type MockCluster = {
   reachable: boolean
   nodeCount: number
   podCount: number
+  namespaces?: string[]
 }
 
 type MockClusterResponse = {
@@ -608,7 +611,7 @@ test.describe('Dashboard Page', () => {
         podCard,
         'Pod card not present on default dashboard',
       )
-      await expect(podCard).toContainText(new RegExp(`(?<!\d)${MOCK_POD_COUNT}(?!\d)`))
+      await expect(podCard).toContainText(new RegExp(String.raw`(?<!\d)${MOCK_POD_COUNT}(?!\d)`))
     })
 
     test('renders cluster health status from mocked API data', async ({ page }) => {
@@ -640,33 +643,46 @@ test.describe('Dashboard Page', () => {
       await expect(clusterHealthCard).toContainText('test-unhealthy-cluster')
     })
 
-    test('renders namespace count from mocked API data', async ({ page }) => {
-      // Mock namespace data with specific count
+    test('renders namespace count from mocked cluster data', async ({ page }) => {
       const MOCK_NAMESPACE_COUNT = 15
-      const mockNamespaces = Array.from({ length: MOCK_NAMESPACE_COUNT }, (_, i) => ({
-        name: `namespace-${i}`,
-        cluster: 'test-cluster',
-        status: 'Active',
-      }))
-      const mockNamespaceResponse = { namespaces: mockNamespaces }
+      const mockClusterResponse: MockClusterResponse = validateMockClusterResponse({
+        clusters: [{
+          name: 'test-cluster',
+          healthy: true,
+          reachable: true,
+          nodeCount: 5,
+          podCount: 20,
+          namespaces: Array.from({ length: MOCK_NAMESPACE_COUNT }, (_, i) => `namespace-${i}`),
+        }],
+      })
 
-      await page.route('**/api/mcp/namespaces', (route) =>
+      await page.route('**/api/mcp/clusters', (route) =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(mockNamespaceResponse),
+          body: JSON.stringify(mockClusterResponse),
         })
       )
 
-      await reloadDashboard(page)
-
-      const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      const namespaceCard = cardsGrid.locator('[data-card-id]').filter({ hasText: /namespace/i }).first()
-      await expectVisible(
-        namespaceCard,
-        'Namespace card not present on default dashboard',
+      // Dashboard stats derive namespace totals from the mocked cluster payload,
+      // so switch this test to live mode before reloading.
+      await setupTestStorage(page, { demoMode: false, agentSetupDismissed: true })
+      const clustersApiPromise = page.waitForResponse(
+        (resp) => resp.url().includes('/api/mcp/clusters') && resp.status() === 200
       )
-      await expect(namespaceCard).toContainText(new RegExp(`(?<!\d)${MOCK_NAMESPACE_COUNT}(?!\d)`))
+      await page.goto('/')
+      await page.waitForLoadState('domcontentloaded')
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({
+        timeout: CARD_DATA_TIMEOUT_MS,
+      })
+      await clustersApiPromise
+
+      const namespaceStatBlock = page.getByTestId('stat-block-namespaces')
+      await expectVisible(
+        namespaceStatBlock,
+        'Namespace stat block not present on default dashboard',
+      )
+      await expect(namespaceStatBlock).toContainText(new RegExp(String.raw`(?<!\d)${MOCK_NAMESPACE_COUNT}(?!\d)`))
     })
   })
 })
@@ -874,7 +890,7 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
     // .first() may target stale DOM elements during re-render without synchronization
     await expect(clusterStatBlock.first()).toBeVisible({ timeout: STAT_BLOCK_TIMEOUT_MS })
     await expect(clusterStatBlock.first()).toContainText(
-      new RegExp(`(?<!\\d)${EXPECTED_CLUSTER_COUNT}(?!\\d)`),
+      new RegExp(String.raw`(?<!\d)${EXPECTED_CLUSTER_COUNT}(?!\d)`),
       { timeout: STAT_BLOCK_TIMEOUT_MS },
     )
   })
@@ -882,23 +898,27 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
   test('injected cluster name renders on dashboard exactly as provided', async ({
     page,
   }) => {
+    const DASHBOARD_CARD_TIMEOUT_MS = 20_000
+    const injectedClusterName = 'accuracy-cluster-1'
+
     // A single card-level data-accuracy check: a unique cluster name we
     // injected via route() must appear verbatim inside the Cluster Health
     // card. If the card transforms, truncates, or mis-maps the API field,
     // this fails.
+    const dashboardClustersApiPromise = page.waitForResponse(
+      (resp) => resp.url().includes('/api/mcp/clusters') && resp.status() === 200
+    )
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByTestId('dashboard-page')).toBeVisible({
-      timeout: 10000,
+      timeout: DASHBOARD_CARD_TIMEOUT_MS,
     })
+    await dashboardClustersApiPromise
 
-    const cardsGrid = page.getByTestId('dashboard-cards-grid')
-    const injectedClusterCard = cardsGrid.locator('[data-card-id]').filter({
-      hasText: 'accuracy-cluster-1',
-    }).first()
-    await expect(injectedClusterCard).toBeVisible({ timeout: 10000 })
-    await expect(injectedClusterCard).toContainText('accuracy-cluster-1', {
-      timeout: 10000,
+    const clusterHealthCard = page.locator(`[data-card-id="${DEFAULT_CLUSTER_HEALTH_CARD_ID}"]`)
+    await expect(clusterHealthCard).toBeVisible({ timeout: DASHBOARD_CARD_TIMEOUT_MS })
+    await expect(clusterHealthCard).toContainText(injectedClusterName, {
+      timeout: DASHBOARD_CARD_TIMEOUT_MS,
     })
   })
 })

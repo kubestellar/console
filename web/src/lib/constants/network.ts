@@ -14,8 +14,12 @@
  * On Netlify, agent URLs are disabled — there is no local kc-agent.
  * Duplicated from demoMode.ts to avoid circular imports (demoMode → constants → network).
  */
+const viteEnv = (import.meta.env ?? {}) as Partial<ImportMetaEnv>
+const isDemoModeBuild = viteEnv.VITE_DEMO_MODE === 'true'
+const isNoLocalAgentBuild = viteEnv.VITE_NO_LOCAL_AGENT === 'true'
+
 const _isNetlify = typeof window !== 'undefined' && (
-  (import.meta.env?.VITE_DEMO_MODE === 'true') ||
+  isDemoModeBuild ||
   window.location.hostname.includes('netlify.app') ||
   window.location.hostname.includes('deploy-preview-') ||
   window.location.hostname === 'console.kubestellar.io'
@@ -30,7 +34,7 @@ const _isNetlify = typeof window !== 'undefined' && (
  * The runtime flag (set via suppressLocalAgent()) covers pre-built images
  * deployed in-cluster where Vite env vars cannot be injected at runtime.
  */
-let _suppressAgent = _isNetlify || import.meta.env?.VITE_NO_LOCAL_AGENT === 'true'
+let _suppressAgent = _isNetlify || isNoLocalAgentBuild
 
 /**
  * Called by the BrandingProvider after fetching /health to suppress agent
