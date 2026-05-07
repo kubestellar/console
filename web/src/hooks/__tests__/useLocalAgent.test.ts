@@ -66,6 +66,7 @@ const POLL_INTERVAL = 10000
 const DISCONNECTED_POLL_INTERVAL = 60000
 const FAILURE_THRESHOLD = 9
 const _SUCCESS_THRESHOLD = 2
+const UNAUTHORIZED_STATUS = 401
 
 /** Standard health response from a running agent. */
 const healthData = {
@@ -112,6 +113,20 @@ function mockFetchStatus(status: number) {
     status,
     json: () => Promise.resolve({}),
   })
+}
+
+function mockFetchAuthError(status = UNAUTHORIZED_STATUS, data = healthData) {
+  ;(global.fetch as ReturnType<typeof vi.fn>)
+    .mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(data),
+    })
+    .mockResolvedValueOnce({
+      ok: false,
+      status,
+      json: () => Promise.resolve({}),
+    })
 }
 
 /** Run enough failure cycles to cross the FAILURE_THRESHOLD and reach disconnected. */
@@ -179,6 +194,7 @@ describe('useLocalAgent', () => {
     expect(result.current).toHaveProperty('lastDataError')
     expect(result.current).toHaveProperty('isConnected')
     expect(result.current).toHaveProperty('isDegraded')
+    expect(result.current).toHaveProperty('isAuthError')
     expect(result.current).toHaveProperty('isDemoMode')
     expect(result.current).toHaveProperty('installInstructions')
     expect(result.current).toHaveProperty('refresh')
@@ -219,6 +235,23 @@ describe('useLocalAgent', () => {
     // Conversion step 3 (agent) and 4 (clusters > 0)
     expect(mockEmitConversionStep).toHaveBeenCalledWith(3, 'agent', { agent_version: '1.2.3' })
     expect(mockEmitConversionStep).toHaveBeenCalledWith(4, 'clusters', { cluster_count: '2' })
+  })
+
+  it('transitions to auth_error when agent is reachable but auth fails', async () => {
+    mockFetchAuthError()
+    const { result } = renderHook(() => useLocalAgent())
+
+    await flushMicrotasks()
+
+    expect(result.current.status).toBe('auth_error')
+    expect(result.current.isAuthError).toBe(true)
+    expect(result.current.isConnected).toBe(false)
+    expect(result.current.health).toMatchObject({
+      status: 'ok',
+      version: '1.2.3',
+      clusters: 2,
+    })
+    expect(result.current.error).toContain(`HTTP ${UNAUTHORIZED_STATUS}`)
   })
 
   it('stamps first-ever agent connection in localStorage', async () => {

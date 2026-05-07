@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -32,8 +32,19 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+const mockUseLocalAgent = vi.fn(() => ({
+  status: '',
+  health: {},
+  connectionEvents: [],
+  isConnected: false,
+  isDegraded: false,
+  isAuthError: false,
+  dataErrorCount: 0,
+  lastDataError: null,
+}))
+
 vi.mock('../../../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => ({ status: '', health: {}, connectionEvents: [], isConnected: false, isDegraded: null, dataErrorCount: 0, lastDataError: null }),
+  useLocalAgent: () => mockUseLocalAgent(),
 }))
 
 vi.mock('../../../../hooks/useMissions', () => ({
@@ -54,5 +65,23 @@ describe('AgentStatusIndicator', () => {
   it('renders without crashing', () => {
     const { container } = render(<AgentStatusIndicator />)
     expect(container).toBeTruthy()
+  })
+
+  it('shows auth warning state when agent auth fails', () => {
+    mockUseLocalAgent.mockReturnValueOnce({
+      status: 'auth_error',
+      health: { version: '1.2.3' },
+      connectionEvents: [],
+      isConnected: false,
+      isDegraded: false,
+      isAuthError: true,
+      dataErrorCount: 0,
+      lastDataError: null,
+    })
+
+    render(<AgentStatusIndicator />)
+
+    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.authErrorTitle')
+    expect(screen.getByText('agent.authError')).toBeTruthy()
   })
 })

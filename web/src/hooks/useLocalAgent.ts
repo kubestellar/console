@@ -36,7 +36,12 @@ export interface AgentHealth {
   }
 }
 
-export type AgentConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'degraded'
+export type AgentConnectionStatus =
+  | 'connected'
+  | 'disconnected'
+  | 'connecting'
+  | 'degraded'
+  | 'auth_error'
 
 export interface ConnectionEvent {
   timestamp: Date
@@ -51,6 +56,12 @@ const FAILURE_THRESHOLD = 9 // Require 9 consecutive failures (~90s) before disc
 // Using the default 10s timeout causes false failures when the browser's
 // HTTP/1.1 connection pool (6 per origin) is saturated by concurrent requests.
 const AGENT_HEALTH_TIMEOUT_MS = 3000
+const HTTP_UNAUTHORIZED_STATUS = 401
+const HTTP_FORBIDDEN_STATUS = 403
+const AUTH_ERROR_STATUS_CODES = new Set([
+  HTTP_UNAUTHORIZED_STATUS,
+  HTTP_FORBIDDEN_STATUS,
+])
 const SUCCESS_THRESHOLD = 2 // Require 2 consecutive successes before reconnecting (prevents flicker)
 const AGGRESSIVE_POLL_INTERVAL = 1000 // 1 second during aggressive detection burst
 const AGGRESSIVE_DETECT_DURATION = 10000 // 10 seconds of aggressive polling
@@ -237,57 +248,88 @@ class AgentManager {
         headers: { Accept: 'application/json' },
         signal: AbortSignal.timeout(AGENT_HEALTH_TIMEOUT_MS) })
 
-      if (response.ok) {
-        const data = await response.json()
-        const wasDisconnected = this.state.status === 'disconnected'
-        const wasConnecting = this.state.status === 'connecting'
-        const wasConnected = this.state.status === 'connected' || this.state.status === 'degraded'
-        this.failureCount = 0 // Reset failure count on success
-        this.successCount++ // Track consecutive successes
-
-        // Hysteresis: require multiple successes to reconnect from disconnected (prevents flicker)
-        if (wasDisconnected && this.successCount >= SUCCESS_THRESHOLD) {
-          this.wasEverConnected = true
-          this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
-          // Reconnected - speed up polling
-          this.adjustPollInterval(POLL_INTERVAL)
-          this.setState({
-            health: data,
-            status: 'connected',
-            error: null })
-          // Demo mode transition is handled by Layout based on agentStatus changes
-          emitAgentConnected(data.version || 'unknown', data.clusters || 0)
-          emitAgentProvidersDetected(data.availableProviders || [])
-        } else if (wasConnecting) {
-          // Initial connection - connect immediately on first success
-          this.wasEverConnected = true
-          this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
-          this.adjustPollInterval(POLL_INTERVAL)
-          this.setState({
-            health: data,
-            status: 'connected',
-            error: null })
-          emitAgentConnected(data.version || 'unknown', data.clusters || 0)
-          emitAgentProvidersDetected(data.availableProviders || [])
-          // Stamp the first-ever agent connection for time-based nudges
-          if (!safeGetItem(STORAGE_KEY_FIRST_AGENT_CONNECT)) {
-            safeSetItem(STORAGE_KEY_FIRST_AGENT_CONNECT, String(Date.now()))
-          }
-          emitConversionStep(3, 'agent', { agent_version: data.version || 'unknown' })
-          if ((data.clusters || 0) > 0) {
-            emitConversionStep(4, 'clusters', { cluster_count: String(data.clusters) })
-          }
-        } else if (wasConnected) {
-          // Already connected - just update health data
-          this.setState({
-            health: data,
-            status: 'connected',
-            error: null })
-        }
-        // If wasDisconnected but not enough successes yet, don't change status
-      } else {
+      if (!response.ok) {
         throw new Error(`Agent returned ${response.status}`)
       }
+
+      const data = await response.json()
+      const authResponse = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/status`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      })
+
+      if (AUTH_ERROR_STATUS_CODES.has(authResponse.status)) {
+        const isUnauthorized = authResponse.status === HTTP_UNAUTHORIZED_STATUS
+        const authErrorMessage = isUnauthorized
+          ? 'Local agent reachable, but authentication failed'
+          : 'Local agent reachable, but access is forbidden'
+        const wasAuthError = this.state.status === 'auth_error'
+
+        this.failureCount = 0
+        this.successCount = 0
+        this.adjustPollInterval(POLL_INTERVAL)
+        if (!wasAuthError) {
+          this.addEvent('error', `${authErrorMessage} (HTTP ${authResponse.status})`)
+        }
+        this.setState({
+          health: data,
+          status: 'auth_error',
+          error: `${authErrorMessage} (HTTP ${authResponse.status})`,
+        })
+        return
+      }
+
+      if (!authResponse.ok) {
+        throw new Error(`Agent auth probe returned ${authResponse.status}`)
+      }
+
+      const wasDisconnected = this.state.status === 'disconnected'
+      const wasConnecting = this.state.status === 'connecting' || this.state.status === 'auth_error'
+      const wasConnected =
+        this.state.status === 'connected' || this.state.status === 'degraded'
+      this.failureCount = 0 // Reset failure count on success
+      this.successCount++ // Track consecutive successes
+
+      // Hysteresis: require multiple successes to reconnect from disconnected (prevents flicker)
+      if (wasDisconnected && this.successCount >= SUCCESS_THRESHOLD) {
+        this.wasEverConnected = true
+        this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
+        // Reconnected - speed up polling
+        this.adjustPollInterval(POLL_INTERVAL)
+        this.setState({
+          health: data,
+          status: 'connected',
+          error: null })
+        // Demo mode transition is handled by Layout based on agentStatus changes
+        emitAgentConnected(data.version || 'unknown', data.clusters || 0)
+        emitAgentProvidersDetected(data.availableProviders || [])
+      } else if (wasConnecting) {
+        // Initial connection - connect immediately on first success
+        this.wasEverConnected = true
+        this.addEvent('connected', `Connected to local agent v${data.version || 'unknown'}`)
+        this.adjustPollInterval(POLL_INTERVAL)
+        this.setState({
+          health: data,
+          status: 'connected',
+          error: null })
+        emitAgentConnected(data.version || 'unknown', data.clusters || 0)
+        emitAgentProvidersDetected(data.availableProviders || [])
+        // Stamp the first-ever agent connection for time-based nudges
+        if (!safeGetItem(STORAGE_KEY_FIRST_AGENT_CONNECT)) {
+          safeSetItem(STORAGE_KEY_FIRST_AGENT_CONNECT, String(Date.now()))
+        }
+        emitConversionStep(3, 'agent', { agent_version: data.version || 'unknown' })
+        if ((data.clusters || 0) > 0) {
+          emitConversionStep(4, 'clusters', { cluster_count: String(data.clusters) })
+        }
+      } else if (wasConnected) {
+        // Already connected - just update health data
+        this.setState({
+          health: data,
+          status: 'connected',
+          error: null })
+      }
+      // If wasDisconnected but not enough successes yet, don't change status
     } catch {
       this.failureCount++
       this.successCount = 0 // Reset success count on failure
@@ -425,7 +467,8 @@ export function reportAgentDataSuccess() {
 
 /**
  * Check if the agent is currently connected (from non-hook code)
- * Returns true if connected or degraded, false if disconnected or connecting
+ * Returns true if connected or degraded, false if disconnected, connecting,
+ * or blocked by agent authentication.
  */
 export function isAgentConnected(): boolean {
   const state = agentManager.getState()
@@ -535,6 +578,7 @@ export function useLocalAgent() {
     lastDataError: state.lastDataError,
     isConnected: state.status === 'connected' || state.status === 'degraded',
     isDegraded: state.status === 'degraded',
+    isAuthError: state.status === 'auth_error',
     isDemoMode: state.status === 'disconnected',
     installInstructions,
     refresh,

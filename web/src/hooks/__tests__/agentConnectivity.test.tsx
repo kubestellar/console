@@ -94,6 +94,7 @@ let triggerAggressiveDetection: typeof import('../useLocalAgent').triggerAggress
 const POLL_INTERVAL = 10_000
 const DISCONNECTED_POLL_INTERVAL = 60_000
 const FAILURE_THRESHOLD = 9
+const UNAUTHORIZED_STATUS = 401
 
 const healthData = {
   status: 'ok',
@@ -134,6 +135,20 @@ function mockFetchStatus(status: number) {
     status,
     json: () => Promise.resolve({}),
   })
+}
+
+function mockFetchAuthError(status = UNAUTHORIZED_STATUS, data = healthData) {
+  ;(global.fetch as ReturnType<typeof vi.fn>)
+    .mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(data),
+    })
+    .mockResolvedValueOnce({
+      ok: false,
+      status,
+      json: () => Promise.resolve({}),
+    })
 }
 
 /** Drive agent to disconnected by exhausting the failure threshold. */
@@ -253,8 +268,8 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
       expect(result.current.error).toBe('Local agent not available')
     })
 
-    it('HTTP 401 from agent is treated as a failure', async () => {
-      mockFetchStatus(401)
+    it('HTTP 401 from agent health is treated as a failure', async () => {
+      mockFetchStatus(UNAUTHORIZED_STATUS)
       const { result } = renderHook(() => useLocalAgent())
 
       await flushMicrotasks()
@@ -264,6 +279,17 @@ describe('Agent Connectivity Failure Paths (#11591)', () => {
       }
 
       expect(result.current.status).toBe('disconnected')
+    })
+
+    it('HTTP 401 from auth probe is treated as auth_error', async () => {
+      mockFetchAuthError(UNAUTHORIZED_STATUS)
+      const { result } = renderHook(() => useLocalAgent())
+
+      await flushMicrotasks()
+
+      expect(result.current.status).toBe('auth_error')
+      expect(result.current.isConnected).toBe(false)
+      expect(result.current.error).toContain(`HTTP ${UNAUTHORIZED_STATUS}`)
     })
   })
 

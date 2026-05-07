@@ -38,6 +38,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
     connectionEvents,
     isConnected,
     isDegraded,
+    isAuthError,
     dataErrorCount,
     lastDataError,
   } = useLocalAgent()
@@ -129,10 +130,12 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
   const stableConnected =
     stableStatus === 'connected' || stableStatus === 'degraded'
   const stableDegraded = stableStatus === 'degraded'
+  const stableAuthError = stableStatus === 'auth_error'
 
   // --- Sticky demo styling (fixes demo toggle flash) ---
   // When demo mode is on, showDemoStyle=true. When demo mode is toggled off,
-  // showDemoStyle stays true (sticky) until the agent connects or 3s elapses.
+  // showDemoStyle stays true (sticky) until the agent authenticates, reports an
+  // auth warning, or 3s elapses.
   const [showDemoStyle, setShowDemoStyle] = useState(isDemoMode)
   const demoExitTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
@@ -141,12 +144,12 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
     if (isDemoMode) setShowDemoStyle(true)
   }, [isDemoMode])
 
-  // Clear sticky flag once agent connects after leaving demo mode
+  // Clear sticky flag once the agent resolves to a live status after leaving demo mode
   useEffect(() => {
-    if (!isDemoMode && showDemoStyle && stableConnected) {
+    if (!isDemoMode && showDemoStyle && (stableConnected || stableAuthError)) {
       setShowDemoStyle(false)
     }
-  }, [isDemoMode, showDemoStyle, stableConnected])
+  }, [isDemoMode, showDemoStyle, stableAuthError, stableConnected])
 
   // Safety timeout: clear sticky flag after 3s even if agent never connects
   useEffect(() => {
@@ -250,7 +253,15 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
           Icon: Wifi,
           title: t('agent.degradedTitle', { count: dataErrorCount }),
         }
-      : stableConnected && backendIssue
+      : stableAuthError
+        ? {
+            bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
+            dot: 'bg-yellow-400 animate-pulse',
+            label: t('agent.authError'),
+            Icon: Wifi,
+            title: t('agent.authErrorTitle'),
+          }
+        : stableConnected && backendIssue
         ? {
             bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
             dot: 'bg-yellow-400 animate-pulse',
@@ -405,7 +416,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
                     ? 'bg-gray-400'
                     : isClusterBacked
                       ? 'bg-blue-400'
-                      : isDegraded
+                      : isDegraded || isAuthError
                         ? 'bg-yellow-400'
                         : isConnected
                           ? 'bg-green-400'
@@ -426,13 +437,15 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
                     ? t('agent.clusterMode')
                     : isDegraded
                       ? t('agent.localAgentDegraded')
-                      : isConnected
-                        ? t('agent.localAgentConnectedLabel')
-                        : stableStatus === 'connecting'
-                          ? t('agent.localAgentConnecting')
-                          : t('agent.localAgentDisconnectedLabel')}
+                      : isAuthError
+                        ? t('agent.localAgentAuthErrorLabel')
+                        : isConnected
+                          ? t('agent.localAgentConnectedLabel')
+                          : stableStatus === 'connecting'
+                            ? t('agent.localAgentConnecting')
+                            : t('agent.localAgentDisconnectedLabel')}
               </span>
-              {isConnected &&
+              {(isConnected || isAuthError) &&
                 agentHealth?.version &&
                 agentHealth.version !== 'demo' && (
                   <span className="text-xs text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
@@ -474,9 +487,11 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
                   ? t('agent.usingInClusterService')
                   : isDegraded
                     ? t('agent.connectedButErrors', { count: dataErrorCount })
-                    : isConnected
-                      ? t('agent.connectedToLocalAgent')
-                      : t('agent.unableToConnect')}
+                    : isAuthError
+                      ? t('agent.authErrorDescription')
+                      : isConnected
+                        ? t('agent.connectedToLocalAgent')
+                        : t('agent.unableToConnect')}
             </p>
             {/* When running on the hosted demo, surface a self-host link so
                 users who want real cluster data know where to go next. */}
