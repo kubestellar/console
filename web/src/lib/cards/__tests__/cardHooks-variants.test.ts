@@ -276,6 +276,14 @@ describe('useChartFilters', () => {
     expect(result.current.localClusterFilter).toEqual(['gpu-cluster'])
   })
 
+  it('drops stale persisted cluster filters and falls back to connected clusters', () => {
+    localStorage.setItem(`${LOCAL_FILTER_STORAGE_PREFIX}chart-stale`, JSON.stringify(['missing-cluster']))
+    const { result } = renderHook(() => useChartFilters({ storageKey: 'chart-stale' }))
+    expect(result.current.localClusterFilter).toEqual([])
+    expect(result.current.filteredClusters.map(cluster => cluster.name)).toEqual(['prod-east', 'staging', 'gpu-cluster'])
+    expect(localStorage.getItem(`${LOCAL_FILTER_STORAGE_PREFIX}chart-stale`)).toBeNull()
+  })
+
   it('handles corrupted localStorage gracefully', () => {
     localStorage.setItem(`${LOCAL_FILTER_STORAGE_PREFIX}chart-bad`, 'not-json')
     const { result } = renderHook(() => useChartFilters({ storageKey: 'chart-bad' }))

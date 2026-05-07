@@ -1109,6 +1109,20 @@ export function useChartFilters(
     if (isAllClustersSelected) return deduplicatedClusters
     return deduplicatedClusters.filter(c => selectedClusters.includes(c.name))
   }, [deduplicatedClusters, selectedClusters, isAllClustersSelected])
+  const availableClusterNames = useMemo(
+    () => new Set(availableClusters.map(cluster => cluster.name)),
+    [availableClusters],
+  )
+
+  // Drop any persisted local filter entries that no longer exist in the
+  // current cluster set. When nothing valid remains, fall back to the
+  // connected clusters instead of leaving chart cards stuck empty.
+  useEffect(() => {
+    if (localClusterFilter.length === 0) return
+    const validSelections = localClusterFilter.filter(clusterName => availableClusterNames.has(clusterName))
+    if (validSelections.length === localClusterFilter.length) return
+    setLocalClusterFilter(validSelections)
+  }, [availableClusterNames, localClusterFilter, setLocalClusterFilter])
 
   // Filtered clusters based on global + local filters (reachable only for data)
   const filteredClusters = useMemo(() => {
