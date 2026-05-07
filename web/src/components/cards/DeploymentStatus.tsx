@@ -90,7 +90,7 @@ export function DeploymentStatus() {
     isRefreshing,
     isDemoData: isDemoFallback,
     hasAnyData: hasData,
-    isFailed,
+    isFailed: isFailed && !hasData,
     consecutiveFailures })
   const isLoading = showSkeleton
 

@@ -57,7 +57,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
     isLoading: (clustersLoading || subscriptionsLoading) && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isFailed,
+    isFailed: isFailed && !hasData,
     consecutiveFailures,
     isDemoData })
 

@@ -438,15 +438,27 @@ describe('DeploymentStatus', () => {
 
   // -------------------------------------------------------------------------
   describe('useCardLoadingState integration', () => {
-    it('passes correct args to useCardLoadingState', () => {
+    it('suppresses failure state when cached data exists', () => {
       const deployments = [makeDeployment()]
       setupHooks({ deployments, isFailed: true, consecutiveFailures: 3 })
       render(<DeploymentStatus />)
       expect(mockUseCardLoadingState).toHaveBeenCalledWith(
         expect.objectContaining({
-          isFailed: true,
+          isFailed: false,
           consecutiveFailures: 3,
           hasAnyData: true,
+        })
+      )
+    })
+
+    it('preserves failure state when no data exists', () => {
+      setupHooks({ deployments: [], isFailed: true, consecutiveFailures: 3 })
+      render(<DeploymentStatus />)
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isFailed: true,
+          consecutiveFailures: 3,
+          hasAnyData: false,
         })
       )
     })

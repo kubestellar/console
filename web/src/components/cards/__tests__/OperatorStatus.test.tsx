@@ -355,4 +355,34 @@ describe('OperatorStatus', () => {
     const { container } = render(<OperatorStatus />)
     expect(container).toBeTruthy()
   })
+
+  it('suppresses failure state when cached data exists', () => {
+    mockUseCachedOperators.mockReturnValue(
+      defaultHookResult({ isFailed: true, consecutiveFailures: 4 }),
+    )
+
+    render(<OperatorStatus />)
+    expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hasAnyData: true,
+        isFailed: false,
+        consecutiveFailures: 4,
+      }),
+    )
+  })
+
+  it('preserves failure state when no data exists', () => {
+    mockUseCachedOperators.mockReturnValue(
+      defaultHookResult({ operators: [], isFailed: true, consecutiveFailures: 4 }),
+    )
+
+    render(<OperatorStatus />)
+    expect(mockUseCardLoadingState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        hasAnyData: false,
+        isFailed: true,
+        consecutiveFailures: 4,
+      }),
+    )
+  })
 })

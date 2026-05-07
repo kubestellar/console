@@ -61,7 +61,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
     isLoading: (clustersLoading || operatorsLoading) && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isFailed,
+    isFailed: isFailed && !hasData,
     consecutiveFailures,
     isDemoData })
 
