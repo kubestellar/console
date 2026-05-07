@@ -8,7 +8,7 @@
 
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { fetchFromAllClusters, fetchViaSSE, getToken, getClusterFetcher } from '../lib/cache/fetcherUtils'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS } from '../lib/constants/network'
 import {
   getDemoPVCs,
   getDemoNamespaces,
@@ -232,7 +232,7 @@ export function useCachedNamespaces(
       if (!token) throw new Error('No authentication token')
       const response = await fetch(`/api/mcp/namespaces?cluster=${encodeURIComponent(cluster)}`, {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
       })
       if (!response.ok) throw new Error(`API error: ${response.status}`)
       const data = await response.json().catch(() => null) as Array<{ name?: string; Name?: string }> | null

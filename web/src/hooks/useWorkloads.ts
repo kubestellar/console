@@ -6,7 +6,7 @@ import { isDemoMode } from '../lib/demoMode'
 import { isInClusterMode } from './useBackendHealth'
 import { api } from '../lib/api'
 import { LOCAL_AGENT_HTTP_URL, STORAGE_KEY_TOKEN } from '../lib/constants'
-import { FETCH_DEFAULT_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
+import { MCP_HOOK_TIMEOUT_MS, POLL_INTERVAL_MS, POLL_INTERVAL_SLOW_MS } from '../lib/constants/network'
 
 // Types
 export interface Workload {
@@ -94,6 +94,11 @@ export function requireLocalAgentHttp(action: string): string {
   return LOCAL_AGENT_HTTP_URL
 }
 
+
+function getFetchSignal(signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS)
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+}
 
 export function getDemoWorkloads(cluster?: string, namespace?: string): Workload[] {
   const workloads: Workload[] = [
@@ -279,7 +284,10 @@ export function useWorkloads(options?: {
       const queryString = params.toString()
       const url = `/api/workloads${queryString ? `?${queryString}` : ''}`
 
-      const res = await fetch(url, { headers: authHeaders(), signal: signal || AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      const res = await fetch(url, {
+        headers: authHeaders(),
+        signal: getFetchSignal(signal),
+      })
       if (!res.ok) {
         throw new Error(`Failed to fetch workloads: ${res.statusText}`)
       }
