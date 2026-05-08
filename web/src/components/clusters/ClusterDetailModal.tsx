@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { X, CheckCircle, AlertTriangle, WifiOff, Pencil, Trash2, ChevronRight, ChevronDown, Layers, Server, Network, HardDrive, Box, FolderOpen, Loader2, Cpu, MemoryStick, Database, Wand2, Stethoscope, Wrench, Bot, ExternalLink } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { useClusterHealth, usePodIssues, useDeploymentIssues, useGPUNodes, useNodes, useNamespaceStats, useDeployments, useClusters } from '../../hooks/useMCP'
@@ -19,6 +19,10 @@ import { ClusterStatusDetails } from './ClusterStatusDetails'
 
 // Cloud provider types
 type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | 'digitalocean' | 'rancher' | 'coreweave' | 'kind' | 'minikube' | 'k3s' | 'unknown'
+
+// Maximum time to wait for initial data before forcing modal to show content (10 seconds)
+// Prevents indefinite loading when cluster is slow or unreachable
+const MAX_INITIAL_LOADING_MS = 10_000
 
 // Get console URL for a specific provider
 function getConsoleUrlForProvider(provider: string, clusterName: string, apiServerUrl?: string): string | null {
@@ -99,19 +103,9 @@ interface ClusterDetailModalProps {
 
 export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename, onRemove }: ClusterDetailModalProps) {
   const { t } = useTranslation()
-  const { health, isLoading, error: healthError } = useClusterHealth(clusterName)
+  
+  // Get cluster info early to check if unreachable
   const { deduplicatedClusters, clusters: rawClusters } = useClusters()
-  const { issues: podIssues } = usePodIssues(clusterName)
-  const { issues: deploymentIssues } = useDeploymentIssues(clusterName)
-  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing } = useGPUNodes(clusterName)
-  const { nodes: clusterNodes, isLoading: nodesLoading } = useNodes(clusterName)
-  const { stats: namespaceStats, isLoading: nsLoading } = useNamespaceStats(clusterName)
-  const { deployments: clusterDeployments } = useDeployments(clusterName)
-  const { drillToPod, drillToDeployment } = useDrillDownActions()
-  const { startMission } = useMissions()
-
-  // Get cached cluster info for distribution detection (lastUpdated via parent refresh cycle)
-  // First try deduplicated clusters, then raw clusters, also check aliases
   const clusterInfo = (() => {
     // Direct match in deduplicated clusters
     let found = deduplicatedClusters.find(c => c.name === clusterName)
@@ -122,6 +116,30 @@ export function ClusterDetailModal({ clusterName, clusterUser, onClose, onRename
     // Fallback to raw clusters
     return rawClusters.find(c => c.name === clusterName)
   })()
+  
+  // Early bailout: if cluster is known unreachable, skip expensive data fetching
+  const isKnownUnreachable = clusterInfo ? isClusterUnreachable(clusterInfo) : false
+  
+  // Conditionally call hooks - only fetch data for reachable clusters
+  const { health, isLoading, error: healthError } = useClusterHealth(clusterName)
+  const { issues: podIssues } = usePodIssues(isKnownUnreachable ? undefined : clusterName)
+  const { issues: deploymentIssues } = useDeploymentIssues(isKnownUnreachable ? undefined : clusterName)
+  const { nodes: gpuNodes, isLoading: gpuLoading, isRefreshing: gpuRefreshing } = useGPUNodes(isKnownUnreachable ? undefined : clusterName)
+  const { nodes: clusterNodes, isLoading: nodesLoading } = useNodes(isKnownUnreachable ? undefined : clusterName)
+  const { stats: namespaceStats, isLoading: nsLoading } = useNamespaceStats(isKnownUnreachable ? undefined : clusterName)
+  const { deployments: clusterDeployments } = useDeployments(isKnownUnreachable ? undefined : clusterName)
+  const { drillToPod, drillToDeployment } = useDrillDownActions()
+  const { startMission } = useMissions()
+  
+  // Force exit from loading state after MAX_INITIAL_LOADING_MS
+  // This prevents indefinite loading when cluster is slow or hooks timeout
+  const [forceShowContent, setForceShowContent] = useState(false)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setForceShowContent(true)
+    }, MAX_INITIAL_LOADING_MS)
+    return () => clearTimeout(timeout)
+  }, [clusterName]) // Reset timeout when cluster changes
 
   // Build a map of raw cluster names to deduplicated primary names for GPU deduplication
   const clusterNameMap = (() => {
@@ -244,6 +262,10 @@ After I approve, help me execute the repairs step by step.`,
   // so that health badges are always consistent (#5487).
   const isUnreachable = clusterInfo ? isClusterUnreachable(clusterInfo) : false
   const isHealthy = clusterInfo ? isClusterHealthy(clusterInfo) : (!isLoading && health?.healthy !== false)
+  
+  // Effective loading state: override to false after timeout
+  // This ensures the modal shows partial data rather than hanging indefinitely
+  const effectiveLoading = forceShowContent ? false : isLoading
 
   // Group GPUs by type for summary
   const gpuByType = (() => {
@@ -464,14 +486,14 @@ After I approve, help me execute the repairs step by step.`,
         {/* Stats - Interactive Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <button
-            onClick={() => !isUnreachable && !isLoading && setShowNodeDetails(!showNodeDetails)}
-            disabled={isUnreachable || isLoading}
+            onClick={() => !isUnreachable && !effectiveLoading && setShowNodeDetails(!showNodeDetails)}
+            disabled={isUnreachable || effectiveLoading}
             className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !isLoading ? 'border-border hover:border-cyan-500/50 hover:bg-cyan-500/5 hover:shadow-lg hover:shadow-cyan-500/10 cursor-pointer' : 'border-border cursor-default'
+              !isUnreachable && !effectiveLoading ? 'border-border hover:border-cyan-500/50 hover:bg-cyan-500/5 hover:shadow-lg hover:shadow-cyan-500/10 cursor-pointer' : 'border-border cursor-default'
             } ${showNodeDetails ? 'border-cyan-500/50 bg-cyan-500/10 shadow-lg shadow-cyan-500/10' : ''}`}
-            title={!isUnreachable && !isLoading ? t('clusterDetail.clickToViewNode') : undefined}
+            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewNode') : undefined}
           >
-            {isLoading ? (
+            {effectiveLoading ? (
               <>
                 <div className="h-8 w-12 bg-muted/30 rounded animate-pulse mb-1" />
                 <div className="text-sm text-muted-foreground">{t('common.nodes')}</div>
@@ -492,18 +514,18 @@ After I approve, help me execute the repairs step by step.`,
             )}
           </button>
           <button
-            onClick={() => !isUnreachable && !isLoading && setShowPodsByNamespace(!showPodsByNamespace)}
-            disabled={isUnreachable || isLoading}
+            onClick={() => !isUnreachable && !effectiveLoading && setShowPodsByNamespace(!showPodsByNamespace)}
+            disabled={isUnreachable || effectiveLoading}
             className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !isLoading ? 'border-border hover:border-blue-500/50 hover:bg-blue-500/5 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer' : 'border-border cursor-default'
+              !isUnreachable && !effectiveLoading ? 'border-border hover:border-blue-500/50 hover:bg-blue-500/5 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer' : 'border-border cursor-default'
             } ${showPodsByNamespace ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/10' : ''}`}
-            title={!isUnreachable && !isLoading ? t('clusterDetail.clickToViewWorkloads') : undefined}
+            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewWorkloads') : undefined}
           >
             <div className="text-sm text-muted-foreground flex items-center gap-1 mb-1">
               {t('clusterDetail.workloads')}
-              {!isUnreachable && !isLoading && <ChevronDown className={`w-4 h-4 transition-transform text-blue-400 ${showPodsByNamespace ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />}
+              {!isUnreachable && !effectiveLoading && <ChevronDown className={`w-4 h-4 transition-transform text-blue-400 ${showPodsByNamespace ? 'rotate-180' : 'group-hover:translate-y-0.5'}`} />}
             </div>
-            {isLoading ? (
+            {effectiveLoading ? (
               <div className="space-y-1.5">
                 <div className="h-4 bg-muted/30 rounded animate-pulse" />
                 <div className="h-4 bg-muted/30 rounded animate-pulse" />
@@ -538,14 +560,14 @@ After I approve, help me execute the repairs step by step.`,
             )}
           </button>
           <button
-            onClick={() => !isUnreachable && !isLoading && stableClusterGPUs.length > 0 && setShowGPUDetail(true)}
-            disabled={isUnreachable || isLoading || stableClusterGPUs.length === 0}
+            onClick={() => !isUnreachable && !effectiveLoading && stableClusterGPUs.length > 0 && setShowGPUDetail(true)}
+            disabled={isUnreachable || effectiveLoading || stableClusterGPUs.length === 0}
             className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !isLoading && stableClusterGPUs.length > 0 ? 'border-border hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:shadow-lg hover:shadow-yellow-500/10 cursor-pointer' : 'border-border cursor-default'
+              !isUnreachable && !effectiveLoading && stableClusterGPUs.length > 0 ? 'border-border hover:border-yellow-500/50 hover:bg-yellow-500/5 hover:shadow-lg hover:shadow-yellow-500/10 cursor-pointer' : 'border-border cursor-default'
             }`}
-            title={!isUnreachable && !isLoading && stableClusterGPUs.length > 0 ? t('clusterDetail.clickToViewGPU') : undefined}
+            title={!isUnreachable && !effectiveLoading && stableClusterGPUs.length > 0 ? t('clusterDetail.clickToViewGPU') : undefined}
           >
-            {isLoading ? (
+            {effectiveLoading ? (
               <>
                 <div className="h-8 w-12 bg-muted/30 rounded animate-pulse mb-1" />
                 <div className="text-sm text-muted-foreground">{t('common.gpus')}</div>
@@ -567,18 +589,18 @@ After I approve, help me execute the repairs step by step.`,
         {/* Resource Metrics - Clickable cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           <button
-            onClick={() => !isUnreachable && !isLoading && setShowCPUDetail(true)}
-            disabled={isUnreachable || isLoading}
+            onClick={() => !isUnreachable && !effectiveLoading && setShowCPUDetail(true)}
+            disabled={isUnreachable || effectiveLoading}
             className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !isLoading ? 'border-border hover:border-blue-500/50 hover:bg-blue-500/5 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer' : 'border-border cursor-default'
+              !isUnreachable && !effectiveLoading ? 'border-border hover:border-blue-500/50 hover:bg-blue-500/5 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer' : 'border-border cursor-default'
             }`}
-            title={!isUnreachable && !isLoading ? t('clusterDetail.clickToViewCPU') : undefined}
+            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewCPU') : undefined}
           >
             <div className="flex items-center gap-2 mb-2">
               <Cpu className="w-4 h-4 text-blue-400" />
               <span className="text-sm text-muted-foreground">{t('common.cpu')}</span>
             </div>
-            {isLoading ? (
+            {effectiveLoading ? (
               <>
                 <div className="h-8 w-16 bg-muted/30 rounded animate-pulse mb-1" />
                 <div className="h-4 w-24 bg-muted/30 rounded animate-pulse" />
@@ -594,18 +616,18 @@ After I approve, help me execute the repairs step by step.`,
             )}
           </button>
           <button
-            onClick={() => !isUnreachable && !isLoading && setShowMemoryDetail(true)}
-            disabled={isUnreachable || isLoading}
+            onClick={() => !isUnreachable && !effectiveLoading && setShowMemoryDetail(true)}
+            disabled={isUnreachable || effectiveLoading}
             className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !isLoading ? 'border-border hover:border-green-500/50 hover:bg-green-500/5 hover:shadow-lg hover:shadow-green-500/10 cursor-pointer' : 'border-border cursor-default'
+              !isUnreachable && !effectiveLoading ? 'border-border hover:border-green-500/50 hover:bg-green-500/5 hover:shadow-lg hover:shadow-green-500/10 cursor-pointer' : 'border-border cursor-default'
             }`}
-            title={!isUnreachable && !isLoading ? t('clusterDetail.clickToViewMemory') : undefined}
+            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewMemory') : undefined}
           >
             <div className="flex items-center gap-2 mb-2">
               <MemoryStick className="w-4 h-4 text-green-400" />
               <span className="text-sm text-muted-foreground">{t('common.memory')}</span>
             </div>
-            {isLoading ? (
+            {effectiveLoading ? (
               <>
                 <div className="h-8 w-20 bg-muted/30 rounded animate-pulse mb-1" />
                 <div className="h-4 w-16 bg-muted/30 rounded animate-pulse" />
@@ -623,18 +645,18 @@ After I approve, help me execute the repairs step by step.`,
             )}
           </button>
           <button
-            onClick={() => !isUnreachable && !isLoading && setShowStorageDetail(true)}
-            disabled={isUnreachable || isLoading}
+            onClick={() => !isUnreachable && !effectiveLoading && setShowStorageDetail(true)}
+            disabled={isUnreachable || effectiveLoading}
             className={`group p-4 rounded-lg bg-card/50 border text-left transition-all duration-200 ${
-              !isUnreachable && !isLoading ? 'border-border hover:border-purple-500/50 hover:bg-purple-500/5 hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer' : 'border-border cursor-default'
+              !isUnreachable && !effectiveLoading ? 'border-border hover:border-purple-500/50 hover:bg-purple-500/5 hover:shadow-lg hover:shadow-purple-500/10 cursor-pointer' : 'border-border cursor-default'
             }`}
-            title={!isUnreachable && !isLoading ? t('clusterDetail.clickToViewStorage') : undefined}
+            title={!isUnreachable && !effectiveLoading ? t('clusterDetail.clickToViewStorage') : undefined}
           >
             <div className="flex items-center gap-2 mb-2">
               <Database className="w-4 h-4 text-purple-400" />
               <span className="text-sm text-muted-foreground">{t('common.storage')}</span>
             </div>
-            {isLoading ? (
+            {effectiveLoading ? (
               <>
                 <div className="h-8 w-20 bg-muted/30 rounded animate-pulse mb-1" />
                 <div className="h-4 w-16 bg-muted/30 rounded animate-pulse" />
@@ -964,7 +986,7 @@ After I approve, help me execute the repairs step by step.`,
             gpuType: n.gpuType || 'Unknown',
             gpuCount: n.gpuCount,
             gpuAllocated: n.gpuAllocated }))}
-          isLoading={isLoading}
+          isLoading={effectiveLoading}
           onClose={() => setShowGPUDetail(false)}
         />
       )}
