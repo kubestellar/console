@@ -52,7 +52,7 @@ export function AiGenerationPanel<T>({
   useEffect(() => {
     if (!trackedMission || phase !== 'generating') return
 
-    const assistantMessages = trackedMission.messages.filter(m => m.role === 'assistant')
+    const assistantMessages = (trackedMission.messages || []).filter(m => m.role === 'assistant')
     const combinedContent = assistantMessages.map(m => m.content).join('')
     if (combinedContent) {
       setStreamingText(combinedContent)

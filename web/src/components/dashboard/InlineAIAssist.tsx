@@ -43,7 +43,7 @@ export function InlineAIAssist<T>({
   useEffect(() => {
     if (!trackedMission || phase !== 'generating') return
 
-    const assistantMessages = trackedMission.messages.filter(m => m.role === 'assistant')
+    const assistantMessages = (trackedMission.messages || []).filter(m => m.role === 'assistant')
     const lastMsg = assistantMessages[assistantMessages.length - 1]
 
     if (

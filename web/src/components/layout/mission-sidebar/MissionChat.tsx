@@ -61,12 +61,13 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const { user } = useAuth()
   const { isDemoMode } = useDemoMode()
   const { findSimilarResolutions, recordUsage } = useResolutions()
+  const missionMessages = mission.messages || []
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
-  const lastMessageCountRef = useRef(mission.messages.length)
+  const lastMessageCountRef = useRef(missionMessages.length)
   // Command history for up/down arrow navigation
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
@@ -87,7 +88,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const titleInputRef = useRef<HTMLInputElement>(null)
 
   // Pre-run editing state — lets users tweak description/steps before executing
-  const isSavedPreRun = mission.status === 'saved' && mission.messages.length === 0
+  const isSavedPreRun = mission.status === 'saved' && missionMessages.length === 0
   const [isEditingMission, setIsEditingMission] = useState(false)
   const [editDescription, setEditDescription] = useState(mission.description)
   const [editSteps, setEditSteps] = useState<Array<{ title: string; description: string }>>(
@@ -135,7 +136,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     const content = [
       mission.title,
       mission.description,
-      ...mission.messages.slice(0, 3).map(m => m.content), // First few messages
+      ...missionMessages.slice(0, 3).map(m => m.content), // First few messages
     ].join('\n')
 
     const signature = detectIssueSignature(content)
@@ -163,7 +164,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       '',
     ]
 
-    for (const msg of mission.messages) {
+    for (const msg of missionMessages) {
       const timestamp = msg.timestamp.toLocaleString()
       if (msg.role === 'user') {
         lines.push(`### User (${timestamp})`)
@@ -215,14 +216,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
   // Auto-scroll to bottom only when new messages are added (not on every render)
   useEffect(() => {
-    const messageCount = mission.messages.length
+    const messageCount = missionMessages.length
     const hasNewMessages = messageCount > lastMessageCountRef.current
     lastMessageCountRef.current = messageCount
 
     if (shouldAutoScroll && hasNewMessages) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [mission.messages.length, shouldAutoScroll])
+  }, [missionMessages.length, shouldAutoScroll])
 
   // Focus input when mission becomes active
   useEffect(() => {
@@ -236,15 +237,15 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   // Without this guard the dialog re-pops on every refresh because the
   // stale "Local Agent Not Connected" system message persists across
   // page loads.
-  const initialMessageCountRef = useRef(mission.messages.length)
+  const initialMessageCountRef = useRef(missionMessages.length)
   useEffect(() => {
     // Skip messages that existed at mount time (restored from persistence).
-    if (mission.messages.length <= initialMessageCountRef.current) return
-    const lastMsg = mission.messages[mission.messages.length - 1]
+    if (missionMessages.length <= initialMessageCountRef.current) return
+    const lastMsg = missionMessages[missionMessages.length - 1]
     if (lastMsg?.role === 'system' && lastMsg.content.includes('Local Agent Not Connected')) {
       setShowSetupDialog(true)
     }
-  }, [mission.messages])
+  }, [missionMessages])
 
   // Scroll to bottom when entering full screen mode
   useEffect(() => {
@@ -259,14 +260,14 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
   // Get the original ask (first user message)
   const originalAsk = (() => {
-    const firstUserMsg = mission.messages.find(m => m.role === 'user')
+    const firstUserMsg = missionMessages.find(m => m.role === 'user')
     return firstUserMsg?.content || mission.description
   })()
 
   // Generate a simple summary based on conversation state
   const conversationSummary = useMemo(() => {
-    const userMsgs = mission.messages.filter(m => m.role === 'user')
-    const assistantMsgs = mission.messages.filter(m => m.role === 'assistant')
+    const userMsgs = missionMessages.filter(m => m.role === 'user')
+    const assistantMsgs = missionMessages.filter(m => m.role === 'assistant')
     const lastAssistant = assistantMsgs[assistantMsgs.length - 1]
 
     // Extract key info from last assistant message
@@ -286,7 +287,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
       hasToolExecution: assistantMsgs.some(m =>
         m.content.includes('```') && (m.content.includes('kubectl') || m.content.includes('executed'))
       ) }
-  }, [mission.messages, mission.status, mission.updatedAt])
+  }, [missionMessages, mission.status, mission.updatedAt])
 
   /** Maximum allowed length for mission titles */
   const MAX_TITLE_LENGTH = 80
@@ -349,7 +350,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
   const handleRetryMission = () => {
     // Find the last user message in the conversation (the one that failed)
-    const lastUserMessage = [...mission.messages].reverse().find(m => m.role === 'user')
+    const lastUserMessage = [...missionMessages].reverse().find(m => m.role === 'user')
     const prompt = lastUserMessage?.content || ''
     if (!prompt.trim()) return
     sendMessage(mission.id, prompt)
@@ -794,10 +795,10 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           </div>
         )}
 
-        {mission.messages.map((msg, index) => {
+        {missionMessages.map((msg, index) => {
           // Find if this is the last assistant message
           const isLastAssistantMessage = msg.role === 'assistant' &&
-            !mission.messages.slice(index + 1).some(m => m.role === 'assistant')
+            !missionMessages.slice(index + 1).some(m => m.role === 'assistant')
 
           return (
             <MemoizedMessage
@@ -1044,7 +1045,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
               <span className={cn(config.color)}>{config.label}</span>
               <span className="text-muted-foreground">{t('missionChat.switchAgentRetry')}</span>
             </div>
-            {mission.messages.some(m => m.role === 'user') && (
+            {missionMessages.some(m => m.role === 'user') && (
               <button
                 onClick={handleRetryMission}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"

@@ -237,7 +237,7 @@ export function MissionSidebar() {
     const content = [
       activeMission.title,
       activeMission.description,
-      ...activeMission.messages.slice(0, 3).map(m => m.content),
+      ...(activeMission.messages || []).slice(0, 3).map(m => m.content),
     ].join('\n')
     const signature = detectIssueSignature(content)
     if (!signature.type || signature.type === 'Unknown') return []

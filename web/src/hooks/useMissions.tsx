@@ -36,6 +36,9 @@ import {
   stripInteractiveArtifacts, buildSavedMissionPrompt,
 } from './useMissionPromptBuilder'
 
+function getMissionMessages(messages?: MissionMessage[]): MissionMessage[] {
+  return messages || []
+}
 
 interface MissionContextValue {
   missions: Mission[]
@@ -693,7 +696,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             currentStep: undefined,
             updatedAt: new Date(),
             messages: [
-              ...m.messages,
+              ...getMissionMessages(m.messages),
               {
                 id: `msg-timeout-${Date.now()}-${m.id}`,
                 role: 'system' as const,
@@ -837,7 +840,8 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   // 'completed' with a softer note instead. Truly-failed
                   // (no assistant response, or last message is a system
                   // message) keeps the original 'failed' + retry CTA.
-                  const lastMsg = m.messages[m.messages.length - 1]
+                  const missionMessages = getMissionMessages(m.messages)
+                  const lastMsg = missionMessages[missionMessages.length - 1]
                   const lastWasSuccessfulAssistant =
                     lastMsg !== undefined &&
                     lastMsg.role === 'assistant' &&
@@ -852,7 +856,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                         ...m.context,
                         needsReconnect: false },
                       messages: [
-                        ...m.messages,
+                        ...missionMessages,
                         {
                           id: `msg-reconnect-stale-success-${m.id}-${Date.now()}`,
                           role: 'system' as const,
@@ -875,7 +879,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                       ...m.context,
                       needsReconnect: false },
                     messages: [
-                      ...m.messages,
+                      ...missionMessages,
                       {
                         id: `msg-reconnect-stale-${m.id}-${Date.now()}`,
                         role: 'system' as const,
@@ -892,7 +896,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                     updatedAt: new Date(),
                     context: { ...m.context, needsReconnect: false },
                     messages: [
-                      ...m.messages,
+                      ...getMissionMessages(m.messages),
                       {
                         id: `msg-reconnect-abort-${m.id}-${Date.now()}`,
                         role: 'system' as const,
@@ -954,7 +958,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                 }
 
                 // Find the last user message to re-send
-                const userMessages = mission.messages.filter(msg => msg.role === 'user')
+                const userMessages = getMissionMessages(mission.messages).filter(msg => msg.role === 'user')
                 const lastUserMessage = userMessages[userMessages.length - 1]
 
                 if (lastUserMessage && wsRef.current?.readyState === WebSocket.OPEN) {
@@ -980,7 +984,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                   // `history` and `prompt`, it's seen twice by the model.
                   // Exclude the trailing user turn from `history` so `prompt`
                   // is the single source of truth for the new message.
-                  const fullHistory = mission.messages
+                  const fullHistory = getMissionMessages(mission.messages)
                     .filter(msg => msg.role === 'user' || msg.role === 'assistant')
                     .map(msg => ({
                       role: msg.role,
@@ -1137,7 +1141,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
                     status: 'failed',
                     currentStep: undefined,
                     messages: [
-                      ...m.messages,
+                      ...getMissionMessages(m.messages),
                       {
                         id: generateMessageId(m.id),
                         role: 'system',
@@ -1201,7 +1205,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
                 if (!affectedMissionIds.has(m.id)) return m
                 if (m.status !== 'running' && m.status !== 'waiting_input') return m
                 return { ...m, status: 'failed' as MissionStatus, currentStep: 'Connection failed',
-                  messages: [...m.messages, { id: generateMessageId('ws-error'), role: 'system' as const, content: errorContent, timestamp: new Date() }] }
+                  messages: [...getMissionMessages(m.messages), { id: generateMessageId('ws-error'), role: 'system' as const, content: errorContent, timestamp: new Date() }] }
               }))
             } else {
               setMissions(prev => prev.map(m => {
@@ -1315,7 +1319,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           currentStep: undefined,
           updatedAt: new Date(),
           messages: [
-            ...m.messages,
+            ...getMissionMessages(m.messages),
             {
               id: `msg-waiting-timeout-${Date.now()}-${m.id}`,
               role: 'system' as const,
@@ -1367,7 +1371,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         currentStep: undefined,
         updatedAt: new Date(),
         messages: [
-          ...m.messages,
+          ...getMissionMessages(m.messages),
           {
             id: generateMessageId(),
             role: 'system',
@@ -1664,7 +1668,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       } else if (message.type === 'stream') {
         // Streaming response from agent
         const payload = message.payload as ChatStreamPayload
-        const lastMsg = m.messages[m.messages.length - 1]
+        const missionMessages = getMissionMessages(m.messages)
+        const lastMsg = missionMessages[missionMessages.length - 1]
         const now = Date.now()
         const lastTs = lastStreamTimestamp.current.get(missionId)
 
@@ -1698,7 +1703,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             updatedAt: new Date(),
             agent: payload.agent || m.agent,
             messages: [
-              ...m.messages.slice(0, -1),
+              ...missionMessages.slice(0, -1),
               { ...lastMsg, content: lastMsg.content + (payload.content || ''), agent: payload.agent || lastMsg.agent }
             ]
           }
@@ -1718,7 +1723,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             updatedAt: new Date(),
             agent: payload.agent || m.agent,
             messages: [
-              ...m.messages,
+              ...missionMessages,
               {
                 id: generateMessageId(`s${splitIndex}`),
                 role: 'assistant' as const,
@@ -1810,13 +1815,14 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         const resultContent = chatPayload.content || (payload as { output?: string }).output || 'Task completed.'
         // Check ALL assistant messages since the last user message for streamed content
         // (streaming may split into multiple bubbles due to tool-use gaps)
-        const lastUserIdx = m.messages.map(msg => msg.role).lastIndexOf('user')
+        const missionMessages = getMissionMessages(m.messages)
+        const lastUserIdx = missionMessages.map(msg => msg.role).lastIndexOf('user')
         // #7320 — When no user messages exist (system-generated missions),
         // limit the lookback to the last MAX_DEDUP_LOOKBACK messages to prevent
         // memory spikes on massive histories.
         const MAX_DEDUP_LOOKBACK = 50
-        const sliceStart = lastUserIdx >= 0 ? lastUserIdx + 1 : Math.max(0, m.messages.length - MAX_DEDUP_LOOKBACK)
-        const streamedSinceUser = m.messages
+        const sliceStart = lastUserIdx >= 0 ? lastUserIdx + 1 : Math.max(0, missionMessages.length - MAX_DEDUP_LOOKBACK)
+        const streamedSinceUser = missionMessages
           .slice(sliceStart)
           .filter(msg => msg.role === 'assistant')
           .map(msg => msg.content)
@@ -1861,8 +1867,8 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           updatedAt: new Date(),
           agent: chatPayload.agent || m.agent,
           tokenUsage,
-          messages: alreadyStreamed ? m.messages : [
-            ...m.messages,
+          messages: alreadyStreamed ? getMissionMessages(m.messages) : [
+            ...getMissionMessages(m.messages),
             {
               id: generateMessageId(),
               role: 'assistant' as const,
@@ -1932,7 +1938,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           currentStep: undefined,
           updatedAt: new Date(),
           messages: [
-            ...m.messages,
+            ...getMissionMessages(m.messages),
             {
               id: generateMessageId(),
               role: 'system' as const,
@@ -1973,7 +1979,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             currentStep: 'Missing required tools',
             preflightError: toolResult.error,
             messages: [
-              ...m.messages,
+              ...getMissionMessages(m.messages),
               {
                 id: generateMessageId('tool-preflight'),
                 role: 'system' as const,
@@ -2013,7 +2019,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             currentStep: 'Preflight check failed',
             preflightError: preflight.error,
             messages: [
-              ...m.messages,
+              ...getMissionMessages(m.messages),
               {
                 id: generateMessageId('preflight'),
                 role: 'system' as const,
@@ -2058,7 +2064,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
           },
           messages: [
-            ...m.messages,
+            ...getMissionMessages(m.messages),
             {
               id: generateMessageId('preflight-error'),
               role: 'system' as const,
@@ -2082,7 +2088,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             details: { hint: 'The tool pre-flight check threw an unexpected error. Verify the local agent is running.' },
           },
           messages: [
-            ...m.messages,
+            ...getMissionMessages(m.messages),
             {
               id: generateMessageId('tool-check-error'),
               role: 'system' as const,
@@ -2230,7 +2236,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
                   status: 'failed',
                   currentStep: undefined,
                   messages: [
-                    ...m.messages,
+                    ...getMissionMessages(m.messages),
                     {
                       id: generateMessageId('kagenti-missing-agent'),
                       role: 'system',
@@ -2251,13 +2257,14 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             setMissions(prev => prev.map(m => {
               if (m.id !== missionId) return m
 
-              const idx = m.messages.findIndex(msg => msg.id === assistantMessageId)
+              const missionMessages = getMissionMessages(m.messages)
+              const idx = missionMessages.findIndex(msg => msg.id === assistantMessageId)
               if (idx === -1) {
                 return {
                   ...m,
                   currentStep: `Processing with ${selectedAgentRef.current || 'kagenti'}...`,
                   messages: [
-                    ...m.messages,
+                    ...missionMessages,
                     {
                       id: assistantMessageId,
                       role: 'assistant',
@@ -2269,7 +2276,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
                 }
               }
 
-              const nextMessages = [...m.messages]
+              const nextMessages = [...missionMessages]
               nextMessages[idx] = {
                 ...nextMessages[idx],
                 content: `${nextMessages[idx].content}${text}`,
@@ -2290,16 +2297,17 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             setMissions(prev => prev.map(m => {
               if (m.id !== missionId) return m
 
-              const hasAssistant = m.messages.some(msg => msg.id === assistantMessageId && msg.content.trim().length > 0)
+              const missionMessages = getMissionMessages(m.messages)
+              const hasAssistant = missionMessages.some(msg => msg.id === assistantMessageId && msg.content.trim().length > 0)
               return {
                 ...m,
                 status: 'completed',
                 currentStep: undefined,
                 updatedAt: new Date(),
                 messages: hasAssistant
-                  ? m.messages
+                  ? missionMessages
                   : [
-                      ...m.messages,
+                      ...missionMessages,
                       {
                         id: assistantMessageId,
                         role: 'assistant',
@@ -2323,7 +2331,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
                     currentStep: undefined,
                     updatedAt: new Date(),
                     messages: [
-                      ...m.messages,
+                      ...getMissionMessages(m.messages),
                       {
                         id: generateMessageId('kagenti-error'),
                         role: 'system',
@@ -2418,7 +2426,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           status: 'failed',
           currentStep: undefined,
           messages: [
-            ...m.messages,
+            ...getMissionMessages(m.messages),
             {
               id: generateMessageId(),
               role: 'system',
@@ -2460,7 +2468,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
               currentStep: 'Missing required tools',
               preflightError: toolResult.error,
               messages: [
-                ...m.messages,
+                ...getMissionMessages(m.messages),
                 {
                   id: generateMessageId('tool-preflight-retry'),
                   role: 'system' as const,
@@ -2508,7 +2516,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
               currentStep: 'Preflight check failed',
               preflightError: preflight.error,
               messages: [
-                ...m.messages,
+                ...getMissionMessages(m.messages),
                 {
                   id: generateMessageId('preflight-retry'),
                   role: 'system' as const,
@@ -2529,7 +2537,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         // only prepended cluster context, losing dry-run instructions,
         // resolution context, and non-interactive handling from the original
         // enriched prompt.
-        const lastUserMsg = mission.messages.find(m => m.role === 'user')
+        const lastUserMsg = getMissionMessages(mission.messages).find(m => m.role === 'user')
         const retryParams: StartMissionParams = {
           title: mission.title,
           description: mission.description,
@@ -2546,7 +2554,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
             ...m,
             preflightError: undefined,
             messages: [
-              ...m.messages,
+              ...getMissionMessages(m.messages),
               {
                 id: generateMessageId('preflight-ok'),
                 role: 'system' as const,
@@ -2625,7 +2633,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         setMissions(prev => prev.map(m => m.id === missionId ? {
           ...m,
           status: 'failed' as const,
-          messages: [...m.messages, {
+          messages: [...getMissionMessages(m.messages), {
             id: generateMessageId(),
             role: 'system' as const,
             content: `**Mission blocked:** Imported mission contains potentially unsafe content:\n\n${findings.map(f => `- ${f.message}: \`${f.match}\` (in ${f.location})`).join('\n')}\n\nPlease review and edit the mission before running.`,
@@ -2721,7 +2729,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           preflightError: undefined,
           updatedAt: new Date(),
           messages: [
-            ...m.messages,
+            ...getMissionMessages(m.messages),
             {
               id: `msg-cancel-pending-${Date.now()}`,
               role: 'system' as const,
@@ -2788,7 +2796,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         currentStep: 'Cancelling mission...',
         updatedAt: new Date(),
         messages: [
-          ...m.messages,
+          ...getMissionMessages(m.messages),
           {
             id: generateMessageId(),
             role: 'system',
@@ -2907,7 +2915,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           status: 'failed',
           currentStep: undefined,
           messages: [
-            ...m.messages,
+            ...getMissionMessages(m.messages),
             {
               id: generateMessageId(),
               role: 'system',
@@ -2925,15 +2933,16 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     let removedContent: string | null = null
     setMissions(prev => prev.map(m => {
       if (m.id !== missionId) return m
-      const msgIndex = m.messages.findIndex(msg => msg.id === messageId)
+      const missionMessages = getMissionMessages(m.messages)
+      const msgIndex = missionMessages.findIndex(msg => msg.id === messageId)
       if (msgIndex < 0) return m
-      const targetMsg = m.messages[msgIndex]
+      const targetMsg = missionMessages[msgIndex]
       if (targetMsg.role !== 'user') return m
       removedContent = targetMsg.content
       return {
         ...m,
         // Truncate from the edited message onward
-        messages: m.messages.slice(0, msgIndex),
+        messages: missionMessages.slice(0, msgIndex),
         // Reset status so the user can re-send
         status: m.status === 'running' || m.status === 'cancelling' ? m.status : 'waiting_input' as MissionStatus,
         updatedAt: new Date(),

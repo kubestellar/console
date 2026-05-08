@@ -99,7 +99,7 @@ export function loadMissions(): Mission[] {
             currentStep: undefined,
             updatedAt: new Date(),
             messages: [
-              ...mission.messages,
+              ...(mission.messages || []),
               {
                 id: `msg-pending-reload-${mission.id}-${Date.now()}`,
                 role: 'system' as const,
@@ -115,7 +115,7 @@ export function loadMissions(): Mission[] {
             status: 'failed',
             currentStep: undefined,
             messages: [
-              ...mission.messages,
+              ...(mission.messages || []),
               {
                 id: `msg-cancel-${mission.id}-${Date.now()}`,
                 role: 'system' as const,
@@ -181,7 +181,7 @@ export function saveMissions(missions: Mission[]) {
         console.warn('[Missions] still full after count-pruning, stripping chat messages')
         const stripped = pruned.map(m =>
           (m.status === 'completed' || m.status === 'failed' || m.status === 'cancelled')
-            ? { ...m, messages: m.messages.slice(-3) } // keep only last 3 messages
+            ? { ...m, messages: (m.messages || []).slice(-3) } // keep only last 3 messages
             : m
         )
         try {
@@ -247,7 +247,7 @@ export function mergeMissions(prev: Mission[], reloaded: Mission[]): Mission[] {
     // more user actions and should win. If counts also match, prefer remote
     // (already-persisted) as before.
     if (remoteTime === localTime) {
-      merged.push(remote.messages.length >= local.messages.length ? remote : local)
+      merged.push((remote.messages || []).length >= (local.messages || []).length ? remote : local)
     } else {
       merged.push(remoteTime > localTime ? remote : local)
     }

@@ -851,7 +851,8 @@ export function useMissionControl() {
     // immediate feedback in Phase 1 (the error details are also in the sidebar,
     // but the sidebar may not be visible).
     if (status === 'failed' && state.aiStreaming) {
-      const lastMsg = planningMission.messages[planningMission.messages.length - 1]
+      const planningMessages = planningMission.messages || []
+      const lastMsg = planningMessages[planningMessages.length - 1]
       const msgText = (lastMsg?.content || '').toLowerCase()
       const isAuthError =
         msgText.includes('401') ||

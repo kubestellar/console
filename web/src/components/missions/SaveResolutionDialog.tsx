@@ -86,10 +86,11 @@ const CONVERSATION_TRUNCATION_MARKER = '\n\n[…earlier conversation omitted…]
  * WebSocket frame stays under the agent's read limit (#9162).
  */
 function buildConversationSnippet(messages: Mission['messages']): string {
+  const safeMessages = messages || []
   // Take only the most recent messages — older context adds little to a
   // resolution summary and risks blowing past the agent's read limit.
-  const recent = messages.slice(-MAX_SUMMARY_MESSAGES)
-  const omittedCount = messages.length - recent.length
+  const recent = safeMessages.slice(-MAX_SUMMARY_MESSAGES)
+  const omittedCount = safeMessages.length - recent.length
 
   const lines = recent.map(m => {
     const content = m.content.length > MAX_MESSAGE_CHARS
@@ -323,7 +324,7 @@ export function SaveResolutionDialog({
     const content = [
       mission.title,
       mission.description,
-      ...mission.messages.map(m => m.content),
+      ...(mission.messages || []).map(m => m.content),
     ].join('\n')
 
     return detectIssueSignature(content)
