@@ -55,15 +55,25 @@ export function Alerts() {
 
     switch (blockId) {
       case 'firing':
-        return { value: stats.firing, sublabel: 'active alerts', onClick: drillToFiringAlert, isClickable: stats.firing > 0 }
+        return {
+          value: stats.firing,
+          sublabel: t('alerts.activeAlertsSublabel', { defaultValue: 'active alerts' }),
+          onClick: drillToFiringAlert,
+          isClickable: stats.firing > 0,
+        }
       case 'pending':
-        return { value: 0, sublabel: 'pending', isClickable: false }
+        return { value: 0, sublabel: t('alerts.pendingSublabel', { defaultValue: 'pending' }), isClickable: false }
       case 'resolved':
-        return { value: stats.resolved, sublabel: 'resolved', onClick: drillToResolvedAlert, isClickable: stats.resolved > 0 }
+        return {
+          value: stats.resolved,
+          sublabel: t('alerts.resolvedSublabel', { defaultValue: 'resolved' }),
+          onClick: drillToResolvedAlert,
+          isClickable: stats.resolved > 0,
+        }
       case 'rules_enabled':
-        return { value: enabledRulesCount, sublabel: 'rules enabled', isClickable: false }
+        return { value: enabledRulesCount, sublabel: t('alerts.rulesEnabledSublabel', { defaultValue: 'rules enabled' }), isClickable: false }
       case 'rules_disabled':
-        return { value: disabledRulesCount, sublabel: 'rules disabled', isClickable: false }
+        return { value: disabledRulesCount, sublabel: t('alerts.rulesDisabledSublabel', { defaultValue: 'rules disabled' }), isClickable: false }
       default:
         return { value: 0 }
     }
@@ -90,7 +100,7 @@ export function Alerts() {
       hasData={stats.firing > 0 || enabledRulesCount > 0}
       emptyState={{
         title: t('alerts.dashboardTitle'),
-        description: 'Add cards to monitor alerts, rules, and issues across your clusters.' }}
+        description: t('alerts.emptyStateDescription', { defaultValue: 'Add cards to monitor alerts, rules, and issues across your clusters.' }) }}
     >
       {/* Error Display */}
       {error && (

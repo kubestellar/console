@@ -43,7 +43,11 @@ vi.mock('../../../../hooks/useDrillDown', () => ({
 // Issue 8844 — MultiClusterSummaryDrillDown now reads alerts from useAlerts so the
 // all-alerts drill-down matches the Alerts dashboard stat blocks.
 vi.mock('../../../../hooks/useAlerts', () => ({
-  useAlerts: () => ({ alerts: [], stats: { total: 0, firing: 0, resolved: 0, critical: 0, warning: 0, info: 0, acknowledged: 0 } }),
+  useAlerts: () => ({
+    alerts: [],
+    deduplicatedAlerts: [],
+    stats: { total: 0, firing: 0, resolved: 0, critical: 0, warning: 0, info: 0, acknowledged: 0 },
+  }),
 }))
 
 vi.mock('../../../../hooks/useCachedData', () => ({

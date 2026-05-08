@@ -267,6 +267,7 @@ const ALERT_RULES_KEY = 'kc_alert_rules'
 
 interface AlertsContextValue {
   alerts: Alert[]
+  deduplicatedAlerts: Alert[]
   activeAlerts: Alert[]
   acknowledgedAlerts: Alert[]
   stats: AlertStats
@@ -601,21 +602,22 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  const deduplicatedAlerts = useMemo(() => deduplicateAlerts(alerts, rules), [alerts, rules])
+
   // Calculate alert statistics — memoize to prevent unstable references in context consumers
   // #7336 — Compute stats from deduplicated alerts so counters match
   // the displayed alert list (which uses deduplicateAlerts).
   const stats: AlertStats = useMemo(() => {
-    const deduped = deduplicateAlerts(alerts, rules)
-    const unacknowledgedFiring = deduped.filter(a => a.status === 'firing' && !a.acknowledgedAt)
+    const unacknowledgedFiring = deduplicatedAlerts.filter(a => a.status === 'firing' && !a.acknowledgedAt)
     return {
-      total: deduped.length,
+      total: deduplicatedAlerts.length,
       firing: unacknowledgedFiring.length,
-      resolved: deduped.filter(a => a.status === 'resolved').length,
+      resolved: deduplicatedAlerts.filter(a => a.status === 'resolved').length,
       critical: unacknowledgedFiring.filter(a => a.severity === 'critical').length,
       warning: unacknowledgedFiring.filter(a => a.severity === 'warning').length,
       info: unacknowledgedFiring.filter(a => a.severity === 'info').length,
-      acknowledged: deduped.filter(a => a.acknowledgedAt && a.status === 'firing').length }
-  }, [alerts, rules])
+      acknowledged: deduplicatedAlerts.filter(a => a.acknowledgedAt && a.status === 'firing').length }
+  }, [deduplicatedAlerts])
 
   // Get active (firing) alerts - exclude acknowledged alerts. Deduplicated via shared helper.
   const activeAlerts = useMemo(() => {
@@ -1736,6 +1738,7 @@ Please provide:
 
   const value = useMemo<AlertsContextValue>(() => ({
     alerts,
+    deduplicatedAlerts,
     activeAlerts,
     acknowledgedAlerts,
     stats,
@@ -1753,7 +1756,7 @@ Please provide:
     updateRule,
     deleteRule,
     toggleRule }), [
-    alerts, activeAlerts, acknowledgedAlerts, stats, rules,
+    alerts, deduplicatedAlerts, activeAlerts, acknowledgedAlerts, stats, rules,
     isEvaluating, isLoadingData, dataError,
     acknowledgeAlert, acknowledgeAlerts, resolveAlert, deleteAlert,
     runAIDiagnosis, stableEvaluateConditions,

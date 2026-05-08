@@ -121,6 +121,7 @@ export function useAlerts() {
   if (!context) {
     return {
       alerts: [] as Alert[],
+      deduplicatedAlerts: [] as Alert[],
       activeAlerts: [] as Alert[],
       acknowledgedAlerts: [] as Alert[],
       stats: _defaultAlertStats,
@@ -135,6 +136,7 @@ export function useAlerts() {
   }
   const {
     alerts,
+    deduplicatedAlerts,
     activeAlerts,
     acknowledgedAlerts,
     stats,
@@ -149,6 +151,7 @@ export function useAlerts() {
 
   return {
     alerts,
+    deduplicatedAlerts,
     activeAlerts,
     acknowledgedAlerts,
     stats,

@@ -619,7 +619,7 @@ describe('stable references (regression)', () => {
   it('useAlerts outside context exposes all expected properties', () => {
     const { result } = renderHook(() => useAlerts())
     const expectedKeys = [
-      'alerts', 'activeAlerts', 'acknowledgedAlerts', 'stats',
+      'alerts', 'deduplicatedAlerts', 'activeAlerts', 'acknowledgedAlerts', 'stats',
       'acknowledgeAlert', 'acknowledgeAlerts', 'resolveAlert', 'deleteAlert',
       'runAIDiagnosis', 'evaluateConditions', 'isLoadingData', 'dataError',
     ]

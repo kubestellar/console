@@ -133,14 +133,11 @@ const SIDEBAR_MAX_WIDTH_PX = 480
 /** Index of the primary (dashboard list) section — "Add more..." button renders after it */
 const PRIMARY_SECTION_INDEX = 0
 
-/** Map sidebar item href to dashboard config ID for card count display.
- * NOTE: '/alerts' is intentionally excluded — displaying the card count
- * next to "Alerts" would be confused with the active alert count shown
- * in the header badge (#11404). */
+/** Map sidebar item href to dashboard config ID for card count display. */
 const HREF_TO_DASHBOARD_ID: Record<string, string> = {
   '/': 'main', '/compute': 'compute', '/security': 'security',
   '/gitops': 'gitops', '/storage': 'storage', '/network': 'network',
-  '/events': 'events', '/workloads': 'workloads', '/operators': 'operators',
+  '/events': 'events', '/alerts': 'alerts', '/workloads': 'workloads', '/operators': 'operators',
   '/clusters': 'clusters', '/compliance': 'compliance', '/cost': 'cost',
   '/gpu-reservations': 'gpu', '/nodes': 'nodes', '/deployments': 'deployments',
   '/pods': 'pods', '/services': 'services', '/helm': 'helm',

@@ -189,7 +189,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   // could show e.g. 18 while the drill-down list was always empty because
   // synthetic pod-alerts never carry status='resolved'. Using the real
   // alerts list here keeps the count and the list in lock-step.
-  const { alerts: contextAlerts } = useAlerts()
+  const { deduplicatedAlerts: contextAlerts } = useAlerts()
   // Use useCachedAllNodes (not useCachedNodes) for the cumulative,
   // cross-cluster drill-down list so the UI never substitutes four
   // hard-coded demo nodes for a real-but-empty live result (Issue 8840).
@@ -483,6 +483,8 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       const status = config.getStatus(item as Record<string, unknown>)?.toLowerCase() || ''
       return ['running', 'healthy', 'ready', 'active', 'deployed', 'succeeded', 'available', 'normal'].includes(status)
     }).length
+    const firing = filteredItems.filter(item => config.getStatus(item as Record<string, unknown>)?.toLowerCase() === 'firing').length
+    const resolved = filteredItems.filter(item => config.getStatus(item as Record<string, unknown>)?.toLowerCase() === 'resolved').length
 
     let total = listTotal
     if (listTotal === 0 && !searchQuery && statusFilter === 'all' && clusterFilter === 'all') {
@@ -496,7 +498,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
     // issues (we don't have per-item statuses), so treat them as unknown.
     const issues = total - healthy
 
-    return { total, healthy, issues }
+    return { total, healthy, issues, firing, resolved }
   })()
 
   return (
@@ -526,20 +528,41 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
           </div>
           <div className="text-2xl font-bold">{stats.total}</div>
         </div>
-        <div className="glass rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle className="w-5 h-5 text-green-400" />
-            <span className="text-sm text-muted-foreground">{t('common.healthy')}</span>
-          </div>
-          <div className="text-2xl font-bold text-green-400">{stats.healthy}</div>
-        </div>
-        <div className="glass rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-400" />
-            <span className="text-sm text-muted-foreground">Issues</span>
-          </div>
-          <div className="text-2xl font-bold text-yellow-400">{stats.issues}</div>
-        </div>
+        {viewType === 'all-alerts' ? (
+          <>
+            <div className="glass rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+                <span className="text-sm text-muted-foreground">{t('alerts.firingLabel', { defaultValue: 'Firing' })}</span>
+              </div>
+              <div className="text-2xl font-bold text-red-400">{stats.firing}</div>
+            </div>
+            <div className="glass rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <span className="text-sm text-muted-foreground">{t('alerts.resolvedLabel', { defaultValue: 'Resolved' })}</span>
+              </div>
+              <div className="text-2xl font-bold text-green-400">{stats.resolved}</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="glass rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="w-5 h-5 text-green-400" />
+                <span className="text-sm text-muted-foreground">{t('common.healthy')}</span>
+              </div>
+              <div className="text-2xl font-bold text-green-400">{stats.healthy}</div>
+            </div>
+            <div className="glass rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                <span className="text-sm text-muted-foreground">{t('common.issues', { defaultValue: 'Issues' })}</span>
+              </div>
+              <div className="text-2xl font-bold text-yellow-400">{stats.issues}</div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Filters */}
