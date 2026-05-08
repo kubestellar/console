@@ -446,7 +446,6 @@ export function StatsOverview({
   collapsible = true,
   defaultExpanded = true,
   collapsedStorageKey,
-  lastUpdated,
   className = '',
   title,
   showConfigButton = true,

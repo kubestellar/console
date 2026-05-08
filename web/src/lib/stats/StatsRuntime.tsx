@@ -153,7 +153,6 @@ export function StatsRuntime({
   getStatValue: customGetStatValue,
   hasData = true,
   isLoading = false,
-  lastUpdated,
   collapsible = true,
   defaultExpanded = true,
   collapsedStorageKey,
