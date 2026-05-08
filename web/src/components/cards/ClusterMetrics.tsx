@@ -321,7 +321,7 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
         nodes: c.nodeCount || 0 }
     })
     const newPoint: MetricPoint = {
-      time: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: new Date(now).toLocaleTimeString([], DEMO_TIME_FORMAT_OPTIONS),
       timestamp: now,
       cpu: realValues.cpu,
       memory: realValues.memory,
@@ -356,6 +356,29 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
 
   const rangeMs = TIME_RANGE_MS[timeRange]
   const filteredHistory = effectiveHistory.filter(point => Date.now() - point.timestamp <= rangeMs)
+
+  const demoHistory = useMemo(() => {
+    if (!isDemoMode || clusters.length === 0) return []
+
+    const now = Date.now()
+    const clusterMetrics = clusters.reduce<Record<string, ClusterMetricValues>>((acc, cluster) => {
+      acc[cluster.name] = {
+        cpu: cluster.cpuCores || 0,
+        memory: cluster.memoryGB || 0,
+        pods: cluster.podCount || 0,
+        nodes: cluster.nodeCount || 0,
+      }
+      return acc
+    }, {})
+
+    return Array.from({ length: MAX_HISTORY_POINTS }, (_unused, index) => {
+      const pointsFromNow = MAX_HISTORY_POINTS - index - 1
+      const timestamp = now - (pointsFromNow * CLUSTER_POLL_INTERVAL_MS)
+      return buildDemoMetricPoint(timestamp, clusterMetrics)
+    })
+  }, [clusters, isDemoMode])
+
+  const historyForDisplay = isDemoMode ? demoHistory : history
 
   // Transform history to chart data for selected metric
   const data = filteredHistory.map(point => ({
@@ -409,6 +432,7 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
   })()
 
   const config = metricConfig[selectedMetric]
+  const latestChartValue = data[data.length - 1]?.value ?? 0
   // Use real current value if non-zero, otherwise fall back to the last
   // known non-null chart value so the header stays in sync with the chart
   // instead of showing a misleading 0 during temporary data loss (#6875).
@@ -425,6 +449,12 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
     }
     return 0
   })()
+  const dataValues = (data || []).map(point => point.value)
+  const minValue = dataValues.length > 0 ? Math.min(...dataValues) : 0
+  const avgValue = dataValues.length > 0
+    ? dataValues.reduce((sum, value) => sum + value, 0) / dataValues.length
+    : 0
+  const maxValue = dataValues.length > 0 ? Math.max(...dataValues) : 0
 
   return (
     <div className="h-full flex flex-col">
@@ -563,19 +593,19 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.min')}</p>
             <p className="text-sm font-medium text-foreground">
-              {(() => { const vals = data.map((d) => d.value); return Math.round(vals.length > 0 ? Math.min(...vals) : 0) })()}{config.unit}
+              {Math.round(minValue)}{config.unit}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.avg')}</p>
             <p className="text-sm font-medium text-foreground">
-              {Math.round(data.reduce((a, b) => a + b.value, 0) / data.length)}{config.unit}
+              {Math.round(avgValue)}{config.unit}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.max')}</p>
             <p className="text-sm font-medium text-foreground">
-              {(() => { const vals = data.map((d) => d.value); return Math.round(vals.length > 0 ? Math.max(...vals) : 0) })()}{config.unit}
+              {Math.round(maxValue)}{config.unit}
             </p>
           </div>
         </div>
