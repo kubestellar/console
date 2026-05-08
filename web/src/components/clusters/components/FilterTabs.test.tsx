@@ -119,4 +119,19 @@ describe('FilterTabs', () => {
     // Both buttons should share a common parent container
     expect(addBtn.closest('div')).toBe(createBtn.closest('div'))
   })
+
+  it('uses the same semantic colour scheme for both cluster action buttons', () => {
+    const onAddCluster = vi.fn()
+    const onCreateClusterWithAI = vi.fn()
+    renderFilterTabs({ onAddCluster, onCreateClusterWithAI })
+
+    const addBtn = screen.getByRole('button', { name: 'cluster.addCluster' })
+    const createBtn = screen.getByRole('button', { name: 'cluster.createClusterWithAI' })
+
+    expect(addBtn.className).toContain('bg-primary')
+    expect(addBtn.className).toContain('text-primary-foreground')
+    expect(createBtn.className).toContain('bg-primary')
+    expect(createBtn.className).toContain('text-primary-foreground')
+    expect(createBtn.className).not.toContain('bg-purple-600/80')
+  })
 })
