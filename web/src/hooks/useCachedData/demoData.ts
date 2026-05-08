@@ -112,11 +112,47 @@ interface _CoreDNSClusterStatus {
 // ============================================================================
 
 export const getDemoPods = (): PodInfo[] => [
-  { name: 'frontend-7d8f9c4b5-x2km4', namespace: 'production', status: 'Running', ready: '1/1', restarts: 0, age: '2d', cpuRequestMillis: 500, memoryRequestBytes: 536870912, cpuUsageMillis: 320, memoryUsageBytes: 412516352, metricsAvailable: true },
-  { name: 'backend-api-6c8d7f5e4-j3ln9', namespace: 'production', status: 'Running', ready: '2/2', restarts: 1, age: '5d', cpuRequestMillis: 1000, memoryRequestBytes: 1073741824, cpuUsageMillis: 850, memoryUsageBytes: 892871680, metricsAvailable: true },
-  { name: 'ml-worker-8f9a6b7c3-k4lm2', namespace: 'ml-workloads', status: 'Running', ready: '1/1', restarts: 0, age: '1d', cpuRequestMillis: 4000, memoryRequestBytes: 8589934592, gpuRequest: 2, cpuUsageMillis: 3200, memoryUsageBytes: 7516192768, metricsAvailable: true },
-  { name: 'inference-server-5d4c3b2a1-n7op9', namespace: 'ml-workloads', status: 'Running', ready: '1/1', restarts: 2, age: '3d', cpuRequestMillis: 2000, memoryRequestBytes: 4294967296, gpuRequest: 1, cpuUsageMillis: 1850, memoryUsageBytes: 3865470566, metricsAvailable: true },
-  { name: 'cache-redis-6e5d4c3b2-q8rs1', namespace: 'production', status: 'Running', ready: '1/1', restarts: 0, age: '7d', cpuRequestMillis: 250, memoryRequestBytes: 268435456, cpuUsageMillis: 45, memoryUsageBytes: 134217728, metricsAvailable: true },
+  { name: 'frontend-7d8f9c4b5-x2km4', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'Running', ready: '1/1', restarts: 0, age: '2d', cpuRequestMillis: 500, memoryRequestBytes: 536870912, cpuUsageMillis: 320, memoryUsageBytes: 412516352, metricsAvailable: true },
+  { name: 'backend-api-6c8d7f5e4-j3ln9', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'Running', ready: '2/2', restarts: 1, age: '5d', cpuRequestMillis: 1000, memoryRequestBytes: 1073741824, cpuUsageMillis: 850, memoryUsageBytes: 892871680, metricsAvailable: true },
+  { name: 'ml-worker-8f9a6b7c3-k4lm2', namespace: 'ml-workloads', cluster: 'vllm-gpu-cluster', status: 'Running', ready: '1/1', restarts: 0, age: '1d', cpuRequestMillis: 4000, memoryRequestBytes: 8589934592, gpuRequest: 2, cpuUsageMillis: 3200, memoryUsageBytes: 7516192768, metricsAvailable: true },
+  { name: 'inference-server-5d4c3b2a1-n7op9', namespace: 'ml-workloads', cluster: 'vllm-gpu-cluster', status: 'Running', ready: '1/1', restarts: 2, age: '3d', cpuRequestMillis: 2000, memoryRequestBytes: 4294967296, gpuRequest: 1, cpuUsageMillis: 1850, memoryUsageBytes: 3865470566, metricsAvailable: true },
+  { name: 'cache-redis-6e5d4c3b2-q8rs1', namespace: 'production', cluster: 'gke-staging', status: 'Running', ready: '1/1', restarts: 0, age: '7d', cpuRequestMillis: 250, memoryRequestBytes: 268435456, cpuUsageMillis: 45, memoryUsageBytes: 134217728, metricsAvailable: true },
+  {
+    name: 'etcd-ip-10-0-12-17.ec2.internal',
+    namespace: 'kube-system',
+    cluster: 'eks-prod-us-east-1',
+    status: 'Running',
+    ready: '1/1',
+    restarts: 0,
+    age: '14d',
+    node: 'ip-10-0-12-17.ec2.internal',
+    labels: { component: 'etcd', 'app.kubernetes.io/name': 'etcd', tier: 'control-plane' },
+    containers: [{ name: 'etcd', image: 'registry.k8s.io/etcd:3.5.12-0', ready: true, state: 'running' }],
+  },
+  {
+    name: 'etcd-ip-10-0-12-42.ec2.internal',
+    namespace: 'kube-system',
+    cluster: 'eks-prod-us-east-1',
+    status: 'Running',
+    ready: '1/1',
+    restarts: 1,
+    age: '14d',
+    node: 'ip-10-0-12-42.ec2.internal',
+    labels: { component: 'etcd', 'app.kubernetes.io/name': 'etcd', tier: 'control-plane' },
+    containers: [{ name: 'etcd', image: 'registry.k8s.io/etcd:3.5.12-0', ready: true, state: 'running' }],
+  },
+  {
+    name: 'etcd-gke-staging-control-plane',
+    namespace: 'kube-system',
+    cluster: 'gke-staging',
+    status: 'Running',
+    ready: '1/1',
+    restarts: 0,
+    age: '9d',
+    node: 'gke-staging-control-plane',
+    labels: { component: 'etcd', 'app.kubernetes.io/name': 'etcd', tier: 'control-plane' },
+    containers: [{ name: 'etcd', image: 'registry.k8s.io/etcd:3.5.9-0', ready: true, state: 'running' }],
+  },
 ]
 
 export const getDemoEvents = (): ClusterEvent[] => {
