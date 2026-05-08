@@ -25,6 +25,7 @@ import { RefreshCw, ScrollText, AlertCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useCachedPods, useCachedNamespaces } from '../../hooks/useCachedData'
 import { usePodLogs } from '../../hooks/mcp/workloads'
+import { useDemoMode } from '../../hooks/useDemoMode'
 import { useCardLoadingState } from './CardDataContext'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Select } from '../ui/Select'
@@ -57,6 +58,7 @@ interface PodLogsProps {
 
 export function PodLogs({ config }: PodLogsProps) {
   const { t } = useTranslation('cards')
+  const { isDemoMode } = useDemoMode()
   const {
     deduplicatedClusters: allClusters,
     isLoading: clustersLoading,
@@ -153,7 +155,7 @@ export function PodLogs({ config }: PodLogsProps) {
     isLoading: clustersLoading && !hasAnyData,
     isRefreshing: clustersRefreshing || nsRefreshing || podsRefreshing || logsLoading,
     hasAnyData,
-    isDemoData: false,
+    isDemoData: isDemoMode,
     isFailed: clustersFailed,
     consecutiveFailures: clustersConsecutiveFailures,
   })
