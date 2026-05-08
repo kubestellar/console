@@ -3836,7 +3836,8 @@
       "expandSidebar": "Expand sidebar",
       "collapseSidebar": "Collapse sidebar",
       "unpinSidebar": "Unpin sidebar (auto-collapse on mouse leave)",
-      "pinSidebar": "Pin sidebar open"
+      "pinSidebar": "Pin sidebar open",
+      "resizeSidebar": "Resize sidebar"
     },
     "navbar": {
       "filtersActive": "Filters active - click to modify",

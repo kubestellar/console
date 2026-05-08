@@ -129,6 +129,10 @@ export interface SidebarShellProps {
 
 const SIDEBAR_MIN_WIDTH_PX = 180
 const SIDEBAR_MAX_WIDTH_PX = 480
+const SIDEBAR_RESIZE_STEP_PX = 16
+const SIDEBAR_RESIZE_HANDLE_TOP_PX = 160
+const SIDEBAR_RESIZE_HANDLE_OFFSET_PX = 3
+const SIDEBAR_RESIZE_HANDLE_WIDTH_PX = 6
 
 /** Index of the primary (dashboard list) section — "Add more..." button renders after it */
 const PRIMARY_SECTION_INDEX = 0
@@ -251,6 +255,10 @@ export function SidebarShell({
   const [isResizing, setIsResizing] = useState(false)
   const resizeCleanupRef = useRef<(() => void) | null>(null)
 
+  const clampSidebarWidth = useCallback((nextWidth: number) => {
+    return Math.min(SIDEBAR_MAX_WIDTH_PX, Math.max(SIDEBAR_MIN_WIDTH_PX, nextWidth))
+  }, [])
+
   // Clean up resize listeners on unmount to prevent leaks if mouseup never fires
   useEffect(() => () => { resizeCleanupRef.current?.() }, [])
 
@@ -261,10 +269,7 @@ export function SidebarShell({
     const startWidth = widthOverride ?? config.width ?? SIDEBAR_DEFAULT_WIDTH_PX
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      const newWidth = Math.min(
-        SIDEBAR_MAX_WIDTH_PX,
-        Math.max(SIDEBAR_MIN_WIDTH_PX, startWidth + (moveEvent.clientX - startX))
-      )
+      const newWidth = clampSidebarWidth(startWidth + (moveEvent.clientX - startX))
       setWidth(newWidth)
     }
 
@@ -282,6 +287,23 @@ export function SidebarShell({
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
     resizeCleanupRef.current = handleMouseUp
+  }
+
+  const handleResizeKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    let delta = 0
+
+    if (event.key === 'ArrowLeft') {
+      delta = -SIDEBAR_RESIZE_STEP_PX
+    } else if (event.key === 'ArrowRight') {
+      delta = SIDEBAR_RESIZE_STEP_PX
+    }
+
+    if (delta === 0) {
+      return
+    }
+
+    event.preventDefault()
+    setWidth(clampSidebarWidth(sidebarWidth + delta))
   }
 
   // ---- Inline rename state ----
@@ -827,11 +849,25 @@ export function SidebarShell({
       {features.resize !== false && !isCollapsed && !isMobile && (
         <div
           onMouseDown={handleResizeStart}
+          onKeyDown={handleResizeKeyDown}
+          tabIndex={0}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t('layout.sidebar.resizeSidebar')}
+          aria-valuemin={SIDEBAR_MIN_WIDTH_PX}
+          aria-valuemax={SIDEBAR_MAX_WIDTH_PX}
+          aria-valuenow={sidebarWidth}
           className={cn(
-            "fixed bottom-0 cursor-col-resize z-sidebar hover:bg-purple-500/30 transition-colors hidden md:block",
-            isResizing && "bg-purple-500/50"
+            'fixed bottom-0 hidden cursor-col-resize z-sidebar transition-colors md:block',
+            'hover:bg-purple-500/30 focus-visible:bg-purple-500/30 focus-visible:outline-none',
+            'focus-visible:ring-2 focus-visible:ring-purple-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+            isResizing && 'bg-purple-500/50'
           )}
-          style={{ top: 160, left: sidebarWidth - 3, width: 6 }}
+          style={{
+            top: SIDEBAR_RESIZE_HANDLE_TOP_PX,
+            left: sidebarWidth - SIDEBAR_RESIZE_HANDLE_OFFSET_PX,
+            width: SIDEBAR_RESIZE_HANDLE_WIDTH_PX,
+          }}
         />
       )}
     </>
