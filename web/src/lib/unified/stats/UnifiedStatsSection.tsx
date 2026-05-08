@@ -155,13 +155,6 @@ export function UnifiedStatsSection({
               Demo
             </StatusBadge>
           )}
-
-          {/* Last updated */}
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground/60">
-              Updated {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
         </div>
 
         {/* Configure button */}

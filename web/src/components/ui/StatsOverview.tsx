@@ -548,11 +548,7 @@ export function StatsOverview({
               {t('statsOverview.demo')}
             </StatusBadge>
           )}
-          {lastUpdated && (
-            <span className="text-xs text-muted-foreground/60">
-              {t('statsOverview.updated', { time: lastUpdated.toLocaleTimeString() })}
-            </span>
-          )}
+
         </div>
         {showConfigButton && isExpanded && (
           <Button
