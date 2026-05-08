@@ -183,12 +183,12 @@ export const getDemoDeploymentIssues = (): DeploymentIssue[] => [
 ]
 
 export const getDemoDeployments = (): Deployment[] => [
-  { name: 'web-frontend', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
-  { name: 'api-gateway', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'deploying', replicas: 3, readyReplicas: 1, updatedReplicas: 2, availableReplicas: 1, progress: 33 },
-  { name: 'worker-service', namespace: 'batch', cluster: 'gke-staging', status: 'deploying', replicas: 4, readyReplicas: 2, updatedReplicas: 3, availableReplicas: 2, progress: 50 },
-  { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-gpu-cluster', status: 'deploying', replicas: 2, readyReplicas: 0, updatedReplicas: 1, availableReplicas: 0, progress: 0 },
-  { name: 'cache-redis', namespace: 'data', cluster: 'gke-staging', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100 },
-  { name: 'monitoring-stack', namespace: 'monitoring', cluster: 'aks-dev-westeu', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100 },
+  { name: 'web-frontend', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100, image: 'nginx:1.25' },
+  { name: 'api-gateway', namespace: 'production', cluster: 'eks-prod-us-east-1', status: 'deploying', replicas: 3, readyReplicas: 1, updatedReplicas: 2, availableReplicas: 1, progress: 33, image: 'company/api-gateway:v2.5.1' },
+  { name: 'worker-service', namespace: 'batch', cluster: 'gke-staging', status: 'deploying', replicas: 4, readyReplicas: 2, updatedReplicas: 3, availableReplicas: 2, progress: 50, image: 'company/worker-service:v1.12.0' },
+  { name: 'ml-inference', namespace: 'ml', cluster: 'vllm-gpu-cluster', status: 'deploying', replicas: 2, readyReplicas: 0, updatedReplicas: 1, availableReplicas: 0, progress: 0, image: 'vllm/vllm-openai:v0.6.3' },
+  { name: 'cache-redis', namespace: 'data', cluster: 'gke-staging', status: 'running', replicas: 3, readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3, progress: 100, image: 'redis:7.2-alpine' },
+  { name: 'monitoring-stack', namespace: 'monitoring', cluster: 'aks-dev-westeu', status: 'running', replicas: 2, readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2, progress: 100, image: 'prom/prometheus:v2.48.0' },
 ]
 
 export const getDemoServices = (): Service[] => [
