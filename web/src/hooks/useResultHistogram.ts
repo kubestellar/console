@@ -94,7 +94,7 @@ function normalizeHistogramData(raw: HistogramResponse, sortBy: HistogramSort): 
   const entries = Array.isArray(raw.histogram)
     ? raw.histogram.map((entry): HistogramEntry => {
         const record = typeof entry === 'object' && entry !== null
-          ? entry as Record<string, unknown>
+          ? entry as unknown as Record<string, unknown>
           : {}
 
         return {
