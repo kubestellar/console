@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Coins, Rocket, Stethoscope, Lightbulb, TrendingUp, MoreHorizontal } from 'lucide-react'
 import { useTokenUsage, type TokenCategory, type TokenAlertLevel } from '../../../hooks/useTokenUsage'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { Tooltip } from '../../ui/Tooltip'
 import { cn } from '../../../lib/cn'
 import { getSettingsWithHash } from '../../../config/routes'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -95,7 +96,13 @@ export function TokenUsageWidget({ showLabel = false }: TokenUsageWidgetProps) {
         {isDemoData && (
           <StatusBadge color="yellow" role="img" aria-label={t('layout.navbar.demoModeActive')}>{t('layout.demo')}</StatusBadge>
         )}
-        <span className={cn("text-xs font-medium", showLabel ? 'inline' : 'hidden sm:inline')}>{percentage.toFixed(0)}%</span>
+        {isDemoData ? (
+          <Tooltip content={t('layout.navbar.demoPercentageTooltip')} side="bottom">
+            <span className={cn("text-xs font-medium", showLabel ? 'inline' : 'hidden sm:inline')}>{percentage.toFixed(0)}%</span>
+          </Tooltip>
+        ) : (
+          <span className={cn("text-xs font-medium", showLabel ? 'inline' : 'hidden sm:inline')}>{percentage.toFixed(0)}%</span>
+        )}
         <div className={cn("w-12 h-1.5 bg-secondary rounded-full overflow-hidden", showLabel ? 'block' : 'hidden sm:block')}>
           <div
             className={`h-full transition-all ${alertStyles.bar}`}

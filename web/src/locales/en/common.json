@@ -3838,6 +3838,7 @@
       "tokenUsageTitle": "Token usage: {{percentage}}%{{suffix}}",
       "tokenUsage": "Token Usage",
       "demoData": "Demo Data",
+      "demoPercentageTooltip": "0% indicates all data is mocked. API calls hit demo endpoints instead of live clusters.",
       "simulatedTokenUsage": "Showing simulated token usage. Connect to kc-agent for live data.",
       "limit": "Limit",
       "usedToday": "Used today",
