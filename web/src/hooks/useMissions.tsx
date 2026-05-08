@@ -2598,6 +2598,24 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           ))
         }
 
+        if (allowMissingToolWarning && toolResult.error) {
+          setMissions(prev => prev.map(m =>
+            m.id === missionId ? {
+              ...m,
+              currentStep: 'Continuing with AI-assisted flow',
+              messages: [
+                ...getMissionMessages(m.messages),
+                {
+                  id: generateMessageId('tool-preflight-warning-retry'),
+                  role: 'system' as const,
+                  content: buildMissingToolWarning(toolResult.error!),
+                  timestamp: new Date(),
+                },
+              ],
+            } : m
+          ))
+        }
+
         // #7145 — Validate ALL clusters in a multi-cluster mission, not just the
         // first. The cluster field is comma-separated; the old code split on ','
         // and only checked [0], giving a false recovery state when later clusters
