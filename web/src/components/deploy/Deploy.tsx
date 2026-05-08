@@ -264,10 +264,10 @@ export function Deploy() {
         <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs" role="presentation" onClick={() => setGroupPickerWorkload(null)} onKeyDown={(e) => { if (e.key === 'Escape') setGroupPickerWorkload(null) }}>
           <div ref={groupPickerRef} className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5" role="dialog" aria-modal="true" aria-labelledby="group-picker-dialog-title" onClick={e => e.stopPropagation()}>
             <h3 id="group-picker-dialog-title" className="text-base font-medium text-foreground mb-1">
-              Choose a cluster group
+              {t('common:deploy.chooseClusterGroup')}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Deploy <span className="font-medium text-foreground">{groupPickerWorkload.name}</span> to:
+              {t('common:deploy.deployWorkloadTo', { name: groupPickerWorkload.name })}
             </p>
             <div className="space-y-2">
               {allGroups.map(g => (
@@ -286,7 +286,7 @@ export function Deploy() {
                 >
                   <span className="block font-medium text-sm text-foreground">{g.name}</span>
                   <span className="block text-xs text-muted-foreground mt-0.5">
-                    {g.clusters.length} cluster{g.clusters.length !== 1 ? 's' : ''}: {g.clusters.slice(0, 3).join(', ')}{g.clusters.length > 3 ? ` +${g.clusters.length - 3} more` : ''}
+                    {t('common:deploy.clusterCount', { count: g.clusters.length })}: {g.clusters.slice(0, 3).join(', ')}{g.clusters.length > 3 ? ` ${t('common:deploy.andMoreClusters', { count: g.clusters.length - 3 })}` : ''}
                   </span>
                 </button>
               ))}
@@ -295,7 +295,7 @@ export function Deploy() {
               onClick={() => setGroupPickerWorkload(null)}
               className="mt-4 w-full px-4 py-2 text-sm rounded-lg bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             >
-              Cancel
+              {t('common:actions.cancel')}
             </button>
           </div>
         </div>

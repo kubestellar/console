@@ -3515,7 +3515,12 @@
     "noDependencies": "No additional dependencies detected.",
     "optional": "optional",
     "deployToCluster_one": "Deploy to {{count}} cluster",
-    "deployToCluster_other": "Deploy to {{count}} clusters"
+    "deployToCluster_other": "Deploy to {{count}} clusters",
+    "chooseClusterGroup": "Choose a cluster group",
+    "deployWorkloadTo": "Deploy {{name}} to:",
+    "clusterCount_one": "{{count}} cluster",
+    "clusterCount_other": "{{count}} clusters",
+    "andMoreClusters": "+{{count}} more"
   },
   "onboarding": {
     "installTitle": "Install KubeStellar Console",
