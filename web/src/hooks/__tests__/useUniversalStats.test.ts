@@ -267,8 +267,8 @@ describe('useUniversalStats', () => {
       expect(getStatValue('nodes')?.value).toBe(0)
       expect(getStatValue('pods')?.value).toBe(0)
       expect(getStatValue('cpus')?.value).toBe(0)
-      expect(getStatValue('memory')?.value).toBe('0')
-      expect(getStatValue('storage')?.value).toBe('0')
+      expect(getStatValue('memory')?.value).toBe('0 GB')
+      expect(getStatValue('storage')?.value).toBe('0 GB')
     })
 
     it('handles clusters with missing namespaces array', () => {
