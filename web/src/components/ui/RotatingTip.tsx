@@ -244,6 +244,13 @@ const TIPS: Record<string, string[]> = {
     'Arcade cards remember your layout between sessions automatically.',
     'Try combining GPU, compliance, and cluster cards for a unified overview.',
   ],
+  drasi: [
+    'Drasi sources connect to databases, message queues, and Kubernetes events as live data streams.',
+    'Continuous queries update automatically as source data changes — no polling required.',
+    'Reactions trigger downstream actions (webhooks, SignalR, Gremlin) when query results change.',
+    'Set VITE_DRASI_API_URL to connect the console to your Drasi management API.',
+    'The reactive graph view shows how sources, queries, and reactions are wired together.',
+  ],
 }
 
 interface RotatingTipProps {
