@@ -616,15 +616,17 @@ func TestServer_SettingsAll(t *testing.T) {
 
 func TestServer_ValidateToken(t *testing.T) {
 	tests := []struct {
-		name              string
-		agentToken        string // configured token
-		authHeader        string
-		queryToken        string
-		upgradeHeader     string // set to "websocket" for WebSocket upgrade requests
-		connectionHeader  string // "upgrade" for real WebSocket handshakes
-		secWebSocketKey   string // base64 nonce sent by browsers
-		origin            string // Origin header — browser requests always include this
-		expectResult      bool
+		name             string
+		agentToken       string   // configured token
+		tokenExplicit    bool     // true when KC_AGENT_TOKEN came from an explicit user setting
+		allowedOrigins   []string // origins eligible for the browser-only bypass
+		authHeader       string
+		queryToken       string
+		upgradeHeader    string // set to "websocket" for WebSocket upgrade requests
+		connectionHeader string // "upgrade" for real WebSocket handshakes
+		secWebSocketKey  string // base64 nonce sent by browsers
+		origin           string // Origin header — browser requests always include this
+		expectResult     bool
 	}{
 		{
 			name:         "No token configured - skip validation",
@@ -647,6 +649,14 @@ func TestServer_ValidateToken(t *testing.T) {
 			queryToken:   "",
 			origin:       "http://localhost:8080",
 			expectResult: false, // browser requests include Origin — CSRF protection
+		},
+		{
+			name:           "Allowed origin bypass when token was startup-generated",
+			agentToken:     "secret123",
+			tokenExplicit:  false,
+			allowedOrigins: []string{"http://localhost"},
+			origin:         "http://localhost:5174",
+			expectResult:   true,
 		},
 		{
 			name:         "Valid Bearer token",
@@ -747,7 +757,9 @@ func TestServer_ValidateToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server := &Server{
-				agentToken: tt.agentToken,
+				agentToken:     tt.agentToken,
+				tokenExplicit:  tt.tokenExplicit,
+				allowedOrigins: tt.allowedOrigins,
 			}
 
 			url := "/test"
@@ -831,8 +843,8 @@ func TestMatchOrigin(t *testing.T) {
 		{"http://localhost.attacker.com", "http://localhost", false}, // prefix bypass
 		{"https://app.ibm.com", "https://*.ibm.com", true},
 		{"https://deep.sub.ibm.com", "https://*.ibm.com", true}, // multi-level subdomain allowed
-		{"http://ibm.com", "https://*.ibm.com", false},           // wrong scheme
-		{"https://ibm.com", "https://*.ibm.com", false},          // no subdomain, doesn't have .ibm.com suffix
+		{"http://ibm.com", "https://*.ibm.com", false},          // wrong scheme
+		{"https://ibm.com", "https://*.ibm.com", false},         // no subdomain, doesn't have .ibm.com suffix
 		{"https://google.com", "https://*.ibm.com", false},
 		{"http://exact.com", "http://exact.com", true},
 		{"http://exact.com:8080", "http://exact.com", true},      // port variation allowed

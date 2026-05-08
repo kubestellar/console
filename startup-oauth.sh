@@ -352,7 +352,10 @@ fi
 # via a backend-proxied token endpoint.
 if [ -z "$KC_AGENT_TOKEN" ]; then
     KC_AGENT_TOKEN="$(openssl rand -hex 32)"
+    export KC_AGENT_TOKEN_GENERATED=true
     echo "Auto-generated KC_AGENT_TOKEN."
+else
+    unset KC_AGENT_TOKEN_GENERATED
 fi
 export KC_AGENT_TOKEN
 
