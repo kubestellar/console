@@ -124,58 +124,60 @@ function StatBlock({ blockId, stats, hasData, onClick, color, icon }: StatBlockP
       isClickable = isClickable && stats.unreachable > 0
       break
     case 'nodes':
-      value = hasData ? formatStat(stats.totalNodes) : '-'
+      // Show 0 when there are zero nodes, only show '-' when data is truly unavailable
+      value = stats.totalNodes != null ? formatStat(stats.totalNodes) : '-'
       label = 'Nodes'
       sublabel = 'total'
-      isClickable = isClickable && hasData && stats.totalNodes > 0
+      isClickable = isClickable && stats.totalNodes > 0
       break
     case 'cpus':
-      value = hasData ? formatStat(stats.totalCPUs) : '-'
+      value = stats.totalCPUs != null ? formatStat(stats.totalCPUs) : '-'
       label = 'CPUs'
       sublabel = 'cores'
-      isClickable = isClickable && hasData && stats.totalCPUs > 0
+      isClickable = isClickable && stats.totalCPUs > 0
       break
     case 'memory':
-      value = formatMemoryStat(stats.totalMemoryGB, hasData)
+      // formatMemoryStat handles null/undefined internally, pass hasData for proper formatting
+      value = formatMemoryStat(stats.totalMemoryGB, stats.totalMemoryGB != null)
       label = 'Memory'
       sublabel = 'allocatable'
-      isClickable = isClickable && hasData && stats.totalMemoryGB > 0
+      isClickable = isClickable && stats.totalMemoryGB != null && stats.totalMemoryGB > 0
       break
     case 'storage':
-      value = formatMemoryStat(stats.totalStorageGB, hasData)
+      value = formatMemoryStat(stats.totalStorageGB, stats.totalStorageGB != null)
       label = 'Storage'
       sublabel = 'ephemeral'
-      isClickable = isClickable && hasData && stats.totalStorageGB > 0
+      isClickable = isClickable && stats.totalStorageGB != null && stats.totalStorageGB > 0
       break
     case 'gpus':
-      value = hasData ? formatStat(stats.totalGPUs) : '-'
+      value = stats.totalGPUs != null ? formatStat(stats.totalGPUs) : '-'
       label = 'GPUs'
-      sublabel = hasData && stats.allocatedGPUs > 0 ? `${formatStat(stats.allocatedGPUs)} allocated` : 'total'
-      isClickable = isClickable && hasData && stats.totalGPUs > 0
+      sublabel = stats.allocatedGPUs != null && stats.allocatedGPUs > 0 ? `${formatStat(stats.allocatedGPUs)} allocated` : 'total'
+      isClickable = isClickable && stats.totalGPUs != null && stats.totalGPUs > 0
       break
     case 'tpus':
-      value = hasData ? formatStat(stats.totalTPUs ?? 0) : '-'
+      value = (stats.totalTPUs ?? 0) >= 0 ? formatStat(stats.totalTPUs ?? 0) : '-'
       label = 'TPUs'
-      sublabel = hasData && (stats.allocatedTPUs ?? 0) > 0 ? `${formatStat(stats.allocatedTPUs ?? 0)} allocated` : 'total'
-      isClickable = isClickable && hasData && (stats.totalTPUs ?? 0) > 0
+      sublabel = (stats.allocatedTPUs ?? 0) > 0 ? `${formatStat(stats.allocatedTPUs ?? 0)} allocated` : 'total'
+      isClickable = isClickable && (stats.totalTPUs ?? 0) > 0
       break
     case 'aius':
-      value = hasData ? formatStat(stats.totalAIUs ?? 0) : '-'
+      value = (stats.totalAIUs ?? 0) >= 0 ? formatStat(stats.totalAIUs ?? 0) : '-'
       label = 'AIUs'
-      sublabel = hasData && (stats.allocatedAIUs ?? 0) > 0 ? `${formatStat(stats.allocatedAIUs ?? 0)} allocated` : 'total'
-      isClickable = isClickable && hasData && (stats.totalAIUs ?? 0) > 0
+      sublabel = (stats.allocatedAIUs ?? 0) > 0 ? `${formatStat(stats.allocatedAIUs ?? 0)} allocated` : 'total'
+      isClickable = isClickable && (stats.totalAIUs ?? 0) > 0
       break
     case 'xpus':
-      value = hasData ? formatStat(stats.totalXPUs ?? 0) : '-'
+      value = (stats.totalXPUs ?? 0) >= 0 ? formatStat(stats.totalXPUs ?? 0) : '-'
       label = 'XPUs'
-      sublabel = hasData && (stats.allocatedXPUs ?? 0) > 0 ? `${formatStat(stats.allocatedXPUs ?? 0)} allocated` : 'total'
-      isClickable = isClickable && hasData && (stats.totalXPUs ?? 0) > 0
+      sublabel = (stats.allocatedXPUs ?? 0) > 0 ? `${formatStat(stats.allocatedXPUs ?? 0)} allocated` : 'total'
+      isClickable = isClickable && (stats.totalXPUs ?? 0) > 0
       break
     case 'pods':
-      value = hasData ? formatStat(stats.totalPods) : '-'
+      value = stats.totalPods != null ? formatStat(stats.totalPods) : '-'
       label = 'Pods'
       sublabel = 'running'
-      isClickable = isClickable && hasData && stats.totalPods > 0
+      isClickable = isClickable && stats.totalPods > 0
       break
   }
 

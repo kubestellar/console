@@ -1029,7 +1029,7 @@ export function Dashboard() {
       <StatsOverview
         dashboardType="dashboard"
         getStatValue={getStatValue}
-        hasData={clusters.length > 0}
+        hasData={!isClustersLoading}
         isLoading={isClustersLoading && clusters.length === 0}
         lastUpdated={lastUpdated}
         collapsedStorageKey="kubestellar-dashboard-stats-collapsed"

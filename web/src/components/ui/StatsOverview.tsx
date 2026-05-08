@@ -215,9 +215,10 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const availableModes = getAvailableModes(block.id, data)
 
   const rawValue = data.value
-  const displayValue = hasData
-    ? (data.format && typeof rawValue === 'number' ? data.format(rawValue) : rawValue)
-    : '-'
+  // Show actual value if it's a number (including 0), only show '-' if truly no data (undefined/null/'-')
+  const displayValue = isLoading || rawValue === undefined || rawValue === null || rawValue === '-'
+    ? '-'
+    : (data.format && typeof rawValue === 'number' ? data.format(rawValue) : rawValue)
   const numericValue = typeof rawValue === 'number'
     ? rawValue
     : parseFloat(String(rawValue))
