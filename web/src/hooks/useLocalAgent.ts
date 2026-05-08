@@ -254,7 +254,7 @@ class AgentManager {
       }
 
       const data = await response.json()
-      const authResponse = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/status`, {
+      const authResponse = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/providers/health`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
       })

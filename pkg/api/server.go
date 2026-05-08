@@ -169,8 +169,8 @@ type Config struct {
 	// AgentToken is the shared secret for authenticating with kc-agent.
 	// startup-oauth.sh generates this and passes it to both kc-agent and
 	// the Go backend via the KC_AGENT_TOKEN env var. The backend serves
-	// it to authenticated users via GET /api/agent/token so the frontend
-	// can call kc-agent endpoints that require Bearer auth.
+	// it via GET /api/agent/token so the frontend can call kc-agent
+	// endpoints that require Bearer auth.
 	AgentToken string
 	// Kubara platform catalog configuration
 	// KubaraCatalogRepo is the GitHub owner/name of the catalog repo
@@ -892,6 +892,17 @@ func (s *Server) setupRoutes() {
 		return apiLimiter(c)
 	}
 
+	// kc-agent token endpoint — returns the shared KC_AGENT_TOKEN so the
+	// frontend can authenticate to kc-agent HTTP endpoints during initial
+	// connection, before any JWT-backed session is established.
+	agentToken := s.config.AgentToken
+	s.app.Get("/api/agent/token", func(c *fiber.Ctx) error {
+		if agentToken == "" {
+			return c.JSON(fiber.Map{"token": ""})
+		}
+		return c.JSON(fiber.Map{"token": agentToken})
+	})
+
 	api := s.app.Group("/api", apiLimiterWithSkip, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
 
 	// User identity routes — exempt from both apiLimiter (via skip list) and
@@ -901,17 +912,6 @@ func (s *Server) setupRoutes() {
 	user := handlers.NewUserHandler(s.store)
 	s.app.Get("/api/me", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), user.GetCurrentUser)
 	s.app.Put("/api/me", bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret), user.UpdateCurrentUser)
-
-	// kc-agent token endpoint — returns the shared KC_AGENT_TOKEN so the
-	// frontend can authenticate to kc-agent HTTP endpoints (auto-update, etc.).
-	// Auth-protected: only logged-in users can retrieve this.
-	agentToken := s.config.AgentToken
-	api.Get("/agent/token", func(c *fiber.Ctx) error {
-		if agentToken == "" {
-			return c.JSON(fiber.Map{"token": ""})
-		}
-		return c.JSON(fiber.Map{"token": agentToken})
-	})
 
 	// kc-agent auto-update proxy — forwards /api/agent/auto-update/* to the
 	// co-located kc-agent at 127.0.0.1:8585. This avoids cross-origin requests
