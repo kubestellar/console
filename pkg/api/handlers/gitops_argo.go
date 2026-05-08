@@ -52,8 +52,8 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		slog.Warn("[GitOps] helm history failed", "release", release, "error", err, "stderr", stderr.String())
-		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": stderr.String()})
+		slog.Error("[GitOps] helm history failed", "release", release, "error", err, "stderr", stderr.String())
+		return c.JSON(fiber.Map{"history": []HelmHistoryEntry{}, "error": "helm operation failed"})
 	}
 
 	history := make([]HelmHistoryEntry, 0)
@@ -106,8 +106,8 @@ func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
-		slog.Warn("[GitOps] helm get values failed", "release", release, "error", err, "stderr", stderr.String())
-		return c.JSON(fiber.Map{"values": map[string]interface{}{}, "error": stderr.String()})
+		slog.Error("[GitOps] helm values failed", "release", release, "error", err, "stderr", stderr.String())
+		return c.JSON(fiber.Map{"values": map[string]interface{}{}, "error": "helm operation failed"})
 	}
 
 	var values map[string]interface{}
