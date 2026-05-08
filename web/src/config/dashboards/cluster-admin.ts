@@ -43,7 +43,6 @@ export const clusterAdminDashboardConfig: UnifiedDashboardConfig = {
     // Row 9: Security & info
     { id: 'ca-security-1', cardType: 'security_issues', position: { w: 4, h: 3, x: 0, y: 25 } },
     { id: 'ca-ai-1', cardType: 'console_ai_health_check', position: { w: 4, h: 3, x: 4, y: 25 } },
-    { id: 'ca-rss-1', cardType: 'rss_feed', position: { w: 4, h: 3, x: 8, y: 25 } },
   ],
   features: {
     dragDrop: true,
