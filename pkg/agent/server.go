@@ -478,7 +478,9 @@ func (s *Server) Start() error {
 
 	// Cluster data endpoints - direct k8s queries without backend
 	mux.HandleFunc("/gpu-nodes", s.handleGPUNodesHTTP)
+	mux.HandleFunc("/gpu-nodes/stream", s.handleGPUNodesStreamSSE)
 	mux.HandleFunc("/nodes", s.handleNodesHTTP)
+	mux.HandleFunc("/nodes/stream", s.handleNodesStreamSSE)
 	mux.HandleFunc("/pods", s.handlePodsHTTP)
 	mux.HandleFunc("/pods/stream", s.handlePodsStreamSSE)
 	mux.HandleFunc("/events", s.handleEventsHTTP)

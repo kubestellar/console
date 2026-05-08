@@ -13,6 +13,8 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakek8s "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -47,6 +49,157 @@ func newTestServerForSSE(t *testing.T, contexts map[string]*api.Context) (*Serve
 		agentToken:     "",
 	}
 	return srv, k8sMock
+}
+
+func TestHandleNodesStreamSSE_StreamsEvents(t *testing.T) {
+	contexts := map[string]*api.Context{
+		"cluster-a": {Cluster: "cluster-a", AuthInfo: "cluster-a"},
+	}
+	srv, k8sMock := newTestServerForSSE(t, contexts)
+	fakeCS := fakek8s.NewSimpleClientset(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node-1",
+			Labels: map[string]string{
+				"node-role.kubernetes.io/control-plane": "",
+			},
+		},
+		Status: corev1.NodeStatus{
+			NodeInfo: corev1.NodeSystemInfo{
+				KubeletVersion:          "v1.31.0",
+				OperatingSystem:         "linux",
+				OSImage:                 "Fedora",
+				Architecture:            "amd64",
+				ContainerRuntimeVersion: "containerd://1.7.0",
+			},
+			Addresses: []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "10.0.0.1"}},
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("16Gi"),
+				corev1.ResourcePods:   resource.MustParse("110"),
+			},
+		},
+	})
+	k8sMock.SetClient("cluster-a", fakeCS)
+
+	req := httptest.NewRequest(http.MethodGet, "/nodes/stream?cluster=cluster-a", nil)
+	w := httptest.NewRecorder()
+
+	srv.handleNodesStreamSSE(w, req)
+
+	events := parseSSEEvents(t, w.Body.String())
+
+	var foundClusterData, foundDone bool
+	for _, ev := range events {
+		switch ev.event {
+		case "cluster_data":
+			foundClusterData = true
+			var payload map[string]interface{}
+			if err := json.Unmarshal([]byte(ev.data), &payload); err != nil {
+				t.Fatalf("Failed to unmarshal cluster_data: %v", err)
+			}
+			if payload["cluster"] != "cluster-a" {
+				t.Errorf("cluster_data cluster = %v, want %q", payload["cluster"], "cluster-a")
+			}
+			nodes, ok := payload["nodes"].([]interface{})
+			if !ok {
+				t.Fatal("cluster_data missing nodes array")
+			}
+			if len(nodes) != 1 {
+				t.Errorf("Expected 1 node, got %d", len(nodes))
+			}
+		case "done":
+			foundDone = true
+			var payload map[string]interface{}
+			if err := json.Unmarshal([]byte(ev.data), &payload); err != nil {
+				t.Fatalf("Failed to unmarshal done event: %v", err)
+			}
+			if total, ok := payload["total"].(float64); !ok || int(total) != 1 {
+				t.Errorf("done total = %v, want 1", payload["total"])
+			}
+			if clusters, ok := payload["clusters"].(float64); !ok || int(clusters) != 1 {
+				t.Errorf("done clusters = %v, want 1", payload["clusters"])
+			}
+		}
+	}
+	if !foundClusterData {
+		t.Error("Missing cluster_data SSE event")
+	}
+	if !foundDone {
+		t.Error("Missing done SSE event")
+	}
+}
+
+func TestHandleGPUNodesStreamSSE_StreamsEvents(t *testing.T) {
+	contexts := map[string]*api.Context{
+		"cluster-a": {Cluster: "cluster-a", AuthInfo: "cluster-a"},
+	}
+	srv, k8sMock := newTestServerForSSE(t, contexts)
+	fakeCS := fakek8s.NewSimpleClientset(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "gpu-node-1",
+			Labels: map[string]string{
+				"nvidia.com/gpu.product": "NVIDIA L4",
+			},
+		},
+		Status: corev1.NodeStatus{
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceName("nvidia.com/gpu"): resource.MustParse("1"),
+			},
+		},
+	})
+	k8sMock.SetClient("cluster-a", fakeCS)
+
+	req := httptest.NewRequest(http.MethodGet, "/gpu-nodes/stream?cluster=cluster-a", nil)
+	w := httptest.NewRecorder()
+
+	srv.handleGPUNodesStreamSSE(w, req)
+
+	events := parseSSEEvents(t, w.Body.String())
+
+	var foundClusterData, foundDone bool
+	for _, ev := range events {
+		switch ev.event {
+		case "cluster_data":
+			foundClusterData = true
+			var payload map[string]interface{}
+			if err := json.Unmarshal([]byte(ev.data), &payload); err != nil {
+				t.Fatalf("Failed to unmarshal cluster_data: %v", err)
+			}
+			nodes, ok := payload["nodes"].([]interface{})
+			if !ok {
+				t.Fatal("cluster_data missing nodes array")
+			}
+			if len(nodes) != 1 {
+				t.Errorf("Expected 1 GPU node, got %d", len(nodes))
+			}
+		case "done":
+			foundDone = true
+		}
+	}
+	if !foundClusterData {
+		t.Error("Missing cluster_data SSE event")
+	}
+	if !foundDone {
+		t.Error("Missing done SSE event")
+	}
+}
+
+func TestHandleNodesStreamSSE_Unauthorized(t *testing.T) {
+	contexts := map[string]*api.Context{
+		"c1": {Cluster: "c1", AuthInfo: "c1"},
+	}
+	srv, _ := newTestServerForSSE(t, contexts)
+	srv.agentToken = "secret-token"
+	srv.tokenExplicit = true
+
+	req := httptest.NewRequest(http.MethodGet, "/nodes/stream", nil)
+	w := httptest.NewRecorder()
+
+	srv.handleNodesStreamSSE(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status %d, got %d", http.StatusUnauthorized, w.Code)
+	}
 }
 
 func TestHandleJobsStreamSSE_Headers(t *testing.T) {
