@@ -115,10 +115,11 @@ export function QuantumHistogramCard() {
   } = useResultHistogram(sortBy, refreshInterval)
 
   const histogramEntries = data?.histogram || []
+  const hasAnyData = histogramEntries.length > 0
   const executionTime = formatExecutionTime(data?.timestamp ?? null)
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading,
-    hasAnyData: histogramEntries.length > 0,
+    isLoading: isLoading && !hasAnyData,
+    hasAnyData,
     isFailed,
     consecutiveFailures,
     errorMessage: error || undefined,
