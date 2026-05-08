@@ -4,7 +4,7 @@
  * Generates insights based on the selected llm-d stack's real state.
  * Shows optimization suggestions, warnings, and anomaly detection.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Brain, Lightbulb, AlertTriangle, TrendingUp, Gauge, MessageSquare, ChevronRight, Sparkles, Settings2, Zap, Loader2 } from 'lucide-react'
 import { StatusBadge } from '../../../components/ui/StatusBadge'
@@ -313,6 +313,15 @@ export function LLMdAIInsights() {
   const [chatInput, setChatInput] = useState('')
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'ai'; message: string }>>([])
   const [isGenerating, setIsGenerating] = useState(false)
+  const chatTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (chatTimerRef.current) {
+        clearTimeout(chatTimerRef.current)
+      }
+    }
+  }, [])
 
   // Generate insights based on demo mode or real stack
   const insights = (() => {
@@ -339,7 +348,12 @@ export function LLMdAIInsights() {
 
     try {
       // Generate contextual responses based on stack state
-      await new Promise(resolve => setTimeout(resolve, PROGRESS_SIMULATION_MS))
+      await new Promise<void>(resolve => {
+        chatTimerRef.current = setTimeout(() => {
+          chatTimerRef.current = null
+          resolve()
+        }, PROGRESS_SIMULATION_MS)
+      })
 
       let response: string
       const stack = stackContext?.selectedStack

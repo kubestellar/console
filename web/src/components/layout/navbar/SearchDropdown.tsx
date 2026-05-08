@@ -369,7 +369,10 @@ export function SearchDropdown() {
     // event.stopPropagation() inside the Ctrl+K branch above. The third
     // arg must match between addEventListener and removeEventListener.
     document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [isSearchOpen, isResultsPanelActive, selectedIndex, handleSelect, handleAskAI, openSearch, closeSearch])
 
   // Reset selected index when results change
