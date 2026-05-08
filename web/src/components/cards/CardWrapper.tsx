@@ -745,7 +745,7 @@ export const CardWrapper = memo(function CardWrapper({
                   </span>
                 )}
                 {/* Live data indicator - for time-series/trend cards with real data */}
-                {isLive && !showDemoIndicator && (
+                {isLive && !showDemoIndicator && !effectiveIsFailed && (
                   <span
                     role="status"
                     aria-live="polite"
