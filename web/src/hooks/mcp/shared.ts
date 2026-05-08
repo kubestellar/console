@@ -1585,7 +1585,7 @@ export async function refreshSingleCluster(clusterName: string): Promise<void> {
 }
 
 // Demo data fallbacks
-function getDemoClusters(): ClusterInfo[] {
+export function getDemoClusters(): ClusterInfo[] {
   return [
     // One cluster for each provider type to showcase all icons
     { name: 'kind-local', context: 'kind-local', healthy: true, source: 'kubeconfig', isDemo: true, nodeCount: 1, podCount: 15, cpuCores: 4, memoryGB: 8, storageGB: 50, cpuRequestsCores: 2.1, memoryRequestsGB: 5, distribution: 'kind' },

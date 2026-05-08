@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { CheckCircle, WifiOff, Cpu, Loader2, ExternalLink, AlertTriangle, KeyRound, Server } from 'lucide-react'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
-import { useClusters, ClusterInfo } from '../../hooks/useMCP'
+import { useClusters, ClusterInfo, getDemoClusters } from '../../hooks/useMCP'
 import { useCachedGPUNodes } from '../../hooks/useCachedData'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useMobile } from '../../hooks/useMobile'
@@ -13,11 +13,12 @@ import { ClusterDetailModal } from '../clusters/ClusterDetailModal'
 import { CloudProviderIcon, detectCloudProvider, getProviderLabel, CloudProvider } from '../ui/CloudProviderIcon'
 import { isClusterUnreachable, isClusterTokenExpired, isClusterHealthy } from '../clusters/utils'
 import { StatusBadge } from '../ui/StatusBadge'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useFederationAwareness, getProviderLabel as getFederationProviderLabel, getStateLabel, getStateColorClasses, type FederatedCluster } from '../../hooks/useFederation'
 import { ROUTES } from '../../config/routes'
+import { CARD_LOADING_TIMEOUT_MS } from '../../lib/constants/network'
 import { Tooltip } from '../ui/Tooltip'
 
 // Console URL generation for cloud providers
@@ -90,13 +91,49 @@ export function ClusterHealth() {
     isLoading: isLoadingHook,
     isRefreshing,
     error,
-    lastRefresh } = useClusters()
+    lastRefresh,
+    consecutiveFailures,
+    isFailed } = useClusters()
   const { nodes: gpuNodes, isDemoFallback, isRefreshing: gpuRefreshing } = useCachedGPUNodes()
   const { selectedClusters, isAllClustersSelected } = useGlobalFilters()
   const { isMobile } = useMobile()
   const { isDemoMode } = useDemoMode()
+  const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
   const [selectedCluster, setSelectedCluster] = useState<string | null>(null)
   const federation = useFederationAwareness()
+  const demoClusters = useMemo(() => getDemoClusters(), [])
+  const hasResolvedClusterHealth = rawClusters.some(cluster => (
+    cluster.healthy !== undefined ||
+    cluster.reachable !== undefined ||
+    cluster.nodeCount !== undefined ||
+    cluster.podCount !== undefined ||
+    cluster.errorType !== undefined ||
+    cluster.errorMessage !== undefined
+  ))
+  const [healthFallbackTimedOut, setHealthFallbackTimedOut] = useState(false)
+
+  useEffect(() => {
+    if (isDemoMode || shouldUseDemoData || rawClusters.length === 0 || hasResolvedClusterHealth) {
+      setHealthFallbackTimedOut(false)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setHealthFallbackTimedOut(true)
+    }, CARD_LOADING_TIMEOUT_MS)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [hasResolvedClusterHealth, isDemoMode, rawClusters.length, shouldUseDemoData])
+
+  const shouldShowDemoFallback = ((!isDemoMode && shouldUseDemoData) || healthFallbackTimedOut) && !hasResolvedClusterHealth
+  const usingSyntheticDemoClusters = shouldShowDemoFallback && !rawClusters.some(cluster => cluster.isDemo)
+  const displayClusters = usingSyntheticDemoClusters ? demoClusters : rawClusters
+  const effectiveIsRefreshing = !shouldShowDemoFallback && (isRefreshing || gpuRefreshing)
+  const effectiveIsDemoData = isDemoMode || isDemoFallback || displayClusters.some(cluster => cluster.isDemo)
+  const lastRefreshMs = lastRefresh instanceof Date
+    ? lastRefresh.getTime()
+    : (lastRefresh ? new Date(lastRefresh).getTime() : null)
+  const canOpenClusterDetails = !usingSyntheticDemoClusters
 
   // Hide the inline stats grid when this card is rendered on the Clusters page,
   // which already has its own StatsOverview showing the same metrics (#11415).
@@ -128,7 +165,7 @@ export function ClusterHealth() {
       sortDirection,
       setSortDirection },
     containerRef,
-    containerStyle } = useCardData<ClusterInfo, SortByOption>(rawClusters, {
+    containerStyle } = useCardData<ClusterInfo, SortByOption>(displayClusters, {
     filter: {
       searchFields: ['name', 'context', 'server'],
       clusterField: 'name',
@@ -142,14 +179,15 @@ export function ClusterHealth() {
   // Report state to CardWrapper for refresh animation
   // Show skeleton if loading OR if we haven't completed the initial fetch yet
   // This prevents the empty card flash while waiting for initial data
-  const hasData = rawClusters.length > 0
+  const hasData = displayClusters.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
-    isLoading: isLoadingHook && !hasData,
-    isRefreshing: isRefreshing || gpuRefreshing,
+    isLoading: isLoadingHook && !hasData && !shouldShowDemoFallback,
+    isRefreshing: effectiveIsRefreshing,
     hasAnyData: hasData,
-    isFailed: !!error && !hasData,
-    consecutiveFailures: error ? 1 : 0,
-    isDemoData: isDemoMode || isDemoFallback })
+    isFailed: (!!error && !hasData) || (isFailed && !hasResolvedClusterHealth) || healthFallbackTimedOut,
+    consecutiveFailures: healthFallbackTimedOut ? Math.max(consecutiveFailures, 1) : consecutiveFailures,
+    isDemoData: effectiveIsDemoData,
+    lastRefresh: lastRefreshMs })
   const isLoading = showSkeleton
 
   // Calculate GPU counts per cluster
@@ -164,8 +202,8 @@ export function ClusterHealth() {
 
   // Stats based on globally filtered clusters (not affected by local search/cluster filter)
   const filteredForStats = isAllClustersSelected
-    ? rawClusters
-    : rawClusters.filter(c => selectedClusters.includes(c.name))
+    ? displayClusters
+    : displayClusters.filter(c => selectedClusters.includes(c.name))
 
   // Use shared isClusterHealthy / isClusterUnreachable from clusters/utils.ts
   // so that Dashboard, My Clusters, and Sidebar all produce identical counts.
@@ -228,12 +266,12 @@ export function ClusterHealth() {
       {/* Header with controls */}
       <div className="flex flex-wrap items-center justify-between gap-y-2 mb-4">
         <div className="flex items-center gap-2">
-          <StatusBadge color="purple" title={t('clusterHealth.totalClustersTitle', { count: rawClusters.length })}>
-            {rawClusters.length} {t('clusterHealth.clustersLabel')}
+          <StatusBadge color="purple" title={t('clusterHealth.totalClustersTitle', { count: displayClusters.length })}>
+            {displayClusters.length} {t('clusterHealth.clustersLabel')}
           </StatusBadge>
           <RefreshIndicator
-            isRefreshing={isRefreshing}
-            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            isRefreshing={effectiveIsRefreshing}
+            lastUpdated={!shouldShowDemoFallback && lastRefresh ? new Date(lastRefresh) : null}
             size="sm"
             showLabel={false}
           />
@@ -352,17 +390,17 @@ export function ClusterHealth() {
           return (
             <Tooltip
               key={cluster.name}
-              content={t('clusterHealth.clickViewDetails', { name: cluster.name })}
+              content={canOpenClusterDetails ? t('clusterHealth.clickViewDetails', { name: cluster.name }) : statusTooltip}
               wrapperClassName="block w-full"
             >
             <div
-              data-tour={idx === 0 ? 'drilldown' : undefined}
-              className={`group w-full ${isMobile ? 'flex flex-col gap-2' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3'} p-3 rounded-lg border border-border/30 bg-secondary/30 transition-all cursor-pointer hover:bg-secondary/50 hover:border-border/50 min-w-0 overflow-hidden`}
-              role="button"
-              tabIndex={0}
-              onClick={() => setSelectedCluster(cluster.name)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCluster(cluster.name) } }}
-              aria-label={t('clusterHealth.clickViewDetails', { name: cluster.name })}
+              data-tour={idx === 0 && canOpenClusterDetails ? 'drilldown' : undefined}
+              className={`group w-full ${isMobile ? 'flex flex-col gap-2' : 'flex flex-wrap items-start justify-between gap-x-4 gap-y-3'} p-3 rounded-lg border border-border/30 bg-secondary/30 transition-all ${canOpenClusterDetails ? 'cursor-pointer hover:bg-secondary/50 hover:border-border/50' : 'cursor-default'} min-w-0 overflow-hidden`}
+              role={canOpenClusterDetails ? 'button' : undefined}
+              tabIndex={canOpenClusterDetails ? 0 : undefined}
+              onClick={canOpenClusterDetails ? () => setSelectedCluster(cluster.name) : undefined}
+              onKeyDown={canOpenClusterDetails ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedCluster(cluster.name) } } : undefined}
+              aria-label={canOpenClusterDetails ? t('clusterHealth.clickViewDetails', { name: cluster.name }) : undefined}
             >
               <div className="flex items-center gap-2.5 min-w-0 flex-1 flex-wrap" title={statusTooltip}>
                 {/* Status icon: green check for healthy, red key for auth error, yellow wifi-off for offline, red triangle for degraded */}
@@ -478,7 +516,7 @@ export function ClusterHealth() {
         <span className="whitespace-nowrap truncate" title={t('clusterHealth.totalPodsTitle')}>{totalPods} {t('clusterHealth.totalPods')}</span>
       </div>
 
-      {error && (
+      {(error || shouldShowDemoFallback) && (
         <div className="mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20" title={t('clusterHealth.checkKubeconfigNetwork')}>
           <div className="text-xs text-yellow-400">
             {t('clusterHealth.unableToConnect')}
@@ -507,7 +545,7 @@ export function ClusterHealth() {
       )}
 
       {/* Cluster Detail Modal */}
-      {selectedCluster && (
+      {canOpenClusterDetails && selectedCluster && (
         <ClusterDetailModal
           clusterName={selectedCluster}
           clusterUser={rawClusters.find(c => c.name === selectedCluster)?.user}
