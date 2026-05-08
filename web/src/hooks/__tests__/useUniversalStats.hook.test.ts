@@ -267,8 +267,10 @@ describe('useUniversalStats', () => {
       expect(getStatValue('nodes')?.value).toBe(0)
       expect(getStatValue('pods')?.value).toBe(0)
       expect(getStatValue('cpus')?.value).toBe(0)
-      expect(getStatValue('memory')?.value).toBe('0 GB')
-      expect(getStatValue('storage')?.value).toBe('0 GB')
+      expect(getStatValue('memory')?.value).toBe(0)
+      expect(getStatValue('memory')?.format?.(0)).toBe('0 GB')
+      expect(getStatValue('storage')?.value).toBe(0)
+      expect(getStatValue('storage')?.format?.(0)).toBe('0 GB')
     })
 
     it('handles clusters with missing namespaces array', () => {
@@ -343,13 +345,17 @@ describe('useUniversalStats', () => {
     })
 
     it('formats memory as rounded GB string', () => {
-      expect(getStatValue('memory')?.value).toBe('80 GB') // Math.round(64 + 16)
-      expect(getStatValue('memory')?.sublabel).toBe('total memory')
+      const memory = getStatValue('memory')
+      expect(memory?.value).toBe(80) // Math.round(64 + 16)
+      expect(memory?.format?.(80)).toBe('80 GB')
+      expect(memory?.sublabel).toBe('total memory')
     })
 
     it('formats storage as rounded GB string', () => {
-      expect(getStatValue('storage')?.value).toBe('250 GB') // Math.round(200 + 50)
-      expect(getStatValue('storage')?.sublabel).toBe('total storage')
+      const storage = getStatValue('storage')
+      expect(storage?.value).toBe(250) // Math.round(200 + 50)
+      expect(storage?.format?.(250)).toBe('250 GB')
+      expect(storage?.sublabel).toBe('total storage')
     })
 
     it('de-duplicates namespaces across clusters', () => {

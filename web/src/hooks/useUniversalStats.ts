@@ -29,6 +29,9 @@ const COST_PER_GPU = 900         // USD per GPU per month
 /** Restart count above which a pod is considered "high restart" */
 const HIGH_RESTART_THRESHOLD = 10
 
+/** Format cluster capacity values as rounded gigabytes for stat cards. */
+const formatGigabytes = (value: number): string => `${Math.round(value)} GB`
+
 /**
  * Universal stat value provider that works across ALL dashboards.
  * Provides values for every stat block ID so users can add any stat
@@ -201,9 +204,9 @@ export function useUniversalStats() {
       case 'cpus':
         return { value: totalCPUs, sublabel: 'total CPUs', isClickable: false }
       case 'memory':
-        return { value: `${Math.round(totalMemoryGB)} GB`, sublabel: 'total memory', isClickable: false }
+        return { value: totalMemoryGB, format: formatGigabytes, sublabel: 'total memory', isClickable: false }
       case 'storage':
-        return { value: `${Math.round(totalStorageGB)} GB`, sublabel: 'total storage', isClickable: false }
+        return { value: totalStorageGB, format: formatGigabytes, sublabel: 'total storage', isClickable: false }
       case 'gpus':
         return { value: realGPUCount, sublabel: 'total GPUs', onClick: () => drillToAllGPU(), isClickable: realGPUCount > 0 }
       case 'pods':
