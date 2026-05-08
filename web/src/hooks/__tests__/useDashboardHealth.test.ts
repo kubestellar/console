@@ -5,6 +5,7 @@ const mockUseAlerts = vi.fn()
 const mockUseClusters = vi.fn()
 const mockUsePodIssues = vi.fn()
 const mockUseBackendHealth = vi.fn()
+const mockUseLocalAgent = vi.fn()
 
 vi.mock('../useAlerts', () => ({
   useAlerts: () => mockUseAlerts(),
@@ -19,10 +20,15 @@ vi.mock('../useBackendHealth', () => ({
   useBackendHealth: () => mockUseBackendHealth(),
 }))
 
+vi.mock('../useLocalAgent', () => ({
+  useLocalAgent: () => mockUseLocalAgent(),
+}))
+
 // Default all tests to a "connected" backend so pre-existing cases stay
 // healthy. Individual tests override this for disconnected scenarios.
 beforeEach(() => {
   mockUseBackendHealth.mockReturnValue({ status: 'connected' })
+  mockUseLocalAgent.mockReturnValue({ isDegraded: false, dataErrorCount: 0 })
 })
 
 import { useDashboardHealth } from '../useDashboardHealth'
@@ -154,6 +160,32 @@ describe('useDashboardHealth', () => {
     const { result } = renderHook(() => useDashboardHealth())
     expect(result.current.status).toBe('healthy')
     expect(result.current.criticalCount).toBe(0)
+    expect(result.current.warningCount).toBe(0)
+  })
+
+  it('flags degraded agent as warning when no clusters connected (issue #12622)', () => {
+    mockUseLocalAgent.mockReturnValue({ isDegraded: true, dataErrorCount: 3 })
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
+    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('warning')
+    expect(result.current.warningCount).toBe(1)
+    expect(result.current.details).toContain('Agent degraded - data stream errors')
+  })
+
+  it('does not flag degraded agent when clusters exist (cluster health dominates)', () => {
+    mockUseLocalAgent.mockReturnValue({ isDegraded: true, dataErrorCount: 2 })
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({
+      deduplicatedClusters: [{ healthy: true, reachable: true }],
+      isLoading: false,
+    })
+    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('healthy')
     expect(result.current.warningCount).toBe(0)
   })
 })

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { ROUTES } from '@/config/routes'
 import { useAlerts } from './useAlerts'
 import { useBackendHealth } from './useBackendHealth'
+import { useLocalAgent } from './useLocalAgent'
 import { useClusters, usePodIssues } from './useMCP'
 import { summarizeClusterHealth } from '../components/clusters/utils'
 
@@ -18,7 +19,7 @@ export interface DashboardHealthInfo {
 
 /**
  * Hook to aggregate health status across the dashboard
- * Checks alerts, cluster health, pod issues, and backend connectivity.
+ * Checks alerts, cluster health, pod issues, backend connectivity, and agent status.
  *
  * Backend connectivity (issue #8162): persistent failures of the root
  * `/health` endpoint — which also indicate that downstream API calls
@@ -26,12 +27,17 @@ export interface DashboardHealthInfo {
  * various `/api/.../runs` and `/api/.../stream` endpoints are likely
  * returning 503 — are surfaced as a critical dashboard health state so
  * the UI does not appear "healthy" while backend services are down.
+ *
+ * Agent degradation (issue #12622): when the local agent is in a degraded
+ * state (e.g., MCP streams returning 500 errors), the page-level health
+ * pill reflects this as a warning state to match the top-bar indicator.
  */
 export function useDashboardHealth(): DashboardHealthInfo {
   const { activeAlerts } = useAlerts()
   const { deduplicatedClusters, isLoading: clustersLoading } = useClusters()
   const { issues: podIssues, isLoading: podsLoading } = usePodIssues()
   const { status: backendStatus } = useBackendHealth()
+  const { isDegraded: isAgentDegraded, dataErrorCount } = useLocalAgent()
 
   return useMemo(() => {
     const details: string[] = []
@@ -47,6 +53,20 @@ export function useDashboardHealth(): DashboardHealthInfo {
     if (backendStatus === 'disconnected') {
       criticalCount += 1
       details.push('Backend API unreachable')
+    }
+
+    // Agent degradation check (issue #12622).
+    // When the local agent is degraded (MCP streams failing, data fetch
+    // errors), surface this as a warning so the page-level health pill
+    // matches the top-bar "Degraded" status. Only report if there are
+    // no clusters (when clusters exist, their health dominates the signal).
+    if (isAgentDegraded && !clustersLoading && deduplicatedClusters.length === 0) {
+      warningCount += 1
+      if (dataErrorCount > 0) {
+        details.push('Agent degraded - data stream errors')
+      } else {
+        details.push('Agent degraded')
+      }
     }
 
     // Count critical and warning alerts
@@ -110,5 +130,5 @@ export function useDashboardHealth(): DashboardHealthInfo {
       warningCount,
       navigateTo,
     }
-  }, [activeAlerts, deduplicatedClusters, clustersLoading, podIssues, podsLoading, backendStatus])
+  }, [activeAlerts, deduplicatedClusters, clustersLoading, podIssues, podsLoading, backendStatus, isAgentDegraded, dataErrorCount])
 }
