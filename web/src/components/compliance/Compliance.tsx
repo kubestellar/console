@@ -175,8 +175,8 @@ export function Compliance() {
       case 'warning': {
         const mockTotal = (reachableClusters.length || 1) * MOCK_CHECKS_PER_CLUSTER
         return allDemo
-          ? { value: mockTotal - Math.floor(mockTotal * MOCK_PASS_RATE) - Math.floor(mockTotal * MOCK_FAIL_RATE), sublabel: 'warnings', isDemo: true, isClickable: false }
-          : { value: realData.warning, sublabel: 'warnings', onClick: () => { emitComplianceDrillDown('warning'); drillToCompliance('warning', { passing: realData.passing, failing: realData.failing, warning: realData.warning, totalChecks: realData.totalChecks }) }, isClickable: realData.warning > 0 }
+          ? { value: mockTotal - Math.floor(mockTotal * MOCK_PASS_RATE) - Math.floor(mockTotal * MOCK_FAIL_RATE), sublabel: 'skipped', isDemo: true, isClickable: false }
+          : { value: realData.warning, sublabel: 'skipped', onClick: () => { emitComplianceDrillDown('warning'); drillToCompliance('warning', { passing: realData.passing, failing: realData.failing, warning: realData.warning, totalChecks: realData.totalChecks }) }, isClickable: realData.warning > 0 }
       }
       case 'critical_findings':
         return allDemo
