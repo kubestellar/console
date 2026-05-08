@@ -187,6 +187,25 @@
       }
     }
   },
+  "quantumHistogram": {
+    "title": "Execution Histogram",
+    "refresh": "Refresh histogram",
+    "loginPrompt": "Please log in to view quantum data",
+    "sortByFrequency": "By Frequency",
+    "sortByPattern": "By Pattern",
+    "refreshInterval": "Refresh Interval",
+    "refreshValue": "{{count}} ms",
+    "patternsLabel": "Patterns",
+    "totalShotsLabel": "Total Shots",
+    "qubitsLabel": "Qubits",
+    "emptyTitle": "No execution results available yet",
+    "emptyHint": "Run a quantum circuit to see the histogram.",
+    "tooltipPattern": "Pattern:",
+    "tooltipCount": "Count:",
+    "tooltipProbability": "Probability:",
+    "yAxisLabel": "Counts",
+    "lastExecution": "Last execution: {{time}}"
+  },
   "titles": {
     "cluster_health": "Cluster Health",
     "cluster_focus": "Cluster Focus",

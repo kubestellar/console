@@ -1,239 +1,320 @@
-import React, { useState, useEffect } from 'react'
+import { type CSSProperties, useMemo, useState } from 'react'
 import { AlertCircle, RefreshCw } from 'lucide-react'
-import ReactECharts from 'echarts-for-react'
-import { useReportCardDataState } from '../CardDataContext'
+import { useTranslation } from 'react-i18next'
+import { LazyEChart } from '../../charts/LazyEChart'
+import { useCardLoadingState } from '../CardDataContext'
+import { Button } from '../../ui/Button'
+import { Skeleton } from '../../ui/Skeleton'
 import { Slider } from '../../ui/Slider'
-import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
-import { isQuantumForcedToDemo, isDemoMode } from '../../../lib/demoMode'
-import { useResultHistogram } from '../../../hooks/useResultHistogram'
+import { useResultHistogram, type HistogramSort } from '../../../hooks/useResultHistogram'
 import { useAuth } from '../../../lib/auth'
 import { getChartColor } from '../../../lib/chartColors'
+import {
+  CHART_AXIS_FONT_SIZE,
+  CHART_GRID_STROKE,
+  CHART_TEXT_MUTED,
+  CHART_TICK_COLOR,
+  CHART_TOOLTIP_LABEL_COLOR,
+  CHART_TOOLTIP_TEXT_COLOR,
+} from '../../../lib/constants'
 
-const HISTOGRAM_DEFAULT_POLL_MS = 10000
-const HISTOGRAM_POLL_MIN_MS = 2000
-const HISTOGRAM_POLL_MAX_MS = 30000
-const COLORS = [1, 2, 3, 4, 5, 6, 7, 8].map(i => getChartColor(i))
+const HISTOGRAM_DEFAULT_POLL_MS = 10_000
+const HISTOGRAM_POLL_MIN_MS = 2_000
+const HISTOGRAM_POLL_MAX_MS = 30_000
+const HISTOGRAM_POLL_STEP_MS = 500
+const HISTOGRAM_CHART_HEIGHT_PX = 300
+const HISTOGRAM_AXIS_LABEL_ROTATION_DEG = 45
+const HISTOGRAM_BAR_BORDER_RADIUS: [number, number, number, number] = [6, 6, 0, 0]
+const HISTOGRAM_BAR_MAX_WIDTH_PX = 48
+const HISTOGRAM_TOOLTIP_PERCENTAGE_MULTIPLIER = 100
+const HISTOGRAM_PROBABILITY_DECIMALS = 1
+const HISTOGRAM_NO_VALUE = '—'
+const HISTOGRAM_COLOR_COUNT = 8
+const HISTOGRAM_REFRESH_ICON_SIZE_PX = 16
+const HISTOGRAM_SKELETON_TITLE_WIDTH_PX = 180
+const HISTOGRAM_SKELETON_TITLE_HEIGHT_PX = 24
+const HISTOGRAM_SKELETON_ACTION_SIZE_PX = 32
+const HISTOGRAM_SKELETON_CONTROL_HEIGHT_PX = 36
+const HISTOGRAM_SKELETON_METADATA_HEIGHT_PX = 64
+const HISTOGRAM_COLOR_PALETTE = Array.from(
+  { length: HISTOGRAM_COLOR_COUNT },
+  (_, index) => getChartColor(index + 1),
+)
+const CHART_STYLE: CSSProperties = { height: '100%', width: '100%' }
 
-export const QuantumHistogramCard: React.FC = () => {
+interface HistogramTooltipParam {
+  dataIndex: number
+  value: number
+}
+
+function isHistogramTooltipParam(value: unknown): value is HistogramTooltipParam {
+  return typeof value === 'object'
+    && value !== null
+    && 'dataIndex' in value
+    && typeof value.dataIndex === 'number'
+    && 'value' in value
+    && typeof value.value === 'number'
+}
+
+function formatExecutionTime(timestamp: string | null): string | null {
+  if (!timestamp) {
+    return null
+  }
+
+  const parsed = new Date(timestamp)
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toLocaleTimeString()
+}
+
+function HistogramLoadingState() {
+  return (
+    <div className="p-4 flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <Skeleton variant="text" width={HISTOGRAM_SKELETON_TITLE_WIDTH_PX} height={HISTOGRAM_SKELETON_TITLE_HEIGHT_PX} />
+        <Skeleton variant="circular" width={HISTOGRAM_SKELETON_ACTION_SIZE_PX} height={HISTOGRAM_SKELETON_ACTION_SIZE_PX} />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton variant="rounded" className="flex-1" height={HISTOGRAM_SKELETON_CONTROL_HEIGHT_PX} />
+        <Skeleton variant="rounded" className="flex-1" height={HISTOGRAM_SKELETON_CONTROL_HEIGHT_PX} />
+      </div>
+      <Skeleton variant="rounded" height={HISTOGRAM_SKELETON_METADATA_HEIGHT_PX} />
+      <Skeleton variant="rounded" height={HISTOGRAM_CHART_HEIGHT_PX} />
+    </div>
+  )
+}
+
+function HistogramMetadata({
+  label,
+  value,
+}: {
+  label: string
+  value: number | string
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-secondary/20 px-3 py-2">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-sm font-medium text-foreground">{value}</div>
+    </div>
+  )
+}
+
+export function QuantumHistogramCard() {
+  const { t } = useTranslation(['cards', 'common'])
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
-  const [sortBy, setSortBy] = useState<'count' | 'pattern'>('pattern')
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
+  const [sortBy, setSortBy] = useState<HistogramSort>('count')
   const [refreshInterval, setRefreshInterval] = useState(HISTOGRAM_DEFAULT_POLL_MS)
+  const {
+    data,
+    isLoading,
+    isRefreshing,
+    isDemoData,
+    error,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh,
+    refetch,
+  } = useResultHistogram(sortBy, refreshInterval)
 
-  
-  const { data, isLoading, error: hookError, refetch } = useResultHistogram(sortBy, refreshInterval)
-
-  const isPaused = isGlobalQuantumPollingPaused()
-  const forceDemo = isQuantumForcedToDemo()
-  const globalDemoEnabled = isDemoMode()
-  const effectiveIsDemoData = forceDemo || globalDemoEnabled
-
-  useEffect(() => {
-    if (isPaused || forceDemo) {
-      setRefreshInterval(Number.MAX_SAFE_INTEGER)
-    } else {
-      setRefreshInterval(HISTOGRAM_DEFAULT_POLL_MS)
-    }
-  }, [isPaused, forceDemo])
-
-  useEffect(() => {
-    if (hookError) {
-      setError(hookError)
-      setConsecutiveFailures(prev => prev + 1)
-    } else {
-      setError(null)
-      setConsecutiveFailures(0)
-    }
-  }, [hookError])
-
-  useReportCardDataState({
-    isFailed: error !== null,
+  const histogramEntries = data?.histogram || []
+  const executionTime = formatExecutionTime(data?.timestamp ?? null)
+  const { showSkeleton, showEmptyState } = useCardLoadingState({
+    isLoading,
+    hasAnyData: histogramEntries.length > 0,
+    isFailed,
     consecutiveFailures,
     errorMessage: error || undefined,
-    isLoading,
-    isDemoData: effectiveIsDemoData,
-    hasData: (data?.histogram?.length ?? 0) > 0,
+    isDemoData,
+    isRefreshing,
+    lastRefresh,
   })
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true)
-    await refetch()
-    setIsRefreshing(false)
-  }
+  const chartOption = useMemo(() => {
+    const labels = histogramEntries.map(entry => entry.pattern)
+    const counts = histogramEntries.map(entry => entry.count)
 
-  const handleSortChange = (newSort: 'count' | 'pattern') => {
-    setSortBy(newSort)
-  }
+    return {
+      color: HISTOGRAM_COLOR_PALETTE,
+      grid: {
+        left: '10%',
+        right: '6%',
+        top: '8%',
+        bottom: '18%',
+        containLabel: true,
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (params: unknown) => {
+          if (!Array.isArray(params) || params.length === 0 || !isHistogramTooltipParam(params[0])) {
+            return ''
+          }
 
-  const handleRefreshIntervalChange = (newInterval: number) => {
-    setRefreshInterval(newInterval)
-  }
+          const selectedEntry = histogramEntries[params[0].dataIndex]
+          if (!selectedEntry) {
+            return ''
+          }
 
-  if (authIsLoading) {
-    return (
-      <div className="p-4 flex flex-col gap-4">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-40" />
-        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded" />
-      </div>
-    )
+          return [
+            `<strong style="color:${CHART_TOOLTIP_TEXT_COLOR}">${t('cards:quantumHistogram.tooltipPattern')}</strong> ${selectedEntry.pattern}`,
+            `<strong style="color:${CHART_TOOLTIP_TEXT_COLOR}">${t('cards:quantumHistogram.tooltipCount')}</strong> ${selectedEntry.count}`,
+            `<strong style="color:${CHART_TOOLTIP_TEXT_COLOR}">${t('cards:quantumHistogram.tooltipProbability')}</strong> ${(selectedEntry.probability * HISTOGRAM_TOOLTIP_PERCENTAGE_MULTIPLIER).toFixed(HISTOGRAM_PROBABILITY_DECIMALS)}%`,
+          ].join('<br/>')
+        },
+        textStyle: {
+          color: CHART_TOOLTIP_LABEL_COLOR,
+        },
+      },
+      xAxis: {
+        type: 'category',
+        data: labels,
+        axisLabel: {
+          rotate: HISTOGRAM_AXIS_LABEL_ROTATION_DEG,
+          interval: 0,
+          color: CHART_TEXT_MUTED,
+          fontSize: CHART_AXIS_FONT_SIZE,
+        },
+        axisLine: {
+          lineStyle: {
+            color: CHART_GRID_STROKE,
+          },
+        },
+        axisTick: {
+          lineStyle: {
+            color: CHART_TICK_COLOR,
+          },
+        },
+      },
+      yAxis: {
+        type: 'value',
+        name: t('cards:quantumHistogram.yAxisLabel'),
+        nameTextStyle: {
+          color: CHART_TEXT_MUTED,
+        },
+        axisLabel: {
+          color: CHART_TEXT_MUTED,
+          fontSize: CHART_AXIS_FONT_SIZE,
+        },
+        splitLine: {
+          lineStyle: {
+            color: CHART_GRID_STROKE,
+          },
+        },
+      },
+      series: [
+        {
+          type: 'bar',
+          barMaxWidth: HISTOGRAM_BAR_MAX_WIDTH_PX,
+          data: counts,
+          itemStyle: {
+            borderRadius: HISTOGRAM_BAR_BORDER_RADIUS,
+            color: (params: { dataIndex: number }) => HISTOGRAM_COLOR_PALETTE[params.dataIndex % HISTOGRAM_COLOR_PALETTE.length],
+          },
+        },
+      ],
+    }
+  }, [histogramEntries, t])
+
+  const metadata = useMemo(() => ([
+    {
+      label: t('cards:quantumHistogram.patternsLabel'),
+      value: data?.num_patterns ?? 0,
+    },
+    {
+      label: t('cards:quantumHistogram.totalShotsLabel'),
+      value: data?.total_shots ?? 0,
+    },
+    {
+      label: t('cards:quantumHistogram.qubitsLabel'),
+      value: data?.num_qubits ?? HISTOGRAM_NO_VALUE,
+    },
+  ]), [data?.num_patterns, data?.num_qubits, data?.total_shots, t])
+
+  if (authIsLoading || showSkeleton) {
+    return <HistogramLoadingState />
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 gap-4 text-center">
-        <p className="text-gray-500">Please log in to view quantum data</p>
-        <button
-          onClick={login}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-        >
-          Continue with GitHub
-        </button>
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
+        <p className="text-sm text-muted-foreground">{t('cards:quantumHistogram.loginPrompt')}</p>
+        <Button variant="primary" size="lg" onClick={login}>
+          {t('common:login.continueWithGitHub')}
+        </Button>
       </div>
     )
-  }
-
-  if (!data) {
-    return (
-      <div className="p-4 flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Execution Histogram</h3>
-          <button
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className="p-2 hover:bg-accent/20 rounded-lg disabled:opacity-50"
-            title="Refresh"
-          >
-            <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-          </button>
-        </div>
-
-        {error && (
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive flex items-start gap-2">
-            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <div className="text-center py-8 text-muted-foreground">
-          <p>No execution results available yet</p>
-          <p className="text-xs mt-2">Run a quantum circuit to see the histogram</p>
-        </div>
-      </div>
-    )
-  }
-
-  const chartOption = {
-    responsive: true,
-    maintainAspectRatio: true,
-    color: COLORS,
-    grid: {
-      left: '10%',
-      right: '10%',
-      top: '10%',
-      bottom: '15%',
-      containLabel: true,
-    },
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'shadow' },
-      formatter: (params: any) => {
-        if (!Array.isArray(params) || params.length === 0) return ''
-        const param = params[0]
-        const pattern = data.histogram[param.dataIndex]?.pattern ?? ''
-        const count = param.value
-        const prob = data.histogram[param.dataIndex]?.probability ?? 0
-        return `Pattern: ${pattern}<br/>Count: ${count}<br/>Probability: ${(prob * 100).toFixed(1)}%`
-      },
-    },
-    xAxis: {
-      type: 'category',
-      data: (data.histogram || []).map((entry: any) => entry.pattern),
-      axisLabel: { rotate: 45, interval: 0 },
-    },
-    yAxis: {
-      type: 'value',
-      name: 'Counts',
-    },
-    series: [
-      {
-        data: (data.histogram || []).map((entry: any) => entry.count),
-        type: 'bar',
-        itemStyle: {
-          color: (params: any) => COLORS[params.dataIndex % COLORS.length],
-        },
-      },
-    ],
   }
 
   return (
-    <div className="p-4 flex flex-col gap-4 h-full">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Execution Histogram</h3>
-        <button
-          onClick={handleRefresh}
+    <div className="p-4 flex h-full flex-col gap-4">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-lg font-semibold text-foreground">{t('cards:quantumHistogram.title')}</h3>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => { void refetch() }}
           disabled={isLoading}
-          className="p-2 hover:bg-accent/20 rounded-lg disabled:opacity-50"
-          title="Refresh"
-        >
-          <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-        </button>
-      </div>
-
-      {/* Sort Toggle */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => handleSortChange('count')}
-          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-            sortBy === 'count'
-              ? 'bg-accent text-accent-foreground'
-              : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-          }`}
-        >
-          By Frequency
-        </button>
-        <button
-          onClick={() => handleSortChange('pattern')}
-          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-            sortBy === 'pattern'
-              ? 'bg-accent text-accent-foreground'
-              : 'bg-muted hover:bg-muted/80 text-muted-foreground'
-          }`}
-        >
-          By Pattern
-        </button>
-      </div>
-
-      {/* Refresh Interval Control */}
-      <div className="bg-secondary/30 rounded-lg p-3 border border-border">
-        <Slider
-          label="Refresh Interval"
-          value={refreshInterval}
-          onChange={(e) => handleRefreshIntervalChange(Number(e.currentTarget.value))}
-          min={HISTOGRAM_POLL_MIN_MS}
-          max={HISTOGRAM_POLL_MAX_MS}
-          step={500}
-          unit=" ms"
+          title={t('cards:quantumHistogram.refresh')}
+          icon={<RefreshCw size={HISTOGRAM_REFRESH_ICON_SIZE_PX} className={isRefreshing ? 'animate-spin' : undefined} />}
         />
       </div>
 
-      {/* Metadata */}
-      <div className="text-xs text-muted-foreground flex gap-4">
-        <span>Patterns: {data.num_patterns}</span>
-        <span>Total Shots: {data.total_shots}</span>
-        <span>Qubits: {data.num_qubits}</span>
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          variant={sortBy === 'count' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => setSortBy('count')}
+        >
+          {t('cards:quantumHistogram.sortByFrequency')}
+        </Button>
+        <Button
+          variant={sortBy === 'pattern' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => setSortBy('pattern')}
+        >
+          {t('cards:quantumHistogram.sortByPattern')}
+        </Button>
       </div>
 
-      {/* ECharts Vertical Bar Chart */}
-      <div className="flex-1 min-h-[300px]">
-        <ReactECharts option={chartOption} style={{ height: '100%', width: '100%' }} />
+      <div className="rounded-lg border border-border bg-secondary/30 p-3">
+        <Slider
+          label={t('cards:quantumHistogram.refreshInterval')}
+          value={refreshInterval}
+          onChange={(event) => setRefreshInterval(Number(event.currentTarget.value))}
+          min={HISTOGRAM_POLL_MIN_MS}
+          max={HISTOGRAM_POLL_MAX_MS}
+          step={HISTOGRAM_POLL_STEP_MS}
+          formatValue={(value) => t('cards:quantumHistogram.refreshValue', { count: value })}
+        />
       </div>
 
-      {/* Timestamp */}
-      {data.timestamp && (
-        <div className="text-xs text-muted-foreground text-center">
-          {new Date(data.timestamp).toLocaleTimeString()}
+      {error && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {showEmptyState ? (
+        <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-secondary/10 px-4 py-8 text-center">
+          <p className="text-sm font-medium text-foreground">{t('cards:quantumHistogram.emptyTitle')}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t('cards:quantumHistogram.emptyHint')}</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {metadata.map(item => (
+              <HistogramMetadata key={item.label} label={item.label} value={item.value} />
+            ))}
+          </div>
+
+          <div className="flex-1" style={{ minHeight: HISTOGRAM_CHART_HEIGHT_PX }}>
+            <LazyEChart option={chartOption} style={CHART_STYLE} />
+          </div>
+        </>
+      )}
+
+      {executionTime && (
+        <div className="text-center text-xs text-muted-foreground">
+          {t('cards:quantumHistogram.lastExecution', { time: executionTime })}
         </div>
       )}
     </div>

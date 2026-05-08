@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../lib/auth'
+import { useCache } from '../lib/cache'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { isQuantumForcedToDemo } from '../lib/demoMode'
+import { isGlobalQuantumPollingPaused } from '../lib/quantum/pollingContext'
 
-const DEBUG = import.meta.env.VITE_DEBUG === 'true' || (typeof window !== 'undefined' && (window as any).DEBUG_QUANTUM)
+export type HistogramSort = 'count' | 'pattern'
 
 export interface HistogramEntry {
   pattern: string
@@ -11,7 +14,7 @@ export interface HistogramEntry {
 
 export interface HistogramData {
   histogram: HistogramEntry[]
-  sort: string
+  sort: HistogramSort
   num_patterns: number
   total_shots: number
   num_qubits: number | null
@@ -21,76 +24,180 @@ export interface HistogramData {
   execution_sequence: number | null
 }
 
-export function useResultHistogram(
-  sortBy: 'count' | 'pattern' = 'count',
-  pollInterval: number = 5000
-) {
-  const { isAuthenticated } = useAuth()
-  const [data, setData] = useState<HistogramData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+interface HistogramResponse extends Partial<HistogramData> {
+  warning?: string
+}
 
-  const fetchHistogram = useCallback(async () => {
-    if (!isAuthenticated) return
+interface UseResultHistogramResult {
+  data: HistogramData | null
+  isLoading: boolean
+  isRefreshing: boolean
+  isDemoData: boolean
+  error: string | null
+  isFailed: boolean
+  consecutiveFailures: number
+  lastRefresh: number | null
+  refetch: () => Promise<void>
+}
 
-    setIsLoading(true)
-    setError(null)
-    try {
-      if (DEBUG) console.log('[useResultHistogram] Fetching:', `/api/result/histogram?sort=${sortBy}`)
-      const res = await fetch(`/api/result/histogram?sort=${sortBy}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
+const HISTOGRAM_ENDPOINT = '/api/result/histogram'
+const DEFAULT_SORT: HistogramSort = 'count'
+const DEFAULT_POLL_MS = 5000
+const RATE_LIMIT_STATUS = 429
+
+const EMPTY_HISTOGRAM_DATA: HistogramData = {
+  histogram: [],
+  sort: DEFAULT_SORT,
+  num_patterns: 0,
+  total_shots: 0,
+  num_qubits: null,
+  timestamp: null,
+  backend: null,
+  backend_type: null,
+  execution_sequence: null,
+}
+
+const DEMO_HISTOGRAM_DATA: HistogramData = {
+  histogram: [
+    { pattern: '00', count: 496, probability: 0.4844 },
+    { pattern: '11', count: 372, probability: 0.3633 },
+    { pattern: '01', count: 94, probability: 0.0918 },
+    { pattern: '10', count: 62, probability: 0.0605 },
+  ],
+  sort: DEFAULT_SORT,
+  num_patterns: 4,
+  total_shots: 1024,
+  num_qubits: 2,
+  timestamp: '2026-05-08T14:00:00Z',
+  backend: 'ibmq_qasm_simulator',
+  backend_type: 'simulator',
+  execution_sequence: 7,
+}
+
+function toNumber(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function toNullableNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function toNullableString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null
+}
+
+function normalizeSort(sortBy: string | undefined): HistogramSort {
+  return sortBy === 'pattern' ? 'pattern' : 'count'
+}
+
+function normalizeHistogramData(raw: HistogramResponse, sortBy: HistogramSort): HistogramData {
+  const entries = Array.isArray(raw.histogram)
+    ? raw.histogram.map((entry): HistogramEntry => {
+        const record = typeof entry === 'object' && entry !== null
+          ? entry as Record<string, unknown>
+          : {}
+
+        return {
+          pattern: typeof record.pattern === 'string' ? record.pattern : '',
+          count: toNumber(record.count),
+          probability: toNumber(record.probability),
+        }
       })
+    : []
 
-      if (DEBUG) console.log('[useResultHistogram] Response status:', res.status, 'content-type:', res.headers.get('content-type'))
+  return {
+    histogram: entries,
+    sort: typeof raw.sort === 'string' ? normalizeSort(raw.sort) : sortBy,
+    num_patterns: toNumber(raw.num_patterns, entries.length),
+    total_shots: toNumber(raw.total_shots),
+    num_qubits: toNullableNumber(raw.num_qubits),
+    timestamp: toNullableString(raw.timestamp),
+    backend: toNullableString(raw.backend),
+    backend_type: toNullableString(raw.backend_type),
+    execution_sequence: toNullableNumber(raw.execution_sequence),
+  }
+}
 
-      // Silently ignore 429 (rate limit) — don't report as error, just skip this poll
-      if (res.status === 429) {
-        if (DEBUG) console.debug('[useResultHistogram] Rate limited, skipping')
-        setIsLoading(false)
-        return
-      }
+async function fetchHistogram(sortBy: HistogramSort): Promise<HistogramData> {
+  const response = await fetch(`${HISTOGRAM_ENDPOINT}?sort=${sortBy}`, {
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+  })
 
-      if (!res.ok) {
-        const text = await res.text()
-        if (DEBUG) console.error('[useResultHistogram] Non-ok response:', res.status, text.substring(0, 200))
-        throw new Error(`Failed to fetch histogram (${res.status})`)
-      }
+  if (response.status === RATE_LIMIT_STATUS) {
+    throw new Error(`Failed to fetch histogram (${RATE_LIMIT_STATUS})`)
+  }
 
-      const json = await res.json()
-      if (DEBUG) console.log('[useResultHistogram] Got data, num_patterns:', json.num_patterns)
-      if (json.warning) {
-        setData(null)
-      } else {
-        setData(json as HistogramData)
-      }
-      setError(null)
-    } catch (err) {
-      // Detect if we got HTML (loading page) instead of JSON — this means the backend
-      // is temporarily unhealthy. Don't report an error, just silently skip this poll
-      // and try again next time.
-      const errMsg = err instanceof Error ? err.message : 'Failed to fetch histogram'
-      if (errMsg.includes("<!doctype") || errMsg.includes("Unexpected token '<'")) {
-        if (DEBUG) console.debug('[useResultHistogram] Got HTML (backend loading), retrying next poll')
-        setIsLoading(false)
-        return
-      }
-      if (DEBUG) console.error('[useResultHistogram] Fetch error:', errMsg, err)
-      setError(errMsg)
-    } finally {
-      setIsLoading(false)
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    const message = body.trim() || `Failed to fetch histogram (${response.status})`
+    throw new Error(message)
+  }
+
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new Error('Failed to fetch histogram (unexpected response)')
+  }
+
+  const payload = await response.json() as HistogramResponse
+  if (payload.warning) {
+    return {
+      ...EMPTY_HISTOGRAM_DATA,
+      sort: sortBy,
     }
-  }, [isAuthenticated, sortBy])
+  }
 
-  useEffect(() => {
-    if (!isAuthenticated) return
-    fetchHistogram()
-    const timer = setInterval(fetchHistogram, pollInterval)
-    return () => clearInterval(timer)
-  }, [fetchHistogram, isAuthenticated, pollInterval])
+  return normalizeHistogramData(payload, sortBy)
+}
 
-  return { data, isLoading, error, refetch: fetchHistogram }
+export function useResultHistogram(
+  sortBy: HistogramSort = DEFAULT_SORT,
+  pollInterval: number = DEFAULT_POLL_MS,
+): UseResultHistogramResult {
+  const { isAuthenticated } = useAuth()
+  const isQuantumDemoOnly = isQuantumForcedToDemo()
+
+  const result = useCache<HistogramData>({
+    key: `quantum-result-histogram:${sortBy}`,
+    category: 'realtime',
+    refreshInterval: pollInterval,
+    autoRefresh: !isGlobalQuantumPollingPaused(),
+    enabled: isAuthenticated && !isQuantumDemoOnly,
+    initialData: EMPTY_HISTOGRAM_DATA,
+    demoData: {
+      ...DEMO_HISTOGRAM_DATA,
+      sort: sortBy,
+      histogram: sortBy === 'pattern'
+        ? [...DEMO_HISTOGRAM_DATA.histogram].sort((left, right) => left.pattern.localeCompare(right.pattern))
+        : [...DEMO_HISTOGRAM_DATA.histogram].sort((left, right) => right.count - left.count),
+    },
+    fetcher: () => fetchHistogram(sortBy),
+  })
+
+  if (!isAuthenticated) {
+    return {
+      data: null,
+      isLoading: false,
+      isRefreshing: false,
+      isDemoData: false,
+      error: null,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: result.refetch,
+    }
+  }
+
+  return {
+    data: result.data,
+    isLoading: result.isLoading,
+    isRefreshing: result.isRefreshing,
+    isDemoData: result.isDemoFallback && !result.isLoading,
+    error: result.error,
+    isFailed: result.isFailed,
+    consecutiveFailures: result.consecutiveFailures,
+    lastRefresh: result.lastRefresh,
+    refetch: result.refetch,
+  }
 }
