@@ -267,6 +267,7 @@ const ALERT_RULES_KEY = 'kc_alert_rules'
 
 interface AlertsContextValue {
   alerts: Alert[]
+  /** Deduplicated alerts (firing, resolved, etc.) — matches stats counts */
   deduplicatedAlerts: Alert[]
   activeAlerts: Alert[]
   acknowledgedAlerts: Alert[]
@@ -602,7 +603,11 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
-  const deduplicatedAlerts = useMemo(() => deduplicateAlerts(alerts, rules), [alerts, rules])
+  // Deduplicate all alerts (firing, resolved, etc.) — this is the canonical
+  // source used by stats and must match the drill-down list (#12603)
+  const deduplicatedAlerts = useMemo(() => {
+    return deduplicateAlerts(alerts, rules)
+  }, [alerts, rules])
 
   // Calculate alert statistics — memoize to prevent unstable references in context consumers
   // #7336 — Compute stats from deduplicated alerts so counters match

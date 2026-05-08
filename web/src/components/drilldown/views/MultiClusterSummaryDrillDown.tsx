@@ -189,7 +189,9 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
   // could show e.g. 18 while the drill-down list was always empty because
   // synthetic pod-alerts never carry status='resolved'. Using the real
   // alerts list here keeps the count and the list in lock-step.
-  const { deduplicatedAlerts: contextAlerts } = useAlerts()
+  // Issue 12603 — Use deduplicatedAlerts (not raw alerts) so the drill-down
+  // count matches the stat blocks, which compute from deduplicated alerts.
+  const { deduplicatedAlerts } = useAlerts()
   // Use useCachedAllNodes (not useCachedNodes) for the cumulative,
   // cross-cluster drill-down list so the UI never substitutes four
   // hard-coded demo nodes for a real-but-empty live result (Issue 8840).
@@ -314,7 +316,8 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
         // previous implementation synthesized "alerts" from non-Running
         // pods, which never produced status='resolved' items and left the
         // Resolved drill-down permanently empty regardless of the count.
-        return (contextAlerts || []).map(a => ({
+        // Issue 12603 — Use deduplicatedAlerts so counts match stat blocks.
+        return (deduplicatedAlerts || []).map(a => ({
           ...a,
           name: a.ruleName || a.message || a.id,
           namespace: a.namespace,
@@ -362,7 +365,7 @@ export function MultiClusterSummaryDrillDown({ data, viewType }: MultiClusterSum
       default:
         return []
     }
-  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, warningEvents, filter, helmReleases, operatorSubscriptions, securityIssues, cachedNodes, cachedPVCs, contextAlerts])
+  }, [viewType, clusters, deduplicatedClusters, pods, deployments, events, warningEvents, filter, helmReleases, operatorSubscriptions, securityIssues, cachedNodes, cachedPVCs, deduplicatedAlerts])
 
   // Apply initial filter from data prop
   const preFilteredItems = (() => {
