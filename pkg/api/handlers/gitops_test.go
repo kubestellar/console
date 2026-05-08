@@ -164,5 +164,5 @@ func TestGitOps_ListHelmHistory_HelmErrorMapping(t *testing.T) {
 	}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 	assert.Len(t, body.History, 0)
-	assert.Contains(t, body.Error, "helm failed on purpose")
+	assert.Contains(t, body.Error, "helm operation failed")
 }
