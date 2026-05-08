@@ -173,20 +173,47 @@ The console can use AI for adaptive card suggestions and mission help. AI is **o
 
 **Important**: AI BYOK only works on the **self-hosted** console. The hosted demo at [console.kubestellar.io](https://console.kubestellar.io) explicitly disables `LOCAL_AGENT_HTTP_URL` (verified in `web/src/lib/constants/network.ts`), so the browser cannot reach a local agent there. To use your own AI keys, self-host the console first.
 
-**How to add API keys (self-hosted):** the supported path today is **environment variables** read by `kc-agent` at startup. Export the keys you want, then launch the agent:
+### Supported AI providers (CLI-based and local LLMs)
 
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...   # Claude
-export OPENAI_API_KEY=sk-...          # OpenAI
-export GOOGLE_API_KEY=...             # Gemini  (note: GOOGLE_API_KEY, not GEMINI_API_KEY)
-./bin/kc-agent
-```
+The console uses **local CLI providers** and **self-hosted LLMs** to maintain full control over cluster access and tooling capabilities. Direct API-key providers (like raw `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GOOGLE_API_KEY`) are **intentionally not supported** because they bypass the local CLI tooling model required for executing cluster commands (see `pkg/agent/registry.go:378` and [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md#L175)).
 
-> **A note on the Settings → API Keys modal**: the console UI exposes a "Manage Keys" button under **Settings → API Keys**. This modal is wired to the agent's `/settings/keys` endpoint, but in the current build that endpoint returns an empty providers list (`providers := []providerDef{}` in `pkg/agent/server_operations.go:288`) — the comment in the source explains that "API-key-driven agents are hidden because they cannot execute commands to diagnose/repair clusters." So the modal will render no providers and you can't enter keys through it. **Use the environment-variable path above.** This README will be updated if/when the providers list is re-enabled.
+**Recommended setup paths:**
 
-**If no key is configured**, AI-powered features fall back to deterministic / rule-based behavior. The card suggestions, missions, and dashboards remain fully usable.
+1. **CLI-based agents** (with full tool execution capabilities):
+   ```bash
+   # Install Claude Desktop or claude CLI — https://claude.ai/download
+   # Install Gemini CLI — follow official Google AI SDK instructions
+   # Install GitHub Copilot CLI — gh extension install github/gh-copilot
+   # Install other CLI agents: codex, antigravity, goose, bob
+   
+   # kc-agent will auto-detect installed CLI agents — no env vars needed
+   ./bin/kc-agent
+   ```
 
-**Security model, air-gapped deployments, and local / self-hosted LLMs** are covered in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md). That document explains the data flow between browser, Go backend, kc-agent, and AI providers; how to run the console with no external AI access; and the currently supported self-hosted path using kc-agent's CLI-based agents. It also notes that OpenAI-compatible local LLM endpoints (for example Ollama, vLLM, LM Studio, or an internal gateway) are a planned follow-up for the base-URL-overridable HTTP providers referenced by `GROQ_BASE_URL` / `OPENROUTER_BASE_URL` / `OPEN_WEBUI_URL`, which are not yet wired into the selectable provider list in the current build.
+2. **Local/self-hosted LLM servers** (OpenAI-compatible endpoints):
+   ```bash
+   # Ollama (local)
+   export OLLAMA_URL=http://127.0.0.1:11434
+   export OLLAMA_MODEL=llama3.2
+   
+   # Open WebUI (self-hosted gateway)
+   export OPEN_WEBUI_URL=https://your-openwebui.example.com
+   export OPEN_WEBUI_API_KEY=your-key
+   export OPEN_WEBUI_MODEL=gpt-4
+   
+   # Other supported: llama.cpp, LocalAI, vLLM, LM Studio, Red Hat AI Inference Server
+   # See docs/security/SECURITY-MODEL.md for the full list
+   
+   ./bin/kc-agent
+   ```
+
+> **Why are direct API keys not supported?** The agent registry intentionally excludes upstream API-key providers (Anthropic API, OpenAI API, Google Gemini API) because they cannot execute cluster commands AND they route traffic to a specific vendor endpoint that the operator has no control over. The console's security model requires tool-capable agents that can run `kubectl`, `helm`, and other diagnostic commands locally. See `pkg/agent/registry.go:378-384` for the rationale.
+
+> **A note on the Settings → API Keys modal**: The console UI exposes a "Manage Keys" button under **Settings → API Keys**. This modal is wired to the agent's `/settings/keys` endpoint, but in the current build that endpoint returns an empty providers list (`providers := []providerDef{}` in `pkg/agent/server_operations.go:288`) because API-key-driven agents are hidden. The modal is non-functional by design. **Use the CLI-based or local LLM setup paths above instead.**
+
+**If no AI provider is configured**, AI-powered features fall back to deterministic / rule-based behavior. The card suggestions, missions, and dashboards remain fully usable.
+
+**Security model, air-gapped deployments, and local / self-hosted LLMs** are covered in [`docs/security/SECURITY-MODEL.md`](docs/security/SECURITY-MODEL.md). That document explains the data flow between browser, Go backend, kc-agent, and AI providers; how to run the console with no external AI access; and the currently supported self-hosted path using kc-agent's CLI-based agents.
 
 ## How It Works
 
