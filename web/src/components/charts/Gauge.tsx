@@ -95,7 +95,7 @@ export function Gauge({
         <div className="absolute inset-0 flex items-end justify-center pb-1">
           <span className={`font-bold ${s.fontSize} ${color.text}`}>
             {unit === '%' ? Math.round(percentage) : Math.round(safeValue)}
-            <span className="text-sm text-muted-foreground">{unit}</span>
+            <span className={`text-sm ${color.text}`}>{unit}</span>
           </span>
         </div>
       </div>
