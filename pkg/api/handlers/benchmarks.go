@@ -600,7 +600,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 
 		// Accumulate reports into a pending batch and flush every batchSize reports.
 		const batchSize = 8
-		var pendingBatch []BenchmarkReport
+		pendingBatch := make([]BenchmarkReport, 0)
 
 		// safeFlush writes pending data and cancels the context on write error
 		// (which signals that the client has disconnected).
@@ -913,7 +913,7 @@ func (h *BenchmarkHandlers) fetchRunFolder(ctx context.Context, folderID, experi
 	}
 
 	// First: look for benchmark YAML files directly in this folder
-	var reports []BenchmarkReport
+	reports := make([]BenchmarkReport, 0)
 	var subfolders []driveFile
 	parseFailures := 0
 	for _, f := range items {
@@ -966,7 +966,7 @@ func (h *BenchmarkHandlers) collectBenchmarkFiles(ctx context.Context, folderID,
 	if err != nil {
 		return nil, 0, err
 	}
-	var reports []BenchmarkReport
+	reports := make([]BenchmarkReport, 0)
 	parseFailures := 0
 	for _, f := range files {
 		if f.MimeType == driveFolderMIME {
@@ -1150,7 +1150,7 @@ func adaptV1ToV2(raw rawV1Report, experimentName, runName, fileCreatedTime strin
 }
 
 func buildStackComponents(raw rawV1Report) []BenchmarkStackComponent {
-	var components []BenchmarkStackComponent
+	components := make([]BenchmarkStackComponent, 0)
 
 	// Build one component per accelerator entry
 	for i, accel := range raw.Scenario.Host.Accelerator {

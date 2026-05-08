@@ -75,7 +75,7 @@ func (k *KubectlProxy) ListContexts() ([]protocol.ClusterInfo, string) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	var clusters []protocol.ClusterInfo
+	clusters := make([]protocol.ClusterInfo, 0)
 	current := k.config.CurrentContext
 
 	for name, ctx := range k.config.Contexts {
@@ -470,7 +470,7 @@ func (k *KubectlProxy) PreviewKubeconfig(yamlContent string) ([]KubeconfigPrevie
 		return nil, fmt.Errorf("kubeconfig contains no contexts")
 	}
 
-	var entries []KubeconfigPreviewEntry
+	entries := make([]KubeconfigPreviewEntry, 0)
 	for name, ctx := range incoming.Contexts {
 		entry := KubeconfigPreviewEntry{
 			ContextName: name,

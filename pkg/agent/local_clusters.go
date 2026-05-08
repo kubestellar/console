@@ -1070,7 +1070,7 @@ func (m *LocalClusterManager) CheckVClusterOnAllClusters() ([]VClusterClusterSta
 	}
 
 	contexts := strings.Split(strings.TrimSpace(stdout.String()), "\n")
-	var results []VClusterClusterStatus
+	results := make([]VClusterClusterStatus, 0)
 
 	for _, ctx := range contexts {
 		if ctx == "" {
