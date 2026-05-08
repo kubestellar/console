@@ -237,7 +237,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span>{t(labelKey, { defaultValue: defaultLabel })}</span>
-                {isActive && <span className="ml-auto text-purple-400">&#x2713;</span>}
+                {isActive && <span className="ml-auto text-purple-400" aria-hidden="true">&#x2713;</span>}
               </button>
             )
           })}
