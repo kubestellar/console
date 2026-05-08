@@ -892,18 +892,18 @@ func (s *Server) setupRoutes() {
 		return apiLimiter(c)
 	}
 
+	api := s.app.Group("/api", apiLimiterWithSkip, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
+
 	// kc-agent token endpoint — returns the shared KC_AGENT_TOKEN so the
-	// frontend can authenticate to kc-agent HTTP endpoints during initial
-	// connection, before any JWT-backed session is established.
+	// authenticated frontend can establish Bearer-authenticated kc-agent
+	// requests after the cookie-backed session is in place.
 	agentToken := s.config.AgentToken
-	s.app.Get("/api/agent/token", func(c *fiber.Ctx) error {
+	api.Get("/agent/token", func(c *fiber.Ctx) error {
 		if agentToken == "" {
 			return c.JSON(fiber.Map{"token": ""})
 		}
 		return c.JSON(fiber.Map{"token": agentToken})
 	})
-
-	api := s.app.Group("/api", apiLimiterWithSkip, bodyGuard, csrfGuard, middleware.JWTAuth(s.config.JWTSecret))
 
 	// User identity routes — exempt from both apiLimiter (via skip list) and
 	// authLimiter. JWTAuth is sufficient protection. The old authLimiter
