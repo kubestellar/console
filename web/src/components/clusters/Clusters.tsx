@@ -41,6 +41,11 @@ import { ClusterGroupsSection } from './ClusterGroupsSection'
 
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
+const AI_CLUSTER_CREATION_CONTEXT = {
+  allowMissingLocalTools: true,
+  skipClusterPreflight: true,
+  missionFlow: 'cluster-creation',
+}
 
 // Default cards loaded from centralized config
 const DEFAULT_CLUSTERS_CARDS = getDefaultCards('clusters')
@@ -397,7 +402,9 @@ export function Clusters() {
                       title: t('cluster.createClusterWithAI'),
                       description: 'AI-guided cluster creation across any provider',
                       type: 'deploy',
-                      initialPrompt: prompt })
+                      initialPrompt: prompt,
+                      context: AI_CLUSTER_CREATION_CONTEXT,
+                    })
                     openSidebar()
                   })
                 }}

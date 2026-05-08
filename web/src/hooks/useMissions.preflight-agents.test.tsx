@@ -548,6 +548,41 @@ describe('preflight check', () => {
     expect(mission?.status).toBe('blocked')
   })
 
+  it('continues AI cluster creation missions when local tools are missing', async () => {
+    const { runPreflightCheck, runToolPreflightCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runPreflightCheck).mockClear()
+    vi.mocked(runToolPreflightCheck).mockResolvedValueOnce({
+      ok: false,
+      error: {
+        code: 'MISSING_TOOLS',
+        message: 'Required tools not found: kubectl, helm',
+        details: { missingTools: ['kubectl', 'helm'] },
+      },
+      tools: [],
+    })
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => {
+      result.current.startMission({
+        ...defaultParams,
+        type: 'deploy',
+        description: 'AI-guided cluster creation across any provider',
+        context: {
+          allowMissingLocalTools: true,
+          skipClusterPreflight: true,
+        },
+      })
+    })
+    await act(async () => { await Promise.resolve() })
+    await act(async () => { await Promise.resolve() })
+
+    const mission = result.current.missions[0]
+    expect(mission.status).not.toBe('blocked')
+    expect(mission.messages.some(m => m.content.includes('Tool availability warning'))).toBe(true)
+    expect(runPreflightCheck).not.toHaveBeenCalled()
+    expect(MockWebSocket.lastInstance).not.toBeNull()
+  })
+
   it('retryPreflight transitions blocked mission back to pending', async () => {
     // First, create a blocked mission
     const { runPreflightCheck } = await import('../lib/missions/preflightCheck')

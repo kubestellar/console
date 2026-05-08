@@ -368,6 +368,26 @@ describe('startMission preflight for different types', () => {
     // Preflight should NOT have been called for troubleshoot without cluster
     expect(runPreflightCheck).not.toHaveBeenCalled()
   })
+
+  it('skips cluster preflight for AI cluster creation missions', async () => {
+    const { runPreflightCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runPreflightCheck).mockClear()
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => {
+      result.current.startMission({
+        ...defaultParams,
+        type: 'deploy',
+        context: {
+          allowMissingLocalTools: true,
+          skipClusterPreflight: true,
+        },
+      })
+    })
+    await act(async () => { await Promise.resolve() })
+
+    expect(runPreflightCheck).not.toHaveBeenCalled()
+  })
 })
 
 // ── retryPreflight: cluster context injection ───────────────────────────────

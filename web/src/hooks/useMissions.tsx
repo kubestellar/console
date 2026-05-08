@@ -11,7 +11,13 @@ import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, 
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory'
 import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
-import { runPreflightCheck, runToolPreflightCheck, resolveRequiredTools, type PreflightResult } from '../lib/missions/preflightCheck'
+import {
+  runPreflightCheck,
+  runToolPreflightCheck,
+  resolveRequiredTools,
+  type PreflightError,
+  type PreflightResult,
+} from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
@@ -154,6 +160,27 @@ const WS_CONNECTION_TIMEOUT_MS = 5_000
 const STATUS_WAITING_DELAY_MS = 500
 /** Delay before showing "Processing with AI..." status */
 const STATUS_PROCESSING_DELAY_MS = 3_000
+const MISSING_TOOL_WARNING_HEADING = '**Tool availability warning**'
+const MISSING_TOOL_WARNING_SUFFIX = 'The AI-assisted flow can still continue, but local execution steps may still need these tools later.'
+
+function shouldAllowMissingToolWarning(context?: Record<string, unknown>): boolean {
+  return context?.allowMissingLocalTools === true
+}
+
+function shouldSkipClusterPreflight(context?: Record<string, unknown>): boolean {
+  return context?.skipClusterPreflight === true
+}
+
+function buildMissingToolWarning(error: PreflightError): string {
+  const missingTools = Array.isArray(error.details?.missingTools)
+    ? (error.details.missingTools as string[])
+    : []
+  const toolSummary = missingTools.length > 0
+    ? `Missing local tools: ${missingTools.join(', ')}.`
+    : error.message
+
+  return `${MISSING_TOOL_WARNING_HEADING}\n\n${toolSummary}\n\n${MISSING_TOOL_WARNING_SUFFIX}`
+}
 
 /**
  * Maximum time (ms) a mission is allowed to stay in "running" state before the
@@ -1971,7 +1998,12 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
     const toolCheckPromise = runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
 
     toolCheckPromise.then(toolResult => {
-      if (!toolResult.ok && toolResult.error) {
+      const allowMissingToolWarning =
+        !toolResult.ok &&
+        toolResult.error?.code === 'MISSING_TOOLS' &&
+        shouldAllowMissingToolWarning(params.context)
+
+      if (!toolResult.ok && toolResult.error && !allowMissingToolWarning) {
         setMissions(prev => prev.map(m =>
           m.id === missionId ? {
             ...m,
@@ -1992,8 +2024,27 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         return
       }
 
+      if (allowMissingToolWarning && toolResult.error) {
+        setMissions(prev => prev.map(m =>
+          m.id === missionId ? {
+            ...m,
+            currentStep: 'Continuing with AI-assisted flow',
+            messages: [
+              ...getMissionMessages(m.messages),
+              {
+                id: generateMessageId('tool-preflight-warning'),
+                role: 'system' as const,
+                content: buildMissingToolWarning(toolResult.error),
+                timestamp: new Date(),
+              },
+            ],
+          } : m
+        ))
+      }
+
       // --- Phase 2: Cluster access check (existing logic) ---
-      const missionNeedsCluster = !!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || '')
+      const missionNeedsCluster = !shouldSkipClusterPreflight(params.context) &&
+        (!!params.cluster || ['deploy', 'repair', 'upgrade'].includes(params.type || ''))
       // Run preflight on ALL target clusters, not just the first one (#7177).
       const clusterContexts = params.cluster?.split(',').map(c => c.trim()).filter(Boolean) || []
       const preflightPromise = missionNeedsCluster && clusterContexts.length > 0
@@ -2460,7 +2511,12 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         // --- Phase 1: Tool availability check (matches preflightAndExecute) ---
         const requiredTools = resolveRequiredTools(mission.type)
         const toolResult = await runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
-        if (!toolResult.ok && toolResult.error) {
+        const allowMissingToolWarning =
+          !toolResult.ok &&
+          toolResult.error?.code === 'MISSING_TOOLS' &&
+          shouldAllowMissingToolWarning(mission.context)
+
+        if (!toolResult.ok && toolResult.error && !allowMissingToolWarning) {
           setMissions(prev => prev.map(m =>
             m.id === missionId ? {
               ...m,
@@ -2481,6 +2537,24 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           return
         }
 
+        if (allowMissingToolWarning && toolResult.error) {
+          setMissions(prev => prev.map(m =>
+            m.id === missionId ? {
+              ...m,
+              currentStep: 'Continuing with AI-assisted flow',
+              messages: [
+                ...getMissionMessages(m.messages),
+                {
+                  id: generateMessageId('tool-preflight-warning-retry'),
+                  role: 'system' as const,
+                  content: buildMissingToolWarning(toolResult.error),
+                  timestamp: new Date(),
+                },
+              ],
+            } : m
+          ))
+        }
+
         // #7145 — Validate ALL clusters in a multi-cluster mission, not just the
         // first. The cluster field is comma-separated; the old code split on ','
         // and only checked [0], giving a false recovery state when later clusters
@@ -2491,9 +2565,11 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           .filter(Boolean)
 
         // Run preflight on every cluster context. If any fails, block the mission.
-        const preflightForCluster = clusterContexts.length > 0
-          ? clusterContexts
-          : [undefined] // No cluster specified — run default preflight once
+        const preflightForCluster = shouldSkipClusterPreflight(mission.context)
+          ? []
+          : clusterContexts.length > 0
+            ? clusterContexts
+            : [undefined] // No cluster specified — run default preflight once
 
         const results = await Promise.all(
           preflightForCluster.map(ctx =>
@@ -2506,7 +2582,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
 
         // Find first failing cluster
         const failing = results.find(r => !r.result.ok && 'error' in r.result && r.result.error)
-        const preflight = failing ? failing.result : results[0].result
+        const preflight = failing ? failing.result : (results[0]?.result || { ok: true })
         if (!preflight.ok && 'error' in preflight && preflight.error) {
           // Still failing — re-block
           setMissions(prev => prev.map(m =>
