@@ -1,5 +1,11 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, fireEvent, screen, waitFor } from '@testing-library/react'
+
+const modalState = vi.hoisted(() => ({
+  isOpen: false,
+  close: vi.fn(),
+  toggle: vi.fn(),
+}))
 
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -28,14 +34,65 @@ vi.mock('../../../hooks/useTokenUsage', () => ({
 }))
 
 vi.mock('../../../lib/modals', () => ({
-  useModalState: () => ({ isOpen: false, close: vi.fn(), toggle: vi.fn() }),
+  useModalState: () => modalState,
+  useEscapeLayer: () => () => true,
 }))
 
 import { StatBlockModePicker } from '../StatBlockModePicker'
 
 describe('StatBlockModePicker', () => {
+  beforeEach(() => {
+    modalState.isOpen = false
+    modalState.close.mockReset()
+    modalState.toggle.mockReset()
+  })
+
   it('renders without crashing', () => {
     const { container } = render(<StatBlockModePicker currentMode="numeric" availableModes={["numeric"]} onModeChange={vi.fn()} />)
     expect(container).toBeTruthy()
+  })
+
+  it('repositions the popover on resize and scroll while open', async () => {
+    modalState.isOpen = true
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 800,
+    })
+
+    const rect = {
+      top: 50,
+      bottom: 100,
+      right: 300,
+      left: 260,
+      width: 40,
+      height: 50,
+      x: 260,
+      y: 50,
+      toJSON: () => ({}),
+    }
+
+    render(<StatBlockModePicker currentMode="numeric" availableModes={["numeric", "sparkline"]} onModeChange={vi.fn()} />)
+
+    const trigger = screen.getByTitle('Change display mode')
+    Object.defineProperty(trigger, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => rect,
+    })
+
+    fireEvent(window, new Event('resize'))
+
+    const menu = await screen.findByRole('menu', { name: 'Display mode' })
+    await waitFor(() => {
+      expect(menu).toHaveStyle({ top: '104px', left: '140px', width: '160px' })
+    })
+
+    rect.bottom = 180
+    rect.right = 450
+    fireEvent.scroll(window)
+
+    await waitFor(() => {
+      expect(menu).toHaveStyle({ top: '184px', left: '290px', width: '160px' })
+    })
   })
 })

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Settings, Hash, TrendingUp, CircleDot, BarChart3, ArrowUpDown, Layers } from 'lucide-react'
 import { Button } from './Button'
@@ -7,6 +7,10 @@ import { useEscapeLayer, useModalState } from '../../lib/modals'
 
 /** Gap between trigger button and popover in pixels */
 const POPOVER_GAP_PX = 4
+/** Popover width in pixels */
+const POPOVER_WIDTH_PX = 160
+/** Minimum spacing from the viewport edge in pixels */
+const VIEWPORT_PADDING_PX = 8
 
 /** Gauge icon — custom SVG since Lucide doesn't have a half-arc gauge */
 function GaugeIcon({ className }: { className?: string }) {
@@ -67,14 +71,17 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
   const popoverRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ top: 0, left: 0 })
 
-  const updatePosition = () => {
+  const updatePosition = useCallback(() => {
     if (!triggerRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
     setPosition({
       top: rect.bottom + POPOVER_GAP_PX,
-      left: Math.max(rect.right - 160, 8), // Right-align, keep on screen
+      left: Math.max(
+        Math.min(rect.right - POPOVER_WIDTH_PX, window.innerWidth - POPOVER_WIDTH_PX - VIEWPORT_PADDING_PX),
+        VIEWPORT_PADDING_PX,
+      ),
     })
-  }
+  }, [])
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -88,6 +95,19 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
     onModeChange(mode)
     close()
   }
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    updatePosition()
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, { capture: true, passive: true })
+
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, { capture: true })
+    }
+  }, [isOpen, updatePosition])
 
   // Close on click outside
   useEffect(() => {
@@ -133,7 +153,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
           role="menu"
           aria-label="Display mode"
           className="fixed z-dropdown bg-card border border-border rounded-lg shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150"
-          style={{ top: position.top, left: position.left, width: 160 }}
+          style={{ top: position.top, left: position.left, width: POPOVER_WIDTH_PX }}
         >
           <div className="text-2xs text-muted-foreground px-2 py-1 font-medium uppercase tracking-wider">
             Display Mode
