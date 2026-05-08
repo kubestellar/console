@@ -30,21 +30,21 @@ export function Drasi() {
     switch (blockId) {
       case 'sources':
         return {
-          value: (data?.sources || []).length || (isDemoData ? DEMO_SOURCE_COUNT : 0),
+          value: (data?.sources || []).length ?? (isDemoData ? DEMO_SOURCE_COUNT : 0),
           sublabel: t('drasi.statSources'),
           isClickable: false,
           isDemo: isDemoData,
         }
       case 'queries':
         return {
-          value: (data?.queries || []).length || (isDemoData ? DEMO_QUERY_COUNT : 0),
+          value: (data?.queries || []).length ?? (isDemoData ? DEMO_QUERY_COUNT : 0),
           sublabel: t('drasi.statContinuousQueries'),
           isClickable: false,
           isDemo: isDemoData,
         }
       case 'reactions':
         return {
-          value: (data?.reactions || []).length || (isDemoData ? DEMO_REACTION_COUNT : 0),
+          value: (data?.reactions || []).length ?? (isDemoData ? DEMO_REACTION_COUNT : 0),
           sublabel: t('drasi.statReactions'),
           isClickable: false,
           isDemo: isDemoData,
