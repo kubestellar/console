@@ -147,7 +147,6 @@ const HREF_TO_DASHBOARD_ID: Record<string, string> = {
   '/llm-d-benchmarks': 'llm-d-benchmarks', '/cluster-admin': 'cluster-admin',
   '/insights': 'insights', '/drasi': 'drasi',
   '/multi-tenancy': 'multi-tenancy', '/acmm': 'acmm',
-  '/alerts': 'alerts',
 }
 
 const CUSTOM_DASHBOARD_PREFIX = '/custom-dashboard/'
