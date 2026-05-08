@@ -98,6 +98,12 @@ const _staleCheckInterval = setInterval(checkForStaleHtml, STALE_CHECK_INTERVAL_
 // Suppress unused-variable warning — the interval intentionally runs for the app lifetime
 void _staleCheckInterval
 
+// Clean up the stale-check interval during Vite HMR so hot reloads
+// don't accumulate orphaned timers (#12589).
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => clearInterval(_staleCheckInterval))
+}
+
 // Enable MSW mock service worker in demo mode (Netlify previews)
 const enableMocking = async () => {
   // Check env var OR detect Netlify domain (more reliable)
