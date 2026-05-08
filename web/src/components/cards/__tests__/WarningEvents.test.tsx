@@ -46,7 +46,7 @@ vi.mock('../CardDataContext', () => ({
 
 const mockEvents = vi.fn()
 vi.mock('../../../hooks/useCachedData', () => ({
-  useCachedEvents: (...args: unknown[]) => mockEvents(...args),
+  useCachedWarningEvents: (...args: unknown[]) => mockEvents(...args),
 }))
 
 const mockUseCardData = vi.fn()
@@ -146,6 +146,23 @@ describe('WarningEvents', () => {
 
     render(<WarningEvents config={{ limit: 5 }} />)
 
+    expect(setItemsPerPage).toHaveBeenCalledWith(5)
+  })
+
+  it('supports legacy maxItems config for fetch and pagination defaults', () => {
+    const setItemsPerPage = vi.fn()
+    mockUseCardData.mockReturnValue({
+      items: [], totalItems: 0, currentPage: 1, totalPages: 0, itemsPerPage: 17,
+      goToPage: vi.fn(), needsPagination: true, setItemsPerPage,
+      filters: { search: '', setSearch: vi.fn(), localClusterFilter: [], toggleClusterFilter: vi.fn(), clearClusterFilter: vi.fn(), availableClusters: [], showClusterFilter: false, setShowClusterFilter: vi.fn(), clusterFilterRef: { current: null }, clusterFilterBtnRef: { current: null }, dropdownStyle: null },
+      sorting: { sortBy: '', setSortBy: vi.fn(), sortDirection: 'asc' as const, setSortDirection: vi.fn(), toggleSortDirection: vi.fn() },
+      containerRef: { current: null }, containerStyle: undefined,
+    })
+
+    render(<WarningEvents config={{ maxItems: 5 }} />)
+
+    expect(mockEvents).toHaveBeenCalledWith(undefined, undefined, { limit: 5, category: 'realtime' })
+    expect(mockUseCardData).toHaveBeenCalledWith(expect.any(Array), expect.objectContaining({ defaultLimit: 5 }))
     expect(setItemsPerPage).toHaveBeenCalledWith(5)
   })
 

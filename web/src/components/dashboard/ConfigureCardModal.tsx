@@ -473,6 +473,11 @@ const CARD_CONFIG_FIELDS: Record<string, Array<{ key: string; label: string; typ
     { key: 'namespace', label: 'Namespace', type: 'text' },
     { key: 'limit', label: 'Max Events', type: 'number' },
   ],
+  warning_events: [
+    { key: 'cluster', label: 'Cluster', type: 'cluster' },
+    { key: 'namespace', label: 'Namespace', type: 'text' },
+    { key: 'limit', label: 'Items per page', type: 'number' },
+  ],
   pod_issues: [
     { key: 'cluster', label: 'Cluster', type: 'cluster' },
     { key: 'namespace', label: 'Namespace', type: 'text' },

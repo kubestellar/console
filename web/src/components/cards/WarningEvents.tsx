@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useEffect } from 'react'
-import { useCachedEvents } from '../../hooks/useCachedData'
+import { useCachedWarningEvents } from '../../hooks/useCachedData'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { RefreshButton } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
@@ -13,6 +13,11 @@ import { formatTimeAgo } from '../../lib/formatters'
 
 type SortByOption = 'time' | 'count' | 'reason'
 
+interface WarningEventsConfig {
+  limit?: number
+  maxItems?: number
+}
+
 const DEFAULT_API_FETCH_LIMIT = 100
 const DEFAULT_DISPLAY_LIMIT = 5
 
@@ -22,12 +27,16 @@ const SORT_OPTIONS = [
   { value: 'reason' as const, label: 'Reason' },
 ]
 
-export function WarningEvents({ config }: { config?: Record<string, unknown> } = {}) {
+export function WarningEvents({ config }: { config?: WarningEventsConfig } = {}) {
   const { t } = useTranslation()
-  const userLimit =
-    typeof config?.limit === 'number' && config.limit > 0 ? config.limit : null
-  const apiFetchLimit = userLimit ?? DEFAULT_API_FETCH_LIMIT
-  const displayLimit = userLimit ?? DEFAULT_DISPLAY_LIMIT
+  const configuredLimit =
+    typeof config?.limit === 'number' && config.limit > 0
+      ? config.limit
+      : typeof config?.maxItems === 'number' && config.maxItems > 0
+        ? config.maxItems
+        : null
+  const apiFetchLimit = configuredLimit ?? DEFAULT_API_FETCH_LIMIT
+  const displayLimit = configuredLimit ?? DEFAULT_DISPLAY_LIMIT
   const {
     events,
     isLoading,
@@ -36,13 +45,12 @@ export function WarningEvents({ config }: { config?: Record<string, unknown> } =
     refetch,
     isFailed,
     consecutiveFailures,
-    lastRefresh } = useCachedEvents(undefined, undefined, { limit: apiFetchLimit, category: 'realtime' })
+    lastRefresh } = useCachedWarningEvents(undefined, undefined, { limit: apiFetchLimit, category: 'realtime' })
 
-  // Pre-filter to only warning events before passing to useCardData
-  const warningOnly = events.filter(e => e.type === 'Warning')
+  const warningOnly = events || []
 
   // Report data state to CardWrapper for failure badge rendering
-  const hasData = events.length > 0
+  const hasData = warningOnly.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
@@ -91,10 +99,14 @@ export function WarningEvents({ config }: { config?: Record<string, unknown> } =
     defaultLimit: displayLimit })
 
   useEffect(() => {
-    if (typeof userLimit === 'number') {
-      setItemsPerPage(userLimit)
+    if (typeof configuredLimit === 'number') {
+      setItemsPerPage(configuredLimit)
+    } else {
+      // If no limit is configured, enforce the default display limit
+      // to prevent persisted "unlimited" from showing all events (#12604)
+      setItemsPerPage(DEFAULT_DISPLAY_LIMIT)
     }
-  }, [setItemsPerPage, userLimit])
+  }, [configuredLimit, setItemsPerPage])
 
   if (showSkeleton) {
     return <CardSkeleton type="list" rows={3} showHeader showSearch />
@@ -186,9 +198,9 @@ export function WarningEvents({ config }: { config?: Record<string, unknown> } =
         </div>
       ) : (
         <div ref={containerRef} className="space-y-2" style={containerStyle}>
-          {displayedEvents.map((event) => (
+          {displayedEvents.map((event, index) => (
             <div
-              key={`${event.cluster}-${event.namespace}-${event.object}-${event.reason}-${event.lastSeen}`}
+              key={`${event.cluster}-${event.namespace}-${event.object}-${event.reason}-${event.lastSeen}-${index}`}
               className="p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20"
             >
               <div className="flex items-start gap-2">
