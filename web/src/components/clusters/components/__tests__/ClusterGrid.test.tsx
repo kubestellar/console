@@ -119,9 +119,7 @@ describe('ClusterGrid', () => {
     mockLocalClusters = [{ name: 'dev', tool: 'kind', status: 'running' }]
   })
 
-  it('disables refresh and local cluster controls when the cluster is unreachable', () => {
-    // Clear detected clusters so controlsDisabled = unreachable && !isDetectedLocalCluster = true
-    mockLocalClusters = []
+  it('disables refresh but keeps detected local cluster controls enabled when the cluster is unreachable', async () => {
     const { onSelectCluster, onRefreshCluster } = renderGrid({
       healthy: false,
       reachable: false,
@@ -129,18 +127,29 @@ describe('ClusterGrid', () => {
       errorMessage: 'dial tcp timeout',
     })
 
-    const disabledControls = screen.getAllByRole('button', { name: 'cluster.controlsDisabledOffline' })
-    expect(disabledControls).toHaveLength(3)
-    disabledControls.forEach((control) => expect(control).toBeDisabled())
+    const refreshButton = screen.getByRole('button', { name: 'cluster.controlsDisabledOffline' })
+    const startButton = screen.getByRole('button', { name: 'cluster.startCluster' })
+    const restartButton = screen.getByRole('button', { name: 'cluster.restartCluster' })
+
+    expect(refreshButton).toBeDisabled()
+    expect(startButton).not.toBeDisabled()
+    expect(restartButton).not.toBeDisabled()
     expect(screen.getAllByText('cluster.controlsDisabledOffline').length).toBeGreaterThan(0)
 
-    const disabledWrapper = disabledControls[0].closest('span')
+    const disabledWrapper = refreshButton.closest('span')
     expect(disabledWrapper).toBeTruthy()
     fireEvent.click(disabledWrapper as HTMLElement)
+    fireEvent.click(startButton)
+    await waitFor(() => {
+      expect(clusterLifecycle).toHaveBeenCalledWith('kind', 'dev', 'start')
+    })
+    fireEvent.click(restartButton)
+    await waitFor(() => {
+      expect(clusterLifecycle).toHaveBeenCalledWith('kind', 'dev', 'restart')
+    })
 
     expect(onSelectCluster).not.toHaveBeenCalled()
     expect(onRefreshCluster).not.toHaveBeenCalled()
-    expect(clusterLifecycle).not.toHaveBeenCalled()
   })
 
   it('keeps controls interactive for reachable local clusters', async () => {
