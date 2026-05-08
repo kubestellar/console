@@ -56,9 +56,48 @@ c: 5/═════════╩══╩══╩══╩═
 </body>
 </html>`;
 
+// Allowlist of valid proxy path prefixes — reject anything not matching
+const ALLOWED_PATHS = new Set([
+  "/status",
+  "/qubits/simple",
+  "/execute",
+  "/loop/start",
+  "/loop/stop",
+  "/qasm/circuit/ascii",
+  "/qasm/file",
+  "/auth",
+  "/auth/save",
+  "/auth/clear",
+]);
+
+const PROXY_TIMEOUT_MS = 15_000;
+
+function isAllowedPath(path: string): boolean {
+  // Reject path traversal attempts
+  if (path.includes("..") || path.includes("//") || path.includes("\\")) {
+    return false;
+  }
+  // Reject absolute URLs or scheme injection
+  if (path.includes("://") || path.startsWith("//")) {
+    return false;
+  }
+  return ALLOWED_PATHS.has(path);
+}
+
 export default async (req: Request, context: Context): Promise<Response> => {
   const url = new URL(req.url);
   const path = url.pathname.replace("/.netlify/functions/quantum-proxy", "");
+
+  // Validate path against allowlist to prevent SSRF
+  if (!isAllowedPath(path)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid proxy path" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
 
   // Determine if we have a real quantum service
   const quantumServiceURL =
@@ -107,12 +146,13 @@ export default async (req: Request, context: Context): Promise<Response> => {
       }
     }
 
-    // Proxy to actual quantum service
-    const targetURL = quantumServiceURL + path;
+    // Proxy to actual quantum service with timeout
+    const targetURL = new URL(path, quantumServiceURL).toString();
     const proxyReq = new Request(targetURL, {
       method: req.method,
       headers: req.headers,
       body: req.method === "GET" ? undefined : await req.text(),
+      signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
     });
 
     const response = await fetch(proxyReq);
