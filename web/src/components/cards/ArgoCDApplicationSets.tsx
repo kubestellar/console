@@ -189,7 +189,7 @@ function ArgoCDApplicationSetsInternal({ config }: ArgoCDApplicationSetsProps) {
       </div>
 
       {/* Integration notice — only shown in demo/fallback mode */}
-      {isDemoData && (
+      {isDemoData && !hasData && (
         <div className="flex items-start gap-2 p-2 mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-xs">
           <AlertCircle className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
           <div>
