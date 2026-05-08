@@ -56,13 +56,22 @@ vi.mock('../../../lib/cards/cardHooks', () => ({
 
 vi.mock('../charts', () => ({ Gauge: () => null, TimeSeriesChart: () => null, MultiSeriesChart: () => null }))
 
-import { ClusterMetrics, SUPPORTED_TIME_RANGE_KEYS } from '../ClusterMetrics'
+import {
+  ClusterMetrics,
+  SUPPORTED_TIME_RANGE_KEYS,
+  DEMO_MAX_VARIATION_PERCENT,
+  applyDemoTelemetryJitter,
+} from '../ClusterMetrics'
 import { CLUSTER_POLL_INTERVAL_MS } from '../../../hooks/mcp/shared'
 
 // Keep in sync with MAX_HISTORY_POINTS in ClusterMetrics.tsx
 const EXPECTED_MAX_HISTORY_POINTS = 60
 const EXPECTED_MAX_HISTORY_DURATION_MS =
   EXPECTED_MAX_HISTORY_POINTS * CLUSTER_POLL_INTERVAL_MS
+const DEMO_CPU_TOTAL_BASE = 656
+const DEMO_TIMESTAMP_BASE = 1_700_000_000_000
+const DEMO_SAMPLE_POINTS = 20
+const DEMO_CPU_KEY = 'total:cpu'
 
 describe('ClusterMetrics', () => {
   beforeEach(() => {
@@ -115,6 +124,33 @@ describe('ClusterMetrics', () => {
     })
     const { container } = render(<ClusterMetrics />)
     expect(container).toBeTruthy()
+  })
+
+  it('adds bounded deterministic variation to demo CPU telemetry', () => {
+    const samples = Array.from({ length: DEMO_SAMPLE_POINTS }, (_unused, index) => (
+      applyDemoTelemetryJitter(
+        DEMO_CPU_TOTAL_BASE,
+        DEMO_TIMESTAMP_BASE + (index * CLUSTER_POLL_INTERVAL_MS),
+        DEMO_CPU_KEY,
+      )
+    ))
+    const minSample = Math.min(...samples)
+    const maxSample = Math.max(...samples)
+    const minExpected = Math.round(DEMO_CPU_TOTAL_BASE * (1 - DEMO_MAX_VARIATION_PERCENT))
+    const maxExpected = Math.round(DEMO_CPU_TOTAL_BASE * (1 + DEMO_MAX_VARIATION_PERCENT))
+
+    expect(new Set(samples).size).toBeGreaterThan(1)
+    expect(minSample).toBeLessThan(DEMO_CPU_TOTAL_BASE)
+    expect(maxSample).toBeGreaterThan(DEMO_CPU_TOTAL_BASE)
+    expect(minSample).toBeGreaterThanOrEqual(minExpected)
+    expect(maxSample).toBeLessThanOrEqual(maxExpected)
+  })
+
+  it('keeps demo jitter stable for the same timestamp and series key', () => {
+    const first = applyDemoTelemetryJitter(DEMO_CPU_TOTAL_BASE, DEMO_TIMESTAMP_BASE, DEMO_CPU_KEY)
+    const second = applyDemoTelemetryJitter(DEMO_CPU_TOTAL_BASE, DEMO_TIMESTAMP_BASE, DEMO_CPU_KEY)
+
+    expect(first).toBe(second)
   })
 
 })

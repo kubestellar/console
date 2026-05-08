@@ -93,11 +93,79 @@ const metricConfigBase = {
   pods: { labelKey: 'clusterMetrics.pods' as const, color: '#10b981', unit: '', baseValue: 150, variance: 100 },
   nodes: { labelKey: 'clusterMetrics.nodes' as const, color: '#f59e0b', unit: '', baseValue: 10, variance: 5 } }
 
+const FULL_CIRCLE_RADIANS = Math.PI * 2
+const DEMO_PRIMARY_JITTER_PERCENT = 0.03
+const DEMO_SECONDARY_JITTER_PERCENT = 0.015
+export const DEMO_MAX_VARIATION_PERCENT = DEMO_PRIMARY_JITTER_PERCENT + DEMO_SECONDARY_JITTER_PERCENT
+const DEMO_MIN_MULTIPLIER = 1 - DEMO_MAX_VARIATION_PERCENT
+const DEMO_MAX_MULTIPLIER = 1 + DEMO_MAX_VARIATION_PERCENT
+const DEMO_PRIMARY_PERIOD_POINTS = 18
+const DEMO_SECONDARY_PERIOD_POINTS = 7
+const HASH_MULTIPLIER = 33
+const DEMO_TIME_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' }
+
 interface ClusterMetricValues {
   cpu: number
   memory: number
   pods: number
   nodes: number
+}
+
+function getDeterministicSeed(key: string): number {
+  let seed = 0
+  for (const char of key) {
+    seed = (seed * HASH_MULTIPLIER) + char.charCodeAt(0)
+  }
+  return Math.abs(seed)
+}
+
+export function getDemoTelemetryMultiplier(timestamp: number, key: string): number {
+  const pointIndex = Math.floor(timestamp / CLUSTER_POLL_INTERVAL_MS)
+  const seed = getDeterministicSeed(key)
+  const primaryWave = Math.sin((pointIndex + seed) * FULL_CIRCLE_RADIANS / DEMO_PRIMARY_PERIOD_POINTS) * DEMO_PRIMARY_JITTER_PERCENT
+  const secondaryWave = Math.cos((pointIndex + seed) * FULL_CIRCLE_RADIANS / DEMO_SECONDARY_PERIOD_POINTS) * DEMO_SECONDARY_JITTER_PERCENT
+  return Math.min(DEMO_MAX_MULTIPLIER, Math.max(DEMO_MIN_MULTIPLIER, 1 + primaryWave + secondaryWave))
+}
+
+export function applyDemoTelemetryJitter(value: number, timestamp: number, key: string): number {
+  if (value <= 0) return 0
+  return Math.max(0, Math.round(value * getDemoTelemetryMultiplier(timestamp, key)))
+}
+
+function buildDemoClusterMetricValues(clusterName: string, values: ClusterMetricValues, timestamp: number): ClusterMetricValues {
+  return {
+    cpu: applyDemoTelemetryJitter(values.cpu, timestamp, `${clusterName}:cpu`),
+    memory: applyDemoTelemetryJitter(values.memory, timestamp, `${clusterName}:memory`),
+    pods: applyDemoTelemetryJitter(values.pods, timestamp, `${clusterName}:pods`),
+    nodes: values.nodes,
+  }
+}
+
+function buildDemoMetricPoint(timestamp: number, clusterMetrics: Record<string, ClusterMetricValues>): MetricPoint {
+  const clusters: Record<string, ClusterMetricValues> = {}
+  let cpu = 0
+  let memory = 0
+  let pods = 0
+  let nodes = 0
+
+  for (const [clusterName, values] of Object.entries(clusterMetrics)) {
+    const jitteredValues = buildDemoClusterMetricValues(clusterName, values, timestamp)
+    clusters[clusterName] = jitteredValues
+    cpu += jitteredValues.cpu
+    memory += jitteredValues.memory
+    pods += jitteredValues.pods
+    nodes += jitteredValues.nodes
+  }
+
+  return {
+    time: new Date(timestamp).toLocaleTimeString([], DEMO_TIME_FORMAT_OPTIONS),
+    timestamp,
+    cpu,
+    memory,
+    pods,
+    nodes,
+    clusters,
+  }
 }
 
 interface MetricPoint {
@@ -235,7 +303,7 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
         nodes: c.nodeCount || 0 }
     })
     const newPoint: MetricPoint = {
-      time: new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: new Date(now).toLocaleTimeString([], DEMO_TIME_FORMAT_OPTIONS),
       timestamp: now,
       cpu: realValues.cpu,
       memory: realValues.memory,
@@ -261,18 +329,40 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
     }
   }, [realValues, isLoading, hasRealData, clusters])
 
+  const demoHistory = useMemo(() => {
+    if (!isDemoMode || clusters.length === 0) return []
+
+    const now = Date.now()
+    const clusterMetrics = clusters.reduce<Record<string, ClusterMetricValues>>((acc, cluster) => {
+      acc[cluster.name] = {
+        cpu: cluster.cpuCores || 0,
+        memory: cluster.memoryGB || 0,
+        pods: cluster.podCount || 0,
+        nodes: cluster.nodeCount || 0,
+      }
+      return acc
+    }, {})
+
+    return Array.from({ length: MAX_HISTORY_POINTS }, (_unused, index) => {
+      const pointsFromNow = MAX_HISTORY_POINTS - index - 1
+      const timestamp = now - (pointsFromNow * CLUSTER_POLL_INTERVAL_MS)
+      return buildDemoMetricPoint(timestamp, clusterMetrics)
+    })
+  }, [clusters, isDemoMode])
+
+  const historyForDisplay = isDemoMode ? demoHistory : history
+
   // Transform history to chart data for selected metric
-  const data = (() => {
-    // Filter history based on time range
+  const data = useMemo(() => {
     const now = Date.now()
     const rangeMs = TIME_RANGE_MS[timeRange]
-
-    const filteredHistory = history.filter(p => now - p.timestamp <= rangeMs)
+    const filteredHistory = historyForDisplay.filter(point => now - point.timestamp <= rangeMs)
 
     return filteredHistory.map(point => ({
       time: point.time,
-      value: point[selectedMetric] }))
-  })()
+      value: point[selectedMetric],
+    }))
+  }, [historyForDisplay, selectedMetric, timeRange])
 
   // Generate per-cluster data for comparison mode
   const perClusterData = useMemo(() => {
@@ -281,7 +371,7 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
     const now = Date.now()
     const rangeMs = TIME_RANGE_MS[timeRange]
 
-    const filteredHistory = history.filter(p => now - p.timestamp <= rangeMs && p.clusters)
+    const filteredHistory = historyForDisplay.filter(point => now - point.timestamp <= rangeMs && point.clusters)
 
     // Get all unique cluster names from history
     const clusterNames = new Set<string>()
@@ -319,13 +409,18 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
     })
 
     return { data: chartData, series }
-  }, [history, selectedMetric, timeRange, chartMode])
+  }, [historyForDisplay, selectedMetric, timeRange, chartMode])
 
   const config = metricConfig[selectedMetric]
+  const latestChartValue = data[data.length - 1]?.value ?? 0
   // Use real current value if non-zero, otherwise fall back to the last
   // known non-null chart value so the header stays in sync with the chart
   // instead of showing a misleading 0 during temporary data loss (#6875).
   const currentValue = (() => {
+    if (isDemoMode) {
+      return latestChartValue || realValues[selectedMetric]
+    }
+
     const live = hasRealData ? realValues[selectedMetric] : 0
     if (live > 0) return live
     // Walk backwards through chart data to find the last non-null value
@@ -334,6 +429,12 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
     }
     return 0
   })()
+  const dataValues = (data || []).map(point => point.value)
+  const minValue = dataValues.length > 0 ? Math.min(...dataValues) : 0
+  const avgValue = dataValues.length > 0
+    ? dataValues.reduce((sum, value) => sum + value, 0) / dataValues.length
+    : 0
+  const maxValue = dataValues.length > 0 ? Math.max(...dataValues) : 0
 
   return (
     <div className="h-full flex flex-col">
@@ -342,7 +443,7 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
         <div>
           <h3 className="text-sm font-medium text-foreground">{config.label}</h3>
           <p className="text-2xl font-bold text-foreground">
-            {selectedMetric === 'memory' ? realValues.memory.toFixed(1) : Math.round(currentValue)}<span className="text-sm text-muted-foreground">{config.unit}</span>
+            {selectedMetric === 'memory' ? currentValue.toFixed(1) : Math.round(currentValue)}<span className="text-sm text-muted-foreground">{config.unit}</span>
           </p>
         </div>
         <div className="flex gap-1">
@@ -472,19 +573,19 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.min')}</p>
             <p className="text-sm font-medium text-foreground">
-              {(() => { const vals = data.map((d) => d.value); return Math.round(vals.length > 0 ? Math.min(...vals) : 0) })()}{config.unit}
+              {Math.round(minValue)}{config.unit}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.avg')}</p>
             <p className="text-sm font-medium text-foreground">
-              {Math.round(data.reduce((a, b) => a + b.value, 0) / data.length)}{config.unit}
+              {Math.round(avgValue)}{config.unit}
             </p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">{t('cards:clusterMetrics.max')}</p>
             <p className="text-sm font-medium text-foreground">
-              {(() => { const vals = data.map((d) => d.value); return Math.round(vals.length > 0 ? Math.max(...vals) : 0) })()}{config.unit}
+              {Math.round(maxValue)}{config.unit}
             </p>
           </div>
         </div>
