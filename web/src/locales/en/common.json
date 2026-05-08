@@ -1795,7 +1795,11 @@
     "copy": "Copy",
     "copied": "Copied",
     "flowLabel": "Flow",
-    "flowAllResources": "All resources"
+    "flowAllResources": "All resources",
+    "statSources": "sources",
+    "statContinuousQueries": "continuous queries",
+    "statReactions": "reactions",
+    "errorLoadingResources": "Error loading Drasi resources"
   },
   "missionChat": {
     "saveTranscript": "Save transcript",

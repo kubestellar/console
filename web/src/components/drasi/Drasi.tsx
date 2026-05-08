@@ -3,6 +3,7 @@
  *
  * Reactive data pipelines — visualize sources, continuous queries, and reactions.
  */
+import { useTranslation } from 'react-i18next'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
@@ -19,31 +20,32 @@ const DEMO_QUERY_COUNT = 4
 const DEMO_REACTION_COUNT = 1
 
 export function Drasi() {
+  const { t } = useTranslation()
   const { data, isLoading, error } = useDrasiResources()
 
-  const hasRealData = !!data && (data.sources.length > 0 || data.queries.length > 0)
+  const hasRealData = !!data && ((data.sources || []).length > 0 || (data.queries || []).length > 0)
   const isDemoData = !hasRealData && !isLoading
 
   const getStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'sources':
         return {
-          value: data?.sources.length ?? (isDemoData ? DEMO_SOURCE_COUNT : 0),
-          sublabel: 'sources',
+          value: (data?.sources || []).length || (isDemoData ? DEMO_SOURCE_COUNT : 0),
+          sublabel: t('common:drasi.statSources'),
           isClickable: false,
           isDemo: isDemoData,
         }
       case 'queries':
         return {
-          value: data?.queries.length ?? (isDemoData ? DEMO_QUERY_COUNT : 0),
-          sublabel: 'continuous queries',
+          value: (data?.queries || []).length || (isDemoData ? DEMO_QUERY_COUNT : 0),
+          sublabel: t('common:drasi.statContinuousQueries'),
           isClickable: false,
           isDemo: isDemoData,
         }
       case 'reactions':
         return {
-          value: data?.reactions.length ?? (isDemoData ? DEMO_REACTION_COUNT : 0),
-          sublabel: 'reactions',
+          value: (data?.reactions || []).length || (isDemoData ? DEMO_REACTION_COUNT : 0),
+          sublabel: t('common:drasi.statReactions'),
           isClickable: false,
           isDemo: isDemoData,
         }
@@ -72,7 +74,7 @@ export function Drasi() {
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-          <div className="font-medium">Error loading Drasi resources</div>
+          <div className="font-medium">{t('common:drasi.errorLoadingResources')}</div>
           <div className="text-sm text-muted-foreground">{error}</div>
         </div>
       )}

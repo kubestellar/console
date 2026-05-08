@@ -2906,4 +2906,11 @@
       "gapConfigSource": "<strong>Config source</strong> - Unified uses converted configs, legacy uses raw definitions"
     }
   }
+,
+  "drasi": {
+    "statSources": "sources",
+    "statContinuousQueries": "continuous queries",
+    "statReactions": "reactions",
+    "errorLoadingResources": "Error loading Drasi resources"
+  }
 }
