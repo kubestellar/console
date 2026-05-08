@@ -468,6 +468,11 @@ func (s *Server) Start() error {
 	// Health endpoint (HTTP for easy browser detection)
 	mux.HandleFunc("/health", s.handleHealth)
 
+	// Status endpoint — authenticated version of /health. Used by the frontend
+	// (useLocalAgent.ts) to verify that the browser has a valid agent token
+	// before marking the connection as "connected".
+	mux.HandleFunc("/status", s.handleStatus)
+
 	// Clusters endpoint - returns fresh kubeconfig contexts
 	mux.HandleFunc("/clusters", s.handleClustersHTTP)
 
@@ -834,6 +839,30 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(payload)
+}
+
+// handleStatus handles authenticated agent status probes.
+func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
+	s.setCORSHeaders(w, r)
+	w.Header().Set("Content-Type", "application/json")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if !s.validateToken(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	clusters, _ := s.kubectl.ListContexts()
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":   "ok",
+		"version":  Version,
+		"clusters": len(clusters),
+	})
 }
 
 // handleProviderCheck runs a readiness handshake for a specific provider.

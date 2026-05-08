@@ -92,6 +92,67 @@ func TestServer_HandleHealth_CORS(t *testing.T) {
 	}
 }
 
+func TestServer_HandleStatus(t *testing.T) {
+	config := &api.Config{
+		Contexts: map[string]*api.Context{
+			"ctx-1": {Cluster: "c1"},
+			"ctx-2": {Cluster: "c2"},
+		},
+	}
+	server := &Server{
+		kubectl:        &KubectlProxy{config: config},
+		allowedOrigins: []string{"http://allowed.com"},
+		agentToken:     "test-token",
+		tokenExplicit:  true,
+	}
+
+	t.Run("requires auth", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/status", nil)
+		req.Header.Set("Origin", "http://allowed.com")
+		w := httptest.NewRecorder()
+
+		server.handleStatus(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401, got %d", w.Code)
+		}
+		if w.Header().Get("Access-Control-Allow-Origin") != "http://allowed.com" {
+			t.Fatalf("expected CORS header for allowed origin")
+		}
+	})
+
+	t.Run("returns status with valid token", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/status", nil)
+		req.Header.Set("Origin", "http://allowed.com")
+		req.Header.Set("Authorization", "Bearer test-token")
+		w := httptest.NewRecorder()
+
+		server.handleStatus(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("expected 200, got %d (body: %s)", w.Code, w.Body.String())
+		}
+
+		var payload struct {
+			Status   string `json:"status"`
+			Version  string `json:"version"`
+			Clusters int    `json:"clusters"`
+		}
+		if err := json.NewDecoder(w.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode response: %v", err)
+		}
+		if payload.Status != "ok" {
+			t.Fatalf("expected status ok, got %q", payload.Status)
+		}
+		if payload.Version != Version {
+			t.Fatalf("expected version %q, got %q", Version, payload.Version)
+		}
+		if payload.Clusters != 2 {
+			t.Fatalf("expected 2 clusters, got %d", payload.Clusters)
+		}
+	})
+}
+
 func TestServer_IsAllowedOrigin(t *testing.T) {
 	server := &Server{
 		allowedOrigins: []string{

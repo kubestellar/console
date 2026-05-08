@@ -38,6 +38,9 @@ const (
 	// endpointClusters lists kubeconfig contexts (sensitive — reveals infra).
 	endpointClusters = "/clusters"
 
+	// endpointStatus verifies agent auth for local browser clients (sensitive).
+	endpointStatus = "/status"
+
 	// endpointSecrets lists Kubernetes secrets (sensitive).
 	endpointSecrets = "/secrets"
 
@@ -177,6 +180,7 @@ var sensitiveEndpoints = []struct {
 	{endpointSettingsExport, "POST"},
 	{endpointSettingsImport, "POST"},
 	{endpointClusters, "GET"},
+	{endpointStatus, "GET"},
 	{endpointSecrets, "GET"},
 	{endpointRestartBackend, "POST"},
 	{endpointAutoUpdateTrigger, "POST"},
@@ -563,41 +567,42 @@ func resolveEndpointHandler(s *Server, path string) func(http.ResponseWriter, *h
 	}
 
 	handlers := map[string]func(http.ResponseWriter, *http.Request){
-		endpointHealth:            s.handleHealth,
-		endpointSettingsKeys:      s.handleSettingsKeys,
-		endpointSettings:          s.handleSettingsAll,
-		endpointSettingsExport:    s.handleSettingsExport,
-		endpointSettingsImport:    s.handleSettingsImport,
-		endpointClusters:          s.handleClustersHTTP,
-		endpointSecrets:           s.handleSecretsHTTP,
-		endpointWS:                s.handleWebSocket,
-		endpointRestartBackend:    s.handleRestartBackend,
-		endpointAutoUpdateTrigger: s.handleAutoUpdateTrigger,
-		endpointKubeconfigImport:  s.handleKubeconfigImportHTTP,
-		endpointPods:               s.handlePodsHTTP,
-		endpointNodes:              s.handleNodesHTTP,
-		endpointScale:              s.handleScaleHTTP,
-		endpointWorkloadsDeploy:    s.handleDeployWorkloadHTTP,
-		endpointWorkloadsDelete:    s.handleDeleteWorkloadHTTP,
-		endpointProviderCheck:      s.handleProviderCheck,
-		endpointAutoUpdateStatus:   s.handleAutoUpdateStatus,
-		endpointKagentiAgents:      s.handleKagentiAgents,
-		endpointKagentiBuilds:      s.handleKagentiBuilds,
-		endpointKagentiCards:       s.handleKagentiCards,
-		endpointKagentiTools:       s.handleKagentiTools,
-		endpointKagentiSummary:     s.handleKagentiSummary,
-		endpointKagentCRDAgents:    s.handleKagentCRDAgents,
-		endpointKagentCRDTools:     s.handleKagentCRDTools,
-		endpointKagentCRDModels:    s.handleKagentCRDModels,
-		endpointKagentCRDMemories:  s.handleKagentCRDMemories,
-		endpointKagentCRDSummary:   s.handleKagentCRDSummary,
-		endpointPredictionsAI:      s.handlePredictionsAI,
-		endpointPredictionsAnalyze: s.handlePredictionsAnalyze,
+		endpointHealth:              s.handleHealth,
+		endpointSettingsKeys:        s.handleSettingsKeys,
+		endpointSettings:            s.handleSettingsAll,
+		endpointSettingsExport:      s.handleSettingsExport,
+		endpointSettingsImport:      s.handleSettingsImport,
+		endpointClusters:            s.handleClustersHTTP,
+		endpointStatus:              s.handleStatus,
+		endpointSecrets:             s.handleSecretsHTTP,
+		endpointWS:                  s.handleWebSocket,
+		endpointRestartBackend:      s.handleRestartBackend,
+		endpointAutoUpdateTrigger:   s.handleAutoUpdateTrigger,
+		endpointKubeconfigImport:    s.handleKubeconfigImportHTTP,
+		endpointPods:                s.handlePodsHTTP,
+		endpointNodes:               s.handleNodesHTTP,
+		endpointScale:               s.handleScaleHTTP,
+		endpointWorkloadsDeploy:     s.handleDeployWorkloadHTTP,
+		endpointWorkloadsDelete:     s.handleDeleteWorkloadHTTP,
+		endpointProviderCheck:       s.handleProviderCheck,
+		endpointAutoUpdateStatus:    s.handleAutoUpdateStatus,
+		endpointKagentiAgents:       s.handleKagentiAgents,
+		endpointKagentiBuilds:       s.handleKagentiBuilds,
+		endpointKagentiCards:        s.handleKagentiCards,
+		endpointKagentiTools:        s.handleKagentiTools,
+		endpointKagentiSummary:      s.handleKagentiSummary,
+		endpointKagentCRDAgents:     s.handleKagentCRDAgents,
+		endpointKagentCRDTools:      s.handleKagentCRDTools,
+		endpointKagentCRDModels:     s.handleKagentCRDModels,
+		endpointKagentCRDMemories:   s.handleKagentCRDMemories,
+		endpointKagentCRDSummary:    s.handleKagentCRDSummary,
+		endpointPredictionsAI:       s.handlePredictionsAI,
+		endpointPredictionsAnalyze:  s.handlePredictionsAnalyze,
 		endpointPredictionsFeedback: s.handlePredictionsFeedback,
-		endpointPredictionsStats:   s.handlePredictionsStats,
-		endpointDeviceAlerts:       s.handleDeviceAlerts,
-		endpointDeviceAlertsClear:  s.handleDeviceAlertsClear,
-		endpointArgoCDSync:         s.handleArgoCDSync,
+		endpointPredictionsStats:    s.handlePredictionsStats,
+		endpointDeviceAlerts:        s.handleDeviceAlerts,
+		endpointDeviceAlertsClear:   s.handleDeviceAlertsClear,
+		endpointArgoCDSync:          s.handleArgoCDSync,
 	}
 
 	return handlers[path]
@@ -611,11 +616,11 @@ type authTestFakeProvider struct {
 	displayName string
 }
 
-func (p *authTestFakeProvider) Name() string                    { return p.name }
-func (p *authTestFakeProvider) DisplayName() string             { return p.displayName }
-func (p *authTestFakeProvider) Description() string             { return "Test provider for auth tests" }
-func (p *authTestFakeProvider) Provider() string                { return "test" }
-func (p *authTestFakeProvider) IsAvailable() bool               { return true }
+func (p *authTestFakeProvider) Name() string                     { return p.name }
+func (p *authTestFakeProvider) DisplayName() string              { return p.displayName }
+func (p *authTestFakeProvider) Description() string              { return "Test provider for auth tests" }
+func (p *authTestFakeProvider) Provider() string                 { return "test" }
+func (p *authTestFakeProvider) IsAvailable() bool                { return true }
 func (p *authTestFakeProvider) Capabilities() ProviderCapability { return CapabilityChat }
 
 func (p *authTestFakeProvider) Chat(_ context.Context, _ *ChatRequest) (*ChatResponse, error) {
