@@ -213,13 +213,16 @@ vi.mock('../../widgets/WidgetExportModal', () => ({ WidgetExportModal: () => nul
 vi.mock('../../deploy/DeployConfirmDialog', () => ({ DeployConfirmDialog: () => null }))
 vi.mock('../DashboardHealthIndicator', () => ({ DashboardHealthIndicator: () => null }))
 vi.mock('../WelcomeCard', () => ({ WelcomeCard: () => <div data-testid="welcome-card" /> }))
+const mockDashboardHeader = vi.fn(({ title }: { title: string }) => <div data-testid="dashboard-header">{title}</div>)
 vi.mock('../../shared/DashboardHeader', () => ({
-  DashboardHeader: ({ title }: { title: string }) => <div data-testid="dashboard-header">{title}</div>,
+  DashboardHeader: (props: unknown) => mockDashboardHeader(props as { title: string }),
 }))
 let capturedGetStatValue: ((blockId: string) => { value: unknown }) | null = null
+let capturedStatsOverviewProps: Record<string, unknown> | null = null
 vi.mock('../../ui/StatsOverview', () => ({
-  StatsOverview: ({ getStatValue }: { getStatValue: (id: string) => { value: unknown } }) => {
-    capturedGetStatValue = getStatValue
+  StatsOverview: (props: { getStatValue: (id: string) => { value: unknown } }) => {
+    capturedGetStatValue = props.getStatValue
+    capturedStatsOverviewProps = props
     return <div data-testid="stats-overview" />
   },
   StatBlockValue: {},
@@ -258,6 +261,7 @@ import { Dashboard } from '../Dashboard'
 
 describe('Dashboard', () => {
   beforeEach(() => {
+    capturedStatsOverviewProps = null
     vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.clearAllMocks()
     mockSafeGetItem.mockReturnValue(null)
@@ -288,6 +292,17 @@ describe('Dashboard', () => {
     expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
     expect(screen.getByTestId('stats-overview')).toBeInTheDocument()
     expect(screen.getByTestId('getting-started')).toBeInTheDocument()
+  })
+
+  it('hides the header timestamp when stats overview shows the update time', () => {
+    render(<Dashboard />)
+
+    const headerProps = mockDashboardHeader.mock.calls.at(-1)?.[0]
+
+    expect(headerProps).toEqual(expect.objectContaining({ showTimestamp: false }))
+    expect(capturedStatsOverviewProps).toEqual(expect.objectContaining({
+      lastUpdated: expect.any(Date),
+    }))
   })
 
   it('renders default cards from config when localStorage is empty', () => {

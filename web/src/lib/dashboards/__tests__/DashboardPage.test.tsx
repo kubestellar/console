@@ -59,6 +59,11 @@ vi.mock('../DashboardComponents', () => ({
   ),
 }))
 
+const mockStatsOverview = vi.fn(() => <div data-testid="stats-overview" />)
+const mockDashboardHeader = vi.fn(({ title }: { title: string }) => (
+  <div data-testid="dashboard-header">{title}</div>
+))
+
 vi.mock('../../../components/dashboard/ConfigureCardModal', () => ({
   ConfigureCardModal: ({ isOpen }: { isOpen: boolean }) => (
     isOpen ? <div data-testid="configure-card-modal" /> : null
@@ -105,15 +110,13 @@ vi.mock('../../../components/dashboard/customizer/DashboardCustomizer', () => ({
 vi.mock('../../../components/dashboard/templates', () => ({}))
 
 vi.mock('../../../components/ui/StatsOverview', () => ({
-  StatsOverview: () => <div data-testid="stats-overview" />,
+  StatsOverview: (props: unknown) => mockStatsOverview(props),
 }))
 
 vi.mock('../../../components/ui/StatsBlockDefinitions', () => ({}))
 
 vi.mock('../../../components/shared/DashboardHeader', () => ({
-  DashboardHeader: ({ title }: { title: string }) => (
-    <div data-testid="dashboard-header">{title}</div>
-  ),
+  DashboardHeader: (props: unknown) => mockDashboardHeader(props as { title: string }),
 }))
 
 vi.mock('../../../components/dashboard/DashboardHealthIndicator', () => ({
@@ -229,6 +232,21 @@ describe('DashboardPage', () => {
   it('renders stats overview section', () => {
     renderPage()
     expect(screen.getByTestId('stats-overview')).toBeInTheDocument()
+  })
+
+  it('hides the header timestamp when stats overview owns the updated time', () => {
+    const lastUpdated = new Date('2024-01-01T13:51:40')
+
+    renderPage({ lastUpdated })
+
+    const headerProps = mockDashboardHeader.mock.calls.at(-1)?.[0]
+    const statsOverviewProps = mockStatsOverview.mock.calls.at(-1)?.[0]
+
+    expect(headerProps).toEqual(expect.objectContaining({
+      lastUpdated,
+      showTimestamp: false,
+    }))
+    expect(statsOverviewProps).toEqual(expect.objectContaining({ lastUpdated }))
   })
 
   it('renders sortable cards when cards are present', () => {
