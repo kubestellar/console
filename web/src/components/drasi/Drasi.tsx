@@ -31,21 +31,21 @@ export function Drasi() {
       case 'sources':
         return {
           value: (data?.sources || []).length || (isDemoData ? DEMO_SOURCE_COUNT : 0),
-          sublabel: t('common:drasi.statSources'),
+          sublabel: t('drasi.statSources'),
           isClickable: false,
           isDemo: isDemoData,
         }
       case 'queries':
         return {
           value: (data?.queries || []).length || (isDemoData ? DEMO_QUERY_COUNT : 0),
-          sublabel: t('common:drasi.statContinuousQueries'),
+          sublabel: t('drasi.statContinuousQueries'),
           isClickable: false,
           isDemo: isDemoData,
         }
       case 'reactions':
         return {
           value: (data?.reactions || []).length || (isDemoData ? DEMO_REACTION_COUNT : 0),
-          sublabel: t('common:drasi.statReactions'),
+          sublabel: t('drasi.statReactions'),
           isClickable: false,
           isDemo: isDemoData,
         }
@@ -74,7 +74,7 @@ export function Drasi() {
     >
       {error && (
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
-          <div className="font-medium">{t('common:drasi.errorLoadingResources')}</div>
+          <div className="font-medium">{t('drasi.errorLoadingResources')}</div>
           <div className="text-sm text-muted-foreground">{error}</div>
         </div>
       )}
