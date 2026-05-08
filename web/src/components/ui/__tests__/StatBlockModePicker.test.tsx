@@ -7,6 +7,12 @@ const modalState = vi.hoisted(() => ({
   toggle: vi.fn(),
 }))
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
+  }),
+}))
+
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
   isDemoModeForced: false, canToggleDemoMode: () => true, setDemoMode: vi.fn(),
@@ -94,5 +100,46 @@ describe('StatBlockModePicker', () => {
     await waitFor(() => {
       expect(menu).toHaveStyle({ top: '184px', left: '290px', width: '160px' })
     })
+  })
+
+  it('focuses the current mode when the menu opens', () => {
+    modalState.isOpen = true
+
+    render(
+      <StatBlockModePicker
+        currentMode="sparkline"
+        availableModes={['numeric', 'sparkline', 'gauge']}
+        onModeChange={vi.fn()}
+      />,
+    )
+
+    expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Sparkline' }))
+  })
+
+  it('supports arrow-key navigation between available menu items', () => {
+    modalState.isOpen = true
+
+    render(
+      <StatBlockModePicker
+        currentMode="numeric"
+        availableModes={['numeric', 'gauge']}
+        onModeChange={vi.fn()}
+      />,
+    )
+
+    const menu = screen.getByRole('menu', { name: 'Display mode' })
+    const numeric = screen.getByRole('menuitem', { name: 'Number' })
+    const gauge = screen.getByRole('menuitem', { name: 'Gauge' })
+
+    expect(document.activeElement).toBe(numeric)
+
+    fireEvent.keyDown(menu, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(gauge)
+
+    fireEvent.keyDown(menu, { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(numeric)
+
+    fireEvent.keyDown(menu, { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(gauge)
   })
 })

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { Settings, Hash, TrendingUp, CircleDot, BarChart3, ArrowUpDown, Layers } from 'lucide-react'
 import { Button } from './Button'
 import type { StatDisplayMode } from './StatsBlockDefinitions'
@@ -11,6 +12,7 @@ const POPOVER_GAP_PX = 4
 const POPOVER_WIDTH_PX = 160
 /** Minimum spacing from the viewport edge in pixels */
 const VIEWPORT_PADDING_PX = 8
+const MODE_MENU_ITEM_SELECTOR = 'button[role="menuitem"]:not([disabled])'
 
 /** Gauge icon — custom SVG since Lucide doesn't have a half-arc gauge */
 function GaugeIcon({ className }: { className?: string }) {
@@ -46,16 +48,16 @@ function HeatmapIcon({ className }: { className?: string }) {
   )
 }
 
-const MODE_OPTIONS: { mode: StatDisplayMode; icon: React.ComponentType<{ className?: string }>; label: string }[] = [
-  { mode: 'numeric', icon: Hash, label: 'Number' },
-  { mode: 'sparkline', icon: TrendingUp, label: 'Sparkline' },
-  { mode: 'gauge', icon: GaugeIcon, label: 'Gauge' },
-  { mode: 'horseshoe', icon: HorseshoeIcon, label: 'Horseshoe' },
-  { mode: 'ring-3', icon: CircleDot, label: 'Ring' },
-  { mode: 'mini-bar', icon: BarChart3, label: 'Bar' },
-  { mode: 'trend', icon: ArrowUpDown, label: 'Trend' },
-  { mode: 'stacked-bar', icon: Layers, label: 'Stacked' },
-  { mode: 'heatmap', icon: HeatmapIcon, label: 'Heatmap' },
+const MODE_OPTIONS: { mode: StatDisplayMode; icon: React.ComponentType<{ className?: string }>; labelKey: string; defaultLabel: string }[] = [
+  { mode: 'numeric', icon: Hash, labelKey: 'statsOverview.modePicker.options.numeric', defaultLabel: 'Number' },
+  { mode: 'sparkline', icon: TrendingUp, labelKey: 'statsOverview.modePicker.options.sparkline', defaultLabel: 'Sparkline' },
+  { mode: 'gauge', icon: GaugeIcon, labelKey: 'statsOverview.modePicker.options.gauge', defaultLabel: 'Gauge' },
+  { mode: 'horseshoe', icon: HorseshoeIcon, labelKey: 'statsOverview.modePicker.options.horseshoe', defaultLabel: 'Horseshoe' },
+  { mode: 'ring-3', icon: CircleDot, labelKey: 'statsOverview.modePicker.options.ring', defaultLabel: 'Ring' },
+  { mode: 'mini-bar', icon: BarChart3, labelKey: 'statsOverview.modePicker.options.bar', defaultLabel: 'Bar' },
+  { mode: 'trend', icon: ArrowUpDown, labelKey: 'statsOverview.modePicker.options.trend', defaultLabel: 'Trend' },
+  { mode: 'stacked-bar', icon: Layers, labelKey: 'statsOverview.modePicker.options.stacked', defaultLabel: 'Stacked' },
+  { mode: 'heatmap', icon: HeatmapIcon, labelKey: 'statsOverview.modePicker.options.heatmap', defaultLabel: 'Heatmap' },
 ]
 
 interface StatBlockModePickerProps {
@@ -65,6 +67,7 @@ interface StatBlockModePickerProps {
 }
 
 export function StatBlockModePicker({ currentMode, availableModes, onModeChange }: StatBlockModePickerProps) {
+  const { t } = useTranslation()
   const { isOpen, close, toggle } = useModalState()
   const isTopEscapeLayer = useEscapeLayer(isOpen)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -83,19 +86,64 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
     })
   }, [])
 
+  const getFocusableMenuItems = useCallback(() => Array.from(
+    popoverRef.current?.querySelectorAll<HTMLButtonElement>(MODE_MENU_ITEM_SELECTOR) ?? [],
+  ), [])
+
+  const focusMenuItem = useCallback((modeToFocus: StatDisplayMode) => {
+    const focusableItems = getFocusableMenuItems()
+    const nextFocusedItem = focusableItems.find((item) => item.dataset.mode === modeToFocus) ?? focusableItems[0]
+    nextFocusedItem?.focus()
+  }, [getFocusableMenuItems])
+
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (!isOpen) updatePosition()
     toggle()
   }
 
-  const handleSelect = (e: React.MouseEvent, mode: StatDisplayMode) => {
+  const handleTriggerKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!isOpen) {
+      updatePosition()
+      toggle()
+      return
+    }
+
+    focusMenuItem(currentMode)
+  }
+
+  const handleSelect = (e: React.MouseEvent<HTMLButtonElement>, mode: StatDisplayMode) => {
     e.stopPropagation()
     e.preventDefault()
     onModeChange(mode)
     close()
+    triggerRef.current?.focus()
   }
 
+  const handleMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+
+    e.preventDefault()
+    const focusableItems = getFocusableMenuItems()
+    if (!focusableItems.length) return
+
+    const currentIndex = focusableItems.findIndex((item) => item === document.activeElement)
+    if (currentIndex === -1) {
+      focusMenuItem(currentMode)
+      return
+    }
+
+    const direction = e.key === 'ArrowDown' ? 1 : -1
+    const nextIndex = (currentIndex + direction + focusableItems.length) % focusableItems.length
+    focusableItems[nextIndex]?.focus()
+  }
+
+  // Reposition on scroll/resize while open
   useEffect(() => {
     if (!isOpen) return
 
@@ -108,6 +156,12 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
       window.removeEventListener('scroll', updatePosition, { capture: true })
     }
   }, [isOpen, updatePosition])
+
+  // Focus current mode when menu opens
+  useEffect(() => {
+    if (!isOpen) return
+    focusMenuItem(currentMode)
+  }, [currentMode, focusMenuItem, isOpen])
 
   // Close on click outside
   useEffect(() => {
@@ -125,6 +179,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
       e.preventDefault()
       e.stopPropagation()
       close()
+      triggerRef.current?.focus()
     }
     document.addEventListener('mousedown', handleClick)
     document.addEventListener('keydown', handleEsc)
@@ -144,27 +199,32 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
         size="sm"
         icon={<Settings className="w-3 h-3" />}
         onClick={handleToggle}
-        title="Change display mode"
+        onKeyDown={handleTriggerKeyDown}
+        title={t('statsOverview.modePicker.changeDisplayMode', { defaultValue: 'Change display mode' })}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
         className="absolute top-1.5 right-1.5 p-1 opacity-0 group-hover:opacity-100 transition-all z-10"
       />
       {isOpen && createPortal(
         <div
           ref={popoverRef}
           role="menu"
-          aria-label="Display mode"
+          aria-label={t('statsOverview.modePicker.displayMode', { defaultValue: 'Display mode' })}
           className="fixed z-dropdown bg-card border border-border rounded-lg shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150"
           style={{ top: position.top, left: position.left, width: POPOVER_WIDTH_PX }}
+          onKeyDown={handleMenuKeyDown}
         >
           <div className="text-2xs text-muted-foreground px-2 py-1 font-medium uppercase tracking-wider">
-            Display Mode
+            {t('statsOverview.modePicker.displayMode', { defaultValue: 'Display mode' })}
           </div>
-          {MODE_OPTIONS.map(({ mode, icon: Icon, label }) => {
+          {MODE_OPTIONS.map(({ mode, icon: Icon, labelKey, defaultLabel }) => {
             const isAvailable = availableSet.has(mode)
             const isActive = mode === currentMode
             return (
               <button
                 key={mode}
                 role="menuitem"
+                data-mode={mode}
                 onClick={(e) => isAvailable && handleSelect(e, mode)}
                 disabled={!isAvailable}
                 className={`w-full flex items-center gap-2.5 px-2 py-1.5 rounded text-xs transition-colors ${
@@ -176,7 +236,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
                 }`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
-                <span>{label}</span>
+                <span>{t(labelKey, { defaultValue: defaultLabel })}</span>
                 {isActive && <span className="ml-auto text-purple-400">&#x2713;</span>}
               </button>
             )

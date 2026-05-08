@@ -2623,7 +2623,22 @@
     "configureStats": "Configure stats",
     "demo": "Demo",
     "notAvailable": "Not available",
-    "updated": "Updated {{time}}"
+    "updated": "Updated {{time}}",
+    "modePicker": {
+      "changeDisplayMode": "Change display mode",
+      "displayMode": "Display mode",
+      "options": {
+        "numeric": "Number",
+        "sparkline": "Sparkline",
+        "gauge": "Gauge",
+        "horseshoe": "Horseshoe",
+        "ring": "Ring",
+        "bar": "Bar",
+        "trend": "Trend",
+        "stacked": "Stacked",
+        "heatmap": "Heatmap"
+      }
+    }
   },
   "refresh": {
     "failed": "Failed"
