@@ -83,13 +83,12 @@ const COLOR_CLASSES: Record<string, string> = {
 interface StatBlockProps {
   blockId: string
   stats: ClusterStats
-  hasData: boolean
   onClick?: () => void
   color: string
   icon: string
 }
 
-function StatBlock({ blockId, stats, hasData, onClick, color, icon }: StatBlockProps) {
+function StatBlock({ blockId, stats, onClick, color, icon }: StatBlockProps) {
   const IconComponent = ICONS[icon] || Server
   const colorClass = COLOR_CLASSES[color] || 'text-foreground'
 
@@ -137,7 +136,6 @@ function StatBlock({ blockId, stats, hasData, onClick, color, icon }: StatBlockP
       isClickable = isClickable && stats.totalCPUs > 0
       break
     case 'memory':
-      // formatMemoryStat handles null/undefined internally, pass hasData for proper formatting
       value = formatMemoryStat(stats.totalMemoryGB, stats.totalMemoryGB != null)
       label = 'Memory'
       sublabel = 'allocatable'
@@ -229,9 +227,6 @@ export function StatsOverview({
   const isAgentOffline = agentStatus === 'disconnected'
   const forceLoadingForOffline = !isDemoMode && isAgentOffline && !isInClusterMode()
 
-  // Resource data is available if we have reachable clusters with node data
-  const hasData = forceLoadingForOffline ? false : stats.hasResourceData !== false
-
   // Map block IDs to their click handlers
   const getClickHandler = (blockId: string) => {
     switch (blockId) {
@@ -306,7 +301,6 @@ export function StatsOverview({
               key={block.id}
               blockId={block.id}
               stats={stats}
-              hasData={hasData}
               onClick={getClickHandler(block.id)}
               color={block.color}
               icon={block.icon}
