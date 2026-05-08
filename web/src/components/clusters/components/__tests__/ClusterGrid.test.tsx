@@ -120,6 +120,8 @@ describe('ClusterGrid', () => {
   })
 
   it('disables refresh and local cluster controls when the cluster is unreachable', () => {
+    // Clear detected clusters so controlsDisabled = unreachable && !isDetectedLocalCluster = true
+    mockLocalClusters = []
     const { onSelectCluster, onRefreshCluster } = renderGrid({
       healthy: false,
       reachable: false,
