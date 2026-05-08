@@ -26,52 +26,47 @@ vi.mock('../../config/dashboards/sigstore', () => ({
 
 const mockedAuthFetch = vi.mocked(authFetch)
 
-const mockSignatures = [
+const mockImages = [
   {
     image: 'ghcr.io/example/app:1.0.0',
     digest: 'sha256:111',
     signed: true,
+    verified: true,
     signer: 'cosign',
-    issuer: 'Fulcio',
-    timestamp: '2026-04-01T10:00:00Z',
+    keyless: true,
     transparency_log: true,
-    status: 'verified',
+    signed_at: '2026-04-01T10:00:00Z',
   },
 ]
 
-const mockVerifications = [
+const mockPolicies = [
   {
-    id: 'v-1',
-    image: 'ghcr.io/example/app:1.0.0',
-    policy: 'require-signature',
-    result: 'pass',
-    checked_at: '2026-04-01T11:00:00Z',
-    cosign_version: 'v2.4.1',
-    certificate_chain: 2,
-    rekor_entry: true,
+    name: 'require-signature',
+    cluster: 'prod-east',
+    mode: 'enforce',
+    scope: 'default',
+    rules: 2,
+    violations: 0,
   },
 ]
 
 const mockSummary = {
   total_images: 5,
   signed_images: 4,
+  verified_images: 4,
   unsigned_images: 1,
-  verified_signatures: 4,
-  failed_verifications: 0,
-  pending_verifications: 0,
-  transparency_log_entries: 4,
-  trust_roots: 2,
-  policies_enforced: 3,
-  last_verification: '2026-04-01T11:00:00Z',
+  policy_violations: 0,
+  clusters_covered: 2,
+  evaluated_at: '2026-04-01T11:00:00Z',
 }
 
 function mockSuccessResponses() {
   mockedAuthFetch.mockImplementation((url: string) => {
-    if (url.includes('/signatures')) {
-      return Promise.resolve({ ok: true, json: async () => mockSignatures } as Response)
+    if (url.includes('/images')) {
+      return Promise.resolve({ ok: true, json: async () => mockImages } as Response)
     }
-    if (url.includes('/verifications')) {
-      return Promise.resolve({ ok: true, json: async () => mockVerifications } as Response)
+    if (url.includes('/policies')) {
+      return Promise.resolve({ ok: true, json: async () => mockPolicies } as Response)
     }
     if (url.includes('/summary')) {
       return Promise.resolve({ ok: true, json: async () => mockSummary } as Response)
@@ -97,6 +92,7 @@ describe('SigstoreDashboard', () => {
     expect(screen.getByText('5')).toBeInTheDocument()
     expect(screen.getByText(/Signatures \(1\)/)).toBeInTheDocument()
     expect(screen.getByText('ghcr.io/example/app:1.0.0')).toBeInTheDocument()
+    expect(screen.getByText('Sigstore keyless')).toBeInTheDocument()
   })
 
   it('switches to verifications tab and renders verification rows', async () => {
@@ -111,6 +107,7 @@ describe('SigstoreDashboard', () => {
     await user.click(screen.getByRole('button', { name: /Verifications \(1\)/ }))
     expect(screen.getByText('require-signature')).toBeInTheDocument()
     expect(screen.getByText('2 certs')).toBeInTheDocument()
+    expect(screen.getByText('default')).toBeInTheDocument()
   })
 
   it('shows error banner when fetch fails', async () => {

@@ -52,6 +52,88 @@ interface SigstoreSummary {
   last_verification: string
 }
 
+interface SigningImage {
+  image: string
+  digest: string
+  signed: boolean
+  verified: boolean
+  signer: string
+  keyless: boolean
+  transparency_log: boolean
+  signed_at: string | null
+}
+
+interface SigningPolicy {
+  name: string
+  cluster: string
+  mode: 'enforce' | 'warn' | 'audit'
+  scope: string
+  rules: number
+  violations: number
+}
+
+interface SigningSummary {
+  total_images: number
+  signed_images: number
+  verified_images: number
+  unsigned_images: number
+  policy_violations: number
+  clusters_covered: number
+  evaluated_at: string
+}
+
+const SIGNING_IMAGES_ENDPOINT = '/api/supply-chain/signing/images'
+const SIGNING_POLICIES_ENDPOINT = '/api/supply-chain/signing/policies'
+const SIGNING_SUMMARY_ENDPOINT = '/api/supply-chain/signing/summary'
+const NOT_AVAILABLE = '—'
+
+function getSignatureStatus(image: SigningImage): SigstoreSignature['status'] {
+  if (image.verified) return 'verified'
+  if (image.signed) return 'pending'
+  return 'failed'
+}
+
+function buildSignatures(images: SigningImage[]): SigstoreSignature[] {
+  return images.map((image) => ({
+    image: image.image,
+    digest: image.digest,
+    signed: image.signed,
+    signer: image.signer || NOT_AVAILABLE,
+    issuer: image.keyless ? 'Sigstore keyless' : 'Keyed signature',
+    timestamp: image.signed_at ?? NOT_AVAILABLE,
+    transparency_log: image.transparency_log,
+    status: getSignatureStatus(image),
+  }))
+}
+
+function buildVerifications(policies: SigningPolicy[]): SigstoreVerification[] {
+  return policies.map((policy, index) => ({
+    id: `${policy.cluster}-${policy.name}-${index}`,
+    image: policy.scope,
+    policy: policy.name,
+    result: policy.violations > 0 ? (policy.mode === 'warn' ? 'warn' : 'fail') : 'pass',
+    checked_at: NOT_AVAILABLE,
+    cosign_version: policy.mode,
+    certificate_chain: policy.rules,
+    rekor_entry: false,
+  }))
+}
+
+function buildSummary(summary: SigningSummary, policies: SigningPolicy[]): SigstoreSummary {
+  return {
+    total_images: summary.total_images,
+    signed_images: summary.signed_images,
+    unsigned_images: summary.unsigned_images,
+    verified_signatures: summary.verified_images,
+    failed_verifications: summary.policy_violations,
+    pending_verifications: Math.max(summary.signed_images - summary.verified_images, 0),
+    transparency_log_entries: summary.verified_images,
+    trust_roots: summary.clusters_covered,
+    policies_enforced: policies.length,
+    last_verification: summary.evaluated_at,
+  }
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 const RESULT_COLORS: Record<string, string> = {
@@ -96,15 +178,24 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
     setLoading(true)
     setError(null)
     try {
-      const [sigRes, verRes, sumRes] = await Promise.all([
-        authFetch('/api/v1/compliance/sigstore/signatures'),
-        authFetch('/api/v1/compliance/sigstore/verifications'),
-        authFetch('/api/v1/compliance/sigstore/summary'),
+      const [imagesResponse, policiesResponse, summaryResponse] = await Promise.all([
+        authFetch(SIGNING_IMAGES_ENDPOINT),
+        authFetch(SIGNING_POLICIES_ENDPOINT),
+        authFetch(SIGNING_SUMMARY_ENDPOINT),
       ])
-      if (!sigRes.ok || !verRes.ok || !sumRes.ok) throw new Error('Failed to fetch Sigstore data')
-      setSignatures(await sigRes.json())
-      setVerifications(await verRes.json())
-      setSummary(await sumRes.json())
+      if (!imagesResponse.ok || !policiesResponse.ok || !summaryResponse.ok) throw new Error('Failed to fetch Sigstore data')
+
+      const imagesData = await imagesResponse.json()
+      const policiesData = await policiesResponse.json()
+      const images = Array.isArray(imagesData) ? imagesData as SigningImage[] : []
+      const policies = Array.isArray(policiesData) ? policiesData as SigningPolicy[] : []
+      setSignatures(buildSignatures(images))
+      setVerifications(buildVerifications(policies))
+
+      const summaryData = await summaryResponse.json()
+      setSummary(summaryData && typeof summaryData === 'object' && !Array.isArray(summaryData)
+        ? buildSummary(summaryData as SigningSummary, policies)
+        : null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {

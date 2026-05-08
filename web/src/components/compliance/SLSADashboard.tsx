@@ -58,6 +58,94 @@ interface SLSASummary {
   total_builds: number
 }
 
+interface SLSARequirement {
+  met: boolean
+}
+
+interface SLSAWorkload {
+  workload: string
+  image: string
+  slsa_level: 0 | 1 | 2 | 3 | 4
+  build_system: string
+  builder_id: string
+  source_uri: string
+  attestation_present: boolean
+  attestation_verified: boolean
+  evaluated_at: string
+  requirements: SLSARequirement[]
+}
+
+interface SLSABackendSummary {
+  total_workloads: number
+  level_distribution: Record<string, number>
+  attested_workloads: number
+  verified_workloads: number
+}
+
+const SLSA_SUMMARY_ENDPOINT = '/api/supply-chain/slsa/summary'
+const SLSA_WORKLOADS_ENDPOINT = '/api/supply-chain/slsa/workloads'
+const UNKNOWN_SOURCE = 'Unknown'
+
+function getAttestationStatus(workload: SLSAWorkload): SLSAAttestation['status'] {
+  if (workload.attestation_verified) return 'pass'
+  if (workload.attestation_present) return 'fail'
+  return 'pending'
+}
+
+function buildAttestations(workloads: SLSAWorkload[]): SLSAAttestation[] {
+  return workloads.map((workload, index) => ({
+    id: `${workload.workload}-${index}`,
+    artifact: workload.image,
+    builder: workload.build_system,
+    slsa_level: workload.slsa_level === 0 ? 1 : workload.slsa_level,
+    verified: workload.attestation_verified,
+    build_type: workload.build_system,
+    source_repo: workload.source_uri || UNKNOWN_SOURCE,
+    timestamp: workload.evaluated_at,
+    status: getAttestationStatus(workload),
+  }))
+}
+
+function buildProvenance(workloads: SLSAWorkload[]): SLSAProvenance[] {
+  return workloads.map((workload, index) => {
+    const metRequirements = (workload.requirements || []).filter((requirement) => requirement.met).length
+    const totalRequirements = Math.max((workload.requirements || []).length, 1)
+
+    return {
+      id: `${workload.workload}-provenance-${index}`,
+      artifact: workload.image,
+      builder_id: workload.builder_id,
+      build_level: workload.slsa_level === 0 ? 1 : workload.slsa_level,
+      source_uri: workload.source_uri || UNKNOWN_SOURCE,
+      source_digest: 'Unavailable',
+      reproducible: workload.attestation_verified,
+      hermetic: metRequirements === totalRequirements,
+      parameterless: metRequirements >= Math.ceil(totalRequirements / 2),
+      timestamp: workload.evaluated_at,
+    }
+  })
+}
+
+function buildSummary(summary: SLSABackendSummary): SLSASummary {
+  const levelDistribution = summary.level_distribution || {}
+
+  return {
+    total_artifacts: summary.total_workloads,
+    attested_artifacts: summary.attested_workloads,
+    level_1: levelDistribution['1'] ?? 0,
+    level_2: levelDistribution['2'] ?? 0,
+    level_3: levelDistribution['3'] ?? 0,
+    level_4: levelDistribution['4'] ?? 0,
+    verified_attestations: summary.verified_workloads,
+    failed_attestations: Math.max(summary.attested_workloads - summary.verified_workloads, 0),
+    pending_attestations: Math.max(summary.total_workloads - summary.attested_workloads, 0),
+    source_integrity_pass: summary.verified_workloads,
+    source_integrity_fail: Math.max(summary.total_workloads - summary.verified_workloads, 0),
+    reproducible_builds: summary.verified_workloads,
+    total_builds: summary.total_workloads,
+  }
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 const LEVEL_COLORS: Record<number, string> = {
@@ -107,18 +195,21 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
     setLoading(true)
     setError(null)
     try {
-      const [aRes, pRes, sRes] = await Promise.all([
-        authFetch('/api/v1/compliance/slsa/attestations'),
-        authFetch('/api/v1/compliance/slsa/provenance'),
-        authFetch('/api/v1/compliance/slsa/summary'),
+      const [workloadsResponse, summaryResponse] = await Promise.all([
+        authFetch(SLSA_WORKLOADS_ENDPOINT),
+        authFetch(SLSA_SUMMARY_ENDPOINT),
       ])
-      if (!aRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch SLSA data')
-      const aData = await aRes.json()
-      const pData = await pRes.json()
-      const sData = await sRes.json()
-      setAttestations(Array.isArray(aData) ? aData : [])
-      setProvenance(Array.isArray(pData) ? pData : [])
-      setSummary(sData ?? null)
+      if (!workloadsResponse.ok || !summaryResponse.ok) throw new Error('Failed to fetch SLSA data')
+
+      const workloadsData = await workloadsResponse.json()
+      const workloads = Array.isArray(workloadsData) ? workloadsData as SLSAWorkload[] : []
+      setAttestations(buildAttestations(workloads))
+      setProvenance(buildProvenance(workloads))
+
+      const summaryData = await summaryResponse.json()
+      setSummary(summaryData && typeof summaryData === 'object' && !Array.isArray(summaryData)
+        ? buildSummary(summaryData as SLSABackendSummary)
+        : null)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {

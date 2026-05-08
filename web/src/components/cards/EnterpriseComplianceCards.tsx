@@ -499,15 +499,15 @@ export function SessionManagementCard() {
 
 export function SBOMManagerCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/sbom/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/supply-chain/sbom/summary')
   return (
     <CardShell title="SBOM Manager" icon={Package} onClick={() => nav('/enterprise/sbom')}>
       {data ? (
         <div className="grid grid-cols-2 gap-2">
-          <MiniStat label="Packages" value={data.total_packages ?? 0} />
-          <MiniStat label="Vulns" value={data.total_vulnerabilities ?? 0} color="text-red-400" />
-          <MiniStat label="Critical" value={data.critical_vulns ?? 0} color="text-red-500" />
-          <MiniStat label="Compliant" value={data.license_compliant ?? 0} color="text-green-400" />
+          <MiniStat label="Components" value={data.total_components ?? 0} />
+          <MiniStat label="Vulnerable" value={data.vulnerable_components ?? 0} color="text-red-400" />
+          <MiniStat label="Critical" value={data.critical_count ?? 0} color="text-red-500" />
+          <MiniStat label="Coverage" value={`${data.sbom_coverage ?? 0}%`} color="text-green-400" />
         </div>
       ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
@@ -518,15 +518,15 @@ export function SBOMManagerCard() {
 
 export function SigstoreVerifyCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/sigstore/summary')
+  const { data, error } = useSummaryData<Record<string, number>>('/api/supply-chain/signing/summary')
   return (
     <CardShell title="Sigstore Verify" icon={Shield} onClick={() => nav('/enterprise/sigstore')}>
       {data ? (
         <div className="grid grid-cols-2 gap-2">
           <MiniStat label="Images" value={data.total_images ?? 0} />
           <MiniStat label="Signed" value={data.signed_images ?? 0} color="text-green-400" />
-          <MiniStat label="Verified" value={data.verified_signatures ?? 0} color="text-green-400" />
-          <MiniStat label="Failed" value={data.failed_verifications ?? 0} color="text-red-400" />
+          <MiniStat label="Verified" value={data.verified_images ?? 0} color="text-green-400" />
+          <MiniStat label="Violations" value={data.policy_violations ?? 0} color="text-red-400" />
         </div>
       ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>
@@ -537,15 +537,16 @@ export function SigstoreVerifyCard() {
 
 export function SLSAProvenanceCard() {
   const nav = useNavigate()
-  const { data, error } = useSummaryData<Record<string, number>>('/api/v1/compliance/slsa/summary')
+  const { data, error } = useSummaryData<Record<string, unknown>>('/api/supply-chain/slsa/summary')
+  const levelDistribution = (data?.level_distribution as Record<string, number> | undefined) ?? {}
   return (
     <CardShell title="SLSA Provenance" icon={Lock} onClick={() => nav('/enterprise/slsa')}>
       {data ? (
         <div className="grid grid-cols-2 gap-2">
-          <MiniStat label="Artifacts" value={data.total_artifacts ?? 0} />
-          <MiniStat label="Attested" value={data.attested_artifacts ?? 0} color="text-green-400" />
-          <MiniStat label="L3+" value={(data.level_3 ?? 0) + (data.level_4 ?? 0)} color="text-emerald-400" />
-          <MiniStat label="Verified" value={data.verified_attestations ?? 0} color="text-green-400" />
+          <MiniStat label="Workloads" value={Number(data.total_workloads ?? 0)} />
+          <MiniStat label="Attested" value={Number(data.attested_workloads ?? 0)} color="text-green-400" />
+          <MiniStat label="L3+" value={(levelDistribution['3'] ?? 0) + (levelDistribution['4'] ?? 0)} color="text-emerald-400" />
+          <MiniStat label="Verified" value={Number(data.verified_workloads ?? 0)} color="text-green-400" />
         </div>
       ) : <p className={error ? ERROR_TEXT_CLASS : LOADING_TEXT_CLASS}>{error ?? 'Loading…'}</p>}
     </CardShell>

@@ -17,33 +17,38 @@ const mockedAuthFetch = vi.mocked(authFetch)
 
 /* ── Valid fixtures ──────────────────────────────────────────────── */
 
-const mockAttestations = [
-  { id: 'a-1', artifact: 'img:latest', builder: 'github-actions', slsa_level: 3, verified: true, build_type: 'container', source_repo: 'org/repo', timestamp: '2026-04-23T01:00:00Z', status: 'pass' },
-]
-const mockProvenance = [
-  { id: 'p-1', artifact: 'img:latest', builder_id: 'gh-actions', build_level: 3, source_uri: 'https://github.com/org/repo', source_digest: 'sha256:abc', reproducible: true, hermetic: true, parameterless: false, timestamp: '2026-04-23T01:00:00Z' },
+const mockWorkloads = [
+  {
+    workload: 'api-server',
+    image: 'img:latest',
+    slsa_level: 3,
+    build_system: 'github-actions',
+    builder_id: 'gh-actions',
+    source_uri: 'https://github.com/org/repo',
+    attestation_present: true,
+    attestation_verified: true,
+    evaluated_at: '2026-04-23T01:00:00Z',
+    requirements: [{ met: true }, { met: true }],
+  },
 ]
 const mockSummary = {
-  total_artifacts: 1, attested_artifacts: 1,
-  level_1: 0, level_2: 0, level_3: 1, level_4: 0,
-  verified_attestations: 1, failed_attestations: 0, pending_attestations: 0,
-  source_integrity_pass: 1, source_integrity_fail: 0,
-  reproducible_builds: 1, total_builds: 1,
+  total_workloads: 1,
+  level_distribution: { '1': 0, '2': 0, '3': 1, '4': 0 },
+  attested_workloads: 1,
+  verified_workloads: 1,
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 
 /** Configure mockedAuthFetch to resolve each endpoint to the given payloads */
 function setupAuthFetch(overrides: {
-  attestations?: unknown
-  provenance?: unknown
+  workloads?: unknown
   summary?: unknown
 } = {}) {
   mockedAuthFetch.mockImplementation((url: string) => {
     const data =
-      url.includes('/attestations') ? (overrides.attestations ?? mockAttestations) :
-      url.includes('/provenance')   ? (overrides.provenance ?? mockProvenance) :
-      url.includes('/summary')      ? (overrides.summary ?? mockSummary) :
+      url.includes('/workloads') ? (overrides.workloads ?? mockWorkloads) :
+      url.includes('/summary')   ? (overrides.summary ?? mockSummary) :
       {}
     return Promise.resolve({ ok: true, json: () => Promise.resolve(data) } as Response)
   })
@@ -60,29 +65,28 @@ describe('SLSADashboard', () => {
     await waitFor(() => expect(screen.getByText('SLSA Provenance')).toBeInTheDocument())
   })
 
-  it('renders without crashing when attestations endpoint returns a non-array (object)', async () => {
-    setupAuthFetch({ attestations: { unexpected: 'object' } })
+  it('renders without crashing when workloads endpoint returns a non-array (object)', async () => {
+    setupAuthFetch({ workloads: { unexpected: 'object' } })
     render(<SLSADashboard />)
     await waitFor(() => expect(screen.getByText('SLSA Provenance')).toBeInTheDocument())
   })
 
-  it('renders without crashing when provenance endpoint returns null', async () => {
-    setupAuthFetch({ provenance: null })
+  it('renders without crashing when workloads endpoint returns null', async () => {
+    setupAuthFetch({ workloads: null })
     render(<SLSADashboard />)
     await waitFor(() => expect(screen.getByText('SLSA Provenance')).toBeInTheDocument())
   })
 
-  it('renders without crashing when both array endpoints return non-array data', async () => {
-    setupAuthFetch({ attestations: 'string-payload', provenance: 42 })
+  it('renders without crashing when workloads endpoint returns a scalar payload', async () => {
+    setupAuthFetch({ workloads: 'string-payload' })
     render(<SLSADashboard />)
     await waitFor(() => expect(screen.getByText('SLSA Provenance')).toBeInTheDocument())
   })
 
-  it('shows zero-count summary when array endpoints return non-array data', async () => {
+  it('shows zero-count summary when workload endpoint returns non-array data', async () => {
     setupAuthFetch({
-      attestations: {},
-      provenance: null,
-      summary: { ...mockSummary, total_artifacts: 0, attested_artifacts: 0 },
+      workloads: {},
+      summary: { ...mockSummary, total_workloads: 0, attested_workloads: 0, verified_workloads: 0 },
     })
     render(<SLSADashboard />)
     await waitFor(() => {
