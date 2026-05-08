@@ -231,19 +231,27 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     // Update with new data. Previously this code would refuse to overwrite a
     // populated cache with an empty result, which caused the cache to retain
     // stale GPU nodes long after they had been removed from the cluster
-    // (issue #6111). We now distinguish two cases:
+    // (issue #6111). We now distinguish three cases:
     //
-    //   a) `fetchSucceeded === true` — at least one upstream returned a valid
-    //      response (even an empty list). This is an authoritative "truth" and
-    //      we MUST apply it, including the empty-array case, so removed nodes
-    //      disappear.
+    //   a) `fetchSucceeded === true` AND `newNodes.length > 0` — at least one
+    //      upstream returned a valid response with data. This is authoritative
+    //      "truth" and we MUST apply it.
     //
-    //   b) `fetchSucceeded === false` — every upstream errored out. Keep the
+    //   b) `fetchSucceeded === true` BUT `newNodes.length === 0` AND demo mode
+    //      is enabled — API succeeded but returned no GPU nodes. Use demo data
+    //      to ensure consistency with demo GPU reservations (issue #12605).
+    //
+    //   c) `fetchSucceeded === true` BUT `newNodes.length === 0` AND demo mode
+    //      is disabled — API succeeded and truly has no GPU nodes. Clear cache.
+    //
+    //   d) `fetchSucceeded === false` — every upstream errored out. Keep the
     //      stale cache so the UI doesn't flicker to empty on a transient
     //      network failure.
     if (fetchSucceeded) {
+      // Use demo data if API returned 0 nodes and demo mode is on
+      const effectiveNodes = (newNodes.length === 0 && isDemoMode()) ? getDemoGPUNodes() : newNodes
       updateGPUNodeCache({
-        nodes: newNodes,
+        nodes: effectiveNodes,
         lastUpdated: new Date(),
         isLoading: false,
         isRefreshing: false,
