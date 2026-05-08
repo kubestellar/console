@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { useEffect } from 'react'
 import {
+  useEscapeLayer,
   useModalNavigation,
   useModalBackdropClose,
   useModalState,
@@ -42,6 +44,22 @@ function _createContentEditable(): HTMLDivElement {
   div.contentEditable = 'true'
   document.body.appendChild(div)
   return div
+}
+
+function useOverlayEscape(isOpen: boolean, onClose: () => void) {
+  const isTopEscapeLayer = useEscapeLayer(isOpen)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !isTopEscapeLayer()) return
+      onClose()
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, isTopEscapeLayer, onClose])
 }
 
 // ---------------------------------------------------------------------------
@@ -367,6 +385,17 @@ describe('useModalNavigation', () => {
     )
 
     expect(typeof result.current.handleKeyDown).toBe('function')
+  })
+
+  it('yields Escape handling to the top-most overlay layer', () => {
+    const overlayOnClose = vi.fn()
+    renderHook(() => useModalNavigation({ isOpen: true, onClose, enableEscape: true }))
+    renderHook(() => useOverlayEscape(true, overlayOnClose))
+
+    fireKeyDown('Escape')
+
+    expect(overlayOnClose).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
   })
 })
 

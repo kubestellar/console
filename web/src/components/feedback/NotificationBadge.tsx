@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useModalState } from '../../lib/modals'
+import { useEscapeLayer, useModalState } from '../../lib/modals'
 import { Bell, X, Check, Clock, Bug, Sparkles, GitPullRequest, Eye } from 'lucide-react'
 import { StatusBadge } from '../ui/StatusBadge'
 import { useNotifications, type Notification, type NotificationType } from '../../hooks/useFeatureRequests'
@@ -34,20 +34,21 @@ export function NotificationBadge() {
     isLoading,
   } = useNotifications()
   const { isOpen, close, toggle } = useModalState()
+  const isTopEscapeLayer = useEscapeLayer(isOpen)
 
   useEffect(() => {
     if (!isOpen) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        close()
-      }
+      if (e.key !== 'Escape' || !isTopEscapeLayer()) return
+      e.preventDefault()
+      e.stopPropagation()
+      close()
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, close])
+  }, [isOpen, close, isTopEscapeLayer])
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {

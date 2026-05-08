@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Box, Server, Layers, Rocket, FileText, Zap, Cpu, Lock, User, Bell, Ship, GitBranch, Settings, Shield, Package, DollarSign, AlertTriangle, RefreshCw, HardDrive } from 'lucide-react'
 import { useDrillDown } from '../../hooks/useDrillDown'
 import { useMobile } from '../../hooks/useMobile'
+import { useEscapeLayer } from '../../lib/modals'
 // Lazy load large components (>300 lines) for better performance
 const ClusterDrillDown = safeLazy(() => import('./views/ClusterDrillDown'), 'ClusterDrillDown')
 const OperatorDrillDown = safeLazy(() => import('./views/OperatorDrillDown'), 'OperatorDrillDown')
@@ -173,6 +174,7 @@ export function DrillDownModal() {
   const { t } = useTranslation()
   const { state, pop, goTo, close } = useDrillDown()
   const { isMobile } = useMobile()
+  const isTopEscapeLayer = useEscapeLayer(state.isOpen)
 
   // Disable body scroll when modal is open
   useEffect(() => {
@@ -191,6 +193,9 @@ export function DrillDownModal() {
     if (!state.isOpen) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const isNavigationKey = e.key === 'Escape' || e.key === 'Backspace' || e.key === ' '
+      if (isNavigationKey && !isTopEscapeLayer()) return
+
       // Don't handle if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return
@@ -199,6 +204,7 @@ export function DrillDownModal() {
       switch (e.key) {
         case 'Escape':
           e.preventDefault()
+          e.stopPropagation()
           close()
           break
         case 'Backspace':
@@ -215,7 +221,7 @@ export function DrillDownModal() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [state.isOpen, state.stack.length, close, pop])
+  }, [state.isOpen, state.stack.length, close, pop, isTopEscapeLayer])
 
   if (!state.isOpen || !state.currentView) return null
 

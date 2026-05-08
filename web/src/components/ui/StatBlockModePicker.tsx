@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Settings, Hash, TrendingUp, CircleDot, BarChart3, ArrowUpDown, Layers } from 'lucide-react'
 import { Button } from './Button'
 import type { StatDisplayMode } from './StatsBlockDefinitions'
-import { useModalState } from '../../lib/modals'
+import { useEscapeLayer, useModalState } from '../../lib/modals'
 
 /** Gap between trigger button and popover in pixels */
 const POPOVER_GAP_PX = 4
@@ -62,6 +62,7 @@ interface StatBlockModePickerProps {
 
 export function StatBlockModePicker({ currentMode, availableModes, onModeChange }: StatBlockModePickerProps) {
   const { isOpen, close, toggle } = useModalState()
+  const isTopEscapeLayer = useEscapeLayer(isOpen)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ top: 0, left: 0 })
@@ -100,7 +101,10 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
       }
     }
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
+      if (e.key !== 'Escape' || !isTopEscapeLayer()) return
+      e.preventDefault()
+      e.stopPropagation()
+      close()
     }
     document.addEventListener('mousedown', handleClick)
     document.addEventListener('keydown', handleEsc)
@@ -108,7 +112,7 @@ export function StatBlockModePicker({ currentMode, availableModes, onModeChange 
       document.removeEventListener('mousedown', handleClick)
       document.removeEventListener('keydown', handleEsc)
     }
-  }, [isOpen, close])
+  }, [isOpen, close, isTopEscapeLayer])
 
   const availableSet = new Set(availableModes)
 

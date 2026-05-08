@@ -9,12 +9,38 @@ import { UseModalNavigationOptions, UseModalNavigationResult } from './types'
 // ---------------------------------------------------------------------------
 const modalStack: number[] = []
 let modalStackCounter = 0
+const escapeLayerStack: number[] = []
+let escapeLayerCounter = 0
 
 /** Returns true when at least one BaseModal is currently open. Used by
  *  non-modal ESC handlers (e.g. the mission sidebar) to yield to the
  *  front-most modal instead of closing the sidebar behind it. */
 export function isAnyModalOpen(): boolean {
   return modalStack.length > 0
+}
+
+/**
+ * Registers an Escape-handling layer and returns whether it is currently the
+ * front-most handler. Layers include BaseModal, drill-downs, and lightweight
+ * overlays/popovers that should only react to Escape when they are on top.
+ */
+export function useEscapeLayer(isOpen: boolean): () => boolean {
+  const escapeLayerIdRef = useRef(++escapeLayerCounter)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const id = escapeLayerIdRef.current
+    escapeLayerStack.push(id)
+    return () => {
+      const idx = escapeLayerStack.lastIndexOf(id)
+      if (idx >= 0) escapeLayerStack.splice(idx, 1)
+    }
+  }, [isOpen])
+
+  return useCallback(() => {
+    const topId = escapeLayerStack[escapeLayerStack.length - 1]
+    return topId === escapeLayerIdRef.current
+  }, [])
 }
 
 /**
@@ -133,19 +159,18 @@ export function useModalNavigation({
     }
   }, [isOpen])
 
-  // Set up keyboard listener — only process ESC when this modal is the
-  // top of the stack. Other keys (Backspace/Space) pass through
-  // unconditionally because they only affect focused elements inside
-  // the modal anyway.
+  const isTopEscapeLayer = useEscapeLayer(isOpen)
+
+  // Set up keyboard listener — only process handled navigation keys when this
+  // modal is the front-most Escape layer. This keeps stacked overlays/popovers
+  // from closing the modal underneath them.
   const guardedHandleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        const topId = modalStack[modalStack.length - 1]
-        if (topId !== modalIdRef.current) return // not the top modal
-      }
+      const isNavigationKey = e.key === 'Escape' || e.key === 'Backspace' || e.key === ' '
+      if (isNavigationKey && !isTopEscapeLayer()) return
       handleKeyDown(e)
     },
-    [handleKeyDown],
+    [handleKeyDown, isTopEscapeLayer],
   )
 
   useEffect(() => {

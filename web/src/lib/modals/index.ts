@@ -21,6 +21,7 @@ export {
   useModalFocusTrap,
   useModal,
   useModalState,
+  useEscapeLayer,
   isAnyModalOpen,
   type UseModalOptions,
   type UseModalStateResult,
