@@ -1076,8 +1076,24 @@
       "addAll": "Add all"
     },
     "discover": {
+      "sectionLabel": "Suggested cards",
+      "title": "You might also like",
+      "description": "Preview extra cards here, then add them to the live dashboard when you are ready.",
+      "previewLabel": "Card preview",
+      "previousCard": "Previous card",
+      "nextCard": "Next card",
       "addThis": "Add this card",
-      "browseCatalog": "Browse all"
+      "browseCatalog": "Browse all",
+      "cards": {
+        "gpuOverview": "GPU utilization across clusters",
+        "nodeStatus": "Node health and capacity",
+        "securityIssues": "Security audit findings",
+        "nightlyE2EStatus": "Nightly test results",
+        "helmReleases": "Helm release status",
+        "namespaceOverview": "Namespace resource usage",
+        "workloadDeployment": "Multi-cluster deployments",
+        "costOverview": "Resource cost breakdown"
+      }
     },
     "dropZone": {
       "moveToDashboard": "Move to Dashboard",

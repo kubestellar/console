@@ -1138,17 +1138,16 @@ export function Dashboard() {
                 isWorkloadDragActive={activeDragData?.type === 'workload'}
               />
             ))}
-
-            {/* Discover Cards Placeholder — intentional empty slot with card carousel */}
-            {!isCustomized && (
-              <DiscoverCardsPlaceholder
-                existingCardTypes={currentCardTypes}
-                onAddCard={handleAddSingleCard}
-                onOpenCatalog={openAddCardModal}
-              />
-            )}
           </div>
         </SortableContext>
+
+        {!isCustomized && (
+          <DiscoverCardsPlaceholder
+            existingCardTypes={currentCardTypes}
+            onAddCard={handleAddSingleCard}
+            onOpenCatalog={openAddCardModal}
+          />
+        )}
 
         {/* Drag overlay for visual feedback */}
         <DragOverlay dropAnimation={null} zIndex={9999}>

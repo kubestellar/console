@@ -6,7 +6,7 @@
  * the helper functions and sub-patterns directly, plus a minimal render.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import { type ReactNode } from 'react'
 import { STORAGE_KEY_DASHBOARD_AUTO_REFRESH } from '../../../lib/constants'
 
@@ -314,9 +314,13 @@ describe('Dashboard', () => {
     expect(screen.getByTestId('card-recs')).toBeInTheDocument()
   })
 
-  it('renders discover placeholder when not customized', () => {
+  it('renders discover placeholder outside the dashboard grid when not customized', () => {
     render(<Dashboard />)
-    expect(screen.getByTestId('discover')).toBeInTheDocument()
+    const discover = screen.getByTestId('discover')
+    const grid = screen.getByRole('grid', { name: 'Dashboard cards' })
+
+    expect(discover).toBeInTheDocument()
+    expect(within(grid).queryByTestId('discover')).not.toBeInTheDocument()
   })
 
   it('persists auto-refresh true by default', () => {

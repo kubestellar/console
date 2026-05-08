@@ -28,8 +28,10 @@ describe('DiscoverCardsPlaceholder Component', () => {
     expect(screen.getByText('GPU utilization across clusters')).toBeInTheDocument()
   })
 
-  it('shows Add this card and Browse all buttons', () => {
+  it('shows the suggested cards section with actions', () => {
     render(<DiscoverCardsPlaceholder {...defaultProps} />)
+    expect(screen.getByRole('region', { name: 'Suggested cards' })).toBeInTheDocument()
+    expect(screen.getByText('You might also like')).toBeInTheDocument()
     expect(screen.getByText('Add this card')).toBeInTheDocument()
     expect(screen.getByText('Browse all')).toBeInTheDocument()
   })
