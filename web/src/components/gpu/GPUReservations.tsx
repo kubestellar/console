@@ -24,7 +24,6 @@ import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useAuth } from '../../lib/auth'
 import { useToast } from '../ui/Toast'
 import { cn } from '../../lib/cn'
-import { getChartColor } from '../../lib/chartColors'
 import { useGPUReservations } from '../../hooks/useGPUReservations'
 import { useGPUUtilizations } from '../../hooks/useGPUUtilizations'
 import type { GPUReservation, CreateGPUReservationInput, UpdateGPUReservationInput } from '../../hooks/useGPUReservations'
@@ -44,9 +43,7 @@ import {
   sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 
 // Extracted sub-components and constants
-import {
-  GPU_KEYS,
-  MAX_NAME_DISPLAY_LENGTH } from './gpu-constants'
+import { GPU_KEYS } from './gpu-constants'
 import type { GpuDashCard } from './SortableGpuCard'
 import { DEFAULT_GPU_CARDS } from './SortableGpuCard'
 import { GPUOverviewTab } from './GPUOverviewTab'
@@ -55,6 +52,7 @@ import type { CalendarBar } from './GPUCalendarTab'
 import { GPUReservationsTab } from './GPUReservationsTab'
 import { GPUInventoryTab } from './GPUInventoryTab'
 import { GPUDashboardTab } from './GPUDashboardTab'
+import { computeGPUOverviewStats } from './gpuOverviewStats'
 
 type ViewTab = 'overview' | 'calendar' | 'quotas' | 'inventory' | 'dashboard'
 
@@ -260,59 +258,12 @@ export function GPUReservations() {
   }, [allReservations])
 
   // GPU stats
-  const stats = useMemo(() => {
-    const totalGPUs = nodes.reduce((sum, n) => sum + n.gpuCount, 0)
-    const allocatedGPUs = nodes.reduce((sum, n) => sum + n.gpuAllocated, 0)
-    const availableGPUs = totalGPUs - allocatedGPUs
-    const utilizationPercent = totalGPUs > 0 ? Math.round((allocatedGPUs / totalGPUs) * 100) : 0
-
-    const activeReservations = filteredReservations.filter(r => r.status === 'active' || r.status === 'pending').length
-    const reservedGPUs = filteredReservations.reduce((sum, r) => sum + r.gpu_count, 0)
-
-    // GPU type distribution
-    const gpuTypes = nodes.reduce((acc, n) => {
-      if (!acc[n.gpuType]) acc[n.gpuType] = { total: 0, allocated: 0 }
-      acc[n.gpuType].total += n.gpuCount
-      acc[n.gpuType].allocated += n.gpuAllocated
-      return acc
-    }, {} as Record<string, { total: number; allocated: number }>)
-
-    const typeChartData = Object.entries(gpuTypes).map(([name, data], i) => ({
-      name,
-      value: data.total,
-      color: getChartColor((i % 4) + 1) }))
-
-    // Usage by namespace from real quotas (include cluster context)
-    const namespaceUsage: Record<string, number> = {}
-    for (const q of gpuQuotas) {
-      const label = q.cluster ? `${q.namespace} (${q.cluster})` : q.namespace
-      for (const [key, value] of Object.entries(q.used || {})) {
-        if (GPU_KEYS.some(gk => key.includes(gk))) {
-          namespaceUsage[label] = (namespaceUsage[label] || 0) + (parseInt(value) || 0)
-        }
-      }
-    }
-    const usageByNamespace = Object.entries(namespaceUsage).map(([name, value], i) => ({
-      name,
-      value,
-      color: getChartColor((i % 4) + 1) }))
-
-    // GPU allocation by cluster
-    const clusterUsage = gpuClusters.map(c => ({
-      name: c.name.length > MAX_NAME_DISPLAY_LENGTH ? c.name.slice(0, MAX_NAME_DISPLAY_LENGTH) + '...' : c.name,
-      value: c.allocatedGPUs }))
-
-    return {
-      totalGPUs,
-      allocatedGPUs,
-      availableGPUs,
-      utilizationPercent,
-      activeReservations,
-      reservedGPUs,
-      typeChartData,
-      usageByNamespace,
-      clusterUsage }
-  }, [nodes, gpuQuotas, gpuClusters, filteredReservations])
+  const stats = useMemo(() => computeGPUOverviewStats({
+    nodes,
+    reservations: filteredReservations,
+    gpuQuotas,
+    gpuClusters,
+  }), [nodes, gpuQuotas, gpuClusters, filteredReservations])
 
   // Calendar helpers
   const getDaysInMonth = (date: Date) => {

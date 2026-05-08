@@ -108,7 +108,9 @@ export interface UpdateGPUReservationInput {
   max_cluster_gpus?: number
 }
 
-// Demo fallback data — shown when the API is unreachable and demo mode is on
+// Demo fallback data — shown when the API is unreachable and demo mode is on.
+// Keep this aligned with demo GPU inventory so the overview cards stay
+// internally consistent in demo mode.
 const DEMO_RESERVATIONS: GPUReservation[] = [
   {
     id: 'demo-res-1',
@@ -116,7 +118,7 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     user_name: 'alice',
     title: 'LLM Fine-tuning Job',
     description: 'Fine-tuning Llama 3 70B on custom dataset',
-    cluster: 'eks-prod-us-east',
+    cluster: 'vllm-gpu-cluster',
     namespace: 'ml-training',
     gpu_count: 8,
     gpu_type: 'NVIDIA A100',
@@ -134,13 +136,13 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     user_name: 'bob',
     title: 'Inference Benchmark',
     description: 'Benchmarking vLLM serving throughput',
-    cluster: 'gke-ml-cluster',
+    cluster: 'eks-prod-us-east-1',
     namespace: 'benchmarks',
     gpu_count: 4,
-    gpu_type: 'NVIDIA H100',
+    gpu_type: 'NVIDIA A10G',
     // Multi-type demo data showing multi-type preference — this
-    // reservation accepts either H100 or A100 nodes.
-    gpu_types: ['NVIDIA H100', 'NVIDIA A100'],
+    // reservation accepts either A10G or A100 nodes.
+    gpu_types: ['NVIDIA A10G', 'NVIDIA A100'],
     start_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     duration_hours: 24,
     notes: '',
@@ -154,11 +156,11 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     user_name: 'alice',
     title: 'Distributed Training - GPT',
     description: 'Multi-node distributed training experiment',
-    cluster: 'eks-prod-us-east',
+    cluster: 'vllm-gpu-cluster',
     namespace: 'ml-training',
-    gpu_count: 16,
-    gpu_type: 'NVIDIA A100',
-    gpu_types: ['NVIDIA A100'],
+    gpu_count: 8,
+    gpu_type: 'NVIDIA H100',
+    gpu_types: ['NVIDIA H100'],
     start_date: new Date(Date.now() - 172800000).toISOString().split('T')[0],
     duration_hours: 72,
     notes: 'Completed successfully',

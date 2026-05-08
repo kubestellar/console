@@ -14,6 +14,7 @@ import { getChartColorByName } from '../../lib/chartColors'
 import { Sparkline } from '../charts/Sparkline'
 import type { GPUReservation } from '../../hooks/useGPUReservations'
 import type { GPUUtilizationSnapshot } from '../../hooks/useGPUUtilizations'
+import type { GPUOverviewStats } from './gpuOverviewStats'
 import {
   STATUS_COLORS,
   UTILIZATION_HIGH_THRESHOLD,
@@ -23,18 +24,6 @@ import {
   countActiveDays,
   getUtilizationColor,
 } from './gpu-constants'
-
-export interface GPUOverviewStats {
-  totalGPUs: number
-  allocatedGPUs: number
-  availableGPUs: number
-  utilizationPercent: number
-  activeReservations: number
-  reservedGPUs: number
-  typeChartData: Array<{ name: string; value: number; color: string }>
-  usageByNamespace: Array<{ name: string; value: number; color: string }>
-  clusterUsage: Array<{ name: string; value: number }>
-}
 
 export interface GPUOverviewTabProps {
   stats: GPUOverviewStats
