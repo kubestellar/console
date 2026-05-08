@@ -9,10 +9,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen,act } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ArgoCDApplications } from './ArgoCDApplications'
-import type { ArgoApplication } from '../../hooks/useArgoCD'
+import type { ArgoApplication, TriggerSyncResult } from '../../hooks/useArgoCD'
 
 // ---------------------------------------------------------------------------
 // Mock dependencies
@@ -34,12 +34,16 @@ vi.mock('react-i18next', () => ({
 // useArgoCD hooks
 const mockUseArgoCDApplications = vi.fn()
 const mockTriggerSync = vi.fn()
+const mockSyncState: { isSyncing: boolean; lastResult: TriggerSyncResult | null } = {
+  isSyncing: false,
+  lastResult: null,
+}
 vi.mock('../../hooks/useArgoCD', () => ({
   useArgoCDApplications: () => mockUseArgoCDApplications(),
   useArgoCDTriggerSync: () => ({
     triggerSync: mockTriggerSync,
-    isSyncing: false,
-    lastResult: null,
+    isSyncing: mockSyncState.isSyncing,
+    lastResult: mockSyncState.lastResult,
   }),
 }))
 
@@ -47,6 +51,12 @@ vi.mock('../../hooks/useArgoCD', () => ({
 const mockDrillToArgoApp = vi.fn()
 vi.mock('../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToArgoApp: mockDrillToArgoApp }),
+}))
+
+// Toasts
+const mockShowToast = vi.fn()
+vi.mock('../ui/Toast', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
 }))
 
 // CardDataContext — useCardLoadingState
@@ -218,6 +228,8 @@ function setupMocks(opts: {
 describe('ArgoCDApplications', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSyncState.isSyncing = false
+    mockSyncState.lastResult = null
   })
 
   // ---- Loading state ----
@@ -376,12 +388,10 @@ describe('ArgoCDApplications', () => {
     })
 
     it('triggers sync and shows spinner when Sync Now is clicked', async () => {
-      // triggerSync returns a promise that we control
-      let resolveSyncPromise: (v: { success: boolean }) => void
-      const syncPromise = new Promise<{ success: boolean }>((resolve) => {
-        resolveSyncPromise = resolve
+      mockTriggerSync.mockImplementation(() => {
+        mockSyncState.isSyncing = true
+        return new Promise<TriggerSyncResult>(() => {})
       })
-      mockTriggerSync.mockReturnValue(syncPromise)
 
       setupMocks({ isDemoData: false, applications: liveApps, cardDataItems: liveApps })
       render(<ArgoCDApplications />)
@@ -389,16 +399,50 @@ describe('ArgoCDApplications', () => {
       const syncButton = screen.getByTitle('syncNow')
       await userEvent.click(syncButton)
 
-      // triggerSync should have been called with the OutOfSync app's details
       expect(mockTriggerSync).toHaveBeenCalledWith('checkout-svc', 'production')
-
-      // The button should be disabled while syncing (spinner is a Loader2)
       expect(syncButton).toBeDisabled()
+    })
 
-      // Resolve the sync
-      await act(async () => {
-        resolveSyncPromise!({ success: true })
+    it('shows a success toast after sync completes', async () => {
+      mockTriggerSync.mockImplementation(() => {
+        mockSyncState.isSyncing = true
+        return Promise.resolve({ success: true })
       })
+
+      setupMocks({ isDemoData: false, applications: liveApps, cardDataItems: liveApps })
+      const { rerender } = render(<ArgoCDApplications />)
+
+      await userEvent.click(screen.getByTitle('syncNow'))
+
+      mockSyncState.isSyncing = false
+      mockSyncState.lastResult = { success: true }
+      rerender(<ArgoCDApplications />)
+
+      expect(mockShowToast).toHaveBeenCalledWith(
+        'syncSuccessMessage',
+        'success',
+      )
+    })
+
+    it('shows an error toast after sync fails', async () => {
+      mockTriggerSync.mockImplementation(() => {
+        mockSyncState.isSyncing = true
+        return Promise.resolve({ success: false, error: 'boom' })
+      })
+
+      setupMocks({ isDemoData: false, applications: liveApps, cardDataItems: liveApps })
+      const { rerender } = render(<ArgoCDApplications />)
+
+      await userEvent.click(screen.getByTitle('syncNow'))
+
+      mockSyncState.isSyncing = false
+      mockSyncState.lastResult = { success: false, error: 'boom' }
+      rerender(<ArgoCDApplications />)
+
+      expect(mockShowToast).toHaveBeenCalledWith(
+        'syncFailedMessage',
+        'error',
+      )
     })
   })
 
@@ -443,18 +487,19 @@ describe('ArgoCDApplications', () => {
     })
   })
 
-  // ---- Syncing state isolation ----
+  // ---- Syncing state ----
 
-  describe('syncingApps Set logic', () => {
-    it('only shows spinner for the app whose sync button was pressed', async () => {
+  describe('syncing state', () => {
+    it('disables all sync buttons while a sync is in progress', async () => {
       const apps = [
         makeMockApp({ name: 'app-a', syncStatus: 'OutOfSync', cluster: 'c1' }),
         makeMockApp({ name: 'app-b', syncStatus: 'OutOfSync', cluster: 'c2' }),
       ]
 
-      let resolveA: (v: { success: boolean }) => void
-      const promiseA = new Promise<{ success: boolean }>((r) => { resolveA = r })
-      mockTriggerSync.mockReturnValueOnce(promiseA)
+      mockTriggerSync.mockImplementation(() => {
+        mockSyncState.isSyncing = true
+        return new Promise<TriggerSyncResult>(() => {})
+      })
 
       setupMocks({ applications: apps, cardDataItems: apps })
       render(<ArgoCDApplications />)
@@ -462,15 +507,10 @@ describe('ArgoCDApplications', () => {
       const syncButtons = screen.getAllByTitle('syncNow')
       expect(syncButtons).toHaveLength(2)
 
-      // Click sync on app-a only
       await userEvent.click(syncButtons[0])
 
-      // app-a's button is disabled (syncing), app-b's is still enabled
       expect(syncButtons[0]).toBeDisabled()
-      expect(syncButtons[1]).not.toBeDisabled()
-
-      // Resolve app-a sync
-      await act(async () => { resolveA!({ success: true }) })
+      expect(syncButtons[1]).toBeDisabled()
     })
   })
 

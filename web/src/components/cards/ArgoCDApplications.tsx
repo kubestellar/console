@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, ChevronRight, ExternalLink, AlertCircle, Play, Loader2 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -14,6 +14,7 @@ import {
   CardPaginationFooter,
   CardEmptyState } from '../../lib/cards/CardComponents'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
+import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 
 interface ArgoCDApplicationsProps {
@@ -56,6 +57,7 @@ const ARGO_SORT_COMPARATORS = {
 
 function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   const { t } = useTranslation('cards')
+  const { showToast } = useToast()
   const {
     applications: allApps,
     isLoading,
@@ -64,11 +66,25 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
     consecutiveFailures,
     isDemoData } = useArgoCDApplications()
   const { drillToArgoApp } = useDrillDownActions()
-  const { triggerSync } = useArgoCDTriggerSync()
-  // Track per-app sync state with a Set to avoid shared-boolean race conditions
-  const [syncingApps, setSyncingApps] = useState<Set<string>>(new Set())
-  const addSyncingApp = (key: string) => setSyncingApps(prev => new Set(prev).add(key))
-  const removeSyncingApp = (key: string) => setSyncingApps(prev => { const next = new Set(prev); next.delete(key); return next })
+  const { triggerSync, isSyncing, lastResult } = useArgoCDTriggerSync()
+  const [activeSyncTarget, setActiveSyncTarget] = useState<{ key: string; name: string; namespace: string } | null>(null)
+
+  useEffect(() => {
+    if (isSyncing || !lastResult || !activeSyncTarget) return
+
+    showToast(
+      lastResult.success
+        ? t('drilldown.argoApp.syncSuccessMessage', {
+          ns: 'common',
+          appName: activeSyncTarget.name,
+          namespace: activeSyncTarget.namespace })
+        : t('drilldown.argoApp.syncFailedMessage', {
+          ns: 'common',
+          error: lastResult.error ?? 'Unknown error' }),
+      lastResult.success ? 'success' : 'error'
+    )
+    setActiveSyncTarget(null)
+  }, [activeSyncTarget, isSyncing, lastResult, showToast, t])
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = allApps.length > 0
@@ -303,7 +319,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
             const SyncIcon = syncConfig.icon
             const HealthIcon = healthConfig.icon
             const appKey = `${app.cluster}/${app.namespace}/${app.name}`
-            const isThisAppSyncing = syncingApps.has(appKey)
+            const isThisAppSyncing = isSyncing && activeSyncTarget?.key === appKey
 
             return (
               <div
@@ -331,10 +347,10 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation()
-                          addSyncingApp(appKey)
-                          triggerSync(app.name, app.namespace).finally(() => removeSyncingApp(appKey))
+                          setActiveSyncTarget({ key: appKey, name: app.name, namespace: app.namespace })
+                          void triggerSync(app.name, app.namespace)
                         }}
-                        disabled={isThisAppSyncing}
+                        disabled={isSyncing}
                         className="bg-orange-500/20 px-2 py-0.5 text-orange-400 hover:bg-orange-500/30"
                         title={t('argoCDApplications.syncNow')}
                         aria-label={t('argoCDApplications.syncNow') + ': ' + app.name}
