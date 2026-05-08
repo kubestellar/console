@@ -2034,7 +2034,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
               {
                 id: generateMessageId('tool-preflight-warning'),
                 role: 'system' as const,
-                content: buildMissingToolWarning(toolResult.error),
+                content: buildMissingToolWarning(toolResult.error!),
                 timestamp: new Date(),
               },
             ],
@@ -2547,7 +2547,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
                 {
                   id: generateMessageId('tool-preflight-warning-retry'),
                   role: 'system' as const,
-                  content: buildMissingToolWarning(toolResult.error),
+                  content: buildMissingToolWarning(toolResult.error!),
                   timestamp: new Date(),
                 },
               ],
