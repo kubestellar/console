@@ -97,17 +97,23 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     }
   }, [isOpen])
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside.
+  // Uses 'click' (not 'mousedown') so the event fires after React's onClick
+  // has already processed the toggle. Using 'mousedown' can race with the
+  // toggle on initial open: the document mousedown fires before React commits
+  // the isOpen=true state, so the target check can behave unexpectedly during
+  // concurrent re-renders triggered by auth/demo state changes at startup.
   useEffect(() => {
+    if (!isOpen) return
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         closeDropdown()
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [closeDropdown])
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [isOpen, closeDropdown])
 
   // Close dropdown on escape
   useEffect(() => {
@@ -129,6 +135,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
     <div className="relative" ref={dropdownRef}>
       {/* Trigger button */}
       <button
+        type="button"
         data-testid="navbar-profile-btn"
         onClick={toggleDropdown}
         aria-expanded={isOpen}
@@ -201,6 +208,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               </span>
             </div>
             <button
+              type="button"
               onClick={() => {
                 closeDropdown()
                 setShowRewards(true)
@@ -226,6 +234,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             {/* Language selector */}
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setShowLanguageSubmenu(!showLanguageSubmenu)}
                 className="w-full flex items-center gap-3 px-2 py-1.5 text-sm hover:bg-secondary rounded-lg transition-colors"
               >
@@ -241,6 +250,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                 <div className="mt-1 ml-6 space-y-0.5 border-l-2 border-border pl-3">
                   {languages.map((lang) => (
                     <button
+                      type="button"
                       key={lang.code}
                       onClick={() => handleLanguageChange(lang.code)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded-lg transition-colors ${
@@ -265,6 +275,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
           {!isDemoModeForced && (
             <div className="border-b border-border">
               <button
+                type="button"
                 onClick={() => setShowDevPanel(!showDevPanel)}
                 className="w-full flex items-center gap-3 px-5 py-2 text-sm hover:bg-secondary transition-colors"
               >
@@ -316,6 +327,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   {/* Action buttons */}
                   <div className="flex flex-col gap-1 pt-1">
                     <button
+                      type="button"
                       onClick={() => {
                         closeDropdown()
                         if (installMethod === 'dev') {
@@ -368,6 +380,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
           {/* Actions */}
           <div className="p-2 space-y-1">
             <button
+              type="button"
               onClick={() => {
                 closeDropdown()
                 openFeedbackModal()
@@ -379,6 +392,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">{t('feedback.plusCoins')}</span>
             </button>
             <button
+              type="button"
               onClick={handleLinkedInShare}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-foreground hover:bg-secondary rounded-lg transition-colors"
             >
@@ -387,6 +401,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               <span className="ml-auto text-xs px-1.5 py-0.5 rounded bg-yellow-900 text-yellow-400">+{REWARD_ACTIONS.linkedin_share.coins}</span>
             </button>
             <button
+              type="button"
               onClick={() => {
                 closeDropdown()
                 onPreferences?.()
@@ -397,6 +412,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
               {t('settings.title')}
             </button>
             <button
+              type="button"
               onClick={() => {
                 closeDropdown()
                 if (isDemoModeForced) {
