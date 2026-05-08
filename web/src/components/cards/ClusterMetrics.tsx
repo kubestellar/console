@@ -109,14 +109,14 @@ const metricConfigBase = {
   pods: { labelKey: 'clusterMetrics.pods' as const, color: '#10b981', unit: '', baseValue: 150, variance: 100 },
   nodes: { labelKey: 'clusterMetrics.nodes' as const, color: '#f59e0b', unit: '', baseValue: 10, variance: 5 } }
 
-interface ClusterMetricValues {
+export interface ClusterMetricValues {
   cpu: number
   memory: number
   pods: number
   nodes: number
 }
 
-interface MetricPoint {
+export interface MetricPoint {
   time: string
   timestamp: number
   cpu: number
@@ -127,7 +127,7 @@ interface MetricPoint {
   clusters?: Record<string, ClusterMetricValues>
 }
 
-interface ClusterMetricSource {
+export interface ClusterMetricSource {
   name: string
   cpuCores?: number
   memoryGB?: number
@@ -160,7 +160,7 @@ const createDemoMetricValue = (baseValue: number, metric: MetricType, pointIndex
   return Math.max(DEMO_MIN_VALUE, roundToStep(baseValue * variationRatio, tuning.roundingStep))
 }
 
-const buildDemoMetricHistory = (clusters: ClusterMetricSource[], now: number = Date.now()): MetricPoint[] => {
+export const buildDemoMetricHistory = (clusters: ClusterMetricSource[], now: number = Date.now()): MetricPoint[] => {
   return Array.from({ length: MAX_HISTORY_POINTS }, (_, pointIndex) => {
     const timestamp = now - ((MAX_HISTORY_POINTS - pointIndex - 1) * CLUSTER_POLL_INTERVAL_MS)
     const clusterValues: Record<string, ClusterMetricValues> = {}

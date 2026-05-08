@@ -12,7 +12,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Simulate a keyboard event on the window */
+/** Simulate a keyboard event on the document so document/window listeners both see it */
 function fireKeyDown(key: string, options: Partial<KeyboardEvent> = {}) {
   const event = new KeyboardEvent('keydown', {
     key,
@@ -20,7 +20,7 @@ function fireKeyDown(key: string, options: Partial<KeyboardEvent> = {}) {
     cancelable: true,
     ...options,
   })
-  window.dispatchEvent(event)
+  document.dispatchEvent(event)
   return event
 }
 

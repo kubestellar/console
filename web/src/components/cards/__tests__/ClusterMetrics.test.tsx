@@ -59,8 +59,7 @@ vi.mock('../charts', () => ({ Gauge: () => null, TimeSeriesChart: () => null, Mu
 import {
   ClusterMetrics,
   SUPPORTED_TIME_RANGE_KEYS,
-  DEMO_MAX_VARIATION_PERCENT,
-  applyDemoTelemetryJitter,
+  buildDemoMetricHistory,
 } from '../ClusterMetrics'
 import { CLUSTER_POLL_INTERVAL_MS } from '../../../hooks/mcp/shared'
 
@@ -69,9 +68,16 @@ const EXPECTED_MAX_HISTORY_POINTS = 60
 const EXPECTED_MAX_HISTORY_DURATION_MS =
   EXPECTED_MAX_HISTORY_POINTS * CLUSTER_POLL_INTERVAL_MS
 const DEMO_CPU_TOTAL_BASE = 656
+const DEMO_CPU_MAX_VARIATION_RATIO = 0.03
 const DEMO_TIMESTAMP_BASE = 1_700_000_000_000
 const DEMO_SAMPLE_POINTS = 20
-const DEMO_CPU_KEY = 'total:cpu'
+const DEMO_CLUSTER = {
+  name: 'demo-cluster',
+  cpuCores: DEMO_CPU_TOTAL_BASE,
+  memoryGB: 72,
+  podCount: 150,
+  nodeCount: 10,
+}
 
 describe('ClusterMetrics', () => {
   beforeEach(() => {
@@ -127,17 +133,13 @@ describe('ClusterMetrics', () => {
   })
 
   it('adds bounded deterministic variation to demo CPU telemetry', () => {
-    const samples = Array.from({ length: DEMO_SAMPLE_POINTS }, (_unused, index) => (
-      applyDemoTelemetryJitter(
-        DEMO_CPU_TOTAL_BASE,
-        DEMO_TIMESTAMP_BASE + (index * CLUSTER_POLL_INTERVAL_MS),
-        DEMO_CPU_KEY,
-      )
-    ))
+    const samples = buildDemoMetricHistory([DEMO_CLUSTER], DEMO_TIMESTAMP_BASE)
+      .slice(0, DEMO_SAMPLE_POINTS)
+      .map((point) => point.cpu)
     const minSample = Math.min(...samples)
     const maxSample = Math.max(...samples)
-    const minExpected = Math.round(DEMO_CPU_TOTAL_BASE * (1 - DEMO_MAX_VARIATION_PERCENT))
-    const maxExpected = Math.round(DEMO_CPU_TOTAL_BASE * (1 + DEMO_MAX_VARIATION_PERCENT))
+    const minExpected = Math.round(DEMO_CPU_TOTAL_BASE * (1 - DEMO_CPU_MAX_VARIATION_RATIO))
+    const maxExpected = Math.round(DEMO_CPU_TOTAL_BASE * (1 + DEMO_CPU_MAX_VARIATION_RATIO))
 
     expect(new Set(samples).size).toBeGreaterThan(1)
     expect(minSample).toBeLessThan(DEMO_CPU_TOTAL_BASE)
@@ -147,10 +149,10 @@ describe('ClusterMetrics', () => {
   })
 
   it('keeps demo jitter stable for the same timestamp and series key', () => {
-    const first = applyDemoTelemetryJitter(DEMO_CPU_TOTAL_BASE, DEMO_TIMESTAMP_BASE, DEMO_CPU_KEY)
-    const second = applyDemoTelemetryJitter(DEMO_CPU_TOTAL_BASE, DEMO_TIMESTAMP_BASE, DEMO_CPU_KEY)
+    const first = buildDemoMetricHistory([DEMO_CLUSTER], DEMO_TIMESTAMP_BASE).map((point) => point.cpu)
+    const second = buildDemoMetricHistory([DEMO_CLUSTER], DEMO_TIMESTAMP_BASE).map((point) => point.cpu)
 
-    expect(first).toBe(second)
+    expect(first).toEqual(second)
   })
 
 })

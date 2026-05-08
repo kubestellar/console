@@ -57,7 +57,7 @@ describe('useResultHistogram', () => {
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledWith(
         expect.stringContaining('sort=pattern'),
-        expect.any(Object)
+        expect.any(Object),
       )
     })
 

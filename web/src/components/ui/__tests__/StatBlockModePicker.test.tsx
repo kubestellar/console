@@ -102,7 +102,7 @@ describe('StatBlockModePicker', () => {
     })
   })
 
-  it('focuses the current mode when the menu opens', () => {
+  it('focuses the current mode when the menu opens', async () => {
     modalState.isOpen = true
 
     render(
@@ -113,10 +113,12 @@ describe('StatBlockModePicker', () => {
       />,
     )
 
-    expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Sparkline' }))
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Sparkline' }))
+    })
   })
 
-  it('supports arrow-key navigation between available menu items', () => {
+  it('supports arrow-key navigation between available menu items', async () => {
     modalState.isOpen = true
 
     render(
@@ -127,19 +129,26 @@ describe('StatBlockModePicker', () => {
       />,
     )
 
-    const menu = screen.getByRole('menu', { name: 'Display mode' })
     const numeric = screen.getByRole('menuitem', { name: 'Number' })
     const gauge = screen.getByRole('menuitem', { name: 'Gauge' })
 
-    expect(document.activeElement).toBe(numeric)
+    await waitFor(() => {
+      expect(document.activeElement).toBe(numeric)
+    })
 
-    fireEvent.keyDown(menu, { key: 'ArrowDown' })
-    expect(document.activeElement).toBe(gauge)
+    fireEvent.keyDown(numeric, { key: 'ArrowDown' })
+    await waitFor(() => {
+      expect(document.activeElement).toBe(gauge)
+    })
 
-    fireEvent.keyDown(menu, { key: 'ArrowDown' })
-    expect(document.activeElement).toBe(numeric)
+    fireEvent.keyDown(gauge, { key: 'ArrowDown' })
+    await waitFor(() => {
+      expect(document.activeElement).toBe(numeric)
+    })
 
-    fireEvent.keyDown(menu, { key: 'ArrowUp' })
-    expect(document.activeElement).toBe(gauge)
+    fireEvent.keyDown(numeric, { key: 'ArrowUp' })
+    await waitFor(() => {
+      expect(document.activeElement).toBe(gauge)
+    })
   })
 })
