@@ -90,7 +90,7 @@ export function useResultHistogram(
     fetchHistogram()
     const timer = setInterval(fetchHistogram, pollInterval)
     return () => clearInterval(timer)
-  }, [fetchHistogram, isAuthenticated, sortBy, pollInterval])
+  }, [fetchHistogram, isAuthenticated, pollInterval])
 
   return { data, isLoading, error, refetch: fetchHistogram }
 }
