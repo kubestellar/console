@@ -3,6 +3,7 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import { useClusterGroups } from '../../hooks/useClusterGroups'
 import { useClusters, useDeployments } from '../../hooks/useMCP'
 import { useCachedDeployments } from '../../hooks/useCachedData'
+import { useArgoCDApplications } from '../../hooks/useArgoCD'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
@@ -24,6 +25,7 @@ export function Deploy() {
   const { t } = useTranslation(['cards', 'common'])
   const { isLoading: deploymentsLoading, isRefreshing: deploymentsRefreshing, lastUpdated, refetch } = useDeployments()
   const { deployments: cachedDeployments } = useCachedDeployments()
+  const { applications: argoCDApps, isDemoData: isArgoCDDemo } = useArgoCDApplications()
 
   const publishCardEvent = useCardPublish()
   const { mutate: deployWorkload } = useDeployWorkload()
@@ -51,7 +53,7 @@ export function Deploy() {
       case 'failed':
         return { value: failedCount, sublabel: t('common:common.failed') }
       case 'argocd':
-        return { value: 0, sublabel: t('common:deploy.applications'), isDemo: true }
+        return { value: argoCDApps.length, sublabel: t('common:deploy.applications'), isDemo: isArgoCDDemo }
       default:
         return { value: '-' }
     }
