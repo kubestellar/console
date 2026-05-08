@@ -60,12 +60,34 @@ vi.mock('../DashboardCustomizerSidebar', () => ({
 }))
 
 vi.mock('../PreviewPanel', () => ({
-  PreviewPanel: () => <div data-testid="preview-panel" />,
+  PreviewPanel: ({ hoveredCard }: { hoveredCard?: { title?: string } | null }) => (
+    <div data-testid="preview-panel">{hoveredCard?.title || 'empty'}</div>
+  ),
 }))
 
 vi.mock('../sections/UnifiedCardsSection', () => ({
-  UnifiedCardsSection: ({ onAddCards }: { onAddCards?: (cards: Array<{ type: string; title: string; description: string; visualization: string; config: Record<string, unknown> }>) => void }) =>
+  UnifiedCardsSection: ({
+    onAddCards,
+    onHoverCard,
+    onSelectPreviewCard,
+  }: {
+    onAddCards?: (cards: Array<{ type: string; title: string; description: string; visualization: string; config: Record<string, unknown> }>) => void
+    onHoverCard?: (card: { type: string; title: string; description: string; visualization: string } | null) => void
+    onSelectPreviewCard?: (card: { type: string; title: string; description: string; visualization: string }) => void
+  }) =>
     <div data-testid="unified-cards">
+      <button
+        data-testid="trigger-preview-card"
+        onClick={() => onSelectPreviewCard?.({ type: 'pods', title: 'Pods', description: '', visualization: 'status' })}
+      >preview</button>
+      <button
+        data-testid="trigger-hover-card"
+        onClick={() => onHoverCard?.({ type: 'pods', title: 'Pods', description: '', visualization: 'status' })}
+      >hover</button>
+      <button
+        data-testid="trigger-clear-hover"
+        onClick={() => onHoverCard?.(null)}
+      >clear hover</button>
       <button
         data-testid="trigger-add-cards"
         onClick={() => onAddCards?.([{ type: 'pods', title: 'Pods', description: '', visualization: 'status', config: {} }])}
@@ -282,6 +304,18 @@ describe('DashboardCustomizer', () => {
     const { DashboardCustomizer } = await import('../DashboardCustomizer')
     render(<DashboardCustomizer {...DEFAULT_PROPS} initialSection="widgets" />)
     expect(screen.queryByTestId('preview-panel')).toBeNull()
+  })
+
+  it('keeps the last selected preview card when hover clears', async () => {
+    const { DashboardCustomizer } = await import('../DashboardCustomizer')
+    render(<DashboardCustomizer {...DEFAULT_PROPS} initialSection="cards" />)
+
+    fireEvent.click(screen.getByTestId('trigger-preview-card'))
+    expect(screen.getByTestId('preview-panel').textContent).toBe('Pods')
+
+    fireEvent.click(screen.getByTestId('trigger-hover-card'))
+    fireEvent.click(screen.getByTestId('trigger-clear-hover'))
+    expect(screen.getByTestId('preview-panel').textContent).toBe('Pods')
   })
 
   it('handleAddCards calls onAddCards and onClose when UnifiedCardsSection triggers', async () => {

@@ -72,6 +72,7 @@ const defaultProps = {
   existingCardTypes: [] as string[],
   onAddCards: vi.fn(),
   onHoverCard: vi.fn(),
+  onSelectPreviewCard: vi.fn(),
   isActive: true,
 }
 
@@ -146,6 +147,15 @@ describe('UnifiedCardsSection', () => {
     expect(screen.getByText('dashboard.addCard.added')).toBeTruthy()
   })
 
+  it('still previews already-added cards on hover', () => {
+    const onHoverCard = vi.fn()
+    render(<UnifiedCardsSection {...defaultProps} existingCardTypes={['cluster_status']} onHoverCard={onHoverCard} />)
+
+    const previewTarget = screen.getByText('Cluster Status').closest('button')!.parentElement!
+    fireEvent.mouseEnter(previewTarget)
+    expect(onHoverCard).toHaveBeenCalledWith(expect.objectContaining({ type: 'cluster_status' }))
+  })
+
   it('calls onAddCards when Add button is clicked with selected browse cards', () => {
     const onAddCards = vi.fn()
     render(<UnifiedCardsSection {...defaultProps} onAddCards={onAddCards} />)
@@ -169,6 +179,19 @@ describe('UnifiedCardsSection', () => {
     expect(onHoverCard).toHaveBeenCalledWith(expect.objectContaining({ type: 'node_health' }))
     fireEvent.mouseLeave(cardButton)
     expect(onHoverCard).toHaveBeenCalledWith(null)
+  })
+
+  it('pins the preview card on click and keyboard focus', () => {
+    const onHoverCard = vi.fn()
+    const onSelectPreviewCard = vi.fn()
+    render(<UnifiedCardsSection {...defaultProps} onHoverCard={onHoverCard} onSelectPreviewCard={onSelectPreviewCard} />)
+
+    const cardButton = screen.getByText('Node Health').closest('button')!
+    fireEvent.focus(cardButton)
+    expect(onSelectPreviewCard).toHaveBeenCalledWith(expect.objectContaining({ type: 'node_health' }))
+
+    fireEvent.click(cardButton)
+    expect(onSelectPreviewCard).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'node_health' }))
   })
 
   it('uses dashboardName in the description and Add button', () => {

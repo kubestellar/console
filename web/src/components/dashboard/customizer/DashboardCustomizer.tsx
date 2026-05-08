@@ -69,26 +69,35 @@ export function DashboardCustomizer({
   const t = _t as (key: string, defaultValue?: string) => string
   // User-driven section selection (null = use initialSection prop)
   const [userSelectedSection, setUserSelectedSection] = useState<CustomizerSection | null>(null)
+  const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
+  const [selectedPreviewCard, setSelectedPreviewCard] = useState<HoveredCard | null>(null)
 
-  // Reset user selection when modal opens so initialSection takes effect
+  // Reset modal-local state when the modal opens so initial props take effect.
   // eslint-disable-next-line react-hooks/set-state-in-effect -- needed to sync with external isOpen prop
-  useEffect(() => { if (isOpen) setUserSelectedSection(null) }, [isOpen])
+  useEffect(() => {
+    if (isOpen) {
+      setUserSelectedSection(null)
+      setHoveredCard(null)
+      setSelectedPreviewCard(null)
+    }
+  }, [isOpen])
 
   const activeSection = userSelectedSection || initialSection || DEFAULT_SECTION
 
   // Global search reserved for future use
   const globalSearch = ''
-  const [hoveredCard, setHoveredCard] = useState<HoveredCard | null>(null)
   const { dashboards, createDashboard: _createDashboard } = useDashboards()
   const { addItem } = useSidebarConfig()
   const navigate = useNavigate()
 
   const handleHoverCard = useCallback((card: HoveredCard | null) => setHoveredCard(card), [])
+  const handleSelectPreviewCard = useCallback((card: HoveredCard) => setSelectedPreviewCard(card), [])
   const handleAddCards = useCallback((cards: CardSuggestion[]) => { onAddCards(cards); onClose() }, [onAddCards, onClose])
   const handleApplyTemplate = useCallback((tpl: DashboardTemplate) => { onApplyTemplate?.(tpl); onClose() }, [onApplyTemplate, onClose])
 
   const showPreview = SECTIONS_WITH_PREVIEW.has(activeSection)
   const effectiveSearch = globalSearch || initialSearch
+  const previewCard = hoveredCard || selectedPreviewCard
 
   return (
     <>
@@ -114,6 +123,7 @@ export function DashboardCustomizer({
               existingCardTypes={existingCardTypes}
               onAddCards={handleAddCards}
               onHoverCard={handleHoverCard}
+              onSelectPreviewCard={handleSelectPreviewCard}
               initialSearch={effectiveSearch}
               isActive={activeSection === 'cards'}
               dashboardName={dashboardName}
@@ -197,7 +207,7 @@ export function DashboardCustomizer({
         </div>
 
         {showPreview && (
-          <PreviewPanel hoveredCard={hoveredCard} />
+          <PreviewPanel hoveredCard={previewCard} />
         )}
       </div>
 

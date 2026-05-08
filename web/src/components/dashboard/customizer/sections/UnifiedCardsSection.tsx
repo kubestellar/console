@@ -26,6 +26,7 @@ interface UnifiedCardsSectionProps {
   existingCardTypes: string[]
   onAddCards: (cards: CardSuggestion[]) => void
   onHoverCard: (card: HoveredCard | null) => void
+  onSelectPreviewCard: (card: HoveredCard) => void
   initialSearch?: string
   isActive: boolean
   dashboardName?: string
@@ -35,6 +36,7 @@ export function UnifiedCardsSection({
   existingCardTypes,
   onAddCards,
   onHoverCard,
+  onSelectPreviewCard,
   initialSearch = '',
   isActive,
   dashboardName,
@@ -100,6 +102,11 @@ export function UnifiedCardsSection({
     const s = new Set(expandedCategories)
     if (s.has(category)) { s.delete(category) } else { s.add(category); emitCardCategoryBrowsed(category) }
     setExpandedCategories(s)
+  }
+
+  const showPreviewCard = (card: HoveredCard) => {
+    onHoverCard(card)
+    onSelectPreviewCard(card)
   }
 
   // Build merged catalog
@@ -269,25 +276,34 @@ export function UnifiedCardsSection({
               {aiSuggestions.map((card, index) => {
                 const isAlreadyAdded = existingCardTypes.includes(card.type)
                 return (
-                  <button
+                  <div
                     key={index}
-                    onClick={() => !isAlreadyAdded && toggleAiCard(index)}
+                    className="rounded-lg"
                     onMouseEnter={() => onHoverCard(card)}
                     onMouseLeave={() => onHoverCard(null)}
-                    disabled={isAlreadyAdded}
-                    className={`p-2 rounded-lg text-left transition-all ${isAlreadyAdded
-                        ? 'bg-secondary/30 border-2 border-transparent opacity-50 cursor-not-allowed'
-                        : selectedAiCards.has(index)
-                          ? 'bg-purple-500/20 border-2 border-purple-500'
-                          : 'bg-secondary/50 border-2 border-transparent hover:border-purple-500/30'
-                      }`}
                   >
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm">{visualizationIcons[card.visualization]}</span>
-                      <span className="text-xs font-medium text-foreground">{tCard(`cards:titles.${card.type}`, card.title)}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-1">{wrapAbbreviations(tCard(`cards:descriptions.${card.type}`, card.description))}</p>
-                  </button>
+                    <button
+                      onClick={() => {
+                        showPreviewCard(card)
+                        if (!isAlreadyAdded) toggleAiCard(index)
+                      }}
+                      onFocus={() => showPreviewCard(card)}
+                      onBlur={() => onHoverCard(null)}
+                      disabled={isAlreadyAdded}
+                      className={`w-full p-2 rounded-lg text-left transition-all ${isAlreadyAdded
+                          ? 'bg-secondary/30 border-2 border-transparent opacity-50 cursor-not-allowed'
+                          : selectedAiCards.has(index)
+                            ? 'bg-purple-500/20 border-2 border-purple-500'
+                            : 'bg-secondary/50 border-2 border-transparent hover:border-purple-500/30'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-sm">{visualizationIcons[card.visualization]}</span>
+                        <span className="text-xs font-medium text-foreground">{tCard(`cards:titles.${card.type}`, card.title)}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-1">{wrapAbbreviations(tCard(`cards:descriptions.${card.type}`, card.description))}</p>
+                    </button>
+                  </div>
                 )
               })}
             </div>
@@ -327,15 +343,30 @@ export function UnifiedCardsSection({
                       const isAlreadyAdded = existingCardTypes.includes(card.type)
                       const isSelected = selectedBrowseCards.has(card.type)
                       return (
-                        <button key={card.type} onClick={() => !isAlreadyAdded && toggleBrowseCard(card.type)} onMouseEnter={() => onHoverCard(card)} onMouseLeave={() => onHoverCard(null)} disabled={isAlreadyAdded}
-                          className={`p-2 rounded-lg text-left transition-all ${isAlreadyAdded ? 'bg-secondary/30 opacity-50 cursor-not-allowed' : isSelected ? 'bg-purple-500/20 border-2 border-purple-500' : 'bg-secondary/30 border-2 border-transparent hover:border-purple-500/30'}`}>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm">{visualizationIcons[card.visualization]}</span>
-                            <span className="text-xs font-medium text-foreground truncate">{tCard(`cards:titles.${card.type}`, card.title)}</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground line-clamp-2">{wrapAbbreviations(tCard(`cards:descriptions.${card.type}`, card.description))}</p>
-                          {isAlreadyAdded && <span className="text-xs text-muted-foreground">{t('dashboard.addCard.added')}</span>}
-                        </button>
+                        <div
+                          key={card.type}
+                          className="rounded-lg"
+                          onMouseEnter={() => onHoverCard(card)}
+                          onMouseLeave={() => onHoverCard(null)}
+                        >
+                          <button
+                            onClick={() => {
+                              showPreviewCard(card)
+                              if (!isAlreadyAdded) toggleBrowseCard(card.type)
+                            }}
+                            onFocus={() => showPreviewCard(card)}
+                            onBlur={() => onHoverCard(null)}
+                            disabled={isAlreadyAdded}
+                            className={`w-full p-2 rounded-lg text-left transition-all ${isAlreadyAdded ? 'bg-secondary/30 opacity-50 cursor-not-allowed' : isSelected ? 'bg-purple-500/20 border-2 border-purple-500' : 'bg-secondary/30 border-2 border-transparent hover:border-purple-500/30'}`}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm">{visualizationIcons[card.visualization]}</span>
+                              <span className="text-xs font-medium text-foreground truncate">{tCard(`cards:titles.${card.type}`, card.title)}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2">{wrapAbbreviations(tCard(`cards:descriptions.${card.type}`, card.description))}</p>
+                            {isAlreadyAdded && <span className="text-xs text-muted-foreground">{t('dashboard.addCard.added')}</span>}
+                          </button>
+                        </div>
                       )
                     })}
                   </div>
