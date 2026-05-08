@@ -446,6 +446,37 @@ describe('useSidebarConfig', () => {
     expect(restored!.id).not.toMatch(/^custom-/)
   })
 
+  it('re-adding a built-in route clears its removed persistence state', () => {
+    const { result } = renderHook(() => useSidebarConfig())
+
+    act(() => { result.current.removeItem('insights') })
+    act(() => {
+      result.current.addItem({ name: 'Insights', icon: 'Lightbulb', href: '/insights', type: 'link' }, 'primary')
+    })
+
+    const restored = result.current.config.primaryNav.find(i => i.href === '/insights')
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
+
+    expect(restored?.id).toBe('insights')
+    expect(stored.removedBuiltinItemIds).not.toContain('insights')
+  })
+
+  it('persists removed built-in items so they stay hidden after refresh', async () => {
+    const { result } = renderHook(() => useSidebarConfig())
+
+    act(() => { result.current.removeItem('insights') })
+
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!)
+    expect(stored.removedBuiltinItemIds).toContain('insights')
+
+    vi.resetModules()
+    const freshMod = await import('../useSidebarConfig')
+    const { result: refreshedResult } = renderHook(() => freshMod.useSidebarConfig())
+
+    const hasInsights = refreshedResult.current.config.primaryNav.some(item => item.id === 'insights')
+    expect(hasInsights).toBe(false)
+  })
+
   // --- Regression: localStorage persistence survives JSON round-trip ---
   it('persisted config survives JSON round-trip for complex state', () => {
     const { result } = renderHook(() => useSidebarConfig())
@@ -631,6 +662,31 @@ describe('useSidebarConfig — expanded coverage', () => {
     // Missing default items should be added during migration
     const hasAlerts = result.current.config.primaryNav.some(item => item.id === 'alerts')
     expect(hasAlerts).toBe(true)
+  })
+
+  it('migrateConfig keeps explicitly removed built-in items hidden after refresh', async () => {
+    const storedConfig = {
+      primaryNav: [
+        { id: 'dashboard', name: 'Dashboard', icon: 'LayoutDashboard', href: '/', type: 'link', order: 0 },
+      ],
+      secondaryNav: [
+        { id: 'settings', name: 'Settings', icon: 'Settings', href: '/settings', type: 'link', order: 0 },
+      ],
+      sections: [],
+      showClusterStatus: true,
+      collapsed: false,
+      isMobileOpen: false,
+      removedBuiltinItemIds: ['alerts'],
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storedConfig))
+    vi.resetModules()
+
+    const freshMod = await import('../useSidebarConfig')
+    const { result } = renderHook(() => freshMod.useSidebarConfig())
+
+    const hasAlerts = result.current.config.primaryNav.some(item => item.id === 'alerts')
+    expect(hasAlerts).toBe(false)
   })
 
   // --- migrateConfig: adds missing default secondary nav items ---

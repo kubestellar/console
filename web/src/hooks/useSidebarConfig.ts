@@ -29,6 +29,7 @@ export interface SidebarConfig {
   showClusterStatus: boolean
   collapsed: boolean
   isMobileOpen: boolean
+  removedBuiltinItemIds: string[]
   width?: number
 }
 
@@ -110,10 +111,14 @@ const DEFAULT_CONFIG: SidebarConfig = {
   sections: [],
   showClusterStatus: true,
   collapsed: false,
-  isMobileOpen: false }
+  isMobileOpen: false,
+  removedBuiltinItemIds: [] }
 
 const STORAGE_KEY = 'kubestellar-sidebar-config-v11'
 const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v10'
+const BUILTIN_NAV_ITEMS = [...DEFAULT_PRIMARY_NAV, ...DEFAULT_SECONDARY_NAV, ...DISCOVERABLE_DASHBOARDS]
+const BUILTIN_NAV_ITEMS_BY_HREF = new Map(BUILTIN_NAV_ITEMS.map((item) => [item.href, item]))
+const BUILTIN_NAV_ITEM_IDS = new Set(BUILTIN_NAV_ITEMS.map((item) => item.id))
 
 // Routes to remove during migration (deprecated/removed routes)
 const DEPRECATED_ROUTES = ['/apps']
@@ -130,14 +135,60 @@ export function getEnabledDashboardIds(): string[] | null {
   return enabledDashboardIds
 }
 
+function getRemovedBuiltinItemIds(config: Partial<SidebarConfig>): string[] {
+  return Array.isArray(config.removedBuiltinItemIds)
+    ? config.removedBuiltinItemIds.filter((id): id is string => typeof id === 'string')
+    : []
+}
+
+function normalizeConfig(config: Partial<SidebarConfig>): SidebarConfig {
+  return {
+    primaryNav: Array.isArray(config.primaryNav) ? config.primaryNav : DEFAULT_PRIMARY_NAV,
+    secondaryNav: Array.isArray(config.secondaryNav) ? config.secondaryNav : DEFAULT_SECONDARY_NAV,
+    sections: Array.isArray(config.sections) ? config.sections : [],
+    showClusterStatus: config.showClusterStatus ?? true,
+    collapsed: config.collapsed ?? false,
+    isMobileOpen: config.isMobileOpen ?? false,
+    removedBuiltinItemIds: getRemovedBuiltinItemIds(config),
+    width: config.width,
+  }
+}
+
+function buildSidebarItem(
+  item: Omit<SidebarItem, 'id' | 'order'>,
+  order: number
+): SidebarItem {
+  const builtinItem = BUILTIN_NAV_ITEMS_BY_HREF.get(item.href)
+
+  if (builtinItem) {
+    return {
+      ...builtinItem,
+      name: item.name,
+      icon: item.icon,
+      type: item.type,
+      cardType: item.cardType,
+      description: item.description,
+      order,
+    }
+  }
+
+  return {
+    ...item,
+    id: `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    isCustom: true,
+    order,
+  }
+}
+
 function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
   if (!enabledDashboardIds) return config
+  const removedBuiltinItemIds = new Set(config.removedBuiltinItemIds)
   const enabledSet = new Set(enabledDashboardIds)
   const existingIds = new Set(config.primaryNav.map(item => item.id))
 
   // Promote discoverable dashboards into primaryNav when ENABLED_DASHBOARDS includes them
   const promoted = DISCOVERABLE_DASHBOARDS.filter(
-    item => enabledSet.has(item.id) && !existingIds.has(item.id)
+    item => enabledSet.has(item.id) && !existingIds.has(item.id) && !removedBuiltinItemIds.has(item.id)
   )
 
   const combined = [...config.primaryNav, ...promoted]
@@ -195,9 +246,12 @@ export async function fetchEnabledDashboards(): Promise<void> {
 // automatically appended to any stored sidebar config that lacks them,
 // so existing users pick up new dashboards without resetting their layout.
 function migrateConfig(stored: SidebarConfig): SidebarConfig {
+  const normalized = normalizeConfig(stored)
+
   // First, remove deprecated routes
-  const primaryNav = stored.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
-  const secondaryNav = stored.secondaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
+  const primaryNav = normalized.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
+  const secondaryNav = normalized.secondaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
+  const removedBuiltinItemIds = new Set(normalized.removedBuiltinItemIds)
 
   // Find default routes that are missing from the stored config
   const existingHrefs = new Set([
@@ -205,22 +259,24 @@ function migrateConfig(stored: SidebarConfig): SidebarConfig {
     ...secondaryNav.map(item => item.href),
   ])
 
-  // Add missing default primary nav items
+  // Add missing default primary nav items unless the user explicitly removed them
   const missingPrimaryItems = DEFAULT_PRIMARY_NAV.filter(
-    item => !existingHrefs.has(item.href)
+    item => !existingHrefs.has(item.href) && !removedBuiltinItemIds.has(item.id)
   )
 
-  // Add missing default secondary nav items
+  // Add missing default secondary nav items unless the user explicitly removed them
   const missingSecondaryItems = DEFAULT_SECONDARY_NAV.filter(
-    item => !existingHrefs.has(item.href)
+    item => !existingHrefs.has(item.href) && !removedBuiltinItemIds.has(item.id)
   )
 
   // If there are missing items or deprecated routes were removed, update the config
-  const deprecatedRemoved = primaryNav.length !== stored.primaryNav.length || secondaryNav.length !== stored.secondaryNav.length
+  const deprecatedRemoved = primaryNav.length !== normalized.primaryNav.length || secondaryNav.length !== normalized.secondaryNav.length
+  const configWasNormalized = normalized.removedBuiltinItemIds.length !== getRemovedBuiltinItemIds(stored).length
+    || !Array.isArray(stored.removedBuiltinItemIds)
 
-  if (missingPrimaryItems.length > 0 || missingSecondaryItems.length > 0 || deprecatedRemoved) {
+  if (missingPrimaryItems.length > 0 || missingSecondaryItems.length > 0 || deprecatedRemoved || configWasNormalized) {
     return {
-      ...stored,
+      ...normalized,
       primaryNav: [
         ...primaryNav,
         ...missingPrimaryItems.map((item, idx) => ({
@@ -235,7 +291,7 @@ function migrateConfig(stored: SidebarConfig): SidebarConfig {
       ] }
   }
 
-  return stored
+  return normalized
 }
 
 // Initialize shared config from localStorage (called once)
@@ -304,24 +360,24 @@ export function useSidebarConfig() {
 
   const addItem = (item: Omit<SidebarItem, 'id' | 'order'>, target: 'primary' | 'secondary' | 'sections') => {
     setConfig((prev) => {
-      // Generate unique ID using timestamp + random string to avoid collisions when adding multiple items
-      const uniqueId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-      const newItem: SidebarItem = {
-        ...item,
-        id: uniqueId,
-        isCustom: true,
-        order: target === 'primary'
+      const newItem = buildSidebarItem(
+        item,
+        target === 'primary'
           ? prev.primaryNav.length
           : target === 'secondary'
             ? prev.secondaryNav.length
-            : prev.sections.length }
+            : prev.sections.length
+      )
+      const removedBuiltinItemIds = BUILTIN_NAV_ITEM_IDS.has(newItem.id)
+        ? prev.removedBuiltinItemIds.filter((removedId) => removedId !== newItem.id)
+        : prev.removedBuiltinItemIds
 
       if (target === 'primary') {
-        return { ...prev, primaryNav: [...prev.primaryNav, newItem] }
+        return { ...prev, primaryNav: [...prev.primaryNav, newItem], removedBuiltinItemIds }
       } else if (target === 'secondary') {
-        return { ...prev, secondaryNav: [...prev.secondaryNav, newItem] }
+        return { ...prev, secondaryNav: [...prev.secondaryNav, newItem], removedBuiltinItemIds }
       } else {
-        return { ...prev, sections: [...prev.sections, newItem] }
+        return { ...prev, sections: [...prev.sections, newItem], removedBuiltinItemIds }
       }
     })
   }
@@ -333,17 +389,21 @@ export function useSidebarConfig() {
       let newSecondaryNav = [...prev.secondaryNav]
       let newSections = [...prev.sections]
 
+      let removedBuiltinItemIds = [...prev.removedBuiltinItemIds]
+
       items.forEach(({ item, target }) => {
-        const uniqueId = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-        const newItem: SidebarItem = {
-          ...item,
-          id: uniqueId,
-          isCustom: true,
-          order: target === 'primary'
+        const newItem = buildSidebarItem(
+          item,
+          target === 'primary'
             ? newPrimaryNav.length
             : target === 'secondary'
               ? newSecondaryNav.length
-              : newSections.length }
+              : newSections.length
+        )
+
+        if (BUILTIN_NAV_ITEM_IDS.has(newItem.id)) {
+          removedBuiltinItemIds = removedBuiltinItemIds.filter((removedId) => removedId !== newItem.id)
+        }
 
         if (target === 'primary') {
           newPrimaryNav = [...newPrimaryNav, newItem]
@@ -358,16 +418,26 @@ export function useSidebarConfig() {
         ...prev,
         primaryNav: newPrimaryNav,
         secondaryNav: newSecondaryNav,
-        sections: newSections }
+        sections: newSections,
+        removedBuiltinItemIds }
     })
   }
 
   const removeItem = (id: string) => {
-    setConfig((prev) => ({
-      ...prev,
-      primaryNav: prev.primaryNav.filter((item) => item.id !== id),
-      secondaryNav: prev.secondaryNav.filter((item) => item.id !== id),
-      sections: prev.sections.filter((item) => item.id !== id) }))
+    setConfig((prev) => {
+      const removedItem = [...prev.primaryNav, ...prev.secondaryNav, ...prev.sections].find((item) => item.id === id)
+      const removedBuiltinItemIds = BUILTIN_NAV_ITEM_IDS.has(id) && removedItem && !removedItem.isCustom
+        ? Array.from(new Set([...prev.removedBuiltinItemIds, id]))
+        : prev.removedBuiltinItemIds
+
+      return {
+        ...prev,
+        primaryNav: prev.primaryNav.filter((item) => item.id !== id),
+        secondaryNav: prev.secondaryNav.filter((item) => item.id !== id),
+        sections: prev.sections.filter((item) => item.id !== id),
+        removedBuiltinItemIds,
+      }
+    })
   }
 
   const updateItem = (id: string, updates: Partial<SidebarItem>) => {
@@ -433,7 +503,8 @@ export function useSidebarConfig() {
       const newItem: SidebarItem = {
         ...dashboard,
         order: prev.primaryNav.length }
-      return { ...prev, primaryNav: [...prev.primaryNav, newItem] }
+      const removedBuiltinItemIds = prev.removedBuiltinItemIds.filter((removedId) => removedId !== dashboard.id)
+      return { ...prev, primaryNav: [...prev.primaryNav, newItem], removedBuiltinItemIds }
     })
   }
 
