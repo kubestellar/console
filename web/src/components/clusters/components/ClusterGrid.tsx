@@ -166,8 +166,6 @@ const LocalClusterControls = memo(function LocalClusterControls({
   const { clusterLifecycle, clusters } = useLocalClusterTools()
   const [actionInProgress, setActionInProgress] = useState<string | null>(null)
   const tool = providerToTool(provider)
-  const controlsDisabled = unreachable
-  const disabledTooltip = t('cluster.controlsDisabledOffline')
 
   if (!tool) return null
 
@@ -177,6 +175,13 @@ const LocalClusterControls = memo(function LocalClusterControls({
   )
   const effectiveTool = localCluster?.tool || tool
   const effectiveName = localCluster?.name || clusterName.replace(/^kind-/, '')
+
+  // Enable controls for detected local clusters even if unreachable (they can be started)
+  // Only disable for cloud clusters or if we have no info about the cluster
+  const isDetectedLocalCluster = !!localCluster
+  const controlsDisabled = unreachable && !isDetectedLocalCluster
+  const disabledTooltip = t('cluster.controlsDisabledOffline')
+
   const isStopped = localCluster?.status === 'stopped' || unreachable
 
   const handleAction = async (action: 'start' | 'stop' | 'restart', e: React.MouseEvent) => {
