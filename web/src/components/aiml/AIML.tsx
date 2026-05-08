@@ -8,11 +8,54 @@ import { useLLMdClusters } from '../cards/workload-detection/shared'
 import { StackProvider } from '../../contexts/StackContext'
 import { StackSelector } from '../cards/llmd/StackSelector'
 import { useTranslation } from 'react-i18next'
+import { formatPercent } from '../../lib/formatters'
 
 const AIML_CARDS_KEY = 'kubestellar-aiml-cards'
+const PERCENT_MULTIPLIER = 100
+const DEMO_CPU_UTIL_PERCENT = 42
+const DEMO_MEMORY_UTIL_PERCENT = 61
 
 // Default cards for AI/ML dashboard
 const DEFAULT_AIML_CARDS = getDefaultCards('ai-ml')
+
+type AIMLClusterMetrics = {
+  cpuCores?: number
+  cpuUsageCores?: number
+  cpuRequestsCores?: number
+  memoryGB?: number
+  memoryUsageGB?: number
+  memoryRequestsGB?: number
+}
+
+type UtilizationMetric = 'cpu' | 'memory'
+
+function calculateUtilization(
+  clusters: AIMLClusterMetrics[],
+  metric: UtilizationMetric,
+): number | null {
+  const totals = clusters.reduce((accumulator, cluster) => {
+    const capacity = metric === 'cpu' ? (cluster.cpuCores ?? 0) : (cluster.memoryGB ?? 0)
+    const usedValue = metric === 'cpu'
+      ? (cluster.cpuUsageCores ?? cluster.cpuRequestsCores)
+      : (cluster.memoryUsageGB ?? cluster.memoryRequestsGB)
+
+    return {
+      capacity: accumulator.capacity + capacity,
+      usage: accumulator.usage + (usedValue ?? 0),
+      hasUsageData: accumulator.hasUsageData || usedValue !== undefined,
+    }
+  }, {
+    capacity: 0,
+    usage: 0,
+    hasUsageData: false,
+  })
+
+  if (!totals.hasUsageData || totals.capacity <= 0) {
+    return null
+  }
+
+  return (totals.usage / totals.capacity) * PERCENT_MULTIPLIER
+}
 
 export function AIML() {
   const { t } = useTranslation('common')
@@ -26,10 +69,11 @@ export function AIML() {
   // Scans for clusters with GPU nodes or AI/ML naming patterns
   const llmdClusters = useLLMdClusters(clusters, gpuClusterNames)
 
-  const { models: llmModels, isLoading: llmLoading } = useCachedLLMdModels(llmdClusters)
+  const { models: llmModels, isLoading: llmLoading, isDemoFallback: isLLMModelsDemo } = useCachedLLMdModels(llmdClusters)
 
   // Filter reachable clusters
   const reachableClusters = clusters.filter(c => c.reachable !== false)
+  const hasDemoClusters = reachableClusters.some(cluster => cluster.isDemo)
 
   // Calculate total GPUs
   const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
@@ -38,44 +82,65 @@ export function AIML() {
   // Calculate ML workload count (LLM models + other ML deployments)
   const mlWorkloadCount = llmModels.length
 
-  // Determine if we have real data (not just loading or error states)
-  const hasRealData = gpuNodes.length > 0 || llmModels.length > 0
-  const isDemoData = !hasRealData && !gpuLoading && !llmLoading
+  // Determine if we have demo data active for the AI/ML overview
+  const hasAIMLData = gpuNodes.length > 0 || llmModels.length > 0
+  const isDemoData = hasDemoClusters || isLLMModelsDemo || (!hasAIMLData && !gpuLoading && !llmLoading)
+  const cpuUtilization = isDemoData
+    ? DEMO_CPU_UTIL_PERCENT
+    : calculateUtilization(reachableClusters, 'cpu')
+  const memoryUtilization = isDemoData
+    ? DEMO_MEMORY_UTIL_PERCENT
+    : calculateUtilization(reachableClusters, 'memory')
 
   // Stats value getter for the configurable StatsOverview component
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'clusters':
-        return { value: reachableClusters.length, sublabel: 'clusters', isClickable: false }
+        return { value: reachableClusters.length, sublabel: t('common.clusters'), isClickable: false, isDemo: isDemoData }
       case 'gpu_nodes':
         return {
           value: gpuNodes.length,
-          sublabel: `${totalGPUs} GPUs total`,
+          sublabel: t('aiml.gpuTotal', { count: totalGPUs }),
           isClickable: false,
-          isDemo: gpuNodes.length === 0 && !gpuLoading
+          isDemo: isDemoData,
         }
       case 'memory':
         return {
           value: Math.round(totalMemoryGB),
-          sublabel: 'total memory',
-          isClickable: false
+          sublabel: t('aiml.totalMemory'),
+          isClickable: false,
+          isDemo: isDemoData,
         }
       case 'ml_workloads':
         return {
           value: mlWorkloadCount,
-          sublabel: 'ML workloads',
+          sublabel: t('aiml.mlWorkloads'),
           isClickable: false,
-          isDemo: mlWorkloadCount === 0 && !llmLoading
+          isDemo: isDemoData,
         }
       case 'loaded_models': {
         const loadedCount = llmModels.filter(m => m.status === 'loaded').length
         return {
           value: loadedCount,
-          sublabel: 'models loaded',
+          sublabel: t('aiml.modelsLoaded'),
           isClickable: false,
-          isDemo: llmModels.length === 0 && !llmLoading
+          isDemo: isDemoData,
         }
       }
+      case 'cpu_util':
+        return {
+          value: cpuUtilization !== null ? formatPercent(cpuUtilization) : '-',
+          sublabel: t('common.utilization'),
+          isClickable: false,
+          isDemo: isDemoData,
+        }
+      case 'memory_util':
+        return {
+          value: memoryUtilization !== null ? formatPercent(memoryUtilization) : '-',
+          sublabel: t('common.utilization'),
+          isClickable: false,
+          isDemo: isDemoData,
+        }
       default:
         return { value: '-' }
     }
@@ -98,7 +163,7 @@ export function AIML() {
         isLoading={isLoading || gpuLoading || llmLoading}
         isRefreshing={dataRefreshing}
         lastUpdated={lastUpdated}
-        hasData={reachableClusters.length > 0 || hasRealData}
+        hasData={reachableClusters.length > 0 || hasAIMLData}
         isDemoData={isDemoData}
         emptyState={{
           title: t('aiml.emptyStateTitle'),

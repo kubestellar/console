@@ -3664,7 +3664,11 @@
     "subtitle": "Monitor AI and Machine Learning workloads",
     "emptyStateTitle": "AI/ML Dashboard",
     "emptyStateDescription": "Add cards to monitor GPU utilization, ML workloads, and model training across your clusters.",
-    "errorLoading": "Error loading cluster data"
+    "errorLoading": "Error loading cluster data",
+    "gpuTotal": "{{count}} GPUs total",
+    "totalMemory": "total memory",
+    "mlWorkloads": "ML workloads",
+    "modelsLoaded": "models loaded"
   },
   "arcade": {
     "title": "Arcade",
