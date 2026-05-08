@@ -55,6 +55,18 @@ vi.mock('../../../../hooks/useBackendHealth', () => ({
   useBackendHealth: () => ({ status: '', isConnected: false, isInClusterMode: null }),
 }))
 
+const mockUseDashboardHealth = vi.fn(() => ({
+  status: 'healthy',
+  message: 'All systems healthy',
+  details: [],
+  criticalCount: 0,
+  warningCount: 0,
+}))
+
+vi.mock('../../../../hooks/useDashboardHealth', () => ({
+  useDashboardHealth: () => mockUseDashboardHealth(),
+}))
+
 vi.mock('../../../../lib/cn', () => ({
   cn: vi.fn(),
 }))
@@ -83,5 +95,20 @@ describe('AgentStatusIndicator', () => {
 
     expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.authErrorTitle')
     expect(screen.getByText('agent.authError')).toBeTruthy()
+  })
+
+  it('uses dashboard health warning state for the top pill', () => {
+    mockUseDashboardHealth.mockReturnValueOnce({
+      status: 'warning',
+      message: 'Degraded',
+      details: ['Local agent degraded (3 errors)'],
+      criticalCount: 0,
+      warningCount: 1,
+    })
+
+    render(<AgentStatusIndicator />)
+
+    expect(screen.getByText('Degraded')).toBeTruthy()
+    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('Degraded\nLocal agent degraded (3 errors)')
   })
 })

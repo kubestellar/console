@@ -28,7 +28,7 @@ vi.mock('../useLocalAgent', () => ({
 // healthy. Individual tests override this for disconnected scenarios.
 beforeEach(() => {
   mockUseBackendHealth.mockReturnValue({ status: 'connected' })
-  mockUseLocalAgent.mockReturnValue({ isDegraded: false, dataErrorCount: 0 })
+  mockUseLocalAgent.mockReturnValue({ status: 'connected', dataErrorCount: 0 })
 })
 
 import { useDashboardHealth } from '../useDashboardHealth'
@@ -146,6 +146,20 @@ describe('useDashboardHealth', () => {
     expect(result.current.criticalCount).toBe(0)
   })
 
+  it('surfaces degraded local agent as page warning', () => {
+    mockUseLocalAgent.mockReturnValue({ status: 'degraded', dataErrorCount: 3 })
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
+    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
+
+    const { result } = renderHook(() => useDashboardHealth())
+
+    expect(result.current.status).toBe('warning')
+    expect(result.current.message).toBe('Degraded')
+    expect(result.current.details).toContain('Local agent degraded (3 errors)')
+    expect(result.current.warningCount).toBe(1)
+  })
+
   it('skips cluster/pod checks while loading', () => {
     mockUseAlerts.mockReturnValue({ activeAlerts: [] })
     mockUseClusters.mockReturnValue({
@@ -160,32 +174,6 @@ describe('useDashboardHealth', () => {
     const { result } = renderHook(() => useDashboardHealth())
     expect(result.current.status).toBe('healthy')
     expect(result.current.criticalCount).toBe(0)
-    expect(result.current.warningCount).toBe(0)
-  })
-
-  it('flags degraded agent as warning when no clusters connected (issue #12622)', () => {
-    mockUseLocalAgent.mockReturnValue({ isDegraded: true, dataErrorCount: 3 })
-    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
-    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
-    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
-
-    const { result } = renderHook(() => useDashboardHealth())
-    expect(result.current.status).toBe('warning')
-    expect(result.current.warningCount).toBe(1)
-    expect(result.current.details).toContain('Agent degraded - data stream errors')
-  })
-
-  it('does not flag degraded agent when clusters exist (cluster health dominates)', () => {
-    mockUseLocalAgent.mockReturnValue({ isDegraded: true, dataErrorCount: 2 })
-    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
-    mockUseClusters.mockReturnValue({
-      deduplicatedClusters: [{ healthy: true, reachable: true }],
-      isLoading: false,
-    })
-    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
-
-    const { result } = renderHook(() => useDashboardHealth())
-    expect(result.current.status).toBe('healthy')
     expect(result.current.warningCount).toBe(0)
   })
 })

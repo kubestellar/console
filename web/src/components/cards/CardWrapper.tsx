@@ -26,6 +26,7 @@ import { InfoTooltip } from './card-wrapper/InfoTooltip'
 import { CardActionMenu } from './card-wrapper/CardActionMenu'
 import { PendingSwapNotification } from './card-wrapper/PendingSwapNotification'
 import { InstallCTAFlow } from './card-wrapper/InstallCTAFlow'
+import { shouldShowLiveBadge } from './card-wrapper/badgeVisibility'
 // Lazy-load the widget export modal (~42 KB + code generator ~30 KB) — only when user exports
 const WidgetExportModal = safeLazy(() => import('../widgets/WidgetExportModal'), 'WidgetExportModal')
 // Lazy-load the feedback modal (~67 KB) — only loaded when user clicks bug report
@@ -745,7 +746,11 @@ export const CardWrapper = memo(function CardWrapper({
                   </span>
                 )}
                 {/* Live data indicator - for time-series/trend cards with real data */}
-                {isLive && !showDemoIndicator && !effectiveIsFailed && (
+                {shouldShowLiveBadge({
+                  isLive,
+                  showDemoIndicator,
+                  isFailed: effectiveIsFailed,
+                }) && (
                   <span
                     role="status"
                     aria-live="polite"
