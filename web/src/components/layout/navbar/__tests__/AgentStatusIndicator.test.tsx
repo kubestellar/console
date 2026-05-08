@@ -61,6 +61,18 @@ vi.mock('../../../../hooks/useBackendHealth', () => ({
   useBackendHealth: () => mockUseBackendHealth(),
 }))
 
+const mockUseDashboardHealth = vi.fn(() => ({
+  status: 'healthy',
+  message: 'All systems healthy',
+  details: [],
+  criticalCount: 0,
+  warningCount: 0,
+}))
+
+vi.mock('../../../../hooks/useDashboardHealth', () => ({
+  useDashboardHealth: () => mockUseDashboardHealth(),
+}))
+
 vi.mock('../../../../lib/cn', () => ({
   cn: vi.fn(),
 }))
