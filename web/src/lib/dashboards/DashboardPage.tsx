@@ -356,6 +356,7 @@ export function DashboardPage({
           onAutoRefreshChange={setAutoRefresh}
           autoRefreshId={`${storageKey}-auto-refresh`}
           lastUpdated={lastUpdated}
+          showTimestamp={false}
           error={error}
           afterTitle={<DashboardHealthIndicator />}
           rightExtra={rightExtra}

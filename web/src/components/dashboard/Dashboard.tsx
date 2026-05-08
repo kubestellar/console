@@ -1020,6 +1020,7 @@ export function Dashboard() {
         onAutoRefreshChange={setAutoRefresh}
         autoRefreshId="dashboard-auto-refresh"
         lastUpdated={lastUpdated}
+        showTimestamp={false}
         error={clustersError}
         afterTitle={<DashboardHealthIndicator />}
         rightExtra={<RotatingTip page="home" />}

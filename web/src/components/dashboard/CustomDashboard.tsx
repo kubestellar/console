@@ -612,6 +612,7 @@ export function CustomDashboard() {
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}
         lastUpdated={lastUpdated}
+        showTimestamp={false}
         afterTitle={<DashboardHealthIndicator />}
         rightExtra={
           <button

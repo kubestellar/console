@@ -28,13 +28,15 @@ interface DashboardHeaderProps {
   rightExtra?: React.ReactNode
   /** Error message to display (optional) */
   error?: string | null
+  /** Whether to show the Updated timestamp below the controls */
+  showTimestamp?: boolean
 }
 
 /**
  * Shared dashboard header with consistent layout:
  * LEFT:  [Icon] Title / Subtitle  [Hourglass Updating]  [afterTitle]
  * RIGHT: [rightExtra] [Auto checkbox] [Refresh ↻]
- *        Updated X:XX:XX PM
+ *        Optional: Updated X:XX:XX PM
  *
  * The "Updated" timestamp is self-managed: it initializes to "now" on mount
  * and updates automatically whenever isFetching transitions from true→false.
@@ -54,6 +56,7 @@ export function DashboardHeader({
   afterTitle,
   rightExtra,
   error,
+  showTimestamp = true,
 }: DashboardHeaderProps) {
   const { t } = useTranslation()
   // Self-managed timestamp: updates when isFetching goes true → false
@@ -118,7 +121,7 @@ export function DashboardHeader({
         {afterTitle}
       </div>
 
-      {/* Right side: controls + timestamp below */}
+      {/* Right side: controls + optional timestamp below */}
       <div className="flex flex-col items-end gap-0.5 shrink-0">
         <div className="flex items-center gap-3" role="toolbar" aria-label={t('shared.dashboardHeader.toolbarLabel', { defaultValue: 'Dashboard controls' })}>
           {rightExtra}
@@ -165,7 +168,7 @@ export function DashboardHeader({
             <span>{error}</span>
             <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
-        ) : displayTimestamp ? (
+        ) : showTimestamp && displayTimestamp ? (
           <span className="text-xs text-muted-foreground">
             {t('shared.dashboardHeader.updated', { time: displayTimestamp.toLocaleTimeString() })}
           </span>

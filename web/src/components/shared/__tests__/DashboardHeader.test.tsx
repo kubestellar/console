@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 vi.mock('../../../lib/demoMode', () => ({
@@ -48,5 +48,22 @@ describe('DashboardHeader', () => {
       </MemoryRouter>
     )
     expect(container).toBeTruthy()
+  })
+
+  it('hides the updated timestamp when showTimestamp is false', () => {
+    render(
+      <MemoryRouter>
+        <DashboardHeader
+          title="Test"
+          subtitle="Sub"
+          isFetching={false}
+          onRefresh={vi.fn()}
+          lastUpdated={new Date('2024-01-01T13:51:40')}
+          showTimestamp={false}
+        />
+      </MemoryRouter>
+    )
+
+    expect(screen.queryByText(/shared\.dashboardHeader\.updated/)).not.toBeInTheDocument()
   })
 })
