@@ -1,5 +1,6 @@
 import { WifiOff, SortAsc, SortDesc, LayoutGrid, List, Grid3X3, Columns, Plus, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '../../../lib/cn'
 import { ClusterStats } from './StatsOverview'
 import { ClusterLayoutMode } from './ClusterGrid'
 
@@ -27,7 +28,12 @@ const LAYOUT_OPTIONS: { mode: ClusterLayoutMode; icon: typeof LayoutGrid; label:
   { mode: 'wide', icon: Columns, label: 'Wide (2 columns)' },
 ]
 
-const ACTION_BUTTON_CLASSES = 'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-primary text-primary-foreground hover:bg-primary/90'
+const ACTION_BUTTON_CLASSES = cn(
+  'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors',
+  'bg-primary text-primary-foreground hover:bg-primary/90',
+)
+
+const AI_ACTION_BUTTON_CLASSES = cn(ACTION_BUTTON_CLASSES, 'border border-primary/30')
 
 export function FilterTabs({
   stats,
@@ -105,7 +111,7 @@ export function FilterTabs({
             {onCreateClusterWithAI && (
               <button
                 onClick={onCreateClusterWithAI}
-                className={ACTION_BUTTON_CLASSES}
+                className={AI_ACTION_BUTTON_CLASSES}
               >
                 <Sparkles className="w-4 h-4" />
                 {t('cluster.createClusterWithAI')}
