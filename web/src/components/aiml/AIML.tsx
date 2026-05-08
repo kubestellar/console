@@ -33,6 +33,7 @@ export function AIML() {
 
   // Calculate total GPUs
   const totalGPUs = gpuNodes.reduce((sum, n) => sum + n.gpuCount, 0)
+  const totalMemoryGB = reachableClusters.reduce((sum, cluster) => sum + (cluster.memoryGB || 0), 0)
 
   // Calculate ML workload count (LLM models + other ML deployments)
   const mlWorkloadCount = llmModels.length
@@ -52,6 +53,12 @@ export function AIML() {
           sublabel: `${totalGPUs} GPUs total`,
           isClickable: false,
           isDemo: gpuNodes.length === 0 && !gpuLoading
+        }
+      case 'memory':
+        return {
+          value: Math.round(totalMemoryGB),
+          sublabel: 'total memory',
+          isClickable: false
         }
       case 'ml_workloads':
         return {
