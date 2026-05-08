@@ -129,7 +129,7 @@ describe('ArgoCDHealth', () => {
   })
 
   describe('Demo notice', () => {
-    it('shows integration notice when isDemoData is true', async () => {
+    it('hides integration notice when demo data is rendered', async () => {
       const { useArgoCDHealth } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDHealth).mockReturnValue({
         stats: { healthy: 1, degraded: 0, progressing: 0, missing: 0, unknown: 0 },
@@ -142,7 +142,7 @@ describe('ArgoCDHealth', () => {
         isDemoData: true,
       } as never)
       render(<ArgoCDHealth />)
-      expect(screen.getByText('argoCDHealth.argocdIntegration')).toBeTruthy()
+      expect(screen.queryByText('argoCDHealth.argocdIntegration')).toBeNull()
     })
 
     it('hides integration notice when not demo', () => {

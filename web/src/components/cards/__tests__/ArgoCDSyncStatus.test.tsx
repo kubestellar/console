@@ -142,7 +142,7 @@ describe('ArgoCDSyncStatus', () => {
   })
 
   describe('Demo notice', () => {
-    it('shows integration notice when isDemoData', async () => {
+    it('hides integration notice when demo data is rendered', async () => {
       const { useArgoCDSyncStatus } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoCDSyncStatus).mockReturnValue({
         stats: { synced: 1, outOfSync: 0, unknown: 0 },
@@ -156,7 +156,7 @@ describe('ArgoCDSyncStatus', () => {
         isDemoData: true,
       } as never)
       render(<ArgoCDSyncStatus />)
-      expect(screen.getByText('argoCDSyncStatus.argocdIntegration')).toBeTruthy()
+      expect(screen.queryByText('argoCDSyncStatus.argocdIntegration')).toBeNull()
     })
   })
 

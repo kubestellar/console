@@ -185,14 +185,14 @@ describe('ArgoCDApplicationSets', () => {
       expect(screen.getByText('my-template')).toBeTruthy()
     })
 
-    it('renders demo notice when isDemoData is true', async () => {
+    it('hides demo notice when demo data is rendered', async () => {
       const { useArgoApplicationSets } = await import('../../../hooks/useArgoCD')
       vi.mocked(useArgoApplicationSets).mockReturnValue({
         applicationSets: [makeAppSet()],
         isLoading: false, isRefreshing: false, isFailed: false, consecutiveFailures: 0, isDemoData: true,
       } as never)
       render(<ArgoCDApplicationSets />)
-      expect(screen.getByText('ArgoCD ApplicationSet Integration')).toBeTruthy()
+      expect(screen.queryByText('ArgoCD ApplicationSet Integration')).toBeNull()
     })
   })
 

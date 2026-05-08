@@ -315,13 +315,13 @@ describe('ArgoCDApplications', () => {
       expect(statValues.length).toBeGreaterThanOrEqual(4)
     })
 
-    it('shows integration notice when rendering demo data', () => {
+    it('hides integration notice when rendering demo data', () => {
       const demoApps = [makeMockApp()]
       setupMocks({ isDemoData: true, applications: demoApps, cardDataItems: demoApps })
       render(<ArgoCDApplications />)
 
-      expect(screen.getByText('argocdIntegration')).toBeInTheDocument()
-      expect(screen.getByText('installArgoCD')).toBeInTheDocument()
+      expect(screen.queryByText('argocdIntegration')).not.toBeInTheDocument()
+      expect(screen.queryByText('installArgoCD')).not.toBeInTheDocument()
     })
 
     it('passes isDemoData through to useCardLoadingState', () => {
