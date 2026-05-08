@@ -23,6 +23,7 @@ export function UnifiedStatsSection({
   getStatValue,
   hasData = true,
   isLoading = false,
+  lastUpdated = null,
   className = '' }: UnifiedStatsSectionProps) {
   // Collapsed state with localStorage persistence.
   // The storage key name says "collapsed", so the stored value represents
@@ -156,16 +157,24 @@ export function UnifiedStatsSection({
           )}
         </div>
 
-        {/* Configure button */}
-        {config.showConfigButton !== false && isExpanded && (
-          <Button
-            variant="ghost"
-            onClick={() => setIsConfigOpen(true)}
-            className="p-1 rounded-md"
-            title="Configure stats"
-            icon={<Settings className="w-4 h-4" />}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Updated {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+
+          {/* Configure button */}
+          {config.showConfigButton !== false && isExpanded && (
+            <Button
+              variant="ghost"
+              onClick={() => setIsConfigOpen(true)}
+              className="p-1 rounded-md"
+              title="Configure stats"
+              icon={<Settings className="w-4 h-4" />}
+            />
+          )}
+        </div>
       </div>
 
       {/* Stats grid */}

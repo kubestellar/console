@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { useResultHistogram } from '../useResultHistogram'
 import * as authModule from '../../lib/auth'
 
@@ -26,7 +26,7 @@ describe('useResultHistogram', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('includes sortBy in query parameters', () => {
+  it('includes sortBy in query parameters', async () => {
     vi.mocked(authModule.useAuth).mockReturnValue({
       isAuthenticated: true,
       login: vi.fn(),
@@ -54,10 +54,12 @@ describe('useResultHistogram', () => {
 
     renderHook(() => useResultHistogram('pattern'))
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('sort=pattern'),
-      expect.any(Object)
-    )
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('sort=pattern'),
+        expect.any(Object)
+      )
+    })
 
     fetchSpy.mockRestore()
   })

@@ -153,6 +153,7 @@ export function StatsRuntime({
   getStatValue: customGetStatValue,
   hasData = true,
   isLoading = false,
+  lastUpdated = null,
   collapsible = true,
   defaultExpanded = true,
   collapsedStorageKey,
@@ -274,14 +275,21 @@ export function StatsRuntime({
           )}
 
         </div>
-        {showConfigButton && isExpanded && (
-          <button
-            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
-            title="Configure stats"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {lastUpdated && (
+            <span className="text-xs text-muted-foreground">
+              Updated {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+          {showConfigButton && isExpanded && (
+            <button
+              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors"
+              title="Configure stats"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats grid */}
