@@ -16,6 +16,7 @@ const mockUseClusters = vi.fn()
 vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
   useClusterHealth: () => ({ health: null, isLoading: false }),
+  getDemoClusters: () => [],
 }))
 
 const mockUseCachedGPUNodes = vi.fn()
@@ -52,6 +53,7 @@ vi.mock('../../../hooks/useDemoMode', () => ({
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
+  useCardDemoState: () => ({ shouldUseDemoData: false }),
 }))
 
 const mockUseCardData = vi.fn()
@@ -107,6 +109,11 @@ vi.mock('../../ui/Tooltip', () => ({
   Tooltip: ({ children, wrapperClassName }: { children: React.ReactNode; wrapperClassName?: string }) => (
     <div data-testid="tooltip-wrapper" className={wrapperClassName}>{children}</div>
   ),
+}))
+
+vi.mock('../../../lib/constants/network', () => ({
+  CARD_LOADING_TIMEOUT_MS: 30000,
+  FETCH_DEFAULT_TIMEOUT_MS: 10000,
 }))
 
 vi.mock('../../../config/routes', () => ({
@@ -198,6 +205,8 @@ function setupDefaults({
     isRefreshing,
     error,
     lastRefresh: null,
+    consecutiveFailures: 0,
+    isFailed: false,
   })
   mockUseCachedGPUNodes.mockReturnValue({
     nodes: [],
@@ -406,6 +415,8 @@ describe('ClusterHealth', () => {
         isRefreshing: false,
         error: null,
         lastRefresh: null,
+        consecutiveFailures: 0,
+        isFailed: false,
       })
       mockUseCachedGPUNodes.mockReturnValue({
         nodes: [{ cluster: 'prod-cluster', gpuCount: 4, gpuAllocated: 2, acceleratorType: 'GPU' }],
