@@ -120,7 +120,7 @@ describe('FilterTabs', () => {
     expect(addBtn.closest('div')).toBe(createBtn.closest('div'))
   })
 
-  it('uses the same semantic colour scheme for both cluster action buttons', () => {
+  it('keeps Add Cluster primary and makes Create Cluster with AI secondary', () => {
     const onAddCluster = vi.fn()
     const onCreateClusterWithAI = vi.fn()
     renderFilterTabs({ onAddCluster, onCreateClusterWithAI })
@@ -130,8 +130,9 @@ describe('FilterTabs', () => {
 
     expect(addBtn.className).toContain('bg-primary')
     expect(addBtn.className).toContain('text-primary-foreground')
-    expect(createBtn.className).toContain('bg-primary')
-    expect(createBtn.className).toContain('text-primary-foreground')
-    expect(createBtn.className).not.toContain('bg-purple-600/80')
+    expect(createBtn.className).toContain('bg-card/50')
+    expect(createBtn.className).toContain('border-border')
+    expect(createBtn.className).toContain('text-muted-foreground')
+    expect(createBtn.className).not.toContain('bg-primary')
   })
 })

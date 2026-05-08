@@ -33,7 +33,10 @@ const ACTION_BUTTON_CLASSES = cn(
   'bg-primary text-primary-foreground hover:bg-primary/90',
 )
 
-const AI_ACTION_BUTTON_CLASSES = cn(ACTION_BUTTON_CLASSES, 'border border-primary/30')
+const AI_ACTION_BUTTON_CLASSES = cn(
+  'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors',
+  'bg-card/50 border-border text-muted-foreground hover:bg-secondary hover:text-foreground',
+)
 
 export function FilterTabs({
   stats,

@@ -1,6 +1,6 @@
 import { MemoryStick, ImageOff, Clock, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react'
 import { useCachedPodIssues } from '../../hooks/useCachedData'
-import type { PodIssue } from '../../hooks/useMCP'
+import { useClusters, type PodIssue } from '../../hooks/useMCP'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { LimitedAccessWarning } from '../ui/LimitedAccessWarning'
@@ -34,6 +34,7 @@ const getIssueIcon = (status: string | undefined): { icon: typeof MemoryStick; t
 
 export function PodIssues() {
   const { t } = useTranslation()
+  const { deduplicatedClusters } = useClusters()
   const {
     issues: rawIssues,
     isLoading: hookLoading,
@@ -43,6 +44,8 @@ export function PodIssues() {
     consecutiveFailures,
     error
   } = useCachedPodIssues()
+
+  const hasClusters = deduplicatedClusters.length > 0
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = rawIssues.length > 0
@@ -122,12 +125,17 @@ export function PodIssues() {
   }
 
   if (issues.length === 0 && rawIssues.length === 0) {
-    return (
+    return hasClusters ? (
       <CardEmptyState
         icon={CheckCircle}
         title="All pods healthy"
         message="No issues detected"
         variant="success"
+      />
+    ) : (
+      <CardEmptyState
+        title="No clusters connected"
+        message="Pod health will appear here after you connect a cluster"
       />
     )
   }

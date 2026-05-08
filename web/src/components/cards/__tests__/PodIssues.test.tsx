@@ -17,6 +17,11 @@ vi.mock('../../../hooks/useCachedData', () => ({
   useCachedPodIssues: () => mockUseCachedPodIssues(),
 }))
 
+const mockUseClusters = vi.fn()
+vi.mock('../../../hooks/useMCP', () => ({
+  useClusters: () => mockUseClusters(),
+}))
+
 const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useCardLoadingState: (...args: unknown[]) => mockUseCardLoadingState(...args),
@@ -156,6 +161,7 @@ function makeCardDataReturn(issues: PodIssue[] = []) {
 
 function setupDefaults({
   issues = [] as PodIssue[],
+  clusterCount = 1,
   isLoading = false,
   isRefreshing = false,
   isDemoFallback = false,
@@ -165,6 +171,9 @@ function setupDefaults({
   showSkeleton = false,
   showEmptyState = false,
 } = {}) {
+  mockUseClusters.mockReturnValue({
+    deduplicatedClusters: Array.from({ length: clusterCount }, (_, index) => ({ name: `cluster-${index}` })),
+  })
   mockUseCachedPodIssues.mockReturnValue({
     issues,
     isLoading,
@@ -221,11 +230,19 @@ describe('PodIssues', () => {
 
   // -------------------------------------------------------------------------
   describe('all-healthy empty state', () => {
-    it('shows all-healthy CardEmptyState when no issues at all', () => {
-      setupDefaults({ issues: [] })
+    it('shows all-healthy CardEmptyState when clusters exist but no issues were found', () => {
+      setupDefaults({ issues: [], clusterCount: 1 })
       render(<PodIssues />)
       expect(screen.getByText('All pods healthy')).toBeInTheDocument()
       expect(screen.getByText('No issues detected')).toBeInTheDocument()
+    })
+
+    it('shows a neutral empty state when no clusters are connected', () => {
+      setupDefaults({ issues: [], clusterCount: 0 })
+      render(<PodIssues />)
+      expect(screen.getByText('No clusters connected')).toBeInTheDocument()
+      expect(screen.getByText('Pod health will appear here after you connect a cluster')).toBeInTheDocument()
+      expect(screen.queryByText('All pods healthy')).not.toBeInTheDocument()
     })
   })
 
