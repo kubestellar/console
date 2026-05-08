@@ -564,6 +564,26 @@ func streamClusters(
 	return nil
 }
 
+// streamEmptySSE returns an empty SSE stream with just a done event.
+// Used when no clusters are configured to avoid error states on the frontend.
+func streamEmptySSE(c *fiber.Ctx) error {
+	c.Set("Content-Type", "text/event-stream")
+	c.Set("Cache-Control", "no-cache")
+	c.Set("Connection", "keep-alive")
+
+	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		if err := writeSSEEvent(w, sseEventDone, fiber.Map{
+			"totalClusters":     0,
+			"completedClusters": 0,
+			"skippedOffline":    0,
+		}); err != nil {
+			slog.Info("[SSE] empty stream write failed", "event", sseEventDone, "error", err)
+		}
+	})
+
+	return nil
+}
+
 // streamDemoSSE sends demo data as a single instant SSE event.
 func streamDemoSSE(c *fiber.Ctx, dataKey string, demoData interface{}) error {
 	c.Set("Content-Type", "text/event-stream")
@@ -625,7 +645,7 @@ func (h *MCPHandlers) FindPodIssuesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "issues", getDemoPodIssues())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return streamEmptySSE(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -730,7 +750,7 @@ func (h *MCPHandlers) CheckSecurityIssuesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "issues", getDemoSecurityIssues())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return streamEmptySSE(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -755,7 +775,7 @@ func (h *MCPHandlers) FindDeploymentIssuesStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "issues", getDemoDeploymentIssues())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return streamEmptySSE(c)
 	}
 
 	namespace := c.Query("namespace")
@@ -845,7 +865,7 @@ func (h *MCPHandlers) GetWarningEventsStream(c *fiber.Ctx) error {
 		return streamDemoSSE(c, "events", getDemoWarningEvents())
 	}
 	if h.k8sClient == nil {
-		return errNoClusterAccess(c)
+		return streamEmptySSE(c)
 	}
 
 	namespace := c.Query("namespace")
