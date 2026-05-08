@@ -15,6 +15,7 @@
 
 import { STORAGE_KEY_TOKEN } from './constants'
 import { emitSseAuthFailure } from './analytics'
+import { isDemoMode } from './demoMode'
 
 export interface SSEFetchOptions<T> {
   /** SSE endpoint URL path (e.g. `${LOCAL_AGENT_HTTP_URL}/pods/stream`) */
@@ -118,6 +119,12 @@ function parseSSEChunk(
  */
 export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
   const { url, params, onClusterData, onClusterError, onDone, itemsKey, signal } = options
+
+  // In demo mode, skip SSE connection attempts entirely to prevent retry errors (#12596)
+  if (isDemoMode()) {
+    onDone?.({ demo: true })
+    return Promise.resolve([])
+  }
 
   const searchParams = new URLSearchParams()
   if (params) {
