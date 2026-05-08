@@ -38,7 +38,7 @@ import {
 import { sendNotificationWithDeepLink } from '../hooks/useDeepLink'
 import { findRunbookForCondition } from '../lib/runbooks/builtins'
 import { executeRunbook } from '../lib/runbooks/executor'
-
+import { alertDedupKey, deduplicateAlerts } from './alerts/deduplication'
 
 // Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of
 // the main chunk.  The provider renders immediately with empty data; once
@@ -108,34 +108,6 @@ function shallowEqualRecords(
   const keysB = Object.keys(b)
   if (keysA.length !== keysB.length) return false
   return keysA.every(key => a[key] === b[key])
-}
-
-// Build the dedup key for an alert.
-// pod_crash alerts use (ruleId, cluster, namespace, resource) so that pods with the
-// same name in different namespaces get separate entries (#7328/#7338).
-// All aggregate/cluster-level alert types use (ruleId, cluster) only, preventing
-// dynamic resource strings from creating duplicates.
-function alertDedupKey(ruleId: string, conditionType: string, cluster?: string, resource?: string, namespace?: string): string {
-  if (conditionType === 'pod_crash') {
-    return `${ruleId}::${cluster ?? ''}::${namespace ?? ''}::${resource ?? ''}`
-  }
-  return `${ruleId}::${cluster ?? ''}`
-}
-
-// Deduplicate an array of alerts using the per-type key, keeping the most recently fired entry.
-// Used to clean up historical duplicates persisted in localStorage before this fix.
-function deduplicateAlerts(alerts: Alert[], rules: AlertRule[]): Alert[] {
-  const ruleTypeMap = new Map(rules.map(r => [r.id, r.condition.type]))
-  const dedupMap = new Map<string, Alert>()
-  for (const alert of alerts) {
-    const condType = ruleTypeMap.get(alert.ruleId) ?? ''
-    const key = alertDedupKey(alert.ruleId, condType, alert.cluster, alert.resource, alert.namespace)
-    const existing = dedupMap.get(key)
-    if (!existing || new Date(alert.firedAt) > new Date(existing.firedAt)) {
-      dedupMap.set(key, alert)
-    }
-  }
-  return Array.from(dedupMap.values())
 }
 
 /**
