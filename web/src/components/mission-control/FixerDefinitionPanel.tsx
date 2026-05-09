@@ -5,9 +5,9 @@
  * Right: Info panel showing hovered project details, mission steps, and alternatives.
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useId, useRef, type KeyboardEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Loader2, Plus, Search, Info, Shield, Eye, Network, Box, Lock, Layers, Server, X as XIcon, AlertTriangle, RotateCcw } from 'lucide-react'
+import { Sparkles, Loader2, Plus, Search, Info, Shield, Eye, Network, Box, Lock, Layers, Server, X as XIcon, AlertTriangle, RotateCcw, ChevronDown } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { PayloadGrid } from './PayloadGrid'
 import type { MissionControlState, PayloadProject } from './types'
@@ -994,6 +994,9 @@ function AISuggestErrorBanner({
 
 /** Minimum height for the cluster chip container */
 const CLUSTER_CHIP_MIN_HEIGHT_PX = 40
+const ENTER_KEY = 'Enter'
+const ESCAPE_KEY = 'Escape'
+const SPACE_KEY = ' '
 
 function TargetClusterSelector({
   selected,
@@ -1003,7 +1006,34 @@ function TargetClusterSelector({
   }) {
   const { availableClusters, clusterInfoMap } = useGlobalFilters()
   const { isOpen, close: closeDropdown, toggle: toggleDropdown } = useModalState()
+  const dropdownId = useId()
   const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  const closeDropdownAndFocusTrigger = () => {
+    closeDropdown()
+    triggerRef.current?.focus()
+  }
+
+  const handleTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === ENTER_KEY || event.key === SPACE_KEY) {
+      event.preventDefault()
+      toggleDropdown()
+      return
+    }
+
+    if (event.key === ESCAPE_KEY && isOpen) {
+      event.preventDefault()
+      closeDropdownAndFocusTrigger()
+    }
+  }
+
+  const handleDropdownKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === ESCAPE_KEY) {
+      event.preventDefault()
+      closeDropdownAndFocusTrigger()
+    }
+  }
 
   // Close on outside click
   useEffect(() => {
@@ -1037,6 +1067,9 @@ function TargetClusterSelector({
   }
 
   const isAllSelected = selected.length === 0 || selected.length === clusters.length
+  const triggerLabel = isAllSelected
+    ? 'Select target clusters'
+    : `Edit target clusters, ${selected.length} selected`
 
   return (
     // z-dropdown (100) keeps the open dropdown above the Payload Grid below.
@@ -1053,28 +1086,36 @@ function TargetClusterSelector({
           : `${selected.length} cluster${selected.length === 1 ? '' : 's'} selected — AI analysis scoped to these`}
       </p>
 
-      {/* Selected chips + dropdown trigger */}
-      <button
-        type="button"
-        className="relative mt-1 w-full flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-secondary/30 cursor-pointer hover:border-primary/30 transition-colors text-left"
+      <div
+        className="relative mt-1 flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-secondary/30 hover:border-primary/30 transition-colors"
         style={{ minHeight: CLUSTER_CHIP_MIN_HEIGHT_PX }}
-        onClick={() => toggleDropdown()}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-        aria-label="Target cluster selector"
       >
         {selected.length === 0 ? (
-          <span className="text-sm text-muted-foreground/50 flex items-center gap-1.5">
-            <Server className="w-3.5 h-3.5" />
-            All clusters (click to scope)
-          </span>
+          <button
+            ref={triggerRef}
+            type="button"
+            className="flex w-full items-center justify-between gap-2 rounded-md text-left text-sm text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            onClick={toggleDropdown}
+            onKeyDown={handleTriggerKeyDown}
+            aria-controls={dropdownId}
+            aria-expanded={isOpen}
+            aria-haspopup="listbox"
+            aria-label={triggerLabel}
+          >
+            <span className="flex items-center gap-1.5">
+              <Server className="w-3.5 h-3.5" />
+              All clusters (click to scope)
+            </span>
+            <ChevronDown className={cn('w-4 h-4 shrink-0 transition-transform', isOpen && 'rotate-180')} />
+          </button>
         ) : (
           <>
             {selected.map(name => {
               const info = clusterInfoMap[name]
               const isHealthy = info?.healthy !== false && info?.reachable !== false
               return (
-                <span
+                <button
+                  type="button"
                   key={name}
                   className={cn(
                     'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium',
@@ -1082,39 +1123,60 @@ function TargetClusterSelector({
                       ? 'bg-primary/10 text-primary border border-primary/20'
                       : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
                   )}
-                  onClick={(e) => { e.stopPropagation(); toggleCluster(name) }}
+                  onClick={() => toggleCluster(name)}
                 >
                   <span className={cn('w-1.5 h-1.5 rounded-full', isHealthy ? 'bg-green-400' : 'bg-yellow-400')} />
                   {name}
                   <XIcon className="w-3 h-3 opacity-50 hover:opacity-100" />
-                </span>
+                </button>
               )
             })}
-            {selected.length > 0 && (
-              <button
-                type="button"
-                className="text-[10px] text-muted-foreground/50 hover:text-foreground ml-1"
-                onClick={(e) => { e.stopPropagation(); onChange([]) }}
-              >
-                Clear
-              </button>
-            )}
+            <button
+              type="button"
+              className="text-[10px] text-muted-foreground/50 hover:text-foreground"
+              onClick={() => onChange([])}
+            >
+              Clear
+            </button>
+            <button
+              ref={triggerRef}
+              type="button"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              onClick={toggleDropdown}
+              onKeyDown={handleTriggerKeyDown}
+              aria-controls={dropdownId}
+              aria-expanded={isOpen}
+              aria-haspopup="listbox"
+              aria-label={triggerLabel}
+            >
+              Edit selection
+              <ChevronDown className={cn('w-4 h-4 shrink-0 transition-transform', isOpen && 'rotate-180')} />
+            </button>
           </>
         )}
-      </button>
+      </div>
 
       {/* Dropdown — bg-card (opaque) instead of the undefined bg-popover token
           which previously rendered the panel transparent (#5906). */}
       {isOpen && (
-        <div className="absolute z-dropdown mt-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
+        <div
+          id={dropdownId}
+          role="listbox"
+          aria-label="Target clusters"
+          aria-multiselectable="true"
+          className="absolute z-dropdown mt-1 w-64 max-h-48 overflow-y-auto rounded-lg border border-border bg-card shadow-lg"
+          onKeyDown={handleDropdownKeyDown}
+        >
           {/* All clusters toggle */}
           <button
             type="button"
+            role="option"
+            aria-selected={isAllSelected}
             className={cn(
               'w-full px-3 py-2 text-left text-sm hover:bg-secondary/50 flex items-center gap-2 border-b border-border/50',
               isAllSelected && 'text-primary font-medium',
             )}
-            onClick={() => { onChange([]); closeDropdown() }}
+            onClick={() => { onChange([]); closeDropdownAndFocusTrigger() }}
           >
             <Server className="w-3.5 h-3.5" />
             All clusters
@@ -1128,6 +1190,8 @@ function TargetClusterSelector({
             return (
               <button
                 type="button"
+                role="option"
+                aria-selected={isSelected}
                 key={name}
                 className={cn(
                   'w-full px-3 py-1.5 text-left text-sm hover:bg-secondary/50 flex items-center gap-2',

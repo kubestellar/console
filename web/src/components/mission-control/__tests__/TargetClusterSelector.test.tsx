@@ -1,14 +1,17 @@
-import { describe, it, expect, vi} from 'vitest'
-// render and screen imports removed — not currently used in tests
+/** @vitest-environment jsdom */
+import type { HTMLAttributes, ReactNode } from 'react'
+import { describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { FixerDefinitionPanel } from '../FixerDefinitionPanel'
+import type { MissionControlState } from '../types'
 
-// Mock useGlobalFilters before importing the component
 vi.mock('../../../hooks/useGlobalFilters', () => ({
   useGlobalFilters: () => ({
     availableClusters: ['prod-east', 'prod-west', 'staging'],
     clusterInfoMap: {
       'prod-east': { name: 'prod-east', healthy: true, reachable: true, nodeCount: 5 },
       'prod-west': { name: 'prod-west', healthy: true, reachable: true, nodeCount: 3 },
-      'staging': { name: 'staging', healthy: false, reachable: true, nodeCount: 1 },
+      staging: { name: 'staging', healthy: false, reachable: true, nodeCount: 1 },
     },
     selectedClusters: [],
     toggleCluster: vi.fn(),
@@ -17,55 +20,75 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
   }),
 }))
 
-// We need to test the TargetClusterSelector which is not exported directly.
-// Instead, test the behavior through FixerDefinitionPanel props.
-// For unit testing, we'll test the state logic.
+type MotionDivProps = HTMLAttributes<HTMLDivElement> & { children?: ReactNode }
+type ChildrenOnlyProps = { children?: ReactNode }
 
-describe('Mission Control cluster targeting', () => {
-  describe('MissionControlState.targetClusters', () => {
-    it('defaults to empty array (all clusters)', () => {
-      // Import types to verify the field exists
-      const state = {
-        phase: 'define' as const,
-        description: '',
-        title: '',
-        projects: [],
-        assignments: [],
-        phases: [],
-        overlay: 'architecture' as const,
-        deployMode: 'phased' as const,
-        targetClusters: [],
-        aiStreaming: false,
-        launchProgress: [],
-      }
-      expect(state.targetClusters).toEqual([])
-    })
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: MotionDivProps) => <div {...props}>{children}</div>,
+  },
+  AnimatePresence: ({ children }: ChildrenOnlyProps) => <>{children}</>,
+}))
 
-    it('stores selected cluster names', () => {
-      const state = {
-        targetClusters: ['prod-east', 'staging'],
-      }
-      expect(state.targetClusters).toContain('prod-east')
-      expect(state.targetClusters).toContain('staging')
-      expect(state.targetClusters).toHaveLength(2)
-    })
+const baseState: MissionControlState = {
+  phase: 'define',
+  description: 'Fix failing workloads',
+  title: 'Stabilize workloads',
+  projects: [],
+  assignments: [],
+  phases: [],
+  overlay: 'architecture',
+  deployMode: 'phased',
+  targetClusters: [],
+  aiStreaming: false,
+  launchProgress: [],
+}
+
+function renderPanel(stateOverrides: Partial<MissionControlState> = {}) {
+  return render(
+    <FixerDefinitionPanel
+      state={{ ...baseState, ...stateOverrides }}
+      onDescriptionChange={vi.fn()}
+      onTitleChange={vi.fn()}
+      onTargetClustersChange={vi.fn()}
+      onAskAI={vi.fn()}
+      onAddProject={vi.fn()}
+      onRemoveProject={vi.fn()}
+      onUpdatePriority={vi.fn()}
+      aiStreaming={false}
+      planningMission={null}
+    />
+  )
+}
+
+describe('TargetClusterSelector keyboard accessibility', () => {
+  it('toggles the dropdown from the trigger with keyboard controls', () => {
+    renderPanel()
+
+    const trigger = screen.getByRole('button', { name: /select target clusters/i })
+    expect(trigger).toHaveAttribute('aria-haspopup', 'listbox')
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.keyDown(trigger, { key: ' ' })
+
+    expect(screen.getByRole('listbox', { name: /target clusters/i })).toBeInTheDocument()
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
   })
 
-  describe('SavedMissionUpdates.cluster', () => {
-    it('supports cluster field in updates interface', () => {
-      const updates = {
-        description: 'Updated desc',
-        cluster: 'prod-west',
-      }
-      expect(updates.cluster).toBe('prod-west')
-    })
+  it('closes on escape and returns focus to the trigger', () => {
+    renderPanel({ targetClusters: ['prod-east'] })
 
-    it('allows undefined cluster (clear selection)', () => {
-      const updates = {
-        description: 'Updated desc',
-        cluster: undefined,
-      }
-      expect(updates.cluster).toBeUndefined()
-    })
+    const trigger = screen.getByRole('button', { name: /edit target clusters, 1 selected/i })
+    trigger.focus()
+
+    fireEvent.keyDown(trigger, { key: 'Enter' })
+
+    const option = screen.getByRole('option', { name: /prod-west/i })
+    option.focus()
+    fireEvent.keyDown(option, { key: 'Escape' })
+
+    expect(screen.queryByRole('listbox', { name: /target clusters/i })).not.toBeInTheDocument()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(document.activeElement).toBe(trigger)
   })
 })
