@@ -9,6 +9,7 @@
  */
 
 import { Search, Filter, Grid3X3, List, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import type { ViewMode, BrowserTab } from './browser'
 
@@ -22,6 +23,7 @@ interface MissionBrowserTopBarProps {
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
   onClose: () => void
+  isSmallScreen: boolean
 }
 
 export function MissionBrowserTopBar({
@@ -34,7 +36,9 @@ export function MissionBrowserTopBar({
   viewMode,
   onViewModeChange,
   onClose,
+  isSmallScreen,
 }: MissionBrowserTopBarProps) {
+  const { t } = useTranslation(['common'])
   const searchPlaceholder =
     activeTab === 'installers'
       ? 'Search installers… (AND logic: "argo events" = argo AND events)'
@@ -42,10 +46,14 @@ export function MissionBrowserTopBar({
         ? 'Search fixes…'
         : 'Search missions by name, tag, or description…'
 
+  const filterLabel = showFilters
+    ? t('missions.browser.hideFilters')
+    : t('missions.browser.showFilters')
+
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-card border-b border-border sm:flex-nowrap">
       {/* Global search input */}
-      <div className="flex-1 relative">
+      <div className="relative w-full sm:flex-1">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <input
           type="text"
@@ -62,16 +70,22 @@ export function MissionBrowserTopBar({
       <button
         onClick={onToggleFilters}
         className={cn(
-          'p-2 rounded-lg transition-colors relative',
+          'inline-flex items-center gap-2 rounded-lg transition-colors relative px-3 py-2',
           showFilters
             ? 'bg-purple-500/20 text-purple-400'
             : 'hover:bg-secondary text-muted-foreground hover:text-foreground',
         )}
-        title="Toggle filters"
+        title={filterLabel}
+        aria-label={filterLabel}
+        aria-expanded={showFilters}
       >
-        <Filter className="w-5 h-5" />
+        <Filter className="w-5 h-5 shrink-0" />
+        {isSmallScreen && <span className="text-sm font-medium">{filterLabel}</span>}
         {activeFilterCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-purple-500 text-white text-[9px] font-bold flex items-center justify-center">
+          <span className={cn(
+            'rounded-full bg-purple-500 text-white font-bold flex items-center justify-center',
+            isSmallScreen ? 'min-w-5 h-5 px-1 text-[10px]' : 'absolute -top-1 -right-1 w-4 h-4 text-[9px]',
+          )}>
             {activeFilterCount}
           </span>
         )}

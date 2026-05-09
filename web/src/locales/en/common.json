@@ -3992,6 +3992,11 @@
     }
   },
   "missions": {
+    "browser": {
+      "showFilters": "Show Filters",
+      "hideFilters": "Hide Filters",
+      "importSuccess": "Imported \"{{title}}\" successfully."
+    },
     "preflight": {
       "toolCheck": {
         "agentAuthFailed": "Agent authentication failed. Check that KC_AGENT_TOKEN is correctly set and matches between the console and kc-agent.",

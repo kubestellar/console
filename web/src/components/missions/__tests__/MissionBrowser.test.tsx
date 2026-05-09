@@ -24,6 +24,10 @@ const browserMockState = vi.hoisted(() => ({
   fetchTreeChildren: vi.fn(async () => []),
 }))
 
+const toastMockState = vi.hoisted(() => ({
+  showToast: vi.fn(),
+}))
+
 // ── Mocks ────────────────────────────────────────────────────────────────
 
 vi.mock('react-i18next', () => ({
@@ -88,7 +92,7 @@ vi.mock('../../../lib/clipboard', () => ({
 
 vi.mock('../../ui/Toast', () => ({
   useToast: () => ({
-    showToast: vi.fn(),
+    showToast: toastMockState.showToast,
   }),
 }))
 
@@ -102,10 +106,17 @@ vi.mock('../../ui/CollapsibleSection', () => ({
 vi.mock('../browser', () => ({
   TreeNodeItem: () => null,
   DirectoryListing: () => null,
-  RecommendationCard: ({ match, onSelect, compact }: { match: any; onSelect: () => void; compact?: boolean }) => (
-    <button type="button" onClick={onSelect} data-testid="recommendation-card" data-compact={compact ? 'true' : 'false'}>
-      {match.mission.title}
-    </button>
+  RecommendationCard: ({ match, onSelect, onImport, compact }: { match: any; onSelect: () => void; onImport?: () => void; compact?: boolean }) => (
+    <div>
+      <button type="button" onClick={onSelect} data-testid="recommendation-card" data-compact={compact ? 'true' : 'false'}>
+        {match.mission.title}
+      </button>
+      {onImport && (
+        <button type="button" onClick={onImport} data-testid={`recommendation-import-${match.mission.title}`}>
+          Import {match.mission.title}
+        </button>
+      )}
+    </div>
   ),
   EmptyState: ({ message }: { message: string }) => <div data-testid="empty-state">{message}</div>,
   MissionFetchErrorBanner: ({ message }: { message: string }) => <div data-testid="fetch-error">{message}</div>,
@@ -184,7 +195,11 @@ vi.mock('../MissionBrowserSidebar', () => ({
 }))
 
 vi.mock('../ScanProgressOverlay', () => ({
-  ScanProgressOverlay: () => null,
+  ScanProgressOverlay: ({ isScanning, result, onComplete }: { isScanning: boolean; result: { valid: boolean; findings: unknown[]; metadata: unknown } | null; onComplete: (result: { valid: boolean; findings: unknown[]; metadata: unknown }) => void }) => (
+    isScanning && result
+      ? <button type="button" data-testid="scan-complete" onClick={() => onComplete(result)}>Complete scan</button>
+      : null
+  ),
 }))
 
 vi.mock('../InstallerCard', () => ({
@@ -209,6 +224,33 @@ vi.mock('../UnstructuredFilePreview', () => ({
 
 // ── Tests ────────────────────────────────────────────────────────────────
 
+function setViewportWidth(width: number) {
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    writable: true,
+    value: width,
+  })
+
+  window.matchMedia = vi.fn().mockImplementation((query: string) => {
+    const maxMatch = query.match(/max-width:\s*(\d+)px/)
+    const minMatch = query.match(/min-width:\s*(\d+)px/)
+    const maxWidth = maxMatch ? Number(maxMatch[1]) : Number.POSITIVE_INFINITY
+    const minWidth = minMatch ? Number(minMatch[1]) : 0
+    const matches = width >= minWidth && width <= maxWidth
+
+    return {
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }
+  }) as typeof window.matchMedia
+}
+
 describe('MissionBrowser', () => {
   const defaultProps = {
     isOpen: true,
@@ -218,6 +260,8 @@ describe('MissionBrowser', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    toastMockState.showToast.mockReset()
+    setViewportWidth(1280)
     browserMockState.missionCache.installers = []
     browserMockState.missionCache.fixes = []
     browserMockState.missionCache.installersDone = true
@@ -334,6 +378,38 @@ describe('MissionBrowser', () => {
     await waitFor(() => {
       expect(screen.getByTestId('virtualized-mission-grid')).toHaveAttribute('data-view-mode', 'list')
       expect(screen.getByTestId('recommendation-card')).toHaveAttribute('data-compact', 'true')
+    })
+  })
+
+  it('collapses filters by default on small screens', async () => {
+    const user = userEvent.setup()
+    setViewportWidth(390)
+
+    render(<MissionBrowser {...defaultProps} />)
+
+    expect(screen.getByRole('button', { name: 'missions.browser.showFilters' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /clear all/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'missions.browser.showFilters' }))
+
+    expect(screen.getByRole('button', { name: /clear all/i })).toBeInTheDocument()
+  })
+
+  it('shows a success toast and keeps the browser open after import', async () => {
+    const onClose = vi.fn()
+    const onImport = vi.fn()
+
+    addRecommendedMission()
+    render(<MissionBrowser {...defaultProps} onClose={onClose} onImport={onImport} />)
+
+    await userEvent.click(screen.getByTestId('recommendation-import-Recommended fix'))
+    await userEvent.click(await screen.findByTestId('scan-complete'))
+
+    await waitFor(() => {
+      expect(onImport).toHaveBeenCalledTimes(1)
+      expect(onClose).not.toHaveBeenCalled()
+      expect(toastMockState.showToast).toHaveBeenCalledWith('missions.browser.importSuccess', 'success')
+      expect(screen.getByTestId('mission-browser')).toBeInTheDocument()
     })
   })
 
