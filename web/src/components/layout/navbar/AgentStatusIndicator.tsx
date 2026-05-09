@@ -247,22 +247,14 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
         Icon: Box,
         title: t('agent.demoModeTitle'),
       }
-    : dashboardHealth.status === 'critical'
+    : stableStatus === 'degraded'
       ? {
-          bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
-          dot: 'bg-red-400 animate-pulse',
-          label: dashboardHealth.message,
+          bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
+          dot: 'bg-yellow-400 animate-pulse',
+          label: t('agent.degraded'),
           Icon: Wifi,
-          title: systemHealthTooltip,
+          title: t('agent.degradedTitle', { count: dataErrorCount }),
         }
-      : dashboardHealth.status === 'warning'
-        ? {
-            bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
-            dot: 'bg-yellow-400 animate-pulse',
-            label: dashboardHealth.message,
-            Icon: Wifi,
-            title: systemHealthTooltip,
-          }
         : stableAuthError
           ? {
               bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
@@ -323,8 +315,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
   if (
     stableStatus === 'connecting' &&
     !showAsDemoMode &&
-    !isInClusterMode &&
-    dashboardHealth.status === 'healthy'
+    !isInClusterMode
   ) {
     return (
       <div className="relative" ref={agentRef}>

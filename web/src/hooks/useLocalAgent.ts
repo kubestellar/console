@@ -124,6 +124,7 @@ class AgentManager {
   private maxEvents = 50
   private dataErrorWindow = 60000 // 1 minute window for data errors
   private dataErrorThreshold = 3 // Errors within window to trigger degraded
+  private lastCheckError: string | null = null
   private aggressiveDetectTimeout: ReturnType<typeof setTimeout> | null = null
   private lastBrowserWakeCheckAt = 0
   private readonly handleVisibilityChange = () => {
@@ -304,7 +305,7 @@ class AgentManager {
       }
 
       const data = await response.json()
-      const authResponse = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/providers/health`, {
+      const authResponse = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/status`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
       })
@@ -331,7 +332,7 @@ class AgentManager {
       }
 
       if (!authResponse.ok) {
-        throw new Error(`Agent auth probe returned ${authResponse.status}`)
+        throw new Error(`Agent status probe returned ${authResponse.status}`)
       }
 
       const wasDisconnected = this.state.status === 'disconnected'
@@ -341,6 +342,7 @@ class AgentManager {
       const shouldTriggerReconnectRefetch = this.wasEverConnected && (wasDisconnected || wasConnecting)
       this.failureCount = 0 // Reset failure count on success
       this.successCount++ // Track consecutive successes
+      this.lastCheckError = null
 
       // Hysteresis: require multiple successes to reconnect from disconnected (prevents flicker)
       if (wasDisconnected && this.successCount >= SUCCESS_THRESHOLD) {
@@ -388,18 +390,21 @@ class AgentManager {
           error: null })
       }
       // If wasDisconnected but not enough successes yet, don't change status
-    } catch {
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err)
+      this.lastCheckError = reason
       this.failureCount++
       this.successCount = 0 // Reset success count on failure
       // Only mark as disconnected after multiple consecutive failures
       if (this.failureCount >= FAILURE_THRESHOLD) {
         const wasConnected = this.state.status === 'connected'
         const wasConnecting = this.state.status === 'connecting'
+        const detail = this.lastCheckError ? ` (${this.lastCheckError})` : ''
         if (wasConnected) {
-          this.addEvent('disconnected', 'Lost connection to local agent')
+          this.addEvent('disconnected', `Lost connection to local agent${detail}`)
           emitAgentDisconnected()
         } else if (wasConnecting) {
-          this.addEvent('error', 'Failed to connect - local agent not available')
+          this.addEvent('error', `Failed to connect - local agent not available${detail}`)
         }
         this.setState({
           status: 'disconnected',
