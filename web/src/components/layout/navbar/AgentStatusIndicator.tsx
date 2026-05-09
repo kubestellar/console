@@ -239,6 +239,22 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
       ]
     : connectionEvents
 
+  const degradedTooltip = [
+    t('agent.degradedTitle', { count: dataErrorCount }),
+    systemHealthTooltip,
+  ]
+    .filter(Boolean)
+    .join('\n')
+  const connectedTooltip = [
+    t('agent.localAgentConnected'),
+    systemHealthTooltip,
+  ]
+    .filter(Boolean)
+    .join('\n')
+  const liveTooltip = [t('agent.liveMode'), systemHealthTooltip]
+    .filter(Boolean)
+    .join('\n')
+
   const pillStyle = showAsDemoMode
     ? {
         bg: 'bg-purple-500/10 text-purple-400 hover:bg-purple-500/20',
@@ -247,85 +263,72 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
         Icon: Box,
         title: t('agent.demoModeTitle'),
       }
-    : dashboardHealth.status === 'critical'
+    : stableStatus === 'degraded'
       ? {
-          bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
-          dot: 'bg-red-400 animate-pulse',
-          label: dashboardHealth.message,
+          bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
+          dot: 'bg-yellow-400 animate-pulse',
+          label: t('agent.degraded'),
           Icon: Wifi,
-          title: systemHealthTooltip,
+          title: degradedTooltip,
         }
-      : dashboardHealth.status === 'warning'
+      : stableAuthError
         ? {
             bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
             dot: 'bg-yellow-400 animate-pulse',
-            label: dashboardHealth.message,
+            label: t('agent.authError'),
             Icon: Wifi,
-            title: systemHealthTooltip,
+            title: t('agent.authErrorTitle'),
           }
-        : stableAuthError
+        : stableConnected && backendIssue
           ? {
               bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
               dot: 'bg-yellow-400 animate-pulse',
-              label: t('agent.authError'),
+              label: t('agent.aiLabel'),
               Icon: Wifi,
-              title: t('agent.authErrorTitle'),
+              title: t('agent.backendUnavailable'),
             }
-          : stableConnected && backendIssue
+          : stableConnected && isLiveMode
             ? {
-                bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
-                dot: 'bg-yellow-400 animate-pulse',
-                label: t('agent.aiLabel'),
+                bg: 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20',
+                dot: 'bg-cyan-400',
+                label: t('agent.liveLabel'),
                 Icon: Wifi,
-                title: t('agent.backendUnavailable'),
+                title: liveTooltip,
               }
-            : stableConnected && isLiveMode
+            : stableConnected
               ? {
-                  bg: 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20',
-                  dot: 'bg-cyan-400',
-                  label: t('agent.liveLabel'),
+                  bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20',
+                  dot: 'bg-green-400',
+                  label: t('agent.aiLabel'),
                   Icon: Wifi,
-                  title: t('agent.liveMode'),
+                  title: connectedTooltip,
                 }
-              : stableConnected
+              : stableStatus === 'connecting'
                 ? {
-                    bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20',
-                    dot: 'bg-green-400',
+                    bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
+                    dot: 'bg-yellow-400 animate-pulse',
                     label: t('agent.aiLabel'),
                     Icon: Wifi,
-                    title: t('agent.localAgentConnected'),
+                    title: t('agent.connecting'),
                   }
-                : stableStatus === 'connecting'
+                : isInClusterMode
                   ? {
-                      bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
-                      dot: 'bg-yellow-400 animate-pulse',
-                      label: t('agent.aiLabel'),
-                      Icon: Wifi,
-                      title: t('agent.connecting'),
+                      bg: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20',
+                      dot: 'bg-blue-400',
+                      label: t('agent.cluster'),
+                      Icon: Server,
+                      title: t('agent.inClusterModeTitle'),
                     }
-                  : isInClusterMode
-                    ? {
-                        bg: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20',
-                        dot: 'bg-blue-400',
-                        label: t('agent.cluster'),
-                        Icon: Server,
-                        title: t('agent.inClusterModeTitle'),
-                      }
-                    : {
-                        bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
-                        dot: 'bg-red-400',
-                        label: t('agent.offline'),
-                        Icon: WifiOff,
-                        title: t('agent.localAgentDisconnected'),
-                      }
+                  : {
+                      bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
+                      dot: 'bg-red-400',
+                      label: t('agent.offline'),
+                      Icon: WifiOff,
+                      title: t('agent.localAgentDisconnected'),
+                    }
 
   // Loading state: show spinner while initial agent status is resolving (#6772)
-  if (
-    stableStatus === 'connecting' &&
-    !showAsDemoMode &&
-    !isInClusterMode &&
-    dashboardHealth.status === 'healthy'
-  ) {
+  if (stableStatus === 'connecting' && !showAsDemoMode && !isInClusterMode) {
     return (
       <div className="relative" ref={agentRef}>
         <div
