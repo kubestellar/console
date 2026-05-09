@@ -24,7 +24,7 @@ function loadFromStorage<T>(key: string, defaultValue: T, validator?: (value: un
     const stored = localStorage.getItem(key)
     if (stored) {
       const parsed = JSON.parse(stored)
-      if (!validator || validator(parsed)) {
+      if (validator && validator(parsed)) {
         return parsed
       }
     }
