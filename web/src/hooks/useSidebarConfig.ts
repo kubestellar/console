@@ -289,7 +289,7 @@ export async function fetchEnabledDashboards(): Promise<void> {
     }
 
     enabledDashboardIds = Array.isArray(data.enabled_dashboards)
-      ? data.enabled_dashboards.filter((id): id is string => typeof id === 'string')
+      ? data.enabled_dashboards.filter((id: unknown): id is string => typeof id === 'string')
       : null
     enabledDashboardIds = enabledDashboardIds && enabledDashboardIds.length > 0 ? enabledDashboardIds : null
     persistEnabledDashboardIds(enabledDashboardIds)
