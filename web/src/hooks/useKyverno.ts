@@ -10,7 +10,7 @@
  * - Demo fallback when no clusters are connected
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useClusters } from './useMCP'
 import { kubectlProxy } from '../lib/kubectlProxy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
@@ -346,7 +346,11 @@ export function useKyverno() {
   /** Guard to prevent concurrent refetch calls from flooding the request queue */
   const fetchInProgress = useRef(false)
 
-  const clusters = allClusters.filter(c => c.reachable === true).map(c => c.name)
+  const clusters = useMemo(
+    () => allClusters.filter(c => c.reachable === true).map(c => c.name),
+    [allClusters]
+  )
+  const clusterNamesKey = useMemo(() => clusters.join('|'), [clusters])
 
   const refetch = useCallback(async (silent = false) => {
     // In-cluster mode: kubectlProxy requires kc-agent which isn't available.
@@ -445,7 +449,7 @@ export function useKyverno() {
       // (prevents premature empty state while useClusters is still resolving)
       setIsLoading(false)
     }
-  }, [clusters.length, isDemoMode, clustersLoading]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [clusterNamesKey, clustersLoading, isDemoMode, refetch])
 
   // Register with unified mode transition system so skeleton/refetch works
   // in sync with all other cards when demo mode is toggled

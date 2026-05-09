@@ -185,6 +185,38 @@ describe('useKyverno', () => {
     unmount()
   })
 
+  it('refreshes demo statuses when cluster names change but the count stays the same', async () => {
+    mockDemoMode = true
+    mockAllClusters = [
+      { name: 'live-east', reachable: true },
+      { name: 'live-west', reachable: true },
+    ]
+
+    const { result, rerender, unmount } = renderHook(() => useKyverno())
+
+    await waitFor(() => {
+      expect(Object.keys(result.current.statuses)).toEqual(
+        expect.arrayContaining(['live-east', 'live-west']),
+      )
+    })
+
+    mockAllClusters = [
+      { name: 'demo-east', reachable: true },
+      { name: 'demo-west', reachable: true },
+    ]
+    rerender()
+
+    await waitFor(() => {
+      expect(Object.keys(result.current.statuses)).toEqual(
+        expect.arrayContaining(['demo-east', 'demo-west']),
+      )
+    })
+    expect(result.current.statuses['live-east']).toBeUndefined()
+    expect(result.current.statuses['live-west']).toBeUndefined()
+
+    unmount()
+  })
+
   // ── 4. No clusters, not demo mode -- clusters still loading ────────────
 
   it('stays in loading state while clusters are still loading', () => {
