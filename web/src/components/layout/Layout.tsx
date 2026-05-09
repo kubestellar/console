@@ -45,6 +45,8 @@ import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
+import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
+import { MS_PER_DAY } from '../../lib/constants/time'
 import {
   NAVBAR_HEIGHT_PX,
   BANNER_HEIGHT_PX,
@@ -65,7 +67,6 @@ import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { VersionCheckProvider } from '../../hooks/useVersionCheck'
 import { copyToClipboard } from '../../lib/clipboard'
 import { ROUTES } from '../../config/routes'
-import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
 
 // Lazy-load the AI mission sidebar so react-markdown and remark plugins are
 // not part of the initial bundle — they only load when the sidebar is first rendered.
@@ -85,7 +86,7 @@ const STAR_POSITIONS = Array.from({ length: 30 }, () => ({
 const UPDATE_TOAST_DONE_DISMISS_MS = 5000
 const UPDATE_TOAST_TERMINAL_DISMISS_MS = 8000
 const CACHE_META_PREFIX = 'kc_meta:'
-const STALE_META_THRESHOLD_MS = 24 * 60 * 60 * 1000
+const STALE_META_THRESHOLD_MS = MS_PER_DAY
 const CACHE_META_TIMESTAMP_FIELDS = [
   'lastSuccessfulRefresh',
   'lastUpdated',
