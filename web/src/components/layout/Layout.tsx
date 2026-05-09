@@ -717,7 +717,7 @@ export function Layout({ children: _children }: LayoutProps) {
         >
           {/* Spacer pushes scrollable content below the open navbar filter
               panel.  It lives INSIDE <main> (the scroll container) so the
-              offset actually moves content in the viewport. (#12767) */}
+              offset actually moves content in the viewport. (issue 12767) */}
           <div
             aria-hidden
             style={{ height: `var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px)` }}
