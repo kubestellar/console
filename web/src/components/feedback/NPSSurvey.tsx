@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useId } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X, Send, CheckCircle2 } from 'lucide-react'
-import { useNPSSurvey } from '../../hooks/useNPSSurvey'
+import { MIN_NPS_PUBLIC_ISSUE_FEEDBACK_LENGTH, useNPSSurvey } from '../../hooks/useNPSSurvey'
 import { useToast } from '../ui/Toast'
 import { cn } from '../../lib/cn'
 
@@ -29,9 +29,11 @@ export function NPSSurvey() {
   const { showToast } = useToast()
   const [selectedScore, setSelectedScore] = useState<number | null>(null)
   const [feedback, setFeedback] = useState('')
+  const [allowPublicIssue, setAllowPublicIssue] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showThankYou, setShowThankYou] = useState(false)
   const thankYouTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const publicIssueConsentId = useId()
 
   // Cleanup thank-you timer on unmount
   useEffect(() => () => {
@@ -40,11 +42,24 @@ export function NPSSurvey() {
 
   const selectedOption = NPS_OPTIONS.find(o => o.score === selectedScore) ?? null
 
+  const resetForm = useCallback(() => {
+    setSelectedScore(null)
+    setFeedback('')
+    setAllowPublicIssue(false)
+  }, [])
+
+  useEffect(() => {
+    if (selectedOption?.category !== 'detractor') {
+      setAllowPublicIssue(false)
+    }
+  }, [selectedOption?.category])
+
   const handleSubmit = useCallback(async () => {
     if (selectedScore === null) return
     setIsSubmitting(true)
     try {
-      await submitResponse(selectedScore, feedback.trim() || undefined)
+      await submitResponse(selectedScore, feedback.trim() || undefined, { allowPublicIssue })
+      resetForm()
       setShowThankYou(true)
       showToast(t('nps.thankYou'), 'success')
       thankYouTimerRef.current = setTimeout(() => setShowThankYou(false), THANK_YOU_DISPLAY_MS)
@@ -55,13 +70,12 @@ export function NPSSurvey() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [selectedScore, feedback, submitResponse, showToast, t])
+  }, [selectedScore, feedback, allowPublicIssue, resetForm, submitResponse, showToast, t])
 
   const handleDismiss = useCallback(() => {
     dismiss()
-    setSelectedScore(null)
-    setFeedback('')
-  }, [dismiss])
+    resetForm()
+  }, [dismiss, resetForm])
 
   if (!isVisible && !showThankYou) return null
 
@@ -120,6 +134,25 @@ export function NPSSurvey() {
             rows={2}
             className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-secondary/30 resize-none focus:outline-hidden focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground/40"
           />
+          {selectedOption.category === 'detractor' && (
+            <div className="mt-3 rounded-lg border border-border bg-secondary/20 p-3">
+              <p className="text-[11px] text-muted-foreground">
+                {t('nps.publicIssueDisclosure', { minLength: MIN_NPS_PUBLIC_ISSUE_FEEDBACK_LENGTH })}
+              </p>
+              <label htmlFor={publicIssueConsentId} className="mt-2 flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  id={publicIssueConsentId}
+                  type="checkbox"
+                  checked={allowPublicIssue}
+                  onChange={e => setAllowPublicIssue(e.target.checked)}
+                  className="mt-0.5 rounded border-border accent-primary"
+                />
+                <span className="text-xs text-foreground">
+                  {t('nps.publicIssueConsent')}
+                </span>
+              </label>
+            </div>
+          )}
         </div>
       )}
 

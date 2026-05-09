@@ -2072,6 +2072,8 @@
     "feedbackNeutral": "What would make it even better?",
     "feedbackPositive": "What do you love most?",
     "feedbackPlaceholder": "Your feedback (optional)",
+    "publicIssueDisclosure": "Optional: if you check the box below and include at least {{minLength}} characters, we may file your written feedback as a public GitHub issue so maintainers can follow up.",
+    "publicIssueConsent": "I agree that my written feedback may be submitted publicly as a GitHub issue.",
     "submit": "Submit",
     "dismiss": "Not now",
     "thankYou": "Thank you for your feedback!",

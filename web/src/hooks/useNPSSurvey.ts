@@ -36,14 +36,18 @@ const DEFAULT_STATE: NPSPersistentState = {
   maxDismissalsReachedAt: null,
 }
 
+export interface SubmitNPSOptions {
+  allowPublicIssue?: boolean
+}
+
 export interface NPSSurveyState {
   isVisible: boolean
-  submitResponse: (score: number, feedback?: string) => Promise<void>
+  submitResponse: (score: number, feedback?: string, options?: SubmitNPSOptions) => Promise<void>
   dismiss: () => void
 }
 
 /** Minimum description length required by the backend feedback API */
-const MIN_FEEDBACK_LENGTH = 20
+export const MIN_NPS_PUBLIC_ISSUE_FEEDBACK_LENGTH = 20
 
 function daysSince(isoDate: string | null): number {
   if (!isoDate) return Infinity
@@ -97,7 +101,7 @@ export function useNPSSurvey(): NPSSurveyState {
     return () => clearTimeout(timer)
   }, [])
 
-  const submitResponse = useCallback(async (score: number, feedback?: string) => {
+  const submitResponse = useCallback(async (score: number, feedback?: string, options?: SubmitNPSOptions) => {
     if (!Number.isInteger(score) || score < 1 || score > 4) return
 
     // Try the /api/nps backend first. In production it's a Netlify Function
@@ -151,10 +155,9 @@ export function useNPSSurvey(): NPSSurveyState {
     const category = NPS_CATEGORIES[score - 1]
     emitNPSResponse(score, category, feedback ? feedback.length : undefined)
 
-    // Create GitHub issue for detractors (score 1 = "Not great")
-    // Backend requires description >= MIN_FEEDBACK_LENGTH chars
+    // Create GitHub issue for detractors only when the user explicitly opts in.
     const trimmed = feedback?.trim() || ''
-    if (score === 1 && trimmed.length >= MIN_FEEDBACK_LENGTH) {
+    if (score === 1 && options?.allowPublicIssue && trimmed.length >= MIN_NPS_PUBLIC_ISSUE_FEEDBACK_LENGTH) {
       try {
         await api.post('/api/feedback/requests', {
           title: `NPS Detractor Feedback (Score: ${score})`,

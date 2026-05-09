@@ -141,12 +141,12 @@ describe('useNPSSurvey', () => {
     expect(mockAwardCoins).not.toHaveBeenCalled()
   })
 
-  it('creates GitHub issue for detractor scores', async () => {
+  it('creates GitHub issue for detractor scores only with explicit consent', async () => {
     const { result } = renderHook(() => useNPSSurvey())
     act(() => { vi.advanceTimersByTime(30_000) })
 
     await act(async () => {
-      await result.current.submitResponse(1, 'The UI is too complex and hard to navigate')
+      await result.current.submitResponse(1, 'The UI is too complex and hard to navigate', { allowPublicIssue: true })
     })
 
     expect(mockApiPost).toHaveBeenCalledWith('/api/feedback/requests', {
@@ -154,6 +154,17 @@ describe('useNPSSurvey', () => {
       description: 'The UI is too complex and hard to navigate',
       request_type: 'bug',
     })
+  })
+
+  it('does NOT create GitHub issue for detractor scores without explicit consent', async () => {
+    const { result } = renderHook(() => useNPSSurvey())
+    act(() => { vi.advanceTimersByTime(30_000) })
+
+    await act(async () => {
+      await result.current.submitResponse(1, 'The UI is too complex and hard to navigate')
+    })
+
+    expect(mockApiPost).not.toHaveBeenCalled()
   })
 
   it('does NOT create GitHub issue for non-detractor scores', async () => {
