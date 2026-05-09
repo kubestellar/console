@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -33,7 +34,8 @@ func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
 	}
 	available, err := h.client.Status()
 	if err != nil {
-		return c.JSON(fiber.Map{"available": false, "reason": err.Error()})
+		slog.Error("kagenti provider status check failed", "error", err)
+		return c.JSON(fiber.Map{"available": false, "reason": "provider unavailable"})
 	}
 	return c.JSON(fiber.Map{"available": available, "url": ""})
 }
@@ -45,7 +47,8 @@ func (h *KagentiProviderProxyHandler) ListAgents(c *fiber.Ctx) error {
 	}
 	agents, err := h.client.ListAgents()
 	if err != nil {
-		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("kagenti provider list agents failed", "error", err)
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "upstream error"})
 	}
 	return c.JSON(fiber.Map{"agents": agents})
 }
@@ -75,7 +78,8 @@ func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 
 	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, req.Message, req.ContextID, nil)
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("kagenti provider invoke failed", "error", err, "agent", req.Agent, "namespace", req.Namespace)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream error"})
 	}
 	// stream is closed inside the stream writer callback.
 
@@ -114,7 +118,8 @@ func (h *KagentiProviderProxyHandler) Chat(c *fiber.Ctx) error {
 
 			if err != nil {
 				if err != io.EOF {
-					fmt.Fprintf(w, "data: {\"error\": \"stream interrupted: %s\"}\n\n", err.Error())
+					slog.Error("kagenti SSE stream interrupted", "error", err)
+					fmt.Fprintf(w, "data: {\"error\": \"stream interrupted\"}\n\n")
 					w.Flush()
 				}
 				break
@@ -200,7 +205,8 @@ func (h *KagentiProviderProxyHandler) CallTool(c *fiber.Ctx) error {
 
 	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, message, "", nil)
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("kagenti provider tool invocation failed", "error", err, "agent", req.Agent, "namespace", req.Namespace, "tool", req.Tool)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream error"})
 	}
 	defer stream.Close()
 
