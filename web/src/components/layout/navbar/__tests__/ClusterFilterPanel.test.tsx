@@ -78,11 +78,6 @@ describe('ClusterFilterPanel', () => {
   beforeEach(() => {
     Object.values(filterMocks).forEach((mockFn) => mockFn.mockReset())
     document.documentElement.style.removeProperty(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)
-    class ResizeObserverMock {
-      observe() {}
-      disconnect() {}
-    }
-    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
   })
 
   it('exposes dialog semantics and restores focus on Escape', () => {
