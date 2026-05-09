@@ -564,6 +564,23 @@
       "vclusterCreateNew": "Create Virtual Cluster",
       "vclusterDefaultNamespace": "vcluster",
       "vclusterDeleteConfirm": "Delete virtual cluster \"{{name}}\" in namespace \"{{namespace}}\"? This cannot be undone.",
+      "vclusterFeedback": {
+        "connect": {
+          "pending": "Connecting to vCluster \"{{name}}\"...",
+          "success": "Connected to vCluster \"{{name}}\".",
+          "errorFallback": "Failed to connect to vCluster \"{{name}}\"."
+        },
+        "disconnect": {
+          "pending": "Disconnecting from vCluster \"{{name}}\"...",
+          "success": "Disconnected from vCluster \"{{name}}\".",
+          "errorFallback": "Failed to disconnect from vCluster \"{{name}}\"."
+        },
+        "delete": {
+          "pending": "Deleting vCluster \"{{name}}\" from namespace \"{{namespace}}\"...",
+          "success": "Deleted vCluster \"{{name}}\" from namespace \"{{namespace}}\".",
+          "errorFallback": "Failed to delete vCluster \"{{name}}\" from namespace \"{{namespace}}\"."
+        }
+      },
       "selectHostCluster": "Select a host cluster...",
       "kubevirtSection": "KubeVirt",
       "kubevirtDesc": "Run virtual machines on Kubernetes clusters",

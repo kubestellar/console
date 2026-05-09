@@ -49,6 +49,17 @@ export interface CreateClusterResult {
   message: string
 }
 
+export type VClusterActionKind = 'connect' | 'disconnect' | 'delete'
+export type VClusterActionState = 'pending' | 'success' | 'error'
+
+export interface VClusterActionFeedback {
+  action: VClusterActionKind
+  name: string
+  namespace: string
+  state: VClusterActionState
+  message?: string
+}
+
 // Demo data for local clusters
 const DEMO_TOOLS: LocalClusterTool[] = [
   { name: 'kind', installed: true, version: '0.20.0', path: '/usr/local/bin/kind' },
@@ -90,6 +101,7 @@ export function useLocalClusterTools() {
   const [vclustersError, setVClustersError] = useState<string | null>(null)
   const [isConnecting, setIsConnecting] = useState<string | null>(null) // vcluster name being connected
   const [isDisconnecting, setIsDisconnecting] = useState<string | null>(null) // vcluster name being disconnected
+  const [vclusterActionFeedback, setVClusterActionFeedback] = useState<VClusterActionFeedback | null>(null)
 
   // Real-time progress from kc-agent WebSocket
   const { progress: clusterProgress, dismiss: dismissProgress } = useClusterProgress()
@@ -415,6 +427,8 @@ export function useLocalClusterTools() {
 
   // Connect to a vCluster
   const connectVCluster = async (name: string, namespace: string): Promise<boolean> => {
+    setVClusterActionFeedback({ action: 'connect', name, namespace, state: 'pending' })
+
     // In demo mode (without agent connected), simulate connect
     if (isDemoMode && !isConnected) {
       setIsConnecting(name)
@@ -422,11 +436,15 @@ export function useLocalClusterTools() {
 
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
 
+      setVClusterActionFeedback({ action: 'connect', name, namespace, state: 'success' })
       setIsConnecting(null)
       return true
     }
 
     if (!isConnected) {
+      const message = 'Agent not connected'
+      setVClusterActionFeedback({ action: 'connect', name, namespace, state: 'error', message })
+      setError(message)
       return false
     }
 
@@ -444,15 +462,18 @@ export function useLocalClusterTools() {
         // Refresh vcluster list to update connected status
         const timeoutId = setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
         pendingTimeoutsRef.current.push(timeoutId)
+        setVClusterActionFeedback({ action: 'connect', name, namespace, state: 'success' })
         return true
       } else {
         const text = await response.text()
         setError(text)
+        setVClusterActionFeedback({ action: 'connect', name, namespace, state: 'error', message: text })
         return false
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to connect to vCluster'
       setError(message)
+      setVClusterActionFeedback({ action: 'connect', name, namespace, state: 'error', message })
       return false
     } finally {
       setIsConnecting(null)
@@ -461,6 +482,8 @@ export function useLocalClusterTools() {
 
   // Disconnect from a vCluster
   const disconnectVCluster = async (name: string, namespace: string): Promise<boolean> => {
+    setVClusterActionFeedback({ action: 'disconnect', name, namespace, state: 'pending' })
+
     // In demo mode (without agent connected), simulate disconnect
     if (isDemoMode && !isConnected) {
       setIsDisconnecting(name)
@@ -468,11 +491,15 @@ export function useLocalClusterTools() {
 
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
 
+      setVClusterActionFeedback({ action: 'disconnect', name, namespace, state: 'success' })
       setIsDisconnecting(null)
       return true
     }
 
     if (!isConnected) {
+      const message = 'Agent not connected'
+      setVClusterActionFeedback({ action: 'disconnect', name, namespace, state: 'error', message })
+      setError(message)
       return false
     }
 
@@ -490,15 +517,18 @@ export function useLocalClusterTools() {
         // Refresh vcluster list to update connected status
         const timeoutId = setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
         pendingTimeoutsRef.current.push(timeoutId)
+        setVClusterActionFeedback({ action: 'disconnect', name, namespace, state: 'success' })
         return true
       } else {
         const text = await response.text()
         setError(text)
+        setVClusterActionFeedback({ action: 'disconnect', name, namespace, state: 'error', message: text })
         return false
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to disconnect from vCluster'
       setError(message)
+      setVClusterActionFeedback({ action: 'disconnect', name, namespace, state: 'error', message })
       return false
     } finally {
       setIsDisconnecting(null)
@@ -507,6 +537,8 @@ export function useLocalClusterTools() {
 
   // Delete a vCluster
   const deleteVCluster = async (name: string, namespace: string): Promise<boolean> => {
+    setVClusterActionFeedback({ action: 'delete', name, namespace, state: 'pending' })
+
     // In demo mode (without agent connected), simulate deletion
     if (isDemoMode && !isConnected) {
       setIsDeleting(name)
@@ -514,11 +546,15 @@ export function useLocalClusterTools() {
 
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS))
 
+      setVClusterActionFeedback({ action: 'delete', name, namespace, state: 'success' })
       setIsDeleting(null)
       return true
     }
 
     if (!isConnected) {
+      const message = 'Agent not connected'
+      setVClusterActionFeedback({ action: 'delete', name, namespace, state: 'error', message })
+      setError(message)
       return false
     }
 
@@ -536,15 +572,18 @@ export function useLocalClusterTools() {
         // Refresh vcluster list after deletion
         const timeoutId = setTimeout(() => fetchVClusters(), UI_FEEDBACK_TIMEOUT_MS)
         pendingTimeoutsRef.current.push(timeoutId)
+        setVClusterActionFeedback({ action: 'delete', name, namespace, state: 'success' })
         return true
       } else {
         const text = await response.text()
         setError(text)
+        setVClusterActionFeedback({ action: 'delete', name, namespace, state: 'error', message: text })
         return false
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to delete vCluster'
       setError(message)
+      setVClusterActionFeedback({ action: 'delete', name, namespace, state: 'error', message })
       return false
     } finally {
       setIsDeleting(null)
@@ -624,6 +663,8 @@ export function useLocalClusterTools() {
     checkVClusterOnCluster,
     isConnecting,
     isDisconnecting,
+    vclusterActionFeedback,
+    dismissVClusterActionFeedback: () => setVClusterActionFeedback(null),
     createVCluster,
     connectVCluster,
     disconnectVCluster,
