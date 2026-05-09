@@ -111,7 +111,7 @@ function classifyDragonflyPod(pod: PodItem): DragonflyComponent | null {
   ]
 
   for (const [component, candidates] of matchers) {
-    for (const candidate of candidates) {
+    for (const candidate of (candidates || [])) {
       if (componentLabel === candidate) return component
       if (nameLabel === candidate) return component
       if (appLabel === candidate) return component
@@ -166,7 +166,7 @@ function buildStatus(pods: PodItem[]): DragonflyStatusData {
   let sawAnyDragonflyPod = false
   let clusterName = ''
 
-  for (const pod of pods) {
+  for (const pod of (pods || [])) {
     const component = classifyDragonflyPod(pod)
     if (!component) continue
 

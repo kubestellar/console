@@ -77,6 +77,8 @@ interface CacheData {
   timestamp: number
 }
 
+const TRESTLE_CACHE_MAX_AGE_MS = REFRESH_INTERVAL_MS
+
 // ── Cache helpers ────────────────────────────────────────────────────────
 
 function loadFromCache(): CacheData | null {
@@ -152,8 +154,8 @@ function generateDemoControlResults(cluster: string, total: number, passed: numb
   let idx = 0
   const profiles = ['NIST 800-53 rev5', 'FedRAMP Moderate']
 
-  for (const family of DEMO_CONTROL_FAMILIES) {
-    for (const controlId of family.controls) {
+  for (const family of (DEMO_CONTROL_FAMILIES || [])) {
+    for (const controlId of (family.controls || [])) {
       if (idx >= total) break
       const rand = demoRand(clusterSeed + idx)
       let status: 'pass' | 'fail' | 'other'
@@ -427,7 +429,7 @@ export function useTrestle() {
 
     const allStatuses: Record<string, TrestleClusterStatus> = {}
     let checked = 0
-    for (const result of settled) {
+    for (const result of (settled || [])) {
       if (result.status === 'fulfilled') {
         allStatuses[result.value.cluster] = result.value.status
         checked++
@@ -479,7 +481,7 @@ export function useTrestle() {
 
   // Auto-refresh
   useEffect(() => {
-    intervalRef.current = setInterval(() => fetchData(true), REFRESH_INTERVAL_MS)
+    intervalRef.current = setInterval(() => fetchData(true), TRESTLE_CACHE_MAX_AGE_MS)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }

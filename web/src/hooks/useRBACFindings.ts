@@ -205,14 +205,14 @@ async function fetchSingleCluster(cluster: string): Promise<ClusterFetchResult> 
     }
 
     // Analyze ClusterRoleBindings
-    for (const crb of clusterRoleBindings) {
+    for (const crb of (clusterRoleBindings || [])) {
       const subjects = crb.subjects || []
       const roleName = crb.roleRef.name
       const bindingName = `ClusterRoleBinding/${crb.metadata.name}`
       const clusterRole = clusterRoleMap.get(roleName)
       const rules = clusterRole?.rules || []
 
-      for (const subject of subjects) {
+      for (const subject of (subjects || [])) {
         const subjectKind = toSubjectKind(subject.kind)
         const subjectName = subject.name
 
@@ -278,7 +278,7 @@ async function fetchSingleCluster(cluster: string): Promise<ClusterFetchResult> 
 
     // Analyze RoleBindings — flag edit/admin roles at namespace scope
     const elevatedRoles = new Set(['admin', 'edit', 'cluster-admin'])
-    for (const rb of roleBindings) {
+    for (const rb of (roleBindings || [])) {
       if (!elevatedRoles.has(rb.roleRef.name)) continue
       for (const subject of (rb.subjects || [])) {
         findings.push({
@@ -374,7 +374,7 @@ export function useRBACFindings() {
 
       const allFindings: RBACFinding[] = []
       const clusterErrors: string[] = []
-      for (const result of settled) {
+      for (const result of (settled || [])) {
         if (result.status === 'fulfilled') {
           allFindings.push(...result.value.findings)
           if (result.value.error) {

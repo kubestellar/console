@@ -141,7 +141,7 @@ function buildContainerdData(
   }
 
   const containerdNodeNames = new Set<string>()
-  for (const node of containerdNodes) {
+  for (const node of (containerdNodes || [])) {
     if (!node.name) continue
     containerdNodeNames.add(node.name)
     const shortName = node.name.split('.')[0]
@@ -149,7 +149,7 @@ function buildContainerdData(
   }
 
   const containers: ContainerdContainer[] = []
-  for (const pod of pods) {
+  for (const pod of (pods || [])) {
     const nodeName = pod.node ?? ''
     if (!nodeName) continue
     const matches = containerdNodeNames.has(nodeName) ||

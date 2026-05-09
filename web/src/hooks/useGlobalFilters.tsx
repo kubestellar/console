@@ -376,7 +376,7 @@ export function GlobalFiltersProvider({ children }: { children: ReactNode }) {
 
   // Detect which saved filter set matches the current state
   const activeFilterSetId = useMemo(() => {
-    for (const fs of savedFilterSets) {
+    for (const fs of (savedFilterSets || [])) {
       const clustersMatch = haveSameSelections(fs.clusters, selectedClusters)
       const severitiesMatch = haveSameSelections(fs.severities, selectedSeverities as string[])
       const statusesMatch = haveSameSelections(fs.statuses, selectedStatuses as string[])

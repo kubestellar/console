@@ -396,7 +396,7 @@ export function useKyverno() {
 
     // Aggregate after all tasks settle — no shared mutation during concurrency
     const allStatuses: Record<string, KyvernoClusterStatus> = {}
-    for (const result of settled) {
+    for (const result of (settled || [])) {
       if (result.status === 'fulfilled') {
         allStatuses[result.value.cluster] = result.value.status
       }

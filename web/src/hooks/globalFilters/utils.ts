@@ -96,7 +96,7 @@ export function buildClusterInfoMap(clusters: ClusterInfo[]): Record<string, Clu
 export function getAvailableDistributions(clusters: ClusterInfo[]): string[] {
   const distributions = new Set<string>()
 
-  for (const cluster of clusters) {
+  for (const cluster of (clusters || [])) {
     const distribution = cluster.distribution || detectCloudProvider(cluster.name, cluster.server, cluster.namespaces, cluster.user) || 'unknown'
     distributions.add(distribution)
   }

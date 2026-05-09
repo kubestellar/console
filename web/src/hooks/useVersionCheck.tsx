@@ -50,6 +50,8 @@ import {
 declare const __APP_VERSION__: string
 declare const __COMMIT_HASH__: string
 
+const VERSION_CHECK_CACHE_MAX_AGE_MS = MIN_CHECK_INTERVAL_MS
+
 /**
  * Hook for checking version updates from GitHub releases.
  *
@@ -478,13 +480,13 @@ function useVersionCheckCore() {
       setReleases(cache.data.map(parseRelease))
 
       // Only fetch if cache is older than MIN_CHECK_INTERVAL
-      if (Date.now() - cache.timestamp < MIN_CHECK_INTERVAL_MS) {
+      if (Date.now() - cache.timestamp < VERSION_CHECK_CACHE_MAX_AGE_MS) {
         return // Cache is fresh, don't fetch
       }
     }
 
     // Also enforce lastChecked interval as backup
-    if (lastChecked && Date.now() - lastChecked < MIN_CHECK_INTERVAL_MS) {
+    if (lastChecked && Date.now() - lastChecked < VERSION_CHECK_CACHE_MAX_AGE_MS) {
       return
     }
 

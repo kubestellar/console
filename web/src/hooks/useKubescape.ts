@@ -368,7 +368,7 @@ export function useKubescape() {
     const settled = await settledWithConcurrency(tasks)
 
     const allStatuses: Record<string, KubescapeClusterStatus> = {}
-    for (const result of settled) {
+    for (const result of (settled || [])) {
       if (result.status === 'fulfilled') {
         allStatuses[result.value.cluster] = result.value.status
       }

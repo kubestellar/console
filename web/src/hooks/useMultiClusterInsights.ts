@@ -76,7 +76,7 @@ const REASON_FAMILIES: ReadonlyArray<ReadonlyArray<string>> = [
  */
 const REASON_TO_FAMILY = new Map<string, number>()
 for (let i = 0; i < REASON_FAMILIES.length; i++) {
-  for (const r of REASON_FAMILIES[i]) {
+  for (const r of (REASON_FAMILIES[i] || [])) {
     REASON_TO_FAMILY.set(r, i)
   }
 }

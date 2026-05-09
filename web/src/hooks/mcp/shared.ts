@@ -94,14 +94,14 @@ const UI_FIELDS: ReadonlyArray<keyof ClusterCache> = [
 ]
 
 function updatesTouchData(updates: Partial<ClusterCache>): boolean {
-  for (const field of DATA_FIELDS) {
+  for (const field of (DATA_FIELDS || [])) {
     if (field in updates) return true
   }
   return false
 }
 
 function updatesTouchUI(updates: Partial<ClusterCache>): boolean {
-  for (const field of UI_FIELDS) {
+  for (const field of (UI_FIELDS || [])) {
     if (field in updates) return true
   }
   return false

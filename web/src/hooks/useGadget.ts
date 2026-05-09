@@ -118,7 +118,7 @@ async function fetchGadgetTrace<T>(tool: string, args?: Record<string, unknown>)
 
   // Parse result content — IG MCP server returns text JSON
   const content = data.result?.content || data.result?.Content || []
-  for (const item of content) {
+  for (const item of (content || [])) {
     const text = item.text || item.Text || ''
     if (text) {
       try {

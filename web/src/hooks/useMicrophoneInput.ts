@@ -106,7 +106,7 @@ export function useMicrophoneInput(): UseMicrophoneInputReturn {
     }
 
     if (mediaStreamRef.current) {
-      for (const track of mediaStreamRef.current.getTracks()) {
+      for (const track of (mediaStreamRef.current.getTracks( || []))) {
         track.stop()
       }
       mediaStreamRef.current = null

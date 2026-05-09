@@ -153,7 +153,7 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
     try {
       hpaItems = JSON.parse(hpaResult.value.output).items || []
     } catch { /* invalid JSON — skip HPA data */ }
-    for (const hpa of hpaItems) {
+    for (const hpa of (hpaItems || [])) {
       if (hpa.spec.scaleTargetRef.kind === 'Deployment') {
         autoscalerMap.set(`${hpa.metadata.namespace}/${hpa.spec.scaleTargetRef.name}`, 'hpa')
         autoscalerItems.push({
@@ -179,7 +179,7 @@ async function fetchLLMdServersForCluster(cluster: string): Promise<LLMdServer[]
     try {
       vaItems = JSON.parse(vaResult.value.output).items || []
     } catch { /* invalid JSON — skip VA data */ }
-    for (const va of vaItems) {
+    for (const va of (vaItems || [])) {
       if (va.spec.targetRef?.name) {
         const key = `${va.metadata.namespace}/${va.spec.targetRef.name}`
         autoscalerMap.set(key, autoscalerMap.has(key) ? 'both' : 'va')

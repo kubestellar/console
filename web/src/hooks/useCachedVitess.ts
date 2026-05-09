@@ -71,7 +71,7 @@ function shardKey(keyspace: string, shard: string): string {
 
 function buildShards(tablets: VitessTablet[]): VitessShard[] {
   const byKey = new Map<string, VitessShard>()
-  for (const tablet of tablets) {
+  for (const tablet of (tablets || [])) {
     const key = shardKey(tablet.keyspace, tablet.shard)
     const existing = byKey.get(key)
     if (existing) {
@@ -93,7 +93,7 @@ function buildShards(tablets: VitessTablet[]): VitessShard[] {
 
 function buildKeyspaces(shards: VitessShard[], tablets: VitessTablet[]): VitessKeyspace[] {
   const byName = new Map<string, VitessKeyspace>()
-  for (const shard of shards) {
+  for (const shard of (shards || [])) {
     const existing = byName.get(shard.keyspace)
     if (existing) {
       existing.shards.push(shard)
@@ -121,7 +121,7 @@ function summarize(tablets: VitessTablet[], keyspaces: VitessKeyspace[]): Vitess
   let maxReplicationLagSeconds = 0
   let totalShards = 0
 
-  for (const tablet of tablets) {
+  for (const tablet of (tablets || [])) {
     if (tablet.type === 'PRIMARY') primaryTablets += 1
     else if (tablet.type === 'REPLICA') replicaTablets += 1
     else if (tablet.type === 'RDONLY') rdonlyTablets += 1
@@ -131,7 +131,7 @@ function summarize(tablets: VitessTablet[], keyspaces: VitessKeyspace[]): Vitess
     }
   }
 
-  for (const keyspace of keyspaces) {
+  for (const keyspace of (keyspaces || [])) {
     totalShards += keyspace.shards.length
   }
 

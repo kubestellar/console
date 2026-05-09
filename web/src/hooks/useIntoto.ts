@@ -75,7 +75,7 @@ export function computeIntotoStats(layouts: IntotoLayout[]): IntotoStats {
     missingSteps: 0,
   }
 
-  for (const layout of layouts) {
+  for (const layout of (layouts || [])) {
     stats.totalSteps += layout.steps.length
     stats.verifiedSteps += layout.verifiedSteps
     stats.failedSteps += layout.failedSteps
@@ -90,6 +90,8 @@ interface CacheData {
   statuses: Record<string, IntotoClusterStatus>
   timestamp: number
 }
+
+const INTOTO_CACHE_MAX_AGE_MS = REFRESH_INTERVAL_MS
 
 // ── Cache helpers ────────────────────────────────────────────────────────
 
@@ -322,8 +324,8 @@ async function fetchSingleCluster(cluster: string): Promise<IntotoClusterStatus>
     }
 
     // Mark steps with no links found as missing
-    for (const layout of layouts) {
-      for (const step of layout.steps) {
+    for (const layout of (layouts || [])) {
+      for (const step of (layout.steps || [])) {
         if (step.status === 'unknown' && step.linksFound === 0) {
           step.status = 'missing'
         }
@@ -421,7 +423,7 @@ export function useIntoto() {
 
       // Collect results from settled promises — no shared mutable state
       const allStatuses: Record<string, IntotoClusterStatus> = {}
-      for (const result of settled) {
+      for (const result of (settled || [])) {
         if (result.status === 'fulfilled' && result.value) {
           const { cluster, status } = result.value as { cluster: string; status: IntotoClusterStatus }
           allStatuses[cluster] = status
@@ -502,7 +504,7 @@ export function useIntoto() {
   // that get installed later or clusters that become reachable
   useEffect(() => {
     if (isDemoMode || clusters.length === 0) return
-    const interval = setInterval(() => refetch(true), REFRESH_INTERVAL_MS)
+    const interval = setInterval(() => refetch(true), INTOTO_CACHE_MAX_AGE_MS)
     return () => clearInterval(interval)
   }, [clusters.length, refetch, isDemoMode])
 

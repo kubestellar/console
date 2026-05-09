@@ -21,12 +21,12 @@ const NAMESPACE_FETCH_TIMEOUT_MS = 45000
 // (#3945 regression fix). See useNamespaces callers for the consumer.
 function mergeWithClusterCache(fetched: string[], cluster: string): string[] {
   const set = new Set<string>()
-  for (const ns of fetched) {
+  for (const ns of (fetched || [])) {
     if (ns) set.add(ns)
   }
   const cachedCluster = clusterCacheRef.clusters.find(c => c.name === cluster)
   if (Array.isArray(cachedCluster?.namespaces)) {
-    for (const ns of cachedCluster.namespaces) {
+    for (const ns of (cachedCluster.namespaces || [])) {
       if (ns) set.add(ns)
     }
   }

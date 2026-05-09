@@ -97,7 +97,7 @@ function normalizeCatalog(
   partial: Partial<BackstageCatalogCounts> | undefined,
 ): BackstageCatalogCounts {
   const normalized: BackstageCatalogCounts = { ...EMPTY_CATALOG }
-  for (const kind of BACKSTAGE_ENTITY_KINDS) {
+  for (const kind of (BACKSTAGE_ENTITY_KINDS || [])) {
     const value = partial?.[kind]
     if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
       normalized[kind] = value
@@ -108,7 +108,7 @@ function normalizeCatalog(
 
 function totalEntities(catalog: BackstageCatalogCounts): number {
   let total = 0
-  for (const kind of BACKSTAGE_ENTITY_KINDS) {
+  for (const kind of (BACKSTAGE_ENTITY_KINDS || [])) {
     total += catalog[kind] ?? 0
   }
   return total

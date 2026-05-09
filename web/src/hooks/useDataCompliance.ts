@@ -139,7 +139,7 @@ async function fetchClusterCompliance(cluster: string): Promise<ClusterComplianc
     if (secretsResult.exitCode === 0 && secretsResult.output) {
       const types = secretsResult.output.trim().split('\n').filter(Boolean)
       result.secrets.total = types.length
-      for (const t of types) {
+      for (const t of (types || [])) {
         if (t === 'Opaque') result.secrets.opaque++
         else if (t === 'kubernetes.io/tls') result.secrets.tls++
         else if (t === 'kubernetes.io/service-account-token') result.secrets.saToken++
@@ -270,7 +270,7 @@ export function useDataCompliance() {
       const settled = await settledWithConcurrency(tasks)
 
       const clusterFailures: string[] = []
-      for (const result of settled) {
+      for (const result of (settled || [])) {
         if (result.status === 'fulfilled') {
           const { data } = result.value
           aggregated.totalSecrets += data.secrets.total

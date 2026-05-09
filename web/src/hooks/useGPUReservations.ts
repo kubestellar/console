@@ -60,7 +60,7 @@ export function normalizeGpuTypes(r: Pick<GPUReservation, 'gpu_type' | 'gpu_type
     // type (index 0) stays stable across re-renders.
     const seen = new Set<string>()
     const out: string[] = []
-    for (const t of r.gpu_types) {
+    for (const t of (r.gpu_types || [])) {
       if (!t || seen.has(t)) continue
       seen.add(t)
       out.push(t)

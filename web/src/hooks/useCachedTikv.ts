@@ -127,7 +127,7 @@ function summarize(stores: TikvStore[]): TikvStatusData['summary'] {
   let upStores = 0
   let totalRegions = 0
   let totalLeaders = 0
-  for (const store of stores) {
+  for (const store of (stores || [])) {
     if (store.state === 'Up') upStores += 1
     totalRegions += store.regionCount
     totalLeaders += store.leaderCount

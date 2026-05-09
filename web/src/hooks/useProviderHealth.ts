@@ -139,7 +139,7 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
   // --- Cloud Providers from cluster distributions ---
   if (clusterSnapshot.length > 0) {
     const providerCounts = new Map<CloudProvider, number>()
-    for (const cluster of clusterSnapshot) {
+    for (const cluster of (clusterSnapshot || [])) {
       const provider = detectCloudProvider(
         cluster.name,
         cluster.server,

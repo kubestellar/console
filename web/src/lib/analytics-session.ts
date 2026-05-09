@@ -12,14 +12,16 @@ import { MS_PER_MINUTE } from './constants/time'
 
 // ── Storage keys ───────────────────────────────────────────────────
 
-export const CID_KEY = '_ksc_cid'
-export const SID_KEY = '_ksc_sid'
-export const SC_KEY = '_ksc_sc'
-export const LAST_KEY = '_ksc_last'
+const ANALYTICS_STORAGE_KEY_PREFIX = '_ksc_'
+export const CID_KEY = `${ANALYTICS_STORAGE_KEY_PREFIX}cid`
+export const SID_KEY = `${ANALYTICS_STORAGE_KEY_PREFIX}sid`
+export const SC_KEY = `${ANALYTICS_STORAGE_KEY_PREFIX}sc`
+export const LAST_KEY = `${ANALYTICS_STORAGE_KEY_PREFIX}last`
 
 // ── Session ────────────────────────────────────────────────────────
 
 export const SESSION_TIMEOUT_MS = 30 * MS_PER_MINUTE // 30 min
+const ANALYTICS_SESSION_MAX_AGE_MS = SESSION_TIMEOUT_MS
 
 // ── Bot / Headless Detection ────────────────────────────────────────
 // Automated installs (CI pipelines, cloud VMs running curl|bash) start
@@ -92,7 +94,7 @@ export function getSession(): { sid: string; sc: number; isNew: boolean } {
   const lastActivity = Number(localStorage.getItem(LAST_KEY) || '0')
   let sid = localStorage.getItem(SID_KEY) || ''
   let sc = Number(localStorage.getItem(SC_KEY) || '0')
-  const expired = !sid || (now - lastActivity > SESSION_TIMEOUT_MS)
+  const expired = !sid || (now - lastActivity > ANALYTICS_SESSION_MAX_AGE_MS)
 
   if (expired) {
     sid = Math.floor(now / 1000).toString()

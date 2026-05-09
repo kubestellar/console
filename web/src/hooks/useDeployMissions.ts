@@ -359,7 +359,7 @@ export function useDeployMissions() {
       // processed sequentially; clusters within a mission are capped at
       // DEPLOY_POLL_MAX_CONCURRENCY in-flight at a time.
       const updated: DeployMission[] = []
-      for (const mission of current) {
+      for (const mission of (current || [])) {
         updated.push(await (async () => {
           const isCompleted = isTerminalStatus(mission.status)
           // #6415 — Track whether this poll cycle is "within the log-recovery

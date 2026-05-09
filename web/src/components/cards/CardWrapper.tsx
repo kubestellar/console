@@ -34,7 +34,9 @@ const FeatureRequestModal = safeLazy(() => import('../feedback/FeatureRequestMod
 
 
 // Minimum duration to show spin animation (ensures at least one full rotation)
-const MIN_SPIN_DURATION = 500
+const CARD_REFRESH_SPINNER_MAX_AGE_MS = 500
+const MIN_SPIN_DURATION = CARD_REFRESH_SPINNER_MAX_AGE_MS
+const COLLAPSED_CARDS_STORAGE_KEY = 'kubestellar-collapsed-cards'
 
 /** CSS container query style for card content responsive breakpoints */
 const CONTAINER_QUERY_STYLE = { containerType: 'inline-size' } as const
@@ -424,7 +426,7 @@ export const CardWrapper = memo(function CardWrapper({
   // on page navigation (no delay) to prevent a flash of expanded state (#4895).
   const hasSavedCollapseState = useMemo(() => {
     try {
-      const stored = localStorage.getItem('kubestellar-collapsed-cards')
+      const stored = localStorage.getItem(COLLAPSED_CARDS_STORAGE_KEY)
       if (!stored) return false
       const ids: string[] = JSON.parse(stored)
       return ids.includes(collapseKey)

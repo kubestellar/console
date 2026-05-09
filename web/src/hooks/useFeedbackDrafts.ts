@@ -30,6 +30,7 @@ export const DELETED_DRAFT_RETENTION_DAYS = 30
 
 /** Milliseconds per day — used for retention math */
 const MS_PER_DAY = 86_400_000
+const DRAFT_RETENTION_MAX_AGE_MS = DELETED_DRAFT_RETENTION_DAYS * MS_PER_DAY
 
 export interface FeedbackDraft {
   /** Unique identifier (timestamp-based) */
@@ -82,7 +83,7 @@ function persistDrafts(drafts: FeedbackDraft[]): void {
  * Returns a new array (or the same reference if nothing was purged).
  */
 function purgeExpiredDrafts(drafts: FeedbackDraft[]): FeedbackDraft[] {
-  const cutoff = Date.now() - DELETED_DRAFT_RETENTION_DAYS * MS_PER_DAY
+  const cutoff = Date.now() - DRAFT_RETENTION_MAX_AGE_MS
   const filtered = drafts.filter(d => {
     if (!d.deletedAt) return true
     return new Date(d.deletedAt).getTime() > cutoff

@@ -109,24 +109,26 @@ const TIME_RANGES = [
   { value: '1y' as const, label: '1 Year' },
 ]
 
-function isStale(date: string, days: number = 30): boolean {
-  const ageInDays = (Date.now() - new Date(date).getTime()) / (1000 * 60 * 60 * 24)
-  return ageInDays > days
+const GITHUB_ACTIVITY_MAX_AGE_MS = 30 * MS_PER_DAY
+
+function isStale(date: string): boolean {
+  const ageMs = Date.now() - new Date(date).getTime()
+  return ageMs > GITHUB_ACTIVITY_MAX_AGE_MS
 }
 
 
 // Default repository to show if none configured
 const DEFAULT_REPO = 'kubestellar/console'
 
-// LocalStorage key for saved repos
-const SAVED_REPOS_KEY = 'github_activity_saved_repos'
-const CURRENT_REPO_KEY = 'github_activity_repo'
+// LocalStorage keys for saved repos
+const SAVED_REPOS_STORAGE_KEY = 'github_activity_saved_repos'
+const CURRENT_REPO_STORAGE_KEY = 'github_activity_repo'
 
 // Get saved repos from localStorage
 function getSavedRepos(): string[] {
   if (typeof window === 'undefined') return [DEFAULT_REPO]
   try {
-    const saved = localStorage.getItem(SAVED_REPOS_KEY)
+    const saved = localStorage.getItem(SAVED_REPOS_STORAGE_KEY)
     return saved ? JSON.parse(saved) : [DEFAULT_REPO]
   } catch {
     return [DEFAULT_REPO]
@@ -136,7 +138,7 @@ function getSavedRepos(): string[] {
 // Save repos to localStorage
 function saveRepos(repos: string[]) {
   try {
-    localStorage.setItem(SAVED_REPOS_KEY, JSON.stringify(repos))
+    localStorage.setItem(SAVED_REPOS_STORAGE_KEY, JSON.stringify(repos))
   } catch {
     // Silently ignore quota errors or private browsing restrictions
   }
@@ -387,7 +389,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   const [savedRepos, setSavedRepos] = useState<string[]>(() => getSavedRepos())
   const [currentRepo, setCurrentRepo] = useState<string>(() => {
     try {
-      return (typeof window !== 'undefined' && localStorage.getItem(CURRENT_REPO_KEY)) || savedRepos[0] || DEFAULT_REPO
+      return (typeof window !== 'undefined' && localStorage.getItem(CURRENT_REPO_STORAGE_KEY)) || savedRepos[0] || DEFAULT_REPO
     } catch {
       return savedRepos[0] || DEFAULT_REPO
     }
@@ -423,7 +425,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
   // Select a repo from the list
   const handleSelectRepo = (repo: string) => {
     setCurrentRepo(repo)
-    try { localStorage.setItem(CURRENT_REPO_KEY, repo) } catch { /* ignore quota errors */ }
+    try { localStorage.setItem(CURRENT_REPO_STORAGE_KEY, repo) } catch { /* ignore quota errors */ }
   }
 
   // Add a new repo to saved list (inline CRUD)
@@ -440,7 +442,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
     setSavedRepos(newRepos)
     saveRepos(newRepos)
     setCurrentRepo(repo)
-    try { localStorage.setItem(CURRENT_REPO_KEY, repo) } catch { /* ignore quota errors */ }
+    try { localStorage.setItem(CURRENT_REPO_STORAGE_KEY, repo) } catch { /* ignore quota errors */ }
     setRepoInput('')
   }
 
@@ -452,7 +454,7 @@ export function GitHubActivity({ config, ref }: { config?: GitHubActivityConfig;
     saveRepos(newRepos)
     if (currentRepo === repo) {
       setCurrentRepo(newRepos[0])
-      try { localStorage.setItem(CURRENT_REPO_KEY, newRepos[0]) } catch { /* ignore quota errors */ }
+      try { localStorage.setItem(CURRENT_REPO_STORAGE_KEY, newRepos[0]) } catch { /* ignore quota errors */ }
     }
   }
 

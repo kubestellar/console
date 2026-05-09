@@ -32,6 +32,8 @@ function agentAuthHeaders(): Record<string, string> {
 }
 
 // Demo data for console users
+const DEMO_USER_MAX_AGE_MS = 90 * MS_PER_DAY
+
 function getDemoConsoleUsers(): ConsoleUser[] {
   return [
     {
@@ -42,7 +44,7 @@ function getDemoConsoleUsers(): ConsoleUser[] {
       avatar_url: 'https://avatars.githubusercontent.com/u/12345?v=4',
       role: 'admin',
       onboarded: true,
-      created_at: new Date(Date.now() - 90 * MS_PER_DAY).toISOString(),
+      created_at: new Date(Date.now() - DEMO_USER_MAX_AGE_MS).toISOString(),
       last_login: new Date(Date.now() - 2 * MS_PER_HOUR).toISOString() },
     {
       id: '2',

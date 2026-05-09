@@ -59,7 +59,7 @@ export function useDiagnoseRepairLoop(options: UseDiagnoseRepairLoopOptions): Us
   // #7292 — Clear all timers on unmount to prevent post-unmount state mutations
   useEffect(() => {
     return () => {
-      for (const handle of activeTimers.current) {
+      for (const handle of (activeTimers.current || [])) {
         clearTimeout(handle)
       }
       activeTimers.current.clear()
@@ -313,7 +313,7 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
 
   const reset = () => {
     // #7292 — Clear all pending timers on reset
-    for (const handle of activeTimers.current) {
+    for (const handle of (activeTimers.current || [])) {
       clearTimeout(handle)
     }
     activeTimers.current.clear()
@@ -324,7 +324,7 @@ Respond with your analysis in a clear, structured format. ${repairable ? 'For ea
   const cancel = () => {
     // #7292 — Clear all pending timers on cancel to prevent
     // post-cancel state mutations (e.g. jumping to completed)
-    for (const handle of activeTimers.current) {
+    for (const handle of (activeTimers.current || [])) {
       clearTimeout(handle)
     }
     activeTimers.current.clear()

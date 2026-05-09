@@ -229,7 +229,7 @@ export function mergeMissions(prev: Mission[], reloaded: Mission[]): Mission[] {
   const merged: Mission[] = []
   const seen = new Set<string>()
 
-  for (const local of prev) {
+  for (const local of (prev || [])) {
     seen.add(local.id)
     const remote = remoteById.get(local.id)
     if (!remote) {
@@ -252,7 +252,7 @@ export function mergeMissions(prev: Mission[], reloaded: Mission[]): Mission[] {
       merged.push(remoteTime > localTime ? remote : local)
     }
   }
-  for (const remote of reloaded) {
+  for (const remote of (reloaded || [])) {
     if (!seen.has(remote.id)) {
       merged.push(remote)
     }

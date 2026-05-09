@@ -231,7 +231,7 @@ function summarize(collectors: OtelCollector[]): OtelStatusData['summary'] {
   let totalLogsDropped = 0
   let totalExportErrors = 0
 
-  for (const c of collectors) {
+  for (const c of (collectors || [])) {
     if (c.state === 'Running') runningCollectors += 1
     else degradedCollectors += 1
     for (const pipeline of c.pipelines ?? []) {

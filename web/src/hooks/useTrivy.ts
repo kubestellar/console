@@ -302,7 +302,7 @@ export function useTrivy() {
     const settled = await settledWithConcurrency(tasks)
 
     const allStatuses: Record<string, TrivyClusterStatus> = {}
-    for (const result of settled) {
+    for (const result of (settled || [])) {
       if (result.status === 'fulfilled') {
         allStatuses[result.value.cluster] = result.value.status
       }

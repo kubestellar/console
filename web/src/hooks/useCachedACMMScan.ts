@@ -177,7 +177,7 @@ function setDemoFallback(repo: string, value: boolean): void {
   const prev = demoFallbackByRepo.get(repo) ?? false
   if (prev === value) return
   demoFallbackByRepo.set(repo, value)
-  for (const notify of demoFallbackSubs) notify()
+  for (const notify of (demoFallbackSubs || [])) notify()
 }
 
 function getDemoFallback(repo: string): boolean {

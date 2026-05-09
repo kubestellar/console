@@ -236,7 +236,7 @@ export function useClusters() {
   const metricsCompleteness = useMemo(() => {
     const contributingClusters: string[] = []
     const missingClusters: string[] = []
-    for (const c of deduplicatedClusters) {
+    for (const c of (deduplicatedClusters || [])) {
       const hasMetrics = typeof c.cpuCores === 'number' && c.cpuCores >= 0
       if (c.reachable !== false && hasMetrics) {
         contributingClusters.push(c.name)
