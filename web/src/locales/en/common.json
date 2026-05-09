@@ -3972,7 +3972,9 @@
       "useInMissionControl": "Use in Mission Control",
       "useInMissionControlDescription": "Add this Kubara chart as a project in Mission Control Phase 1",
       "kubaraBadge": "Kubara",
-      "kubaraBadgeTooltip": "Imported from Kubara Platform Catalog"
+      "kubaraBadgeTooltip": "Imported from Kubara Platform Catalog",
+      "noHealthyClustersTitle": "No healthy clusters available",
+      "noHealthyClustersMessage": "All clusters are currently unhealthy or unreachable. The Flight Plan Blueprint cannot be displayed until at least one cluster becomes available."
     }
   },
   "shared": {

@@ -28,8 +28,10 @@ import {
   Play,
   Download,
   Tags,
-  Loader2 } from 'lucide-react'
+  Loader2,
+  AlertTriangle } from 'lucide-react'
 import { cn } from '../../lib/cn'
+import { useTranslation } from 'react-i18next'
 
 import { BlueprintDefs } from './svg/BlueprintDefs'
 import { ClusterZone } from './svg/ClusterZone'
@@ -138,6 +140,7 @@ export function FlightPlanBlueprint({
   onMoveProject,
   installedProjects = new Set() }: FlightPlanBlueprintProps) {
   const svgId = useId().replace(/:/g, '')
+  const { t } = useTranslation()
   const { deduplicatedClusters: clusters, error: clustersError } = useClusters()
 
   // Filter out explicitly unhealthy clusters and redistribute orphaned projects to healthy ones.
@@ -559,6 +562,20 @@ export function FlightPlanBlueprint({
             </button>
           </div>
 
+          {/* Empty state when no healthy clusters */}
+          {layout.clusterRects.size === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center max-w-md p-8">
+                <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {t('missionControl.noHealthyClustersTitle')}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {t('missionControl.noHealthyClustersMessage')}
+                </p>
+              </div>
+            </div>
+          ) : (
           <div
             ref={svgContainerRef}
             className="w-full max-w-full max-h-full h-full overflow-x-auto overflow-y-auto"
@@ -754,9 +771,10 @@ export function FlightPlanBlueprint({
             </svg>
           </motion.div>
           </div>
+          )}
 
           {/* Drag-and-drop overlay — invisible drop zones per cluster */}
-          {dragProject && (
+          {dragProject && layout.clusterRects.size > 0 && (
             <div className="absolute inset-4 pointer-events-none" style={{ zIndex: 10 }}>
               <svg
                 viewBox={`0 0 ${layout.viewBox.width} ${layout.viewBox.height}`}
