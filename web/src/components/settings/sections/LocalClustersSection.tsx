@@ -341,8 +341,14 @@ Steps:
 5. Verify the installation: kubectl --context=${clusterContext} get pods -n vcluster
 
 After installation, ask:
-- "vCluster operator is ready — want to create a virtual cluster now?"
-- "Something went wrong — want to see details?"`,
+- "vCluster operator is ready — want me to create and connect a virtual cluster now?"
+- "Something went wrong — want to see details?"
+
+If I say yes, do not stop after creation:
+6. Create the virtual cluster on host context ${clusterContext}.
+7. Connect it so kubeconfig gets a usable vCluster context without replacing the current host context.
+8. Verify the vCluster context is reachable and visible to the Console cluster list.
+`,
       })
     })
   }

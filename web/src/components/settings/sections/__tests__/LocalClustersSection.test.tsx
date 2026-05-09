@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import type { ComponentProps } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -71,8 +71,10 @@ vi.mock('../../../cards/console-missions/shared', () => ({
   ApiKeyPromptModal: () => null,
 }))
 
+let mockConnectedClusters: Array<{ name: string; context?: string; healthy?: boolean; namespaces?: string[] }> = []
+
 vi.mock('../../../../hooks/mcp/clusters', () => ({
-  useClusters: () => ({ deduplicatedClusters: [] }),
+  useClusters: () => ({ deduplicatedClusters: mockConnectedClusters }),
 }))
 
 vi.mock('../../../../lib/modals', () => ({
@@ -139,6 +141,7 @@ function renderSection() {
 describe('LocalClustersSection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockConnectedClusters = []
     mockHookState = buildHookState()
   })
 
@@ -170,5 +173,24 @@ describe('LocalClustersSection', () => {
     renderSection()
 
     expect(screen.getByText('The operation timed out. Check your network connection and system resources, then try again.')).toBeTruthy()
+  })
+
+  it('includes vCluster connection steps in the deploy mission prompt', () => {
+    mockConnectedClusters = [{ name: 'k3d-ai', context: 'k3d-ai', healthy: true, namespaces: [] }]
+
+    renderSection()
+
+    fireEvent.change(screen.getByLabelText('Host Cluster'), { target: { value: 'k3d-ai' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Deploy vCluster to k3d-ai' }))
+
+    expect(mockStartMission).toHaveBeenCalledWith(expect.objectContaining({
+      initialPrompt: expect.stringContaining('want me to create and connect a virtual cluster now?'),
+    }))
+    expect(mockStartMission).toHaveBeenCalledWith(expect.objectContaining({
+      initialPrompt: expect.stringContaining('Connect it so kubeconfig gets a usable vCluster context without replacing the current host context.'),
+    }))
+    expect(mockStartMission).toHaveBeenCalledWith(expect.objectContaining({
+      initialPrompt: expect.stringContaining('Verify the vCluster context is reachable and visible to the Console cluster list.'),
+    }))
   })
 })
