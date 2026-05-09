@@ -691,7 +691,7 @@ describe('useLocalClusterTools - CRUD operations', () => {
       expect(result.current.error).toBe('Failed to delete vCluster')
     })
 
-    it('sends correct DELETE body for deleteVCluster', async () => {
+    it('sends correct POST body for deleteVCluster', async () => {
       const { result } = renderHook(() => useLocalClusterTools())
       await waitFor(() => {})
 
@@ -706,7 +706,7 @@ describe('useLocalClusterTools - CRUD operations', () => {
       const calls = vi.mocked(fetch).mock.calls
       const deleteCall = calls.find(c => String(c[0]).includes('/vcluster/delete'))
       expect(deleteCall).toBeTruthy()
-      expect((deleteCall![1] as RequestInit).method).toBe('DELETE')
+      expect((deleteCall![1] as RequestInit).method).toBe('POST')
       const body = JSON.parse((deleteCall![1] as RequestInit).body as string)
       expect(body).toEqual({ name: 'my-vc', namespace: 'my-ns' })
     })

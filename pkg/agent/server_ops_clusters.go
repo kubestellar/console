@@ -508,11 +508,25 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 
 	if err := s.localClusters.ConnectVCluster(req.Name, req.Namespace); err != nil {
 		slog.Error("[vCluster] failed to connect to vcluster", "name", req.Name, "error", err)
+		s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+			"tool":     "vcluster",
+			"name":     req.Name,
+			"status":   "failed",
+			"message":  sanitizeClusterError(err),
+			"progress": progressFailed,
+		})
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	slog.Info("[vCluster] connected to vcluster", "name", req.Name, "namespace", req.Namespace)
+	s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+		"tool":     "vcluster",
+		"name":     req.Name,
+		"status":   "done",
+		"message":  fmt.Sprintf("Connected to vCluster '%s'", req.Name),
+		"progress": progressDone,
+	})
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":    "connected",
 		"name":      req.Name,
@@ -566,11 +580,25 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 
 	if err := s.localClusters.DisconnectVCluster(req.Name, req.Namespace); err != nil {
 		slog.Error("[vCluster] failed to disconnect from vcluster", "name", req.Name, "error", err)
+		s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+			"tool":     "vcluster",
+			"name":     req.Name,
+			"status":   "failed",
+			"message":  sanitizeClusterError(err),
+			"progress": progressFailed,
+		})
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	slog.Info("[vCluster] disconnected from vcluster", "name", req.Name)
+	s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
+		"tool":     "vcluster",
+		"name":     req.Name,
+		"status":   "done",
+		"message":  fmt.Sprintf("Disconnected from vCluster '%s'", req.Name),
+		"progress": progressDone,
+	})
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":    "disconnected",
 		"name":      req.Name,

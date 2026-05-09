@@ -563,7 +563,7 @@ export function useLocalClusterTools() {
 
     try {
       const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/vcluster/delete`, {
-        method: 'DELETE',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ name, namespace }),
         signal: AbortSignal.timeout(VCLUSTER_CONNECT_TIMEOUT_MS) })

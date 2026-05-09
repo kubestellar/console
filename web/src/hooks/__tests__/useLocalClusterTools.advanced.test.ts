@@ -431,7 +431,7 @@ describe('useLocalClusterTools - advanced operations', () => {
       expect(result.current.error).toBe('Failed to disconnect from vCluster')
     })
 
-    it('deleteVCluster sends DELETE request and returns true on success', async () => {
+    it('deleteVCluster sends POST request and returns true on success', async () => {
       const { result } = renderHook(() => useLocalClusterTools())
       await waitFor(() => {})
 
