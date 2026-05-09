@@ -210,6 +210,7 @@ export function SearchDropdown() {
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
+  const previousPathnameRef = useRef(location.pathname)
   // Flat results from the SearchResultsPanel child, used for keyboard Enter handling.
   // Total count is tracked for analytics (onBlur emits query stats).
   const flatResultsRef = useRef<SearchItem[]>([])
@@ -374,6 +375,18 @@ export function SearchDropdown() {
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isSearchOpen, isResultsPanelActive, selectedIndex, handleSelect, handleAskAI, openSearch, closeSearch])
+
+  useEffect(() => {
+    if (previousPathnameRef.current !== location.pathname) {
+      setSearchQuery('')
+      setSelectedIndex(0)
+      closeSearch()
+      previousPathnameRef.current = location.pathname
+      return
+    }
+
+    previousPathnameRef.current = location.pathname
+  }, [location.pathname, closeSearch])
 
   // Reset selected index when results change
   useEffect(() => {

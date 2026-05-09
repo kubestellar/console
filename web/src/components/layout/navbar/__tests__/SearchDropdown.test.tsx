@@ -1,26 +1,41 @@
-/**
- * SearchDropdown Component Tests
- */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 
-vi.mock('react-router-dom', () => ({
-  useNavigate: () => vi.fn(),
-  useLocation: () => ({ pathname: '/' }),
+const navigateMock = vi.fn()
+const locationState = { pathname: '/' }
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+    useLocation: () => locationState,
+  }
+})
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
 }))
 
 vi.mock('../../../../hooks/useSearchIndex', () => ({
-  useSearchIndex: () => ({ results: [], search: vi.fn(), clear: vi.fn() }),
-  CATEGORY_ORDER: ['dashboard', 'card', 'cluster', 'resource'],
+  useSearchIndex: () => ({ results: new Map(), totalCount: 0 }),
+  CATEGORY_ORDER: ['page', 'card', 'stat', 'setting', 'cluster', 'namespace', 'deployment', 'pod', 'service', 'mission', 'dashboard', 'helm', 'node'],
 }))
 
 vi.mock('../../../../hooks/useMissions', () => ({
-  useMissions: () => ({ startMission: vi.fn() }),
+  useMissions: () => ({
+    openSidebar: vi.fn(),
+    setActiveMission: vi.fn(),
+    startMission: vi.fn(),
+  }),
 }))
 
 vi.mock('../../../../hooks/useSidebarConfig', () => ({
   useSidebarConfig: () => ({
-    config: { items: [] },
-    addItem: vi.fn(),
+    config: { primaryNav: [] },
   }),
   DISCOVERABLE_DASHBOARDS: [],
 }))
@@ -30,11 +45,15 @@ vi.mock('../../../../lib/scrollToCard', () => ({
 }))
 
 vi.mock('../../../../hooks/useFeatureHints', () => ({
-  useFeatureHints: () => ({ hasHint: () => false, markSeen: vi.fn() }),
+  useFeatureHints: () => ({
+    action: vi.fn(),
+    dismiss: vi.fn(),
+    isVisible: false,
+  }),
 }))
 
 vi.mock('../../../ui/FeatureHintTooltip', () => ({
-  FeatureHintTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  FeatureHintTooltip: () => null,
 }))
 
 vi.mock('../../../../lib/analytics', () => ({
@@ -45,9 +64,22 @@ vi.mock('../../../../lib/analytics', () => ({
 }))
 
 describe('SearchDropdown', () => {
-  it('exports SearchDropdown component', async () => {
-    const mod = await import('../SearchDropdown')
-    expect(mod.SearchDropdown).toBeDefined()
-    expect(typeof mod.SearchDropdown).toBe('function')
+  beforeEach(() => {
+    navigateMock.mockReset()
+    locationState.pathname = '/'
+  })
+
+  it('clears the search query when the pathname changes', async () => {
+    const { SearchDropdown } = await import('../SearchDropdown')
+    const { rerender } = render(<SearchDropdown />)
+
+    const searchInput = screen.getByTestId('global-search-input') as HTMLInputElement
+    fireEvent.change(searchInput, { target: { value: 'zzzzzzz' } })
+    expect(searchInput.value).toBe('zzzzzzz')
+
+    locationState.pathname = '/clusters'
+    rerender(<SearchDropdown />)
+
+    expect(screen.getByTestId('global-search-input')).toHaveValue('')
   })
 })
