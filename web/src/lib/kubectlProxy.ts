@@ -1337,6 +1337,8 @@ export interface Deployment {
   image?: string
   labels?: Record<string, string>
   annotations?: Record<string, string>
+  reason?: string
+  message?: string
 }
 
 // Singleton instance

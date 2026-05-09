@@ -6,6 +6,7 @@
  * Extracted from useCachedData.ts for maintainability.
  */
 
+import { useMemo } from 'react'
 import { useCache, type RefreshCategory, type CachedHookResult } from '../lib/cache'
 import { isBackendUnavailable } from '../lib/api'
 import { kubectlProxy } from '../lib/kubectlProxy'
@@ -35,7 +36,6 @@ import {
   getDemoPods,
   getDemoEvents,
   getDemoPodIssues,
-  getDemoDeploymentIssues,
   getDemoDeployments,
   getDemoServices,
   getDemoSecurityIssues,
@@ -456,8 +456,7 @@ export function useCachedDeploymentIssues(
   namespace?: string,
   options?: { category?: RefreshCategory }
 ): CachedHookResult<DeploymentIssue[]> & { issues: DeploymentIssue[] } {
-  const { category = 'deployments' } = options || {}
-  const key = `deploymentIssues:${cluster || 'all'}:${namespace || 'all'}`
+  const deploymentsResult = useCachedDeployments(cluster, namespace, options)
 
   const deriveIssues = (deployments: Deployment[]): DeploymentIssue[] =>
     (deployments || [])
@@ -468,82 +467,28 @@ export function useCachedDeploymentIssues(
         cluster: d.cluster,
         replicas: d.replicas ?? 1,
         readyReplicas: d.readyReplicas ?? 0,
-        reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure' }))
+        reason: d.status === 'failed' ? 'DeploymentFailed' : 'ReplicaFailure',
+        message: d.message || '',
+      }))
 
-  const result = useCache({
-    key,
-    category,
-    initialData: [] as DeploymentIssue[],
-    demoData: getDemoDeploymentIssues(),
-    fetcher: async () => {
-      // Try agent first — derive deployment issues from deployment data
-      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
-        const deployments = cluster
-          ? await (async () => {
-              const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
-              const params = new URLSearchParams()
-              params.append('cluster', clusterInfo?.context || cluster)
-              if (namespace) params.append('namespace', namespace)
-              const ctrl = new AbortController()
-              const tid = setTimeout(() => ctrl.abort(), AGENT_HTTP_TIMEOUT_MS)
-              const res = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/deployments?${params}`, {
-                signal: ctrl.signal, headers: { Accept: 'application/json' } })
-              clearTimeout(tid)
-              if (!res.ok) return []
-              const data = await res.json().catch(() => null)
-              if (!data) return []
-              return ((data.deployments || []) as Deployment[]).map(d => ({ ...d, cluster: cluster }))
-          })()
-          : await fetchDeploymentsViaAgent(namespace)
-
-        return deriveIssues(deployments)
-      }
-
-      // Fall back to REST API using live deployment state so resolved issues drop
-      // out on the next refresh instead of lingering from stale issue snapshots.
-      const token = getToken()
-      const hasRealToken = token && token !== 'demo-token'
-      if (hasRealToken && !isBackendUnavailable()) {
-        const deployments = cluster
-          ? await (async () => {
-              const raw = await getClusterFetcher()<unknown>('deployments', { cluster, namespace })
-              const data = validateArrayResponse<{ deployments: Deployment[] }>(DeploymentsResponseSchema, raw, '/api/mcp/deployments', 'deployments')
-              return (data.deployments || []).map(d => ({ ...d, cluster: d.cluster || cluster }))
-          })()
-          : await fetchFromAllClusters<Deployment>('deployments', 'deployments', { namespace })
-
-        return deriveIssues(deployments)
-      }
-
-      throw new Error("No data source available")
-    },
-    progressiveFetcher: cluster ? undefined : async (onProgress) => {
-      if (clusterCacheRef.clusters.length > 0 && !isAgentUnavailable()) {
-        const deployments = await fetchDeploymentsViaAgent(namespace, (partialDeps) => {
-          onProgress(deriveIssues(partialDeps))
-        })
-        return deriveIssues(deployments)
-      }
-
-      // Fall back to SSE streaming via backend deployments so cleared rollouts
-      // disappear as soon as the refreshed deployment list is healthy again.
-      const deployments = await fetchViaSSE<Deployment>('deployments', 'deployments', { namespace }, (partialDeployments) => {
-        onProgress(deriveIssues(partialDeployments))
-      })
-      return deriveIssues(deployments)
-    } })
+  const issues = useMemo(
+    () => deriveIssues(deploymentsResult.data || []),
+    [deploymentsResult.data]
+  )
 
   return {
-    issues: result.data,
-    data: result.data,
-    isLoading: result.isLoading,
-    isRefreshing: result.isRefreshing,
-    isDemoFallback: result.isDemoFallback && !result.isLoading,
-    error: result.error,
-    isFailed: result.isFailed,
-    consecutiveFailures: result.consecutiveFailures,
-    lastRefresh: result.lastRefresh,
-    refetch: result.refetch, retryFetch: result.retryFetch }
+    issues,
+    data: issues,
+    isLoading: deploymentsResult.isLoading,
+    isRefreshing: deploymentsResult.isRefreshing,
+    isDemoFallback: deploymentsResult.isDemoFallback && !deploymentsResult.isLoading,
+    error: deploymentsResult.error,
+    isFailed: deploymentsResult.isFailed,
+    consecutiveFailures: deploymentsResult.consecutiveFailures,
+    lastRefresh: deploymentsResult.lastRefresh,
+    refetch: deploymentsResult.refetch,
+    retryFetch: deploymentsResult.retryFetch,
+  }
 }
 
 /**

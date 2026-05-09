@@ -175,6 +175,8 @@ export interface Deployment {
   age?: string
   labels?: Record<string, string>
   annotations?: Record<string, string>
+  reason?: string
+  message?: string
 }
 
 /**

@@ -108,6 +108,8 @@ export const DeploymentSchema = z.object({
   age: z.string().optional(),
   labels: labelsSchema,
   annotations: labelsSchema,
+  reason: z.string().optional(),
+  message: z.string().optional(),
 })
 
 /** Envelope: `{ deployments: Deployment[] }` */
