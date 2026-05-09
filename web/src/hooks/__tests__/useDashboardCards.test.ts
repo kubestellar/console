@@ -96,7 +96,8 @@ describe('useDashboardCards', () => {
       )
 
       expect(result.current.cards).toEqual(DEFAULT_CARDS)
-      expect(localStorage.getItem(TEST_STORAGE_KEY)).toBeNull()
+      expect(readStoredCards()).toEqual(DEFAULT_CARDS)
+      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBe('1')
     })
 
     it('clears malformed JSON before restoring defaults', () => {
@@ -107,7 +108,8 @@ describe('useDashboardCards', () => {
       )
 
       expect(result.current.cards).toEqual(DEFAULT_CARDS)
-      expect(localStorage.getItem(TEST_STORAGE_KEY)).toBeNull()
+      expect(readStoredCards()).toEqual(DEFAULT_CARDS)
+      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBe('1')
     })
 
     it('falls back to defaults when the stored schema version is stale', () => {
@@ -120,8 +122,8 @@ describe('useDashboardCards', () => {
       )
 
       expect(result.current.cards).toEqual(DEFAULT_CARDS)
-      expect(localStorage.getItem(TEST_STORAGE_KEY)).toBeNull()
-      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBeNull()
+      expect(readStoredCards()).toEqual(DEFAULT_CARDS)
+      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBe('1')
     })
 
     it('defaults isCollapsed to false (expanded)', () => {

@@ -120,16 +120,18 @@ describe('FeatureRequestModal Component', () => {
     const textarea = await screen.findByRole('textbox')
     fireEvent.change(textarea, { target: { value: 'Unsaved draft content that should trigger a warning.' } })
 
-    fireEvent.click(screen.getByRole('button', { name: /^Drafts$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Drafts/i }))
 
     expect(await screen.findByText(/Save Draft & Switch/i)).toBeInTheDocument()
-    expect(screen.getByText(/Switch Without Saving/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Switch Without Saving/i)).toBeInTheDocument()
     expect(screen.getByRole('textbox')).toHaveValue('Unsaved draft content that should trigger a warning.')
 
     fireEvent.click(screen.getByText(/Switch Without Saving/i))
 
-    await screen.findByText(/Saved Drafts/i)
-    expect(screen.queryByText(/Save Draft & Switch/i)).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/Saved Drafts/i)).toBeInTheDocument()
+      expect(screen.queryByText(/Save Draft & Switch/i)).not.toBeInTheDocument()
+    })
   })
 
   // Regression test for Issue 9358 — after a successful submission the
