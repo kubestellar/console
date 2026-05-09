@@ -11,8 +11,6 @@ on:
     types: [opened, synchronize, ready_for_review]
 
 permissions:
-  contents: write
-  pull-requests: write
   issues: write
   statuses: write
 

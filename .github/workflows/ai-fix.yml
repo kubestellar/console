@@ -13,9 +13,7 @@ on:
     types: [opened]
 
 permissions:
-  contents: write
   issues: write
-  pull-requests: write
 
 jobs:
   ai-fix:
