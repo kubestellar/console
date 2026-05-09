@@ -600,6 +600,7 @@ export function AgentSelector({
         <button
           ref={buttonRef}
           onClick={() => !isDemoMode && toggleDropdown()}
+          aria-label={t("agent.selectAgent")}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
           className={cn(

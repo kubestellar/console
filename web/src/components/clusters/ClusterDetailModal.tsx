@@ -382,7 +382,7 @@ After I approve, help me execute the repairs step by step.`,
               </button>
             )}
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button aria-label={t('actions.close')} onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-5 h-5" />
           </button>
         </div>

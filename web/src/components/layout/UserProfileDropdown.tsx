@@ -138,6 +138,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
         type="button"
         data-testid="navbar-profile-btn"
         onClick={toggleDropdown}
+        aria-label={isOpen ? 'Close profile menu' : 'Open profile menu'}
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-controls="profile-dropdown-menu"
