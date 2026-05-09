@@ -119,14 +119,19 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const [activeTab, setActiveTab] = useState<TabType>((data.tab as TabType) || 'overview')
   const [describeOutput, setDescribeOutput] = useState<string | null>(cache.describeOutput || null)
   const [describeLoading, setDescribeLoading] = useState(false)
+  const [describeError, setDescribeError] = useState<string | null>(null)
   const [logsOutput, setLogsOutput] = useState<string | null>(cache.logsOutput || null)
   const [logsLoading, setLogsLoading] = useState(false)
+  const [logsError, setLogsError] = useState<string | null>(null)
   const [eventsOutput, setEventsOutput] = useState<string | null>(cache.eventsOutput || null)
   const [eventsLoading, setEventsLoading] = useState(false)
+  const [eventsError, setEventsError] = useState<string | null>(null)
   const [yamlOutput, setYamlOutput] = useState<string | null>(cache.yamlOutput || null)
   const [yamlLoading, setYamlLoading] = useState(false)
+  const [yamlError, setYamlError] = useState<string | null>(null)
   const [podStatusOutput, setPodStatusOutput] = useState<string | null>(cache.podStatusOutput || null)
   const [podStatusLoading, setPodStatusLoading] = useState(false)
+  const [podStatusError, setPodStatusError] = useState<string | null>(null)
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(cache.aiAnalysis || null)
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false)
   // #5945 — Track AI analysis errors so failures are surfaced in the UI instead of silently swallowed
@@ -182,6 +187,19 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       origClose(...args)
     }
     return ws
+  }, [])
+
+  const getInvalidWsResponseError = useCallback((context: string) => (
+    `${context} failed: received an invalid response from the agent.`
+  ), [])
+
+  const parseWsMessage = useCallback((event: MessageEvent, context: string) => {
+    try {
+      return JSON.parse(event.data)
+    } catch (err) {
+      console.warn(`[PodDrillDown] Failed to parse ${context} WebSocket message:`, err)
+      return null
+    }
   }, [])
 
   // Close all tracked WebSocket connections on unmount
@@ -336,6 +354,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   // Fetch pod describe output via local agent
   const fetchDescribe = async (force = false) => {
     if (!agentConnected || (!force && describeOutput)) return
+    setDescribeError(null)
     setDescribeLoading(true)
 
     try {
@@ -351,41 +370,45 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       }
 
       ws.onmessage = (event: MessageEvent) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.id === requestId && msg.payload?.output) {
-            setDescribeOutput(msg.payload.output)
-            // Parse labels and annotations from describe output if not already set
-            if (!labels || !annotations) {
-              const output = msg.payload.output as string
-              const labelsMatch = output.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
-              const annotationsMatch = output.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
+        const msg = parseWsMessage(event, 'describe output')
+        if (!msg) {
+          setDescribeError(getInvalidWsResponseError('Describe'))
+          setDescribeLoading(false)
+          ws.close()
+          return
+        }
 
-              if (labelsMatch && !labels) {
-                const parsed: Record<string, string> = Object.create(null) as Record<string, string>
-                labelsMatch[1].trim().split('\n').forEach(line => {
-                  const [key, ...valueParts] = line.trim().split('=')
-                  if (key && key !== '<none>') safeSet(parsed, key, valueParts.join('='))
-                })
-                if (Object.keys(parsed).length > 0) setLabels(parsed)
-              }
+        if (msg.id === requestId && msg.payload?.output) {
+          setDescribeOutput(msg.payload.output)
+          setDescribeError(null)
+          // Parse labels and annotations from describe output if not already set
+          if (!labels || !annotations) {
+            const output = msg.payload.output as string
+            const labelsMatch = output.match(/Labels:\s*([\s\S]*?)(?=Annotations:|$)/i)
+            const annotationsMatch = output.match(/Annotations:\s*([\s\S]*?)(?=Status:|Controlled By:|$)/i)
 
-              if (annotationsMatch && !annotations) {
-                const parsed: Record<string, string> = Object.create(null) as Record<string, string>
-                annotationsMatch[1].trim().split('\n').forEach(line => {
-                  const colonIdx = line.indexOf(':')
-                  if (colonIdx > 0) {
-                    const key = line.substring(0, colonIdx).trim()
-                    const value = line.substring(colonIdx + 1).trim()
-                    if (key && key !== '<none>') safeSet(parsed, key, value)
-                  }
-                })
-                if (Object.keys(parsed).length > 0) setAnnotations(parsed)
-              }
+            if (labelsMatch && !labels) {
+              const parsed: Record<string, string> = Object.create(null) as Record<string, string>
+              labelsMatch[1].trim().split('\n').forEach(line => {
+                const [key, ...valueParts] = line.trim().split('=')
+                if (key && key !== '<none>') safeSet(parsed, key, valueParts.join('='))
+              })
+              if (Object.keys(parsed).length > 0) setLabels(parsed)
+            }
+
+            if (annotationsMatch && !annotations) {
+              const parsed: Record<string, string> = Object.create(null) as Record<string, string>
+              annotationsMatch[1].trim().split('\n').forEach(line => {
+                const colonIdx = line.indexOf(':')
+                if (colonIdx > 0) {
+                  const key = line.substring(0, colonIdx).trim()
+                  const value = line.substring(colonIdx + 1).trim()
+                  if (key && key !== '<none>') safeSet(parsed, key, value)
+                }
+              })
+              if (Object.keys(parsed).length > 0) setAnnotations(parsed)
             }
           }
-        } catch {
-          // Ignore malformed WebSocket messages
         }
         ws.close()
         setDescribeLoading(false)
@@ -403,6 +426,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   // Fetch pod logs via local agent
   const fetchLogs = async (force = false) => {
     if (!agentConnected || (!force && logsOutput)) return
+    setLogsError(null)
     setLogsLoading(true)
 
     try {
@@ -418,13 +442,17 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       }
 
       ws.onmessage = (event: MessageEvent) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.id === requestId && msg.payload?.output) {
-            setLogsOutput(msg.payload.output)
-          }
-        } catch {
-          // Ignore malformed WebSocket messages
+        const msg = parseWsMessage(event, 'logs')
+        if (!msg) {
+          setLogsError(getInvalidWsResponseError('Logs'))
+          setLogsLoading(false)
+          ws.close()
+          return
+        }
+
+        if (msg.id === requestId && msg.payload?.output) {
+          setLogsOutput(msg.payload.output)
+          setLogsError(null)
         }
         ws.close()
         setLogsLoading(false)
@@ -442,6 +470,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   // Fetch pod events via local agent
   const fetchEvents = async (force = false) => {
     if (!agentConnected || (!force && eventsOutput)) return
+    setEventsError(null)
     setEventsLoading(true)
 
     try {
@@ -457,13 +486,17 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       }
 
       ws.onmessage = (event: MessageEvent) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.id === requestId && msg.payload?.output) {
-            setEventsOutput(msg.payload.output)
-          }
-        } catch {
-          // Ignore malformed WebSocket messages
+        const msg = parseWsMessage(event, 'events')
+        if (!msg) {
+          setEventsError(getInvalidWsResponseError('Events'))
+          setEventsLoading(false)
+          ws.close()
+          return
+        }
+
+        if (msg.id === requestId && msg.payload?.output) {
+          setEventsOutput(msg.payload.output)
+          setEventsError(null)
         }
         ws.close()
         setEventsLoading(false)
@@ -512,13 +545,16 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
             }))
           }
           ws.onmessage = (event: MessageEvent) => {
-            try {
-              const msg = JSON.parse(event.data)
-              if (msg.id === requestId && msg.payload?.output) {
-                output = msg.payload.output
-              }
-            } catch {
-              // Ignore malformed WebSocket messages
+            const msg = parseWsMessage(event, 'repair assistant context')
+            if (!msg) {
+              clearTimeout(timeout)
+              ws.close()
+              resolve('Failed to parse response from agent.')
+              return
+            }
+
+            if (msg.id === requestId && msg.payload?.output) {
+              output = msg.payload.output
             }
             clearTimeout(timeout)
             ws.close()
@@ -651,31 +687,35 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       }
 
       ws.onmessage = (event: MessageEvent) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.id === requestId) {
-            if (msg.payload?.content) {
-              // #5945 — Success path: clear any lingering error state
-              setAiAnalysis(msg.payload.content)
-              setAiAnalysisError(null)
-            } else if (msg.payload?.error || msg.payload?.message) {
-              // #5945 — Surface backend error via dedicated error state + toast
-              // so the user sees a clear failure instead of a silent no-op.
-              const errMsg = `Analysis unavailable: ${msg.payload.error || msg.payload.message}`
-              setAiAnalysisError(errMsg)
-              setAiAnalysis(null)
-              showToast(errMsg, 'error')
-            } else {
-              setAiAnalysis('Analysis complete - no specific issues identified.')
-              setAiAnalysisError(null)
-            }
-          }
-        } catch {
+        const msg = parseWsMessage(event, 'AI analysis')
+        if (!msg) {
           // #5945 — Even malformed WebSocket messages must be reported as a
           // failure so the user knows the analysis did not complete.
           const errMsg = 'AI analysis failed: received an invalid response from the agent.'
           setAiAnalysisError(errMsg)
+          setAiAnalysis(null)
           showToast(errMsg, 'error')
+          ws.close()
+          setAiAnalysisLoading(false)
+          return
+        }
+
+        if (msg.id === requestId) {
+          if (msg.payload?.content) {
+            // #5945 — Success path: clear any lingering error state
+            setAiAnalysis(msg.payload.content)
+            setAiAnalysisError(null)
+          } else if (msg.payload?.error || msg.payload?.message) {
+            // #5945 — Surface backend error via dedicated error state + toast
+            // so the user sees a clear failure instead of a silent no-op.
+            const errMsg = `Analysis unavailable: ${msg.payload.error || msg.payload.message}`
+            setAiAnalysisError(errMsg)
+            setAiAnalysis(null)
+            showToast(errMsg, 'error')
+          } else {
+            setAiAnalysis('Analysis complete - no specific issues identified.')
+            setAiAnalysisError(null)
+          }
         }
         ws.close()
         setAiAnalysisLoading(false)
@@ -706,6 +746,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
   // Fetch pod status via kubectl get
   const fetchPodStatus = async (force = false) => {
     if (!agentConnected || (!force && podStatusOutput)) return
+    setPodStatusError(null)
     setPodStatusLoading(true)
 
     try {
@@ -721,13 +762,17 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       }
 
       ws.onmessage = (event: MessageEvent) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.id === requestId && msg.payload?.output) {
-            setPodStatusOutput(msg.payload.output)
-          }
-        } catch {
-          // Ignore malformed WebSocket messages
+        const msg = parseWsMessage(event, 'pod status')
+        if (!msg) {
+          setPodStatusError(getInvalidWsResponseError('Pod status'))
+          setPodStatusLoading(false)
+          ws.close()
+          return
+        }
+
+        if (msg.id === requestId && msg.payload?.output) {
+          setPodStatusOutput(msg.payload.output)
+          setPodStatusError(null)
         }
         ws.close()
         setPodStatusLoading(false)
@@ -745,6 +790,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
   // Fetch pod YAML via local agent
   const fetchYaml = async (force = false) => {
     if (!agentConnected || (!force && yamlOutput)) return
+    setYamlError(null)
     setYamlLoading(true)
 
     try {
@@ -760,13 +806,17 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
       }
 
       ws.onmessage = (event: MessageEvent) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.id === requestId && msg.payload?.output) {
-            setYamlOutput(msg.payload.output)
-          }
-        } catch {
-          // Ignore malformed WebSocket messages
+        const msg = parseWsMessage(event, 'yaml')
+        if (!msg) {
+          setYamlError(getInvalidWsResponseError('YAML'))
+          setYamlLoading(false)
+          ws.close()
+          return
+        }
+
+        if (msg.id === requestId && msg.payload?.output) {
+          setYamlOutput(msg.payload.output)
+          setYamlError(null)
         }
         ws.close()
         setYamlLoading(false)
@@ -928,18 +978,21 @@ Please:
       }
 
       ws.onmessage = (event: MessageEvent) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.id === requestId) {
-            if (msg.type === 'error' || msg.payload?.exitCode !== 0) {
-              setDeleteError(msg.payload?.error || 'Failed to delete pod')
-            } else {
-              // Success - close the drill down
-              closeDrillDown()
-            }
+        const msg = parseWsMessage(event, 'delete pod')
+        if (!msg) {
+          setDeleteError('Failed to parse response from agent')
+          setDeletingPod(false)
+          ws.close()
+          return
+        }
+
+        if (msg.id === requestId) {
+          if (msg.type === 'error' || msg.payload?.exitCode !== 0) {
+            setDeleteError(msg.payload?.error || 'Failed to delete pod')
+          } else {
+            // Success - close the drill down
+            closeDrillDown()
           }
-        } catch {
-          // Ignore malformed WebSocket messages
         }
         ws.close()
         setDeletingPod(false)
@@ -987,21 +1040,22 @@ Please:
             }))
           }
           ws.onmessage = (event: MessageEvent) => {
-            try {
-              const msg = JSON.parse(event.data)
-              if (msg.id === requestId) {
-                clearTimeout(timeout)
-                ws.close()
-                if (msg.payload?.exitCode === 0 || msg.payload?.output) {
-                  resolve({ success: true })
-                } else {
-                  resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
-                }
-              }
-            } catch {
+            const msg = parseWsMessage(event, 'save labels')
+            if (!msg) {
               clearTimeout(timeout)
               ws.close()
               resolve({ success: false, error: 'Failed to parse response' })
+              return
+            }
+
+            if (msg.id === requestId) {
+              clearTimeout(timeout)
+              ws.close()
+              if (msg.payload?.exitCode === 0 || msg.payload?.output) {
+                resolve({ success: true })
+              } else {
+                resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
+              }
             }
           }
           ws.onerror = () => {
@@ -1124,21 +1178,22 @@ Please:
             }))
           }
           ws.onmessage = (event: MessageEvent) => {
-            try {
-              const msg = JSON.parse(event.data)
-              if (msg.id === requestId) {
-                clearTimeout(timeout)
-                ws.close()
-                if (msg.payload?.exitCode === 0 || msg.payload?.output) {
-                  resolve({ success: true })
-                } else {
-                  resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
-                }
-              }
-            } catch {
+            const msg = parseWsMessage(event, 'save annotations')
+            if (!msg) {
               clearTimeout(timeout)
               ws.close()
               resolve({ success: false, error: 'Failed to parse response' })
+              return
+            }
+
+            if (msg.id === requestId) {
+              clearTimeout(timeout)
+              ws.close()
+              if (msg.payload?.exitCode === 0 || msg.payload?.output) {
+                resolve({ success: true })
+              } else {
+                resolve({ success: false, error: msg.payload?.error || 'Unknown error' })
+              }
             }
           }
           ws.onerror = () => {
@@ -1261,13 +1316,16 @@ Please:
             }))
           }
           ws.onmessage = (event: MessageEvent) => {
-            try {
-              const msg = JSON.parse(event.data)
-              if (msg.id === requestId && msg.payload?.output) {
-                output = msg.payload.output
-              }
-            } catch {
-              // Ignore malformed WebSocket messages
+            const msg = parseWsMessage(event, 'related resources')
+            if (!msg) {
+              clearTimeout(timeout)
+              ws.close()
+              resolve(output)
+              return
+            }
+
+            if (msg.id === requestId && msg.payload?.output) {
+              output = msg.payload.output
             }
             clearTimeout(timeout)
             ws.close()
@@ -1499,6 +1557,10 @@ Please:
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-card/50 border border-border">
                     <Loader2 className="w-4 h-4 animate-spin text-primary" />
                     <span className="text-sm text-muted-foreground">{t('drilldown.status.fetchingPodStatus')}</span>
+                  </div>
+                ) : podStatusError ? (
+                  <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-400">
+                    {podStatusError}
                   </div>
                 ) : podStatusOutput ? (
                   <pre className="p-3 rounded-lg bg-muted border border-border overflow-x-auto text-xs text-foreground font-mono">
@@ -1732,6 +1794,7 @@ Please:
             output={describeOutput}
             loading={describeLoading}
             agentConnected={agentConnected}
+            error={describeError}
             copyField="describe"
             copiedField={copiedField}
             kubectlComment={`# kubectl describe pod ${podName} -n ${namespace}`}
@@ -1748,6 +1811,7 @@ Please:
             output={logsOutput}
             loading={logsLoading}
             agentConnected={agentConnected}
+            error={logsError}
             copyField="logs"
             copiedField={copiedField}
             kubectlComment={`# kubectl logs ${podName} -n ${namespace} --tail=500`}
@@ -1780,6 +1844,7 @@ Please:
             output={eventsOutput}
             loading={eventsLoading}
             agentConnected={agentConnected}
+            error={eventsError}
             copyField="events"
             copiedField={copiedField}
             kubectlComment={`# kubectl get events -n ${namespace} --field-selector involvedObject.name=${podName}`}
@@ -1798,6 +1863,7 @@ Please:
             output={yamlOutput}
             loading={yamlLoading}
             agentConnected={agentConnected}
+            error={yamlError}
             copyField="yaml"
             copiedField={copiedField}
             kubectlComment={`# kubectl get pod ${podName} -n ${namespace} -o yaml`}
