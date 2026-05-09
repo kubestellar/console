@@ -1,4 +1,4 @@
-import { safeGetItem, safeGetJSON, safeRemoveItem, safeSetItem, safeSetJSON } from '../utils/localStorage'
+import { safeGetItem, safeRemoveItem, safeSetItem, safeSetJSON } from '../utils/localStorage'
 
 const DASHBOARD_CARD_STORAGE_SCHEMA_VERSION = '1'
 const DASHBOARD_CARD_STORAGE_VERSION_SUFFIX = ':schema-version'
@@ -74,11 +74,14 @@ export function loadDashboardCardsFromStorage<T extends DashboardCardStorageEntr
   fallbackCards: T[],
   options: LoadDashboardCardStorageOptions = {},
 ): T[] {
-  const storedCards = safeGetJSON<unknown>(storageKey)
-  if (storedCards === null) {
-    if (safeGetItem(storageKey) !== null) {
-      clearDashboardCardStorage(storageKey)
-    }
+  const storedValue = safeGetItem(storageKey)
+  if (storedValue === null) return fallbackCards
+
+  let storedCards: unknown
+  try {
+    storedCards = JSON.parse(storedValue)
+  } catch {
+    clearDashboardCardStorage(storageKey)
     return fallbackCards
   }
 
