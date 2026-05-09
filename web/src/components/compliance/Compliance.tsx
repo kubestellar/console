@@ -49,7 +49,11 @@ export function Compliance() {
 
   // Build the set of cluster names that pass the global filter, so we can
   // scope tool aggregates to exactly those clusters (#4714, #4722).
-  const filteredClusterNames = new Set(filteredClusters.map(c => c.name))
+  // Memoize the Set to prevent breaking useMemo dependencies (#12827).
+  const filteredClusterNames = useMemo(
+    () => new Set(filteredClusters.map(c => c.name)),
+    [filteredClusters]
+  )
 
   // Aggregate real data across *filtered* clusters only
   const realData = useMemo(() => {
