@@ -89,8 +89,8 @@ describe('Route helper functions', () => {
     expect(route).toContain('hello%20world')
   })
 
-  it('getHomeBrowseMissionsRoute returns home with query param', () => {
+  it('getHomeBrowseMissionsRoute returns the missions route', () => {
     const route = getHomeBrowseMissionsRoute()
-    expect(route).toBe('/?browse=missions')
+    expect(route).toBe('/missions')
   })
 })

@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
-import { Routes, Route, Navigate, useNavigate, useLocation, useNavigationType, useSearchParams, UNSAFE_LocationContext } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate, useLocation, useNavigationType, UNSAFE_LocationContext } from 'react-router-dom'
 import type { Location } from 'react-router-dom'
 import { CardHistoryEntry } from './hooks/useCardHistory'
 import { Layout } from './components/layout/Layout'
@@ -309,9 +309,6 @@ function SettingsSyncInit() {
   return null
 }
 
-/** Redirect /missions → /?browse=missions to open MissionBrowser.
- *  Redirect /missions/:missionId → /?mission=:missionId to open a specific mission.
- *  Preserves UTM and other query params so GA4 campaign attribution survives the redirect. */
 function IssueRedirect() {
   const navigate = useNavigate()
   const dispatched = useRef(false)
@@ -336,13 +333,6 @@ function FeatureRedirect() {
     }
   }, [navigate])
   return null
-}
-
-function MissionBrowseLink() {
-  const [searchParams] = useSearchParams()
-  const params = new URLSearchParams(searchParams)
-  params.set('browse', 'missions')
-  return <Navigate to={`/?${params.toString()}`} replace />
 }
 
 // MissionDeepLink removed — replaced by MissionLandingPage standalone component
@@ -652,9 +642,6 @@ function App() {
       <Route path={ROUTES.MISSION} element={
         <LightweightShell><MissionLandingPage /></LightweightShell>
       } />
-      <Route path={ROUTES.MISSIONS} element={
-        <LightweightShell><MissionBrowseLink /></LightweightShell>
-      } />
 
       {/* ── Public landing pages ──────────────────────────────────────
           Marketing/comparison pages that must render without auth.
@@ -756,6 +743,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
         <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           <Route path={ROUTES.DASHBOARD_ALIAS} element={<Navigate to={ROUTES.HOME} replace />} />
+          <Route path={ROUTES.MISSIONS} element={<Dashboard />} />
           <Route path={ROUTES.CUSTOM_DASHBOARD} element={<CustomDashboard />} />
           {/* Test routes — rendered with Layout but not cached by KeepAlive */}
           <Route path={ROUTES.PERF_ALL_CARDS} element={<AllCardsPerfTest />} />
@@ -817,10 +805,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           <Route path={ROUTES.TEST_UNIFIED_CARD} element={<UnifiedCardTest />} />
           <Route path={ROUTES.TEST_UNIFIED_STATS} element={<UnifiedStatsTest />} />
           <Route path={ROUTES.TEST_UNIFIED_DASHBOARD} element={<UnifiedDashboardTest />} />
-          {/* Mission deep-link: /missions/install-prometheus → opens MissionBrowser.
-              Must be inside ProtectedRoute so auth is verified before redirect,
-              and the ?mission= param survives the OAuth round-trip. */}
-          {/* Mission routes moved outside ProtectedRoute for the landing page */}
+          {/* Mission landing pages live outside ProtectedRoute; /missions is handled by the dashboard Layout route above. */}
           {/* /issue, /issues, /feedback open the feedback modal on the dashboard */}
           <Route path={ROUTES.ISSUE} element={<IssueRedirect />} />
           <Route path={ROUTES.ISSUES} element={<IssueRedirect />} />

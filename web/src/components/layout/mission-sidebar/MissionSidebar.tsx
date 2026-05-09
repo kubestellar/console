@@ -25,7 +25,7 @@ import {
   Search,
   Satellite,
   History } from 'lucide-react'
-import { useSearchParams, useLocation } from 'react-router-dom'
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useMissions, isActiveMission } from '../../../hooks/useMissions'
 import { useMobile } from '../../../hooks/useMobile'
 import { StatusBadge } from '../../ui/StatusBadge'
@@ -51,6 +51,7 @@ import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
 import { isDemoMode } from '../../../lib/demoMode'
+import { ROUTES } from '../../../config/routes'
 
 const SIDEBAR_MIN_WIDTH = 380
 const SIDEBAR_MAX_WIDTH = 800
@@ -63,6 +64,13 @@ const SIDEBAR_WIDTH_KEY = 'ksc-mission-sidebar-width'
 // width. See issues 6388 / 6394.
 const TABLET_BREAKPOINT_PX = 1024
 const ATTENTION_MISSION_STATUSES: ReadonlySet<Mission['status']> = new Set(['waiting_input', 'blocked'])
+const MISSION_BROWSER_QUERY_KEY = 'browse'
+const MISSION_BROWSER_QUERY_VALUE = 'missions'
+const MISSION_DEEP_LINK_QUERY_KEY = 'mission'
+const MISSION_IMPORT_QUERY_KEY = 'import'
+const MISSION_CONTROL_QUERY_KEY = 'mission-control'
+const MISSION_PLAN_QUERY_KEY = 'plan'
+const MISSION_BROWSER_HISTORY_STATE_KEY = 'kscMissionBrowserOpen'
 
 function getMissionAttentionCount(missions: Mission[]): number {
   return missions.filter(mission => ATTENTION_MISSION_STATUSES.has(mission.status)).length
@@ -269,22 +277,74 @@ export function MissionSidebar() {
   // Direct import: ?import= fetches and imports mission directly (no browser popup)
   const [searchParams, setSearchParams] = useSearchParams()
   const location = useLocation()
-  const deepLinkMission = searchParams.get('mission')
-  const directImportSlug = searchParams.get('import')
-  const browseParam = searchParams.get('browse')
-  const missionControlParam = searchParams.get('mission-control')
+  const navigate = useNavigate()
+  const browserHistoryEntryRef = useRef(false)
+  const deepLinkMission = searchParams.get(MISSION_DEEP_LINK_QUERY_KEY)
+  const directImportSlug = searchParams.get(MISSION_IMPORT_QUERY_KEY)
+  const browseParam = searchParams.get(MISSION_BROWSER_QUERY_KEY)
+  const missionControlParam = searchParams.get(MISSION_CONTROL_QUERY_KEY)
+  const isMissionBrowserRoute = location.pathname === ROUTES.MISSIONS
+  const isMissionBrowserDeepLink = Boolean(deepLinkMission) || browseParam === MISSION_BROWSER_QUERY_VALUE || isMissionBrowserRoute
   /** Mission pre-fetched by MissionLandingPage and passed via navigation state */
   const prefetchedMission = (location.state as { prefetchedMission?: MissionExport } | null)?.prefetchedMission
 
-  useEffect(() => {
-    if (deepLinkMission || browseParam === 'missions') {
-      setShowBrowser(true)
-      const newParams = new URLSearchParams(searchParams)
-      newParams.delete('mission')
-      newParams.delete('browse')
-      setSearchParams(newParams, { replace: true })
+  const getMissionBrowserSearchParams = () => {
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete(MISSION_DEEP_LINK_QUERY_KEY)
+    nextParams.delete(MISSION_BROWSER_QUERY_KEY)
+    return nextParams
+  }
+
+  const openMissionBrowser = () => {
+    if (typeof window !== 'undefined' && !isMissionBrowserDeepLink && !browserHistoryEntryRef.current) {
+      const currentState = window.history.state
+      const nextState = currentState && typeof currentState === 'object'
+        ? { ...(currentState as Record<string, unknown>), [MISSION_BROWSER_HISTORY_STATE_KEY]: true }
+        : { [MISSION_BROWSER_HISTORY_STATE_KEY]: true }
+      window.history.pushState(nextState, '', window.location.href)
+      browserHistoryEntryRef.current = true
     }
-  }, [deepLinkMission, browseParam, searchParams, setSearchParams])
+    setShowBrowser(true)
+  }
+
+  const closeMissionBrowser = () => {
+    if (isMissionBrowserRoute) {
+      const nextParams = getMissionBrowserSearchParams()
+      const nextSearch = nextParams.toString()
+      setShowBrowser(false)
+      navigate({ pathname: ROUTES.HOME, search: nextSearch ? `?${nextSearch}` : '' }, { replace: true })
+      return
+    }
+    if (isMissionBrowserDeepLink) {
+      setShowBrowser(false)
+      setSearchParams(getMissionBrowserSearchParams(), { replace: true })
+      return
+    }
+    if (browserHistoryEntryRef.current && typeof window !== 'undefined') {
+      window.history.back()
+      return
+    }
+    setShowBrowser(false)
+  }
+
+  useEffect(() => {
+    if (isMissionBrowserDeepLink) {
+      setShowBrowser(true)
+    }
+  }, [isMissionBrowserDeepLink])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handlePopState = () => {
+      if (!showBrowser) return
+      browserHistoryEntryRef.current = false
+      setShowBrowser(false)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [showBrowser])
 
   // #6474 — ?mission-control=open opens the MissionControlDialog.
   // Parallel to the ?browse=missions deep-link above. Gives users a
@@ -293,17 +353,17 @@ export function MissionSidebar() {
     if (missionControlParam === 'open') {
       setShowMissionControl(true)
       const newParams = new URLSearchParams(searchParams)
-      newParams.delete('mission-control')
+      newParams.delete(MISSION_CONTROL_QUERY_KEY)
       setSearchParams(newParams, { replace: true })
     } else if (missionControlParam === 'review') {
-      const planParam = searchParams.get('plan')
+      const planParam = searchParams.get(MISSION_PLAN_QUERY_KEY)
       if (planParam) {
         setPendingReviewPlan(planParam)
         setShowMissionControl(true)
       }
       const newParams = new URLSearchParams(searchParams)
-      newParams.delete('mission-control')
-      newParams.delete('plan')
+      newParams.delete(MISSION_CONTROL_QUERY_KEY)
+      newParams.delete(MISSION_PLAN_QUERY_KEY)
       setSearchParams(newParams, { replace: true })
     }
   }, [missionControlParam, searchParams, setSearchParams])
@@ -315,7 +375,7 @@ export function MissionSidebar() {
 
     // Clear the param immediately to prevent re-triggering
     const newParams = new URLSearchParams(searchParams)
-    newParams.delete('import')
+    newParams.delete(MISSION_IMPORT_QUERY_KEY)
     setSearchParams(newParams, { replace: true })
 
     // Fast path: if MissionLandingPage passed the already-fetched mission
@@ -395,7 +455,7 @@ export function MissionSidebar() {
       }
 
       // Last resort: open the browser if direct import failed
-      setShowBrowser(true)
+      openMissionBrowser()
     }
 
     tryImport().finally(() => setIsDirectImporting(false))
@@ -484,7 +544,7 @@ export function MissionSidebar() {
       steps: mission.steps?.map(s => ({ title: s.title, description: s.description })),
       tags: mission.tags,
       initialPrompt: mission.resolution?.summary || mission.description })
-    setShowBrowser(false)
+    closeMissionBrowser()
     // Auto-open the sidebar and highlight the imported mission so the user
     // immediately sees where it went and can act on it
     openSidebar()
@@ -790,7 +850,7 @@ export function MissionSidebar() {
                   New Mission
                 </button>
                 <button
-                  onClick={() => { setShowAddMenu(false); setShowBrowser(true) }}
+                  onClick={() => { setShowAddMenu(false); openMissionBrowser() }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                 >
                   <Globe className="w-4 h-4 text-muted-foreground" />
@@ -1030,7 +1090,7 @@ export function MissionSidebar() {
               </button>
             )}
             <button
-              onClick={() => setShowBrowser(true)}
+              onClick={() => openMissionBrowser()}
               className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
             >
               <Globe className="w-6 h-6 shrink-0" />
@@ -1242,7 +1302,7 @@ export function MissionSidebar() {
               </button>
             )}
             <button
-              onClick={() => setShowBrowser(true)}
+              onClick={() => openMissionBrowser()}
               className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
             >
               <Globe className="w-6 h-6 shrink-0" />
@@ -1494,11 +1554,11 @@ export function MissionSidebar() {
       <Suspense fallback={null}>
         <MissionBrowser
           isOpen={showBrowser}
-          onClose={() => setShowBrowser(false)}
+          onClose={closeMissionBrowser}
           onImport={handleImportMission}
           initialMission={deepLinkMission || undefined}
           onUseInMissionControl={(chartName: string) => {
-            setShowBrowser(false)
+            closeMissionBrowser()
             setPendingKubaraChart(chartName)
             setShowMissionControl(true)
           }}

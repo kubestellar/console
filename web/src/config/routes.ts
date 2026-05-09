@@ -160,8 +160,8 @@ export function getMissionRoute(missionId: string): string {
 }
 
 /**
- * Helper function to create the home route with missions browse panel open
+ * Helper function to create the canonical missions browser route
  */
 export function getHomeBrowseMissionsRoute(): string {
-  return `${ROUTES.HOME}?browse=missions`
+  return ROUTES.MISSIONS
 }
