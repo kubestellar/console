@@ -383,9 +383,17 @@ describe('useLocalAgent', () => {
   })
 
   it('triggers global refetches after reconnecting from disconnected', async () => {
-    mockFetchReject()
+    mockFetchOk()
     const { result } = renderHook(() => useLocalAgent())
-    await driveToDisconnected()
+    await flushMicrotasks()
+    expect(result.current.status).toBe('connected')
+
+    mockTriggerAllRefetches.mockClear()
+    mockFetchReject()
+    for (let i = 0; i < FAILURE_THRESHOLD; i++) {
+      await act(async () => { vi.advanceTimersByTime(POLL_INTERVAL) })
+      await flushMicrotasks()
+    }
     expect(result.current.status).toBe('disconnected')
 
     mockFetchOk()
@@ -395,7 +403,7 @@ describe('useLocalAgent', () => {
     await flushMicrotasks()
 
     expect(result.current.status).toBe('connected')
-    expect(mockTriggerAllRefetches).toHaveBeenCalled()
+    expect(mockTriggerAllRefetches).toHaveBeenCalledTimes(1)
   })
 
   it('resets success counter when a failure occurs between successes', async () => {
