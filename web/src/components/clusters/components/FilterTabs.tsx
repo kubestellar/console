@@ -98,10 +98,10 @@ export function FilterTabs({
       </button>
 
       {/* Add Cluster, Create with AI, Layout, and Sort */}
-      <div className="ml-auto flex items-center gap-3">
+      <div className="w-full sm:w-auto sm:ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
         {/* Add Cluster + Create Cluster with AI */}
         {(onAddCluster || onCreateClusterWithAI) && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {onAddCluster && (
               <button
                 onClick={onAddCluster}
