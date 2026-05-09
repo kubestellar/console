@@ -300,9 +300,10 @@ export function RewardsProvider({ children }: { children: ReactNode }) {
 
   // Get count of times an action has been performed
   const getActionCount = useCallback((action: RewardActionType): number => {
-    if (!rewards) return 0
-    return rewards.events.filter(e => e.action === action).length
-  }, [rewards])
+    const r = rewardsRef.current
+    if (!r) return 0
+    return r.events.filter(e => e.action === action).length
+  }, [])
 
   // Award coins for an action.
   //
