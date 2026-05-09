@@ -1577,7 +1577,7 @@ export function MissionSidebarToggle() {
       data-tour="ai-missions-toggle"
       data-testid="mission-sidebar-toggle"
       className={cn(
-        'fixed xl:hidden flex items-center gap-2 rounded-full border border-border bg-card text-foreground shadow-lg transition-all z-50 hover:bg-secondary',
+        'fixed flex items-center gap-2 rounded-full border border-border bg-card text-foreground shadow-lg transition-all z-50 hover:bg-secondary',
         // Mobile: smaller padding, bottom right
         isMobile ? 'px-3 py-2 right-4 bottom-4' : 'px-4 py-3 right-4 bottom-4',
         needsAttention > 0 && 'ring-2 ring-purple-500/30'
