@@ -376,14 +376,14 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
             return
           }
 
-          // Don't retry on auth (401) or service unavailable (503) — expected in demo mode
+          // Don't retry on auth (401) or offline/service-unavailable responses (400/503).
           const is401 = err.message?.includes('401')
-          const isNonRetryable = is401 || err.message?.includes('503')
+          const isNonRetryable = is401 || err.message?.includes('400') || err.message?.includes('503')
           if (is401 && currentToken) {
             emitSseAuthFailure(fullUrl)
           }
           if (isNonRetryable) {
-            console.debug('[SSE] Non-retryable error — skipping retries (demo mode)')
+            console.debug('[SSE] Non-retryable error (offline cluster or auth) — skipping retries')
             // Clear the in-flight entry and timers so future requests for the
             // same URL start a fresh stream instead of reusing this stale
             // resolved promise (#5404).
@@ -402,7 +402,8 @@ export function fetchSSE<T>(options: SSEFetchOptions<T>): Promise<T[]> {
               SSE_RECONNECT_BASE_MS * Math.pow(SSE_RECONNECT_BACKOFF_FACTOR, attemptNumber),
               SSE_RECONNECT_MAX_MS,
             )
-            console.warn(
+            const logFn = attemptNumber === 0 ? console.warn : console.debug
+            logFn(
               `[SSE] Connection failed (attempt ${attemptNumber + 1}/${SSE_MAX_RECONNECT_ATTEMPTS + 1}, ` +
               `${accumulated.length} items so far), retrying in ${delay}ms: ${err.message}`,
             )
