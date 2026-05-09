@@ -3,6 +3,7 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { setActiveProject } from '../lib/project/context'
 import { setQuantumWorkloadAvailable } from '../lib/demoMode'
 import { NAVIGATION_ICONS } from '../lib/navigationIcons'
+import { safeGetItem, safeRemoveItem, safeSetItem } from '../lib/utils/localStorage'
 
 /** Width of the collapsed sidebar in pixels (w-20 = 5rem = 80px) */
 export const SIDEBAR_COLLAPSED_WIDTH_PX = 80
@@ -30,6 +31,7 @@ export interface SidebarConfig {
   collapsed: boolean
   isMobileOpen: boolean
   removedBuiltinItemIds: string[]
+  knownDefaultItemIds: string[]
   width?: number
 }
 
@@ -105,6 +107,10 @@ const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
   { id: 'settings', name: 'Settings', icon: NAVIGATION_ICONS['settings'], href: '/settings', type: 'link', order: 4 },
 ]
 
+const DEFAULT_NAV_ITEMS = [...DEFAULT_PRIMARY_NAV, ...DEFAULT_SECONDARY_NAV]
+const DEFAULT_NAV_ITEM_IDS = DEFAULT_NAV_ITEMS.map((item) => item.id)
+const DEFAULT_NAV_ITEM_ID_SET = new Set(DEFAULT_NAV_ITEM_IDS)
+
 const DEFAULT_CONFIG: SidebarConfig = {
   primaryNav: DEFAULT_PRIMARY_NAV,
   secondaryNav: DEFAULT_SECONDARY_NAV,
@@ -112,11 +118,14 @@ const DEFAULT_CONFIG: SidebarConfig = {
   showClusterStatus: true,
   collapsed: false,
   isMobileOpen: false,
-  removedBuiltinItemIds: [] }
+  removedBuiltinItemIds: [],
+  knownDefaultItemIds: DEFAULT_NAV_ITEM_IDS,
+}
 
 const STORAGE_KEY = 'kubestellar-sidebar-config-v11'
 const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v10'
-const BUILTIN_NAV_ITEMS = [...DEFAULT_PRIMARY_NAV, ...DEFAULT_SECONDARY_NAV, ...DISCOVERABLE_DASHBOARDS]
+const ENABLED_DASHBOARDS_STORAGE_KEY = `${STORAGE_KEY}-enabled-dashboards`
+const BUILTIN_NAV_ITEMS = [...DEFAULT_NAV_ITEMS, ...DISCOVERABLE_DASHBOARDS]
 const BUILTIN_NAV_ITEMS_BY_HREF = new Map(BUILTIN_NAV_ITEMS.map((item) => [item.href, item]))
 const BUILTIN_NAV_ITEM_IDS = new Set(BUILTIN_NAV_ITEMS.map((item) => item.id))
 
@@ -141,6 +150,31 @@ function getRemovedBuiltinItemIds(config: Partial<SidebarConfig>): string[] {
     : []
 }
 
+function getKnownDefaultItemIds(config: Partial<SidebarConfig>): string[] {
+  if (Array.isArray(config.knownDefaultItemIds)) {
+    return Array.from(new Set(
+      config.knownDefaultItemIds.filter(
+        (id): id is string => typeof id === 'string' && DEFAULT_NAV_ITEM_ID_SET.has(id)
+      )
+    ))
+  }
+
+  const knownDefaultItemIds = new Set(getRemovedBuiltinItemIds(config))
+  const configuredItems = [
+    ...(Array.isArray(config.primaryNav) ? config.primaryNav : []),
+    ...(Array.isArray(config.secondaryNav) ? config.secondaryNav : []),
+  ]
+
+  configuredItems.forEach((item) => {
+    const builtinItem = BUILTIN_NAV_ITEMS_BY_HREF.get(item.href)
+    if (builtinItem && DEFAULT_NAV_ITEM_ID_SET.has(builtinItem.id)) {
+      knownDefaultItemIds.add(builtinItem.id)
+    }
+  })
+
+  return DEFAULT_NAV_ITEM_IDS.filter((id) => knownDefaultItemIds.has(id))
+}
+
 function normalizeConfig(config: Partial<SidebarConfig>): SidebarConfig {
   return {
     primaryNav: Array.isArray(config.primaryNav) ? config.primaryNav : DEFAULT_PRIMARY_NAV,
@@ -150,6 +184,7 @@ function normalizeConfig(config: Partial<SidebarConfig>): SidebarConfig {
     collapsed: config.collapsed ?? false,
     isMobileOpen: config.isMobileOpen ?? false,
     removedBuiltinItemIds: getRemovedBuiltinItemIds(config),
+    knownDefaultItemIds: getKnownDefaultItemIds(config),
     width: config.width,
   }
 }
@@ -178,6 +213,31 @@ function buildSidebarItem(
     isCustom: true,
     order,
   }
+}
+
+function getPersistedEnabledDashboardIds(): string[] | null {
+  const stored = safeGetItem(ENABLED_DASHBOARDS_STORAGE_KEY)
+  if (!stored) return null
+
+  try {
+    const parsed = JSON.parse(stored)
+    const persistedIds = Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === 'string')
+      : []
+    return persistedIds.length > 0 ? persistedIds : null
+  } catch {
+    safeRemoveItem(ENABLED_DASHBOARDS_STORAGE_KEY)
+    return null
+  }
+}
+
+function persistEnabledDashboardIds(ids: string[] | null) {
+  if (!ids || ids.length === 0) {
+    safeRemoveItem(ENABLED_DASHBOARDS_STORAGE_KEY)
+    return
+  }
+
+  safeSetItem(ENABLED_DASHBOARDS_STORAGE_KEY, JSON.stringify(ids))
 }
 
 function applyDashboardFilter(config: SidebarConfig): SidebarConfig {
@@ -228,13 +288,19 @@ export async function fetchEnabledDashboards(): Promise<void> {
       setQuantumWorkloadAvailable(data.workloads.quantum_kc_demo_available)
     }
 
-    if (data.enabled_dashboards && Array.isArray(data.enabled_dashboards) && data.enabled_dashboards.length > 0) {
-      enabledDashboardIds = data.enabled_dashboards as string[]
-      if (sharedConfig) {
+    enabledDashboardIds = Array.isArray(data.enabled_dashboards)
+      ? data.enabled_dashboards.filter((id): id is string => typeof id === 'string')
+      : null
+    enabledDashboardIds = enabledDashboardIds && enabledDashboardIds.length > 0 ? enabledDashboardIds : null
+    persistEnabledDashboardIds(enabledDashboardIds)
+
+    if (sharedConfig) {
+      sharedConfig = migrateConfig(sharedConfig)
+      if (enabledDashboardIds) {
         sharedConfig = applyDashboardFilter(sharedConfig)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(sharedConfig))
-        notifyListeners()
       }
+      safeSetItem(STORAGE_KEY, JSON.stringify(sharedConfig))
+      notifyListeners()
     }
   } catch {
     // Ignore — show all dashboards if health check fails
@@ -251,7 +317,7 @@ function migrateConfig(stored: SidebarConfig): SidebarConfig {
   // First, remove deprecated routes
   const primaryNav = normalized.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
   const secondaryNav = normalized.secondaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
-  const removedBuiltinItemIds = new Set(normalized.removedBuiltinItemIds)
+  const knownDefaultItemIds = new Set(normalized.knownDefaultItemIds)
 
   // Find default routes that are missing from the stored config
   const existingHrefs = new Set([
@@ -259,20 +325,21 @@ function migrateConfig(stored: SidebarConfig): SidebarConfig {
     ...secondaryNav.map(item => item.href),
   ])
 
-  // Add missing default primary nav items unless the user explicitly removed them
+  // Only restore default items that are genuinely new since the config was last saved.
   const missingPrimaryItems = DEFAULT_PRIMARY_NAV.filter(
-    item => !existingHrefs.has(item.href) && !removedBuiltinItemIds.has(item.id)
+    item => !existingHrefs.has(item.href) && !knownDefaultItemIds.has(item.id)
   )
 
-  // Add missing default secondary nav items unless the user explicitly removed them
   const missingSecondaryItems = DEFAULT_SECONDARY_NAV.filter(
-    item => !existingHrefs.has(item.href) && !removedBuiltinItemIds.has(item.id)
+    item => !existingHrefs.has(item.href) && !knownDefaultItemIds.has(item.id)
   )
 
   // If there are missing items or deprecated routes were removed, update the config
   const deprecatedRemoved = primaryNav.length !== normalized.primaryNav.length || secondaryNav.length !== normalized.secondaryNav.length
   const configWasNormalized = normalized.removedBuiltinItemIds.length !== getRemovedBuiltinItemIds(stored).length
     || !Array.isArray(stored.removedBuiltinItemIds)
+    || normalized.knownDefaultItemIds.length !== getKnownDefaultItemIds(stored).length
+    || !Array.isArray(stored.knownDefaultItemIds)
 
   if (missingPrimaryItems.length > 0 || missingSecondaryItems.length > 0 || deprecatedRemoved || configWasNormalized) {
     return {
@@ -288,26 +355,33 @@ function migrateConfig(stored: SidebarConfig): SidebarConfig {
         ...missingSecondaryItems.map((item, idx) => ({
           ...item,
           order: secondaryNav.length + idx })),
-      ] }
+      ],
+      knownDefaultItemIds: DEFAULT_NAV_ITEM_IDS,
+    }
   }
 
-  return normalized
+  return {
+    ...normalized,
+    knownDefaultItemIds: DEFAULT_NAV_ITEM_IDS,
+  }
 }
 
 // Initialize shared config from localStorage (called once)
 function initSharedConfig(): SidebarConfig {
   if (sharedConfig) return sharedConfig
 
+  enabledDashboardIds = enabledDashboardIds ?? getPersistedEnabledDashboardIds()
+
   // Try to load from current storage key
-  let stored = localStorage.getItem(STORAGE_KEY)
+  let stored = safeGetItem(STORAGE_KEY)
 
   // Migrate from old storage key if needed
   if (!stored) {
-    const oldStored = localStorage.getItem(OLD_STORAGE_KEY)
+    const oldStored = safeGetItem(OLD_STORAGE_KEY)
     if (oldStored) {
       stored = oldStored
       // Remove old key after migration
-      localStorage.removeItem(OLD_STORAGE_KEY)
+      safeRemoveItem(OLD_STORAGE_KEY)
     }
   }
 
@@ -333,8 +407,11 @@ function initSharedConfig(): SidebarConfig {
 
 // Update shared config and notify all listeners
 function updateSharedConfig(newConfig: SidebarConfig) {
-  sharedConfig = newConfig
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig))
+  sharedConfig = {
+    ...newConfig,
+    knownDefaultItemIds: DEFAULT_NAV_ITEM_IDS,
+  }
+  safeSetItem(STORAGE_KEY, JSON.stringify(sharedConfig))
   notifyListeners()
 }
 

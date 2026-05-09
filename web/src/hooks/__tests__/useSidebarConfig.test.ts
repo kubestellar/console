@@ -39,6 +39,7 @@ import type { SidebarItem } from '../useSidebarConfig'
 
 const STORAGE_KEY = 'kubestellar-sidebar-config-v11'
 const OLD_STORAGE_KEY = 'kubestellar-sidebar-config-v10'
+const ENABLED_DASHBOARDS_STORAGE_KEY = `${STORAGE_KEY}-enabled-dashboards`
 
 describe('useSidebarConfig', () => {
   beforeEach(() => {
@@ -754,6 +755,34 @@ describe('useSidebarConfig — expanded coverage', () => {
     expect(result.current.config.primaryNav.length).toBeGreaterThan(0)
   })
 
+  it('initSharedConfig uses persisted enabled dashboards so filtered defaults stay hidden on refresh', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      primaryNav: [
+        { id: 'dashboard', name: 'Dashboard', icon: 'LayoutDashboard', href: '/', type: 'link', order: 0 },
+        { id: 'clusters', name: 'My Clusters', icon: 'Server', href: '/clusters', type: 'link', order: 1 },
+        { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 2 },
+      ],
+      secondaryNav: [],
+      sections: [],
+      showClusterStatus: true,
+      collapsed: false,
+      isMobileOpen: false,
+      removedBuiltinItemIds: [],
+    }))
+    localStorage.setItem(ENABLED_DASHBOARDS_STORAGE_KEY, JSON.stringify(['dashboard', 'clusters', 'deploy']))
+
+    const mockFetch = vi.fn().mockImplementation(() => new Promise(() => {}))
+    vi.stubGlobal('fetch', mockFetch)
+
+    vi.resetModules()
+    const freshMod = await import('../useSidebarConfig')
+    const { result } = renderHook(() => freshMod.useSidebarConfig())
+
+    expect(result.current.config.primaryNav.map(item => item.id)).toEqual(['dashboard', 'clusters', 'deploy'])
+    expect(result.current.config.primaryNav.some(item => item.id === 'alerts')).toBe(false)
+    vi.unstubAllGlobals()
+  })
+
   // --- applyDashboardFilter: sorts by ENABLED_DASHBOARDS order ---
   it('fetchEnabledDashboards applies filter and reorders primary nav', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
@@ -770,6 +799,40 @@ describe('useSidebarConfig — expanded coverage', () => {
     // After enabling dashboards, getEnabledDashboardIds should return the list
     const ids = freshMod.getEnabledDashboardIds()
     expect(ids).toEqual(['deploy', 'dashboard', 'clusters'])
+    vi.unstubAllGlobals()
+  })
+
+  it('fetchEnabledDashboards clears stale persisted filters when all dashboards are enabled again', async () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      primaryNav: [
+        { id: 'dashboard', name: 'Dashboard', icon: 'LayoutDashboard', href: '/', type: 'link', order: 0 },
+        { id: 'clusters', name: 'My Clusters', icon: 'Server', href: '/clusters', type: 'link', order: 1 },
+        { id: 'deploy', name: 'Deploy', icon: 'Rocket', href: '/deploy', type: 'link', order: 2 },
+      ],
+      secondaryNav: [],
+      sections: [],
+      showClusterStatus: true,
+      collapsed: false,
+      isMobileOpen: false,
+      removedBuiltinItemIds: [],
+    }))
+    localStorage.setItem(ENABLED_DASHBOARDS_STORAGE_KEY, JSON.stringify(['dashboard', 'clusters', 'deploy']))
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      json: async () => ({ enabled_dashboards: [] }),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    vi.resetModules()
+    const freshMod = await import('../useSidebarConfig')
+    const { result } = renderHook(() => freshMod.useSidebarConfig())
+
+    await act(async () => {
+      await freshMod.fetchEnabledDashboards()
+    })
+
+    expect(localStorage.getItem(ENABLED_DASHBOARDS_STORAGE_KEY)).toBeNull()
+    expect(result.current.config.primaryNav.some(item => item.id === 'alerts')).toBe(true)
     vi.unstubAllGlobals()
   })
 
