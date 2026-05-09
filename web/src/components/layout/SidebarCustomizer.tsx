@@ -325,14 +325,13 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     if (sortedPaths.length > 0) {
       const preview = previewGenerateFromBehavior(sortedPaths)
       if (preview.changes.length === 1 && preview.changes[0] === 'No changes needed') {
-        setGenerationResult('No changes needed — your sidebar already matches your usage.')
+        setGenerationResult(t('sidebar.customizer.noChangesNeeded'))
         dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
       } else {
         setPendingChanges(preview)
       }
     } else {
       setGenerationResult(t('sidebar.customizer.notEnoughData'))
-      const AUTO_DISMISS_MS = 5000
       dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_MS)
     }
 
@@ -342,7 +341,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
   const handleApplyPendingChanges = () => {
     if (pendingChanges) {
       applyGeneratedConfig(pendingChanges.proposed)
-      setGenerationResult(`Applied ${pendingChanges.changes.length} changes`)
+      setGenerationResult(t('sidebar.customizer.appliedChanges', { count: pendingChanges.changes.length }))
       setPendingChanges(null)
       dismissTimerRef.current = setTimeout(() => setGenerationResult(null), AUTO_DISMISS_APPLIED_MS)
     }
@@ -423,7 +422,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
           {/* Search to add dashboards — always visible */}
           <div className="mb-4">
             <p className="text-xs text-muted-foreground mb-2">
-              Search for a dashboard to add to your sidebar
+              {t('sidebar.customizer.searchHint')}
             </p>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -431,7 +430,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
                 type="text"
                 value={routeSearch}
                 onChange={(e) => setRouteSearch(e.target.value)}
-                placeholder="Search dashboards..."
+                placeholder={t('sidebar.customizer.searchPlaceholder')}
                 className="w-full pl-10 pr-4 py-2 bg-secondary rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/50"
               />
             </div>
@@ -452,14 +451,14 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
               : availableRoutes
             if (availableRoutes.length === 0) return null
             if (matchingRoutes.length === 0) {
-              return <div className="mb-4 text-sm text-muted-foreground text-center py-2">No matching dashboards found</div>
+              return <div className="mb-4 text-sm text-muted-foreground text-center py-2">{t('sidebar.customizer.noMatchingDashboards')}</div>
             }
             return (
               <div className="mb-4">
                 <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                  Available to Add ({matchingRoutes.length})
+                  {t('sidebar.customizer.availableToAdd')} ({matchingRoutes.length})
                 </h3>
-                <div className="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-border">
+                <div className="space-y-1 max-h-64 overflow-y-auto rounded-lg border border-border">
                   {matchingRoutes.map(route => (
                     <button
                       key={route.href}
@@ -488,25 +487,25 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
               onClick={handleGenerateFromBehavior}
               disabled={isGenerating}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors text-sm font-medium disabled:opacity-50"
-              title="Reorders your dashboards by most visited and adds any missing ones you use frequently"
+              title={t('sidebar.customizer.autoOrganizeTooltip')}
             >
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {isGenerating ? 'Analyzing...' : 'Auto-organize'}
+              {isGenerating ? t('sidebar.customizer.analyzing') : t('sidebar.customizer.autoOrganize')}
             </button>
             <button
               onClick={resetToDefault}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              title="Restore the default sidebar navigation items"
+              title={t('sidebar.customizer.resetSidebarTooltip')}
             >
               <RotateCcw className="w-4 h-4" />
-              Reset Sidebar
+              {t('sidebar.customizer.resetSidebar')}
             </button>
           </div>
 
           {/* Pending changes preview — approve/reject before applying */}
           {pendingChanges && (
             <div className="mb-4 p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
-              <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2">Proposed Changes</p>
+              <p className="text-xs font-medium text-purple-400 uppercase tracking-wider mb-2">{t('sidebar.customizer.proposedChanges')}</p>
               <ul className="space-y-1 mb-3">
                 {pendingChanges.changes.map((change, i) => (
                   <li key={i} className="text-xs text-foreground">{change}</li>
@@ -514,10 +513,10 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
               </ul>
               <div className="flex gap-2">
                 <button onClick={handleApplyPendingChanges} className="px-3 py-1.5 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 rounded-lg text-xs font-medium transition-colors">
-                  Apply Changes
+                  {t('sidebar.customizer.applyChanges')}
                 </button>
                 <button onClick={handleRejectPendingChanges} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors">
-                  Cancel
+                  {t('sidebar.customizer.cancel')}
                 </button>
               </div>
             </div>
@@ -537,7 +536,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
 
           {/* Your Dashboards — flat list, always visible */}
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-foreground mb-2">Your Dashboards ({config.primaryNav.length + config.secondaryNav.length})</h3>
+            <h3 className="text-sm font-medium text-foreground mb-2">{t('sidebar.customizer.yourDashboards')} ({config.primaryNav.length + config.secondaryNav.length})</h3>
             {renderItemList(config.primaryNav, 'primary')}
             {config.secondaryNav.length > 0 && (
               <>

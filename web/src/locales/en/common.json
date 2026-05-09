@@ -168,7 +168,21 @@
       "analyzed_other": "Analyzed {{count}} page visits. Sidebar updated based on your most visited pages.",
       "notEnoughData": "Not enough navigation data yet. Keep using the console and try again later!",
       "recommendedDashboards": "Recommended Dashboards",
-      "addTopicDashboards": "Add topic-specific dashboards to your sidebar"
+      "addTopicDashboards": "Add topic-specific dashboards to your sidebar",
+      "searchPlaceholder": "Search dashboards...",
+      "searchHint": "Search for a dashboard to add to your sidebar",
+      "noMatchingDashboards": "No matching dashboards found",
+      "availableToAdd": "Available to Add",
+      "autoOrganize": "Auto-organize",
+      "autoOrganizeTooltip": "Reorders your dashboards by most visited and adds any missing ones you use frequently",
+      "resetSidebar": "Reset Sidebar",
+      "resetSidebarTooltip": "Restore the default sidebar navigation items",
+      "proposedChanges": "Proposed Changes",
+      "applyChanges": "Apply Changes",
+      "cancel": "Cancel",
+      "yourDashboards": "Your Dashboards",
+      "noChangesNeeded": "No changes needed — your sidebar already matches your usage.",
+      "appliedChanges": "Applied {{count}} changes"
     }
   },
   "settings": {
