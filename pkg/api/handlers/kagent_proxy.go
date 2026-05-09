@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -36,7 +37,8 @@ func (h *KagentProxyHandler) GetStatus(c *fiber.Ctx) error {
 	}
 	available, err := h.client.Status()
 	if err != nil {
-		return c.JSON(fiber.Map{"available": false, "reason": err.Error()})
+		slog.Error("failed to get kagent status", "error", err)
+		return c.JSON(fiber.Map{"available": false, "reason": "upstream service unavailable"})
 	}
 	return c.JSON(fiber.Map{"available": available, "url": ""})
 }
@@ -48,7 +50,8 @@ func (h *KagentProxyHandler) ListAgents(c *fiber.Ctx) error {
 	}
 	agents, err := h.client.ListAgents()
 	if err != nil {
-		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("failed to list kagent agents", "error", err)
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "upstream service unavailable"})
 	}
 	return c.JSON(fiber.Map{"agents": agents})
 }
@@ -78,7 +81,8 @@ func (h *KagentProxyHandler) Chat(c *fiber.Ctx) error {
 
 	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, req.Message, req.ContextID)
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("failed to invoke kagent chat", "error", err)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to connect to kagent service"})
 	}
 	// Set SSE headers
 	c.Set("Content-Type", "text/event-stream")
@@ -145,7 +149,8 @@ func (h *KagentProxyHandler) CallTool(c *fiber.Ctx) error {
 
 	stream, err := h.client.Invoke(c.Context(), req.Namespace, req.Agent, message, "")
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("failed to invoke kagent tool call", "error", err)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "failed to connect to kagent service"})
 	}
 	defer stream.Close()
 
