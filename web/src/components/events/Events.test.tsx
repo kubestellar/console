@@ -108,6 +108,7 @@ describe('Events Component', () => {
       { type: 'Warning', reason: 'Failed', message: 'warn', object: 'pod-a', namespace: 'default', cluster: 'cluster-a', lastSeen: '2026-05-09T14:00:00Z' },
       { type: 'Normal', reason: 'Scheduled', message: 'ok', object: 'pod-b', namespace: 'default', cluster: 'cluster-a', lastSeen: '2026-05-09T14:05:00Z' },
     ]
+    const getAllEventsTab = () => screen.getByRole('button', { name: /events\.tabs\.allEvents/i })
 
     mockUseCachedEvents.mockReturnValueOnce({
       events: liveEvents,
@@ -124,7 +125,7 @@ describe('Events Component', () => {
     const { rerender } = renderEvents()
 
     await waitFor(() => {
-      expect(screen.getByText('2')).toBeTruthy()
+      expect(getAllEventsTab().textContent).toContain('2')
     })
 
     mockUseCachedEvents.mockReturnValue({
@@ -146,8 +147,8 @@ describe('Events Component', () => {
     )
 
     await waitFor(() => {
-      expect(screen.queryByText('2')).toBeNull()
-      expect(screen.getAllByText('0').length).toBeGreaterThan(0)
+      expect(getAllEventsTab().textContent).toContain('0')
+      expect(getAllEventsTab().textContent).not.toContain('2')
     })
   })
 })
