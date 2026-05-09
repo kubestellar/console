@@ -22,7 +22,6 @@ const STORAGE_KEY = 'test-dashboard-cards'
 describe('useDashboardReset', () => {
   let cards: TestCard[]
   let setCardsFn: ReturnType<typeof vi.fn>
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     localStorage.clear()
@@ -31,11 +30,10 @@ describe('useDashboardReset', () => {
       { id: 'custom-2', card_type: 'custom-widget', config: {} },
     ]
     setCardsFn = vi.fn((newCards: TestCard[]) => { cards = newCards })
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
-    consoleErrorSpy.mockRestore()
+    vi.restoreAllMocks()
   })
 
   afterEach(() => {
