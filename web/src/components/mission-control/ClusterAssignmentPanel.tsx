@@ -107,9 +107,9 @@ export function ClusterAssignmentPanel({
     return notes
   }, [helmReleases, healthyClusters, state.projects])
 
-  const handleAutoAssign = () => {
+  const handleAutoAssign = async () => {
     if (healthyClusters.length === 0) return
-    onAutoAssign(healthyClusters)
+    await onAutoAssign(healthyClusters)
     setAutoAssignDone(true)
   }
 
