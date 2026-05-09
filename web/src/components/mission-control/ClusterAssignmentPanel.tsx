@@ -50,6 +50,7 @@ export function ClusterAssignmentPanel({
   const { deduplicatedClusters: clusters, isLoading: clustersLoading } = useClusters()
   const { releases: helmReleases } = useHelmReleases()
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
+  const [isAutoAssigning, setIsAutoAssigning] = useState(false)
   const [, setAutoAssignDone] = useState(false)
   // Cluster set is owned by Define Mission (state.targetClusters); the panel
   // no longer maintains a local excluded set.
@@ -108,9 +109,14 @@ export function ClusterAssignmentPanel({
   }, [helmReleases, healthyClusters, state.projects])
 
   const handleAutoAssign = async () => {
-    if (healthyClusters.length === 0) return
-    await onAutoAssign(healthyClusters)
-    setAutoAssignDone(true)
+    if (healthyClusters.length === 0 || isAutoAssigning) return
+    setIsAutoAssigning(true)
+    try {
+      await onAutoAssign(healthyClusters)
+      setAutoAssignDone(true)
+    } finally {
+      setIsAutoAssigning(false)
+    }
   }
 
   const handleAISuggest = () => {
@@ -185,18 +191,19 @@ export function ClusterAssignmentPanel({
             variant="secondary"
             size="sm"
             onClick={handleAutoAssign}
-            disabled={aiStreaming || healthyClusters.length === 0}
+            disabled={aiStreaming || isAutoAssigning || healthyClusters.length === 0}
+            loading={isAutoAssigning}
             icon={<Shuffle className="w-3.5 h-3.5" />}
             title="Balance projects across clusters by compute, category, and install status"
           >
-            Auto-Assign
+            {isAutoAssigning ? 'Assigning...' : 'Auto-Assign'}
           </Button>
           <Button
             variant="secondary"
             size="sm"
             data-testid="mission-control-ask-ai"
             onClick={handleAISuggest}
-            disabled={aiStreaming || healthyClusters.length === 0}
+            disabled={aiStreaming || isAutoAssigning || healthyClusters.length === 0}
             icon={
               aiStreaming ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -237,7 +244,12 @@ export function ClusterAssignmentPanel({
       {/* Content */}
       {!clustersLoading && healthyClusters.length > 0 && (
         <>
-          {viewMode === 'cards' ? (
+          {isAutoAssigning ? (
+            <div className="flex items-center justify-center rounded-lg border border-border bg-card/60 py-12 text-muted-foreground">
+              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <span className="text-sm">Auto-assigning projects to clusters...</span>
+            </div>
+          ) : viewMode === 'cards' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {healthyClusters.map((cluster) => {
                 const aiAssignment = state.assignments.find((a) => a.clusterName === cluster.name)
@@ -291,7 +303,7 @@ export function ClusterAssignmentPanel({
           )}
 
           {/* Phase summary */}
-          {state.phases.length > 0 && (
+          {!isAutoAssigning && state.phases.length > 0 && (
             <div className="border-t border-border pt-4">
               <h3 className="text-sm font-medium mb-2">Deployment Phases</h3>
               <div className="flex flex-wrap gap-2">

@@ -163,8 +163,12 @@ describe('ClusterAssignmentPanel', () => {
     })
   })
 
-  it('calls onAutoAssign when button clicked', async () => {
-    const onAutoAssign = vi.fn()
+  it('keeps the panel loading until auto-assign resolves', async () => {
+    let resolveAutoAssign: (() => void) | undefined
+    const onAutoAssign = vi.fn(() => new Promise<void>((resolve) => {
+      resolveAutoAssign = resolve
+    }))
+
     render(
       <ClusterAssignmentPanel
         state={mockState}
@@ -174,13 +178,28 @@ describe('ClusterAssignmentPanel', () => {
         aiStreaming={false}
       />
     )
-    
+
     await waitFor(() => {
-      const btn = screen.getByText('Auto-Assign')
-      expect(btn).not.toBeDisabled()
-      fireEvent.click(btn)
+      expect(screen.getByTestId('mission-control-cluster-cluster-1')).toBeDefined()
     })
+
+    fireEvent.click(screen.getByText('Auto-Assign'))
+
     expect(onAutoAssign).toHaveBeenCalled()
+    expect(await screen.findByText('Assigning...')).toBeDefined()
+    expect(screen.getByText('Auto-assigning projects to clusters...')).toBeDefined()
+    expect(screen.queryByTestId('mission-control-cluster-cluster-1')).toBeNull()
+    expect(screen.getByTestId('mission-control-ask-ai')).toBeDisabled()
+
+    await act(async () => {
+      resolveAutoAssign?.()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Auto-Assign')).toBeDefined()
+      expect(screen.getByTestId('mission-control-cluster-cluster-1')).toBeDefined()
+    })
   })
 })
 
