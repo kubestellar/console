@@ -129,10 +129,12 @@ describe('FeatureRequestModal Component', () => {
     fireEvent.click(screen.getByText(/Switch Without Saving/i))
 
     await waitFor(() => {
-      expect(screen.getByText(/Saved Drafts/i)).toBeInTheDocument()
+      expect(screen.getByText(/^No saved drafts$/i)).toBeInTheDocument()
       expect(screen.queryByText(/Save Draft & Switch/i)).not.toBeInTheDocument()
     })
   })
+
+
 
   // Regression test for Issue 9358 — after a successful submission the
   // form shows the "Request Submitted" confirmation view. Clicking Close
@@ -184,19 +186,42 @@ describe('FeatureRequestModal Component', () => {
   })
 
   it('rechecks backend token status each time the modal reopens', async () => {
-    vi.mocked(global.fetch)
-      .mockResolvedValueOnce(createFetchResponse(false) as Response)
-      .mockResolvedValueOnce(createFetchResponse(true) as Response)
+    const fetchMock = vi.mocked(global.fetch)
+    const tokenStatusResponses = [
+      createFetchResponse(false) as Response,
+      createFetchResponse(true) as Response,
+    ]
+    const getUrl = (input: string | URL | Request) =>
+      typeof input === 'string' || input instanceof URL ? input.toString() : input.url
+    const getTokenStatusCallCount = () => fetchMock.mock.calls.filter(([input]) =>
+      getUrl(input as string | URL | Request).includes('/api/github/token/status')
+    ).length
+
+    fetchMock.mockImplementation(async (input: string | URL | Request) => {
+      if (getUrl(input).includes('/api/github/token/status')) {
+        return tokenStatusResponses.shift() ?? (createFetchResponse(true) as Response)
+      }
+      return createFetchResponse(true) as Response
+    })
 
     const { rerender } = render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
 
-    await screen.findByText(/GitHub integration not configured/i)
+    await waitFor(() => expect(getTokenStatusCallCount()).toBe(1))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Submit/i })).toHaveAttribute(
+        'title',
+        expect.stringContaining('FEEDBACK_GITHUB_TOKEN is not configured'),
+      )
+    }, { timeout: 5000 })
 
     rerender(<FeatureRequestModal isOpen={false} onClose={vi.fn()} initialTab="submit" />)
     rerender(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2))
-    await waitFor(() => expect(screen.queryByText(/GitHub integration not configured/i)).not.toBeInTheDocument())
+    await waitFor(() => expect(getTokenStatusCallCount()).toBe(2))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Submit/i })).not.toHaveAttribute('title')
+      expect(screen.queryByText(/GitHub integration not configured/i)).not.toBeInTheDocument()
+    })
   })
 
   it('shows re-authentication guidance and a direct GitHub fallback for 403 permission errors', async () => {
