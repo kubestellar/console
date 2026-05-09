@@ -97,7 +97,7 @@ describe('AgentStatusIndicator', () => {
     expect(screen.getByText('agent.authError')).toBeTruthy()
   })
 
-  it('uses dashboard health warning state for the top pill', () => {
+  it('uses agent connection state over dashboard health for the top pill', () => {
     mockUseDashboardHealth.mockReturnValueOnce({
       status: 'warning',
       message: 'Degraded',
@@ -108,7 +108,8 @@ describe('AgentStatusIndicator', () => {
 
     render(<AgentStatusIndicator />)
 
-    expect(screen.getByText('Degraded')).toBeTruthy()
-    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('Degraded\nLocal agent degraded (3 errors)')
+    expect(screen.queryByText('Degraded')).toBeNull()
+    expect(screen.getByText('agent.offline')).toBeTruthy()
+    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.localAgentDisconnected')
   })
 })

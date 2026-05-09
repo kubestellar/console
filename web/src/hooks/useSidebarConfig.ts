@@ -318,6 +318,8 @@ function migrateConfig(stored: SidebarConfig): SidebarConfig {
   const primaryNav = normalized.primaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
   const secondaryNav = normalized.secondaryNav.filter(item => !DEPRECATED_ROUTES.includes(item.href))
   const knownDefaultItemIds = new Set(normalized.knownDefaultItemIds)
+  const removedBuiltinItemIds = new Set(normalized.removedBuiltinItemIds)
+  const hasActiveDashboardFilter = enabledDashboardIds !== null
 
   // Find default routes that are missing from the stored config
   const existingHrefs = new Set([
@@ -325,13 +327,15 @@ function migrateConfig(stored: SidebarConfig): SidebarConfig {
     ...secondaryNav.map(item => item.href),
   ])
 
-  // Only restore default items that are genuinely new since the config was last saved.
-  const missingPrimaryItems = DEFAULT_PRIMARY_NAV.filter(
-    item => !existingHrefs.has(item.href) && !knownDefaultItemIds.has(item.id)
-  )
+  // Restore defaults hidden by the server-side filter only while that filter is active.
+  const missingPrimaryItems = DEFAULT_PRIMARY_NAV.filter((item) => {
+    if (existingHrefs.has(item.href)) return false
+    if (hasActiveDashboardFilter) return !knownDefaultItemIds.has(item.id)
+    return !removedBuiltinItemIds.has(item.id)
+  })
 
   const missingSecondaryItems = DEFAULT_SECONDARY_NAV.filter(
-    item => !existingHrefs.has(item.href) && !knownDefaultItemIds.has(item.id)
+    item => !existingHrefs.has(item.href) && !removedBuiltinItemIds.has(item.id)
   )
 
   // If there are missing items or deprecated routes were removed, update the config
