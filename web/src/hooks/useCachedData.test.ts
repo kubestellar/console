@@ -145,6 +145,7 @@ function defaultCacheResult<T>(data: T, overrides: Record<string, unknown> = {})
     consecutiveFailures: 0,
     lastRefresh: Date.now(),
     refetch: vi.fn(),
+    retryFetch: vi.fn(),
     clearAndRefetch: vi.fn(),
     ...overrides,
   }
@@ -1154,6 +1155,7 @@ describe('CachedHookResult interface', () => {
     expect(result.current).toHaveProperty('consecutiveFailures')
     expect(result.current).toHaveProperty('lastRefresh')
     expect(result.current).toHaveProperty('refetch')
+    expect(result.current).toHaveProperty('retryFetch')
   })
 
   it('useCachedServices returns all CachedHookResult fields', () => {

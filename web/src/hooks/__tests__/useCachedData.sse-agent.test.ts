@@ -144,6 +144,7 @@ function makeCacheResult<T>(data: T, overrides?: Record<string, unknown>) {
     consecutiveFailures: 0,
     lastRefresh: Date.now(),
     refetch: vi.fn(),
+    retryFetch: vi.fn(),
     ...overrides,
   }
 }
