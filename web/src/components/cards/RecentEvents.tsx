@@ -109,7 +109,17 @@ export function RecentEvents() {
             )}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        {/* Search */}
+        <CardSearchInput
+          value={filters.search}
+          onChange={filters.setSearch}
+          placeholder="Search events..."
+          className="mb-0 w-full min-w-0 sm:flex-1"
+        />
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
           <CardControlsRow
             clusterFilter={{
               availableClusters: filters.availableClusters,
@@ -131,6 +141,7 @@ export function RecentEvents() {
               onSortChange: (v) => sorting.setSortBy(v as SortByOption),
               sortDirection: sorting.sortDirection,
               onSortDirectionChange: sorting.setSortDirection }}
+            className="mb-0 flex-1"
           />
           <RefreshButton
             isRefreshing={isRefreshing}
@@ -141,9 +152,6 @@ export function RecentEvents() {
           />
         </div>
       </div>
-
-      {/* Search */}
-      <CardSearchInput value={filters.search} onChange={filters.setSearch} placeholder="Search events..." />
 
       {/* Error Display */}
       {isFailed && (

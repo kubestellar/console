@@ -241,7 +241,7 @@ export function CardSearchInput({
   useEffect(() => () => clearTimeout(timerRef.current), [])
 
   return (
-    <div className={`relative mb-4 ${className}`}>
+    <div className={`relative mb-4 flex-1 min-w-[10rem] max-w-full ${className}`}>
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
       <input
         type="text"
@@ -249,7 +249,7 @@ export function CardSearchInput({
         onChange={(e) => handleChange(e.target.value)}
         onBlur={handleBlur}
         placeholder={placeholder}
-        className="w-full pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
+        className="w-full min-w-0 pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
       />
     </div>
   )

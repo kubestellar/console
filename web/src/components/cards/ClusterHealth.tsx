@@ -276,6 +276,16 @@ export function ClusterHealth() {
             showLabel={false}
           />
         </div>
+      </div>
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        {/* Local Search */}
+        <CardSearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder={t('common:common.searchClusters')}
+          className="mb-0 w-full min-w-0 sm:flex-1"
+        />
         <CardControlsRow
           clusterIndicator={
             localClusterFilter.length > 0
@@ -299,17 +309,9 @@ export function ClusterHealth() {
             onSortChange: (v) => setSortBy(v as SortByOption),
             sortDirection,
             onSortDirectionChange: setSortDirection }}
-          className="mb-0"
+          className="mb-0 w-full justify-start sm:w-auto sm:shrink-0"
         />
       </div>
-
-      {/* Local Search */}
-      <CardSearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder={t('common:common.searchClusters')}
-        className="mb-4"
-      />
 
       {/* Stats — hidden on /clusters page where StatsOverview already shows these metrics */}
       {!hideStatsGrid && (

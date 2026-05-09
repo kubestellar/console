@@ -158,6 +158,16 @@ export function PodIssues() {
             {rawIssues.length} issues
           </StatusBadge>
         </div>
+      </div>
+
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        {/* Search */}
+        <CardSearchInput
+          value={localSearch}
+          onChange={setLocalSearch}
+          placeholder={t('common.searchIssues')}
+          className="mb-0 w-full min-w-0 sm:flex-1"
+        />
         <CardControlsRow
           clusterIndicator={{
             selectedCount: localClusterFilter.length,
@@ -182,16 +192,9 @@ export function PodIssues() {
             sortDirection,
             onSortDirectionChange: setSortDirection,
           }}
+          className="mb-0 w-full justify-start sm:w-auto sm:shrink-0"
         />
       </div>
-
-      {/* Search */}
-      <CardSearchInput
-        value={localSearch}
-        onChange={setLocalSearch}
-        placeholder={t('common.searchIssues')}
-        className="mb-3"
-      />
 
       {/* Issues list */}
       <div ref={containerRef} className="flex-1 space-y-2 overflow-y-auto min-h-card-content" style={containerStyle}>
