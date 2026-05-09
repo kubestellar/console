@@ -853,13 +853,12 @@ export function FlightPlanBlueprint({
         <div
           className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs"
           onClick={(e) => { if (e.target === e.currentTarget) { setPreviewMission(null); setPreviewRaw(false) } }}
-          onKeyDownCapture={(e) => {
-            if (e.key === 'Escape') {
-              e.stopPropagation()
-              e.nativeEvent.stopImmediatePropagation()
-              setPreviewMission(null)
-              setPreviewRaw(false)
-            }
+          onKeyDown={(e) => {
+            if (e.defaultPrevented || e.key !== 'Escape') return
+            e.stopPropagation()
+            e.nativeEvent.stopImmediatePropagation()
+            setPreviewMission(null)
+            setPreviewRaw(false)
           }}
           role="dialog"
           tabIndex={-1}
