@@ -65,6 +65,7 @@ import { useUpdateProgress } from '../../hooks/useUpdateProgress'
 import { VersionCheckProvider } from '../../hooks/useVersionCheck'
 import { copyToClipboard } from '../../lib/clipboard'
 import { ROUTES } from '../../config/routes'
+import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
 
 // Lazy-load the AI mission sidebar so react-markdown and remark plugins are
 // not part of the initial bundle — they only load when the sidebar is first rendered.
@@ -83,6 +84,62 @@ const STAR_POSITIONS = Array.from({ length: 30 }, () => ({
 
 const UPDATE_TOAST_DONE_DISMISS_MS = 5000
 const UPDATE_TOAST_TERMINAL_DISMISS_MS = 8000
+const CACHE_META_PREFIX = 'kc_meta:'
+const STALE_META_THRESHOLD_MS = 24 * 60 * 60 * 1000
+const CACHE_META_TIMESTAMP_FIELDS = [
+  'lastSuccessfulRefresh',
+  'lastUpdated',
+  'timestamp',
+  'updatedAt',
+] as const
+
+type CacheMetaTimestampField = typeof CACHE_META_TIMESTAMP_FIELDS[number]
+type CacheMetaStorageValue = Partial<Record<CacheMetaTimestampField, number>>
+
+function getCacheMetaTimestamp(value: unknown): number | null {
+  if (!value || typeof value !== 'object') return null
+
+  const meta = value as CacheMetaStorageValue
+  for (const field of CACHE_META_TIMESTAMP_FIELDS) {
+    const timestamp = meta[field]
+    if (typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0) {
+      return timestamp
+    }
+  }
+
+  return null
+}
+
+export function getStaleCacheMetaKeys(now: number = Date.now()): string[] {
+  try {
+    const keysToRemove: string[] = []
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (!key?.startsWith(CACHE_META_PREFIX)) continue
+
+      const raw = safeGetItem(key)
+      if (!raw) {
+        keysToRemove.push(key)
+        continue
+      }
+
+      try {
+        const parsed: unknown = JSON.parse(raw)
+        const timestamp = getCacheMetaTimestamp(parsed)
+        if (timestamp === null || now - timestamp > STALE_META_THRESHOLD_MS) {
+          keysToRemove.push(key)
+        }
+      } catch {
+        keysToRemove.push(key)
+      }
+    }
+
+    return keysToRemove
+  } catch {
+    return []
+  }
+}
 
 // Thin progress bar shown during route transitions so the user
 // gets immediate visual feedback that navigation is happening.
@@ -213,12 +270,9 @@ export function Layout({ children: _children }: LayoutProps) {
   // Clear stale cache failure metadata on fresh page load so previous-session
   // "Refresh failed" badges don't persist across restarts.
   useEffect(() => {
-    const keysToRemove: string[] = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith('kc_meta:')) keysToRemove.push(key)
-    }
-    keysToRemove.forEach((k) => localStorage.removeItem(k))
+    getStaleCacheMetaKeys().forEach((key) => {
+      safeRemoveItem(key)
+    })
   }, [])
 
   // Auto-enable demo mode when agent is confirmed disconnected and not in cluster mode.
