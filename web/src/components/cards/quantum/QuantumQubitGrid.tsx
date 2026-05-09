@@ -4,6 +4,7 @@ import { useReportCardDataState } from '../CardDataContext'
 import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 
 // Polling interval for qubit grid updates (adjustable for responsiveness)
 const QUBIT_GRID_DEFAULT_POLL_MS = 10000
@@ -214,6 +215,7 @@ export const QuantumQubitGrid: React.FC = () => {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
 
         if (!res.ok) {
@@ -241,6 +243,7 @@ export const QuantumQubitGrid: React.FC = () => {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })
 
           if (statusRes.ok) {

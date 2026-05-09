@@ -6,6 +6,7 @@ import { Slider } from '../../ui/Slider'
 import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 
 // Polling interval for status updates (can be adjusted if needed)
 const STATUS_POLL_MS_DEFAULT = 8000
@@ -85,7 +86,9 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
       }
 
       try {
-        const response = await fetch('/api/quantum/status')
+        const response = await fetch('/api/quantum/status', {
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        })
         if (!response.ok) {
           setIsFailed(true)
           setConsecutiveFailures((prev) => prev + 1)

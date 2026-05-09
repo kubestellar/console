@@ -7,6 +7,7 @@ import { CustomQASMModal } from './CustomQASMModal'
 import { useQASMFiles } from '../../../hooks/useQASMFiles'
 import { useAuth } from '../../../lib/auth'
 import { useDrillDown } from '../../../hooks/useDrillDown'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 
 interface ControlState {
   backend: string
@@ -62,6 +63,8 @@ interface SystemStatus {
 }
 
 const LARGE_CIRCUIT_QASM = 'expt32.qasm'
+const LOOP_MODE_STATUS_SYNC_DELAY_MS = 100
+const EXECUTION_STATUS_POLL_DELAY_MS = 500
 
 const DEMO_DATA: ControlState = {
   backend: 'aer',
@@ -138,6 +141,7 @@ export const QuantumControlPanel: React.FC = () => {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!res.ok) {
@@ -202,6 +206,7 @@ export const QuantumControlPanel: React.FC = () => {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (res.ok) {
       const data = await res.json()
@@ -226,6 +231,7 @@ export const QuantumControlPanel: React.FC = () => {
           'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'include',
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         body: JSON.stringify({
           api_key: form.apiKey,
           crn: form.crn,
@@ -261,6 +267,7 @@ export const QuantumControlPanel: React.FC = () => {
           'X-Requested-With': 'XMLHttpRequest',
         },
         credentials: 'include',
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!res.ok) {
@@ -320,6 +327,7 @@ export const QuantumControlPanel: React.FC = () => {
             'X-Requested-With': 'XMLHttpRequest',
           },
           credentials: 'include',
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           body: JSON.stringify({
             name: qasmFilename,
             content: customQasmContent,
@@ -342,6 +350,7 @@ export const QuantumControlPanel: React.FC = () => {
         'X-Requested-With': 'XMLHttpRequest',
       },
       credentials: 'include',
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       body: JSON.stringify(payload),
       })
 
@@ -365,6 +374,7 @@ export const QuantumControlPanel: React.FC = () => {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
+            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
           })
           if (statusRes.ok) {
             const data = await statusRes.json()
@@ -378,7 +388,7 @@ export const QuantumControlPanel: React.FC = () => {
       } catch (err) {
           console.error('Error polling after execution:', err)
       }
-      }, 500)
+      }, EXECUTION_STATUS_POLL_DELAY_MS)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Execution error')
     } finally {
@@ -396,16 +406,18 @@ export const QuantumControlPanel: React.FC = () => {
         'X-Requested-With': 'XMLHttpRequest',
       },
       credentials: 'include',
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!response.ok) throw new Error('Failed to toggle loop mode')
 
       // Fix #1: Don't rely on response.loop_mode - refetch status instead
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise(resolve => setTimeout(resolve, LOOP_MODE_STATUS_SYNC_DELAY_MS))
       const statusRes = await fetch('/api/quantum/status', {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
       if (statusRes.ok) {
       const statusData = await statusRes.json()

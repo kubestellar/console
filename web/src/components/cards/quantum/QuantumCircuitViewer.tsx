@@ -4,6 +4,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 
 const CIRCUIT_ASCII_POLLING_INTERVAL_MS = 10000
 
@@ -60,7 +61,9 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
       try {
         setIsLoading(true)
         setIsFailed(false)
-        const response = await fetch('/api/quantum/qasm/circuit/ascii')
+        const response = await fetch('/api/quantum/qasm/circuit/ascii', {
+          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+        })
         if (!response.ok) {
           throw new Error(`Failed to fetch circuit: ${response.statusText}`)
         }

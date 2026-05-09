@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../lib/auth'
 import { isQuantumForcedToDemo } from '../lib/demoMode'
+import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 
 interface QASMFile {
   name: string
@@ -29,6 +30,7 @@ export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
       })
 
       if (!response.ok) {
