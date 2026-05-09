@@ -702,7 +702,6 @@ export function Layout({ children: _children }: LayoutProps) {
         <main
           id="main-content"
           style={{
-            marginTop: `var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px)`,
             marginLeft: isMobile ? 0 : sidebarWidthPx + SIDEBAR_CONTROLS_OFFSET_PX,
             marginRight: isMobile ? 0 : 'var(--mission-sidebar-width, 0px)' }}
           // overflow-x-hidden prevents stray wide children from pushing the
@@ -716,6 +715,13 @@ export function Layout({ children: _children }: LayoutProps) {
           className="relative flex-1 p-4 pb-8 pb-[calc(2rem+env(safe-area-inset-bottom))] md:p-6 md:pb-8 md:pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
           data-transition-margin="true"
         >
+          {/* Spacer pushes scrollable content below the open navbar filter
+              panel.  It lives INSIDE <main> (the scroll container) so the
+              offset actually moves content in the viewport. (#12767) */}
+          <div
+            aria-hidden
+            style={{ height: `var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px)` }}
+          />
           <NavigationProgress />
           {/*
             Key the Outlet by location.pathname so route changes are a clean

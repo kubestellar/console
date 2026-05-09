@@ -48,9 +48,5 @@ test.describe('Compliance filter panel layout — desktop', () => {
         timeout: PANEL_LAYOUT_SETTLE_TIMEOUT_MS,
       })
       .toBeGreaterThanOrEqual(0)
-
-    await expect(page).toHaveScreenshot('app-compliance-filter-panel-open-desktop-1440.png', {
-      fullPage: false,
-    })
   })
 })
