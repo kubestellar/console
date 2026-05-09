@@ -1,4 +1,4 @@
-import { ReactNode, Suspense, useState, useEffect, useRef } from 'react'
+import { type CSSProperties, ReactNode, Suspense, useState, useEffect, useRef } from 'react'
 import { safeLazy } from '../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
@@ -45,7 +45,7 @@ import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
-import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX, SIDEBAR_CONTROLS_OFFSET_PX } from '../../lib/constants/ui'
+import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX, MOBILE_BANNER_COLLAPSE_THRESHOLD, SIDEBAR_CONTROLS_OFFSET_PX } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
@@ -147,6 +147,7 @@ export function Layout({ children: _children }: LayoutProps) {
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showInClusterAgentDialog, setShowInClusterAgentDialog] =
     useState(false)
+  const [mobileBannerStackExpanded, setMobileBannerStackExpanded] = useState(false)
   const [wasBackendDown, setWasBackendDown] = useState(false)
   const [updateToastDismissed, setUpdateToastDismissed] = useState(false)
 
@@ -319,6 +320,7 @@ export function Layout({ children: _children }: LayoutProps) {
 
   // Show network banner when browser detects no network, or briefly after reconnecting
   const showNetworkBanner = !isOnline || wasOffline
+  const showDemoBanner = isDemoMode && !demoBannerDismissed
   // Show offline banner only when agent is confirmed disconnected (not during 'connecting' state)
   // This prevents flickering during initial connection attempts
   const showOfflineBanner =
@@ -334,20 +336,234 @@ export function Layout({ children: _children }: LayoutProps) {
     agentStatus === 'disconnected' &&
     !isDemoMode &&
     !hasInClusterAIBackend
+  const isAuthenticatedNoAgent = hasRealToken() && agentStatus !== 'connected'
 
-  // Banner stacking: each banner's top offset depends on how many banners above it are visible.
-  // Dev bar (20px) → Navbar (64px) → Banners (36px each).
-  // Z-index hierarchy: Navbar (z-sticky=200) > Sidebars (z-sidebar=150) > Network banner (z-40) > Demo banner (z-30) > In-cluster / Offline banner (z-20)
-  // Desktop sidebars use z-sidebar so navbar dropdowns (z-toast=500 within z-sticky=200 context) paint above them.
-  // Mobile mission sidebar stays at z-modal (bottom sheet needs full overlay). MissionBrowser modal stays at z-modal.
-  // Stack order: Network (top) → Demo → In-cluster agent / Agent Offline (bottom)
-  const networkBannerTop = NAVBAR_HEIGHT_PX
-  const showDemoBanner = isDemoMode && !demoBannerDismissed
-  const demoBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0)
-  const inClusterBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (showDemoBanner ? BANNER_HEIGHT_PX : 0)
-  const offlineBannerTop = NAVBAR_HEIGHT_PX + (showNetworkBanner ? BANNER_HEIGHT_PX : 0) + (showDemoBanner ? BANNER_HEIGHT_PX : 0) + (showInClusterBanner ? BANNER_HEIGHT_PX : 0)
-  const activeBannerCount = (showNetworkBanner ? 1 : 0) + (showDemoBanner ? 1 : 0) + (showInClusterBanner ? 1 : 0) + (showOfflineBanner ? 1 : 0)
-  const totalBannerHeight = activeBannerCount * BANNER_HEIGHT_PX
+  type LayoutBanner = {
+    id: string
+    className: string
+    style?: CSSProperties
+    content: ReactNode
+  }
+
+  const activeBanners: LayoutBanner[] = []
+
+  if (showNetworkBanner) {
+    activeBanners.push({
+      id: 'network',
+      className: cn(
+        'right-0 z-40 border-b',
+        isOnline
+          ? 'bg-green-500/10 border-green-500/20'
+          : 'bg-red-500/10 border-red-500/20',
+      ),
+      content: (
+        <div className="flex items-center justify-center gap-3 py-1.5 px-4">
+          {isOnline ? (
+            <>
+              <Wifi className="w-4 h-4 text-green-400" aria-hidden="true" />
+              <span className="text-sm text-green-400 font-medium">
+                {t('layout.networkReconnected')}
+              </span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="w-4 h-4 text-red-400" aria-hidden="true" />
+              <span className="text-sm text-red-400 font-medium">
+                {t('layout.networkDisconnected')}
+              </span>
+              <span className="text-xs text-red-400/70">
+                {t('layout.checkInternetConnection')}
+              </span>
+            </>
+          )}
+        </div>
+      ),
+    })
+  }
+
+  if (showDemoBanner) {
+    activeBanners.push({
+      id: 'demo',
+      className: 'right-0 z-30 bg-background border-b border-border/30',
+      content: (
+        <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
+          {isAuthenticatedNoAgent
+            ? <Plug className="w-4 h-4 text-yellow-400" aria-hidden="true" />
+            : <Box className="w-4 h-4 text-yellow-400" aria-hidden="true" />
+          }
+          <span className="text-sm text-yellow-400 font-medium">
+            {isAuthenticatedNoAgent ? t('layout.agentNotConnected') : t('layout.demoMode')}
+          </span>
+          <span className="hidden md:inline text-xs text-yellow-400/70">
+            {isAuthenticatedNoAgent
+              ? t('layout.sampleDataConnectAgent')
+              : t('layout.sampleDataInstallLocally')
+            }
+          </span>
+          <Button
+            variant="accent"
+            size="sm"
+            onClick={() => setShowSetupDialog(true)}
+            className="hidden sm:flex ml-2 rounded-full whitespace-nowrap"
+          >
+            {isAuthenticatedNoAgent ? (
+              <>
+                <Plug className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="hidden xl:inline">{t('layout.howToConnectAgent')}</span>
+                <span className="xl:hidden">{t('layout.connect')}</span>
+              </>
+            ) : (
+              <>
+                <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="hidden xl:inline">{t('layout.wantYourOwnConsole')}</span>
+                <span className="xl:hidden">{t('layout.getConsole')}</span>
+              </>
+            )}
+          </Button>
+          <button
+            onClick={() => isDemoModeForced ? setDemoBannerDismissed(true) : toggleDemoMode()}
+            className="ml-1 md:ml-2 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-yellow-500/20 rounded-full transition-colors"
+            aria-label={isDemoModeForced ? t('buttons.dismissBanner') : t('buttons.exitDemoMode')}
+            title={isDemoModeForced ? t('buttons.dismissBanner') : t('buttons.exitDemoMode')}
+          >
+            <X className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
+          </button>
+        </div>
+      ),
+    })
+  }
+
+  if (showInClusterBanner) {
+    activeBanners.push({
+      id: 'in-cluster',
+      className: 'right-0 z-20 bg-background border-b border-blue-500/20',
+      content: (
+        <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
+          <Plug className="w-4 h-4 text-blue-400" aria-hidden="true" />
+          <span className="text-sm text-blue-400 font-medium">
+            {t('layout.agentNotDetected')}
+          </span>
+          <span className="hidden md:inline text-xs text-blue-400/70">
+            {t('layout.installAgentOrCORS')}
+          </span>
+          <Button
+            variant="accent"
+            size="sm"
+            onClick={() => setShowInClusterAgentDialog(true)}
+            className="hidden sm:flex ml-2 rounded-full"
+          >
+            <Plug className="w-3.5 h-3.5" aria-hidden="true" />
+            <span className="hidden lg:inline">
+              {t('layout.setupGuide')}
+            </span>
+            <span className="lg:hidden">{t('layout.setup')}</span>
+          </Button>
+          <button
+            onClick={() => setShowInClusterAgentDialog(true)}
+            className="sm:hidden ml-1 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-blue-500/20 rounded-full transition-colors"
+            aria-label={t('layout.openAgentSetupGuide')}
+            title={t('layout.openAgentSetupGuide')}
+          >
+            <Plug
+              className="w-3.5 h-3.5 text-blue-400"
+              aria-hidden="true"
+            />
+          </button>
+        </div>
+      ),
+    })
+  }
+
+  if (showOfflineBanner) {
+    activeBanners.push({
+      id: 'offline',
+      className: 'z-20 bg-background border-b border-orange-500/20',
+      style: { right: 'var(--mission-sidebar-width, 0px)' },
+      content: (
+        <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-3 md:px-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <WifiOff className="w-4 h-4 text-orange-400 shrink-0" />
+            <span className="text-sm text-orange-400 font-medium shrink-0">
+              {t('common.offline')}
+            </span>
+            <span className="hidden lg:inline text-xs text-orange-400/70 truncate">
+              — Install:{' '}
+              <code className="bg-orange-500/20 px-1 rounded">
+                brew install kubestellar/tap/kc-agent
+              </code>{' '}
+              → run{' '}
+              <code className="bg-orange-500/20 px-1 rounded">
+                kc-agent
+              </code>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to={ROUTES.SETTINGS}
+              className="flex items-center gap-1 text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
+            >
+              <Settings className="w-3 h-3" />
+              <span className="hidden sm:inline">
+                {t('navigation.settings')}
+              </span>
+            </Link>
+            <button
+              onClick={toggleDemoMode}
+              className="text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
+            >
+              <span className="hidden sm:inline">
+                {t('layout.switchTo')}{' '}
+              </span>
+              {t('layout.demo')}
+            </button>
+            <button
+              onClick={() => setOfflineBannerDismissed(true)}
+              className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-orange-500/20 rounded-full transition-colors"
+              title={t('actions.dismiss')}
+            >
+              <X className="w-3.5 h-3.5 text-orange-400" />
+            </button>
+          </div>
+        </div>
+      ),
+    })
+  }
+
+  const showMobileBannerSummary =
+    isMobile && activeBanners.length > MOBILE_BANNER_COLLAPSE_THRESHOLD
+
+  useEffect(() => {
+    if (!showMobileBannerSummary) {
+      setMobileBannerStackExpanded(false)
+    }
+  }, [showMobileBannerSummary])
+
+  const visibleBanners: LayoutBanner[] = showMobileBannerSummary
+    ? [{
+      id: 'mobile-banner-summary',
+      className: 'right-0 z-40 bg-background border-b border-yellow-500/20',
+      content: (
+        <div className="flex items-center justify-between gap-3 py-1.5 px-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <AlertTriangle className="w-4 h-4 text-yellow-400 shrink-0" aria-hidden="true" />
+            <span className="text-sm text-yellow-400 font-medium truncate">
+              {t('layout.activeAlerts', { count: activeBanners.length })}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileBannerStackExpanded(expanded => !expanded)}
+            className="text-xs px-2 py-2 min-h-11 whitespace-nowrap bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 rounded transition-colors"
+            aria-expanded={mobileBannerStackExpanded}
+          >
+            {mobileBannerStackExpanded ? t('layout.hideAlerts') : t('layout.reviewAlerts')}
+          </button>
+        </div>
+      ),
+    }, ...(mobileBannerStackExpanded ? activeBanners : [])]
+    : activeBanners
+
+  const totalBannerHeight = visibleBanners.length * BANNER_HEIGHT_PX
 
   // Show bottom snackbar when backend is down, or briefly after reconnecting.
   // Suppress during active updates — the backend is expected to be down while restarting.
@@ -448,204 +664,23 @@ export function Layout({ children: _children }: LayoutProps) {
             onDismiss={dismissUpdateProgress}
           />
 
-          {/* Network Disconnected Banner */}
-          {showNetworkBanner && (
+          {/* Status banners — collapse to a single summary row on mobile when too many alerts are active. */}
+          {visibleBanners.map((banner, index) => (
             <div
-              style={{ top: networkBannerTop, left: sidebarWidthPx }}
-              className={cn(
-                'fixed right-0 z-40 border-b transition-[left] duration-300',
-                isOnline
-                  ? 'bg-green-500/10 border-green-500/20'
-                  : 'bg-red-500/10 border-red-500/20',
-              )}
-            >
-              <div className="flex items-center justify-center gap-3 py-1.5 px-4">
-                {isOnline ? (
-                  <>
-                    <Wifi
-                      className="w-4 h-4 text-green-400"
-                      aria-hidden="true"
-                    />
-                    <span className="text-sm text-green-400 font-medium">
-                      {t('layout.networkReconnected')}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff
-                      className="w-4 h-4 text-red-400"
-                      aria-hidden="true"
-                    />
-                    <span className="text-sm text-red-400 font-medium">
-                      {t('layout.networkDisconnected')}
-                    </span>
-                    <span className="text-xs text-red-400/70">
-                      {t('layout.checkInternetConnection')}
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Demo Mode Banner — context-aware messaging:
-          - Authenticated (real JWT) but no agent: "Connect your agent"
-          - No auth / Netlify preview: "Install locally" */}
-      {showDemoBanner && (() => {
-        const isAuthenticatedNoAgent = hasRealToken() && agentStatus !== 'connected'
-        return (
-          <div
-            style={{ top: demoBannerTop, left: sidebarWidthPx }}
-            className={cn(
-              "fixed right-0 z-30 bg-background border-b border-border/30 transition-[left] duration-300",
-            )}>
-            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
-              {isAuthenticatedNoAgent
-                ? <Plug className="w-4 h-4 text-yellow-400" aria-hidden="true" />
-                : <Box className="w-4 h-4 text-yellow-400" aria-hidden="true" />
-              }
-              <span className="text-sm text-yellow-400 font-medium">
-                {isAuthenticatedNoAgent ? t('layout.agentNotConnected') : t('layout.demoMode')}
-              </span>
-              <span className="hidden md:inline text-xs text-yellow-400/70">
-                {isAuthenticatedNoAgent
-                  ? t('layout.sampleDataConnectAgent')
-                  : t('layout.sampleDataInstallLocally')
-                }
-              </span>
-              <Button
-                variant="accent"
-                size="sm"
-                onClick={() => setShowSetupDialog(true)}
-                className="hidden sm:flex ml-2 rounded-full whitespace-nowrap"
-              >
-                {isAuthenticatedNoAgent ? (
-                  <>
-                    <Plug className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="hidden xl:inline">{t('layout.howToConnectAgent')}</span>
-                    <span className="xl:hidden">{t('layout.connect')}</span>
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
-                    <span className="hidden xl:inline">{t('layout.wantYourOwnConsole')}</span>
-                    <span className="xl:hidden">{t('layout.getConsole')}</span>
-                  </>
-                )}
-              </Button>
-              <button
-                onClick={() => isDemoModeForced ? setDemoBannerDismissed(true) : toggleDemoMode()}
-                className="ml-1 md:ml-2 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-yellow-500/20 rounded-full transition-colors"
-                aria-label={isDemoModeForced ? t('buttons.dismissBanner') : t('buttons.exitDemoMode')}
-                title={isDemoModeForced ? t('buttons.dismissBanner') : t('buttons.exitDemoMode')}
-              >
-                <X className="w-3.5 h-3.5 text-yellow-400" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
-        )
-      })()}
-
-          {/* In-Cluster Agent Banner — shown when running in a Kubernetes cluster (Helm) with no agent connection */}
-          {showInClusterBanner && (
-            <div
-              style={{ top: inClusterBannerTop, left: sidebarWidthPx }}
-              className={cn(
-                'fixed right-0 z-20 bg-background border-b border-blue-500/20 transition-[left] duration-300',
-              )}
-            >
-              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
-                <Plug className="w-4 h-4 text-blue-400" aria-hidden="true" />
-                <span className="text-sm text-blue-400 font-medium">
-                  {t('layout.agentNotDetected')}
-                </span>
-                <span className="hidden md:inline text-xs text-blue-400/70">
-                  {t('layout.installAgentOrCORS')}
-                </span>
-                <Button
-                  variant="accent"
-                  size="sm"
-                  onClick={() => setShowInClusterAgentDialog(true)}
-                  className="hidden sm:flex ml-2 rounded-full"
-                >
-                  <Plug className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span className="hidden lg:inline">
-                    {t('layout.setupGuide')}
-                  </span>
-                  <span className="lg:hidden">{t('layout.setup')}</span>
-                </Button>
-                <button
-                  onClick={() => setShowInClusterAgentDialog(true)}
-                  className="sm:hidden ml-1 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-blue-500/20 rounded-full transition-colors"
-                  aria-label={t('layout.openAgentSetupGuide')}
-                  title={t('layout.openAgentSetupGuide')}
-                >
-                  <Plug
-                    className="w-3.5 h-3.5 text-blue-400"
-                    aria-hidden="true"
-                  />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Offline Mode Banner - positioned in main content area only */}
-          {showOfflineBanner && (
-            <div
+              key={banner.id}
               style={{
-                top: offlineBannerTop,
+                top: NAVBAR_HEIGHT_PX + (index * BANNER_HEIGHT_PX),
                 left: sidebarWidthPx,
-                right: 'var(--mission-sidebar-width, 0px)',
+                ...banner.style,
               }}
-              className="fixed z-20 bg-background border-b border-orange-500/20 transition-[right] duration-300"
+              className={cn(
+                'fixed transition-[left,right] duration-300',
+                banner.className,
+              )}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 py-1.5 px-3 md:px-4">
-                <div className="flex items-center gap-2 min-w-0">
-                  <WifiOff className="w-4 h-4 text-orange-400 shrink-0" />
-                  <span className="text-sm text-orange-400 font-medium shrink-0">
-                    {t('common.offline')}
-                  </span>
-                  <span className="hidden lg:inline text-xs text-orange-400/70 truncate">
-                    — Install:{' '}
-                    <code className="bg-orange-500/20 px-1 rounded">
-                      brew install kubestellar/tap/kc-agent
-                    </code>{' '}
-                    → run{' '}
-                    <code className="bg-orange-500/20 px-1 rounded">
-                      kc-agent
-                    </code>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Link
-                    to={ROUTES.SETTINGS}
-                    className="flex items-center gap-1 text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
-                  >
-                    <Settings className="w-3 h-3" />
-                    <span className="hidden sm:inline">
-                      {t('navigation.settings')}
-                    </span>
-                  </Link>
-                  <button
-                    onClick={toggleDemoMode}
-                    className="text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
-                  >
-                    <span className="hidden sm:inline">
-                      {t('layout.switchTo')}{' '}
-                    </span>
-                    {t('layout.demo')}
-                  </button>
-                  <button
-                    onClick={() => setOfflineBannerDismissed(true)}
-                    className="p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-orange-500/20 rounded-full transition-colors"
-                    title={t('actions.dismiss')}
-                  >
-                    <X className="w-3.5 h-3.5 text-orange-400" />
-                  </button>
-                </div>
-              </div>
+              {banner.content}
             </div>
-          )}
+          ))}
 
           <div
             className="flex flex-1 overflow-hidden transition-[padding-top] duration-300"

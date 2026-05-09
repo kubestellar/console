@@ -96,6 +96,8 @@ export const DEFAULT_PAGE_SIZE = 5
 export const NAVBAR_HEIGHT_PX = 64
 /** Height of each status banner (network, demo, offline) in pixels */
 export const BANNER_HEIGHT_PX = 36
+/** Collapse mobile banner stacks into a summary row once this many alerts are active. */
+export const MOBILE_BANNER_COLLAPSE_THRESHOLD = 2
 /**
  * Horizontal offset (in pixels) from the sidebar's right edge at which the
  * floating collapse + pin control container is anchored (see Sidebar.tsx).
