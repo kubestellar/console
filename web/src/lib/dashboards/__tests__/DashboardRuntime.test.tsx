@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 // ---------------------------------------------------------------------------
 // Mocks — declared before component import
@@ -231,10 +232,12 @@ function renderRuntime(
   props: Partial<React.ComponentProps<typeof DashboardRuntime>> = {},
 ) {
   return render(
-    <DashboardRuntime
-      definition={MINIMAL_DEFINITION}
-      {...props}
-    />,
+    <MemoryRouter initialEntries={[MINIMAL_DEFINITION.route]}>
+      <DashboardRuntime
+        definition={MINIMAL_DEFINITION}
+        {...props}
+      />
+    </MemoryRouter>,
   )
 }
 

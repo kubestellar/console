@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -246,7 +247,11 @@ function makeDashboardReturn(overrides: Record<string, unknown> = {}) {
 }
 
 function renderRuntime(props: Partial<React.ComponentProps<typeof DashboardRuntime>> = {}) {
-  return render(<DashboardRuntime definition={FULL_DEFINITION} {...props} />)
+  return render(
+    <MemoryRouter initialEntries={[FULL_DEFINITION.route]}>
+      <DashboardRuntime definition={FULL_DEFINITION} {...props} />
+    </MemoryRouter>,
+  )
 }
 
 // ---------------------------------------------------------------------------

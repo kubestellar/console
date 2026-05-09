@@ -275,10 +275,12 @@ describe('MissionBrowser', () => {
   const addRecommendedMission = () => {
     browserMockState.missionCache.fixes = [
       {
+        version: 'kc-mission-v1',
         title: 'Recommended fix',
         description: 'Recommended description',
         type: 'repair',
         tags: ['networking'],
+        steps: [{ title: 'Apply fix', description: 'Run the recommended repair step.' }],
         metadata: { maturity: 'graduated', projectVersion: '1.0.0' },
       },
     ]
