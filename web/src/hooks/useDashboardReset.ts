@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react'
 import { safeGetItem, safeRemoveItem } from '../lib/utils/localStorage'
 
+const RANDOM_ID_RADIX = 36
+const RANDOM_ID_SLICE_START = 2
+const RANDOM_ID_SLICE_END = 7
+
 export interface DashboardCard {
   id: string
   card_type: string
@@ -35,6 +39,52 @@ interface UseDashboardResetReturn {
   reset: (mode: ResetMode) => number
 }
 
+function stableSerialize(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(item => stableSerialize(item)).join(',')}]`
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+
+    return `{${entries.map(([key, entryValue]) => `${JSON.stringify(key)}:${stableSerialize(entryValue)}`).join(',')}}`
+  }
+
+  return JSON.stringify(value)
+}
+
+function getCardSignature(card: DashboardCard): string {
+  return stableSerialize({
+    cardType: card.card_type,
+    config: card.config ?? {},
+    title: card.title ?? null,
+    position: card.position ?? null,
+  })
+}
+
+function getMissingDefaultCards<T extends DashboardCard>(defaultCards: T[], currentCards: T[]): T[] {
+  const matchedCardIndexes = new Set<number>()
+
+  return defaultCards.filter(defaultCard => {
+    const defaultCardSignature = getCardSignature(defaultCard)
+    const matchIndex = currentCards.findIndex((currentCard, index) => {
+      if (matchedCardIndexes.has(index)) {
+        return false
+      }
+
+      return currentCard.id === defaultCard.id || getCardSignature(currentCard) === defaultCardSignature
+    })
+
+    if (matchIndex === -1) {
+      return true
+    }
+
+    matchedCardIndexes.add(matchIndex)
+    return false
+  })
+}
+
 /**
  * Shared hook for dashboard reset functionality.
  * Supports two modes:
@@ -64,14 +114,13 @@ export function useDashboardReset<T extends DashboardCard>({
   // Add missing default cards while keeping existing cards
   const addMissingDefaults = () => {
     const currentCards = cardsRef.current
-    const existingTypes = new Set(currentCards.map(c => c.card_type))
-    const missingCards = defaultCards.filter(d => !existingTypes.has(d.card_type))
+    const missingCards = getMissingDefaultCards(defaultCards, currentCards)
 
     if (missingCards.length > 0) {
       // Generate new IDs for the missing cards to avoid conflicts
       const cardsToAdd = missingCards.map(card => ({
         ...card,
-        id: `${card.card_type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }))
+        id: `${card.card_type}-${Date.now()}-${Math.random().toString(RANDOM_ID_RADIX).slice(RANDOM_ID_SLICE_START, RANDOM_ID_SLICE_END)}` }))
       setCards([...currentCards, ...cardsToAdd] as T[])
     }
 

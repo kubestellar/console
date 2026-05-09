@@ -6,6 +6,8 @@ interface TestCard {
   id: string
   card_type: string
   config: Record<string, unknown>
+  title?: string
+  position?: { w: number; h: number }
 }
 
 const DEFAULT_CARDS: TestCard[] = [
@@ -87,7 +89,7 @@ describe('useDashboardReset', () => {
     expect(result.current.isCustomized).toBe(false)
   })
 
-  it('resetToDefaults still clears customized state when localStorage removal throws', () => {
+it('resetToDefaults still clears customized state when localStorage removal throws', () => {
     localStorage.setItem(STORAGE_KEY, 'something')
     const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
       throw new Error('storage denied')
@@ -109,7 +111,7 @@ describe('useDashboardReset', () => {
     removeItemSpy.mockRestore()
   })
 
-  it('addMissingDefaults adds only missing default card types', () => {
+  it('addMissingDefaults adds only missing default cards', () => {
     // cards already has 'cluster', missing 'pods' and 'nodes'
     const { result } = renderHook(() => useDashboardReset({
       storageKey: STORAGE_KEY,
@@ -137,6 +139,79 @@ describe('useDashboardReset', () => {
     act(() => { addedCount = result.current.addMissingDefaults() })
     expect(addedCount).toBe(0)
     expect(setCardsFn).not.toHaveBeenCalled()
+  })
+
+  it('addMissingDefaults restores duplicate card types when configs differ', () => {
+    const duplicateDefaults: TestCard[] = [
+      { id: 'default-workloads-all', card_type: 'workloads', config: { namespace: 'all' } },
+      { id: 'default-workloads-team-a', card_type: 'workloads', config: { namespace: 'team-a' } },
+    ]
+    cards = [duplicateDefaults[0]]
+
+    const { result } = renderHook(() => useDashboardReset({
+      storageKey: STORAGE_KEY,
+      defaultCards: duplicateDefaults,
+      setCards: setCardsFn,
+      cards,
+    }))
+
+    let addedCount = 0
+    act(() => { addedCount = result.current.addMissingDefaults() })
+
+    expect(addedCount).toBe(1)
+    const newCards = setCardsFn.mock.calls[0][0] as TestCard[]
+    expect(newCards).toHaveLength(2)
+    expect(newCards[1].card_type).toBe('workloads')
+    expect(newCards[1].config).toEqual({ namespace: 'team-a' })
+  })
+
+  it('addMissingDefaults matches existing default cards by id before config', () => {
+    cards = DEFAULT_CARDS.map(card =>
+      card.id === 'default-1'
+        ? {
+            ...card,
+            config: { scope: 'customized' },
+            title: 'Custom title',
+            position: { w: 6, h: 3 },
+          }
+        : { ...card }
+    )
+
+    const { result } = renderHook(() => useDashboardReset({
+      storageKey: STORAGE_KEY,
+      defaultCards: DEFAULT_CARDS,
+      setCards: setCardsFn,
+      cards,
+    }))
+
+    let addedCount = 0
+    act(() => { addedCount = result.current.addMissingDefaults() })
+
+    expect(addedCount).toBe(0)
+    expect(setCardsFn).not.toHaveBeenCalled()
+  })
+
+  it('addMissingDefaults restores duplicate card types when positions differ', () => {
+    const duplicateDefaults: TestCard[] = [
+      { id: 'default-workloads-compact', card_type: 'workloads', config: {}, position: { w: 4, h: 2 } },
+      { id: 'default-workloads-expanded', card_type: 'workloads', config: {}, position: { w: 8, h: 4 } },
+    ]
+    cards = [duplicateDefaults[0]]
+
+    const { result } = renderHook(() => useDashboardReset({
+      storageKey: STORAGE_KEY,
+      defaultCards: duplicateDefaults,
+      setCards: setCardsFn,
+      cards,
+    }))
+
+    let addedCount = 0
+    act(() => { addedCount = result.current.addMissingDefaults() })
+
+    expect(addedCount).toBe(1)
+    const newCards = setCardsFn.mock.calls[0][0] as TestCard[]
+    expect(newCards).toHaveLength(2)
+    expect(newCards[1].position).toEqual({ w: 8, h: 4 })
   })
 
   it('reset with "replace" mode returns default card count', () => {
