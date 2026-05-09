@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { safeGetItem, safeRemoveItem } from '../lib/utils/localStorage'
 
 export interface DashboardCard {
   id: string
@@ -46,7 +47,7 @@ export function useDashboardReset<T extends DashboardCard>({
   setCards,
   cards }: UseDashboardResetOptions<T>): UseDashboardResetReturn {
   const [isCustomized, setCustomized] = useState(() =>
-    localStorage.getItem(storageKey) !== null
+    safeGetItem(storageKey) !== null
   )
 
   // Keep a ref to the latest cards so callbacks never read stale state
@@ -56,7 +57,7 @@ export function useDashboardReset<T extends DashboardCard>({
   // Reset to only default cards (replace mode)
   const resetToDefaults = () => {
     setCards(defaultCards)
-    localStorage.removeItem(storageKey)
+    safeRemoveItem(storageKey)
     setCustomized(false)
   }
 

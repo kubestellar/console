@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useDashboardReset } from '../useDashboardReset'
 
@@ -19,6 +19,7 @@ const STORAGE_KEY = 'test-dashboard-cards'
 describe('useDashboardReset', () => {
   let cards: TestCard[]
   let setCardsFn: ReturnType<typeof vi.fn>
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     localStorage.clear()
@@ -27,6 +28,11 @@ describe('useDashboardReset', () => {
       { id: 'custom-2', card_type: 'custom-widget', config: {} },
     ]
     setCardsFn = vi.fn((newCards: TestCard[]) => { cards = newCards })
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
   })
 
   it('reports not customized when no localStorage key exists', () => {
@@ -50,6 +56,23 @@ describe('useDashboardReset', () => {
     expect(result.current.isCustomized).toBe(true)
   })
 
+  it('falls back to not customized when localStorage access throws during init', () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('storage denied')
+    })
+
+    const { result } = renderHook(() => useDashboardReset({
+      storageKey: STORAGE_KEY,
+      defaultCards: DEFAULT_CARDS,
+      setCards: setCardsFn,
+      cards,
+    }))
+
+    expect(result.current.isCustomized).toBe(false)
+    expect(consoleErrorSpy).toHaveBeenCalled()
+    getItemSpy.mockRestore()
+  })
+
   it('resetToDefaults replaces cards with defaults and clears storage', () => {
     localStorage.setItem(STORAGE_KEY, 'something')
     const { result } = renderHook(() => useDashboardReset({
@@ -62,6 +85,28 @@ describe('useDashboardReset', () => {
     expect(setCardsFn).toHaveBeenCalledWith(DEFAULT_CARDS)
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull()
     expect(result.current.isCustomized).toBe(false)
+  })
+
+  it('resetToDefaults still clears customized state when localStorage removal throws', () => {
+    localStorage.setItem(STORAGE_KEY, 'something')
+    const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('storage denied')
+    })
+
+    const { result } = renderHook(() => useDashboardReset({
+      storageKey: STORAGE_KEY,
+      defaultCards: DEFAULT_CARDS,
+      setCards: setCardsFn,
+      cards,
+    }))
+
+    expect(() => {
+      act(() => { result.current.resetToDefaults() })
+    }).not.toThrow()
+    expect(setCardsFn).toHaveBeenCalledWith(DEFAULT_CARDS)
+    expect(result.current.isCustomized).toBe(false)
+    expect(consoleErrorSpy).toHaveBeenCalled()
+    removeItemSpy.mockRestore()
   })
 
   it('addMissingDefaults adds only missing default card types', () => {
