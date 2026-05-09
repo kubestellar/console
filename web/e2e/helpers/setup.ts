@@ -108,6 +108,8 @@ export const EXPECTED_ERROR_PATTERNS = [
   /\[CacheWorkerRpc\] Worker error/i, // Cache worker failures in CI (#11660)
   /\[mockApiFallback\]/i, // Test mock logging that leaks to browser console (#11660)
   /Error fetching from cluster/i, // Cluster fetch errors when backend is unavailable (#11660)
+  /\[SSE\] Connection failed/i, // SSE retry warnings for offline clusters (#12742)
+  /\[SSE\] .*retr/i, // SSE retry-related messages (backoff, exhaustion) (#12742)
 ]
 
 function isExpectedError(message: string): boolean {
