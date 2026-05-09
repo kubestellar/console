@@ -284,7 +284,7 @@ describe('Compliance dashboard component', () => {
 
   // ---- 3) Real data aggregation ----
 
-  it('computes overall score from Kubescape + Kyverno + Trivy', () => {
+  it('keeps the overview score aligned with the compliance score card calculation', () => {
     setupDefaults({
       kyverno: installedKyverno(),
       kubescape: installedKubescape(),
@@ -292,13 +292,11 @@ describe('Compliance dashboard component', () => {
     })
     render(<Compliance />)
 
-    // Kubescape: 100 controls, 72 pass, 20 fail
-    // Kyverno: 35 policies, 8 violations => 27 pass, 8 fail
-    // Trivy: 80 reports, 14 critical+high fail => 66 pass
-    // Total: 215 checks, 165 pass, 42 fail
-    // Score: round(165/215 * 100) = 77%
+    // The overview score now mirrors the Compliance Score donut card logic:
+    // Kubescape contributes 72%, Kyverno contributes 77% (100 - 8/35),
+    // so the shared composite is round((72 + 77) / 2) = 75%.
     const score = getStatValue('score')
-    expect(score.value).toBe('77%')
+    expect(score.value).toBe('75%')
     expect(score.isDemo).toBeUndefined()
 
     const totalChecks = getStatValue('total_checks')
@@ -357,7 +355,7 @@ describe('Compliance dashboard component', () => {
     expect(props.isDemoData).toBe(true)
 
     const score = getStatValue('score')
-    expect(score.value).toBe('78%')
+    expect(score.value).toBe('85%')
     expect(score.isDemo).toBe(true)
   })
 

@@ -28,6 +28,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from './console-missions/shared'
 import { ConfirmMissionPromptDialog } from '../missions/ConfirmMissionPromptDialog'
 import { CARD_INSTALL_MAP } from '../../lib/cards/cardInstallMap'
 import { CARD_UI_STRINGS } from './strings'
+import { buildComplianceScoreSummary } from '../../lib/complianceScore'
 
 interface CardConfig {
   config?: Record<string, unknown>
@@ -1008,55 +1009,11 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   const minChecked = Math.min(ksChecked, kyChecked)
   const allChecked = minChecked >= totalChecking && totalChecking > 0
 
-  // Compute composite score from available tools
-  const { score, breakdown, usingFallback } = useMemo(() => {
-    const scores: Array<{ name: string; value: number }> = []
-
-    // Kubescape score (filtered by cluster if needed)
-    if (kubescapeAgg.overallScore > 0) {
-      scores.push({ name: 'Kubescape', value: kubescapeAgg.overallScore })
-    }
-
-    // Kyverno compliance rate
-    let totalPolicies = 0
-    for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
-      if (!status.installed) continue
-      if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
-      totalPolicies += status.totalPolicies
-    }
-    if (totalPolicies > 0) {
-      // Compliance rate based on totalViolations from PolicyReports
-      // (individual policy.violations is always 0 — hook doesn't back-populate)
-      let totalViolations = 0
-      for (const [clusterName, status] of Object.entries(kyvernoStatuses)) {
-        if (!status.installed) continue
-        if (selectedClusters.length > 0 && !selectedClusters.includes(clusterName)) continue
-        totalViolations += status.totalViolations
-      }
-      // Score: 100% when no violations, clamped to 0% when violations >= totalPolicies.
-      // Note: multiple resources can violate the same policy, so totalViolations
-      // often exceeds totalPolicies — the score floors at 0% in that case.
-      const rate = totalViolations === 0
-        ? 100
-        : Math.max(0, Math.round(100 - (totalViolations / totalPolicies) * 100))
-      scores.push({ name: 'Kyverno', value: rate })
-    }
-
-    if (scores.length === 0) {
-      // No real compliance data — show placeholder with demo indicator
-      return {
-        score: 85,
-        breakdown: [
-          { name: 'CIS', value: 82 },
-          { name: 'NSA', value: 79 },
-          { name: 'PCI', value: 71 },
-        ],
-        usingFallback: true }
-    }
-
-    const avg = Math.round(scores.reduce((sum, s) => sum + s.value, 0) / scores.length)
-    return { score: avg, breakdown: scores, usingFallback: false }
-  }, [kubescapeAgg, kyvernoStatuses, selectedClusters])
+  const { score, breakdown, usingFallback } = useMemo(() => buildComplianceScoreSummary({
+    kubescapeStatuses,
+    kyvernoStatuses,
+    selectedClusters,
+  }), [kubescapeStatuses, kyvernoStatuses, selectedClusters])
 
   // Kyverno aggregation for breakdown modal
   const kyvernoBreakdownData = useMemo(() => {
