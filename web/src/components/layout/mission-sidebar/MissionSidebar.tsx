@@ -544,6 +544,7 @@ export function MissionSidebar() {
       steps: mission.steps?.map(s => ({ title: s.title, description: s.description })),
       tags: mission.tags,
       initialPrompt: mission.resolution?.summary || mission.description })
+    closeMissionBrowser()
     // Auto-open the sidebar and highlight the imported mission so the user
     // immediately sees where it went and can act on it
     openSidebar()
