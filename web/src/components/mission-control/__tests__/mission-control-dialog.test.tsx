@@ -93,6 +93,16 @@ describe('MissionControlDialog', () => {
     expect(screen.getByTestId('phase-define')).toBeDefined()
   })
 
+  it('opens cleanly after rendering closed first', () => {
+    const { rerender } = render(<MissionControlDialog open={false} onClose={vi.fn()} />)
+
+    expect(() => {
+      rerender(<MissionControlDialog open={true} onClose={vi.fn()} />)
+    }).not.toThrow()
+
+    expect(screen.getByTestId('mission-control-dialog')).toBeDefined()
+  })
+
   it('calls setPhase when clicking Next', () => {
     // Provide a project so canAdvance is true
     const mcWithProjects = {
