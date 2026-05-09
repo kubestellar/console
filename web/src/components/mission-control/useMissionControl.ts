@@ -556,6 +556,7 @@ export function useMissionControl() {
   const { releases: helmReleases } = useHelmReleases()
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated } = useClusters()
   const lastParsedContentRef = useRef('')
+  const lastBalancedScanMissionIdRef = useRef<string | undefined>(state.planningMissionId ?? undefined)
   const lastAssistantMessageCountRef = useRef(0)
   const balancedBlockScanCursorRef = useRef<BalancedBlockScanCursor>(
     createBalancedBlockScanCursor(),
@@ -733,7 +734,11 @@ export function useMissionControl() {
     // mid-burst. The old comment referenced a non-existent length check.
     if (!debouncedAssistantContent) return
     const assistantMsgs = (planningMission.messages ?? []).filter((m) => m.role === 'assistant')
-    if (assistantMsgs.length !== lastAssistantMessageCountRef.current) {
+    if (planningMission.id !== lastBalancedScanMissionIdRef.current) {
+      lastBalancedScanMissionIdRef.current = planningMission.id
+      lastAssistantMessageCountRef.current = assistantMsgs.length
+      resetBalancedBlockScanCursor(balancedBlockScanCursorRef.current)
+    } else if (assistantMsgs.length !== lastAssistantMessageCountRef.current) {
       lastAssistantMessageCountRef.current = assistantMsgs.length
       resetBalancedBlockScanCursor(balancedBlockScanCursorRef.current)
     }
@@ -1477,6 +1482,7 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     userInteractedAfterTimeoutRef.current = false
     localStorage.removeItem(STORAGE_KEY)
     lastParsedContentRef.current = ''
+    lastBalancedScanMissionIdRef.current = undefined
     lastAssistantMessageCountRef.current = 0
     resetBalancedBlockScanCursor(balancedBlockScanCursorRef.current)
     setState(makeInitialState())
