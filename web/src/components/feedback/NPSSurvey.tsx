@@ -41,6 +41,9 @@ export function NPSSurvey() {
   }, [])
 
   const selectedOption = NPS_OPTIONS.find(o => o.score === selectedScore) ?? null
+  const trimmedFeedback = feedback.trim()
+  const canCreatePublicIssue = selectedOption?.category === 'detractor'
+    && trimmedFeedback.length >= MIN_NPS_PUBLIC_ISSUE_FEEDBACK_LENGTH
 
   const resetForm = useCallback(() => {
     setSelectedScore(null)
@@ -49,16 +52,16 @@ export function NPSSurvey() {
   }, [])
 
   useEffect(() => {
-    if (selectedOption?.category !== 'detractor') {
+    if (!canCreatePublicIssue) {
       setAllowPublicIssue(false)
     }
-  }, [selectedOption?.category])
+  }, [canCreatePublicIssue])
 
   const handleSubmit = useCallback(async () => {
     if (selectedScore === null) return
     setIsSubmitting(true)
     try {
-      await submitResponse(selectedScore, feedback.trim() || undefined, { allowPublicIssue })
+      await submitResponse(selectedScore, trimmedFeedback || undefined, { allowPublicIssue })
       resetForm()
       setShowThankYou(true)
       showToast(t('nps.thankYou'), 'success')
@@ -70,7 +73,7 @@ export function NPSSurvey() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [selectedScore, feedback, allowPublicIssue, resetForm, submitResponse, showToast, t])
+  }, [selectedScore, trimmedFeedback, allowPublicIssue, resetForm, submitResponse, showToast, t])
 
   const handleDismiss = useCallback(() => {
     dismiss()
@@ -144,8 +147,9 @@ export function NPSSurvey() {
                   id={publicIssueConsentId}
                   type="checkbox"
                   checked={allowPublicIssue}
+                  disabled={!canCreatePublicIssue}
                   onChange={e => setAllowPublicIssue(e.target.checked)}
-                  className="mt-0.5 rounded border-border accent-primary"
+                  className="mt-0.5 rounded border-border accent-primary disabled:cursor-not-allowed disabled:opacity-50"
                 />
                 <span className="text-xs text-foreground">
                   {t('nps.publicIssueConsent')}

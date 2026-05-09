@@ -167,6 +167,28 @@ describe('useNPSSurvey', () => {
     expect(mockApiPost).not.toHaveBeenCalled()
   })
 
+  it('does NOT create GitHub issue when consent is given without a feedback body', async () => {
+    const { result } = renderHook(() => useNPSSurvey())
+    act(() => { vi.advanceTimersByTime(30_000) })
+
+    await act(async () => {
+      await result.current.submitResponse(1, '   ', { allowPublicIssue: true })
+    })
+
+    expect(mockApiPost).not.toHaveBeenCalled()
+  })
+
+  it('does NOT create GitHub issue when consent is given with too-short feedback', async () => {
+    const { result } = renderHook(() => useNPSSurvey())
+    act(() => { vi.advanceTimersByTime(30_000) })
+
+    await act(async () => {
+      await result.current.submitResponse(1, 'Too short', { allowPublicIssue: true })
+    })
+
+    expect(mockApiPost).not.toHaveBeenCalled()
+  })
+
   it('does NOT create GitHub issue for non-detractor scores', async () => {
     const { result } = renderHook(() => useNPSSurvey())
     act(() => { vi.advanceTimersByTime(30_000) })
