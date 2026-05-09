@@ -38,7 +38,7 @@ export function useCardHistory() {
     setHistory((prev) => {
       const newEntry: CardHistoryEntry = {
         ...entry,
-        id: `history-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: crypto.randomUUID(),
         timestamp: Date.now() }
       return [newEntry, ...prev].slice(0, MAX_HISTORY)
     })
