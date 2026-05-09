@@ -2,12 +2,13 @@ import { useState, useEffect, Suspense } from 'react'
 import { safeLazy } from '../../../lib/safeLazy'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink } from 'lucide-react'
+import { Sun, Moon, Monitor, Menu, X, MoreVertical, ExternalLink, Sparkles } from 'lucide-react'
 import { useAuth } from '../../../lib/auth'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { useTheme } from '../../../hooks/useTheme'
 import { useMobile } from '../../../hooks/useMobile'
 import { useBranding } from '../../../hooks/useBranding'
+import { useMissions } from '../../../hooks/useMissions'
 import { LearnDropdown } from './LearnDropdown'
 import { LogoWithStar } from '../../ui/LogoWithStar'
 import { Tooltip } from '../../ui/Tooltip'
@@ -45,6 +46,11 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
   const { isMobile } = useMobile()
   const { t } = useTranslation()
   const branding = useBranding()
+  const { missions, isSidebarOpen, openSidebar } = useMissions()
+  const missionsNeedingAttention = missions.filter((mission) => (
+    mission.status === 'waiting_input' || mission.status === 'failed'
+  )).length
+
   // Close mobile more menu on route change
   useEffect(() => {
     setShowMobileMore(false)
@@ -128,6 +134,26 @@ export function Navbar({ topOffset = 0 }: NavbarProps) {
         {/* Extended desktop items: xl+ (1280px) — moved from lg to xl to
              prevent button overflow at the 1024px breakpoint (#10001). */}
         <div className="hidden xl:flex items-center gap-2">
+          {!isSidebarOpen && (
+            <button
+              type="button"
+              onClick={openSidebar}
+              data-tour="ai-missions-toggle"
+              data-testid="navbar-ai-missions-btn"
+              className="relative flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20"
+              aria-label={t('missionSidebar.openAIMissions')}
+              title={t('missionSidebar.openAIMissions')}
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{t('missionSidebar.aiMissions')}</span>
+              {missionsNeedingAttention > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-purple-500 text-white rounded-full animate-pulse">
+                  {missionsNeedingAttention}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Update Indicator */}
           <UpdateIndicator />
 
