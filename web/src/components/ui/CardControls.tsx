@@ -56,6 +56,8 @@ export function CardControls<T extends string = string>({
   const [sortOpen, setSortOpen] = useState(false)
   const limitRef = useRef<HTMLDivElement>(null)
   const sortRef = useRef<HTMLDivElement>(null)
+  const limitMenuRef = useRef<HTMLDivElement>(null)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
 
   const toggleDirection = () => {
     if (onSortDirectionChange) {
@@ -79,6 +81,19 @@ export function CardControls<T extends string = string>({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    if (!limitOpen) return
+    const items = limitMenuRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])')
+    items?.[0]?.focus()
+  }, [limitOpen])
+
+  useEffect(() => {
+    if (!sortOpen) return
+    const items = Array.from(sortMenuRef.current?.querySelectorAll<HTMLElement>('button:not([disabled])') || [])
+    const selectedItem = items.find(item => item.getAttribute('data-selected') === 'true')
+    ;(selectedItem || items[0])?.focus()
+  }, [sortOpen])
+
   const currentLimitLabel = LIMIT_OPTIONS.find(o => o.value === limit)?.label || '5'
   const currentSortLabel = sortOptions?.find(o => o.value === sortBy)?.label || sortBy
 
@@ -97,7 +112,7 @@ export function CardControls<T extends string = string>({
             Show: {currentLimitLabel}
           </Button>
           {limitOpen && (
-            <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[80px] py-1"
+            <div ref={limitMenuRef} className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[80px] py-1"
               onKeyDown={(e) => {
                 if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                 e.preventDefault()
@@ -141,7 +156,7 @@ export function CardControls<T extends string = string>({
               Sort: {currentSortLabel}
             </Button>
             {sortOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[100px] py-1"
+              <div ref={sortMenuRef} className="absolute top-full left-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-50 min-w-[100px] py-1"
                 onKeyDown={(e) => {
                   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
                   e.preventDefault()
@@ -161,6 +176,7 @@ export function CardControls<T extends string = string>({
                       'w-full justify-start px-3 py-1.5 text-xs',
                       sortBy === option.value ? 'text-primary bg-primary/10' : 'text-foreground'
                     )}
+                    data-selected={sortBy === option.value}
                     fullWidth
                   >
                     {option.label}
