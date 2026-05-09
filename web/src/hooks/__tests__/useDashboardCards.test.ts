@@ -7,6 +7,7 @@ import { useDashboardCards, DashboardCard } from '../useDashboardCards'
 // ---------------------------------------------------------------------------
 
 const TEST_STORAGE_KEY = 'test-dashboard-cards'
+const TEST_STORAGE_SCHEMA_KEY = `${TEST_STORAGE_KEY}:schema-version`
 const TEST_COLLAPSED_KEY = `${TEST_STORAGE_KEY}:collapsed`
 
 const makeCard = (id: string, cardType = 'generic', config: Record<string, unknown> = {}): DashboardCard => ({
@@ -85,6 +86,42 @@ describe('useDashboardCards', () => {
 
       // Should prefer stored cards over defaults
       expect(result.current.cards).toEqual(stored)
+    })
+
+    it('falls back to defaults when stored cards do not match the schema', () => {
+      localStorage.setItem(TEST_STORAGE_KEY, JSON.stringify([{ id: 'stored-1', card_type: 'custom' }]))
+
+      const { result } = renderHook(() =>
+        useDashboardCards({ storageKey: TEST_STORAGE_KEY, defaultCards: DEFAULT_CARDS }),
+      )
+
+      expect(result.current.cards).toEqual(DEFAULT_CARDS)
+      expect(localStorage.getItem(TEST_STORAGE_KEY)).toBeNull()
+    })
+
+    it('clears malformed JSON before restoring defaults', () => {
+      localStorage.setItem(TEST_STORAGE_KEY, '{not-valid-json}')
+
+      const { result } = renderHook(() =>
+        useDashboardCards({ storageKey: TEST_STORAGE_KEY, defaultCards: DEFAULT_CARDS }),
+      )
+
+      expect(result.current.cards).toEqual(DEFAULT_CARDS)
+      expect(localStorage.getItem(TEST_STORAGE_KEY)).toBeNull()
+    })
+
+    it('falls back to defaults when the stored schema version is stale', () => {
+      const stored: DashboardCard[] = [makeCard('stored-1', 'custom')]
+      localStorage.setItem(TEST_STORAGE_KEY, JSON.stringify(stored))
+      localStorage.setItem(TEST_STORAGE_SCHEMA_KEY, '0')
+
+      const { result } = renderHook(() =>
+        useDashboardCards({ storageKey: TEST_STORAGE_KEY, defaultCards: DEFAULT_CARDS }),
+      )
+
+      expect(result.current.cards).toEqual(DEFAULT_CARDS)
+      expect(localStorage.getItem(TEST_STORAGE_KEY)).toBeNull()
+      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBeNull()
     })
 
     it('defaults isCollapsed to false (expanded)', () => {
@@ -519,6 +556,7 @@ describe('useDashboardCards', () => {
       expect(stored).toHaveLength(1)
       expect(stored[0].card_type).toBe('test_card')
       expect(stored[0].config).toEqual({ key: 'val' })
+      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBe('1')
     })
 
     it('persists cards to localStorage after removing a card', () => {
@@ -533,6 +571,7 @@ describe('useDashboardCards', () => {
       const stored = readStoredCards()
       expect(stored).toHaveLength(1)
       expect(stored[0].id).toBe('card-2')
+      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBe('1')
     })
 
     it('persists cards to localStorage after replaceCards', () => {
@@ -546,6 +585,7 @@ describe('useDashboardCards', () => {
       })
 
       expect(readStoredCards()).toEqual(newCards)
+      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBe('1')
     })
 
     it('persists cards after clearCards', () => {
@@ -558,6 +598,7 @@ describe('useDashboardCards', () => {
       })
 
       expect(readStoredCards()).toEqual([])
+      expect(localStorage.getItem(TEST_STORAGE_SCHEMA_KEY)).toBe('1')
     })
 
     it('uses separate storage keys for different instances', () => {

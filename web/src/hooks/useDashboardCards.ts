@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import {
+  clearDashboardCardStorage,
+  loadDashboardCardsFromStorage,
+  saveDashboardCardsToStorage,
+} from '../lib/dashboards/dashboardCardStorage'
 
 export interface DashboardCard {
   id: string
@@ -21,17 +26,9 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
   // Track whether a reset just happened so the persistence effect can skip one cycle
   const skipPersistRef = useRef(false)
 
-  const [cards, setCards] = useState<DashboardCard[]>(() => {
-    try {
-      const stored = localStorage.getItem(storageKey)
-      if (!stored) return defaultCards
-
-      const parsed = JSON.parse(stored)
-      return Array.isArray(parsed) ? parsed : defaultCards
-    } catch {
-      return defaultCards
-    }
-  })
+  const [cards, setCards] = useState<DashboardCard[]>(() =>
+    loadDashboardCardsFromStorage(storageKey, defaultCards),
+  )
 
   // Collapsed state - persisted separately
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
@@ -59,7 +56,7 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
       skipPersistRef.current = false
       return
     }
-    localStorage.setItem(storageKey, JSON.stringify(cards))
+    saveDashboardCardsToStorage(storageKey, cards)
   }, [cards, storageKey])
 
   const addCard = (cardType: string, config: Record<string, unknown> = {}, title?: string) => {
@@ -93,22 +90,12 @@ export function useDashboardCards({ storageKey, defaultCards = [], defaultCollap
   const resetToDefaults = () => {
     skipPersistRef.current = true
     setCards(defaultCards)
-    localStorage.removeItem(storageKey)
+    clearDashboardCardStorage(storageKey)
   }
 
   const isCustomized = () => {
-    const stored = localStorage.getItem(storageKey)
-    if (stored === null) return false
-    // Compare actual content to defaults — key existence alone is not sufficient
-    // because the persistence effect may have re-written the default state
-    try {
-      const parsed = JSON.parse(stored)
-      if (!Array.isArray(parsed)) return false
-
-      return JSON.stringify(parsed) !== JSON.stringify(defaultCards)
-    } catch {
-      return false
-    }
+    const storedCards = loadDashboardCardsFromStorage(storageKey, defaultCards)
+    return JSON.stringify(storedCards) !== JSON.stringify(defaultCards)
   }
 
   return {
