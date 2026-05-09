@@ -1014,6 +1014,17 @@ function TargetClusterSelector({
     return () => document.removeEventListener('mousedown', handler)
   }, [closeDropdown])
 
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        closeDropdown()
+      }
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [isOpen, closeDropdown])
+
   // Use deduplicated short names
   const clusters = availableClusters
 
@@ -1043,10 +1054,14 @@ function TargetClusterSelector({
       </p>
 
       {/* Selected chips + dropdown trigger */}
-      <div
-        className="relative mt-1 flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-secondary/30 cursor-pointer hover:border-primary/30 transition-colors"
+      <button
+        type="button"
+        className="relative mt-1 w-full flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-lg border border-border bg-secondary/30 cursor-pointer hover:border-primary/30 transition-colors text-left"
         style={{ minHeight: CLUSTER_CHIP_MIN_HEIGHT_PX }}
         onClick={() => toggleDropdown()}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        aria-label="Target cluster selector"
       >
         {selected.length === 0 ? (
           <span className="text-sm text-muted-foreground/50 flex items-center gap-1.5">
@@ -1086,7 +1101,7 @@ function TargetClusterSelector({
             )}
           </>
         )}
-      </div>
+      </button>
 
       {/* Dropdown — bg-card (opaque) instead of the undefined bg-popover token
           which previously rendered the panel transparent (#5906). */}
