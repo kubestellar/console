@@ -690,9 +690,7 @@ export function Layout({ children: _children }: LayoutProps) {
 
           <div
             className="flex flex-1 overflow-hidden transition-[padding-top] duration-300"
-            style={{
-              paddingTop: `calc(${NAVBAR_HEIGHT_PX + totalBannerHeight}px + var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px))`,
-            }}
+            style={{ paddingTop: NAVBAR_HEIGHT_PX + totalBannerHeight }}
           >
             {/* Wrap Sidebar in PageErrorBoundary so stale-chunk errors
             (e.g. "Can't find variable: handleSidebarMouseEnter" from cached
@@ -704,6 +702,7 @@ export function Layout({ children: _children }: LayoutProps) {
         <main
           id="main-content"
           style={{
+            marginTop: `var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px)`,
             marginLeft: isMobile ? 0 : sidebarWidthPx + SIDEBAR_CONTROLS_OFFSET_PX,
             marginRight: isMobile ? 0 : 'var(--mission-sidebar-width, 0px)' }}
           // overflow-x-hidden prevents stray wide children from pushing the
