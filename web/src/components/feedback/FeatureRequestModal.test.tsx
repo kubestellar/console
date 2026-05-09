@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import * as FeatureRequestModalModule from './FeatureRequestModal'
 import { FeatureRequestModal } from './FeatureRequestModal'
@@ -63,10 +63,20 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: vi.fn() },
 }))
 
+const createFetchResponse = (hasToken: boolean) => ({
+  ok: true,
+  json: vi.fn().mockResolvedValue({ hasToken }),
+})
+
 describe('FeatureRequestModal Component', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
     createRequestMock.mockReset()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(createFetchResponse(true)))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it('exports FeatureRequestModal component', () => {
@@ -169,6 +179,22 @@ describe('FeatureRequestModal Component', () => {
     // …and the Unsaved-changes dialog must NOT appear.
     expect(screen.queryByText(/Unsaved changes/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Save Draft & Close/i)).not.toBeInTheDocument()
+  })
+
+  it('rechecks backend token status each time the modal reopens', async () => {
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce(createFetchResponse(false) as Response)
+      .mockResolvedValueOnce(createFetchResponse(true) as Response)
+
+    const { rerender } = render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
+
+    await screen.findByText(/GitHub integration not configured/i)
+
+    rerender(<FeatureRequestModal isOpen={false} onClose={vi.fn()} initialTab="submit" />)
+    rerender(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
+
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.queryByText(/GitHub integration not configured/i)).not.toBeInTheDocument())
   })
 
   it('shows re-authentication guidance and a direct GitHub fallback for 403 permission errors', async () => {

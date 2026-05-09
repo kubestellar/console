@@ -78,23 +78,32 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   }, [isOpen, initialContext])
 
   // Check whether FEEDBACK_GITHUB_TOKEN is configured on the backend
-  const tokenCheckedRef = useRef(false)
   useEffect(() => {
-    if (!isOpen || tokenCheckedRef.current || isDemoModeForced) return
-    tokenCheckedRef.current = true
+    if (!isOpen) {
+      setFeedbackTokenMissing(false)
+      return
+    }
+    if (isDemoModeForced) return
+
+    setFeedbackTokenMissing(false)
+    let isCurrent = true
 
     fetch(`${BACKEND_DEFAULT_URL}/api/github/token/status`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data && !data.hasToken) {
-          setFeedbackTokenMissing(true)
+        if (isCurrent && data) {
+          setFeedbackTokenMissing(!data.hasToken)
         }
       })
       .catch(() => {
         // Silently ignore — backend may not be reachable (e.g. demo mode)
       })
+
+    return () => {
+      isCurrent = false
+    }
   }, [isOpen, token])
 
   const handleRefreshGitHub = async () => {
