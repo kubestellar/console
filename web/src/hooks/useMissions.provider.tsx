@@ -461,7 +461,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           streamSplitCounter.current.clear()
           // #7106 — Clear all per-mission status-update timers
           for (const timers of missionStatusTimers.current.values()) {
-            for (const handle of timers) {
+            for (const handle of (timers || [])) {
               clearTimeout(handle)
             }
           }
@@ -732,7 +732,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
               // non-idempotent agents, see #5930) vs stale (backend session
               // has very likely expired, see #6371).
               const now = Date.now()
-              for (const m of candidates) {
+              for (const m of (candidates || [])) {
                 const ageMs = now - new Date(m.updatedAt).getTime()
                 if (ageMs > MISSION_RECONNECT_MAX_AGE_MS) {
                   missionsToMarkStale.push(m.id)
@@ -851,7 +851,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
             // long-running tool call. The count resets to the real value
             // once the first tool_start or tool_result frame arrives.
             const OPTIMISTIC_TOOLS_IN_FLIGHT = 1
-            for (const mission of dedupedMissions) {
+            for (const mission of (dedupedMissions || [])) {
               toolsInFlight.current.set(mission.id, OPTIMISTIC_TOOLS_IN_FLIGHT)
             }
             setTimeout(() => {
@@ -1030,7 +1030,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           // #6836 — Cancel pending wsSend retry timers so they don't fire
           // on the dead socket. The main unmount effect also clears these,
           // but onclose fires on transient disconnects (not just unmount).
-          for (const handle of wsSendRetryTimers.current) {
+          for (const handle of (wsSendRetryTimers.current || [])) {
             clearTimeout(handle)
           }
           wsSendRetryTimers.current.clear()
@@ -1140,7 +1140,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           pendingRequests.current.clear()
           // #6836 — Cancel pending wsSend retry timers on error so they
           // don't fire on the dead/closed socket.
-          for (const handle of wsSendRetryTimers.current) {
+          for (const handle of (wsSendRetryTimers.current || [])) {
             clearTimeout(handle)
           }
           wsSendRetryTimers.current.clear()
@@ -1160,7 +1160,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           streamSplitCounter.current.clear()
           // #7106 — Clear status-update timers on WS error
           for (const timers of missionStatusTimers.current.values()) {
-            for (const handle of timers) {
+            for (const handle of (timers || [])) {
               clearTimeout(handle)
             }
           }
@@ -1192,7 +1192,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
   const clearMissionStatusTimers = (missionId: string) => {
     const timers = missionStatusTimers.current.get(missionId)
     if (timers) {
-      for (const handle of timers) {
+      for (const handle of (timers || [])) {
         clearTimeout(handle)
       }
       missionStatusTimers.current.delete(missionId)
@@ -2978,7 +2978,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
       // #6629 — Cancel any in-flight wsSend retry timers so they don't
       // fire on an unmounted provider or touch a dying socket.
-      for (const handle of wsSendRetryTimersRef) {
+      for (const handle of (wsSendRetryTimersRef || [])) {
         clearTimeout(handle)
       }
       wsSendRetryTimersRef.clear()
@@ -3004,7 +3004,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       waitingInputTimeoutsRef.clear()
       // #7106 — Clear all per-mission status-update timers
       for (const timers of missionStatusTimersRef.values()) {
-        for (const handle of timers) {
+        for (const handle of (timers || [])) {
           clearTimeout(handle)
         }
       }
