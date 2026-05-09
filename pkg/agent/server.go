@@ -204,6 +204,9 @@ type Server struct {
 	// Auto-update system
 	updateChecker *UpdateChecker
 
+	resourceRetryMu    sync.Mutex
+	resourceRetryState map[string]clusterResourceRetryState
+
 	SkipKeyValidation bool // For testing purposes
 }
 
@@ -305,19 +308,20 @@ func NewServer(cfg Config) (*Server, error) {
 
 	now := time.Now()
 	server := &Server{
-		config:            cfg,
-		kubectl:           kubectl,
-		k8sClient:         k8sClient,
-		registry:          GetRegistry(),
-		clients:           make(map[*websocket.Conn]*wsClient),
-		allowedOrigins:    allowedOrigins,
-		agentToken:        agentToken,
-		tokenExplicit:     tokenExplicit,
-		sessionStart:      now,
-		todayDate:         now.Format("2006-01-02"),
-		activeChatCtxs:    make(map[string]activeChatEntry),
-		dryRunSessions:    make(map[string]bool),
-		sessionTokenQuota: sessionQuota,
+		config:             cfg,
+		kubectl:            kubectl,
+		k8sClient:          k8sClient,
+		registry:           GetRegistry(),
+		clients:            make(map[*websocket.Conn]*wsClient),
+		allowedOrigins:     allowedOrigins,
+		agentToken:         agentToken,
+		tokenExplicit:      tokenExplicit,
+		sessionStart:       now,
+		todayDate:          now.Format("2006-01-02"),
+		activeChatCtxs:     make(map[string]activeChatEntry),
+		dryRunSessions:     make(map[string]bool),
+		resourceRetryState: make(map[string]clusterResourceRetryState),
+		sessionTokenQuota:  sessionQuota,
 	}
 
 	server.upgrader = websocket.Upgrader{

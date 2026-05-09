@@ -5,6 +5,7 @@ import { TRANSITION_DELAY_MS } from '../lib/constants/network'
 import { emitAgentConnected, emitAgentDisconnected, emitAgentProvidersDetected, emitConversionStep } from '../lib/analytics'
 import { safeGetItem, safeSetItem } from '../lib/utils/localStorage'
 import { STORAGE_KEY_FIRST_AGENT_CONNECT } from '../lib/constants/storage'
+import { triggerAllRefetches } from '../lib/modeTransition'
 import { agentFetch } from './mcp/shared'
 
 export interface ProviderSummary {
@@ -66,6 +67,7 @@ const AUTH_ERROR_STATUS_CODES = new Set([
 const SUCCESS_THRESHOLD = 2 // Require 2 consecutive successes before reconnecting (prevents flicker)
 const AGGRESSIVE_POLL_INTERVAL = 1000 // 1 second during aggressive detection burst
 const AGGRESSIVE_DETECT_DURATION = 10000 // 10 seconds of aggressive polling
+const BROWSER_WAKE_DEBOUNCE_MS = 1000
 
 // Demo data for when agent is not connected
 const DEMO_DATA: AgentHealth = {
@@ -123,6 +125,18 @@ class AgentManager {
   private dataErrorWindow = 60000 // 1 minute window for data errors
   private dataErrorThreshold = 3 // Errors within window to trigger degraded
   private aggressiveDetectTimeout: ReturnType<typeof setTimeout> | null = null
+  private lastBrowserWakeCheckAt = 0
+  private readonly handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      this.handleBrowserWake('visibilitychange')
+    }
+  }
+  private readonly handleWindowFocus = () => {
+    this.handleBrowserWake('focus')
+  }
+  private readonly handleWindowOnline = () => {
+    this.handleBrowserWake('online')
+  }
 
   private currentPollInterval = POLL_INTERVAL
 
@@ -139,6 +153,7 @@ class AgentManager {
       return
     }
 
+    this.addBrowserWakeListeners()
     this.addEvent('connecting', 'Attempting to connect to local agent...')
     this.checkAgent()
     this.currentPollInterval = POLL_INTERVAL
@@ -154,6 +169,8 @@ class AgentManager {
       clearTimeout(this.aggressiveDetectTimeout)
       this.aggressiveDetectTimeout = null
     }
+    this.removeBrowserWakeListeners()
+    this.lastBrowserWakeCheckAt = 0
     this.isStarted = false
     this.isChecking = false // Reset so next start can check immediately
   }
@@ -165,6 +182,39 @@ class AgentManager {
       clearInterval(this.pollInterval)
       this.pollInterval = setInterval(() => this.checkAgent(), interval)
     }
+  }
+
+  private addBrowserWakeListeners() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return
+    document.addEventListener('visibilitychange', this.handleVisibilityChange)
+    window.addEventListener('focus', this.handleWindowFocus)
+    window.addEventListener('online', this.handleWindowOnline)
+  }
+
+  private removeBrowserWakeListeners() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+    window.removeEventListener('focus', this.handleWindowFocus)
+    window.removeEventListener('online', this.handleWindowOnline)
+  }
+
+  private handleBrowserWake(source: 'visibilitychange' | 'focus' | 'online') {
+    if (!this.isStarted || isDemoModeForced) return
+
+    const now = Date.now()
+    if (now - this.lastBrowserWakeCheckAt < BROWSER_WAKE_DEBOUNCE_MS) {
+      return
+    }
+    this.lastBrowserWakeCheckAt = now
+
+    if (this.state.status === 'connected' || this.state.status === 'degraded') {
+      this.addEvent('connecting', `Refreshing local agent after browser ${source}`)
+      this.checkAgent()
+      triggerAllRefetches()
+      return
+    }
+
+    this.aggressiveDetect()
   }
 
   subscribe(listener: Listener): () => void {
@@ -288,6 +338,7 @@ class AgentManager {
       const wasConnecting = this.state.status === 'connecting' || this.state.status === 'auth_error'
       const wasConnected =
         this.state.status === 'connected' || this.state.status === 'degraded'
+      const shouldTriggerReconnectRefetch = this.wasEverConnected && (wasDisconnected || wasConnecting)
       this.failureCount = 0 // Reset failure count on success
       this.successCount++ // Track consecutive successes
 
@@ -304,6 +355,9 @@ class AgentManager {
         // Demo mode transition is handled by Layout based on agentStatus changes
         emitAgentConnected(data.version || 'unknown', data.clusters || 0)
         emitAgentProvidersDetected(data.availableProviders || [])
+        if (shouldTriggerReconnectRefetch) {
+          triggerAllRefetches()
+        }
       } else if (wasConnecting) {
         // Initial connection - connect immediately on first success
         this.wasEverConnected = true
@@ -322,6 +376,9 @@ class AgentManager {
         emitConversionStep(3, 'agent', { agent_version: data.version || 'unknown' })
         if ((data.clusters || 0) > 0) {
           emitConversionStep(4, 'clusters', { cluster_count: String(data.clusters) })
+        }
+        if (shouldTriggerReconnectRefetch) {
+          triggerAllRefetches()
         }
       } else if (wasConnected) {
         // Already connected - just update health data

@@ -184,6 +184,36 @@ func TestHandleGPUNodesStreamSSE_StreamsEvents(t *testing.T) {
 	}
 }
 
+func TestHandleNodesStreamSSE_SkipsBackoffedClusters(t *testing.T) {
+	contexts := map[string]*api.Context{
+		"cluster-a": {Cluster: "cluster-a", AuthInfo: "cluster-a"},
+	}
+	srv, k8sMock := newTestServerForSSE(t, contexts)
+	k8sMock.SetClient("cluster-a", fakek8s.NewSimpleClientset(&corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
+		Status: corev1.NodeStatus{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("4"),
+				corev1.ResourceMemory: resource.MustParse("16Gi"),
+				corev1.ResourcePods:   resource.MustParse("110"),
+			},
+		},
+	}))
+	srv.recordClusterResourceFailure("nodes", "cluster-a")
+
+	req := httptest.NewRequest(http.MethodGet, "/nodes/stream", nil)
+	w := httptest.NewRecorder()
+
+	srv.handleNodesStreamSSE(w, req)
+
+	events := parseSSEEvents(t, w.Body.String())
+	for _, ev := range events {
+		if ev.event == "cluster_data" {
+			t.Fatal("expected backoffed cluster to be skipped from SSE stream")
+		}
+	}
+}
+
 func TestHandleNodesStreamSSE_Unauthorized(t *testing.T) {
 	contexts := map[string]*api.Context{
 		"c1": {Cluster: "c1", AuthInfo: "c1"},

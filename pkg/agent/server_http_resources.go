@@ -9,11 +9,68 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 )
+
+const (
+	clusterResourceRetryBaseDelay = 30 * time.Second
+	clusterResourceRetryMaxDelay  = 5 * time.Minute
+	clusterResourceRetryFactor    = 2
+)
+
+type clusterResourceRetryState struct {
+	failures  int
+	nextRetry time.Time
+}
+
+func (s *Server) clusterResourceRetryKey(resourceName, clusterName string) string {
+	return resourceName + ":" + clusterName
+}
+
+func (s *Server) shouldSkipClusterResource(resourceName, clusterName string) bool {
+	s.resourceRetryMu.Lock()
+	defer s.resourceRetryMu.Unlock()
+	if s.resourceRetryState == nil {
+		s.resourceRetryState = make(map[string]clusterResourceRetryState)
+	}
+	state, ok := s.resourceRetryState[s.clusterResourceRetryKey(resourceName, clusterName)]
+	return ok && time.Now().Before(state.nextRetry)
+}
+
+func (s *Server) recordClusterResourceFailure(resourceName, clusterName string) time.Duration {
+	s.resourceRetryMu.Lock()
+	defer s.resourceRetryMu.Unlock()
+	if s.resourceRetryState == nil {
+		s.resourceRetryState = make(map[string]clusterResourceRetryState)
+	}
+	key := s.clusterResourceRetryKey(resourceName, clusterName)
+	state := s.resourceRetryState[key]
+	state.failures++
+	delay := clusterResourceRetryBaseDelay
+	for attempt := 1; attempt < state.failures; attempt++ {
+		delay *= clusterResourceRetryFactor
+		if delay >= clusterResourceRetryMaxDelay {
+			delay = clusterResourceRetryMaxDelay
+			break
+		}
+	}
+	state.nextRetry = time.Now().Add(delay)
+	s.resourceRetryState[key] = state
+	return delay
+}
+
+func (s *Server) recordClusterResourceSuccess(resourceName, clusterName string) {
+	s.resourceRetryMu.Lock()
+	defer s.resourceRetryMu.Unlock()
+	if s.resourceRetryState == nil {
+		return
+	}
+	delete(s.resourceRetryState, s.clusterResourceRetryKey(resourceName, clusterName))
+}
 
 func (s *Server) handleClustersHTTP(w http.ResponseWriter, r *http.Request) {
 	s.setCORSHeaders(w, r)
@@ -62,15 +119,22 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
 	defer cancel()
 
-	var allNodes []k8s.GPUNode
+	allNodes := make([]k8s.GPUNode, 0)
+	const resourceName = "gpu-nodes"
 
 	if cluster != "" {
-		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
-		if err != nil {
-			slog.Warn("error fetching nodes", "error", err)
+		if s.shouldSkipClusterResource(resourceName, cluster) {
 			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}
+		nodes, err := s.k8sClient.GetGPUNodes(ctx, cluster)
+		if err != nil {
+			retryIn := s.recordClusterResourceFailure(resourceName, cluster)
+			slog.Warn("error fetching nodes", "cluster", cluster, "error", err, "retryIn", retryIn)
+			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
+			return
+		}
+		s.recordClusterResourceSuccess(resourceName, cluster)
 		allNodes = nodes
 	} else {
 		// Query all clusters
@@ -84,6 +148,9 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		for _, cl := range clusters {
+			if s.shouldSkipClusterResource(resourceName, cl.Name) {
+				continue
+			}
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
@@ -96,10 +163,12 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				defer clusterCancel()
 				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, clusterName)
 				if err != nil {
+					retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
 					// #7750: Log per-cluster errors so GPU metric gaps are diagnosable.
-					slog.Warn("[GPUNodes] failed to list GPU nodes for cluster", "cluster", clusterName, "error", err)
+					slog.Warn("[GPUNodes] failed to list GPU nodes for cluster", "cluster", clusterName, "error", err, "retryIn", retryIn)
 					return
 				}
+				s.recordClusterResourceSuccess(resourceName, clusterName)
 				if len(nodes) > 0 {
 					mu.Lock()
 					allNodes = append(allNodes, nodes...)
@@ -137,16 +206,23 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
 	defer cancel()
 
-	var allNodes []k8s.NodeInfo
+	allNodes := make([]k8s.NodeInfo, 0)
+	const resourceName = "nodes"
 
 	if cluster != "" {
-		// Query specific cluster
-		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
-		if err != nil {
-			slog.Warn("error fetching nodes", "error", err)
+		if s.shouldSkipClusterResource(resourceName, cluster) {
 			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
 			return
 		}
+		// Query specific cluster
+		nodes, err := s.k8sClient.GetNodes(ctx, cluster)
+		if err != nil {
+			retryIn := s.recordClusterResourceFailure(resourceName, cluster)
+			slog.Warn("error fetching nodes", "cluster", cluster, "error", err, "retryIn", retryIn)
+			writeJSONError(w, http.StatusServiceUnavailable, "cluster temporarily unavailable")
+			return
+		}
+		s.recordClusterResourceSuccess(resourceName, cluster)
 		allNodes = nodes
 	} else {
 		// Query all clusters
@@ -161,6 +237,9 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 		var mu sync.Mutex
 
 		for _, cl := range clusters {
+			if s.shouldSkipClusterResource(resourceName, cl.Name) {
+				continue
+			}
 			wg.Add(1)
 			go func(clusterName string) {
 				defer wg.Done()
@@ -172,7 +251,13 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
 				defer clusterCancel()
 				nodes, err := s.k8sClient.GetNodes(clusterCtx, clusterName)
-				if err == nil && len(nodes) > 0 {
+				if err != nil {
+					retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
+					slog.Warn("[Nodes] failed to list nodes for cluster", "cluster", clusterName, "error", err, "retryIn", retryIn)
+					return
+				}
+				s.recordClusterResourceSuccess(resourceName, clusterName)
+				if len(nodes) > 0 {
 					mu.Lock()
 					allNodes = append(allNodes, nodes...)
 					mu.Unlock()

@@ -54,6 +54,12 @@ vi.mock('../../lib/utils/localStorage', () => ({
   safeSetItem: (...args: unknown[]) => mockSafeSetItem(...args),
 }))
 
+const mockTriggerAllRefetches = vi.fn()
+
+vi.mock('../../lib/modeTransition', () => ({
+  triggerAllRefetches: (...args: unknown[]) => mockTriggerAllRefetches(...args),
+}))
+
 // Dynamically imported after each module reset
 let useLocalAgent: typeof import('../useLocalAgent').useLocalAgent
 let reportAgentDataError: typeof import('../useLocalAgent').reportAgentDataError
@@ -150,6 +156,7 @@ describe('useLocalAgent', () => {
     mockEmitConversionStep.mockClear()
     mockSafeGetItem.mockClear()
     mockSafeSetItem.mockClear()
+    mockTriggerAllRefetches.mockClear()
 
     vi.stubGlobal('fetch', vi.fn())
 
@@ -373,6 +380,22 @@ describe('useLocalAgent', () => {
     await flushMicrotasks()
     expect(result.current.status).toBe('connected')
     expect(result.current.isConnected).toBe(true)
+  })
+
+  it('triggers global refetches after reconnecting from disconnected', async () => {
+    mockFetchReject()
+    const { result } = renderHook(() => useLocalAgent())
+    await driveToDisconnected()
+    expect(result.current.status).toBe('disconnected')
+
+    mockFetchOk()
+    await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+    await flushMicrotasks()
+    await act(async () => { vi.advanceTimersByTime(DISCONNECTED_POLL_INTERVAL) })
+    await flushMicrotasks()
+
+    expect(result.current.status).toBe('connected')
+    expect(mockTriggerAllRefetches).toHaveBeenCalled()
   })
 
   it('resets success counter when a failure occurs between successes', async () => {
