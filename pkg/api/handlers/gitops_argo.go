@@ -211,8 +211,9 @@ func (h *GitOpsHandlers) ListArgoApplications(c *fiber.Ctx) error {
 
 	appList, err := h.k8sClient.ListArgoApplications(ctx)
 	if err != nil {
+		slog.Error("[ArgoCD] failed to list applications", "error", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":      fmt.Sprintf("Failed to list ArgoCD applications: %v", err),
+			"error":      "Failed to list ArgoCD applications",
 			"isDemoData": true,
 		})
 	}
@@ -255,8 +256,9 @@ func (h *GitOpsHandlers) GetArgoHealthSummary(c *fiber.Ctx) error {
 
 	appList, err := h.k8sClient.ListArgoApplications(ctx)
 	if err != nil {
+		slog.Error("[ArgoCD] failed to list applications for health summary", "error", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":      fmt.Sprintf("Failed to list ArgoCD applications: %v", err),
+			"error":      "Failed to list ArgoCD applications",
 			"isDemoData": true,
 		})
 	}
@@ -306,8 +308,9 @@ func (h *GitOpsHandlers) GetArgoSyncSummary(c *fiber.Ctx) error {
 
 	appList, err := h.k8sClient.ListArgoApplications(ctx)
 	if err != nil {
+		slog.Error("[ArgoCD] failed to list applications for sync summary", "error", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":      fmt.Sprintf("Failed to list ArgoCD applications: %v", err),
+			"error":      "Failed to list ArgoCD applications",
 			"isDemoData": true,
 		})
 	}
@@ -381,8 +384,9 @@ func (h *GitOpsHandlers) ListArgoApplicationSets(c *fiber.Ctx) error {
 
 	appSetList, err := h.k8sClient.ListArgoApplicationSets(ctx)
 	if err != nil {
+		slog.Error("[ArgoCD] failed to list ApplicationSets", "error", err)
 		return c.Status(500).JSON(fiber.Map{
-			"error":      fmt.Sprintf("Failed to list ArgoCD ApplicationSets: %v", err),
+			"error":      "Failed to list ArgoCD ApplicationSets",
 			"isDemoData": true,
 		})
 	}
