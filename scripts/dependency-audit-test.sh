@@ -129,18 +129,23 @@ echo ""
 echo -e "${BOLD}Phase 2: govulncheck (Go backend)${NC}"
 
 if command -v go &>/dev/null; then
-  if ! command -v govulncheck &>/dev/null; then
-    echo -e "  ${DIM}Installing govulncheck...${NC}"
-    go install golang.org/x/vuln/cmd/govulncheck@v1.2.0 2>/dev/null
+  GOVULNCHECK_BIN="$TMPDIR_AUDIT/govulncheck"
+  GOVULNCHECK_TOOLCHAIN="auto"
+  MODULE_GO_VERSION=$(go list -m -f '{{.GoVersion}}' 2>/dev/null || true)
+  if [ -n "$MODULE_GO_VERSION" ]; then
+    GOVULNCHECK_TOOLCHAIN="go${MODULE_GO_VERSION}"
   fi
 
-  if command -v govulncheck &>/dev/null; then
+  echo -e "  ${DIM}Installing govulncheck...${NC}"
+  GOTOOLCHAIN="$GOVULNCHECK_TOOLCHAIN" GOBIN="$TMPDIR_AUDIT" go install golang.org/x/vuln/cmd/govulncheck@v1.2.0 2>/dev/null || true
+
+  if [ -x "$GOVULNCHECK_BIN" ]; then
     GOVULN_OUTPUT="$TMPDIR_AUDIT/govulncheck.txt"
     GOVULN_EXIT=0
     GOVULN_TIMEOUT_SECS=120
 
     echo -e "  ${DIM}Running govulncheck (timeout: ${GOVULN_TIMEOUT_SECS}s)...${NC}"
-    if timeout "${GOVULN_TIMEOUT_SECS}" govulncheck ./... > "$GOVULN_OUTPUT" 2>/dev/null; then
+    if timeout "${GOVULN_TIMEOUT_SECS}" "$GOVULNCHECK_BIN" ./... > "$GOVULN_OUTPUT" 2>/dev/null; then
       GOVULN_EXIT=0
     else
       GOVULN_EXIT=$?
