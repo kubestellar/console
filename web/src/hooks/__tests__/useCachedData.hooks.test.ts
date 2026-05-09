@@ -6,6 +6,7 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
@@ -311,20 +312,25 @@ describe('useCachedData', () => {
   // useCachedDeploymentIssues
   // ========================================================================
   describe('useCachedDeploymentIssues', () => {
-    it('returns deployment issues', async () => {
-      const data = [{ name: 'web', namespace: 'prod', replicas: 3, readyReplicas: 1 }]
-      mockUseCache.mockReturnValue(makeCacheResult(data))
+    it('derives deployment issues from cached deployments', async () => {
+      const deployments = [
+        { name: 'web', namespace: 'prod', cluster: 'c1', replicas: 3, readyReplicas: 1, status: 'running' },
+        { name: 'healthy', namespace: 'prod', cluster: 'c1', replicas: 2, readyReplicas: 2, status: 'running' },
+      ]
+      mockUseCache.mockReturnValue(makeCacheResult(deployments))
       const { useCachedDeploymentIssues } = await loadModule()
-      const result = useCachedDeploymentIssues()
-      expect(result.issues).toEqual(data)
+      const { result } = renderHook(() => useCachedDeploymentIssues())
+      expect(result.current.issues).toEqual([
+        { name: 'web', namespace: 'prod', cluster: 'c1', replicas: 3, readyReplicas: 1, reason: 'ReplicaFailure', message: '' },
+      ])
     })
 
-    it('sets correct key with cluster and namespace', async () => {
+    it('uses the deployments cache key with cluster and namespace', async () => {
       mockUseCache.mockReturnValue(makeCacheResult([]))
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues('cls', 'ns')
+      renderHook(() => useCachedDeploymentIssues('cls', 'ns'))
       const call = mockUseCache.mock.calls[0][0]
-      expect(call.key).toBe('deploymentIssues:cls:ns')
+      expect(call.key).toBe('deployments:cls:ns')
     })
   })
 

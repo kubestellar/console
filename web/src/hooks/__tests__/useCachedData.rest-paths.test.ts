@@ -6,6 +6,7 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
@@ -478,7 +479,7 @@ describe('useCachedData', () => {
   describe('useCachedDeploymentIssues — REST cluster-specific', () => {
     afterEach(() => { vi.unstubAllGlobals() })
 
-    it('fetcher uses REST for single cluster when agent unavailable', async () => {
+    it('fetcher reuses the deployments REST path for a single cluster', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
@@ -499,13 +500,16 @@ describe('useCachedData', () => {
       }))
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues('c1', 'ns')
+      renderHook(() => useCachedDeploymentIssues('c1', 'ns'))
 
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ name: string; reason?: string }>>
-      const issues = await fetcher()
+      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ name: string; cluster?: string }>>
+      const deployments = await fetcher()
 
-      expect(issues).toHaveLength(1)
-      expect(issues[0]).toMatchObject({ name: 'dep-issue', reason: 'ReplicaFailure' })
+      expect(deployments).toHaveLength(2)
+      expect(deployments).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'healthy-dep', cluster: 'c1' }),
+        expect.objectContaining({ name: 'dep-issue', cluster: 'c1' }),
+      ]))
     })
   })
 

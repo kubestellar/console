@@ -459,15 +459,18 @@ describe('useCachedDeploymentIssues', () => {
     expect(Array.isArray(result.current.issues)).toBe(true)
   })
 
-  it('returns deployment issues data', () => {
-    const mockIssues = [
-      { name: 'web-app', namespace: 'prod', replicas: 3, readyReplicas: 1, reason: 'ReplicaFailure' },
+  it('derives deployment issues from cached deployments', () => {
+    const mockDeployments = [
+      { name: 'web-app', namespace: 'prod', cluster: 'prod', replicas: 3, readyReplicas: 1, status: 'running' },
+      { name: 'healthy-app', namespace: 'prod', cluster: 'prod', replicas: 2, readyReplicas: 2, status: 'running' },
     ]
-    mockUseCache.mockReturnValue(defaultCacheResult(mockIssues))
+    mockUseCache.mockReturnValue(defaultCacheResult(mockDeployments))
     const { result } = renderHook(() => useCachedDeploymentIssues())
 
-    expect(result.current.issues).toEqual(mockIssues)
-    expect(result.current.data).toEqual(mockIssues)
+    expect(result.current.issues).toEqual([
+      { name: 'web-app', namespace: 'prod', cluster: 'prod', replicas: 3, readyReplicas: 1, reason: 'ReplicaFailure', message: '' },
+    ])
+    expect(result.current.data).toEqual(result.current.issues)
   })
 
   it('uses deployments refresh category', () => {
@@ -481,12 +484,10 @@ describe('useCachedDeploymentIssues', () => {
     )
   })
 
-  it('fetcher derives issues from unhealthy deployments via agent', async () => {
-    // Set up agent clusters so agent path is taken
+  it('fetcher reuses deployments from the agent path', async () => {
     mockClusterCacheRef.clusters = [{ name: 'prod', context: 'prod-ctx', reachable: true }]
     mockIsAgentUnavailable.mockReturnValue(false)
 
-    // Mock agent fetch returning deployments with unhealthy replicas
     globalThis.fetch = vi.fn().mockResolvedValue(mockResponse({
       deployments: [
         { name: 'web-app', namespace: 'prod', replicas: 3, readyReplicas: 1, status: 'running' },
@@ -497,15 +498,15 @@ describe('useCachedDeploymentIssues', () => {
     const { capturedFetcher } = renderWithCapturedFetcher(
       () => useCachedDeploymentIssues('prod'),
     )
-    const issues = await capturedFetcher() as Array<{ name: string; readyReplicas: number }>
+    const deployments = await capturedFetcher() as Array<{ name: string; cluster: string }>
 
-    // Only web-app should be an issue (readyReplicas < replicas)
-    expect(issues).toHaveLength(1)
-    expect(issues[0].name).toBe('web-app')
-    expect(issues[0].readyReplicas).toBe(1)
+    expect(deployments).toEqual([
+      { name: 'web-app', namespace: 'prod', replicas: 3, readyReplicas: 1, status: 'running', cluster: 'prod' },
+      { name: 'api-gw', namespace: 'prod', replicas: 2, readyReplicas: 2, status: 'running', cluster: 'prod' },
+    ])
   })
 
-  it('fetcher derives issues from deployments when agent unavailable', async () => {
+  it('fetcher reuses deployments from the REST fallback', async () => {
     mockClusterCacheRef.clusters = []
     mockIsBackendUnavailable.mockReturnValue(false)
 
@@ -528,7 +529,15 @@ describe('useCachedDeploymentIssues', () => {
         cluster: 'prod',
         replicas: 2,
         readyReplicas: 0,
-        reason: 'DeploymentFailed',
+        status: 'failed',
+      },
+      {
+        name: 'healthy-deploy',
+        namespace: 'prod',
+        cluster: 'prod',
+        replicas: 2,
+        readyReplicas: 2,
+        status: 'running',
       },
     ])
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
@@ -1101,7 +1110,7 @@ describe('Backend/Agent unavailability', () => {
         cluster: 'prod',
         replicas: 1,
         readyReplicas: 0,
-        reason: 'ReplicaFailure',
+        status: 'running',
       },
     ])
     const url = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string

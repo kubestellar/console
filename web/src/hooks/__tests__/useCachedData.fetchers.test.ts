@@ -6,6 +6,7 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
@@ -507,7 +508,7 @@ describe('useCachedData', () => {
       mockIsAgentUnavailable.mockReturnValue(true)
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues()
+      renderHook(() => useCachedDeploymentIssues())
 
       const fetcher = capturedOpts.fetcher as () => Promise<unknown>
       await expect(fetcher()).rejects.toThrow('No data source available')
@@ -826,7 +827,7 @@ describe('useCachedData', () => {
       })
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues('my-cluster')
+      renderHook(() => useCachedDeploymentIssues('my-cluster'))
 
       expect(capturedOpts.progressiveFetcher).toBeUndefined()
     })

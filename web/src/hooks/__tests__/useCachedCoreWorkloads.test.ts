@@ -250,16 +250,18 @@ describe('useCachedPodIssues', () => {
 // ---------------------------------------------------------------------------
 
 describe('useCachedDeploymentIssues', () => {
-  it('exposes issues alias for data', () => {
-    const issues = [{ name: 'deploy-1', namespace: 'default', cluster: 'c1', replicas: 3, readyReplicas: 1 }]
-    mockUseCache.mockReturnValue(defaultCache({ data: issues }))
+  it('derives issues from cached deployments', () => {
+    const deployments = [{ name: 'deploy-1', namespace: 'default', cluster: 'c1', replicas: 3, readyReplicas: 1, status: 'running' }]
+    mockUseCache.mockReturnValue(defaultCache({ data: deployments }))
     const { result } = renderHook(() => useCachedDeploymentIssues())
-    expect(result.current.issues).toEqual(issues)
+    expect(result.current.issues).toEqual([
+      { name: 'deploy-1', namespace: 'default', cluster: 'c1', replicas: 3, readyReplicas: 1, reason: 'ReplicaFailure', message: '' },
+    ])
   })
 
-  it('includes cluster in cache key', () => {
+  it('delegates to the deployments cache key', () => {
     renderHook(() => useCachedDeploymentIssues('prod'))
-    expect(mockUseCache.mock.calls[0][0].key).toContain('prod')
+    expect(mockUseCache.mock.calls[0][0].key).toBe('deployments:prod:all')
   })
 })
 

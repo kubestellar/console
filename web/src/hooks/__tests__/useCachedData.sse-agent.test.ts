@@ -6,6 +6,7 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
@@ -775,7 +776,7 @@ describe('useCachedData', () => {
   // DeploymentIssues agent path (derives issues from deployments)
   // ========================================================================
   describe('deployment issues agent path', () => {
-    it('useCachedDeploymentIssues derives issues from agent deployments', async () => {
+    it('useCachedDeploymentIssues reuses deployments from the agent fetcher', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
@@ -785,7 +786,6 @@ describe('useCachedData', () => {
       mockClusterCacheRef.clusters = [{ name: 'prod', context: 'prod-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
       mockIsAgentUnavailable.mockReturnValue(false)
 
-      // Agent returns deployments with some degraded
       const agentRes = {
         ok: true,
         json: vi.fn().mockResolvedValue({
@@ -798,15 +798,16 @@ describe('useCachedData', () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(agentRes))
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues()
+      renderHook(() => useCachedDeploymentIssues())
 
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ name: string; reason: string }>>
-      const issues = await fetcher()
+      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ name: string; cluster?: string }>>
+      const deployments = await fetcher()
 
-      // Only unhealthy-dep should be in issues (readyReplicas < replicas)
-      expect(issues).toHaveLength(1)
-      expect(issues[0].name).toBe('unhealthy-dep')
-      expect(issues[0].reason).toBe('DeploymentFailed')
+      expect(deployments).toHaveLength(2)
+      expect(deployments).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'healthy-dep', cluster: 'prod' }),
+        expect.objectContaining({ name: 'unhealthy-dep', cluster: 'prod' }),
+      ]))
 
       vi.unstubAllGlobals()
     })
@@ -829,11 +830,10 @@ describe('useCachedData', () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(agentRes))
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues('prod')
+      renderHook(() => useCachedDeploymentIssues('prod'))
 
       const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
       const issues = await fetcher()
-      // Agent returned non-ok, returns empty deployment list, so no issues
       expect(issues).toEqual([])
 
       vi.unstubAllGlobals()

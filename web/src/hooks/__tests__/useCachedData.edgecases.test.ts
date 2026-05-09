@@ -6,6 +6,7 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
@@ -568,90 +569,40 @@ describe('useCachedData', () => {
     afterEach(() => { vi.unstubAllGlobals() })
 
     it('derives ReplicaFailure reason for running status with missing replicas', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult([])
-      })
-
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
-          deployments: [
-            { name: 'partial-dep', namespace: 'prod', status: 'running', replicas: 5, readyReplicas: 2 },
-          ],
-        }),
-      })
-      vi.stubGlobal('fetch', mockFetch)
-      mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
-      mockIsAgentUnavailable.mockReturnValue(false)
+      mockUseCache.mockReturnValue(makeCacheResult([
+        { name: 'partial-dep', namespace: 'prod', cluster: 'c1', status: 'running', replicas: 5, readyReplicas: 2 },
+      ]))
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues()
+      const { result } = renderHook(() => useCachedDeploymentIssues())
 
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ name: string; reason: string; replicas: number; readyReplicas: number }>>
-      const issues = await fetcher()
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].reason).toBe('ReplicaFailure')
-      expect(issues[0].replicas).toBe(5)
-      expect(issues[0].readyReplicas).toBe(2)
+      expect(result.current.issues).toEqual([
+        { name: 'partial-dep', namespace: 'prod', cluster: 'c1', replicas: 5, readyReplicas: 2, reason: 'ReplicaFailure', message: '' },
+      ])
     })
 
     it('derives DeploymentFailed reason for failed status', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult([])
-      })
-
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
-          deployments: [
-            { name: 'failed-dep', namespace: 'prod', status: 'failed', replicas: 3, readyReplicas: 0 },
-          ],
-        }),
-      })
-      vi.stubGlobal('fetch', mockFetch)
-      mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
+      mockUseCache.mockReturnValue(makeCacheResult([
+        { name: 'failed-dep', namespace: 'prod', cluster: 'c1', status: 'failed', replicas: 3, readyReplicas: 0 },
+      ]))
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues()
+      const { result } = renderHook(() => useCachedDeploymentIssues())
 
-      const fetcher = capturedOpts.fetcher as () => Promise<Array<{ name: string; reason: string }>>
-      const issues = await fetcher()
-
-      expect(issues).toHaveLength(1)
-      expect(issues[0].reason).toBe('DeploymentFailed')
+      expect(result.current.issues).toEqual([
+        { name: 'failed-dep', namespace: 'prod', cluster: 'c1', replicas: 3, readyReplicas: 0, reason: 'DeploymentFailed', message: '' },
+      ])
     })
 
     it('skips healthy deployments in deriveIssues', async () => {
-      let capturedOpts: Record<string, unknown> = {}
-      mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
-        capturedOpts = opts
-        return makeCacheResult([])
-      })
-
-      mockClusterCacheRef.clusters = [{ name: 'c1', context: 'c1-ctx', reachable: true }] as typeof mockClusterCacheRef.clusters
-      mockIsAgentUnavailable.mockReturnValue(false)
-
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-        ok: true,
-        json: vi.fn().mockResolvedValue({
-          deployments: [
-            { name: 'healthy-dep', namespace: 'prod', status: 'running', replicas: 3, readyReplicas: 3 },
-          ],
-        }),
-      }))
+      mockUseCache.mockReturnValue(makeCacheResult([
+        { name: 'healthy-dep', namespace: 'prod', cluster: 'c1', status: 'running', replicas: 3, readyReplicas: 3 },
+      ]))
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues()
+      const { result } = renderHook(() => useCachedDeploymentIssues())
 
-      const fetcher = capturedOpts.fetcher as () => Promise<unknown[]>
-      const issues = await fetcher()
-
-      expect(issues).toEqual([])
+      expect(result.current.issues).toEqual([])
     })
   })
 

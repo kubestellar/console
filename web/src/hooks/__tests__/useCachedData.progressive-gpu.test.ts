@@ -6,6 +6,7 @@
  * useCached* hook by mocking the underlying cache layer and network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared BEFORE importing the module under test
@@ -282,7 +283,7 @@ describe('useCachedData', () => {
   // Deployment issues progressive fetcher
   // ========================================================================
   describe('deployment issues progressive fetcher', () => {
-    it('uses agent and derives issues progressively', async () => {
+    it('uses the deployments progressive fetcher via agent', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
@@ -301,17 +302,17 @@ describe('useCachedData', () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue(agentRes))
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues()
+      renderHook(() => useCachedDeploymentIssues())
 
       const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<unknown[]>
       const onProgress = vi.fn()
-      const issues = await progressiveFetcher(onProgress)
-      expect(issues).toHaveLength(1)
+      const deployments = await progressiveFetcher(onProgress)
+      expect(deployments).toHaveLength(1)
 
       vi.unstubAllGlobals()
     })
 
-    it('falls back to SSE when no agent', async () => {
+    it('falls back to the deployments SSE fetcher when no agent', async () => {
       let capturedOpts: Record<string, unknown> = {}
       mockUseCache.mockImplementation((opts: Record<string, unknown>) => {
         capturedOpts = opts
@@ -327,13 +328,16 @@ describe('useCachedData', () => {
       ])
 
       const { useCachedDeploymentIssues } = await loadModule()
-      useCachedDeploymentIssues()
+      renderHook(() => useCachedDeploymentIssues())
 
-      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<Array<{ name: string; reason?: string }>>
+      const progressiveFetcher = capturedOpts.progressiveFetcher as (onProgress: (p: unknown[]) => void) => Promise<Array<{ name: string }>>
       const result = await progressiveFetcher(vi.fn())
       expect(mockFetchSSE).toHaveBeenCalled()
-      expect(result).toHaveLength(1)
-      expect(result[0]).toMatchObject({ name: 'di1', reason: 'ReplicaFailure' })
+      expect(result).toHaveLength(2)
+      expect(result).toEqual(expect.arrayContaining([
+        expect.objectContaining({ name: 'healthy-dep' }),
+        expect.objectContaining({ name: 'di1' }),
+      ]))
     })
   })
 
@@ -454,7 +458,7 @@ describe('useCachedData', () => {
       m.useCachedPods()
       m.useCachedEvents()
       m.useCachedPodIssues()
-      m.useCachedDeploymentIssues()
+      renderHook(() => m.useCachedDeploymentIssues())
       m.useCachedDeployments()
       m.useCachedServices()
       m.useCachedSecurityIssues()
