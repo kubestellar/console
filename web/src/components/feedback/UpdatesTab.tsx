@@ -129,6 +129,8 @@ export function UpdatesTab({
       if (res.ok) {
         const data = await res.json()
         setPreviewResults(prev => ({ ...prev, [prNumber]: data }))
+      } else {
+        setPreviewResults(prev => ({ ...prev, [prNumber]: { status: 'error', message: `HTTP ${res.status}` } }))
       }
     } catch {
       setPreviewResults(prev => ({ ...prev, [prNumber]: { status: 'error', message: 'Failed to check' } }))
