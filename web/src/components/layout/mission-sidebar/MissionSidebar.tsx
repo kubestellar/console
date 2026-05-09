@@ -48,8 +48,6 @@ import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { useTranslation } from 'react-i18next'
-import { useAlertsContext } from '../../../contexts/AlertsContext'
-import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
 import { MISSION_FILE_FETCH_TIMEOUT_MS } from '../../missions/browser/missionCache'
 import { isDemoMode } from '../../../lib/demoMode'
@@ -64,6 +62,11 @@ const SIDEBAR_WIDTH_KEY = 'ksc-mission-sidebar-width'
 // main content) so tablet layouts don't get squeezed below the min sidebar
 // width. See issues 6388 / 6394.
 const TABLET_BREAKPOINT_PX = 1024
+const ATTENTION_MISSION_STATUSES: ReadonlySet<Mission['status']> = new Set(['waiting_input', 'blocked'])
+
+function getMissionAttentionCount(missions: Mission[]): number {
+  return missions.filter(mission => ATTENTION_MISSION_STATUSES.has(mission.status)).length
+}
 
 function loadSavedWidth(): number {
   const maxW = typeof window !== 'undefined'
@@ -586,9 +589,7 @@ export function MissionSidebar() {
   // missions are terminal and are filtered out of the active list by
   // `isActiveMission`, so including them here produced a badge count the
   // user could not reconcile with the visible active list.
-  const needsAttention = missions.filter(m =>
-    m.status === 'waiting_input' || m.status === 'blocked'
-  ).length
+  const needsAttention = getMissionAttentionCount(missions)
 
   const runningCount = missions.filter(m => m.status === 'running').length
 
@@ -1555,12 +1556,7 @@ export function MissionSidebarToggle() {
   const { t } = useTranslation(['common'])
   const { missions, isSidebarOpen, openSidebar } = useMissions()
   const { isMobile } = useMobile()
-  const { activeAlerts } = useAlertsContext()
-  const { drillToAllAlerts } = useDrillDownActions()
-
-  // Count active alerts that need attention (firing alerts, not acknowledged)
-  const needsAttention = activeAlerts.length
-
+  const needsAttention = getMissionAttentionCount(missions)
   const runningCount = missions.filter(m => m.status === 'running').length
   /**
    * Active mission count — excludes saved/completed/failed/cancelled (#5947).
@@ -1576,31 +1572,31 @@ export function MissionSidebarToggle() {
 
   return (
     <button
-      onClick={needsAttention > 0 ? () => drillToAllAlerts() : openSidebar}
+      type="button"
+      onClick={openSidebar}
       data-tour="ai-missions-toggle"
       data-testid="mission-sidebar-toggle"
       className={cn(
-        'fixed flex items-center gap-2 rounded-full shadow-lg transition-all z-50',
+        'fixed flex items-center gap-2 rounded-full border border-border bg-card text-foreground shadow-lg transition-all z-50 hover:bg-secondary',
         // Mobile: smaller padding, bottom right
         isMobile ? 'px-3 py-2 right-4 bottom-4' : 'px-4 py-3 right-4 bottom-4',
-        needsAttention > 0
-          ? 'bg-purple-500 text-white animate-pulse'
-          : 'bg-card border border-border text-foreground hover:bg-secondary'
+        needsAttention > 0 && 'ring-2 ring-purple-500/30'
       )}
       title={t('missionSidebar.openAIMissions')}
     >
-      <LogoWithStar className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
+      <LogoWithStar className={cn(isMobile ? 'w-4 h-4' : 'w-5 h-5', needsAttention > 0 && 'text-purple-400')} />
       {runningCount > 0 && (
-        <Loader2 className={isMobile ? 'w-3 h-3 animate-spin' : 'w-4 h-4 animate-spin'} />
+        <Loader2 className={isMobile ? 'w-3 h-3 animate-spin text-purple-400' : 'w-4 h-4 animate-spin text-purple-400'} />
       )}
-      {needsAttention > 0 ? (
-        <span className={isMobile ? 'text-xs font-medium' : 'text-sm font-medium'}>{t('missionSidebar.needsAttention', { count: needsAttention })}</span>
-      ) : activeCount > 0 ? (
-        <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.missionCount', { count: activeCount })}</span>
-      ) : (
-        <span className={isMobile ? 'text-xs' : 'text-sm'}>{t('missionSidebar.aiMissions')}</span>
+      <span className={cn(isMobile ? 'text-xs' : 'text-sm', needsAttention > 0 && 'font-medium')}>
+        {activeCount > 0 ? t('missionSidebar.missionCount', { count: activeCount }) : t('missionSidebar.aiMissions')}
+      </span>
+      {needsAttention > 0 && (
+        <StatusBadge color="purple" size={isMobile ? 'xs' : 'sm'} variant="solid" rounded="full">
+          {needsAttention}
+        </StatusBadge>
       )}
-      <ChevronRight className={cn(isMobile ? 'w-3 h-3' : 'w-4 h-4', isMobile && '-rotate-90')} />
+      <ChevronRight className={cn(isMobile ? 'w-3 h-3' : 'w-4 h-4', isMobile && '-rotate-90', needsAttention > 0 && 'text-purple-400')} />
     </button>
   )
 }
