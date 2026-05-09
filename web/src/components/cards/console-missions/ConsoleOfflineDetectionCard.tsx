@@ -312,7 +312,7 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
         .filter((clusterName): clusterName is string => !!clusterName)
     )
 
-    return globalFilteredClusters.flatMap(cluster => {
+    return globalFilteredClusters.flatMap((cluster): ClusterHealthIssue[] => {
       if (clustersWithOfflineNodes.has(cluster.name)) {
         return []
       }
@@ -862,7 +862,7 @@ Please:
         >
           <div className="text-xl font-bold text-foreground">{currentClusterIssueCount}</div>
           <div className={cn('text-2xs', currentClusterIssueCount > 0 ? 'text-red-400' : 'text-green-400')}>
-            {t('common:common.issues')}
+            {t('common:common.issues', { defaultValue: 'Issues' })}
           </div>
         </div>
         <div
