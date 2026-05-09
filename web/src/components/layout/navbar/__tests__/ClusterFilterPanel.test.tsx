@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ClusterFilterPanel } from '../ClusterFilterPanel'
+import { NAVBAR_FILTER_PANEL_GAP_PX, NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR } from '../../../../lib/constants/ui'
 
 const filterMocks = {
   toggleCluster: vi.fn(),
@@ -76,6 +77,12 @@ vi.mock('../../../ui/Tooltip', () => ({
 describe('ClusterFilterPanel', () => {
   beforeEach(() => {
     Object.values(filterMocks).forEach((mockFn) => mockFn.mockReset())
+    document.documentElement.style.removeProperty(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)
+    class ResizeObserverMock {
+      observe() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
   })
 
   it('exposes dialog semantics and restores focus on Escape', () => {
