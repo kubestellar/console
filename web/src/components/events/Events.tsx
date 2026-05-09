@@ -254,10 +254,16 @@ export function Events() {
   useEffect(() => {
     if (!refreshingAll && stats.total > 0) {
       eventsStatsCache = { total: stats.total, warnings: stats.warnings, errors: stats.errors, normal: stats.normal, recentCount: stats.recentCount }
+      return
     }
-  }, [refreshingAll, stats.total, stats.warnings, stats.errors, stats.normal, stats.recentCount])
 
-  const displayStats = (stats.total === 0 && eventsStatsCache && eventsStatsCache.total > 0) ? { ...stats, ...eventsStatsCache } : stats
+    if (!isLoading && !refreshingAll && (allEvents || []).length === 0) {
+      eventsStatsCache = null
+    }
+  }, [allEvents, isLoading, refreshingAll, stats.total, stats.warnings, stats.errors, stats.normal, stats.recentCount])
+
+  const shouldUseCachedStats = isLoading && (allEvents || []).length === 0 && stats.total === 0 && !!eventsStatsCache?.total
+  const displayStats = shouldUseCachedStats && eventsStatsCache ? { ...stats, ...eventsStatsCache } : stats
 
   const formatEventStat = (count: number) => {
     const formatted = formatStat(count)

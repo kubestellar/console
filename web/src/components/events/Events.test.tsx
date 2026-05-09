@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 vi.mock('../../lib/demoMode', () => ({
@@ -30,11 +30,13 @@ vi.mock('../../lib/dashboards/DashboardPage', () => ({
   ),
 }))
 
+const mockUseCachedEvents = vi.fn(() => ({
+  events: [], isLoading: false, isRefreshing: false, lastRefresh: null, refetch: vi.fn(),
+  isFailed: false, consecutiveFailures: 0, isDemoFallback: false, error: null,
+}))
+
 vi.mock('../../hooks/useCachedData', () => ({
-  useCachedEvents: () => ({
-    events: [], isLoading: false, isRefreshing: false, lastRefresh: null, refetch: vi.fn(),
-    isFailed: false, consecutiveFailures: 0, isDemoFallback: false, error: null,
-  }),
+  useCachedEvents: () => mockUseCachedEvents(),
 }))
 
 vi.mock('../../hooks/useGlobalFilters', () => ({
@@ -63,6 +65,14 @@ vi.mock('react-i18next', () => ({
 import { Events } from './Events'
 
 describe('Events Component', () => {
+  beforeEach(() => {
+    mockUseCachedEvents.mockReset()
+    mockUseCachedEvents.mockReturnValue({
+      events: [], isLoading: false, isRefreshing: false, lastRefresh: null, refetch: vi.fn(),
+      isFailed: false, consecutiveFailures: 0, isDemoFallback: false, error: null,
+    })
+  })
+
   const renderEvents = () =>
     render(
       <MemoryRouter>
@@ -91,5 +101,53 @@ describe('Events Component', () => {
     renderEvents()
     expect(screen.getAllByText('events.stats.total').length).toBeGreaterThan(0)
     expect(screen.getAllByText('events.stats.warnings').length).toBeGreaterThan(0)
+  })
+
+  it('clears cached stats when all events are removed', async () => {
+    const liveEvents = [
+      { type: 'Warning', reason: 'Failed', message: 'warn', object: 'pod-a', namespace: 'default', cluster: 'cluster-a', lastSeen: '2026-05-09T14:00:00Z' },
+      { type: 'Normal', reason: 'Scheduled', message: 'ok', object: 'pod-b', namespace: 'default', cluster: 'cluster-a', lastSeen: '2026-05-09T14:05:00Z' },
+    ]
+
+    mockUseCachedEvents.mockReturnValueOnce({
+      events: liveEvents,
+      isLoading: false,
+      isRefreshing: false,
+      lastRefresh: null,
+      refetch: vi.fn(),
+      isFailed: false,
+      consecutiveFailures: 0,
+      isDemoFallback: false,
+      error: null,
+    })
+
+    const { rerender } = renderEvents()
+
+    await waitFor(() => {
+      expect(screen.getByText('2')).toBeTruthy()
+    })
+
+    mockUseCachedEvents.mockReturnValue({
+      events: [],
+      isLoading: false,
+      isRefreshing: false,
+      lastRefresh: null,
+      refetch: vi.fn(),
+      isFailed: false,
+      consecutiveFailures: 0,
+      isDemoFallback: false,
+      error: null,
+    })
+
+    rerender(
+      <MemoryRouter>
+        <Events />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText('2')).toBeNull()
+      expect(screen.getAllByText('0').length).toBeGreaterThan(0)
+    })
   })
 })
