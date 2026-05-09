@@ -22,6 +22,7 @@ import { useAuth } from '../../lib/auth'
 import { NAVBAR_HEIGHT_PX } from '../../lib/constants/ui'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
 import { useClusterContext } from '../../hooks/useClusterContext'
+import { useMobile } from '../../hooks/useMobile'
 import {
   emitFixerBrowsed,
   emitFixerViewed,
@@ -230,10 +231,15 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [missionClassFilter, setMissionClassFilter] = useState<string>('All')
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All')
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
+  const { isMobile } = useMobile()
   // Default to list view and hide filters on mobile for better content visibility
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
   const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? 'list' : 'grid')
   const [showFilters, setShowFilters] = useState(!isMobile)
+
+  useEffect(() => {
+    setViewMode(isMobile ? 'list' : 'grid')
+    setShowFilters(!isMobile)
+  }, [isMobile])
 
   // Tree state
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([])
