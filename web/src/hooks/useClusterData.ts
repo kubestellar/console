@@ -8,7 +8,8 @@
  * in consumers that call .map(), .filter(), .flatMap(), .join(), etc.
  */
 
-import { useClusters, useAllPods, useDeployments, useNamespaces, useEvents, useWarningEvents, useHelmReleases, useOperatorSubscriptions, useSecurityIssues } from './useMCP'
+import { useClusters, useAllPods, useDeployments, useNamespaces, useHelmReleases, useOperatorSubscriptions, useSecurityIssues } from './useMCP'
+import { useCachedEvents, useCachedWarningEvents } from './useCachedData'
 
 export function useClusterData() {
   const { clusters, deduplicatedClusters } = useClusters()
@@ -22,13 +23,12 @@ export function useClusterData() {
   const { pods, clusterErrors: podClusterErrors } = useAllPods()
   const { deployments } = useDeployments()
   const { namespaces } = useNamespaces()
-  const { events } = useEvents()
-  // Issue #12371 — The warnings stat block uses warningEvents (via
-  // useUniversalStats), so the drill-down must use the same data source.
-  // Previously the drill-down filtered the general events list by type,
-  // but if useEvents() was empty, the drill-down showed 0 items even when
-  // the stat block showed a non-zero count.
-  const { events: warningEvents } = useWarningEvents(undefined, undefined, 100)
+  // Issue #12790 — The Events dashboard stats are powered by the cached hooks,
+  // so the multi-cluster drill-down must read from the same source. Using the
+  // older MCP hooks could leave the modal empty even while the dashboard tiles
+  // showed populated counts.
+  const { events } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
+  const { events: warningEvents } = useCachedWarningEvents(undefined, undefined, { limit: 100, category: 'realtime' })
   const { releases: helmReleases } = useHelmReleases()
   const { subscriptions: operatorSubscriptions } = useOperatorSubscriptions()
   const { issues: securityIssues } = useSecurityIssues()
