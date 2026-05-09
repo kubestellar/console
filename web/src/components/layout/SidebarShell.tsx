@@ -163,6 +163,9 @@ function isGroundControlItem(href: string): boolean {
 }
 
 const SIDEBAR_AUTO_HIDE_MS = 2000
+const COLLAPSED_BADGE_MAX_COUNT = 99
+const COLLAPSED_BADGE_BASE_CLASS = 'absolute -top-1 -right-1 z-10 flex h-4 min-w-4 items-center justify-center rounded-full border border-background px-0.5 text-[10px] font-bold leading-none shadow-sm'
+const COLLAPSED_BADGE_DEFAULT_COLOR_CLASS = 'bg-primary text-primary-foreground'
 
 // ---------------------------------------------------------------------------
 // Component
@@ -426,16 +429,78 @@ export function SidebarShell({
     return IconComponent ? <IconComponent className={className} /> : null
   }
 
+  const getCompactBadgeLabel = (badgeValue: string) => {
+    const numericBadge = Number(badgeValue)
+
+    if (!Number.isFinite(numericBadge)) {
+      return badgeValue
+    }
+
+    return numericBadge > COLLAPSED_BADGE_MAX_COUNT
+      ? `${COLLAPSED_BADGE_MAX_COUNT}+`
+      : String(numericBadge)
+  }
+
+  const getNavItemBadge = (item: SidebarNavItem) => {
+    const dashboardId = HREF_TO_DASHBOARD_ID[item.href]
+    const count = dashboardId
+      ? getSidebarCardCount(DASHBOARD_CONFIGS[dashboardId])
+      : null
+    const rawBadge = item.badge ?? (count != null ? String(count) : null)
+    const trimmedBadge = rawBadge?.trim()
+
+    if (!trimmedBadge) {
+      return {
+        count,
+        compactLabel: null,
+        tooltipLabel: null,
+        colorClassName: item.badgeColor ?? COLLAPSED_BADGE_DEFAULT_COLOR_CLASS,
+      }
+    }
+
+    const numericBadge = Number(trimmedBadge)
+    const hasNumericBadge = Number.isFinite(numericBadge)
+
+    if (hasNumericBadge && numericBadge <= 0) {
+      return {
+        count,
+        compactLabel: null,
+        tooltipLabel: null,
+        colorClassName: item.badgeColor ?? COLLAPSED_BADGE_DEFAULT_COLOR_CLASS,
+      }
+    }
+
+    return {
+      count,
+      compactLabel: getCompactBadgeLabel(trimmedBadge),
+      tooltipLabel: trimmedBadge,
+      colorClassName: item.badgeColor ?? COLLAPSED_BADGE_DEFAULT_COLOR_CLASS,
+    }
+  }
+
   /* Disable drag-reorder on mobile — draggable elements intercept touch
    * events on Safari, preventing NavLink taps from registering. */
   const canDrag = features.dragReorder !== false && !isMobile
 
   const renderNavItem = (item: SidebarNavItem, sectionId: string) => {
     const isEditing = editingItemId === item.id
+    const navItemBadge = getNavItemBadge(item)
     const showTooltip = isCollapsed && !isEditing
-    const tooltipContent = showTooltip
-      ? `${item.label} — ${t('help.sidebarNavItem')}`
+    const tooltipBadgeText = navItemBadge.tooltipLabel
+      ? ` (${navItemBadge.tooltipLabel})`
       : ''
+    const tooltipContent = showTooltip
+      ? `${item.label}${tooltipBadgeText} — ${t('help.sidebarNavItem')}`
+      : ''
+    const navItemTitle = [
+      navItemBadge.tooltipLabel
+        ? `${item.label} (${navItemBadge.tooltipLabel})`
+        : item.label,
+    ]
+
+    if (item.isCustom && item.href.startsWith('/custom-dashboard/')) {
+      navItemTitle.push(t('sidebar.doubleClickRename'))
+    }
 
     return (
       <Tooltip
@@ -492,19 +557,26 @@ export function SidebarShell({
             onDoubleClick={(e) => handleDoubleClick(item, e)}
             onMouseEnter={() => prefetchDashboard(item.href)}
             className={({ isActive }) => cn(
-              'flex items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-200',
+              'relative flex items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-200',
               isActive
                 ? 'bg-purple-500/15 text-purple-400 border-l-[3px] border-purple-500 shadow-[inset_0_0_12px_rgba(168,85,247,0.08)]'
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50 border-l-[3px] border-transparent',
               isCollapsed ? 'justify-center p-3' : 'px-3 py-2'
             )}
-            title={item.isCustom && item.href.startsWith('/custom-dashboard/') ? `${item.label} — ${t('sidebar.doubleClickRename')}` : item.label}
+            title={navItemTitle.join(' — ')}
           >
-            {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
+            <span className="relative shrink-0">
+              {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
+              {isCollapsed && navItemBadge.compactLabel && (
+                <span
+                  className={cn(COLLAPSED_BADGE_BASE_CLASS, navItemBadge.colorClassName)}
+                  aria-hidden="true"
+                >
+                  {navItemBadge.compactLabel}
+                </span>
+              )}
+            </span>
             {!isCollapsed && (() => {
-              const dashId = HREF_TO_DASHBOARD_ID[item.href]
-              const count = dashId
-                ? getSidebarCardCount(DASHBOARD_CONFIGS[dashId]) : null
               const isGC = isGroundControlItem(item.href)
               return (
                 <span className="flex-1 min-w-0 flex items-center gap-1">
@@ -512,11 +584,11 @@ export function SidebarShell({
                   {isGC && (
                     <Satellite className="w-3.5 h-3.5 text-purple-400 shrink-0" aria-label="Ground Control dashboard" />
                   )}
-                  {count != null && (
+                  {navItemBadge.count != null && (
                     <span
                       className="text-[10px] text-muted-foreground/40 tabular-nums ml-0.5 shrink-0"
-                      title={t('sidebar.cardCount', { count })}
-                    >{count}</span>
+                      title={t('sidebar.cardCount', { count: navItemBadge.count })}
+                    >{navItemBadge.count}</span>
                   )}
                 </span>
               )
