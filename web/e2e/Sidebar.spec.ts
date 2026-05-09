@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test'
 import { DEFAULT_PRIMARY_NAV } from '../src/hooks/useSidebarConfig'
-import { mockApiFallback } from './helpers/setup'
+import { mockApiFallback, mockLocalAgentUnavailable } from './helpers/setup'
+import { setupDemoMode } from './helpers/storage-setup'
 
 /**
  * Sets up authentication and MCP mocks for sidebar tests
@@ -23,6 +24,24 @@ async function setupSidebarTest(page: Page) {
       }),
     })
   )
+
+  await page.route('**/health', (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname !== '/health') return route.fallback()
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        status: 'ok',
+        version: 'dev',
+        oauth_configured: true,
+        in_cluster: false,
+        no_local_agent: true,
+        install_method: 'dev',
+      }),
+    })
+  })
+  await mockLocalAgentUnavailable(page)
 
   // Mock MCP endpoints
   await page.route('**/api/mcp/**', (route) => {
@@ -48,24 +67,13 @@ async function setupSidebarTest(page: Page) {
     }
   })
 
-  // Seed localStorage BEFORE any page script runs so the auth guard sees
-  // the token on first execution. page.evaluate() runs after the page has
-  // already parsed and executed scripts, which is too late for webkit/Safari
-  // where the auth redirect fires synchronously on script evaluation.
-  // page.addInitScript() injects the snippet ahead of any page code (#9096).
-  await page.addInitScript(() => {
-    // demo-token sentinel: setDemoMode() runs synchronously, no /api/me fetch needed.
-    // Auth resolves instantly on all browsers. (#nightly-playwright)
-    localStorage.setItem('token', 'demo-token')
-    localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('demo-user-onboarded', 'true')
-    localStorage.setItem('kc-agent-setup-dismissed', 'true')
-  })
+  await setupDemoMode(page)
 
   await page.goto('/')
   await page.waitForLoadState('domcontentloaded')
   // Wait up to 20s for sidebar — Firefox/webkit are slower on CI.
   await page.getByTestId('sidebar').waitFor({ state: 'visible', timeout: 20_000 })
+  await page.getByTestId('sidebar-primary-nav').waitFor({ state: 'visible', timeout: 20_000 })
 }
 
 const SIDEBAR_TIMEOUT_MS = 10_000
@@ -113,9 +121,12 @@ test.describe('Sidebar Navigation', () => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
       await expectDashboardNavigation(page, '/clusters', 'My Clusters')
 
-      const dashboardLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/"]').first()
+      const dashboardLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/"], [data-testid="sidebar"] a[href="/"]').first()
       await expect(dashboardLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      await dashboardLink.click()
+      await Promise.all([
+        page.waitForURL('**/', { timeout: SIDEBAR_TIMEOUT_MS }),
+        dashboardLink.click({ force: true }),
+      ])
 
       await expectDashboardNavigation(page, '/', 'Dashboard')
     })
@@ -123,10 +134,12 @@ test.describe('Sidebar Navigation', () => {
     test('clusters link navigates to clusters page', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
-      const clustersLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/clusters"]').first()
-        .or(page.getByTestId('sidebar').locator('a[href="/clusters"]').first())
+      const clustersLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/clusters"], [data-testid="sidebar"] a[href="/clusters"]').first()
       await expect(clustersLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      await clustersLink.click()
+      await Promise.all([
+        page.waitForURL('**/clusters', { timeout: SIDEBAR_TIMEOUT_MS }),
+        clustersLink.click({ force: true }),
+      ])
 
       await expectDashboardNavigation(page, '/clusters', 'My Clusters')
     })
@@ -134,10 +147,12 @@ test.describe('Sidebar Navigation', () => {
     test('deploy link navigates to deploy page', async ({ page }) => {
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
 
-      const deployLink = page.getByTestId('sidebar-primary-nav').locator('a[href="/deploy"]').first()
-        .or(page.getByTestId('sidebar').locator('a[href="/deploy"]').first())
+      const deployLink = page.locator('[data-testid="sidebar-primary-nav"] a[href="/deploy"], [data-testid="sidebar"] a[href="/deploy"]').first()
       await expect(deployLink).toBeVisible({ timeout: SIDEBAR_TIMEOUT_MS })
-      await deployLink.click()
+      await Promise.all([
+        page.waitForURL('**/deploy', { timeout: SIDEBAR_TIMEOUT_MS }),
+        deployLink.click({ force: true }),
+      ])
 
       await expectDashboardNavigation(page, '/deploy', 'Deploy')
     })

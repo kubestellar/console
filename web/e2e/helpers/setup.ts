@@ -19,6 +19,21 @@ export const MODAL_TIMEOUT_MS = 5_000
 /** Timeout for navigation to complete */
 export const NAV_TIMEOUT_MS = 15_000
 
+const LOCAL_AGENT_HTTP_PATTERNS = [
+  'http://127.0.0.1:8585/**',
+  'http://localhost:8585/**',
+  'https://127.0.0.1:8585/**',
+  'https://localhost:8585/**',
+] as const
+const LOCAL_AGENT_WS_PATTERNS = [
+  'ws://127.0.0.1:8585/**',
+  'ws://localhost:8585/**',
+  'wss://127.0.0.1:8585/**',
+  'wss://localhost:8585/**',
+] as const
+const LOCAL_AGENT_UNAVAILABLE_STATUS = 503
+const LOCAL_AGENT_UNAVAILABLE_MESSAGE = 'agent not running'
+
 // ---------------------------------------------------------------------------
 // Mock user returned from /api/me in demo/test mode
 // See #9075 — smoke tests must mock /api/me so AuthProvider does not try
@@ -165,6 +180,37 @@ export async function mockApiMe(page: Page) {
       body: JSON.stringify(MOCK_DEMO_USER),
     })
   )
+}
+
+export async function mockLocalAgentUnavailable(page: Page) {
+  for (const pattern of LOCAL_AGENT_HTTP_PATTERNS) {
+    await page.route(pattern, (route) =>
+      route.fulfill({
+        status: LOCAL_AGENT_UNAVAILABLE_STATUS,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: LOCAL_AGENT_UNAVAILABLE_MESSAGE }),
+      })
+    )
+  }
+
+  for (const pattern of LOCAL_AGENT_WS_PATTERNS) {
+    await page.routeWebSocket(pattern, (ws) => {
+      ws.onMessage((data) => {
+        try {
+          const message = JSON.parse(String(data)) as { id?: string | number }
+          if (typeof message.id !== 'undefined') {
+            ws.send(JSON.stringify({
+              id: message.id,
+              type: 'error',
+              payload: { error: LOCAL_AGENT_UNAVAILABLE_MESSAGE },
+            }))
+          }
+        } catch {
+          // Ignore malformed test traffic.
+        }
+      })
+    })
+  }
 }
 
 /**

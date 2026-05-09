@@ -2,7 +2,7 @@ import { test, expect, type Locator, type Page } from '@playwright/test'
 import { CARD_TITLES } from '../src/components/cards/cardMetadata'
 import { getDefaultCardsForDashboard } from '../src/config/dashboards'
 import { formatCardTitle } from '../src/lib/formatCardTitle'
-import { mockApiFallback } from './helpers/setup'
+import { mockApiFallback, mockLocalAgentUnavailable } from './helpers/setup'
 import { setupStrictDemoMode, API_RESPONSES } from './helpers/api-mocks'
 import { setupDemoMode, setupTestStorage } from './helpers/storage-setup'
 
@@ -164,6 +164,7 @@ test.describe('Dashboard Page', () => {
         },
       ],
     })
+    await mockLocalAgentUnavailable(page)
 
     // Set up storage before navigation (#12088, #12089)
     // Uses unified storage setup to prevent addInitScript accumulation and
@@ -288,6 +289,7 @@ test.describe('Dashboard Page', () => {
       test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       const addCardButton = page.getByTestId('sidebar-add-card')
 
+      await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: ADD_CARD_MODAL_TIMEOUT_MS })
       await expect(addCardButton).toBeVisible({ timeout: ADD_CARD_MODAL_TIMEOUT_MS })
       await addCardButton.click()
 
@@ -321,14 +323,7 @@ test.describe('Dashboard Page', () => {
         })
       )
 
-      // Mock the local kc-agent HTTP endpoint to prevent hangs in CI.
-      await page.route('http://127.0.0.1:8585/**', (route) =>
-        route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [], pods: [] }),
-        })
-      )
+      await mockLocalAgentUnavailable(page)
 
       // Use manual route control to guarantee skeleton visibility
       let resolveMcpApi: (() => void) | undefined
@@ -382,14 +377,23 @@ test.describe('Dashboard Page', () => {
         })
       )
 
-      // Mock the local kc-agent HTTP endpoint to prevent hangs in CI.
-      await page.route('http://127.0.0.1:8585/**', (route) =>
-        route.fulfill({
+      await mockLocalAgentUnavailable(page)
+      await page.route('**/health', (route) => {
+        const url = new URL(route.request().url())
+        if (url.pathname !== '/health') return route.fallback()
+        return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({ clusters: [], issues: [], events: [], nodes: [], pods: [] }),
+          body: JSON.stringify({
+            status: 'ok',
+            version: 'dev',
+            oauth_configured: true,
+            in_cluster: false,
+            no_local_agent: true,
+            install_method: 'dev',
+          }),
         })
-      )
+      })
 
       await page.route('**/api/mcp/clusters', (route) =>
         route.fulfill({
@@ -484,7 +488,7 @@ test.describe('Dashboard Page', () => {
       await expect(page.getByTestId('dashboard-page')).toBeVisible({ timeout: PAGE_VISIBLE_TIMEOUT_MS })
       await expect(page.getByTestId('dashboard-header')).toBeVisible()
       await expect(cardsGrid).toBeVisible()
-      await expect(sidebarCollapseToggle).toBeHidden()
+      await expect(sidebarCollapseToggle).not.toBeVisible({ timeout: STANDARD_ASSERT_TIMEOUT_MS })
       expect(await getGridColumnCount(cardsGrid)).toBe(SINGLE_COLUMN_GRID_COUNT)
     })
 
@@ -595,6 +599,17 @@ test.describe('Dashboard Page', () => {
       }))
       const mockPodResponse = { pods: mockPods }
 
+      await mockLocalAgentUnavailable(page)
+      await page.route('**/api/mcp/**', (route) => {
+        if (route.request().url().includes('/pods')) {
+          return route.fallback()
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(API_RESPONSES.mcp()),
+        })
+      })
       await page.route('**/api/mcp/pods**', (route) =>
         route.fulfill({
           status: 200,
@@ -603,10 +618,19 @@ test.describe('Dashboard Page', () => {
         })
       )
 
-      await reloadDashboard(page)
+      await setupTestStorage(page, { demoMode: false, agentSetupDismissed: true })
+      const podsApiPromise = page.waitForResponse(
+        (resp) => resp.url().includes('/api/mcp/pods') && resp.status() === 200
+      )
+      await page.goto('/')
+      await page.waitForLoadState('domcontentloaded')
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({
+        timeout: CARD_DATA_TIMEOUT_MS,
+      })
+      await podsApiPromise
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      const podCard = cardsGrid.locator('[data-card-id]').filter({ hasText: /pods/i }).first()
+      const podCard = cardsGrid.locator('[data-card-type="pods"]')
       await expectVisible(
         podCard,
         'Pod card not present on default dashboard',
@@ -622,6 +646,17 @@ test.describe('Dashboard Page', () => {
         ],
       })
 
+      await mockLocalAgentUnavailable(page)
+      await page.route('**/api/mcp/**', (route) => {
+        if (route.request().url().includes('/clusters')) {
+          return route.fallback()
+        }
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(API_RESPONSES.mcp()),
+        })
+      })
       await page.route('**/api/mcp/clusters', (route) =>
         route.fulfill({
           status: 200,
@@ -630,16 +665,24 @@ test.describe('Dashboard Page', () => {
         })
       )
 
-      await reloadDashboard(page)
+      await setupTestStorage(page, { demoMode: false, agentSetupDismissed: true })
+      const clustersApiPromise = page.waitForResponse(
+        (resp) => resp.url().includes('/api/mcp/clusters') && resp.status() === 200
+      )
+      await page.goto('/')
+      await page.waitForLoadState('domcontentloaded')
+      await expect(page.getByTestId('dashboard-page')).toBeVisible({
+        timeout: CARD_DATA_TIMEOUT_MS,
+      })
+      await clustersApiPromise
 
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
-      const clusterHealthCard = cardsGrid.locator('[data-card-id]').filter({
-        hasText: 'test-healthy-cluster',
-      }).first()
+      const clusterHealthCard = cardsGrid.locator('[data-card-type="cluster_health"]')
       await expectVisible(
         clusterHealthCard,
         'Cluster health card not present on default dashboard layout',
       )
+      await expect(clusterHealthCard).toContainText('test-healthy-cluster')
       await expect(clusterHealthCard).toContainText('test-unhealthy-cluster')
     })
 
@@ -732,16 +775,7 @@ test.describe('Dashboard Data Accuracy (#6459)', () => {
       })
     })
 
-    // Mock the local agent endpoint so fetchClusterListFromAgent() returns
-    // immediately instead of waiting 1.5s for MCP_PROBE_TIMEOUT_MS on
-    // browsers where connection-refused is slow (webkit/firefox). (#10784)
-    await page.route('**/127.0.0.1:8585/**', (route) =>
-      route.fulfill({
-        status: 503,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'agent not running' }),
-      })
-    )
+    await mockLocalAgentUnavailable(page)
 
     // Mock /api/dashboards so the dashboard component doesn't wait for a
     // backend response before falling back to demo cards.

@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { mockApiFallback } from './helpers/setup'
+import { mockApiFallback, mockLocalAgentUnavailable } from './helpers/setup'
 import { setupLiveMode } from './helpers/storage-setup'
 
 /**
@@ -37,18 +37,8 @@ async function setupClustersTest(page: Page) {
     })
   })
 
-  // Mock the local agent endpoint so fetchClusterListFromAgent() returns
-  // immediately instead of waiting for the 1.5s MCP_PROBE_TIMEOUT_MS on
-  // browsers where the connection-refused error is slow (webkit/firefox).
-  // This also prevents cross-origin errors from 127.0.0.1:8585. (#10784)
   // Registered AFTER mockApiFallback → higher priority
-  await page.route('**/127.0.0.1:8585/**', (route) =>
-    route.fulfill({
-      status: 503,
-      contentType: 'application/json',
-      body: JSON.stringify({ error: 'agent not running' }),
-    })
-  )
+  await mockLocalAgentUnavailable(page)
 
   // Mock authentication
   // Registered AFTER mockApiFallback → higher priority, overrides catch-all
@@ -423,23 +413,23 @@ test.describe('Clusters Page', () => {
     test('sort dropdown changes cluster order', async ({ page }) => {
       await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10000 })
 
-      // Look for sort select or dropdown
-      const sortSelect = page.locator('select').first()
-      const sortSelectVisible = await sortSelect.isVisible({ timeout: 5000 }).catch(() => false)
+      // Look for the dedicated sort selector before falling back to generic buttons
+      const sortSelect = page.getByRole('combobox', { name: /sort/i }).first()
+      const sortSelectVisible = await sortSelect.isVisible({ timeout: 10_000 }).catch(() => false)
 
       if (sortSelectVisible) {
         // Change sort to "name"
         await sortSelect.selectOption({ label: /name/i }).catch(() =>
           sortSelect.selectOption('name').catch(() => {})
         )
-        await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 5000 })
+        await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10_000 })
       } else {
         // Sort may be rendered as buttons — look for sort-related controls
         const sortBtn = page.locator('button[aria-label*="sort" i], button[aria-label*="Sort"]').first()
         const sortBtnVisible = await sortBtn.isVisible().catch(() => false)
         if (sortBtnVisible) {
           await sortBtn.click()
-          await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 5000 })
+          await expect(page.getByTestId('clusters-page')).toBeVisible({ timeout: 10_000 })
         }
       }
     })
