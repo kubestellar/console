@@ -12,6 +12,7 @@ Helm chart for deploying the KubeStellar Console to a Kubernetes cluster.
 - [Secrets and configuration](#secrets-and-configuration)
 - [Quickstart: Kind or Minikube](#quickstart-kind-or-minikube)
 - [Installing on a real cluster](#installing-on-a-real-cluster)
+- [Connecting Kagenti](#connecting-kagenti)
 - [Schema validation](#schema-validation)
 - [Configuration reference](#configuration-reference)
 - [Troubleshooting](#troubleshooting)
@@ -140,6 +141,165 @@ For production installs:
 4. Point your GitHub OAuth app's callback URL at
    `https://<your-fqdn>/api/auth/github/callback`.
 5. `helm install kc ./deploy/helm/kubestellar-console -n kubestellar-console -f your-values.yaml`
+
+## Connecting Kagenti
+
+If you deploy the console in-cluster and want the **AI Agents** dashboard to talk
+to an in-cluster Kagenti backend, use the chart's `kagenti:` values block. The
+chart renders these values as backend environment variables in
+[`templates/deployment.yaml`](./templates/deployment.yaml), and the example file
+[`values-kagenti-incluster.example.yaml`](./values-kagenti-incluster.example.yaml)
+shows the supported overrides.
+
+### 1. Deploy `kagenti-backend` in the cluster
+
+A minimal deployment only needs the backend service plus RBAC that allows it to
+read cluster resources. The full Kagenti platform (Keycloak, Istio, SPIFFE,
+etc.) is optional for this console integration.
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kagenti-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kagenti-backend
+  namespace: kagenti-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kagenti-backend
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kagenti-backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kagenti-backend
+subjects:
+  - kind: ServiceAccount
+    name: kagenti-backend
+    namespace: kagenti-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kagenti-backend
+  namespace: kagenti-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kagenti-backend
+  template:
+    metadata:
+      labels:
+        app: kagenti-backend
+    spec:
+      serviceAccountName: kagenti-backend
+      containers:
+        - name: kagenti-backend
+          image: ghcr.io/kagenti/kagenti/backend:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: KAGENTI_AUTH_ENABLED
+              value: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kagenti-backend
+  namespace: kagenti-system
+spec:
+  selector:
+    app: kagenti-backend
+  ports:
+    - port: 8000
+      targetPort: 8000
+```
+
+Apply it with:
+
+```bash
+kubectl apply -f kagenti-backend-deploy.yaml
+```
+
+### 2. Wire the console to Kagenti via Helm
+
+Start from the chart example file:
+[`values-kagenti-incluster.example.yaml`](./values-kagenti-incluster.example.yaml)
+
+```yaml
+kagenti:
+  enabled: true
+  forceDefaultAgent: true
+  controllerUrl: ""
+  namespace: kagenti-system
+  serviceName: kagenti-backend
+  servicePort: "8000"
+  serviceProtocol: http
+
+networkPolicy:
+  enabled: true
+```
+
+Notes:
+
+- Leave `controllerUrl` empty to let the console auto-detect
+  `http://kagenti-backend.kagenti-system.svc:8000` from the other `kagenti:`
+  values.
+- For production, explicitly setting `controllerUrl` is recommended:
+  `http://kagenti-backend.kagenti-system.svc:8000`.
+- When `networkPolicy.enabled=true`, the chart's default
+  `kagenti.allowNetworkPolicyEgress=true` adds TCP egress on
+  `kagenti.servicePort` for the console pod.
+
+Upgrade or install with:
+
+```bash
+helm upgrade --install ks-console ./deploy/helm/kubestellar-console \
+  -n kubestellar-console \
+  -f deploy/helm/kubestellar-console/values-kagenti-incluster.example.yaml \
+  -f values-kagenti.yaml
+```
+
+### 3. Patch an existing non-Helm deployment
+
+If the console Deployment already exists and you just need to point it at
+Kagenti, set the backend URL directly:
+
+```bash
+kubectl set env deployment/<console-deployment> \
+  -n <console-namespace> \
+  KAGENTI_CONTROLLER_URL=http://kagenti-backend.kagenti-system.svc:8000
+```
+
+Restarting the console pod after setting the environment variable ensures the
+new backend target is picked up immediately.
+
+### 4. Caveats and troubleshooting
+
+- Kagenti auto-detection happens **once at startup**. If the backend is not
+  reachable then, the console keeps running without Kagenti until the console
+  pod is restarted.
+- Auto-detection uses a short **3-second timeout**. Cold starts are often more
+  reliable when `KAGENTI_CONTROLLER_URL` is set explicitly.
+- The `kagenti-backend` ServiceAccount needs cluster read permissions. Without
+  the `ClusterRole`/`ClusterRoleBinding` above, Kagenti can return `403`
+  responses from endpoints such as `/api/v1/agents`.
+- The chart also supports direct-agent mode via `kagenti.directAgentUrl`, but
+  controller mode is the recommended in-cluster setup.
 
 ## Schema validation
 

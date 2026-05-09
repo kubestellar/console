@@ -39,7 +39,7 @@ The quickest path to a working console with your own data. `start.sh` downloads 
 curl -sSL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash
 ```
 
-Deploy into a cluster instead with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`).
+Deploy into a cluster instead with [`deploy.sh`](deploy.sh) (`--openshift`, `--ingress <host>`, `--github-oauth`, `--uninstall`). For Helm chart installs that should talk to an in-cluster Kagenti backend, see [Connecting Kagenti](deploy/helm/kubestellar-console/README.md#connecting-kagenti).
 
 ## kc-agent (bridge self-hosted console to your clusters)
 
