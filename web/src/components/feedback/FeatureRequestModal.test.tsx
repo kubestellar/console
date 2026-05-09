@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import type { FeedbackDraft } from '../../hooks/useFeedbackDrafts'
 import * as FeatureRequestModalModule from './FeatureRequestModal'
 import { FeatureRequestModal } from './FeatureRequestModal'
 
@@ -7,6 +8,7 @@ import { FeatureRequestModal } from './FeatureRequestModal'
 // createRequest is declared outside the factory so individual tests can
 // swap its implementation (e.g. to simulate a successful submission).
 const createRequestMock = vi.fn()
+const mockDrafts: FeedbackDraft[] = []
 
 vi.mock('../../hooks/useFeatureRequests', () => ({
   useFeatureRequests: () => ({
@@ -40,9 +42,10 @@ vi.mock('../../hooks/useRewards', () => ({
 }))
 
 vi.mock('../../hooks/useFeedbackDrafts', () => ({
+  extractDraftTitle: (description: string) => description.split('\n')[0]?.trim() || 'Untitled draft',
   useFeedbackDrafts: () => ({
-    drafts: [],
-    draftCount: 0,
+    drafts: mockDrafts,
+    draftCount: mockDrafts.length,
     recentlyDeletedDrafts: [],
     recentlyDeletedCount: 0,
     saveDraft: vi.fn(),
@@ -56,6 +59,10 @@ vi.mock('../../hooks/useFeedbackDrafts', () => ({
 
 vi.mock('../ui/Toast', () => ({
   useToast: () => ({ showToast: vi.fn() }),
+}))
+
+vi.mock('../../lib/imageCompression', () => ({
+  compressScreenshot: vi.fn(async (preview: string) => preview),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -72,6 +79,7 @@ describe('FeatureRequestModal Component', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
     createRequestMock.mockReset()
+    mockDrafts.length = 0
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(createFetchResponse(true)))
   })
 
@@ -246,5 +254,58 @@ describe('FeatureRequestModal Component', () => {
       'href',
       expect.stringContaining('https://github.com/kubestellar/console/issues/new'),
     )
+  })
+
+  it('restores draft data URI attachments as uploadable files', async () => {
+    const restoredPreview = 'data:image/png;base64,ZmFrZS1wbmctYnl0ZXM='
+    mockDrafts.push({
+      id: 'draft-with-image',
+      requestType: 'bug',
+      targetRepo: 'console',
+      description: 'Restored draft title\nThis restored draft contains enough detail to be submitted with an attachment.',
+      savedAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+      screenshots: [restoredPreview],
+    })
+    createRequestMock.mockResolvedValue({
+      github_issue_url: 'https://github.com/kubestellar/console/issues/12824',
+      screenshots_uploaded: 1,
+      screenshots_failed: 0,
+    })
+
+    render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="drafts" />)
+
+    fireEvent.click(screen.getByRole('button', { name: /^Edit$/i }))
+    await screen.findByText(/Editing a saved draft/i)
+
+    fireEvent.click(screen.getByRole('button', { name: /^Submit/i }))
+
+    await waitFor(() => expect(createRequestMock).toHaveBeenCalledTimes(1))
+    expect(createRequestMock).toHaveBeenCalledWith(
+      expect.objectContaining({ screenshots: [restoredPreview] }),
+      expect.objectContaining({ timeout: expect.any(Number) }),
+    )
+  })
+
+  it('rejects restored draft attachments that still have zero bytes', async () => {
+    mockDrafts.push({
+      id: 'draft-with-invalid-image',
+      requestType: 'bug',
+      targetRepo: 'console',
+      description: 'Broken restored draft\nThis draft includes an attachment preview that cannot be reconstructed into a real file.',
+      savedAt: '2025-01-01T00:00:00.000Z',
+      updatedAt: '2025-01-01T00:00:00.000Z',
+      screenshots: ['not-a-data-uri'],
+    })
+
+    render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="drafts" />)
+
+    fireEvent.click(screen.getByRole('button', { name: /^Edit$/i }))
+    await screen.findByText(/Editing a saved draft/i)
+
+    fireEvent.click(screen.getByRole('button', { name: /^Submit/i }))
+
+    await screen.findByText(/could not be restored/i)
+    expect(createRequestMock).not.toHaveBeenCalled()
   })
 })

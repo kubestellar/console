@@ -21,11 +21,70 @@ import type { FeedbackDraft } from '../../hooks/useFeedbackDrafts'
 
 // Split sub-components
 import type { FeatureRequestModalProps, TabType, ScreenshotItem, SuccessState } from './FeatureRequestTypes'
-import { MIN_DRAFT_LENGTH, SUCCESS_DISPLAY_MS } from './FeatureRequestTypes'
+import { MIN_DRAFT_LENGTH, SUCCESS_DISPLAY_MS, EMPTY_FILE_SIZE_BYTES } from './FeatureRequestTypes'
 import { DiscardConfirmDialog, LoginPromptDialog, FullscreenPreview, ScreenshotPreviewOverlay } from './FeedbackDialogs'
 import { DraftsTab } from './DraftsTab'
 import { UpdatesTab } from './UpdatesTab'
 import { SubmitForm, SuccessView, SubmitFooter } from './SubmitTab'
+
+const DRAFT_ATTACHMENT_INDEX_OFFSET = 1
+const FIRST_CHARACTER_INDEX = 0
+const DATA_URI_PART_LIMIT = 2
+const DATA_URI_PREFIX = 'data:'
+const DATA_URI_BASE64_MARKER = ';base64'
+const DEFAULT_DRAFT_ATTACHMENT_MIME_TYPE = 'image/png'
+const DEFAULT_DRAFT_ATTACHMENT_EXTENSION = 'png'
+
+function getDraftAttachmentMediaType(mimeType: string): ScreenshotItem['mediaType'] {
+  return mimeType.startsWith('video/') ? 'video' : 'image'
+}
+
+function getDraftAttachmentFilename(index: number, mimeType: string): string {
+  const extension = mimeType.split('/').pop() || DEFAULT_DRAFT_ATTACHMENT_EXTENSION
+  return `draft-screenshot-${index + DRAFT_ATTACHMENT_INDEX_OFFSET}.${extension}`
+}
+
+function createEmptyDraftAttachment(index: number, mimeType: string): File {
+  return new File([], getDraftAttachmentFilename(index, mimeType), { type: mimeType })
+}
+
+function restoreDraftAttachment(preview: string, index: number): ScreenshotItem {
+  if (!preview.startsWith(DATA_URI_PREFIX)) {
+    return {
+      file: createEmptyDraftAttachment(index, DEFAULT_DRAFT_ATTACHMENT_MIME_TYPE),
+      preview,
+      mediaType: 'image',
+    }
+  }
+
+  const [header, encodedBody] = preview.split(',', DATA_URI_PART_LIMIT)
+  const mimeType = header.match(/:(.*?)(;|$)/)?.[1] || DEFAULT_DRAFT_ATTACHMENT_MIME_TYPE
+  const mediaType = getDraftAttachmentMediaType(mimeType)
+
+  if (!header.includes(DATA_URI_BASE64_MARKER) || !encodedBody) {
+    return {
+      file: createEmptyDraftAttachment(index, mimeType),
+      preview,
+      mediaType,
+    }
+  }
+
+  try {
+    const binary = atob(encodedBody)
+    const bytes = Uint8Array.from(binary, char => char.codePointAt(FIRST_CHARACTER_INDEX) ?? EMPTY_FILE_SIZE_BYTES)
+    return {
+      file: new File([bytes], getDraftAttachmentFilename(index, mimeType), { type: mimeType }),
+      preview,
+      mediaType,
+    }
+  } catch {
+    return {
+      file: createEmptyDraftAttachment(index, mimeType),
+      preview,
+      mediaType,
+    }
+  }
+}
 
 export function FeatureRequestModal({ isOpen, onClose, initialTab, initialRequestType, initialContext }: FeatureRequestModalProps) {
   const { t } = useTranslation()
@@ -148,13 +207,16 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
     setTargetRepo(draft.targetRepo)
     setDescription(draft.description)
     setEditingDraftId(draft.id)
-    const restoredScreenshots = (draft.screenshots || []).map((preview, idx) => ({
-      file: new File([], `draft-screenshot-${idx + 1}.png`, { type: 'image/png' }),
-      preview,
-    }))
+    const restoredScreenshots = (draft.screenshots || []).map(restoreDraftAttachment)
+    const invalidAttachmentCount = restoredScreenshots.filter(({ file }) => file.size === EMPTY_FILE_SIZE_BYTES).length
     setScreenshots(restoredScreenshots)
     setActiveTab('submit')
-    showToast('Draft loaded into editor', 'success')
+    showToast(
+      invalidAttachmentCount > EMPTY_FILE_SIZE_BYTES
+        ? t('drafts.restoreRequiresReattach', 'Draft loaded, but one or more attachments must be re-attached before submitting')
+        : t('drafts.loadedIntoEditor', 'Draft loaded into editor'),
+      invalidAttachmentCount > EMPTY_FILE_SIZE_BYTES ? 'error' : 'success',
+    )
   }
 
   const handleDeleteDraft = (id: string) => {

@@ -60,6 +60,9 @@ export interface ScreenshotItem {
   mediaType?: 'image' | 'video'
 }
 
+/** Empty files have no uploadable content */
+export const EMPTY_FILE_SIZE_BYTES = 0
+
 /** Maximum video file size in bytes (10 MB) */
 export const MAX_VIDEO_SIZE_BYTES = 10 * 1024 * 1024
 

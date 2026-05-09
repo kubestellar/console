@@ -30,6 +30,7 @@ import {
   MIN_DESCRIPTION_WORDS,
   MAX_TITLE_LENGTH,
   MAX_VIDEO_SIZE_BYTES,
+  EMPTY_FILE_SIZE_BYTES,
   ACCEPTED_MEDIA_TYPES,
   ACCEPTED_VIDEO_MIME_TYPES,
 } from './FeatureRequestTypes'
@@ -349,6 +350,15 @@ export function SubmitForm({
     }
     if (extractedDesc.split(/\s+/).filter(Boolean).length < MIN_DESCRIPTION_WORDS) {
       setError('Description must contain at least 3 words')
+      return
+    }
+
+    const hasZeroByteAttachment = screenshots.some(({ file }) => file.size === EMPTY_FILE_SIZE_BYTES)
+    if (hasZeroByteAttachment) {
+      setError(t(
+        'feedback.invalidAttachmentRestore',
+        'One or more attachments could not be restored. Remove them or re-attach the original file before submitting.',
+      ))
       return
     }
 
