@@ -832,7 +832,7 @@ func (m *LocalClusterManager) ListVClusters() ([]VClusterInstance, error) {
 	return instances, nil
 }
 
-// CreateVCluster creates a new vCluster with progress broadcasting
+// CreateVCluster creates a new vCluster and connects it so it is immediately usable.
 func (m *LocalClusterManager) CreateVCluster(name, namespace string) error {
 	// Phase 1: Validating
 	m.broadcastProgress("vcluster", name, "validating", "Checking vcluster CLI...", progressValidating)
@@ -851,6 +851,10 @@ func (m *LocalClusterManager) CreateVCluster(name, namespace string) error {
 
 	if err := runWithTimeout(cmd, vclusterCreateTimeout); err != nil {
 		return fmt.Errorf("vcluster create failed: %s", strings.TrimSpace(stderr.String()))
+	}
+
+	if err := m.ConnectVCluster(name, namespace); err != nil {
+		return fmt.Errorf("vcluster created but connection failed: %w", err)
 	}
 
 	return nil

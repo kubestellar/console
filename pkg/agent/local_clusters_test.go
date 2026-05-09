@@ -143,6 +143,90 @@ func TestLocalClusterManager_CreateCluster_ErrorContainsDetails(t *testing.T) {
 	}
 }
 
+func TestCreateVCluster_ConnectsAfterCreate(t *testing.T) {
+	oldLookPath := lookPath
+	oldExecCommand := execCommand
+	defer func() {
+		lookPath = oldLookPath
+		execCommand = oldExecCommand
+	}()
+
+	lookPath = func(file string) (string, error) {
+		if file == "vcluster" {
+			return "/usr/local/bin/vcluster", nil
+		}
+		return "", os.ErrNotExist
+	}
+
+	const expectedCreateCall = "vcluster create demo -n tenant-a"
+	const expectedConnectCall = "vcluster connect demo -n tenant-a --update-current=false"
+
+	var mu sync.Mutex
+	calls := make([]string, 0, 2)
+	appendCall := func(args ...string) {
+		mu.Lock()
+		defer mu.Unlock()
+		calls = append(calls, strings.Join(args, " "))
+	}
+
+	execCommand = func(name string, arg ...string) *exec.Cmd {
+		appendCall(append([]string{name}, arg...)...)
+		return exec.Command("true")
+	}
+
+	m := NewLocalClusterManager(nil)
+	if err := m.CreateVCluster("demo", "tenant-a"); err != nil {
+		t.Fatalf("CreateVCluster returned unexpected error: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 vcluster commands, got %d: %v", len(calls), calls)
+	}
+	if calls[0] != expectedCreateCall {
+		t.Fatalf("expected first call %q, got %q", expectedCreateCall, calls[0])
+	}
+	if calls[1] != expectedConnectCall {
+		t.Fatalf("expected second call %q, got %q", expectedConnectCall, calls[1])
+	}
+}
+
+func TestCreateVCluster_ReturnsConnectFailure(t *testing.T) {
+	oldLookPath := lookPath
+	oldExecCommand := execCommand
+	defer func() {
+		lookPath = oldLookPath
+		execCommand = oldExecCommand
+	}()
+
+	lookPath = func(file string) (string, error) {
+		if file == "vcluster" {
+			return "/usr/local/bin/vcluster", nil
+		}
+		return "", os.ErrNotExist
+	}
+
+	execCommand = func(name string, arg ...string) *exec.Cmd {
+		if name == "vcluster" && len(arg) > 0 && arg[0] == "connect" {
+			return exec.Command("sh", "-c", "echo 'connection timed out' >&2; exit 1")
+		}
+		return exec.Command("true")
+	}
+
+	m := NewLocalClusterManager(nil)
+	err := m.CreateVCluster("demo", "tenant-a")
+	if err == nil {
+		t.Fatal("expected CreateVCluster to return a connection error")
+	}
+	if !strings.Contains(err.Error(), "vcluster created but connection failed") {
+		t.Fatalf("expected wrapped connection error, got %q", err.Error())
+	}
+	if !strings.Contains(err.Error(), "connection timed out") {
+		t.Fatalf("expected stderr details in error, got %q", err.Error())
+	}
+}
+
 // TestDisconnectVCluster_UnsetsCurrentContextWhenActive verifies that
 // DisconnectVCluster unsets current-context before deleting when the target
 // vcluster context is the active kubectl context. Regression for #8076.
