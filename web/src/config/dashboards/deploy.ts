@@ -40,7 +40,9 @@ export const deployDashboardConfig: UnifiedDashboardConfig = {
     autoRefresh: true,
     autoRefreshInterval: 30000,
   },
-  storageKey: 'kubestellar-deploy-cards',
+  // Reset the saved layout key so the Deploy dashboard no longer resurrects
+  // the old placeholder Test Card from previously persisted defaults.
+  storageKey: 'kubestellar-deploy-cards-v2',
 }
 
 export default deployDashboardConfig

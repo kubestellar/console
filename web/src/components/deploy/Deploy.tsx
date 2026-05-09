@@ -6,7 +6,7 @@ import { useCachedDeployments } from '../../hooks/useCachedData'
 import { useArgoCDApplications } from '../../hooks/useArgoCD'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
-import { getDefaultCards } from '../../config/dashboards'
+import { deployDashboardConfig, getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
 import { emitDeployWorkload } from '../../lib/analytics'
 import { useCardPublish, type DeployResultPayload } from '../../lib/cardEvents'
@@ -18,7 +18,7 @@ import { useToast } from '../ui/Toast'
 import { useModalNavigation, useModalFocusTrap } from '../../lib/modals/useModalNavigation'
 import { useTranslation } from 'react-i18next'
 
-const DEPLOY_CARDS_KEY = 'kubestellar-deploy-cards'
+const DEPLOY_CARDS_KEY = deployDashboardConfig.storageKey ?? 'kubestellar-deploy-cards-v2'
 const DEFAULT_DEPLOY_CARDS = getDefaultCards('deploy')
 
 export function Deploy() {
