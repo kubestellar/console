@@ -23,6 +23,7 @@ import { useAuth } from '../../lib/auth'
 import { NAVBAR_HEIGHT_PX } from '../../lib/constants/ui'
 import { matchMissionsToCluster } from '../../lib/missions/matcher'
 import { useClusterContext } from '../../hooks/useClusterContext'
+import { useMobile } from '../../hooks/useMobile'
 import {
   emitFixerBrowsed,
   emitFixerViewed,
@@ -115,7 +116,6 @@ const MODAL_TOP_INSET_PX = NAVBAR_HEIGHT_PX + MODAL_NAVBAR_GAP_PX
  * modal panel, matching the inset pattern used by MissionControlDialog.
  */
 const MODAL_SIDE_INSET_PX = 16
-const LIST_VIEW_BREAKPOINT_PX = 768
 const COLLAPSIBLE_FILTERS_BREAKPOINT_PX = 640
 
 // ============================================================================
@@ -227,6 +227,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [isSmallScreen, setIsSmallScreen] = useState(() =>
     typeof window !== 'undefined' && window.innerWidth < COLLAPSIBLE_FILTERS_BREAKPOINT_PX,
   )
+  const { isMobile } = useMobile()
 
   // Navigation state
   const [searchQuery, setSearchQuery] = useState('')
@@ -238,12 +239,8 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [missionClassFilter, setMissionClassFilter] = useState<string>('All')
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All')
   const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set())
-  const [viewMode, setViewMode] = useState<ViewMode>(() =>
-    typeof window !== 'undefined' && window.innerWidth < LIST_VIEW_BREAKPOINT_PX ? 'list' : 'grid',
-  )
-  const [showFilters, setShowFilters] = useState(() =>
-    typeof window === 'undefined' || window.innerWidth >= COLLAPSIBLE_FILTERS_BREAKPOINT_PX,
-  )
+  const [viewMode, setViewMode] = useState<ViewMode>(isMobile ? 'list' : 'grid')
+  const [showFilters, setShowFilters] = useState(!isMobile)
 
   // Tree state
   const [treeNodes, setTreeNodes] = useState<TreeNode[]>([])
@@ -322,8 +319,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   }, [])
 
   useEffect(() => {
-    setShowFilters(!isSmallScreen)
-  }, [isSmallScreen])
+    setViewMode(isMobile ? 'list' : 'grid')
+    setShowFilters(!isMobile)
+  }, [isMobile])
 
   useEffect(() => {
     expandedNodesRef.current = expandedNodes
