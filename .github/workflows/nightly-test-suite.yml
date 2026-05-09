@@ -18,7 +18,7 @@ concurrency:
 env:
   RESULTS_DIR: test-results/nightly
   NODE_VERSION: '22'
-  GO_VERSION: '1.26'
+  GO_VERSION: '1.26.3'
 
 jobs:
   test:
