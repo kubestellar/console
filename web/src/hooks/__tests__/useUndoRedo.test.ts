@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useUndoRedo, useDashboardUndoRedo } from '../useUndoRedo'
 
@@ -107,10 +107,19 @@ describe('useDashboardUndoRedo', () => {
   let cards: string[]
   const setCards = vi.fn((newCards: string[]) => { cards = newCards })
   const getCurrentCards = () => cards
+  const originalRequestAnimationFrame = globalThis.requestAnimationFrame
 
   beforeEach(() => {
     cards = ['card-a', 'card-b']
     vi.clearAllMocks()
+    globalThis.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+      callback(0)
+      return 0
+    })
+  })
+
+  afterEach(() => {
+    globalThis.requestAnimationFrame = originalRequestAnimationFrame
   })
 
   it('starts with empty stacks', () => {
@@ -154,5 +163,35 @@ describe('useDashboardUndoRedo', () => {
     const { result } = renderHook(() => useDashboardUndoRedo(setCards, getCurrentCards))
     act(() => { result.current.redo() })
     expect(setCards).not.toHaveBeenCalled()
+  })
+
+  it('ignores keyboard shortcuts when the dashboard is inactive', () => {
+    const { result } = renderHook(() => useDashboardUndoRedo(setCards, getCurrentCards, false))
+
+    act(() => { result.current.snapshot(['card-a', 'card-b']) })
+    cards = ['card-a', 'card-b', 'card-c']
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }))
+    })
+
+    expect(setCards).not.toHaveBeenCalled()
+  })
+
+  it('ignores keyboard shortcuts while typing in an input', () => {
+    const { result } = renderHook(() => useDashboardUndoRedo(setCards, getCurrentCards, true))
+
+    act(() => { result.current.snapshot(['card-a', 'card-b']) })
+    cards = ['card-a', 'card-b', 'card-c']
+
+    const input = document.createElement('input')
+    document.body.appendChild(input)
+
+    act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }))
+    })
+
+    expect(setCards).not.toHaveBeenCalled()
+    input.remove()
   })
 })

@@ -33,6 +33,7 @@
  */
 
 import { ReactNode, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -125,6 +126,8 @@ export function DashboardRuntime({
   onRefresh,
   children,
   getStatValue: customGetStatValue }: DashboardRuntimeProps) {
+  const location = useLocation()
+  const mountedRouteRef = useRef(location.pathname)
   const {
     title,
     description,
@@ -146,6 +149,7 @@ export function DashboardRuntime({
   const dashboard = useDashboard({
     storageKey,
     defaultCards,
+    isActive: location.pathname === mountedRouteRef.current,
     onRefresh,
     autoRefreshInterval })
 

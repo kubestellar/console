@@ -105,6 +105,7 @@ export function Dashboard() {
   const [isLoading, setIsLoading] = useState(false) // Cards are pre-populated from localStorage/defaults — never block
   const location = useLocation()
   const navigate = useNavigate()
+  const isActiveDashboard = location.pathname === '/' || location.pathname === ''
   const [searchParams, setSearchParams] = useSearchParams()
   const { isOpen: isConfigureCardOpen, open: openConfigureCard, close: closeConfigureCard } = useModalState()
   const [selectedCard, setSelectedCard] = useState<Card | null>(null)
@@ -174,6 +175,7 @@ export function Dashboard() {
   const { snapshot, undo, redo, canUndo, canRedo } = useDashboardUndoRedo<Card>(
     setLocalCards,
     () => localCardsRef.current,
+    isActiveDashboard,
   )
 
   // Contextual nudges (replaces traditional tour with in-context hints)

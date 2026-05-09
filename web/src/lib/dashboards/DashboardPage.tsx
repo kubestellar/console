@@ -167,6 +167,7 @@ export function DashboardPage({
     canRedo } = useDashboard({
       storageKey,
       defaultCards,
+      isActive: location.pathname === mountedRouteRef.current,
       onRefresh
     })
 

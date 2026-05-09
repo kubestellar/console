@@ -124,7 +124,8 @@ export interface UseDashboardCardsResult {
 
 export function useDashboardCards(
   storageKey: string,
-  defaultCards: DashboardCardPlacement[]
+  defaultCards: DashboardCardPlacement[],
+  isActive: boolean = true,
 ): UseDashboardCardsResult {
   // Convert default placements to card instances
   const defaultCardInstances = defaultCards.map((card, i) => ({
@@ -216,6 +217,7 @@ export function useDashboardCards(
     snapshot, undo, redo, canUndo, canRedo } = useDashboardUndoRedo<DashboardCard>(
     (restored) => setCards(restored),
     () => cardsRef.current,
+    isActive,
   )
 
   // Wrapper that snapshots before calling setCards
@@ -477,6 +479,8 @@ export interface UseDashboardOptions {
   storageKey: string
   /** Default card placements */
   defaultCards: DashboardCardPlacement[]
+  /** Whether this dashboard instance is currently active/visible */
+  isActive?: boolean
   /** Refresh function for auto-refresh */
   onRefresh?: () => void
   /** Auto-refresh interval in ms */
@@ -499,10 +503,10 @@ export interface UseDashboardResult
 }
 
 export function useDashboard(options: UseDashboardOptions): UseDashboardResult {
-  const { storageKey, defaultCards, onRefresh, autoRefreshInterval = 30000 } = options
+  const { storageKey, defaultCards, isActive = true, onRefresh, autoRefreshInterval = 30000 } = options
 
   // Card management
-  const cardState = useDashboardCards(storageKey, defaultCards)
+  const cardState = useDashboardCards(storageKey, defaultCards, isActive)
 
   // DnD
   const dnd = useDashboardDnD(cardState.cards, cardState.setCards)

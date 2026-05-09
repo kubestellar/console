@@ -3,6 +3,17 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 /** Maximum number of undo snapshots to keep in memory */
 const MAX_UNDO_STACK_SIZE = 30
 
+/** Keyboard key used for undo/redo shortcuts */
+const UNDO_REDO_KEY = 'z'
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+    return true
+  }
+
+  return target instanceof HTMLElement && target.isContentEditable
+}
+
 /**
  * Generic undo/redo hook using snapshot-based history.
  *
@@ -110,6 +121,7 @@ export interface UseDashboardUndoRedoResult<T> {
 export function useDashboardUndoRedo<T>(
   setCards: (cards: T[]) => void,
   getCurrentCards: () => T[],
+  isActive: boolean = true,
 ): UseDashboardUndoRedoResult<T> {
   const undoStackRef = useRef<T[][]>([])
   const redoStackRef = useRef<T[][]>([])
@@ -156,13 +168,15 @@ export function useDashboardUndoRedo<T>(
 
   // Keyboard shortcuts: Cmd/Ctrl+Z for undo, Cmd/Ctrl+Shift+Z for redo
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey
-      if (!mod || e.key !== 'z') return
+    if (!isActive) return
 
-      // Don't intercept if user is typing in an input/textarea
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isActive) return
+      if (isEditableShortcutTarget(e.target)) return
+
+      const mod = e.metaKey || e.ctrlKey
+      const normalizedKey = e.key.toLowerCase()
+      if (!mod || normalizedKey !== UNDO_REDO_KEY) return
 
       e.preventDefault()
       if (e.shiftKey) {
@@ -174,7 +188,7 @@ export function useDashboardUndoRedo<T>(
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [undo, redo])
+  }, [isActive, undo, redo])
 
   return {
     snapshot,

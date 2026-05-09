@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { GripVertical, Trash2, AlertTriangle } from 'lucide-react'
 import {
   DndContext,
@@ -232,6 +232,9 @@ function DragPreviewCard({ card }: { card: Card }) {
 export function CustomDashboard() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const activeDashboardPath = `/custom-dashboard/${id}`
+  const isActiveDashboard = location.pathname === activeDashboardPath
   const { showToast } = useToast()
   const { getDashboardWithCards, deleteDashboard, exportDashboard, importDashboard } = useDashboards()
   const { deduplicatedClusters, isLoading: isClustersLoading } = useClusters()
@@ -312,6 +315,7 @@ export function CustomDashboard() {
     snapshot, undo, redo, canUndo, canRedo } = useDashboardUndoRedo<Card>(
     (restored) => setCards(restored),
     () => cardsRef.current,
+    isActiveDashboard,
   )
 
   // Load dashboard
