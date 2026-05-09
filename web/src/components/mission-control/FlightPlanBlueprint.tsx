@@ -568,10 +568,10 @@ export function FlightPlanBlueprint({
               <div className="text-center max-w-md p-8">
                 <AlertTriangle className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  {t('missionControl.noHealthyClustersTitle')}
+                  {t('layout.missionSidebar.noHealthyClustersTitle')}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {t('missionControl.noHealthyClustersMessage')}
+                  {t('layout.missionSidebar.noHealthyClustersMessage')}
                 </p>
               </div>
             </div>
