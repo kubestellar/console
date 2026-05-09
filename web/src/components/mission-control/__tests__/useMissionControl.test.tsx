@@ -9,6 +9,7 @@ import { afterEach, describe, it, expect } from 'vitest'
 import {
   isSafeProjectName,
   buildInstallPromptForProject,
+  createBalancedBlockScanCursor,
   extractJSON,
   mergeProjects,
   PROJECT_NAME_MAX_LENGTH,
@@ -192,6 +193,60 @@ describe('extractJSON — balanced block extraction (#6382)', () => {
     expect(parsed).not.toBeNull()
     expect(parsed?.name).toBe('falco')
     expect(parsed?.reason).toBe('path\\with\\quotes: "x"')
+  })
+
+  it('resumes balanced-block scanning across streamed chunks', () => {
+    const cursor = createBalancedBlockScanCursor()
+    const chunkOne = 'intro {"projects":[{"name":"falco","reason":"brace {inside'
+    const chunkTwo = `${chunkOne} string with \\"quote\\""}]}`
+
+    expect(
+      extractJSON<{ projects: Array<{ name: string; reason: string }> }>(
+        chunkOne,
+        'projects',
+        undefined,
+        cursor,
+      ),
+    ).toBeNull()
+    expect(cursor.lastScanIndex).toBe(chunkOne.length)
+    expect(cursor.completedBlocks).toEqual([])
+
+    const parsed = extractJSON<{ projects: Array<{ name: string; reason: string }> }>(
+      chunkTwo,
+      'projects',
+      undefined,
+      cursor,
+    )
+    expect(parsed?.projects?.[0]?.name).toBe('falco')
+    expect(parsed?.projects?.[0]?.reason).toBe('brace {inside string with "quote"')
+    expect(cursor.completedBlocks).toHaveLength(1)
+    expect(cursor.lastScanIndex).toBe(chunkTwo.length)
+  })
+
+  it('resets the balanced-block cursor when a new shorter stream starts', () => {
+    const cursor = createBalancedBlockScanCursor()
+    const firstPayload = '{"projects":[{"name":"falco"}]}'
+    const secondPayload = '{"projects":[{"name":"opa"}]}'
+
+    expect(
+      extractJSON<{ projects: Array<{ name: string }> }>(
+        firstPayload,
+        'projects',
+        undefined,
+        cursor,
+      )?.projects?.[0]?.name,
+    ).toBe('falco')
+    expect(cursor.lastScanIndex).toBe(firstPayload.length)
+
+    const parsed = extractJSON<{ projects: Array<{ name: string }> }>(
+      secondPayload,
+      'projects',
+      undefined,
+      cursor,
+    )
+    expect(parsed?.projects?.[0]?.name).toBe('opa')
+    expect(cursor.lastScanIndex).toBe(secondPayload.length)
+    expect(cursor.completedBlocks).toHaveLength(1)
   })
 })
 

@@ -340,7 +340,46 @@ function makeInitialState(persisted?: Partial<MissionControlState> | null): Miss
  * fenced ```json blocks and returns the first one containing that key.
  * Falls back to the first parseable block otherwise.
  */
-export function extractJSON<T>(text: string, requiredKey?: string, warnKey?: string): T | null {
+export interface BalancedBlockScanFrame {
+  startIndex: number
+  opener: '{' | '['
+  expectedCloser: '}' | ']'
+}
+
+export interface BalancedBlockScanCursor {
+  lastScanIndex: number
+  inString: boolean
+  escape: boolean
+  frames: BalancedBlockScanFrame[]
+  completedBlocks: string[]
+}
+
+const INITIAL_BALANCED_BLOCK_SCAN_INDEX = 0
+
+export function createBalancedBlockScanCursor(): BalancedBlockScanCursor {
+  return {
+    lastScanIndex: INITIAL_BALANCED_BLOCK_SCAN_INDEX,
+    inString: false,
+    escape: false,
+    frames: [],
+    completedBlocks: [],
+  }
+}
+
+function resetBalancedBlockScanCursor(cursor: BalancedBlockScanCursor): void {
+  cursor.lastScanIndex = INITIAL_BALANCED_BLOCK_SCAN_INDEX
+  cursor.inString = false
+  cursor.escape = false
+  cursor.frames = []
+  cursor.completedBlocks = []
+}
+
+export function extractJSON<T>(
+  text: string,
+  requiredKey?: string,
+  warnKey?: string,
+  balancedBlockCursor?: BalancedBlockScanCursor,
+): T | null {
   // #6727 — Bounded inner repetition prevents catastrophic backtracking on
   // malformed input (e.g. an open fence with tens of thousands of body chars
   // and no close fence). `{0,MAX_FENCE_BODY}` caps the engine's work per
@@ -374,7 +413,7 @@ export function extractJSON<T>(text: string, requiredKey?: string, warnKey?: str
   // for balanced braces, then return the last valid (and largest) parse.
   // This avoids the old greedy regex which grabbed from the first { to the
   // last } and failed when prose contained intermediate braces.  (#5505)
-  const blocks = extractBalancedBlocks(text, warnKey)
+  const blocks = extractBalancedBlocks(text, warnKey, balancedBlockCursor)
   let best: T | null = null
   let bestLen = 0
   for (const block of blocks) {
@@ -424,7 +463,22 @@ export function resetOversizedWarnings(): void {
  * message once, not on every streamed chunk. If omitted, a legacy
  * always-log token is used so existing callers retain their warning.
  */
-function extractBalancedBlocks(text: string, warnKey?: string): string[] {
+function extractBalancedBlocks(
+  text: string,
+  warnKey?: string,
+  cursor?: BalancedBlockScanCursor,
+): string[] {
+  const activeCursor = cursor ?? createBalancedBlockScanCursor()
+
+  // #12841 — Streaming responses append to the same assistant message. Keep a
+  // resumable cursor so each debounced parse resumes from the last scanned
+  // offset instead of rescanning the full accumulated payload from index 0.
+  // If the caller swaps to a different message (shorter content), reset the
+  // cursor so the next scan starts from the new payload's beginning.
+  if (activeCursor.lastScanIndex > text.length) {
+    resetBalancedBlockScanCursor(activeCursor)
+  }
+
   // #6723 — Refuse pathological inputs. The scanner is worst-case O(n²)
   // on inputs with many unclosed openers, which freezes the main thread
   // on 10 MB garbage payloads. Return early with a console warning so
@@ -443,72 +497,50 @@ function extractBalancedBlocks(text: string, warnKey?: string): string[] {
         `key "${key}" will be suppressed until reset.`
       )
     }
-    return []
+    return activeCursor.completedBlocks
   }
 
-  const results: string[] = []
-  const openers = new Set(['{', '['])
-  const closerFor: Record<string, string> = { '{': '}', '[': ']' }
-
-  for (let i = 0; i < text.length; i++) {
+  for (let i = activeCursor.lastScanIndex; i < text.length; i++) {
     const ch = text[i]
-    if (!openers.has(ch)) continue
 
-    const expected = closerFor[ch]
-    let depth = 1
-    let j = i + 1
-    let inString = false
-    let escape = false
-
-    while (j < text.length && depth > 0) {
-      // issue 6426 — Belt-and-suspenders forward-progress guard. Every
-      // branch below advances `j`, but we capture the pre-iteration index
-      // and break out if somehow `j` fails to advance. This makes the
-      // state machine provably terminating regardless of input pathology
-      // (heavy nested `\\` escapes, embedded quotes, etc).
-      const jStart = j
-      const c = text[j]
-      if (escape) {
-        // Previous char was a backslash inside a string. Consume this
-        // char unconditionally and reset the escape flag.
-        escape = false
-        j++
-      } else if (c === '\\' && inString) {
-        // Enter escape state. Next char will be consumed verbatim.
-        escape = true
-        j++
-      } else if (c === '"') {
-        // Toggle string state. JSON only allows double-quoted strings.
-        inString = !inString
-        j++
-      } else {
-        if (!inString) {
-          if (c === ch) depth++
-          else if (c === expected) depth--
-        }
-        j++
-      }
-      if (j <= jStart) {
-        // Forward progress invariant violated — bail to avoid any chance
-        // of an infinite loop. Should be unreachable, but log a warning
-        // (#6444 item C) with a snippet of the offending input so future
-        // debugging can detect that this guard tripped.
-        const snippetStart = Math.max(0, i - 20)
-        const snippetEnd = Math.min(text.length, j + 20)
-        console.warn(
-          `[useMissionControl] extractBalancedBlocks: forward-progress guard tripped at i=${i}, j=${j}, ch=${ch}. ` +
-          `Input snippet: ${JSON.stringify(text.slice(snippetStart, snippetEnd))}`,
-        )
-        break
-      }
+    if (activeCursor.escape) {
+      activeCursor.escape = false
+      continue
     }
 
-    if (depth === 0) {
-      results.push(text.substring(i, j))
-      i = j - 1 // skip past this block
+    if (ch === '\\' && activeCursor.inString) {
+      activeCursor.escape = true
+      continue
     }
+
+    if (ch === '"') {
+      activeCursor.inString = !activeCursor.inString
+      continue
+    }
+
+    if (activeCursor.inString) continue
+
+    if (ch === '{' || ch === '[') {
+      activeCursor.frames.push({
+        startIndex: i,
+        opener: ch,
+        expectedCloser: ch === '{' ? '}' : ']',
+      })
+      continue
+    }
+
+    const topFrame = activeCursor.frames[activeCursor.frames.length - 1]
+    if (!topFrame || ch !== topFrame.expectedCloser) continue
+
+    const completedFrame = activeCursor.frames.pop()
+    if (!completedFrame) continue
+    if (activeCursor.frames.length > 0) continue
+
+    activeCursor.completedBlocks.push(text.substring(completedFrame.startIndex, i + 1))
   }
-  return results
+
+  activeCursor.lastScanIndex = text.length
+  return activeCursor.completedBlocks
 }
 
 // ---------------------------------------------------------------------------
@@ -524,6 +556,10 @@ export function useMissionControl() {
   const { releases: helmReleases } = useHelmReleases()
   const { deduplicatedClusters: clusters, isLoading: clustersLoading, lastUpdated: clustersLastUpdated } = useClusters()
   const lastParsedContentRef = useRef('')
+  const lastAssistantMessageCountRef = useRef(0)
+  const balancedBlockScanCursorRef = useRef<BalancedBlockScanCursor>(
+    createBalancedBlockScanCursor(),
+  )
   // #9496 — Track whether the AI suggestion request timed out. When the
   // AI_SUGGEST_TIMEOUT_MS safety net fires, we set this ref so the parse
   // effect ignores any late-arriving streamed content that would otherwise
@@ -697,6 +733,10 @@ export function useMissionControl() {
     // mid-burst. The old comment referenced a non-existent length check.
     if (!debouncedAssistantContent) return
     const assistantMsgs = (planningMission.messages ?? []).filter((m) => m.role === 'assistant')
+    if (assistantMsgs.length !== lastAssistantMessageCountRef.current) {
+      lastAssistantMessageCountRef.current = assistantMsgs.length
+      resetBalancedBlockScanCursor(balancedBlockScanCursorRef.current)
+    }
     const latest = assistantMsgs[assistantMsgs.length - 1]
     if (!latest) return
 
@@ -709,6 +749,7 @@ export function useMissionControl() {
         latest.content,
         'projects',
         state.planningMissionId ?? undefined,
+        balancedBlockScanCursorRef.current,
       )
       // #6725 — Schema guard. The AI occasionally returns
       // `{ "projects": { ... } }` (object) instead of
@@ -765,7 +806,12 @@ export function useMissionControl() {
         assignments?: ClusterAssignment[]
         phases?: DeployPhase[]
         warnings?: string[]
-      }>(latest.content, 'assignments', state.planningMissionId ?? undefined)
+      }>(
+        latest.content,
+        'assignments',
+        state.planningMissionId ?? undefined,
+        balancedBlockScanCursorRef.current,
+      )
       // #6726 — Schema guard. Same class of crash as #6725 for projects:
       // the AI can return `{ "assignments": { ... } }` instead of an array,
       // which immediately crashes the `.map(a => a.clusterName)` below.
@@ -1431,6 +1477,8 @@ Order phases by dependency — prerequisites first. Each phase completes before 
     userInteractedAfterTimeoutRef.current = false
     localStorage.removeItem(STORAGE_KEY)
     lastParsedContentRef.current = ''
+    lastAssistantMessageCountRef.current = 0
+    resetBalancedBlockScanCursor(balancedBlockScanCursorRef.current)
     setState(makeInitialState())
   }
 
