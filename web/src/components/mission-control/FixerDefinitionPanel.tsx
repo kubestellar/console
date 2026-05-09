@@ -1047,7 +1047,7 @@ function TargetClusterSelector({
   // Close on Escape key
   useEffect(() => {
     const handler = (e: Event) => {
-      if ((e as KeyboardEvent).key === 'Escape' && isOpen) {
+      if ((e as unknown as KeyboardEvent).key === 'Escape' && isOpen) {
         closeDropdown()
       }
     }
