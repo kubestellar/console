@@ -104,6 +104,24 @@ describe('FeatureRequestModal Component', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 
+  it('warns before switching away from Submit when unsaved report content exists', async () => {
+    render(<FeatureRequestModal isOpen onClose={vi.fn()} initialTab="submit" />)
+
+    const textarea = await screen.findByRole('textbox')
+    fireEvent.change(textarea, { target: { value: 'Unsaved draft content that should trigger a warning.' } })
+
+    fireEvent.click(screen.getByRole('button', { name: /^Drafts$/i }))
+
+    expect(await screen.findByText(/Save Draft & Switch/i)).toBeInTheDocument()
+    expect(screen.getByText(/Switch Without Saving/i)).toBeInTheDocument()
+    expect(screen.getByRole('textbox')).toHaveValue('Unsaved draft content that should trigger a warning.')
+
+    fireEvent.click(screen.getByText(/Switch Without Saving/i))
+
+    await screen.findByText(/Saved Drafts/i)
+    expect(screen.queryByText(/Save Draft & Switch/i)).not.toBeInTheDocument()
+  })
+
   // Regression test for Issue 9358 — after a successful submission the
   // form shows the "Request Submitted" confirmation view. Clicking Close
   // must dismiss the modal cleanly, WITHOUT re-surfacing the unsaved-

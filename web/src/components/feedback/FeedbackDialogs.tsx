@@ -15,12 +15,22 @@ interface DiscardConfirmDialogProps {
   onSaveAndClose: () => void
   onDiscard: () => void
   onKeepEditing: () => void
+  title?: string
+  message?: string
+  saveLabel?: string
+  discardLabel?: string
+  keepEditingLabel?: string
 }
 
 export function DiscardConfirmDialog({
   onSaveAndClose,
   onDiscard,
   onKeepEditing,
+  title,
+  message,
+  saveLabel,
+  discardLabel,
+  keepEditingLabel,
 }: DiscardConfirmDialogProps) {
   const { t } = useTranslation()
   return (
@@ -31,11 +41,11 @@ export function DiscardConfirmDialog({
             <AlertTriangle className="w-5 h-5 text-yellow-400" />
           </div>
           <h3 className="text-lg font-semibold text-foreground">
-            {t('common:common.discardUnsavedChanges', 'Unsaved changes')}
+            {title || t('common:common.discardUnsavedChanges', 'Unsaved changes')}
           </h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          You have unsaved content. Would you like to save it as a draft for later?
+          {message || t('feedback.unsavedDraftPrompt', 'You have unsaved content. Would you like to save it as a draft for later?')}
         </p>
         <div className="flex flex-col gap-2">
           <button
@@ -43,20 +53,20 @@ export function DiscardConfirmDialog({
             className="w-full px-4 py-2 text-sm rounded-lg bg-purple-500 hover:bg-purple-600 text-white transition-colors flex items-center justify-center gap-2"
           >
             <Save className="w-4 h-4" />
-            Save Draft & Close
+            {saveLabel || t('feedback.saveDraftAndClose', 'Save Draft & Close')}
           </button>
           <div className="flex gap-2">
             <button
               onClick={onDiscard}
               className="flex-1 px-4 py-2 text-sm rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors"
             >
-              {t('common:common.discard', 'Discard')}
+              {discardLabel || t('common:common.discard', 'Discard')}
             </button>
             <button
               onClick={onKeepEditing}
               className="flex-1 px-4 py-2 text-sm rounded-lg border border-border hover:bg-secondary/50 text-foreground transition-colors"
             >
-              {t('common:common.keepEditing', 'Keep editing')}
+              {keepEditingLabel || t('common:common.keepEditing', 'Keep editing')}
             </button>
           </div>
         </div>
