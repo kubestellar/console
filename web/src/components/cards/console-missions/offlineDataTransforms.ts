@@ -24,6 +24,14 @@ export type NodeData = {
   conditions?: NodeCondition[]
 }
 
+export type ClusterHealthIssue = {
+  cluster: string
+  state: 'unhealthy' | 'unreachable'
+  reason: string
+  reasonDetailed: string
+  severity: 'critical' | 'warning'
+}
+
 export type UnifiedItem = {
   id: string
   category: 'offline' | 'gpu' | 'prediction'
@@ -35,6 +43,7 @@ export type UnifiedItem = {
   metric?: string
   rootCause?: { cause: string; details: string }
   nodeData?: NodeData
+  clusterIssueData?: ClusterHealthIssue
   gpuData?: { nodeName: string; cluster: string; expected: number; available: number; reason: string }
   predictionData?: PredictedRisk
 }
@@ -193,6 +202,21 @@ export function buildOfflineItems(offlineNodes: NodeData[]): UnifiedItem[] {
       nodeData: node,
     }
   })
+}
+
+/** Build unified items from cluster health issues */
+export function buildClusterHealthItems(clusterIssues: ClusterHealthIssue[]): UnifiedItem[] {
+  return clusterIssues.map((issue, i) => ({
+    id: `cluster-health-${issue.cluster}-${issue.state}-${i}`,
+    category: 'offline' as const,
+    name: issue.cluster,
+    cluster: issue.cluster,
+    severity: issue.severity,
+    reason: issue.reason,
+    reasonDetailed: issue.reasonDetailed,
+    rootCause: { cause: issue.reason, details: issue.reasonDetailed },
+    clusterIssueData: issue,
+  }))
 }
 
 /** Build unified items from GPU issues */

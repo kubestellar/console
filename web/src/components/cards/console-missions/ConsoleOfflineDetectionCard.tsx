@@ -26,6 +26,8 @@ import { DynamicCardErrorBoundary } from '../DynamicCardErrorBoundary'
 import { POLL_INTERVAL_MS } from '../../../lib/constants/network'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { agentFetch } from '../../../hooks/mcp/shared'
+import { useClusterFiltering } from '../../clusters/useClusterFiltering'
+import { getClusterHealthState, isClusterTokenExpired } from '../../clusters/utils'
 
 // Extracted subcomponents and helpers
 import {
@@ -33,9 +35,11 @@ import {
   type UnifiedItem,
   type SortField,
   type GpuIssue,
+  type ClusterHealthIssue,
   SORT_OPTIONS,
   buildOfflineDetectionCardLoadState,
   buildOfflineItems,
+  buildClusterHealthItems,
   buildGpuItems,
   buildPredictionItems,
   generatePredictionId,
@@ -136,7 +140,13 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     consecutiveFailures: podsFailures,
   } = useCachedPodIssues()
   const { deduplicatedClusters: clusters } = useClusters()
-  const { selectedClusters, isAllClustersSelected, customFilter } = useGlobalFilters()
+  const {
+    selectedClusters,
+    isAllClustersSelected,
+    customFilter,
+    selectedDistributions,
+    isAllDistributionsSelected,
+  } = useGlobalFilters()
   const { drillToCluster, drillToNode } = useDrillDownActions()
   const { showKeyPrompt, checkKeyAndRun, goToSettings, dismissPrompt } = useApiKeyCheck()
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
@@ -248,6 +258,19 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     }
   }, [shouldUseDemoData])
 
+  const { globalFilteredClusters } = useClusterFiltering({
+    clusters,
+    filter: 'all',
+    globalSelectedClusters: selectedClusters,
+    isAllClustersSelected,
+    customFilter,
+    selectedDistributions,
+    isAllDistributionsSelected,
+    sortBy: 'name',
+    sortAsc: true,
+    customOrder: [],
+  })
+
   // Filter nodes by global cluster filter
   const nodes = useMemo(() => {
     let result = allNodes
@@ -281,6 +304,45 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     })
     return Array.from(byName.values())
   }, [nodes])
+
+  const clusterHealthIssues = useMemo((): ClusterHealthIssue[] => {
+    const clustersWithOfflineNodes = new Set(
+      offlineNodes
+        .map(node => node.cluster)
+        .filter((clusterName): clusterName is string => !!clusterName)
+    )
+
+    return globalFilteredClusters.flatMap(cluster => {
+      if (clustersWithOfflineNodes.has(cluster.name)) {
+        return []
+      }
+
+      const state = getClusterHealthState(cluster)
+      if (state === 'unhealthy') {
+        return [{
+          cluster: cluster.name,
+          state,
+          reason: t('common:common.unhealthy'),
+          reasonDetailed: cluster.errorMessage || t('cards:clusterHealth.clusterHasIssues'),
+          severity: 'warning',
+        }]
+      }
+
+      if (state === 'unreachable') {
+        return [{
+          cluster: cluster.name,
+          state,
+          reason: t('common:common.offline'),
+          reasonDetailed: isClusterTokenExpired(cluster)
+            ? t('cards:clusterHealth.tokenExpired')
+            : (cluster.errorMessage || t('cards:clusterHealth.offlineCheckNetwork')),
+          severity: 'critical',
+        }]
+      }
+
+      return []
+    })
+  }, [globalFilteredClusters, offlineNodes, t])
 
   // Detect GPU issues from GPU nodes data
   const gpuIssues = useMemo((): GpuIssue[] => {
@@ -464,10 +526,11 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
   const unifiedItems = useMemo((): UnifiedItem[] => {
     return [
       ...buildOfflineItems(offlineNodes),
+      ...buildClusterHealthItems(clusterHealthIssues),
       ...buildGpuItems(gpuIssues),
       ...buildPredictionItems(predictedRisks),
     ]
-  }, [offlineNodes, gpuIssues, predictedRisks])
+  }, [offlineNodes, clusterHealthIssues, gpuIssues, predictedRisks])
 
   // ============================================================================
   // Card controls state
@@ -674,7 +737,12 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
     const filteredOfflineItems = isFiltered
       ? sortedItems.filter(i => i.category === 'offline')
       : unifiedItems.filter(i => i.category === 'offline')
-    const filteredOfflineNodes = filteredOfflineItems.map(i => i.nodeData).filter((n): n is NonNullable<typeof n> => !!n)
+    const filteredOfflineNodes = filteredOfflineItems
+      .map(i => i.nodeData)
+      .filter((node): node is NonNullable<typeof node> => !!node)
+    const filteredClusterHealthIssues = filteredOfflineItems
+      .map(i => i.clusterIssueData)
+      .filter((issue): issue is NonNullable<typeof issue> => !!issue)
     const filteredGpuIssuesList = isFiltered
       ? sortedItems.filter(i => i.category === 'gpu' && i.gpuData).map(i => i.gpuData) as typeof gpuIssues
       : gpuIssues
@@ -682,16 +750,20 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       ? sortedItems.filter(i => i.category === 'prediction' && i.predictionData).map(i => i.predictionData) as typeof predictedRisks
       : predictedRisks
 
-    const nodesSummary = filteredOfflineItems.filter(item => item.nodeData).map(item => {
-      const n = item.nodeData!
-      const rootCause = item.rootCause
-      let line = `- Node ${n.name} (${n.cluster || 'unknown'}): Status=${n.unschedulable ? 'Cordoned' : n.status}`
+    const nodesSummary = filteredOfflineNodes.map(node => {
+      const item = filteredOfflineItems.find(entry => entry.nodeData?.name === node.name && entry.nodeData?.cluster === node.cluster)
+      const rootCause = item?.rootCause
+      let line = `- Node ${node.name} (${node.cluster || 'unknown'}): Status=${node.unschedulable ? 'Cordoned' : node.status}`
       if (rootCause) {
         line += `\n  Root Cause: ${rootCause.cause}`
         line += `\n  Details: ${rootCause.details}`
       }
       return line
     }).join('\n')
+
+    const clusterHealthSummary = filteredClusterHealthIssues.map(issue =>
+      `- Cluster ${issue.cluster}: ${issue.reason}${issue.reasonDetailed ? `\n  Details: ${issue.reasonDetailed}` : ''}`
+    ).join('\n')
 
     const gpuSummary = filteredGpuIssuesList.map(g =>
       `- Node ${g.nodeName} (${g.cluster}): ${g.reason}`
@@ -720,7 +792,10 @@ export function ConsoleOfflineDetectionCard(_props: ConsoleMissionCardProps) {
       type: 'troubleshoot',
       initialPrompt: `I need help analyzing ${hasCurrentIssues ? 'current issues and ' : ''}potential failures in my Kubernetes clusters.
 
-${hasCurrentIssues ? `**Current Offline/Unhealthy Nodes (${filteredOfflineNodes.length}):**
+${hasCurrentIssues ? `**Current Cluster Health Issues (${filteredClusterHealthIssues.length}):**
+${clusterHealthSummary || 'None detected'}
+
+**Current Node Issues (${filteredOfflineNodes.length}):**
 ${nodesSummary || 'None detected'}
 
 **Current GPU Issues (${filteredGpuIssuesList.length}):**
@@ -730,18 +805,20 @@ ${gpuSummary || 'None detected'}
 ${predictedSummary || 'None predicted'}
 
 Please:
-1. ${hasCurrentIssues ? 'Identify root causes for current offline nodes' : 'Analyze the predicted risks and their likelihood'}
+1. ${hasCurrentIssues ? 'Identify root causes for the current cluster and node issues' : 'Analyze the predicted risks and their likelihood'}
 2. ${hasPredictions ? 'Assess the predicted failures - which are most likely to occur? Consider the AI confidence levels and trends.' : 'Check for patterns in the current issues'}
 3. Provide preventive actions to avoid predicted failures
-4. ${hasCurrentIssues ? 'Provide remediation steps for current issues' : 'Recommend monitoring thresholds to catch issues earlier'}
+4. ${hasCurrentIssues ? 'Provide remediation steps for the current issues' : 'Recommend monitoring thresholds to catch issues earlier'}
 5. Prioritize by severity and potential impact
 6. Suggest proactive measures to prevent future failures`,
       context: {
         offlineNodes: filteredOfflineNodes.slice(0, 20),
+        clusterHealthIssues: filteredClusterHealthIssues.slice(0, 20),
         gpuIssues: filteredGpuIssuesList,
         predictedRisks: filteredPredictedRisks.slice(0, 20),
         affectedClusters: new Set([
-          ...filteredOfflineNodes.map(n => n.cluster || 'unknown'),
+          ...filteredOfflineNodes.map(node => node.cluster || 'unknown'),
+          ...filteredClusterHealthIssues.map(issue => issue.cluster),
           ...filteredGpuIssuesList.map(g => g.cluster)
         ]).size,
         criticalPredicted: filteredCriticalPredicted,
@@ -750,6 +827,8 @@ Please:
   }
 
   const handleStartAnalysis = () => checkKeyAndRun(doStartAnalysis)
+  const currentClusterIssueCount = offlineNodes.length + clusterHealthIssues.length
+  const firstCurrentIssueCluster = offlineNodes[0]?.cluster || clusterHealthIssues[0]?.cluster || null
 
   return (
     <div className="h-full flex flex-col relative">
@@ -768,20 +847,22 @@ Please:
         <div
           className={cn(
             'p-2 rounded-lg border',
-            offlineNodes.length > 0
+            currentClusterIssueCount > 0
               ? 'bg-red-500/10 border-red-500/20 cursor-pointer hover:bg-red-500/20 transition-colors'
               : 'bg-green-500/10 border-green-500/20 cursor-default'
           )}
           onClick={() => {
-            if (offlineNodes.length > 0 && offlineNodes[0]?.cluster) {
-              drillToCluster(offlineNodes[0].cluster)
+            if (firstCurrentIssueCluster) {
+              drillToCluster(firstCurrentIssueCluster)
             }
           }}
-          title={offlineNodes.length > 0 ? `${offlineNodes.length} offline node${offlineNodes.length !== 1 ? 's' : ''} - Click to view` : 'All nodes online'}
+          title={currentClusterIssueCount > 0
+            ? t('common:healthCheck.issuesTooltip', { count: currentClusterIssueCount })
+            : t('cards:consoleOfflineDetection.allHealthy')}
         >
-          <div className="text-xl font-bold text-foreground">{offlineNodes.length}</div>
-          <div className={cn('text-2xs', offlineNodes.length > 0 ? 'text-red-400' : 'text-green-400')}>
-            {t('cards:consoleOfflineDetection.offline')}
+          <div className="text-xl font-bold text-foreground">{currentClusterIssueCount}</div>
+          <div className={cn('text-2xs', currentClusterIssueCount > 0 ? 'text-red-400' : 'text-green-400')}>
+            {t('common:common.issues')}
           </div>
         </div>
         <div

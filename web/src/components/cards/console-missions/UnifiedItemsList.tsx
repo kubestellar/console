@@ -49,6 +49,17 @@ export function UnifiedItemsList({
           )
         }
 
+        if (item.category === 'offline' && item.clusterIssueData) {
+          return (
+            <ClusterHealthIssueRow
+              key={item.id}
+              item={item}
+              drillToCluster={drillToCluster}
+              t={t as (key: string) => string}
+            />
+          )
+        }
+
         if (item.category === 'gpu' && item.gpuData) {
           return (
             <GpuIssueRow
@@ -130,6 +141,51 @@ function OfflineNodeRow({
         <CardAIActions
           resource={{ kind: 'Node', name: node.name, cluster: node.cluster, status: node.unschedulable ? 'Cordoned' : node.status }}
           issues={rootCause ? [{ name: rootCause.cause, message: rootCause.details }] : []}
+          className="opacity-0 group-hover:opacity-100"
+        />
+        <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
+      </div>
+    </div>
+  )
+}
+
+function ClusterHealthIssueRow({
+  item,
+  drillToCluster,
+  t,
+}: {
+  item: UnifiedItem
+  drillToCluster: (cluster: string) => void
+  t: (key: string) => string
+}) {
+  const issue = item.clusterIssueData!
+  const isCritical = issue.severity === 'critical'
+
+  return (
+    <div
+      className={cn(
+        'p-2 rounded text-xs cursor-pointer transition-colors group flex flex-wrap items-center justify-between gap-y-2',
+        isCritical ? 'bg-red-500/10 hover:bg-red-500/20' : 'bg-yellow-500/10 hover:bg-yellow-500/20'
+      )}
+      onClick={() => drillToCluster(issue.cluster)}
+      title={issue.reasonDetailed}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-medium text-foreground truncate">{issue.cluster}</span>
+          <StatusBadge color={isCritical ? 'red' : 'yellow'} size="xs" className="shrink-0">
+            {issue.state === 'unreachable' ? t('common:common.offline') : t('common:common.unhealthy')}
+          </StatusBadge>
+          <ClusterBadge cluster={issue.cluster} size="sm" />
+        </div>
+        <div className={cn('truncate mt-0.5', isCritical ? 'text-red-400' : 'text-yellow-400')}>
+          {issue.reasonDetailed}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 shrink-0 ml-2">
+        <CardAIActions
+          resource={{ kind: 'Cluster', name: issue.cluster, cluster: issue.cluster, status: issue.reason }}
+          issues={[{ name: issue.reason, message: issue.reasonDetailed }]}
           className="opacity-0 group-hover:opacity-100"
         />
         <ChevronRight className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100" />

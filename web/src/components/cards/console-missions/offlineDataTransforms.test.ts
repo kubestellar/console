@@ -1,5 +1,40 @@
 import { describe, expect, it } from 'vitest'
-import { buildOfflineDetectionCardLoadState } from './offlineDataTransforms'
+import { buildClusterHealthItems, buildOfflineDetectionCardLoadState } from './offlineDataTransforms'
+
+describe('buildClusterHealthItems', () => {
+  it('creates offline items for unhealthy and unreachable clusters', () => {
+    const items = buildClusterHealthItems([
+      {
+        cluster: 'demo-a',
+        state: 'unhealthy',
+        reason: 'Unhealthy',
+        reasonDetailed: 'Cluster is reachable but reporting issues.',
+        severity: 'warning',
+      },
+      {
+        cluster: 'demo-b',
+        state: 'unreachable',
+        reason: 'Offline',
+        reasonDetailed: 'Cluster cannot be contacted.',
+        severity: 'critical',
+      },
+    ])
+
+    expect(items).toHaveLength(2)
+    expect(items[0]).toMatchObject({
+      category: 'offline',
+      cluster: 'demo-a',
+      reason: 'Unhealthy',
+      clusterIssueData: { state: 'unhealthy' },
+    })
+    expect(items[1]).toMatchObject({
+      category: 'offline',
+      cluster: 'demo-b',
+      reason: 'Offline',
+      clusterIssueData: { state: 'unreachable' },
+    })
+  })
+})
 
 describe('buildOfflineDetectionCardLoadState', () => {
   it('suppresses card failure when partial node data exists', () => {
