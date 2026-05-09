@@ -392,7 +392,7 @@ const FullClusterCard = memo(function FullClusterCard({
           <CloudProviderIcon provider={provider} size={100} />
         </div>
         <div className="flex items-start justify-between mb-4 relative z-10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {dragHandle}
             {/* Status indicator with refresh button below */}
             <div className="flex flex-col items-center gap-2 shrink-0">
@@ -452,12 +452,12 @@ const FullClusterCard = memo(function FullClusterCard({
               })()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="shrink-0" title={providerLabel}>
                   <CloudProviderIcon provider={provider} size={18} />
                 </span>
                 <h3
-                  className="font-semibold text-foreground truncate"
+                  className="flex-1 min-w-0 font-semibold text-foreground truncate"
                   title={cluster.aliases && cluster.aliases.length > 0
                     ? `${cluster.context || cluster.name}\n\naka: ${cluster.aliases.join(', ')}`
                     : cluster.context || cluster.name
@@ -652,7 +652,7 @@ const ListClusterCard = memo(function ListClusterCard({
         >
           <CloudProviderIcon provider={provider} size={64} />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           {dragHandle}
           {/* Status indicator */}
           <div className="shrink-0">
@@ -676,10 +676,10 @@ const ListClusterCard = memo(function ListClusterCard({
           </div>
 
           {/* Provider and name */}
-          <div className="flex items-center gap-2 min-w-0 shrink-0 w-48">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <CloudProviderIcon provider={provider} size={16} />
             <span
-              className="font-medium text-foreground truncate"
+              className="font-medium text-foreground truncate flex-1 min-w-0"
               title={cluster.aliases && cluster.aliases.length > 0
                 ? `${cluster.context || cluster.name}\n\naka: ${cluster.aliases.join(', ')}`
                 : cluster.context || cluster.name
@@ -844,7 +844,7 @@ const CompactClusterCard = memo(function CompactClusterCard({
     >
       <div className="relative glass p-3 rounded-lg h-full overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2 mb-2 min-w-0">
           {dragHandle}
           {isTokenExpired(cluster) ? (
             <span title="Token Expired"><KeyRound className="w-3 h-3 text-red-400" /></span>
@@ -857,7 +857,7 @@ const CompactClusterCard = memo(function CompactClusterCard({
           )}
           <CloudProviderIcon provider={provider} size={14} />
           <span
-            className="text-xs font-medium text-foreground truncate flex-1"
+            className="text-xs font-medium text-foreground truncate flex-1 min-w-0"
             title={cluster.aliases && cluster.aliases.length > 0
               ? `${cluster.context || cluster.name}\n\naka: ${cluster.aliases.join(', ')}`
               : cluster.context || cluster.name

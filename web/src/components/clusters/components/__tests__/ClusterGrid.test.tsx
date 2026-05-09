@@ -85,13 +85,13 @@ const baseCluster: ClusterInfo = {
   source: 'kubeconfig',
 }
 
-function renderGrid(clusterOverrides: Partial<ClusterInfo> = {}) {
+function renderGrid(clusterOverrides: Partial<ClusterInfo> = {}, layoutMode: 'grid' | 'list' | 'compact' | 'wide' = 'grid') {
   const onSelectCluster = vi.fn()
   const onRenameCluster = vi.fn()
   const onRefreshCluster = vi.fn()
   const onRemoveCluster = vi.fn()
 
-  render(
+  const renderResult = render(
     <ClusterGrid
       clusters={[{ ...baseCluster, ...clusterOverrides }]}
       gpuByCluster={{}}
@@ -102,10 +102,12 @@ function renderGrid(clusterOverrides: Partial<ClusterInfo> = {}) {
       onRenameCluster={onRenameCluster}
       onRefreshCluster={onRefreshCluster}
       onRemoveCluster={onRemoveCluster}
+      layoutMode={layoutMode}
     />,
   )
 
   return {
+    ...renderResult,
     onSelectCluster,
     onRenameCluster,
     onRefreshCluster,
@@ -169,5 +171,57 @@ describe('ClusterGrid', () => {
     await waitFor(() => {
       expect(clusterLifecycle).toHaveBeenCalledWith('kind', 'dev', 'stop')
     })
+  })
+
+  it('keeps long cluster names truncatable across card layouts', () => {
+    const longContext = 'kind-dev-with-an-extremely-long-context-name-that-should-truncate-cleanly-without-breaking-card-layout'
+
+    const grid = renderGrid({ context: longContext })
+    let name = screen.getByText(longContext)
+    expect(name.className).toContain('truncate')
+    expect(name.className).toContain('flex-1')
+    expect(name.className).toContain('min-w-0')
+
+    grid.rerender(
+      <ClusterGrid
+        clusters={[{ ...baseCluster, context: longContext }]}
+        gpuByCluster={{}}
+        isConnected={true}
+        permissionsLoading={false}
+        isClusterAdmin={() => true}
+        onSelectCluster={vi.fn()}
+        onRenameCluster={vi.fn()}
+        onRefreshCluster={vi.fn()}
+        onRemoveCluster={vi.fn()}
+        layoutMode="list"
+      />,
+    )
+    name = screen.getByText(longContext)
+    expect(name.className).toContain('truncate')
+    expect(name.className).toContain('flex-1')
+    expect(name.className).toContain('min-w-0')
+    expect(name.parentElement?.className).toContain('flex-1')
+    expect(name.parentElement?.className).toContain('min-w-0')
+    expect(name.parentElement?.className).not.toContain('shrink-0')
+    expect(name.parentElement?.className).not.toContain('w-48')
+
+    grid.rerender(
+      <ClusterGrid
+        clusters={[{ ...baseCluster, context: longContext }]}
+        gpuByCluster={{}}
+        isConnected={true}
+        permissionsLoading={false}
+        isClusterAdmin={() => true}
+        onSelectCluster={vi.fn()}
+        onRenameCluster={vi.fn()}
+        onRefreshCluster={vi.fn()}
+        onRemoveCluster={vi.fn()}
+        layoutMode="compact"
+      />,
+    )
+    name = screen.getByText(longContext)
+    expect(name.className).toContain('truncate')
+    expect(name.className).toContain('flex-1')
+    expect(name.className).toContain('min-w-0')
   })
 })
