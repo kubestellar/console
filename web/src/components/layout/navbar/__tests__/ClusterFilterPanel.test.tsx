@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ClusterFilterPanel } from '../ClusterFilterPanel'
+import { NAVBAR_FILTER_PANEL_GAP_PX, NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR } from '../../../../lib/constants/ui'
 
 const filterMocks = {
   toggleCluster: vi.fn(),
@@ -76,6 +77,12 @@ vi.mock('../../../ui/Tooltip', () => ({
 describe('ClusterFilterPanel', () => {
   beforeEach(() => {
     Object.values(filterMocks).forEach((mockFn) => mockFn.mockReset())
+    document.documentElement.style.removeProperty(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)
+    class ResizeObserverMock {
+      observe() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock)
   })
 
   it('exposes dialog semantics and restores focus on Escape', () => {
@@ -106,5 +113,26 @@ describe('ClusterFilterPanel', () => {
     expect(screen.getByRole('button', { name: 'Critical' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'kind' })).toHaveAttribute('aria-pressed', 'false')
     expect(screen.getByRole('button', { name: /alpha/i })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('publishes and clears the layout offset while the desktop panel is open', () => {
+    const { unmount } = render(<ClusterFilterPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'layout.navbar.filtersActive' }))
+
+    expect(document.documentElement.style.getPropertyValue(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)).toBe(
+      `${NAVBAR_FILTER_PANEL_GAP_PX}px`
+    )
+
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'navbar.clusterFilter' }), { key: 'Escape' })
+    expect(document.documentElement.style.getPropertyValue(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)).toBe('')
+
+    fireEvent.click(screen.getByRole('button', { name: 'layout.navbar.filtersActive' }))
+    expect(document.documentElement.style.getPropertyValue(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)).toBe(
+      `${NAVBAR_FILTER_PANEL_GAP_PX}px`
+    )
+
+    unmount()
+    expect(document.documentElement.style.getPropertyValue(NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR)).toBe('')
   })
 })

@@ -45,7 +45,13 @@ import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
-import { NAVBAR_HEIGHT_PX, BANNER_HEIGHT_PX, MOBILE_BANNER_COLLAPSE_THRESHOLD, SIDEBAR_CONTROLS_OFFSET_PX } from '../../lib/constants/ui'
+import {
+  NAVBAR_HEIGHT_PX,
+  BANNER_HEIGHT_PX,
+  MOBILE_BANNER_COLLAPSE_THRESHOLD,
+  NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR,
+  SIDEBAR_CONTROLS_OFFSET_PX,
+} from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
@@ -684,7 +690,9 @@ export function Layout({ children: _children }: LayoutProps) {
 
           <div
             className="flex flex-1 overflow-hidden transition-[padding-top] duration-300"
-            style={{ paddingTop: NAVBAR_HEIGHT_PX + totalBannerHeight }}
+            style={{
+              paddingTop: `calc(${NAVBAR_HEIGHT_PX + totalBannerHeight}px + var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px))`,
+            }}
           >
             {/* Wrap Sidebar in PageErrorBoundary so stale-chunk errors
             (e.g. "Can't find variable: handleSidebarMouseEnter" from cached
