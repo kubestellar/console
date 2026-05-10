@@ -368,7 +368,7 @@ fi
 if [ -z "$KC_AGENT_TOKEN" ]; then
     KC_AGENT_TOKEN="$(openssl rand -hex 32)"
     export KC_AGENT_TOKEN_GENERATED=true
-    echo "Auto-generated KC_AGENT_TOKEN."
+    echo "Auto-generated KC_AGENT_TOKEN for this session. Set KC_AGENT_TOKEN in your shell or .env to keep a stable shared secret (see README kc-agent authentication section)."
 else
     unset KC_AGENT_TOKEN_GENERATED
 fi
