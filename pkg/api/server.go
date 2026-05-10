@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -51,11 +52,8 @@ const (
 	portReleasePollInterval = 50 * time.Millisecond
 	defaultDevFrontendURL   = "http://localhost:5174"
 	defaultProdFrontendURL  = "http://localhost:8080"
-
-	// kcAgentBaseURL is the loopback URL of the co-located kc-agent HTTP server.
-	// The backend proxies auto-update requests to this address so the browser
-	// never makes a cross-origin call to kc-agent (avoids CORS/PNA issues).
-	kcAgentBaseURL = "http://127.0.0.1:8585"
+	defaultKCAgentBaseURL   = "http://127.0.0.1:8585"
+	kcAgentURLEnvVar        = "KC_AGENT_URL"
 
 	// kcAgentProxyTimeout is the timeout for proxied requests to kc-agent.
 	kcAgentProxyTimeout = 30 * time.Second
@@ -84,6 +82,11 @@ const (
 // Used in /health response for stale-frontend detection.
 var Version = "dev"
 
+// kcAgentBaseURL is the loopback URL of the co-located kc-agent HTTP server.
+// The backend proxies auto-update requests to this address so the browser
+// never makes a cross-origin call to kc-agent (avoids CORS/PNA issues).
+var kcAgentBaseURL = defaultKCAgentBaseURL
+
 // BuildInfo holds VCS metadata extracted from the Go binary at startup.
 type BuildInfo struct {
 	GoVersion   string
@@ -98,6 +101,8 @@ var buildInfo BuildInfo
 func GetBuildInfo() BuildInfo { return buildInfo }
 
 func init() {
+	kcAgentBaseURL = normalizeKCAgentBaseURL(os.Getenv(kcAgentURLEnvVar))
+
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return
@@ -113,6 +118,30 @@ func init() {
 			buildInfo.VCSModified = s.Value
 		}
 	}
+}
+
+func normalizeKCAgentBaseURL(raw string) string {
+	trimmed := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if trimmed == "" {
+		return defaultKCAgentBaseURL
+	}
+	return trimmed
+}
+
+func kcAgentWebSocketBaseURL(httpURL string) string {
+	parsedURL, err := url.Parse(httpURL)
+	if err != nil {
+		return ""
+	}
+
+	switch parsedURL.Scheme {
+	case "http":
+		parsedURL.Scheme = "ws"
+	case "https":
+		parsedURL.Scheme = "wss"
+	}
+
+	return strings.TrimRight(parsedURL.String(), "/")
 }
 
 // Config holds server configuration
@@ -512,6 +541,14 @@ func (s *Server) setupMiddleware() {
 		const kcAgentLocalhost = "http://localhost:8585" // kc-agent HTTP on localhost
 		const kcAgentLocalhostWS = "ws://localhost:8585" // kc-agent WebSocket on localhost
 
+		customKCAgentConnectSrc := ""
+		if kcAgentBaseURL != kcAgentLoopback && kcAgentBaseURL != kcAgentLocalhost {
+			customKCAgentConnectSrc = " " + kcAgentBaseURL
+			if kcAgentBaseURLWS := kcAgentWebSocketBaseURL(kcAgentBaseURL); kcAgentBaseURLWS != "" {
+				customKCAgentConnectSrc += " " + kcAgentBaseURLWS
+			}
+		}
+
 		// script-src includes 'wasm-unsafe-eval' because the SQLite cache
 		// worker compiles a WebAssembly module at runtime; without it the
 		// worker aborts, logs a noisy CompileError, and forces an IndexedDB
@@ -535,7 +572,7 @@ func (s *Server) setupMiddleware() {
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"img-src 'self' data: https:; "+
-				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://console.kubestellar.io https://api.github.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
+				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+customKCAgentConnectSrc+" https://console.kubestellar.io https://api.github.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
 				"font-src 'self' data: https://fonts.gstatic.com; "+
 				"object-src 'none'; "+
 				"base-uri 'self'")

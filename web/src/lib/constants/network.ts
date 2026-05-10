@@ -63,6 +63,44 @@ export function isLocalAgentSuppressed(): boolean {
  * so this ensures the constructor succeeds but the connection simply fails
  * via `onerror`, which all consumers already handle. */
 const AGENT_WS_DISABLED_URL = 'ws://localhost:1/disabled'
+const DEFAULT_LOCAL_AGENT_HTTP_URL = 'http://127.0.0.1:8585'
+const LOCAL_AGENT_WS_PATH = '/ws'
+
+function stripTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '')
+}
+
+function getLocalAgentURLs(agentBaseURL?: string): { httpURL: string; wsURL: string } {
+  const configuredBaseURL = stripTrailingSlash((agentBaseURL || '').trim())
+  if (!configuredBaseURL) {
+    return {
+      httpURL: DEFAULT_LOCAL_AGENT_HTTP_URL,
+      wsURL: `${DEFAULT_LOCAL_AGENT_HTTP_URL.replace(/^http/, 'ws')}${LOCAL_AGENT_WS_PATH}`,
+    }
+  }
+
+  try {
+    const parsedURL = new URL(configuredBaseURL)
+    const normalizedPath = parsedURL.pathname === '/' ? '' : stripTrailingSlash(parsedURL.pathname)
+    const httpURL = `${parsedURL.origin}${normalizedPath}`
+    parsedURL.protocol = parsedURL.protocol === 'https:' ? 'wss:' : 'ws:'
+    parsedURL.pathname = `${normalizedPath}${LOCAL_AGENT_WS_PATH}` || LOCAL_AGENT_WS_PATH
+    parsedURL.search = ''
+    parsedURL.hash = ''
+
+    return {
+      httpURL,
+      wsURL: parsedURL.toString(),
+    }
+  } catch {
+    return {
+      httpURL: DEFAULT_LOCAL_AGENT_HTTP_URL,
+      wsURL: `${DEFAULT_LOCAL_AGENT_HTTP_URL.replace(/^http/, 'ws')}${LOCAL_AGENT_WS_PATH}`,
+    }
+  }
+}
+
+const configuredLocalAgentURLs = getLocalAgentURLs(viteEnv.VITE_KC_AGENT_URL)
 
 /**
  * WebSocket URL for the local kc-agent.
@@ -70,14 +108,14 @@ const AGENT_WS_DISABLED_URL = 'ws://localhost:1/disabled'
  * VITE_NO_LOCAL_AGENT=true. The connection fails via `onerror`, which
  * all consumers already handle.
  */
-export let LOCAL_AGENT_WS_URL = _suppressAgent ? AGENT_WS_DISABLED_URL : 'ws://127.0.0.1:8585/ws'
+export let LOCAL_AGENT_WS_URL = _suppressAgent ? AGENT_WS_DISABLED_URL : configuredLocalAgentURLs.wsURL
 
 /**
  * HTTP URL for the local kc-agent.
  * Empty when suppressed — fetch calls become relative URLs (e.g. '/settings'),
  * which 404 silently.
  */
-export let LOCAL_AGENT_HTTP_URL = _suppressAgent ? '' : 'http://127.0.0.1:8585'
+export let LOCAL_AGENT_HTTP_URL = _suppressAgent ? '' : configuredLocalAgentURLs.httpURL
 
 /** Default backend URL — empty string means same-origin relative URL.
  * This ensures API requests work in deployed environments (custom domain,

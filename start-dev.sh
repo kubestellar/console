@@ -116,6 +116,18 @@ if [ -f .env ]; then
     done < .env
 fi
 
+DEFAULT_KC_AGENT_URL="http://localhost:8585"
+CONFIGURED_KC_AGENT_URL="${KC_AGENT_URL:-${VITE_KC_AGENT_URL:-$DEFAULT_KC_AGENT_URL}}"
+CONFIGURED_KC_AGENT_URL="${CONFIGURED_KC_AGENT_URL%/}"
+USE_EXTERNAL_KC_AGENT=false
+if [ -n "${KC_AGENT_URL:-}" ] || [ -n "${VITE_KC_AGENT_URL:-}" ]; then
+    export KC_AGENT_URL="$CONFIGURED_KC_AGENT_URL"
+    export VITE_KC_AGENT_URL="${VITE_KC_AGENT_URL:-$CONFIGURED_KC_AGENT_URL}"
+    if [ "$CONFIGURED_KC_AGENT_URL" != "$DEFAULT_KC_AGENT_URL" ] && [ "$CONFIGURED_KC_AGENT_URL" != "http://127.0.0.1:8585" ]; then
+        USE_EXTERNAL_KC_AGENT=true
+    fi
+fi
+
 export DEV_MODE=${DEV_MODE:-true}
 export VITE_DEV_MODE=${VITE_DEV_MODE:-true}  # Pass to Vite so __DEV_MODE__ is true in the frontend
 export FRONTEND_URL=${FRONTEND_URL:-http://localhost:5174}
@@ -123,13 +135,18 @@ export FRONTEND_URL=${FRONTEND_URL:-http://localhost:5174}
 # Without this, the proxy defaults to 8081 (used when a TLS watchdog sits on 8080).
 export BACKEND_LISTEN_PORT=${BACKEND_LISTEN_PORT:-8080}
 
+REQUIRED_PORTS="8080 5174"
+if [ "$USE_EXTERNAL_KC_AGENT" = false ]; then
+    REQUIRED_PORTS="$REQUIRED_PORTS 8585"
+fi
+
 # Kill any existing project instances on required ports
-for p in 8080 5174 8585; do
+for p in $REQUIRED_PORTS; do
     kill_project_port "$p"
 done
 
 # Verify all required ports are free before proceeding
-for p in 8080 5174 8585; do
+for p in $REQUIRED_PORTS; do
     if ! verify_port_free "$p"; then
         exit 1
     fi
@@ -218,10 +235,25 @@ else
 fi
 export KC_AGENT_TOKEN
 
+# WSL hint: if kc-agent runs on Windows, set VITE_KC_AGENT_URL to the Windows host IP
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    WSL_HOST_IP=$(ip route show default | awk '{print $3}')
+    if [ -z "${VITE_KC_AGENT_URL:-}" ]; then
+        echo -e "${YELLOW}WSL detected: if kc-agent runs on Windows, export VITE_KC_AGENT_URL=http://${WSL_HOST_IP}:8585${NC}"
+    fi
+fi
+
 # Start kc-agent and verify it is running
 AGENT_PID=""
 AGENT_RUNNING=false
-if [ -n "$KC_AGENT_BIN" ]; then
+if [ "$USE_EXTERNAL_KC_AGENT" = true ]; then
+    echo "Using external kc-agent at $CONFIGURED_KC_AGENT_URL"
+    if curl -sf --max-time 1 "$CONFIGURED_KC_AGENT_URL/health" >/dev/null 2>&1; then
+        AGENT_RUNNING=true
+    else
+        echo "Warning: external kc-agent health endpoint is not reachable at $CONFIGURED_KC_AGENT_URL/health"
+    fi
+elif [ -n "$KC_AGENT_BIN" ]; then
     echo "Starting kc-agent ($KC_AGENT_BIN)..."
     KC_AGENT_ARGS=()
     if [ -n "$KUBECONFIG" ]; then
@@ -239,7 +271,7 @@ if [ -n "$KC_AGENT_BIN" ]; then
             AGENT_PID=""
             break
         fi
-        if curl -sf --max-time 1 http://localhost:8585/health >/dev/null 2>&1; then
+        if curl -sf --max-time 1 "$CONFIGURED_KC_AGENT_URL/health" >/dev/null 2>&1; then
             AGENT_RUNNING=true
             break
         fi
@@ -282,9 +314,9 @@ echo ""
 echo "  Frontend: http://localhost:5174"
 echo "  Backend:  http://localhost:8080"
 if [ "$AGENT_RUNNING" = true ]; then
-    echo "  Agent:    http://localhost:8585"
+    echo "  Agent:    $CONFIGURED_KC_AGENT_URL"
 else
-    echo "  Agent:    not running (kc-agent failed to start or not installed)"
+    echo "  Agent:    not running ($CONFIGURED_KC_AGENT_URL)"
 fi
 echo ""
 echo "Press Ctrl+C to stop"

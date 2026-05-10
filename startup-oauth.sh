@@ -175,6 +175,18 @@ if [ -f .env ]; then
     done < .env
 fi
 
+DEFAULT_KC_AGENT_URL="http://localhost:8585"
+CONFIGURED_KC_AGENT_URL="${KC_AGENT_URL:-${VITE_KC_AGENT_URL:-$DEFAULT_KC_AGENT_URL}}"
+CONFIGURED_KC_AGENT_URL="${CONFIGURED_KC_AGENT_URL%/}"
+USE_EXTERNAL_KC_AGENT=false
+if [ -n "${KC_AGENT_URL:-}" ] || [ -n "${VITE_KC_AGENT_URL:-}" ]; then
+    export KC_AGENT_URL="$CONFIGURED_KC_AGENT_URL"
+    export VITE_KC_AGENT_URL="${VITE_KC_AGENT_URL:-$CONFIGURED_KC_AGENT_URL}"
+    if [ "$CONFIGURED_KC_AGENT_URL" != "$DEFAULT_KC_AGENT_URL" ] && [ "$CONFIGURED_KC_AGENT_URL" != "http://127.0.0.1:8585" ]; then
+        USE_EXTERNAL_KC_AGENT=true
+    fi
+fi
+
 # Check OAuth credentials — optional when using the one-click manifest flow.
 # The console will check SQLite for credentials saved by a previous manifest
 # setup, or show the one-click setup button on the login page.
@@ -251,9 +263,12 @@ fi
 
 # Clean ports — skip 8080 if watchdog is alive
 # Only target LISTENING processes to avoid matching the watchdog's outgoing connections.
-PORTS_TO_CLEAN="$BACKEND_LISTEN_PORT 8585"
+PORTS_TO_CLEAN="$BACKEND_LISTEN_PORT"
+if [ "$USE_EXTERNAL_KC_AGENT" = false ]; then
+    PORTS_TO_CLEAN="$PORTS_TO_CLEAN 8585"
+fi
 if [ "$WATCHDOG_RUNNING" = false ]; then
-    PORTS_TO_CLEAN="8080 $BACKEND_LISTEN_PORT 8585"
+    PORTS_TO_CLEAN="8080 $PORTS_TO_CLEAN"
 fi
 if [ "$USE_DEV_SERVER" = true ]; then PORTS_TO_CLEAN="$PORTS_TO_CLEAN 5174"; fi
 for p in $PORTS_TO_CLEAN; do
@@ -359,11 +374,23 @@ else
 fi
 export KC_AGENT_TOKEN
 
+# WSL hint: if kc-agent runs on Windows, set VITE_KC_AGENT_URL to the Windows host IP
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    WSL_HOST_IP=$(ip route show default | awk '{print $3}')
+    if [ -z "${VITE_KC_AGENT_URL:-}" ]; then
+        echo -e "${YELLOW}WSL detected: if kc-agent runs on Windows, export VITE_KC_AGENT_URL=http://${WSL_HOST_IP}:8585${NC}"
+    fi
+fi
+
 # Launch kc-agent with auto-restart on crash. Idempotent: no-op if already running.
 AGENT_PID=""
 AGENT_LOOP_PID=""
 AGENT_PID_FILE="/tmp/.kc-agent-pid-$$"
 launch_kc_agent() {
+    if [ "$USE_EXTERNAL_KC_AGENT" = true ]; then
+        echo -e "${GREEN}Using external kc-agent at $CONFIGURED_KC_AGENT_URL${NC}"
+        return
+    fi
     [ -z "$KC_AGENT_BIN" ] && { echo -e "${YELLOW}Warning: kc-agent not found. Run 'make build' or install via brew.${NC}"; return; }
     [ -n "$AGENT_LOOP_PID" ] && return  # already running
     echo -e "${GREEN}Starting kc-agent ($KC_AGENT_BIN)...${NC}"
@@ -535,7 +562,7 @@ if [ "$USE_DEV_SERVER" = true ]; then
     echo -e "  Frontend: ${CYAN}http://localhost:5174${NC}  (Vite HMR)"
     echo -e "  Watchdog: ${CYAN}http://localhost:8080${NC}  (reverse proxy)"
     echo -e "  Backend:  ${CYAN}http://localhost:$BACKEND_LISTEN_PORT${NC}"
-    echo -e "  Agent:    ${CYAN}http://localhost:8585${NC}"
+    echo -e "  Agent:    ${CYAN}${CONFIGURED_KC_AGENT_URL}${NC}"
     echo -e "  Auth:     GitHub OAuth (real login)"
 else
     # Production mode: pre-built frontend served by Go backend (fast load)
@@ -661,7 +688,7 @@ else
     echo ""
     echo -e "  Console:  ${CYAN}http://localhost:8080${NC}  (via watchdog)"
     echo -e "  Backend:  ${CYAN}http://localhost:$BACKEND_LISTEN_PORT${NC}"
-    echo -e "  Agent:    ${CYAN}http://localhost:8585${NC}"
+    echo -e "  Agent:    ${CYAN}${CONFIGURED_KC_AGENT_URL}${NC}"
     echo -e "  Auth:     GitHub OAuth (real login)"
 fi
 echo ""
