@@ -46,6 +46,9 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	if input.RequestType != models.RequestTypeBug && input.RequestType != models.RequestTypeFeature {
 		return fiber.NewError(fiber.StatusBadRequest, "Request type must be 'bug' or 'feature'")
 	}
+	if input.ParentIssueNumber != nil && *input.ParentIssueNumber < 1 {
+		return fiber.NewError(fiber.StatusBadRequest, "Parent issue number must be a positive integer")
+	}
 
 	// Reject early if GitHub issue creation is not configured
 	if h.getEffectiveToken() == "" || h.repoOwner == "" || h.repoName == "" {
@@ -92,7 +95,7 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	// created synchronously so the client receives the issue number/URL in
 	// the response; screenshot comments are uploaded asynchronously below
 	// (#9898) so slow GitHub responses do not block Fiber workers.
-	issueNumber, _, validScreenshots, ssResult, err := h.createGitHubIssueInRepo(c.UserContext(), request, user, h.repoOwner, targetRepoName, input.Screenshots, input.ConsoleErrors, input.FailedApiCalls, input.Diagnostics, clientAuth)
+	issueNumber, issueWarning, validScreenshots, ssResult, err := h.createGitHubIssueInRepo(c.UserContext(), request, user, h.repoOwner, targetRepoName, input.Screenshots, input.ConsoleErrors, input.FailedApiCalls, input.Diagnostics, input.ParentIssueNumber, clientAuth)
 	if err != nil {
 		slog.Error("[Feedback] failed to create GitHub issue", "error", err)
 		// Clean up the orphaned database record. Log but don't fail the
@@ -175,14 +178,36 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	// is removing.
 	type createResponse struct {
 		*models.FeatureRequest
-		ScreenshotsUploaded int `json:"screenshots_uploaded"`
-		ScreenshotsFailed   int `json:"screenshots_failed"`
+		ScreenshotsUploaded int    `json:"screenshots_uploaded"`
+		ScreenshotsFailed   int    `json:"screenshots_failed"`
+		Warning             string `json:"warning,omitempty"`
 	}
 	return c.Status(fiber.StatusCreated).JSON(createResponse{
 		FeatureRequest:      request,
 		ScreenshotsUploaded: ssResult.Uploaded,
 		ScreenshotsFailed:   ssResult.Failed,
+		Warning:             issueWarning,
 	})
+}
+
+func (h *FeedbackHandler) GetIssueLinkCapabilities(c *fiber.Ctx) error {
+	clientAuth := c.Get("X-KC-Client-Auth")
+	if clientAuth == "" {
+		return c.JSON(fiber.Map{"can_link_parent": false})
+	}
+
+	targetRepo := models.TargetRepo(c.Query("target_repo"))
+	if targetRepo != models.TargetRepoConsole && targetRepo != models.TargetRepoDocs {
+		targetRepo = models.TargetRepoConsole
+	}
+
+	canLinkParent, err := h.canLinkParentIssue(c.UserContext(), h.repoOwner, h.resolveRepoName(targetRepo), clientAuth)
+	if err != nil {
+		slog.Warn("[Feedback] failed to determine issue link capabilities", "target_repo", targetRepo, "error", err)
+		return c.JSON(fiber.Map{"can_link_parent": false})
+	}
+
+	return c.JSON(fiber.Map{"can_link_parent": canLinkParent})
 }
 
 // ListFeatureRequests returns the user's feature requests

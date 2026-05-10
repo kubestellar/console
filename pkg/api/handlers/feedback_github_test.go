@@ -2,6 +2,9 @@ package handlers
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -133,4 +136,39 @@ func TestHandleDeploymentStatus_Success(t *testing.T) {
 	err := handler.handleDeploymentStatus(context.Background(), payload)
 	assert.NoError(t, err)
 	mockStore.AssertExpectations(t)
+}
+
+func TestPostGitHubIssue_SubIssueLinkFailureReturnsWarning(t *testing.T) {
+	t.Setenv("GITHUB_URL", "https://ghe.example.com")
+
+	handler := NewFeedbackHandler(new(test.MockStore), FeedbackConfig{GitHubToken: "token"})
+	handler.appTokenProvider = nil
+	handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+		switch req.URL.String() {
+		case "https://ghe.example.com/api/v3/repos/kubestellar/console/issues":
+			return &http.Response{
+				StatusCode: http.StatusCreated,
+				Body:       io.NopCloser(strings.NewReader(`{"id":42,"number":7,"html_url":"https://github.com/kubestellar/console/issues/7"}`)),
+				Header:     make(http.Header),
+			}
+		case "https://ghe.example.com/api/v3/repos/kubestellar/console/issues/123/sub_issues":
+			return &http.Response{
+				StatusCode: http.StatusNotFound,
+				Body:       io.NopCloser(strings.NewReader(`{"message":"Not Found"}`)),
+				Header:     make(http.Header),
+			}
+		default:
+			return &http.Response{
+				StatusCode: http.StatusInternalServerError,
+				Body:       io.NopCloser(strings.NewReader(`{"message":"unexpected request"}`)),
+				Header:     make(http.Header),
+			}
+		}
+	})}
+
+	parentIssueNumber := 123
+	createdIssue, err := handler.postGitHubIssue(context.Background(), "kubestellar", "console", "Bug title", "Bug body", nil, &parentIssueNumber, "")
+	assert.NoError(t, err)
+	assert.Equal(t, 7, createdIssue.Number)
+	assert.Contains(t, createdIssue.Warning, "could not be linked to parent issue #123")
 }

@@ -52,6 +52,8 @@ export interface FeatureRequest {
   screenshots_uploaded?: number
   /** Number of screenshots that failed to upload (only in create response) */
   screenshots_failed?: number
+  /** Non-fatal warning surfaced after the issue was created */
+  warning?: string
 }
 
 /** Check if a request has been triaged (accepted for review) */
@@ -106,9 +108,14 @@ export interface DiagnosticInfo {
   agent_arch?: string
   install_method?: string
   clusters?: number
+  cluster_context?: string
+  console_deploy_mode?: string
+  active_agent_backend?: string
+  backend_ws_status?: string
   agent_connection_status?: string
   agent_connection_failures?: number
   agent_last_error?: string
+  agent_connection_log?: string[]
   browser_user_agent?: string
   browser_platform?: string
   browser_language?: string
@@ -122,6 +129,7 @@ export interface CreateFeatureRequestInput {
   description: string
   request_type: RequestType
   target_repo?: TargetRepo
+  parent_issue_number?: number
   /** Base64 data-URI screenshots to upload and embed in the GitHub issue */
   screenshots?: string[]
   /** Recent browser console errors captured automatically for bug reports */

@@ -41,16 +41,16 @@ const (
 type NotificationType string
 
 const (
-	NotificationTypeIssueCreated      NotificationType = "issue_created"
-	NotificationTypeTriageAccepted    NotificationType = "triage_accepted"
-	NotificationTypeFeasibilityStudy  NotificationType = "feasibility_study"
-	NotificationTypeAIStuck           NotificationType = "ai_stuck"
-	NotificationTypeFixReady          NotificationType = "fix_ready"
-	NotificationTypePreviewReady      NotificationType = "preview_ready"
-	NotificationTypeFixComplete       NotificationType = "fix_complete"
-	NotificationTypeUnableToFix       NotificationType = "unable_to_fix"
-	NotificationTypeClosed            NotificationType = "closed"
-	NotificationTypeFeedbackReceived  NotificationType = "feedback_received"
+	NotificationTypeIssueCreated     NotificationType = "issue_created"
+	NotificationTypeTriageAccepted   NotificationType = "triage_accepted"
+	NotificationTypeFeasibilityStudy NotificationType = "feasibility_study"
+	NotificationTypeAIStuck          NotificationType = "ai_stuck"
+	NotificationTypeFixReady         NotificationType = "fix_ready"
+	NotificationTypePreviewReady     NotificationType = "preview_ready"
+	NotificationTypeFixComplete      NotificationType = "fix_complete"
+	NotificationTypeUnableToFix      NotificationType = "unable_to_fix"
+	NotificationTypeClosed           NotificationType = "closed"
+	NotificationTypeFeedbackReceived NotificationType = "feedback_received"
 )
 
 // FeatureRequest represents a bug or feature request submitted by a user
@@ -117,23 +117,28 @@ type ConsoleError struct {
 // DiagnosticInfo contains environment details collected from the agent and browser
 // to help debug issues (e.g. CORS mismatches from old agent builds).
 type DiagnosticInfo struct {
-	AgentVersion            string `json:"agent_version,omitempty"`
-	CommitSHA               string `json:"commit_sha,omitempty"`
-	BuildTime               string `json:"build_time,omitempty"`
-	GoVersion               string `json:"go_version,omitempty"`
-	AgentOS                 string `json:"agent_os,omitempty"`
-	AgentArch               string `json:"agent_arch,omitempty"`
-	InstallMethod           string `json:"install_method,omitempty"`
-	Clusters                int    `json:"clusters,omitempty"`
-	AgentConnectionStatus   string `json:"agent_connection_status,omitempty"`
-	AgentConnectionFailures int    `json:"agent_connection_failures,omitempty"`
-	AgentLastError          string `json:"agent_last_error,omitempty"`
-	BrowserUA               string `json:"browser_user_agent,omitempty"`
-	BrowserPlatform         string `json:"browser_platform,omitempty"`
-	BrowserLanguage         string `json:"browser_language,omitempty"`
-	ScreenResolution        string `json:"screen_resolution,omitempty"`
-	WindowSize              string `json:"window_size,omitempty"`
-	PageURL                 string `json:"page_url,omitempty"`
+	AgentVersion            string   `json:"agent_version,omitempty"`
+	CommitSHA               string   `json:"commit_sha,omitempty"`
+	BuildTime               string   `json:"build_time,omitempty"`
+	GoVersion               string   `json:"go_version,omitempty"`
+	AgentOS                 string   `json:"agent_os,omitempty"`
+	AgentArch               string   `json:"agent_arch,omitempty"`
+	InstallMethod           string   `json:"install_method,omitempty"`
+	Clusters                int      `json:"clusters,omitempty"`
+	ClusterContext          string   `json:"cluster_context,omitempty"`
+	ConsoleDeployMode       string   `json:"console_deploy_mode,omitempty"`
+	ActiveAgentBackend      string   `json:"active_agent_backend,omitempty"`
+	BackendWSStatus         string   `json:"backend_ws_status,omitempty"`
+	AgentConnectionStatus   string   `json:"agent_connection_status,omitempty"`
+	AgentConnectionFailures int      `json:"agent_connection_failures,omitempty"`
+	AgentLastError          string   `json:"agent_last_error,omitempty"`
+	AgentConnectionLog      []string `json:"agent_connection_log,omitempty"`
+	BrowserUA               string   `json:"browser_user_agent,omitempty"`
+	BrowserPlatform         string   `json:"browser_platform,omitempty"`
+	BrowserLanguage         string   `json:"browser_language,omitempty"`
+	ScreenResolution        string   `json:"screen_resolution,omitempty"`
+	WindowSize              string   `json:"window_size,omitempty"`
+	PageURL                 string   `json:"page_url,omitempty"`
 }
 
 // FailedApiCall represents a recent failed API call captured by the ring buffer.
@@ -146,10 +151,11 @@ type FailedApiCall struct {
 
 // CreateFeatureRequestInput is the input for creating a feature request
 type CreateFeatureRequestInput struct {
-	Title       string      `json:"title" validate:"required,min=10,max=200"`
-	Description string      `json:"description" validate:"required,min=20,max=5000"`
-	RequestType RequestType `json:"request_type" validate:"required,oneof=bug feature"`
-	TargetRepo  TargetRepo  `json:"target_repo,omitempty"`
+	Title             string      `json:"title" validate:"required,min=10,max=200"`
+	Description       string      `json:"description" validate:"required,min=20,max=5000"`
+	RequestType       RequestType `json:"request_type" validate:"required,oneof=bug feature"`
+	TargetRepo        TargetRepo  `json:"target_repo,omitempty"`
+	ParentIssueNumber *int        `json:"parent_issue_number,omitempty"`
 	// Screenshots contains base64-encoded data URIs (e.g. "data:image/png;base64,...")
 	// that will be uploaded to GitHub and embedded in the issue body.
 	Screenshots []string `json:"screenshots,omitempty"`

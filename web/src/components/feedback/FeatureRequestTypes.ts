@@ -44,6 +44,7 @@ export interface SuccessState {
   issueUrl?: string
   screenshotsUploaded?: number
   screenshotsFailed?: number
+  warning?: string
 }
 
 export interface PreviewResult {

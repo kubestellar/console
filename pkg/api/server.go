@@ -1183,6 +1183,7 @@ func (s *Server) setupRoutes() {
 	// POST route is registered outside the /api group to exempt it from apiLimiter (#9969)
 	// GET routes still use the group limiters for general API protection
 	api.Get("/feedback/requests", feedback.ListFeatureRequests)
+	api.Get("/feedback/issue-link-capabilities", feedback.GetIssueLinkCapabilities)
 	api.Get("/feedback/queue", feedback.ListAllFeatureRequests)
 	api.Get("/feedback/requests/:id", feedback.GetFeatureRequest)
 	api.Post("/feedback/requests/:id/feedback", feedback.SubmitFeedback)

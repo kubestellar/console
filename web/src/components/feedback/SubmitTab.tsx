@@ -9,6 +9,7 @@ import { Github } from '@/lib/icons'
 import { Button } from '../ui/Button'
 import { isDemoModeForced } from '../../lib/demoMode'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
+import { api } from '../../lib/api'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_FINE_GRAINED_PERMISSIONS } from '../../lib/constants/github-token'
 import { compressScreenshot } from '../../lib/imageCompression'
@@ -17,6 +18,9 @@ import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 
 import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
+import { useBackendHealth } from '../../hooks/useBackendHealth'
+import { useKagentBackend } from '../../hooks/useKagentBackend'
+import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { REWARD_ACTIONS } from '../../types/rewards'
@@ -99,9 +103,18 @@ export function SuccessView({ success, screenshots, onViewUpdates }: SuccessView
           </p>
         </div>
       )}
+      {success.warning && (
+        <div className="mt-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <p className="text-xs text-yellow-400 font-medium">{success.warning}</p>
+        </div>
+      )}
     </div>
   )
 }
+
+const MIN_PARENT_ISSUE_NUMBER = 1
+const MAX_AGENT_CONNECTION_LOG_LINES = 10
+const ALL_CLUSTERS_CONTEXT_LABEL = 'all clusters'
 
 type SubmitErrorAction = 'reauthenticate' | 'setup' | null
 
@@ -187,7 +200,7 @@ interface SubmitFormProps {
   isPreviewFullscreen: boolean
   setIsPreviewFullscreen: (v: boolean) => void
   setPreviewImageSrc: (v: string | null) => void
-  onSubmit: (payload: CreateFeatureRequestInput, options?: { timeout: number }) => Promise<{ github_issue_url?: string; screenshots_uploaded?: number; screenshots_failed?: number }>
+  onSubmit: (payload: CreateFeatureRequestInput, options?: { timeout: number }) => Promise<{ github_issue_url?: string; screenshots_uploaded?: number; screenshots_failed?: number; warning?: string }>
   onSuccess: (result: SuccessState) => void
   onShowSetupDialog: () => void
   onShowLoginPrompt: () => void
@@ -222,12 +235,24 @@ export function SubmitForm({
 }: SubmitFormProps) {
   const { t } = useTranslation()
   const { showToast } = useToast()
-  const { health: agentHealth, status: agentStatus, dataErrorCount: agentDataErrorCount, lastDataError: agentLastDataError } = useLocalAgent()
+  const {
+    health: agentHealth,
+    status: agentStatus,
+    dataErrorCount: agentDataErrorCount,
+    lastDataError: agentLastDataError,
+    connectionEvents,
+  } = useLocalAgent()
+  const { status: backendStatus, isInClusterMode } = useBackendHealth()
+  const { activeBackend } = useKagentBackend()
+  const { selectedClusters } = useGlobalFilters()
   const directIssueUrl = buildDirectIssueUrl(targetRepo, description)
   const errorDetails = error ? getSubmitErrorDetails(error, canPerformActions, t as unknown as (key: string, defaultValue?: string) => string) : null
   const [descriptionTab, setDescriptionTab] = useState<'write' | 'preview'>('write')
   const [isDragOver, setIsDragOver] = useState(false)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [parentIssueNumber, setParentIssueNumber] = useState('')
+  const [canLinkParentIssue, setCanLinkParentIssue] = useState(false)
+  const [isCheckingParentIssueAccess, setIsCheckingParentIssueAccess] = useState(false)
   const screenshotInputRef = useRef<HTMLInputElement>(null)
 
   // Close fullscreen preview on Escape key
@@ -243,6 +268,49 @@ export function SubmitForm({
       return () => document.removeEventListener('keydown', handleFullscreenKeyDown)
     }
   }, [isPreviewFullscreen, handleFullscreenKeyDown])
+
+  useEffect(() => {
+    if (!canPerformActions || requestType !== 'bug') {
+      setCanLinkParentIssue(false)
+      setIsCheckingParentIssueAccess(false)
+      return
+    }
+
+    let isCurrent = true
+    setIsCheckingParentIssueAccess(true)
+
+    ;(async () => {
+      try {
+        const { getClientCtx } = await import('../../lib/clientCtx')
+        const ctx = getClientCtx()
+        if (!ctx) {
+          if (isCurrent) setCanLinkParentIssue(false)
+          return
+        }
+        const { data } = await api.get<{ can_link_parent?: boolean }>(`/api/feedback/issue-link-capabilities?target_repo=${targetRepo}`, {
+          headers: { 'X-KC-Client-Auth': ctx },
+          timeout: FETCH_DEFAULT_TIMEOUT_MS,
+        })
+        if (isCurrent) {
+          setCanLinkParentIssue(data.can_link_parent === true)
+        }
+      } catch {
+        if (isCurrent) setCanLinkParentIssue(false)
+      } finally {
+        if (isCurrent) setIsCheckingParentIssueAccess(false)
+      }
+    })()
+
+    return () => {
+      isCurrent = false
+    }
+  }, [canPerformActions, requestType, targetRepo])
+
+  useEffect(() => {
+    if (!canLinkParentIssue) {
+      setParentIssueNumber('')
+    }
+  }, [canLinkParentIssue, targetRepo])
 
   // Handle paste events to capture screenshots pasted into the textarea
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -362,6 +430,16 @@ export function SubmitForm({
       return
     }
 
+    const trimmedParentIssueNumber = parentIssueNumber.trim()
+    let parsedParentIssueNumber: number | undefined
+    if (trimmedParentIssueNumber) {
+      parsedParentIssueNumber = Number.parseInt(trimmedParentIssueNumber, 10)
+      if (!Number.isInteger(parsedParentIssueNumber) || parsedParentIssueNumber < MIN_PARENT_ISSUE_NUMBER) {
+        setError(t('feedback.parentIssueNumberInvalid', 'Parent issue number must be a positive integer.'))
+        return
+      }
+    }
+
     const screenshotDataURIs: string[] = []
     for (const s of screenshots) {
       if (s.mediaType === 'video') {
@@ -379,6 +457,16 @@ export function SubmitForm({
       const browserErrors = requestType === 'bug' ? getRecentBrowserErrors() : []
       const failedApiCalls = getRecentFailedApiCalls()
 
+      const selectedClusterContext = (selectedClusters || []).length > 0
+        ? (selectedClusters || []).join(', ')
+        : ALL_CLUSTERS_CONTEXT_LABEL
+      const agentConnectionLog = (connectionEvents || []).length > 0
+        ? (connectionEvents || [])
+          .slice(0, MAX_AGENT_CONNECTION_LOG_LINES)
+          .map(event => `[${event.timestamp.toISOString()}] ${event.type}: ${event.message}`)
+        : isInClusterMode
+          ? [`[${new Date().toISOString()}] connected: Using in-cluster service`]
+          : []
       const diagnostics = {
         agent_version: agentHealth?.version,
         commit_sha: agentHealth?.commitSHA,
@@ -388,9 +476,14 @@ export function SubmitForm({
         agent_arch: agentHealth?.arch,
         install_method: agentHealth?.install_method,
         clusters: agentHealth?.clusters,
+        cluster_context: selectedClusterContext,
+        console_deploy_mode: isInClusterMode ? 'in-cluster' : 'local',
+        active_agent_backend: activeBackend,
+        backend_ws_status: backendStatus,
         agent_connection_status: agentStatus,
         agent_connection_failures: agentDataErrorCount,
         agent_last_error: agentLastDataError ?? undefined,
+        ...(agentConnectionLog.length > 0 && { agent_connection_log: agentConnectionLog }),
         browser_user_agent: navigator.userAgent,
         browser_platform: navigator.platform,
         browser_language: navigator.language,
@@ -406,6 +499,7 @@ export function SubmitForm({
           request_type: requestType,
           target_repo: targetRepo,
           diagnostics,
+          ...(parsedParentIssueNumber && { parent_issue_number: parsedParentIssueNumber }),
           ...(hasScreenshots && { screenshots: screenshotDataURIs }),
           ...(browserErrors.length > 0 && { console_errors: browserErrors }),
           ...(failedApiCalls.length > 0 && { failed_api_calls: failedApiCalls }),
@@ -416,6 +510,7 @@ export function SubmitForm({
         issueUrl: result.github_issue_url,
         screenshotsUploaded: result.screenshots_uploaded,
         screenshotsFailed: result.screenshots_failed,
+        warning: result.warning,
       })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : ''
@@ -613,6 +708,41 @@ export function SubmitForm({
             </p>
           )}
         </div>
+
+        {(requestType === 'bug' && (canLinkParentIssue || isCheckingParentIssueAccess)) && (
+          <details className="rounded-lg border border-border bg-secondary/20 px-3 py-2">
+            <summary className="cursor-pointer list-none text-xs font-medium text-foreground">
+              {t('feedback.linkToParentIssue', 'Link to parent issue')}
+            </summary>
+            <div className="mt-3 space-y-2">
+              {isCheckingParentIssueAccess ? (
+                <p className="text-2xs text-muted-foreground">
+                  {t('feedback.checkingIssueLinkAccess', 'Checking repository access…')}
+                </p>
+              ) : canLinkParentIssue ? (
+                <>
+                  <label htmlFor="feedback-parent-issue" className="block text-xs font-medium text-muted-foreground">
+                    {t('feedback.parentIssueNumber', 'Parent issue number')}
+                  </label>
+                  <input
+                    id="feedback-parent-issue"
+                    type="number"
+                    min={MIN_PARENT_ISSUE_NUMBER}
+                    inputMode="numeric"
+                    value={parentIssueNumber}
+                    onChange={e => setParentIssueNumber(e.target.value)}
+                    disabled={inputsDisabled}
+                    placeholder="12345"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-hidden transition-colors focus:border-purple-500 disabled:opacity-60"
+                  />
+                  <p className="text-2xs text-muted-foreground">
+                    {t('feedback.parentIssueHelp', 'If provided, this report will be linked as a child issue after submission.')}
+                  </p>
+                </>
+              ) : null}
+            </div>
+          </details>
+        )}
 
         {/* Description */}
         <div className="flex flex-col">
