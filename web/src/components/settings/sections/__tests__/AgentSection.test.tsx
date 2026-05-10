@@ -36,6 +36,25 @@ vi.mock('../../../../lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }))
 
+vi.mock('../../../../hooks/useKagentBackend', () => ({
+  useKagentBackend: () => ({
+    kagentAvailable: false,
+    kagentStatus: null,
+    kagentAgents: [],
+    selectedKagentAgent: null,
+    selectKagentAgent: vi.fn(),
+    kagentiAvailable: false,
+    kagentiStatus: null,
+    kagentiAgents: [],
+    selectedKagentiAgent: null,
+    selectKagentiAgent: vi.fn(),
+    preferredBackend: 'kc-agent',
+    setPreferredBackend: vi.fn(),
+    activeBackend: 'kc-agent',
+    refresh: vi.fn().mockResolvedValue(undefined),
+  }),
+}))
+
 import { AgentSection } from '../AgentSection'
 
 describe('AgentSection', () => {

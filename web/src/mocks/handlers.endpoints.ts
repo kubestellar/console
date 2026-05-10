@@ -1777,6 +1777,14 @@ export function createHandlers() {
   http.get('/api/kagenti-provider/agents', () => {
     return HttpResponse.json({ agents: [] })
   }),
+  http.patch('/api/kagenti-provider/config', async ({ request }) => {
+    const body = await request.json() as { llm_provider?: string }
+    return HttpResponse.json({
+      llm_provider: body.llm_provider || 'gemini',
+      api_key_configured: true,
+      configured_providers: body.llm_provider ? [body.llm_provider] : ['gemini'],
+    })
+  }),
   http.get('/api/gadget/status', () => {
     return HttpResponse.json({ available: false, reason: 'not configured in demo mode' })
   }),

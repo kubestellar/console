@@ -1291,9 +1291,16 @@ func (s *Server) setupRoutes() {
 
 	// Kagenti A2A proxy routes
 	kagentiProviderClient := kagenti_provider.NewKagentiClientFromEnv()
-	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient)
+	var kagentiConfigManager kagenti_provider.ConfigManager
+	if manager, err := kagenti_provider.NewKubernetesConfigManagerFromEnv(); err != nil {
+		slog.Debug("kagenti config manager unavailable", "error", err)
+	} else {
+		kagentiConfigManager = manager
+	}
+	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager)
 	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
 	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
+	api.Patch("/kagenti-provider/config", kagentiProviderHandler.UpdateConfig)
 	api.Post("/kagenti-provider/chat", kagentiProviderHandler.Chat)
 	api.Post("/kagenti-provider/tools/call", kagentiProviderHandler.CallTool)
 

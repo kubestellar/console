@@ -12,6 +12,7 @@ const mockAuthFetch = vi.mocked(authFetch)
 // Import the module under test (need to import after mock setup)
 let fetchKagentiProviderStatus: typeof import('../kagentiProviderBackend').fetchKagentiProviderStatus
 let fetchKagentiProviderAgents: typeof import('../kagentiProviderBackend').fetchKagentiProviderAgents
+let updateKagentiProviderConfig: typeof import('../kagentiProviderBackend').updateKagentiProviderConfig
 let kagentiProviderCallTool: typeof import('../kagentiProviderBackend').kagentiProviderCallTool
 let kagentiProviderChat: typeof import('../kagentiProviderBackend').kagentiProviderChat
 
@@ -20,6 +21,7 @@ beforeEach(async () => {
   const mod = await import('../kagentiProviderBackend')
   fetchKagentiProviderStatus = mod.fetchKagentiProviderStatus
   fetchKagentiProviderAgents = mod.fetchKagentiProviderAgents
+  updateKagentiProviderConfig = mod.updateKagentiProviderConfig
   kagentiProviderCallTool = mod.kagentiProviderCallTool
   kagentiProviderChat = mod.kagentiProviderChat
 })
@@ -59,6 +61,34 @@ describe('fetchKagentiProviderStatus', () => {
     mockAuthFetch.mockRejectedValueOnce(new DOMException('The operation was aborted', 'AbortError'))
 
     await expect(fetchKagentiProviderStatus()).rejects.toThrow('The operation was aborted')
+  })
+})
+
+describe('updateKagentiProviderConfig', () => {
+  it('patches provider config and returns the updated status', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ llm_provider: 'anthropic', api_key_configured: true, configured_providers: ['anthropic'] }),
+    } as Response)
+
+    const result = await updateKagentiProviderConfig({ llm_provider: 'anthropic', api_key: 'sk-ant' })
+    expect(result.llm_provider).toBe('anthropic')
+    expect(result.api_key_configured).toBe(true)
+
+    expect(mockAuthFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/kagenti-provider/config'),
+      expect.objectContaining({ method: 'PATCH' })
+    )
+  })
+
+  it('throws the API error message on failure', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: 'api key required for selected provider' }),
+    } as Response)
+
+    await expect(updateKagentiProviderConfig({ llm_provider: 'openai' })).rejects.toThrow('api key required for selected provider')
   })
 })
 

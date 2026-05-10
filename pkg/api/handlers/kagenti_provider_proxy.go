@@ -3,6 +3,7 @@ package handlers
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -19,12 +20,13 @@ const kagentiSSELineBufferBytes = 256 * 1024
 
 // KagentiProviderProxyHandler proxies requests to the kagenti A2A endpoint.
 type KagentiProviderProxyHandler struct {
-	client *kagenti_provider.KagentiClient // can be nil if kagenti not detected
+	client        *kagenti_provider.KagentiClient // can be nil if kagenti not detected
+	configManager kagenti_provider.ConfigManager
 }
 
 // NewKagentiProviderProxyHandler creates a new KagentiProviderProxyHandler.
-func NewKagentiProviderProxyHandler(client *kagenti_provider.KagentiClient) *KagentiProviderProxyHandler {
-	return &KagentiProviderProxyHandler{client: client}
+func NewKagentiProviderProxyHandler(client *kagenti_provider.KagentiClient, configManager kagenti_provider.ConfigManager) *KagentiProviderProxyHandler {
+	return &KagentiProviderProxyHandler{client: client, configManager: configManager}
 }
 
 // GetStatus returns the kagenti controller availability status.
@@ -37,7 +39,22 @@ func (h *KagentiProviderProxyHandler) GetStatus(c *fiber.Ctx) error {
 		slog.Error("kagenti provider status check failed", "error", err)
 		return c.JSON(fiber.Map{"available": false, "reason": "provider unavailable"})
 	}
-	return c.JSON(fiber.Map{"available": available, "url": ""})
+
+	response := fiber.Map{"available": available, "url": "", "config_supported": false}
+	if h.configManager != nil {
+		status, statusErr := h.configManager.GetStatus(c.Context())
+		if statusErr != nil {
+			slog.Warn("kagenti provider config status check failed", "error", statusErr)
+			response["config_supported"] = false
+			response["config_reason"] = "config unavailable"
+		} else if status != nil {
+			response["llm_provider"] = status.LLMProvider
+			response["api_key_configured"] = status.APIKeyConfigured
+			response["configured_providers"] = status.ConfiguredProviders
+			response["config_supported"] = true
+		}
+	}
+	return c.JSON(response)
 }
 
 // ListAgents returns known kagenti agents.
@@ -179,6 +196,46 @@ type kagentiCallToolRequest struct {
 	Namespace string         `json:"namespace"`
 	Tool      string         `json:"tool"`
 	Args      map[string]any `json:"args"`
+}
+
+type kagentiConfigUpdateRequest struct {
+	LLMProvider string `json:"llm_provider"`
+	APIKey      string `json:"api_key,omitempty"`
+}
+
+// UpdateConfig updates the in-cluster Kagenti LLM provider configuration.
+func (h *KagentiProviderProxyHandler) UpdateConfig(c *fiber.Ctx) error {
+	if h.configManager == nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "kagenti config not available"})
+	}
+
+	var req kagentiConfigUpdateRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+	if strings.TrimSpace(req.LLMProvider) == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "llm_provider is required"})
+	}
+
+	status, err := h.configManager.UpdateConfig(c.Context(), kagenti_provider.ConfigUpdate{
+		LLMProvider: req.LLMProvider,
+		APIKey:      req.APIKey,
+	})
+	if err != nil {
+		switch {
+		case errors.Is(err, kagenti_provider.ErrUnsupportedLLMProvider), errors.Is(err, kagenti_provider.ErrAPIKeyRequired):
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		default:
+			slog.Error("kagenti provider config update failed", "error", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update kagenti config"})
+		}
+	}
+
+	return c.JSON(fiber.Map{
+		"llm_provider":         status.LLMProvider,
+		"api_key_configured":   status.APIKeyConfigured,
+		"configured_providers": status.ConfiguredProviders,
+	})
 }
 
 // CallTool invokes a tool through a kagenti agent via A2A.

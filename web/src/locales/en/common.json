@@ -234,7 +234,27 @@
       "kagentAgents": "Kagent Agents",
       "kagentiAgents": "Kagenti Agents",
       "noKagentAgents": "No kagent agents found. Agents may not be deployed yet.",
-      "noKagentiAgents": "No kagenti agents found. Agents may not be deployed yet."
+      "noKagentiAgents": "No kagenti agents found. Agents may not be deployed yet.",
+      "providerConfigTitle": "Kagenti LLM configuration",
+      "currentProvider": "Current provider",
+      "providerSelector": "Provider",
+      "providerUnknown": "Unknown",
+      "apiKeyLabel": "API key",
+      "apiKeyPlaceholder": "Enter a new API key",
+      "apiKeyHint": "Paste a new key to save it for the selected provider.",
+      "apiKeyMaskedHint": "A key is already stored for this provider. Leave this blank to keep the current key.",
+      "apiKeyRequired": "Enter an API key or keep an existing key for the selected provider.",
+      "save": "Save",
+      "saving": "Saving...",
+      "saveSuccess": "Saved. Kagenti will roll out with the updated provider configuration.",
+      "saveFailed": "Failed to save Kagenti provider settings.",
+      "rolloutHint": "Saving updates the Kagenti secret and triggers a deployment rollout.",
+      "configUnsupported": "Provider configuration is only available when the console runs in-cluster with Kagenti RBAC.",
+      "providers": {
+        "gemini": "Gemini",
+        "anthropic": "Anthropic",
+        "openai": "OpenAI"
+      }
     },
     "localAgent": "Local Agent",
     "groups": {

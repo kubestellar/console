@@ -311,6 +311,10 @@ spec:
               value: {{ .Values.kagenti.namespace | quote }}
             - name: KAGENTI_SERVICE_NAME
               value: {{ .Values.kagenti.serviceName | quote }}
+            - name: KAGENTI_DEPLOYMENT_NAME
+              value: {{ .Values.kagenti.deploymentName | quote }}
+            - name: KAGENTI_LLM_SECRET_NAME
+              value: {{ .Values.kagenti.llmSecretName | quote }}
             - name: KAGENTI_SERVICE_PORT
               value: {{ .Values.kagenti.servicePort | quote }}
             - name: KAGENTI_SERVICE_PROTOCOL

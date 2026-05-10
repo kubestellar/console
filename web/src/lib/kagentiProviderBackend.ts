@@ -15,10 +15,23 @@ export interface KagentiProviderAgent {
   tools?: string[]
 }
 
+export type KagentiLLMProvider = 'gemini' | 'anthropic' | 'openai'
+
 export interface KagentiProviderStatus {
   available: boolean
   url?: string
   reason?: string
+  llm_provider?: KagentiLLMProvider
+  api_key_configured?: boolean
+  configured_providers?: KagentiLLMProvider[]
+  config_supported?: boolean
+  config_reason?: string
+}
+
+export interface KagentiProviderConfigStatus {
+  llm_provider?: KagentiLLMProvider
+  api_key_configured?: boolean
+  configured_providers?: KagentiLLMProvider[]
 }
 
 function getRequestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal {
@@ -55,6 +68,33 @@ export async function fetchKagentiProviderAgents(options: { signal?: AbortSignal
     }
     return []
   }
+}
+
+export async function updateKagentiProviderConfig(payload: {
+  llm_provider: KagentiLLMProvider
+  api_key?: string
+}): Promise<KagentiProviderConfigStatus> {
+  const resp = await authFetch(`${API_BASE}/api/kagenti-provider/config`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(KAGENTI_STATUS_TIMEOUT_MS),
+  })
+
+  if (!resp.ok) {
+    let message = `HTTP ${resp.status}`
+    try {
+      const data = await resp.json()
+      if (typeof data?.error === 'string' && data.error.length > 0) {
+        message = data.error
+      }
+    } catch {
+      // Ignore invalid JSON errors and fall back to the HTTP status.
+    }
+    throw new Error(message)
+  }
+
+  return resp.json()
 }
 
 /**
