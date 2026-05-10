@@ -776,6 +776,24 @@ describe('sseClient expanded', () => {
       expect(result).toEqual([])
     })
 
+    it('does not retry on 404 response', async () => {
+      const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      vi.mocked(fetch).mockResolvedValue(new Response('Not Found', { status: 404 }))
+
+      const result = await fetchSSE({
+        url: `/api/sse-404-${testId++}`,
+        itemsKey: 'items',
+        onClusterData: vi.fn(),
+      })
+
+      expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1)
+      expect(debugSpy).toHaveBeenCalledWith('[SSE] Non-retryable error (endpoint unavailable or auth) — skipping retries')
+      expect(mockEmitSseAuth).not.toHaveBeenCalled()
+      expect(warnSpy).not.toHaveBeenCalled()
+      expect(result).toEqual([])
+    })
+
     it('does not emit emitSseAuthFailure on successful response', async () => {
       vi.mocked(fetch).mockResolvedValue(makeSSEResponse([
         { event: 'done', data: {} },
