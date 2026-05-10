@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { AlertTriangle, GitPullRequestArrow, ExternalLink, Loader2 } from 'lucide-react'
+import { GitPullRequestArrow, ExternalLink, Loader2 } from 'lucide-react'
 import { BaseModal } from '../../lib/modals'
 import { Button } from '../ui/Button'
 import { useAuth } from '../../lib/auth'
@@ -34,7 +34,7 @@ export function RequestApprovalModal({
   const [issueUrl, setIssueUrl] = useState<string | null>(null)
   const [hasGitHubToken, setHasGitHubToken] = useState(false)
   const [checkingGitHubToken, setCheckingGitHubToken] = useState(false)
-  const [tokenCheckError, setTokenCheckError] = useState<string | null>(null)
+  const [tokenCheckError, setTokenCheckError] = useState(false)
   const tokenCheckedRef = useRef(false)
   const submittingRef = useRef(false)
 
@@ -42,20 +42,14 @@ export function RequestApprovalModal({
 
   const checkGitHubTokenStatus = useCallback(async () => {
     setCheckingGitHubToken(true)
-    setTokenCheckError(null)
+    setTokenCheckError(false)
     try {
-      const res = await fetch('/api/github/token/status', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
-      })
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`)
-      }
-      const data = await res.json() as { hasToken?: boolean }
-      setHasGitHubToken(Boolean(data?.hasToken))
+      const res = await fetch('/api/github/token/status', { headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setHasGitHubToken(Boolean((await res.json() as { hasToken?: boolean }).hasToken))
     } catch {
       setHasGitHubToken(false)
-      setTokenCheckError('Could not verify GitHub access. Retry to continue.')
+      setTokenCheckError(true)
     } finally {
       setCheckingGitHubToken(false)
     }
@@ -145,7 +139,7 @@ export function RequestApprovalModal({
     setSubmitting(false)
     setHasGitHubToken(false)
     setCheckingGitHubToken(false)
-    setTokenCheckError(null)
+    setTokenCheckError(false)
     onClose()
   }, [onClose])
 
@@ -217,26 +211,14 @@ export function RequestApprovalModal({
               </div>
 
               {checkingGitHubToken ? (
-                <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
+                <p className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span>Checking GitHub access…</span>
-                </div>
+                </p>
               ) : tokenCheckError ? (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <div className="space-y-2">
-                      <p>{tokenCheckError}</p>
-                      <button
-                        type="button"
-                        onClick={() => void checkGitHubTokenStatus()}
-                        className="font-medium text-red-200 underline underline-offset-2 hover:text-white"
-                      >
-                        Retry check
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                  Could not verify GitHub access. <button type="button" className="underline underline-offset-2" onClick={() => void checkGitHubTokenStatus()}>Retry</button>
+                </p>
               ) : !hasGitHubToken && (
                 <p className="text-xs text-amber-400">
                   You must be logged in with GitHub to create issues.
