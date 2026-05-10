@@ -764,15 +764,15 @@ function CardPreview({ cardType }: { cardType: string }) {
           <div style={ps.title}><span style={ps.dot(ps.colors.warning)} /> Pod Issues</div>
           <div style={ps.muted}>4 total issues</div>
           <div style={{ ...ps.col, marginTop: PREV_SM }}>
-            <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS }}>
+            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS }}>
               <span style={{ color: ps.colors.error, fontWeight: 600, fontSize: PREV_FS_BODY }}>2</span>
               <span style={ps.muted}>CrashLoopBackOff</span>
             </div>
-            <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS }}>
+            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS }}>
               <span style={{ color: ps.colors.warning, fontWeight: 600, fontSize: PREV_FS_BODY }}>1</span>
               <span style={ps.muted}>OOMKilled</span>
             </div>
-            <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: PREV_XS }}>
+            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: PREV_XS }}>
               <span style={{ color: ps.colors.info, fontWeight: 600, fontSize: PREV_FS_BODY }}>1</span>
               <span style={ps.muted}>ImagePullBackOff</span>
             </div>
@@ -821,11 +821,11 @@ function CardPreview({ cardType }: { cardType: string }) {
           </div>
           <div style={ps.col}>
             <div style={{ fontSize: PREV_FS_MICRO, fontWeight: 600, color: PREV_CLR_MUTED, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerts (2)</div>
-            <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${ps.colors.error}` }}>
+            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${ps.colors.error}` }}>
               <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.error, fontWeight: 600 }}>GPU</span>
               <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: PREV_XS }}>worker-3 (-2)</span>
             </div>
-            <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${ps.colors.warning}` }}>
+            <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${ps.colors.warning}` }}>
               <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.warning, fontWeight: 600 }}>NIC</span>
               <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: PREV_XS }}>worker-1 (-1)</span>
             </div>
@@ -846,7 +846,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { label: 'No resource limits', count: 12, color: ps.colors.warning },
               { label: 'Running as root', count: 5, color: ps.colors.error },
             ].map((item) => (
-              <div key={item.label} style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: item.color === ps.colors.error ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS }}>
+              <div key={item.label} className="px-2 py-1" style={{ ...ps.row, backgroundColor: item.color === ps.colors.error ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS }}>
                 <span style={{ color: item.color, fontWeight: 600, fontSize: PREV_FS_BODY, minWidth: '16px' }}>{item.count}</span>
                 <span style={ps.muted}>{item.label}</span>
               </div>
@@ -865,7 +865,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'PodCrashLooping', severity: 'warning', ns: 'default' },
               { name: 'NodeDiskPressure', severity: 'warning', ns: 'kube-system' },
             ].map((a) => (
-              <div key={a.name} style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
+              <div key={a.name} className="px-2 py-1" style={{ ...ps.row, backgroundColor: a.severity === 'critical' ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)', borderRadius: PREV_XS, borderLeft: `4px solid ${a.severity === 'critical' ? ps.colors.error : ps.colors.warning}` }}>
                 <span style={{ fontSize: PREV_FS_CAPTION, color: a.severity === 'critical' ? ps.colors.error : ps.colors.warning, fontWeight: 600 }}>{a.name}</span>
                 <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: 'auto' }}>{a.ns}</span>
               </div>
@@ -1095,7 +1095,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'fullstack-smoke', status: 'queued', time: 'queued' },
               { name: 'coverage-gate', status: 'success', time: '24s' },
             ].map((r) => (
-              <div key={r.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(30,41,59,0.5)', borderRadius: PREV_XS }}>
+              <div key={r.name} className="px-2 py-1" style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, backgroundColor: 'rgba(30,41,59,0.5)', borderRadius: PREV_XS }}>
                 <span style={ps.dot(r.status === 'running' ? ps.colors.info : r.status === 'success' ? ps.colors.healthy : PREV_CLR_MUTED)} />
                 <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_3}>{r.name}</span>
                 <span style={{ color: PREV_CLR_MUTED, fontSize: PREV_FS_MICRO }}>{r.time}</span>
@@ -1114,7 +1114,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { wf: 'nightly-test-suite', step: 'e2e-tests', ago: '2h ago' },
               { wf: 'build', step: 'lint', ago: '5h ago' },
             ].map((f) => (
-              <div key={f.wf} style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}` }}>
+              <div key={f.wf} className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}` }}>
                 <div style={WIDGET_EXPORT_MODAL_DIV_STYLE_2}>
                   <div style={{ fontSize: PREV_FS_CAPTION, fontWeight: 600, color: ps.colors.error }}>{f.wf}</div>
                   <div style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED }}>Failed at: {f.step}</div>
@@ -1218,7 +1218,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { name: 'StatefulSets', running: 3, total: 3, color: ps.colors.healthy },
               { name: 'DaemonSets', running: 4, total: 5, color: ps.colors.warning },
             ].map((w) => (
-              <div key={w.name} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD }}>
+              <div key={w.name} className="px-2 py-1" style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
                 <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_2}>{w.name}</span>
                 <span style={{ color: w.running === w.total ? ps.colors.healthy : ps.colors.warning }}>
                   {w.running}/{w.total} ready
@@ -1261,7 +1261,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { ns: 'monitoring', pods: 6, deploys: 3 },
               { ns: 'production', pods: 18, deploys: 6 },
             ].map((n) => (
-              <div key={n.ns} style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD }}>
+              <div key={n.ns} className="px-2 py-1" style={{ ...ps.row, justifyContent: 'space-between', fontSize: PREV_FS_CAPTION }}>
                 <span style={{ fontWeight: 500, color: PREV_CLR_CPU }}>{n.ns}</span>
                 <span style={{ color: PREV_CLR_MUTED }}>{n.pods} pods</span>
                 <span style={{ color: PREV_CLR_MUTED }}>{n.deploys} deploys</span>
@@ -1285,7 +1285,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               { finding: 'Pod restart rate normal', severity: 'ok' },
               { finding: 'Memory pressure on worker-2', severity: 'warn' },
             ].map((f) => (
-              <div key={f.finding} style={{ ...ps.row, fontSize: PREV_FS_CAPTION, padding: PREV_ITEM_PAD }}>
+              <div key={f.finding} className="px-2 py-1" style={{ ...ps.row, fontSize: PREV_FS_CAPTION }}>
                 <span style={ps.dot(f.severity === 'ok' ? ps.colors.healthy : ps.colors.warning)} />
                 <span style={{ color: f.severity === 'ok' ? PREV_CLR_SECONDARY : ps.colors.warning }}>{f.finding}</span>
               </div>
@@ -1312,7 +1312,7 @@ function CardPreview({ cardType }: { cardType: string }) {
               <span style={ps.statLbl}>GPUs down</span>
             </div>
           </div>
-          <div style={{ ...ps.row, padding: PREV_ITEM_PAD, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}`, marginTop: PREV_SM }}>
+          <div className="px-2 py-1" style={{ ...ps.row, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: PREV_XS, borderLeft: `3px solid ${ps.colors.error}`, marginTop: PREV_SM }}>
             <span style={{ fontSize: PREV_FS_CAPTION, color: ps.colors.error, fontWeight: 600 }}>worker-4</span>
             <span style={{ fontSize: PREV_FS_MICRO, color: PREV_CLR_MUTED, marginLeft: 'auto' }}>unreachable 12m</span>
           </div>
@@ -1378,7 +1378,7 @@ function TemplatePreview({ templateId }: { templateId: string }) {
         const stat = WIDGET_STATS[id]
         const value = SAMPLE_STATS[id] ?? '—'
         return (
-          <div key={id} style={{ ...ps.statBlock, flex: 1, borderTop: `2px solid ${stat?.color || '#9333ea'}`, textAlign: 'center', padding: PREV_ITEM_PAD }}>
+          <div key={id} className="px-2 py-1" style={{ ...ps.statBlock, flex: 1, borderTop: `2px solid ${stat?.color || '#9333ea'}`, textAlign: 'center' }}>
             <span style={{ fontSize: PREV_FS_STAT_SM, fontWeight: 700, color: stat?.color || '#fff' }}>{value}</span>
             <span style={{ ...ps.statLbl, fontSize: PREV_FS_LABEL }}>{stat?.displayName}</span>
           </div>
@@ -1464,10 +1464,10 @@ function NightlyE2EPreview() {
         <div><span style={{ fontSize: PREV_FS_STAT, fontWeight: 700, color: '#ef4444' }}>3</span><div style={ps.muted}>Failing</div></div>
       </div>
       {platforms.map((p) => (
-        <div key={p.name} style={{ marginBottom: PREV_XS }}>
-          <div style={{ color: p.color, fontWeight: 600, fontSize: PREV_FS_MICRO, marginBottom: PREV_XS }}>{p.name}</div>
+        <div key={p.name} className="mb-1">
+          <div className="mb-1" style={{ color: p.color, fontWeight: 600, fontSize: PREV_FS_MICRO }}>{p.name}</div>
           {p.guides.map((g) => (
-            <div key={`${p.name}-${g.acronym}`} style={{ display: 'flex', alignItems: 'center', gap: PREV_XS, marginBottom: PREV_HAIRLINE_GAP }}>
+            <div key={`${p.name}-${g.acronym}`} className="flex items-center gap-1" style={{ marginBottom: PREV_HAIRLINE_GAP }}>
               <span style={WIDGET_EXPORT_MODAL_SPAN_STYLE_4}>{g.acronym}</span>
               <div style={{ display: 'flex', gap: PREV_DOTS_GAP }}>
                 {g.dots.length > 0 ? g.dots.map((d, i) => (
