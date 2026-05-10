@@ -6,6 +6,7 @@
  */
 import { useState, useEffect } from 'react'
 import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock, Package, Scale } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { authFetch, safeJson } from '../../lib/api'
 import { useNavigate } from 'react-router-dom'
 
@@ -20,6 +21,7 @@ const ERROR_TEXT_CLASS = 'text-red-400 text-sm'
 const LOADING_TEXT_CLASS = 'text-gray-500 text-sm'
 
 function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
+  const { t } = useTranslation('errors')
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -33,12 +35,16 @@ function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
 
         return safeJson<T>(response)
       })
-      .then(setData)
+      .then((result) => {
+        setData(result)
+        setError(null)
+      })
       .catch((err: unknown) => {
         console.error(`[EnterpriseComplianceCards] ${endpoint} fetch failed:`, err)
-        setError(CARD_LOAD_ERROR)
+        setData(null)
+        setError(t('messages.loadFailed', { defaultValue: CARD_LOAD_ERROR }))
       })
-  }, [endpoint])
+  }, [endpoint, t])
 
   return { data, error }
 }
