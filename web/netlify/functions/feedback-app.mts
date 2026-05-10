@@ -71,11 +71,16 @@ const CORS_OPTS = {
   headers: `Content-Type, ${CLIENT_AUTH_HEADER}`,
 } as const;
 
+type FeedbackAppAction = "create_issue" | "comment_issue" | "update_issue_state";
+
 interface IssueRequest {
+  action?: FeedbackAppAction;
   repoOwner: string;
   repoName: string;
-  title: string;
-  body: string;
+  issueNumber?: number;
+  title?: string;
+  body?: string;
+  state?: "open" | "closed";
   labels?: string[];
   parentIssueNumber?: number;
 }
@@ -331,14 +336,29 @@ export default async function handler(request: Request): Promise<Response> {
   const mode = url.searchParams.get("mode");
 
   let payload: IssueRequest | null = null;
+  let action: FeedbackAppAction = "create_issue";
   if (request.method === "POST") {
     try {
       payload = (await request.json()) as IssueRequest;
     } catch {
       return jsonResponse(request, 400, { error: "Invalid JSON body" });
     }
-    if (!payload.repoOwner || !payload.repoName || !payload.title || !payload.body) {
-      return jsonResponse(request, 400, { error: "repoOwner, repoName, title, body required" });
+    if (!payload.repoOwner || !payload.repoName) {
+      return jsonResponse(request, 400, { error: "repoOwner and repoName are required" });
+    }
+
+    action = payload.action ?? "create_issue";
+    if (action === "create_issue" && (!payload.title || !payload.body)) {
+      return jsonResponse(request, 400, { error: "title and body are required for issue creation" });
+    }
+    if ((action === "comment_issue" || action === "update_issue_state") && typeof payload.issueNumber !== "number") {
+      return jsonResponse(request, 400, { error: "issueNumber is required for this action" });
+    }
+    if (action === "comment_issue" && !payload.body) {
+      return jsonResponse(request, 400, { error: "body is required for issue comments" });
+    }
+    if (action === "update_issue_state" && payload.state !== "open" && payload.state !== "closed") {
+      return jsonResponse(request, 400, { error: "state must be 'open' or 'closed'" });
     }
   }
 
@@ -379,24 +399,88 @@ export default async function handler(request: Request): Promise<Response> {
     return jsonResponse(request, 502, { error: `App credential unavailable: ${msg}` });
   }
 
-  const issueRequest = payload as IssueRequest;
+  if (!payload) {
+    return jsonResponse(request, 400, { error: "Request body required" });
+  }
+  const issueRequest = payload;
 
   // Footer proves which GitHub user the proxy authenticated. Localhost
   // users can't forge this because the login comes from GitHub's own
   // /user response against their client credential.
-  const stampedBody = `${issueRequest.body}\n\n---\n*Submitted by @${user.login} via KubeStellar Console (proxied by \`kubestellar-console-bot\`).*`;
-
-  const issuePayload: Record<string, unknown> = {
-    title: issueRequest.title,
-    body: stampedBody,
-  };
-  if (issueRequest.labels && issueRequest.labels.length > 0) {
-    issuePayload.labels = issueRequest.labels;
-  }
+  const stampedBody = issueRequest.body
+    ? `${issueRequest.body}\n\n---\n*Submitted by @${user.login} via KubeStellar Console (proxied by \`kubestellar-console-bot\`).*`
+    : "";
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), GH_TIMEOUT_MS);
   try {
+    if (action === "comment_issue") {
+      const resp = await fetch(
+        `${GITHUB_API}/repos/${repoSlug}/issues/${payload.issueNumber}/comments`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${installCred}`,
+            Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+            "User-Agent": "KubeStellar-Console-FeedbackApp",
+          },
+          body: JSON.stringify({ body: stampedBody }),
+          signal: controller.signal,
+        },
+      );
+      if (!resp.ok) {
+        const txt = await resp.text();
+        return jsonResponse(request, resp.status, {
+          error: `GitHub issue comment failed: ${txt}`,
+        });
+      }
+      const data = (await resp.json()) as { html_url: string };
+      return jsonResponse(request, 200, {
+        html_url: data.html_url,
+        submitter: user.login,
+      });
+    }
+
+    if (action === "update_issue_state") {
+      const resp = await fetch(
+        `${GITHUB_API}/repos/${repoSlug}/issues/${payload.issueNumber}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${installCred}`,
+            Accept: "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "Content-Type": "application/json",
+            "User-Agent": "KubeStellar-Console-FeedbackApp",
+          },
+          body: JSON.stringify({ state: payload.state }),
+          signal: controller.signal,
+        },
+      );
+      if (!resp.ok) {
+        const txt = await resp.text();
+        return jsonResponse(request, resp.status, {
+          error: `GitHub issue update failed: ${txt}`,
+        });
+      }
+      const data = (await resp.json()) as { html_url: string; state: string };
+      return jsonResponse(request, 200, {
+        html_url: data.html_url,
+        state: data.state,
+        submitter: user.login,
+      });
+    }
+
+    const issuePayload: Record<string, unknown> = {
+      title: payload.title,
+      body: stampedBody,
+    };
+    if (payload.labels && payload.labels.length > 0) {
+      issuePayload.labels = payload.labels;
+    }
+
     const resp = await fetch(
       `${GITHUB_API}/repos/${repoSlug}/issues`,
       {
@@ -442,7 +526,7 @@ export default async function handler(request: Request): Promise<Response> {
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return jsonResponse(request, 502, { error: `Issue creation failed: ${msg}` });
+    return jsonResponse(request, 502, { error: `Feedback action failed: ${msg}` });
   } finally {
     clearTimeout(timeout);
   }

@@ -145,6 +145,14 @@ export interface SubmitFeedbackInput {
   comment?: string
 }
 
+export interface CloseRequestInput {
+  user_verified?: boolean
+}
+
+export interface ReopenRequestInput {
+  comment: string
+}
+
 // Status display helpers
 export const STATUS_LABELS: Record<RequestStatus, string> = {
   open: 'Open',
@@ -394,17 +402,25 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     setIsRefreshing(false)
   }
 
+  const withClientContext = useCallback(async <T extends { headers?: Record<string, string> }>(options?: T): Promise<T | undefined> => {
+    const { getClientCtx } = await import('../lib/clientCtx')
+    const ctx = getClientCtx()
+    if (!ctx) {
+      return options
+    }
+    return {
+      ...(options ?? {}),
+      headers: {
+        ...(options?.headers ?? {}),
+        'X-KC-Client-Auth': ctx,
+      },
+    } as T
+  }, [])
+
   const createRequest = async (input: CreateFeatureRequestInput, options?: { timeout?: number }) => {
     try {
       setIsSubmitting(true)
-      // Attach the per-user client credential so the backend can route
-      // through the attribution proxy. The header name is intentionally
-      // non-descriptive (do not rename to anything auth-suggestive).
-      const { getClientCtx } = await import('../lib/clientCtx')
-      const ctx = getClientCtx()
-      const mergedOpts = ctx
-        ? { ...(options ?? {}), headers: { ...(options as { headers?: Record<string, string> })?.headers, 'X-KC-Client-Auth': ctx } }
-        : options
+      const mergedOpts = await withClientContext(options)
       const { data } = await api.post<FeatureRequest>('/api/feedback/requests', input, mergedOpts)
       setRequests(prev => [data, ...prev])
       return data
@@ -435,9 +451,16 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     return data
   }
 
-  const closeRequest = async (requestId: string) => {
-    const { data } = await api.post<FeatureRequest>(`/api/feedback/requests/${requestId}/close`)
-    // Update the request in the list
+  const closeRequest = async (requestId: string, input: CloseRequestInput = {}) => {
+    const requestOptions = await withClientContext<{ headers?: Record<string, string> }>({})
+    const { data } = await api.patch<FeatureRequest>(`/api/feedback/${requestId}/close`, input, requestOptions)
+    setRequests(prev => prev.map(r => r.id === requestId ? data : r))
+    return data
+  }
+
+  const reopenRequest = async (requestId: string, input: ReopenRequestInput) => {
+    const requestOptions = await withClientContext<{ headers?: Record<string, string> }>({})
+    const { data } = await api.post<FeatureRequest>(`/api/feedback/${requestId}/reopen`, input, requestOptions)
     setRequests(prev => prev.map(r => r.id === requestId ? data : r))
     return data
   }
@@ -459,7 +482,8 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     getRequest,
     submitFeedback,
     requestUpdate,
-    closeRequest }
+    closeRequest,
+    reopenRequest }
 }
 
 // Notifications Hook

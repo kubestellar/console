@@ -8,6 +8,7 @@ vi.mock('../../lib/api', async (importOriginal) => {
     api: {
       get: vi.fn(),
       post: vi.fn(),
+      patch: vi.fn(),
     },
   }
 })
@@ -204,11 +205,11 @@ describe('useFeatureRequests', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const closed = { ...existing, status: 'closed', closed_by_user: true }
-    vi.mocked(api.post).mockResolvedValue({ data: closed })
+    vi.mocked(api.patch).mockResolvedValue({ data: closed })
     await act(async () => {
       await result.current.closeRequest('r2')
     })
-    expect(api.post).toHaveBeenCalledWith('/api/feedback/requests/r2/close')
+    expect(api.patch).toHaveBeenCalledWith('/api/feedback/r2/close', {}, {})
     expect(result.current.requests[0].status).toBe('closed')
     expect(result.current.requests[0].closed_by_user).toBe(true)
   })
@@ -269,6 +270,7 @@ describe('useFeatureRequests', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(api.get).not.toHaveBeenCalled()
     expect(api.post).not.toHaveBeenCalled()
+    expect(api.patch).not.toHaveBeenCalled()
   })
 
   it('createRequest sets isSubmitting during submission', async () => {
@@ -363,7 +365,7 @@ describe('useFeatureRequests', () => {
     expect(result.current.requests).toHaveLength(2)
 
     const closedReq2 = { ...req2, status: 'closed', closed_by_user: true }
-    vi.mocked(api.post).mockResolvedValue({ data: closedReq2 })
+    vi.mocked(api.patch).mockResolvedValue({ data: closedReq2 })
     await act(async () => {
       await result.current.closeRequest('r2')
     })
@@ -372,6 +374,28 @@ describe('useFeatureRequests', () => {
     expect(result.current.requests.find(r => r.id === 'r1')?.status).toBe('open')
     // req2 should be closed
     expect(result.current.requests.find(r => r.id === 'r2')?.status).toBe('closed')
+  })
+
+  it('reopenRequest posts follow-up details and updates the matching request', async () => {
+    localStorage.setItem('kc-auth-token', 'real-jwt-token')
+    const existing = { id: 'r3', title: 'Needs another pass', description: 'd', request_type: 'bug', user_id: 'u1', status: 'fix_complete', created_at: '2024-01-01' }
+    vi.mocked(api.get).mockResolvedValue({ data: [existing] })
+
+    const { result } = renderHook(() => useFeatureRequests())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const reopened = { ...existing, status: 'triage_accepted', latest_comment: 'Still broken on my cluster.' }
+    vi.mocked(api.post).mockResolvedValue({ data: reopened })
+    await act(async () => {
+      await result.current.reopenRequest('r3', { comment: 'Still broken on my cluster.' })
+    })
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/feedback/r3/reopen',
+      { comment: 'Still broken on my cluster.' },
+      {}
+    )
+    expect(result.current.requests.find(r => r.id === 'r3')?.status).toBe('triage_accepted')
   })
 })
 

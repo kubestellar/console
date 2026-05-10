@@ -620,6 +620,58 @@ class ApiClient {
     }
   }
 
+  async patch<T = unknown>(path: string, body?: unknown, options?: { timeout?: number; headers?: Record<string, string> }): Promise<{ data: T }> {
+    // Check backend availability
+    const available = await checkBackendAvailability()
+    if (!available) {
+      throw new BackendUnavailableError()
+    }
+
+    const { controller, timeoutId } = this.createAbortController(options?.timeout ?? DEFAULT_TIMEOUT)
+
+    try {
+      const response = await fetch(`${API_BASE}${path}`, {
+        method: 'PATCH',
+        headers: { ...this.getHeaders(), ...options?.headers },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        if (response.status === 401 && !path.startsWith('/api/github/')) {
+          handle401()
+          throw new UnauthorizedError()
+        }
+        if (response.status === 401) {
+          throw new UnauthorizedError()
+        }
+        if (response.status === 429) {
+          handle429(response)
+        }
+        const errorText = await response.text().catch(() => '')
+        emitHttpError(String(response.status), errorText || '')
+        throw new Error(errorText || `API error: ${response.status}`)
+      }
+      markBackendSuccess()
+      this.checkTokenRefresh(response)
+      const data = await response.json().catch(() => null)
+      if (data === null) throw new Error('Invalid JSON response from API')
+      return { data }
+    } catch (err: unknown) {
+      clearTimeout(timeoutId)
+      if (err instanceof Error && err.name === 'AbortError') {
+        emitHttpError('timeout', `Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s`)
+        throw createErrorWithCause(`Request timeout after ${(options?.timeout ?? DEFAULT_TIMEOUT) / 1000}s: ${path}`, err)
+      }
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        markBackendFailure()
+        emitHttpError('network', err.message)
+      }
+      throw err
+    }
+  }
+
   async put<T = unknown>(path: string, body?: unknown, options?: { timeout?: number }): Promise<{ data: T }> {
     // Check backend availability
     const available = await checkBackendAvailability()

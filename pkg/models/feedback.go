@@ -174,6 +174,18 @@ type SubmitFeedbackInput struct {
 	Comment      string       `json:"comment,omitempty" validate:"max=1000"`
 }
 
+// CloseFeatureRequestInput captures optional user verification metadata when a
+// reporter marks a fix as resolved.
+type CloseFeatureRequestInput struct {
+	UserVerified bool `json:"user_verified,omitempty"`
+}
+
+// ReopenFeatureRequestInput captures the reporter's follow-up details when a
+// merged fix did not resolve the original issue.
+type ReopenFeatureRequestInput struct {
+	Comment string `json:"comment" validate:"required,max=1000"`
+}
+
 // WebhookPayload represents the payload from GitHub webhooks for status updates
 type WebhookPayload struct {
 	Action           string `json:"action"`
