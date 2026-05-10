@@ -13,6 +13,9 @@ const makeNode = (overrides = {}) => ({
 })
 
 const mockExecute = vi.fn()
+const { mockUseCardLoadingState } = vi.hoisted(() => ({
+  mockUseCardLoadingState: vi.fn(() => ({})),
+}))
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +27,7 @@ vi.mock('../../../hooks/useCachedData', () => ({
     isDemoFallback: false,
     isFailed: false,
     consecutiveFailures: 0,
+    lastRefresh: null,
   })),
 }))
 
@@ -32,7 +36,7 @@ vi.mock('../../../hooks/useKubectl', () => ({
 }))
 
 vi.mock('../CardDataContext', () => ({
-  useCardLoadingState: vi.fn(() => ({})),
+  useCardLoadingState: mockUseCardLoadingState,
 }))
 
 vi.mock('../../../hooks/useDemoMode', () => ({
@@ -61,33 +65,66 @@ vi.mock('../../ui/StatusBadge', () => ({
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('NodeConditions', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockUseCardLoadingState.mockReturnValue({})
+  })
 
   describe('Loading state', () => {
     it('renders pulse skeletons when isLoading and no nodes', async () => {
       const { useCachedNodes } = await import('../../../hooks/useCachedData')
       vi.mocked(useCachedNodes).mockReturnValue({
-        nodes: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0,
+        nodes: [], isLoading: true, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, lastRefresh: null,
       } as never)
       render(<NodeConditions />)
       const pulses = document.querySelectorAll('.animate-pulse')
       expect(pulses.length).toBeGreaterThan(0)
     })
 
-    it('suppresses refresh failures when demo fallback data is active', async () => {
+    it('reports demo data instead of a failure state when fallback nodes are shown', async () => {
       const { useCachedNodes } = await import('../../../hooks/useCachedData')
-      const { useCardLoadingState } = await import('../CardDataContext')
       vi.mocked(useCachedNodes).mockReturnValue({
-        nodes: [makeNode()], isLoading: false, isRefreshing: true, isDemoFallback: true, isFailed: true, consecutiveFailures: 21,
+        nodes: [makeNode()],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: true,
+        isFailed: true,
+        consecutiveFailures: 4,
+        lastRefresh: 1234,
       } as never)
 
       render(<NodeConditions />)
 
-      expect(vi.mocked(useCardLoadingState)).toHaveBeenCalledWith(expect.objectContaining({
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(expect.objectContaining({
+        hasAnyData: true,
         isDemoData: true,
         isFailed: false,
-        consecutiveFailures: 0,
+        lastRefresh: 1234,
       }))
+      expect(screen.queryByText('nodeConditions.staleData')).toBeNull()
+    })
+
+    it('shows a stale cached-data warning instead of reporting a hard failure when nodes exist', async () => {
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
+      vi.mocked(useCachedNodes).mockReturnValue({
+        nodes: [makeNode()],
+        isLoading: false,
+        isRefreshing: false,
+        isDemoFallback: false,
+        isFailed: true,
+        consecutiveFailures: 7,
+        lastRefresh: 4567,
+      } as never)
+
+      render(<NodeConditions />)
+
+      expect(mockUseCardLoadingState).toHaveBeenCalledWith(expect.objectContaining({
+        hasAnyData: true,
+        isDemoData: false,
+        isFailed: false,
+        lastRefresh: 4567,
+      }))
+      expect(screen.getByText('nodeConditions.staleData')).toBeTruthy()
     })
   })
 

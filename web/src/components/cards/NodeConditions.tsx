@@ -5,7 +5,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useKubectl } from '../../hooks/useKubectl'
 import { useCardLoadingState } from './CardDataContext'
 import { CardEmptyState } from '../../lib/cards/CardComponents'
-import { Server } from 'lucide-react'
+import { AlertTriangle, Server } from 'lucide-react'
 import { useDemoMode } from '../../hooks/useDemoMode'
 
 const MAX_VISIBLE_CONDITIONS = 20
@@ -21,19 +21,21 @@ interface PendingAction {
 
 export function NodeConditions() {
   const { t } = useTranslation('cards')
-  const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures } = useCachedNodes()
+  const { nodes, isLoading, isRefreshing, isDemoFallback, isFailed, consecutiveFailures, lastRefresh } = useCachedNodes()
   const { isDemoMode } = useDemoMode()
   const { execute } = useKubectl()
 
-  const isUsingDemoData = isDemoMode || isDemoFallback
   const hasData = nodes.length > 0
+  const isUsingDemoData = isDemoMode || isDemoFallback
+  const showStaleWarning = hasData && isFailed && !isUsingDemoData
   const { showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
     isDemoData: isUsingDemoData,
-    isFailed: isUsingDemoData ? false : isFailed,
-    consecutiveFailures: isUsingDemoData ? 0 : consecutiveFailures })
+    isFailed: isFailed && !hasData && !isUsingDemoData,
+    consecutiveFailures,
+    lastRefresh })
 
   const [filter, setFilter] = useState<ConditionFilter>('all')
   const [actionPending, setActionPending] = useState<string | null>(null)
@@ -161,6 +163,20 @@ export function NodeConditions() {
           <button onClick={() => setActionError(null)} className="ml-2 text-red-300 hover:text-red-200">
             ✕
           </button>
+        </div>
+      )}
+
+      {showStaleWarning && (
+        <div
+          className="flex items-center gap-1 rounded-md border border-yellow-500/20 bg-yellow-500/10 px-2 py-1 text-xs text-yellow-300"
+          role="status"
+          aria-live="polite"
+          title={lastRefresh
+            ? t('cardWrapper.lastRefreshedStale', { time: new Date(lastRefresh).toLocaleString() })
+            : t('nodeConditions.staleData', { defaultValue: 'Showing cached node data while refresh retries continue.' })}
+        >
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{t('nodeConditions.staleData', { defaultValue: 'Showing cached node data while refresh retries continue.' })}</span>
         </div>
       )}
 
