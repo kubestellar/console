@@ -1298,12 +1298,14 @@ func (s *Server) setupRoutes() {
 	} else {
 		kagentiConfigManager = manager
 	}
-	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager)
+	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager, s.k8sClient)
 	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
 	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
+	api.Get("/kagenti-provider/tools", kagentiProviderHandler.GetTools)
 	api.Patch("/kagenti-provider/config", kagentiProviderHandler.UpdateConfig)
 	api.Post("/kagenti-provider/chat", kagentiProviderHandler.Chat)
 	api.Post("/kagenti-provider/tools/call", kagentiProviderHandler.CallTool)
+	api.Post("/kagenti-provider/tools/call-direct", kagentiProviderHandler.CallToolDirect)
 
 	// Console persistence routes (CRD-based state management)
 	persistenceHandler := handlers.NewConsolePersistenceHandlers(s.persistenceStore, s.k8sClient, s.hub, s.store)

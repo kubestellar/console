@@ -31,7 +31,7 @@ func (s *stubKagentiConfigManager) UpdateConfig(_ context.Context, update kagent
 
 func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 	t.Run("Nil Client", func(t *testing.T) {
-		h := NewKagentiProviderProxyHandler(nil, nil)
+		h := NewKagentiProviderProxyHandler(nil, nil, nil)
 		app := fiber.New()
 		app.Get("/status", h.GetStatus)
 
@@ -56,7 +56,7 @@ func TestKagentiProviderProxyHandler_GetStatus(t *testing.T) {
 			LLMProvider:         "openai",
 			APIKeyConfigured:    true,
 			ConfiguredProviders: []string{"openai"},
-		}})
+		}}, nil)
 		app := fiber.New()
 		app.Get("/status", h.GetStatus)
 
@@ -86,7 +86,7 @@ func TestKagentiProviderProxyHandler_UpdateConfig(t *testing.T) {
 		},
 	}
 
-	h := NewKagentiProviderProxyHandler(nil, manager)
+	h := NewKagentiProviderProxyHandler(nil, manager, nil)
 	app := fiber.New()
 	app.Patch("/config", h.UpdateConfig)
 
