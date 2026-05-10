@@ -20,6 +20,9 @@ export interface ActiveUsersInfo {
 const POLL_INTERVAL = 10_000 // Poll every 10 seconds
 const HEARTBEAT_INTERVAL = 30_000 // Heartbeat every 30 seconds
 const HEARTBEAT_JITTER = 3_000 // Jitter (0-3s) to spread heartbeats without long delays
+const HEARTBEAT_REQUEST_TIMEOUT_MS = 5_000
+const ACTIVE_USERS_FETCH_MIN_INTERVAL_MS = 2_000
+const HEARTBEAT_MIN_INTERVAL_MS = HEARTBEAT_INTERVAL
 
 import { MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
@@ -38,6 +41,22 @@ const ACTIVE_USERS_FETCH_TIMEOUT_MS = 5_000
 function isJsonResponse(resp: Response): boolean {
   const ct = resp.headers.get('content-type') || ''
   return ct.includes('application/json')
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+function createAbortControllerWithTimeout(timeoutMs: number): {
+  controller: AbortController
+  timeoutId: ReturnType<typeof setTimeout>
+} {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => {
+    controller.abort()
+  }, timeoutMs)
+
+  return { controller, timeoutId }
 }
 
 // Singleton state to share across all hook instances
@@ -67,6 +86,14 @@ let presenceReconnectAttempts = 0
 // Netlify heartbeat state (serverless mode)
 let heartbeatStarted = false
 let heartbeatTimeoutId: ReturnType<typeof setTimeout> | null = null
+let heartbeatRequestController: AbortController | null = null
+let lastHeartbeatAt = 0
+
+// Shared fetch coordination for route churn and duplicate subscribers
+let activeUsersFetchPromise: Promise<void> | null = null
+let activeUsersFetchController: AbortController | null = null
+let activeUsersFetchTimer: ReturnType<typeof setTimeout> | null = null
+let lastActiveUsersFetchAt = 0
 
 // Smoothing for unstable Netlify Blobs counts (eventual consistency causes fluctuations)
 const recentCounts: number[] = []
@@ -92,7 +119,13 @@ export function __resetForTest(): void {
   presenceStarted = false
   presenceReconnectAttempts = 0
   if (heartbeatTimeoutId) { clearTimeout(heartbeatTimeoutId); heartbeatTimeoutId = null }
+  if (heartbeatRequestController) { heartbeatRequestController.abort(); heartbeatRequestController = null }
   heartbeatStarted = false
+  lastHeartbeatAt = 0
+  if (activeUsersFetchTimer) { clearTimeout(activeUsersFetchTimer); activeUsersFetchTimer = null }
+  if (activeUsersFetchController) { activeUsersFetchController.abort(); activeUsersFetchController = null }
+  activeUsersFetchPromise = null
+  lastActiveUsersFetchAt = 0
   recentCounts.length = 0
 }
 
@@ -116,15 +149,31 @@ function getSessionId(): string {
 
 // Send heartbeat POST to Netlify Function
 async function sendHeartbeat() {
+  if (heartbeatRequestController) return
+
+  const elapsedSinceLastHeartbeat = Date.now() - lastHeartbeatAt
+  if (elapsedSinceLastHeartbeat < HEARTBEAT_MIN_INTERVAL_MS) return
+
+  lastHeartbeatAt = Date.now()
+  const { controller, timeoutId } = createAbortControllerWithTimeout(HEARTBEAT_REQUEST_TIMEOUT_MS)
+  heartbeatRequestController = controller
+
   try {
     await fetch('/api/active-users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
       body: JSON.stringify({ sessionId: getSessionId() }),
-      signal: AbortSignal.timeout(5000)
+      signal: controller.signal
     })
-  } catch {
-    // Best-effort — don't block on failure
+  } catch (error) {
+    if (!isAbortError(error)) {
+      // Best-effort — don't block on failure
+    }
+  } finally {
+    clearTimeout(timeoutId)
+    if (heartbeatRequestController === controller) {
+      heartbeatRequestController = null
+    }
   }
 }
 
@@ -156,6 +205,10 @@ function stopHeartbeat() {
   if (heartbeatTimeoutId) {
     clearTimeout(heartbeatTimeoutId)
     heartbeatTimeoutId = null
+  }
+  if (heartbeatRequestController) {
+    heartbeatRequestController.abort()
+    heartbeatRequestController = null
   }
   heartbeatStarted = false
 }
@@ -267,8 +320,29 @@ function notifySubscribers(state?: { loading?: boolean; error?: boolean }) {
   }
 }
 
+function scheduleActiveUsersFetch(delayMs: number) {
+  if (activeUsersFetchTimer) return
+
+  activeUsersFetchTimer = setTimeout(() => {
+    activeUsersFetchTimer = null
+    void fetchActiveUsers(true)
+  }, delayMs)
+}
+
+function abortActiveUsersFetch() {
+  if (activeUsersFetchTimer) {
+    clearTimeout(activeUsersFetchTimer)
+    activeUsersFetchTimer = null
+  }
+  if (activeUsersFetchController) {
+    activeUsersFetchController.abort()
+    activeUsersFetchController = null
+  }
+  activeUsersFetchPromise = null
+}
+
 // Fetch active users from API
-async function fetchActiveUsers() {
+async function fetchActiveUsers(bypassThrottle = false) {
   // Stop polling after too many consecutive failures, but schedule recovery
   if (consecutiveFailures >= MAX_FAILURES) {
     if (pollInterval) {
@@ -287,46 +361,72 @@ async function fetchActiveUsers() {
     return
   }
 
-  try {
-    const resp = await fetch('/api/active-users', { signal: AbortSignal.timeout(ACTIVE_USERS_FETCH_TIMEOUT_MS) })
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    // Guard: if the response is HTML (e.g. Netlify SPA catch-all returning
-    // index.html because MSW hasn't intercepted yet), skip JSON parsing
-    // entirely to avoid SyntaxError: Unexpected token '<' console noise.
-    if (!isJsonResponse(resp)) throw new Error('Non-JSON response (likely HTML fallback)')
-    // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
-    // before the outer try/catch processes the rejection (microtask timing issue).
-    const data = await resp.json().catch(() => null) as ActiveUsersInfo | null
-    if (!data) throw new Error('Invalid JSON response')
-    if (!Number.isFinite(data.activeUsers)) throw new Error('Invalid activeUsers value')
-    consecutiveFailures = 0 // Reset on success
-
-    // Smooth the count to handle Netlify Blobs eventual consistency fluctuations
-    // Use the max of recent counts since undercounting is more common than overcounting
-    recentCounts.push(data.activeUsers)
-    if (recentCounts.length > SMOOTHING_WINDOW) recentCounts.shift()
-    const smoothedCount = Math.max(...recentCounts)
-
-    const smoothedData: ActiveUsersInfo = {
-      activeUsers: smoothedCount,
-      totalConnections: smoothedCount
-    }
-
-    const dataChanged = smoothedData.activeUsers !== sharedInfo.activeUsers ||
-      smoothedData.totalConnections !== sharedInfo.totalConnections
-    if (dataChanged) {
-      sharedInfo = smoothedData
-    }
-    // Always notify on first success (clears loading state) or when data changes
-    if (!hasFetchedOnce || dataChanged) {
-      hasFetchedOnce = true
-      notifySubscribers({ loading: false, error: false })
-    }
-  } catch {
-    consecutiveFailures++
-    // API not available, keep current state
-    notifySubscribers({ error: consecutiveFailures >= MAX_FAILURES })
+  if (activeUsersFetchPromise) {
+    return activeUsersFetchPromise
   }
+
+  const elapsedSinceLastFetch = Date.now() - lastActiveUsersFetchAt
+  if (!bypassThrottle && elapsedSinceLastFetch < ACTIVE_USERS_FETCH_MIN_INTERVAL_MS) {
+    scheduleActiveUsersFetch(ACTIVE_USERS_FETCH_MIN_INTERVAL_MS - elapsedSinceLastFetch)
+    return
+  }
+
+  lastActiveUsersFetchAt = Date.now()
+  const { controller, timeoutId } = createAbortControllerWithTimeout(ACTIVE_USERS_FETCH_TIMEOUT_MS)
+  activeUsersFetchController = controller
+
+  activeUsersFetchPromise = (async () => {
+    try {
+      const resp = await fetch('/api/active-users', { signal: controller.signal })
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      // Guard: if the response is HTML (e.g. Netlify SPA catch-all returning
+      // index.html because MSW hasn't intercepted yet), skip JSON parsing
+      // entirely to avoid SyntaxError: Unexpected token '<' console noise.
+      if (!isJsonResponse(resp)) throw new Error('Non-JSON response (likely HTML fallback)')
+      // Use .catch() on .json() to prevent Firefox from firing unhandledrejection
+      // before the outer try/catch processes the rejection (microtask timing issue).
+      const data = await resp.json().catch(() => null) as ActiveUsersInfo | null
+      if (!data) throw new Error('Invalid JSON response')
+      if (!Number.isFinite(data.activeUsers)) throw new Error('Invalid activeUsers value')
+      consecutiveFailures = 0 // Reset on success
+
+      // Smooth the count to handle Netlify Blobs eventual consistency fluctuations
+      // Use the max of recent counts since undercounting is more common than overcounting
+      recentCounts.push(data.activeUsers)
+      if (recentCounts.length > SMOOTHING_WINDOW) recentCounts.shift()
+      const smoothedCount = Math.max(...recentCounts)
+
+      const smoothedData: ActiveUsersInfo = {
+        activeUsers: smoothedCount,
+        totalConnections: smoothedCount
+      }
+
+      const dataChanged = smoothedData.activeUsers !== sharedInfo.activeUsers ||
+        smoothedData.totalConnections !== sharedInfo.totalConnections
+      if (dataChanged) {
+        sharedInfo = smoothedData
+      }
+      // Always notify on first success (clears loading state) or when data changes
+      if (!hasFetchedOnce || dataChanged) {
+        hasFetchedOnce = true
+        notifySubscribers({ loading: false, error: false })
+      }
+    } catch (error) {
+      if (isAbortError(error)) return
+
+      consecutiveFailures++
+      // API not available, keep current state
+      notifySubscribers({ error: consecutiveFailures >= MAX_FAILURES })
+    } finally {
+      clearTimeout(timeoutId)
+      if (activeUsersFetchController === controller) {
+        activeUsersFetchController = null
+      }
+      activeUsersFetchPromise = null
+    }
+  })()
+
+  return activeUsersFetchPromise
 }
 
 // Start singleton polling
@@ -423,6 +523,7 @@ export function useActiveUsers() {
           clearTimeout(recoveryTimer)
           recoveryTimer = null
         }
+        abortActiveUsersFetch()
         stopHeartbeat()
         stopPresenceConnection()
       }
@@ -458,4 +559,6 @@ export const __testables = {
   MAX_FAILURES,
   RECOVERY_DELAY,
   SMOOTHING_WINDOW,
+  ACTIVE_USERS_FETCH_MIN_INTERVAL_MS,
+  HEARTBEAT_MIN_INTERVAL_MS,
 }

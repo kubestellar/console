@@ -24,7 +24,7 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   }
 })
 
-import { useActiveUsers, __resetForTest } from '../useActiveUsers'
+import { useActiveUsers, __resetForTest, __testables } from '../useActiveUsers'
 
 describe('useActiveUsers', () => {
   beforeEach(() => {
@@ -533,9 +533,11 @@ describe('useActiveUsers', () => {
         value: 'visible',
         configurable: true,
       })
-      document.dispatchEvent(new Event('visibilitychange'))
+      act(() => {
+        document.dispatchEvent(new Event('visibilitychange'))
+      })
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(100)
+        await vi.advanceTimersByTimeAsync(__testables.ACTIVE_USERS_FETCH_MIN_INTERVAL_MS + 100)
       })
       expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsBefore)
       unmount()
@@ -557,12 +559,70 @@ describe('useActiveUsers', () => {
         await vi.advanceTimersByTimeAsync(100)
       })
       const callsBefore = fetchSpy.mock.calls.length
-      window.dispatchEvent(new Event('kc-demo-mode-change'))
+      act(() => {
+        window.dispatchEvent(new Event('kc-demo-mode-change'))
+      })
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(100)
+        await vi.advanceTimersByTimeAsync(__testables.ACTIVE_USERS_FETCH_MIN_INTERVAL_MS + 100)
       })
       expect(fetchSpy.mock.calls.length).toBeGreaterThan(callsBefore)
       unmount()
+    })
+  })
+
+  describe('route churn protection', () => {
+    it('throttles active-user GET and POST requests across rapid remounts', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(JSON.stringify({ activeUsers: 5, totalConnections: 5 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+
+      const firstMount = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      firstMount.unmount()
+
+      const secondMount = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+
+      const activeUsersCalls = fetchSpy.mock.calls.filter(([url]) => (url as string).includes('/api/active-users'))
+      const getCalls = activeUsersCalls.filter(([, opts]) => !(opts as RequestInit | undefined)?.method)
+      const postCalls = activeUsersCalls.filter(([, opts]) => (opts as RequestInit | undefined)?.method === 'POST')
+
+      expect(getCalls.length).toBe(1)
+      expect(postCalls.length).toBe(1)
+      secondMount.unmount()
+    })
+
+    it('aborts an in-flight fetch when the last subscriber unmounts', async () => {
+      mockGetDemoMode.mockReturnValue(false)
+
+      let requestSignal: AbortSignal | null = null
+      vi.spyOn(globalThis, 'fetch').mockImplementation((_, opts) => new Promise((_, reject) => {
+        requestSignal = ((opts as RequestInit | undefined)?.signal as AbortSignal | null) ?? null
+        requestSignal?.addEventListener('abort', () => {
+          reject(new DOMException('Aborted', 'AbortError'))
+        }, { once: true })
+      }))
+
+      const { unmount } = renderHook(() => useActiveUsers())
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10)
+      })
+
+      expect(requestSignal).not.toBeNull()
+
+      unmount()
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      expect(requestSignal?.aborted).toBe(true)
     })
   })
 
