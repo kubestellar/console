@@ -659,7 +659,7 @@ export function HardwareHealthCard() {
         value={search}
         onChange={setSearch}
         placeholder={CARD_UI_STRINGS.hardwareHealth.searchDevicesPlaceholder}
-        className="mb-3"
+        className="mb-3 flex-none"
       />
 
       {/* Error display with retry */}
