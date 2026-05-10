@@ -703,12 +703,12 @@ Please:
         value={search}
         onChange={setSearch}
         placeholder={t('common:common.searchClusters')}
-        className="mb-3"
+        className="mb-2"
       />
 
       {/* Summary stats */}
       {installedCount > 0 && (
-        <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="grid grid-cols-2 gap-2 mb-2">
           <div className="p-2 rounded-lg bg-orange-500/10 border border-orange-500/20">
             <p className="text-2xs text-orange-400">Policies Active</p>
             <p className="text-lg font-bold text-foreground">
