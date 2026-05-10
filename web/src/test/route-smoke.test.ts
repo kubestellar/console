@@ -320,6 +320,7 @@ describe('Route config completeness', () => {
   const INTENTIONALLY_UNWIRED = new Set([
     'HOME',           // Uses <Route index> instead of path={ROUTES.HOME}
     'AUTH_CALLBACK',  // Used in AuthProvider
+    'EMBED_BASE',     // Prefix constant for ROUTE_TITLES lookup, not a navigable route
   ])
 
   it('every route in config is either wired in App.tsx or intentionally unwired', () => {
