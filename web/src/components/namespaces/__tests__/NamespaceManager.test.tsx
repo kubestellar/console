@@ -19,9 +19,10 @@ const API_TIMEOUT_MS = 3000
 // ── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockUseClusters = vi.fn()
+const mockClusterCacheRef = { clusters: [] as Array<{ name: string; namespaces?: string[] }> }
 vi.mock('../../../hooks/mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  clusterCacheRef: { clusters: [] },
+  clusterCacheRef: mockClusterCacheRef,
   REFRESH_INTERVAL_MS: 120_000,
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
@@ -56,7 +57,10 @@ vi.mock('../../../components/ui/Toast', () => ({
 
 const mockFetch = vi.fn()
 
-const mockTranslation = vi.fn((key: string) => key)
+const mockTranslation = vi.fn((key: string, options?: string | { defaultValue?: string }) => {
+  if (typeof options === 'string') return options
+  return options?.defaultValue || key
+})
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: mockTranslation,
@@ -78,6 +82,7 @@ beforeEach(async () => {
   vi.clearAllMocks()
   vi.stubGlobal('fetch', mockFetch)
   mockFetch.mockReset()
+  mockClusterCacheRef.clusters = []
   mockUseClusters.mockReturnValue({
     clusters: [
       { name: 'cluster-1', reachable: true },
@@ -94,8 +99,8 @@ beforeEach(async () => {
     isAllClustersSelected: true,
   })
   mockUseRefreshIndicator.mockReturnValue({
-    isRefreshing: false,
-    setRefreshing: vi.fn(),
+    showIndicator: false,
+    triggerRefresh: vi.fn(),
   })
 
   // Dynamically import component to ensure a fresh module-level cache for each test

@@ -6,10 +6,11 @@ import { BrowserRouter } from 'react-router-dom'
 const mockUseClusters = vi.fn()
 const mockUseGlobalFilters = vi.fn()
 const mockUseRefreshIndicator = vi.fn()
+const mockClusterCacheRef = { clusters: [] as Array<{ name: string; namespaces?: string[] }> }
 
 vi.mock('../../../hooks/mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  clusterCacheRef: { clusters: [] },
+  clusterCacheRef: mockClusterCacheRef,
   REFRESH_INTERVAL_MS: 120_000,
   CLUSTER_POLL_INTERVAL_MS: 60_000,
 }))
@@ -54,6 +55,7 @@ beforeEach(async () => {
   localStorage.clear()
   localStorage.setItem('token', 'jwt-token')
   vi.stubGlobal('fetch', mockFetch)
+  mockClusterCacheRef.clusters = []
 
   mockUseClusters.mockReturnValue({
     clusters: [{ name: 'cluster-1', reachable: true }],
@@ -129,5 +131,43 @@ describe('NamespaceManager auth and offline handling', () => {
 
     expect(mockFetch).not.toHaveBeenCalled()
     expect(screen.queryByText(/Authorization failed for namespace access/i)).not.toBeInTheDocument()
+  })
+
+  it('shows cached namespace data when live namespace requests fail', async () => {
+    mockClusterCacheRef.clusters = [{
+      name: 'cluster-1',
+      namespaces: ['team-a', 'team-b', 'team-c'],
+    }]
+    mockFetch
+      .mockRejectedValueOnce(new TypeError('agent unavailable'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'backend unavailable' }), { status: 500 }))
+      .mockRejectedValueOnce(new Error('pods unavailable'))
+
+    renderWithRouter(<NamespaceManager />)
+
+    await waitFor(() => {
+      expect(screen.getByText('team-a')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('team-b')).toBeInTheDocument()
+    expect(screen.getByText('team-c')).toBeInTheDocument()
+    expect(screen.getByText(/3 namespaces/i)).toBeInTheDocument()
+    expect(screen.queryByText(/^0 namespaces$/i)).not.toBeInTheDocument()
+  })
+
+  it('shows an unavailable state instead of zero namespaces when no fallback data exists', async () => {
+    mockFetch
+      .mockRejectedValueOnce(new TypeError('agent unavailable'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'backend unavailable' }), { status: 500 }))
+      .mockRejectedValueOnce(new Error('pods unavailable'))
+
+    renderWithRouter(<NamespaceManager />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Data unavailable')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText(/Namespace data is unavailable for this cluster/i)).toBeInTheDocument()
+    expect(screen.queryByText(/^0 namespaces$/i)).not.toBeInTheDocument()
   })
 })
