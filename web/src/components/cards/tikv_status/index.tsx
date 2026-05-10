@@ -114,7 +114,15 @@ export function TikvStatus() {
     return <SkeletonCardWithRefresh showStats={true} rows={STORE_PAGE_SIZE} />
   }
 
-  if (showEmptyState || (health === 'not-installed' && !isDemoData)) {
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex items-center justify-center p-4">
+        <EmptyState icon={<AlertTriangle className="w-8 h-8 text-red-400" />} title={t('tikvStatus.fetchFailed', 'Failed to fetch TiKV status')} />
+      </div>
+    )
+  }
+
+  if (health === 'not-installed' && !isDemoData) {
     return (
       <div className="h-full flex items-center justify-center p-4">
         <EmptyState
