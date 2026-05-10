@@ -402,7 +402,7 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
     setIsRefreshing(false)
   }
 
-  const withClientContext = useCallback(async <T extends { headers?: Record<string, string> }>(options?: T): Promise<T | undefined> => {
+  const withClientContext = useCallback(async <T extends { headers?: Record<string, string>; timeout?: number }>(options?: T): Promise<T | undefined> => {
     const { getClientCtx } = await import('../lib/clientCtx')
     const ctx = getClientCtx()
     if (!ctx) {
@@ -414,7 +414,7 @@ export function useFeatureRequests(currentUserId?: string, options?: UseFeatureR
         ...(options?.headers ?? {}),
         'X-KC-Client-Auth': ctx,
       },
-    } as T
+    } as unknown as T
   }, [])
 
   const createRequest = async (input: CreateFeatureRequestInput, options?: { timeout?: number }) => {
