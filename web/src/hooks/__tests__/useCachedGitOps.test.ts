@@ -26,8 +26,8 @@ vi.mock('../useCachedData/demoData', () => ({
   getDemoHelmReleases: () => [],
   getDemoHelmHistory: () => [],
   getDemoHelmValues: () => ({ values: {} }),
-  getDemoOperators: () => [],
-  getDemoOperatorSubscriptions: () => [],
+  getDemoOperators: () => [{ name: 'demo-operator', namespace: 'demo', version: '1.0.0', status: 'Succeeded', cluster: 'demo-cluster' }],
+  getDemoOperatorSubscriptions: () => [{ name: 'demo-subscription', namespace: 'demo', channel: 'stable', source: 'demo', installPlanApproval: 'Automatic', currentCSV: 'demo.v1.0.0', cluster: 'demo-cluster' }],
   getDemoGitOpsDrifts: () => [],
   getDemoBuildpackImages: () => [],
   getDemoK8sRoles: () => [],
@@ -64,6 +64,7 @@ function defaultCache(overrides = {}) {
     consecutiveFailures: 0,
     lastRefresh: null,
     refetch: vi.fn(),
+    retryFetch: vi.fn(),
     ...overrides,
   }
 }
@@ -141,6 +142,26 @@ describe('useCachedOperators', () => {
     expect(result.current.operators).toEqual(operators)
   })
 
+  it('falls back to demo data when the live fetch fails without cached data', () => {
+    const retryFetch = vi.fn()
+    mockUseCache.mockReturnValue(defaultCache({
+      isLoading: true,
+      error: 'API error: 503',
+      consecutiveFailures: 2,
+      isFailed: false,
+      retryFetch,
+    }))
+
+    const { result } = renderHook(() => useCachedOperators())
+    expect(result.current.operators).toEqual([
+      { name: 'demo-operator', namespace: 'demo', version: '1.0.0', status: 'Succeeded', cluster: 'demo-cluster' },
+    ])
+    expect(result.current.isDemoFallback).toBe(true)
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.consecutiveFailures).toBe(0)
+    expect(result.current.refetch).toBe(retryFetch)
+  })
+
   it('rethrows partial empty SSE failures instead of falling back to REST', async () => {
     renderHook(() => useCachedOperators())
     const cacheConfig = mockUseCache.mock.calls[0][0]
@@ -170,6 +191,25 @@ describe('useCachedOperatorSubscriptions', () => {
     const { result } = renderHook(() => useCachedOperatorSubscriptions())
     expect(result.current).toHaveProperty('subscriptions')
     expect(Array.isArray(result.current.subscriptions)).toBe(true)
+  })
+
+  it('falls back to demo data when the live fetch fails without cached data', () => {
+    const retryFetch = vi.fn()
+    mockUseCache.mockReturnValue(defaultCache({
+      isLoading: true,
+      error: 'API error: 503',
+      consecutiveFailures: 4,
+      isFailed: true,
+      retryFetch,
+    }))
+
+    const { result } = renderHook(() => useCachedOperatorSubscriptions())
+    expect(result.current.subscriptions).toEqual([
+      { name: 'demo-subscription', namespace: 'demo', channel: 'stable', source: 'demo', installPlanApproval: 'Automatic', currentCSV: 'demo.v1.0.0', cluster: 'demo-cluster' },
+    ])
+    expect(result.current.isDemoFallback).toBe(true)
+    expect(result.current.isFailed).toBe(false)
+    expect(result.current.refetch).toBe(retryFetch)
   })
 
   it('falls back to REST for non-partial SSE failures', async () => {

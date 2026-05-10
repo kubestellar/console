@@ -53,7 +53,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch operators - pass undefined to get all clusters
-  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, refetch } = useCachedOperators(undefined)
+  const { operators: rawOperators, isLoading: operatorsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch } = useCachedOperators(undefined)
 
   // Report card data state
   const hasData = rawOperators.length > 0
@@ -171,7 +171,7 @@ function OperatorStatusInternal({ config: _config }: OperatorStatusProps) {
           <p className="text-sm">{t('operatorStatus.errorLoading', 'Unable to load operators')}</p>
           <p className="text-xs">{t('operatorStatus.errorLoadingHint', 'Failed after {{count}} attempts', { count: consecutiveFailures })}</p>
           <button
-            onClick={() => refetch()}
+            onClick={() => retryFetch()}
             disabled={isRefreshing}
             className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
