@@ -221,7 +221,12 @@ export function ReservationFormModal({
     onClose()
   }
 
-  const { namespaces: rawNamespaces } = useNamespaces(cluster || undefined, forceLive)
+  const {
+    namespaces: rawNamespaces,
+    isLoading: namespacesLoading,
+    error: namespacesError,
+    refetch: refetchNamespaces,
+  } = useNamespaces(cluster || undefined, forceLive)
 
   // Union the hook result with namespaces from existing reservations on
   // this cluster. Memoized to avoid re-allocating on every keystroke.
@@ -497,7 +502,7 @@ export function ReservationFormModal({
                     setNamespace(e.target.value)
                   }
                 }}
-                disabled={!!editingReservation || !cluster}
+                disabled={!!editingReservation || !cluster || (namespacesLoading && clusterNamespaces.length === 0)}
                 className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground disabled:opacity-50"
               >
                 <option value="">{t('gpuReservations.form.fields.selectNamespace')}</option>
@@ -527,6 +532,24 @@ export function ReservationFormModal({
                   aria-label={t('gpuReservations.form.fields.backToList')}
                 >
                   &times;
+                </button>
+              </div>
+            )}
+            {cluster && !isNewNamespace && namespacesLoading && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Loading namespaces…</span>
+              </div>
+            )}
+            {cluster && !isNewNamespace && namespacesError && !namespacesLoading && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-red-400">
+                <span>{namespacesError}</span>
+                <button
+                  type="button"
+                  onClick={() => void refetchNamespaces()}
+                  className="font-medium underline underline-offset-2 hover:text-red-300"
+                >
+                  Retry
                 </button>
               </div>
             )}
