@@ -4048,6 +4048,19 @@
     "cancel": "Cancel",
     "confirm": "Run mission"
   },
+  "missionToolCheck": {
+    "checking": "Checking for required local tools…",
+    "readyTitle": "Local tools ready",
+    "readyDescription": "Required local tools detected: {{tools}}.",
+    "blockedTitle": "Install local tools before running",
+    "blockedDescription": "This mission requires {{tools}} to be installed locally before it can run.",
+    "blockedHint": "Run Mission is disabled until the required tools are installed.",
+    "warningTitle": "Local tools recommended",
+    "warningDescription": "This AI-assisted flow can continue, but local execution steps may still require {{tools}}.",
+    "errorTitle": "Unable to verify local tools",
+    "errorDescription": "The console could not verify required local tools right now.",
+    "installTool": "Install {{tool}}"
+  },
   "embed": {
     "getEmbedCode": "Get embed code",
     "unknownCard": "Unknown card type",
