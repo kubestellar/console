@@ -22,7 +22,9 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('../../../lib/modals/BaseModal', () => ({
   BaseModal: Object.assign(
-    ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) => (
+      isOpen ? <div role="dialog" aria-modal="true">{children}</div> : null
+    ),
     {
       Header: ({ title, description, onClose }: { title: string; description?: string; onClose?: () => void }) => (
         <div>
@@ -47,6 +49,8 @@ vi.mock('../../ui/TextArea', () => ({
 
 import { ConfirmMissionPromptDialog } from '../ConfirmMissionPromptDialog'
 
+const getRunMissionButton = () => screen.getByRole('button', { name: /Run mission/i })
+
 describe('ConfirmMissionPromptDialog', () => {
   it('shows the review copy, mission details, and editable prompt', () => {
     render(
@@ -60,11 +64,13 @@ describe('ConfirmMissionPromptDialog', () => {
       />,
     )
 
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('Review AI mission prompt')).toBeInTheDocument()
     expect(screen.getByText('Install live data')).toBeInTheDocument()
     expect(screen.getByText('Install live data components')).toBeInTheDocument()
+    expect(screen.getByText('Review the prompt below before running. You can edit it to add extra context, change parameters, or remove anything you do not want the AI agent to do.')).toBeInTheDocument()
     expect(screen.getByLabelText('Prompt sent to the AI agent')).toHaveValue('Install the missing components')
-    expect(screen.getByRole('button', { name: 'Run mission' })).toBeEnabled()
+    expect(getRunMissionButton()).toBeEnabled()
   })
 
   it('disables Run mission and shows validation when the prompt is blank', () => {
@@ -83,7 +89,7 @@ describe('ConfirmMissionPromptDialog', () => {
     })
 
     expect(screen.getByText('Prompt cannot be empty.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Run mission' })).toBeDisabled()
+    expect(getRunMissionButton()).toBeDisabled()
   })
 
   it('submits the edited prompt when Run mission is clicked', () => {
@@ -102,7 +108,7 @@ describe('ConfirmMissionPromptDialog', () => {
     fireEvent.change(screen.getByLabelText('Prompt sent to the AI agent'), {
       target: { value: 'Create a production cluster' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Run mission' }))
+    fireEvent.click(getRunMissionButton())
 
     expect(onConfirm).toHaveBeenCalledWith('Create a production cluster')
   })
