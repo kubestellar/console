@@ -14,6 +14,14 @@ const INSTALL_COMMAND = KC_AGENT.installCommand
 
 const KC_AGENT_URL = KC_AGENT.url
 
+const API_PROVIDER_ENV_VARS = [
+  'ANTHROPIC_API_KEY',
+  'OPENAI_API_KEY',
+  'GEMINI_API_KEY',
+  'GROQ_API_KEY',
+  'OPENROUTER_API_KEY',
+] as const
+
 /** Body shape for POST /settings/keys when saving a Base URL override.
  *
  *  Empty draft = "Leave blank to use the compiled-in default" — send
@@ -373,6 +381,39 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                     <Copy className="w-4 h-4" />
                     {copied ? t('actions.copied') : t('actions.copy')}
                   </button>
+                </div>
+              </div>
+
+              <button
+                onClick={fetchKeysStatus}
+                className="text-sm text-primary hover:underline"
+              >
+                {t('agent.retryConnection')}
+              </button>
+            </div>
+          ) : filteredKeys.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="p-3 rounded-full bg-secondary w-fit mx-auto mb-4">
+                <Key className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                {t('agent.noProvidersTitle')}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t('agent.noProvidersDescription')}
+              </p>
+
+              <div className="bg-secondary/50 rounded-lg p-4 mb-4 text-left">
+                <p className="text-xs text-muted-foreground mb-2">{t('agent.envVarHint')}</p>
+                <div className="space-y-1">
+                  {API_PROVIDER_ENV_VARS.map((envVar) => (
+                    <code
+                      key={envVar}
+                      className="block px-2 py-1 rounded bg-background font-mono text-xs text-foreground"
+                    >
+                      {envVar}
+                    </code>
+                  ))}
                 </div>
               </div>
 
