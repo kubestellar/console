@@ -129,31 +129,13 @@ async function setupMissionsTest(page: Page) {
     }
   })
 
-  // Mock GitHub mission listings used by the missions browser. An empty list
-  // is fine for the panel-renders test. Tests that need specific mission data
-  // must override this AFTER setupMissionsTest() runs by calling
-  // page.unroute('**/api/missions/list**') to drop this default handler, then
-  // registering a fresh page.route() with the desired response — see the
-  // "project card" test below.
-  await page.route('**/api/missions/list**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ items: [] }),
-    })
-  )
-
-  // Mock local agent so it does not block the panel mount.
-  await page.route('**/127.0.0.1:8585/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ events: [], health: { hasClaude: true, hasBob: false } }),
-    })
-  )
+  // The shared mockApiFallback() helper already mocks local-agent failures and
+  // mission browsing. Keep setupMissionsTest aligned with those shared mocks so
+  // route precedence is deterministic across browsers.
 
   // Seed auth token + onboarded flag BEFORE any page script runs
   await page.addInitScript(() => {
+    localStorage.removeItem('kc_mission_control_state')
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
@@ -172,6 +154,14 @@ test.describe('AI Missions', () => {
   })
 
   test('Mission Control panel opens via ?mission-control=open URL param', async ({ page }) => {
+    const panel = page.locator('[data-testid="mission-control-dialog"]')
+
+    // Start from a clean route first so this test proves the URL param opens
+    // the panel instead of accidentally passing due to stale state.
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await expect(panel).toBeHidden()
+
     // #11895 — The URL param is processed by MissionSidebar which is lazily
     // loaded via safeLazy(). We must wait for networkidle so the chunk is
     // downloaded and the useEffect that reads the param has fired.
@@ -182,9 +172,11 @@ test.describe('AI Missions', () => {
     // (not a floating modal). It has role="dialog" but depending on browser
     // accessibility tree timing, getByRole may not find it reliably. Use the
     // stable data-testid instead, which is always present when the component
-    // mounts. Fall back to role query for broader compatibility.
-    const panel = page.locator('[data-testid="mission-control-dialog"]')
+    // mounts.
     await expect(panel).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
+    await expect(panel.getByRole('heading', { name: /define your mission/i })).toBeVisible({
+      timeout: PANEL_VISIBLE_TIMEOUT_MS,
+    })
   })
 
   test('Mission Control panel exposes a close control', async ({ page }) => {
@@ -203,57 +195,38 @@ test.describe('AI Missions', () => {
   })
 
   test('missions browser renders at least one project card', async ({ page }) => {
-    // Override the listing mock to return one known project. The missions
-    // browser opens in Phase 1 (project picker) and must surface this entry.
-    //
-    // #6474 — Must unroute() the default handler from setupMissionsTest()
-    // before registering a replacement. A second page.route() for the same
-    // glob does NOT override — it stacks, and the first registration wins
-    // because Playwright matches routes in order.
-    await page.unroute('**/api/missions/list**')
-    await page.route('**/api/missions/list**', (route) =>
+    // Override the shared browse mock with one concrete community mission entry.
+    // MissionBrowser fetches /api/missions/browse?path=... and expects a plain
+    // BrowseEntry[] response, not an { items: [...] } wrapper.
+    await page.unroute('**/api/missions/browse*')
+    await page.route('**/api/missions/browse*', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          items: [
-            {
-              name: 'sample-mission',
-              path: 'missions/sample-mission.yaml',
-              sha: 'abc123',
-              type: 'file',
-            },
-          ],
-        }),
+        body: JSON.stringify([
+          {
+            name: 'sample-mission.yaml',
+            path: 'fixes/sample-mission.yaml',
+            type: 'file',
+            size: 1234,
+            description: 'Sample community mission',
+          },
+        ]),
       })
     )
 
     await page.goto('/?browse=missions')
     await page.waitForLoadState('networkidle')
 
-    // The missions browser renders entries inside the mission grid. Query by
-    // the grid test-id first (structural), then fall back to text content.
-    // This avoids brittle getByText that breaks when the UI transforms the
-    // file name (strips .yaml, title-cases, etc.). See #9526.
-    const panel = page.locator('[data-testid="mission-control-dialog"]')
-      .or(page.getByRole('dialog'))
-    await expect(panel.first()).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
+    const browser = page.getByTestId('mission-browser')
+    await expect(browser).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
 
-    const visiblePanel = panel.first()
-    const missionGrid = visiblePanel.locator('[data-testid="mission-grid"]')
-    const hasGrid = await missionGrid.isVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS }).catch(() => false)
+    await browser.getByRole('button', { name: /kube.?stellar community/i }).click()
 
-    if (hasGrid) {
-      // Prefer structural assertion: at least one card in the grid
-      const cards = missionGrid.locator('.group')
-      await expect(cards.first()).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
-      expect(await cards.count()).toBeGreaterThanOrEqual(1)
-    } else {
-      // Fallback: the panel must contain at least one heading with the mission name
-      const missionEntry = visiblePanel.getByRole('heading', { name: /sample-mission/i })
-        .or(visiblePanel.locator('h4:has-text("sample-mission")'))
-        .first()
-      await expect(missionEntry).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
-    }
+    const missionGrid = browser.getByTestId('mission-grid')
+    await expect(missionGrid).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
+    await expect(missionGrid.getByRole('button', { name: /sample-mission\.yaml/i })).toBeVisible({
+      timeout: PANEL_VISIBLE_TIMEOUT_MS,
+    })
   })
 })
