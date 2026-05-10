@@ -1,0 +1,502 @@
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO audit action=user_login actor_id=00000000-0000-0000-0000-000000000000 target_type=user target_id=00000000-0000-0000-0000-000000000000 ip=0.0.0.0 path=/auth/dev method=GET details=dev-user
+2026/05/11 08:32:48 INFO audit action=user_login actor_id=00000000-0000-0000-0000-000000000000 target_type=user target_id=a1f914d0-c39a-4dad-942c-f89b0ab6fd98 ip=0.0.0.0 path=/auth/dev method=GET details=dev-user
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 WARN [CSRF] request rejected: missing or invalid CSRF header ip=0.0.0.0 method=POST path=/auth/refresh
+2026/05/11 08:32:48 INFO [Auth] refresh rejected: invalid or revoked token error="token is malformed: token contains an invalid number of segments"
+2026/05/11 08:32:48 INFO [Auth] refresh rejected: invalid or revoked token error="token has invalid claims: token is expired"
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:48 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=false hasState=false hasError=false redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=true hasState=false hasError=false redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 ERROR [Auth] CSRF validation failed: invalid or expired state token
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=false hasState=false hasError=true redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 ERROR [Auth] GitHub returned error error=access_denied description="The user denied access"
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=false hasState=false hasError=true redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 ERROR [Auth] GitHub returned error error=application_suspended description="App is suspended"
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=true hasState=true hasError=false redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [Auth] CSRF state invalid but user already has valid cookie, recovering to /
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=true hasState=true hasError=false redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 ERROR [Auth] CSRF validation failed: invalid or expired state token
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=true hasState=true hasError=false redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 ERROR [Auth] CSRF validation failed: invalid or expired state token
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=true hasState=true hasError=false redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 ERROR [Auth] CSRF validation failed: invalid or expired state token
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=true hasState=false hasError=false redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [Auth] CSRF state invalid but user already has valid cookie, recovering to /
+2026/05/11 08:32:48 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:48 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:48 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:48 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:48 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:48 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:48 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:48 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [Auth] GitHubCallback entered hasCode=false hasState=false hasError=true redirectURI=http://localhost:8080/auth/github/callback frontendURL=http://frontend
+2026/05/11 08:32:48 ERROR [Auth] GitHub returned error error=access_denied description="bad  injected"
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 WARN [CSRF] request rejected: missing or invalid CSRF header ip=0.0.0.0 method=POST path=/auth/logout
+2026/05/11 08:32:48 INFO audit action=user_logout actor_id=00000000-0000-0000-0000-000000000000 target_type=user target_id=3fa45ab9-a988-4624-9e63-caf7a7c83e37 ip=0.0.0.0 path=/auth/logout method=POST details=test
+2026/05/11 08:32:48 INFO [Auth] token revoked, WS sessions closed user=test jti=c65b8766-d178-4ad4-a546-58f28d74b186
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO [Auth] logout with expired/invalid token — clearing cookie idempotently error="token has invalid claims: token is expired"
+2026/05/11 08:32:48 WARN [Auth] BACKEND_URL is not set but FRONTEND_URL points to a non-local host. OAuth callback will fall back to localhost:8080 which will fail. Set BACKEND_URL to the public backend address. frontendURL=http://frontend
+2026/05/11 08:32:48 INFO audit action=user_login actor_id=00000000-0000-0000-0000-000000000000 target_type=user target_id=00000000-0000-0000-0000-000000000000 ip=0.0.0.0 path=/auth/dev method=GET details=dev-user
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [ComplianceFrameworks] no evaluator configured, returning demo result framework=pci-dss-4.0 cluster=demo-cluster
+2026/05/11 08:32:48 INFO [ComplianceReports] generating demo report framework=pci-dss-4.0 cluster=test-cluster format=json
+2026/05/11 08:32:48 INFO [ComplianceReports] generating demo report framework=pci-dss-4.0 cluster=test-cluster format=pdf
+2026/05/11 08:32:48 INFO [ComplianceReports] generating demo report framework=soc2-type2 cluster=prod-cluster format=json
+2026/05/11 08:32:48 INFO [ComplianceReports] generating demo report framework=pci-dss-4.0 cluster=test-cluster format=json
+2026/05/11 08:32:48 INFO [ComplianceReports] generating demo report framework=pci-dss-4.0 cluster=prod format=pdf
+2026/05/11 08:32:48 INFO [ComplianceReports] generating demo report framework=pci-dss-4.0 cluster=prod format=json
+2026/05/11 08:32:48 INFO [ConsolePersistence] unsupported filter field, skipping cluster field=region cluster=c
+2026/05/11 08:32:48 INFO [ConsolePersistence] unsupported filter field, skipping cluster field=zone cluster=c
+2026/05/11 08:32:48 INFO [ConsolePersistence] unsupported filter field, skipping cluster field=provider cluster=c
+2026/05/11 08:32:48 INFO [ConsolePersistence] unsupported filter field, skipping cluster field=version cluster=c
+2026/05/11 08:32:48 INFO [ConsolePersistence] unsupported filter field, skipping cluster field=unknownField cluster=c
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 INFO [Webhook] issue event issue=123 action=labeled
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 INFO [Webhook] issue event issue=123 action=closed
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 INFO [Webhook] PR event processed pr=456 action=opened requestID=2f24edfa-5f79-407b-8d66-b626b3657039
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 INFO [Webhook] deployment success pr=456 targetURL=https://preview.url
+2026/05/11 08:32:48 INFO [Webhook] updated preview URL requestID=3da62d13-929d-4fdf-af5c-f95ce889a722 targetURL=https://preview.url
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 WARN [Feedback] WARNING: FEEDBACK_GITHUB_TOKEN is not set — issue submission will be disabled. Add FEEDBACK_GITHUB_TOKEN=<your-pat> to your .env file. Classic PAT: needs 'repo' scope. Fine-grained PAT: needs 'Issues' + 'Contents' read/write permissions.
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 ERROR [Gadget] tool call failed tool=trace_dns error="gadget client not available"
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 ERROR [MCP] internal error error="simulated error"
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 ERROR [MCP] internal error error="list failure"
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 ERROR [MCP] internal error error="route error"
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=false private_key_set=false
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=true installation_id_set=true private_key_set=false
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=false installation_id_set=true private_key_set=true
+2026/05/11 08:32:48 INFO [GitHubApp] credentials not fully configured — falling back to PAT auth for feedback issues app_id_set=true installation_id_set=false private_key_set=true
+2026/05/11 08:32:48 WARN [rewards] invalid CONSOLE_APP_ATTRIBUTION_CUTOFF — enforcement disabled value=not-a-timestamp error="parsing time \"not-a-timestamp\" as \"2006-01-02T15:04:05Z07:00\": cannot parse \"not-a-timestamp\" as \"2006\""
+2026/05/11 08:32:48 WARN [GitHubPipelines] Invalid repo slug in PIPELINE_REPOS, skipping repo=../etc/passwd
+2026/05/11 08:32:48 WARN [GitHubPipelines] Invalid repo slug in PIPELINE_REPOS, skipping repo=../etc/passwd
+2026/05/11 08:32:48 WARN [GitHubPipelines] Invalid repo slug in PIPELINE_REPOS, skipping repo=noslash
+2026/05/11 08:32:48 WARN [GitHubPipelines] Invalid repo slug in PIPELINE_REPOS, skipping repo=owner/repo/extra
+2026/05/11 08:32:48 WARN [GitHubPipelines] Invalid repo slug in PIPELINE_REPOS, skipping repo=evil/../passwd
+2026/05/11 08:32:48 WARN [GitHubPipelines] Invalid repo slug in PIPELINE_REPOS, skipping repo=owner/../../repo
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 ERROR [GitOps] helm history failed release=orders error="exit status 1" stderr="helm failed on purpose\n"
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO audit action=create_gpu_reservation actor_id=00000000-0000-0000-0000-000000000001 target_type=gpu_reservation target_id=fa22fae3-9814-4552-a245-ec410d805ea8 ip=0.0.0.0 path=/api/gpu/reservations method=POST details="cluster=cluster-a namespace=ml gpus=1"
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 ERROR [KubaraCatalog] upstream fetch failed error="GitHub API returned non-200 status"
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 WARN [Manifest] callback rejected — OAuth already configured
+2026/05/11 08:32:48 WARN [Manifest] callback called without code
+2026/05/11 08:32:48 INFO [Manifest] GitHub App created and credentials saved appID=12345 appName="Test App" appURL=https://github.com/apps/test
+2026/05/11 08:32:48 ERROR [Manifest] conversion returned non-201 status=404 body="{\"message\":\"Not Found\"}"
+2026/05/11 08:32:48 ERROR [Manifest] conversion response missing credentials
+2026/05/11 08:32:48 INFO [Manifest] GitHub App created and credentials saved appID=1 appName="GHE App" appURL=""
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:48 INFO [MCP] per-cluster error cluster=cluster-2 errorType=unknown error="query error"
+2026/05/11 08:32:48 INFO [MCP] per-cluster error cluster=cluster-2 errorType=timeout error="context deadline exceeded"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 ERROR [MCP] internal error error="failed to get config for context non-existent: stat /tmp/kubestellar-test-kubeconfig: no such file or directory"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO audit action=create_resource_quota actor_id=00000000-0000-0000-0000-000000000001 target_type=resource_quota target_id=test-quota ip=0.0.0.0 path=/api/mcp/resources/quotas method=POST details="cluster=test-cluster namespace=default"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 ERROR [MCP] internal error error="forced pods list error"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [MCP] cluster unavailable errorType=network error="dial tcp 127.0.0.1:6443: connect: connection refused"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [MCP] cluster unavailable errorType=network error="dial tcp 127.0.0.1:6443: connect: connection refused"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [MCP] cluster unavailable errorType=network error="dial tcp 10.0.0.1:443: connect: connection refused"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [MCP] cluster unavailable errorType=auth error="Unauthorized: token expired"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [ListWorkloads] listing workloads clusterCount=1 clusters=[test-cluster]
+2026/05/11 08:32:49 ERROR [ListWorkloads] error listing workloads for cluster cluster=test-cluster error="GetDynamicClient(test-cluster): failed to get config for context test-cluster: stat /tmp/kubestellar-test-kubeconfig: no such file or directory"
+2026/05/11 08:32:49 INFO [ListWorkloads] listing workloads clusterCount=1 clusters=[test-cluster]
+2026/05/11 08:32:49 ERROR [ListWorkloads] error listing workloads for cluster cluster=test-cluster error="GetDynamicClient(test-cluster): failed to get config for context test-cluster: stat /tmp/kubestellar-test-kubeconfig: no such file or directory"
+2026/05/11 08:32:49 INFO [ListWorkloads] listing workloads clusterCount=1 clusters=[test-cluster]
+2026/05/11 08:32:49 ERROR [ListWorkloads] error listing workloads for cluster cluster=test-cluster error="GetDynamicClient(test-cluster): failed to get config for context test-cluster: stat /tmp/kubestellar-test-kubeconfig: no such file or directory"
+2026/05/11 08:32:49 INFO [ListWorkloads] listing workloads clusterCount=1 clusters=[test-cluster]
+2026/05/11 08:32:49 ERROR [ListWorkloads] error listing workloads for cluster cluster=test-cluster error="GetDynamicClient(test-cluster): failed to get config for context test-cluster: stat /tmp/kubestellar-test-kubeconfig: no such file or directory"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 ERROR [MCP] internal error error="failed to get config for context api.cluster.example.com: stat /tmp/kubestellar-test-kubeconfig: no such file or directory"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 ERROR [MCP] internal error error="export list error"
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (browse) path=missions
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (browse) path=""
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (index json) bytes=147
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (index json) bytes=174
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (index json) bytes=37
+2026/05/11 08:32:49 INFO audit action=share_mission_github actor_id=00000000-0000-0000-0000-000000000000 target_type=mission target_id=missions/test.yaml ip=0.0.0.0 path=/api/missions/share/github method=POST details="repo=kubestellar/console-kb branch=mission-test fork=testuser/console pr=https://github.com/kubestellar/console/pull/42"
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (file) ref=master path=missions/example.yaml bytes=63
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (browse) path=fixes
+2026/05/11 08:32:49 INFO [missions] cache HIT (browse) path=fixes
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (file) ref=master path=fixes/index.json bytes=54
+2026/05/11 08:32:49 INFO [missions] cache HIT (file) ref=master path=fixes/index.json
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (browse) path=stale-test
+2026/05/11 08:32:49 INFO [missions] rate-limited, serving stale cache (browse) path=stale-test status=403
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (file) ref=master path=test/mission.json bytes=26
+2026/05/11 08:32:49 INFO [missions] rate-limited, serving stale cache (file) ref=master path=test/mission.json status=429
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (index json) bytes=507
+2026/05/11 08:32:49 INFO [missions] cache MISS, stored (index json) bytes=84
+2026/05/11 08:32:49 WARN [missions] upstream 5xx (index json) status=500 attempt=1
+2026/05/11 08:32:49 INFO [missions] retrying upstream fetch (index json) attempt=2 delay=500ms
+2026/05/11 08:32:50 WARN [missions] upstream 5xx (index json) status=500 attempt=2
+2026/05/11 08:32:50 INFO [missions] retrying upstream fetch (index json) attempt=3 delay=1s
+2026/05/11 08:32:51 WARN [missions] upstream 5xx (index json) status=500 attempt=3
+2026/05/11 08:32:51 INFO [missions] cache MISS, stored (index json) bytes=507
+2026/05/11 08:32:51 INFO [missions] rate-limited, serving stale cache (index json) status=403
+2026/05/11 08:32:51 INFO [missions] cache MISS, stored (index json) bytes=507
+2026/05/11 08:32:51 INFO [missions] cache MISS, stored (index json) bytes=507
+2026/05/11 08:32:51 INFO [missions] cache MISS, stored (index json) bytes=507
+2026/05/11 08:32:51 INFO [missions] cache MISS, stored (index json) bytes=507
+2026/05/11 08:32:51 WARN [missions] upstream 5xx (index json) status=503 attempt=1
+2026/05/11 08:32:51 INFO [missions] retrying upstream fetch (index json) attempt=2 delay=500ms
+2026/05/11 08:32:51 WARN [missions] upstream 5xx (index json) status=503 attempt=2
+2026/05/11 08:32:51 INFO [missions] retrying upstream fetch (index json) attempt=3 delay=1s
+2026/05/11 08:32:52 WARN [missions] upstream 5xx (index json) status=503 attempt=3
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 WARN [Namespaces] failed to list namespaces cluster=test-cluster error="namespaces is forbidden: assert.AnError general error for testing"
+2026/05/11 08:32:52 WARN [rbac] SECURITY: non-admin attempted to read namespace access user_id=2d3f7675-08ca-40ec-92d0-39786625da6a github_login=""
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO orbit auto-run triggered mission=orbit-auto-skip type=health-check result=skipped summary="No executor configured"
+2026/05/11 08:32:52 INFO orbit auto-run triggered mission=orbit-auto-success type=health-check result=completed summary="Scheduled mission ran successfully"
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO audit action=update_role actor_id=00000000-0000-0000-0000-000000000001 target_type=user target_id=f72b8c52-db85-4c23-90d5-a3053917b91f ip=0.0.0.0 path=/api/rbac/users/f72b8c52-db85-4c23-90d5-a3053917b91f/role method=PUT details=unknown->editor
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO audit action=unauthorized_attempt actor_id=00000000-0000-0000-0000-000000000001 target_type=endpoint target_id=/api/users ip=0.0.0.0 path=/api/rbac/users method=GET details="non-admin list attempt"
+2026/05/11 08:32:52 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 WARN [reconcile] WorkloadDeployment specifies both targetClusters and targetGroupRef — clusters will be merged name=wd1 namespace=test-ns explicitClusters=cluster-a,cluster-b groupRef=group1
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [ConsolePersistence] reconciling deployment namespace=test-ns name=wd-no-targets
+2026/05/11 08:32:52 INFO [reconcile] deployment reached terminal state name=wd-no-targets phase=Failed message="No target clusters resolved"
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [ConsolePersistence] reconciling deployment namespace=test-ns name=wd-bad-ref
+2026/05/11 08:32:52 ERROR [reconcile] failed to resolve ManagedWorkload name=wd-bad-ref error="ManagedWorkload test-ns/nonexistent-workload not found: failed to get ManagedWorkload test-ns/nonexistent-workload: managedworkloads.console.kubestellar.io \"nonexistent-workload\" not found"
+2026/05/11 08:32:52 INFO [reconcile] deployment reached terminal state name=wd-bad-ref phase=Failed message="Failed to resolve ManagedWorkload: ManagedWorkload test-ns/nonexistent-workload not found: failed to get ManagedWorkload test-ns/nonexistent-workload: managedworkloads.console.kubestellar.io \"nonexistent-workload\" not found"
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [ConsolePersistence] reconciling deployment namespace=test-ns name=wd-fail
+2026/05/11 08:32:52 ERROR [reconcile] k8sClient is nil, cannot deploy workload name=wd-fail
+2026/05/11 08:32:52 INFO [reconcile] deployment reached terminal state name=wd-fail phase=Failed message="Internal error: multi-cluster client not configured"
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [ConsolePersistence] reconciling deployment namespace=test-ns name=wd-partial
+2026/05/11 08:32:52 ERROR [reconcile] cluster deployment failed cluster=cluster-fail name=wd-partial error="partial failure"
+2026/05/11 08:32:52 INFO [reconcile] deployment reached terminal state name=wd-partial phase=Failed message="Partial deployment: 1 succeeded, 1 failed"
+2026/05/11 08:32:52 INFO [PersistenceStore] config saved enabled=true primary=persist-cluster secondary=""
+2026/05/11 08:32:52 INFO [ConsolePersistence] reconciling deployment namespace=test-ns name=wd-allfail
+2026/05/11 08:32:52 ERROR [reconcile] cluster deployment failed cluster=cluster-a name=wd-allfail error="source cluster unreachable"
+2026/05/11 08:32:52 ERROR [reconcile] cluster deployment failed cluster=cluster-b name=wd-allfail error="source cluster unreachable"
+2026/05/11 08:32:52 ERROR [reconcile] all clusters failed name=wd-allfail failedCount=2 error="source cluster unreachable"
+2026/05/11 08:32:52 INFO [reconcile] deployment reached terminal state name=wd-allfail phase=Failed message="All 2 clusters failed"
+2026/05/11 08:32:52 INFO [reconcile] deployment reached terminal state name=wd1 phase=Complete message="All done"
+2026/05/11 08:32:52 INFO [reconcile] deployment reached terminal state name=wd1 phase=Failed message="Retry failed"
+2026/05/11 08:32:52 ERROR [rewards/badge] store lookup failed login=db-error error="query failed"
+2026/05/11 08:32:52 ERROR [rewards/badge] live rewards fetch failed login=api-error error="github down"
+2026/05/11 08:32:52 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:52 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:52 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:52 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:52 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:52 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:52 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 ERROR [rewards] failed to list items repo=kubestellar/console user=test-user error="GitHub API returned 401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+2026/05/11 08:32:53 ERROR [rewards] failed to fetch GitHub rewards user=test-user error="list kubestellar/console failed: GitHub API returned 401: {\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 WARN [self-upgrade] SECURITY: non-admin user attempted self-upgrade user_id=44c4ab0c-5e21-46a1-95f2-1b40a8f50d05 github_login="" role=viewer
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [self-upgrade] admin user triggering upgrade user_id=00000000-0000-0000-0000-000000000001 github_login=""
+2026/05/11 08:32:53 INFO [self-upgrade] admin user triggering upgrade user_id=00000000-0000-0000-0000-000000000001 github_login=""
+2026/05/11 08:32:53 INFO [self-upgrade] admin user triggering upgrade user_id=00000000-0000-0000-0000-000000000001 github_login=""
+2026/05/11 08:32:53 INFO [self-upgrade] admin user triggering upgrade user_id=00000000-0000-0000-0000-000000000001 github_login=""
+2026/05/11 08:32:53 INFO [self-upgrade] admin user triggering upgrade user_id=00000000-0000-0000-0000-000000000001 github_login=""
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [self-upgrade] admin user triggering upgrade user_id=00000000-0000-0000-0000-000000000001 github_login=""
+2026/05/11 08:32:53 INFO [self-upgrade] upgrading deployment namespace=kubestellar deployment=kubestellar-console from=ghcr.io/kubestellar/console:v0.1.0 to=ghcr.io/kubestellar/console:v0.1.1
+2026/05/11 08:32:53 INFO [self-upgrade] Deployment patched successfully, rollout starting
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [self-upgrade] admin user triggering upgrade user_id=00000000-0000-0000-0000-000000000001 github_login=""
+2026/05/11 08:32:53 INFO [self-upgrade] upgrading deployment namespace=kubestellar deployment=kubestellar-console from=ghcr.io/kubestellar/console:v0.1.0@sha256:abc123 to=ghcr.io/kubestellar/console:v0.1.1@sha256:abc123
+2026/05/11 08:32:53 INFO [self-upgrade] Deployment patched successfully, rollout starting
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO audit action=save_settings actor_id=d7d91c2d-deca-48ff-b5b7-d193bcf9c96a target_type=settings target_id=all ip=0.0.0.0 path=/api/settings method=PUT
+2026/05/11 08:32:53 INFO audit action=export_settings actor_id=fa524ce7-306e-461a-a968-1bb6656fa88c target_type=settings target_id=backup ip=0.0.0.0 path=/api/settings/export method=POST
+2026/05/11 08:32:53 INFO [settings] imported settings with encrypted fields (same key)
+2026/05/11 08:32:53 INFO audit action=import_settings actor_id=fa524ce7-306e-461a-a968-1bb6656fa88c target_type=settings target_id=backup ip=0.0.0.0 path=/api/settings/import method=POST
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO audit action=save_settings actor_id=00000000-0000-0000-0000-000000000001 target_type=settings target_id=all ip=0.0.0.0 path=/api/settings method=PUT
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO audit action=export_settings actor_id=00000000-0000-0000-0000-000000000001 target_type=settings target_id=backup ip=0.0.0.0 path=/api/settings/export method=POST
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [settings] imported settings with encrypted fields (same key)
+2026/05/11 08:32:53 INFO audit action=import_settings actor_id=00000000-0000-0000-0000-000000000001 target_type=settings target_id=backup ip=0.0.0.0 path=/api/settings/import method=POST
+2026/05/11 08:32:53 ERROR [settings] Import error error="invalid settings file: invalid character 'o' in literal null (expecting 'u')"
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 ERROR [settings] SaveAll error error="failed to create temp settings file: open /tmp/TestSettingsFileError1039722514/001/.settings-713450173.tmp: permission denied"
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 ERROR [SSE] cluster fetch failed cluster=cluster-bad elapsed=13.745µs error="forced list error"
+2026/05/11 08:32:53 INFO [SSE] cancelled SSE streams for user user=05aa23ae-895f-49fd-b2fc-cab7e6d08e36 count=2
+2026/05/11 08:32:53 INFO [SSE] cancelled SSE streams for user user=e29b2f6a-2cc0-49e4-b046-8905d6f40385 count=1
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 ERROR [SSE] cluster fetch failed cluster=cluster-bad elapsed=11.155µs error="forced jobs list error"
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+--- FAIL: TestStellarMissionAndActionFlow (0.02s)
+    stellar_test.go:133: 
+        	Error Trace:	/home/akaxonas/cncf-projects/console/pkg/api/handlers/stellar_test.go:133
+        	Error:      	Not equal: 
+        	            	expected: 200
+        	            	actual  : 403
+        	Test:       	TestStellarMissionAndActionFlow
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+--- FAIL: TestStellarAskStateDigestAndNotifications (0.02s)
+    stellar_test.go:148: 
+        	Error Trace:	/home/akaxonas/cncf-projects/console/pkg/api/handlers/stellar_test.go:148
+        	Error:      	Not equal: 
+        	            	expected: 200
+        	            	actual  : 500
+        	Test:       	TestStellarAskStateDigestAndNotifications
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 ERROR [Timeline] query failed error="assert.AnError general error for testing"
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [SQLite] connection pool configured max_open_conns=25 max_idle_conns=5 conn_max_lifetime=5m0s conn_max_idle_time=2m0s
+2026/05/11 08:32:53 INFO [SQLite] schema migrations complete total_migrations=39
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] client connected user=5626c93f-99e6-42f0-9145-67ed252587bc
+2026/05/11 08:32:53 INFO [WebSocket] client disconnected user=5626c93f-99e6-42f0-9145-67ed252587bc
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] broadcast buffer full, dropping message user=2f86e860-345f-414d-95f8-b0255f50929b type=test
+2026/05/11 08:32:53 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:53 INFO [WebSocket] client connected user=c094c6e9-ee92-4c60-b8ea-c30eef008368
+2026/05/11 08:32:53 WARN [WebSocket] slow client buffer full, disconnecting user=c094c6e9-ee92-4c60-b8ea-c30eef008368
+2026/05/11 08:32:53 WARN [WebSocket] slow client buffer full, disconnecting user=c094c6e9-ee92-4c60-b8ea-c30eef008368
+2026/05/11 08:32:53 INFO [WebSocket] client disconnected user=c094c6e9-ee92-4c60-b8ea-c30eef008368
+2026/05/11 08:32:53 INFO [WebSocket] client disconnected user=c094c6e9-ee92-4c60-b8ea-c30eef008368
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=2
+2026/05/11 08:32:54 INFO Demo-mode WebSocket connection for presence tracking (dev mode)
+2026/05/11 08:32:54 INFO [WebSocket] client connected user=00000000-0000-0000-0000-000000000000
+2026/05/11 08:32:54 INFO Demo-mode WebSocket connection for presence tracking (dev mode)
+2026/05/11 08:32:54 INFO [WebSocket] client connected user=00000000-0000-0000-0000-000000000000
+2026/05/11 08:32:54 INFO Demo-mode WebSocket connection for presence tracking (dev mode)
+2026/05/11 08:32:54 WARN [WebSocket] SECURITY: rejected connection - limit reached user=00000000-0000-0000-0000-000000000000 current=2 limit=2
+2026/05/11 08:32:54 INFO [WebSocket] client disconnected user=00000000-0000-0000-0000-000000000000
+2026/05/11 08:32:54 INFO [WebSocket] client disconnected user=00000000-0000-0000-0000-000000000000
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:54 INFO [ListWorkloads] listing workloads clusterCount=1 clusters=[test-cluster]
+2026/05/11 08:32:54 INFO [ListWorkloads] found workloads in cluster count=1 cluster=test-cluster
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:54 INFO audit action=create_cluster_group actor_id=00000000-0000-0000-0000-000000000001 target_type=cluster_group target_id=group1 ip=0.0.0.0 path=/api/cluster-groups method=POST
+2026/05/11 08:32:54 INFO audit action=update_cluster_group actor_id=00000000-0000-0000-0000-000000000001 target_type=cluster_group target_id=group1 ip=0.0.0.0 path=/api/cluster-groups/group1 method=PUT
+2026/05/11 08:32:54 INFO audit action=delete_cluster_group actor_id=00000000-0000-0000-0000-000000000001 target_type=cluster_group target_id=group1 ip=0.0.0.0 path=/api/cluster-groups/group1 method=DELETE
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+2026/05/11 08:32:54 INFO [WebSocket] connection limit configured max=1000
+FAIL
+FAIL	github.com/kubestellar/console/pkg/api/handlers	6.453s
+FAIL
