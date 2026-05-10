@@ -14,14 +14,6 @@ const INSTALL_COMMAND = KC_AGENT.installCommand
 
 const KC_AGENT_URL = KC_AGENT.url
 
-const API_PROVIDER_ENV_VARS = [
-  'ANTHROPIC_API_KEY',
-  'OPENAI_API_KEY',
-  'GEMINI_API_KEY',
-  'GROQ_API_KEY',
-  'OPENROUTER_API_KEY',
-] as const
-
 /** Body shape for POST /settings/keys when saving a Base URL override.
  *
  *  Empty draft = "Leave blank to use the compiled-in default" — send
@@ -191,9 +183,9 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
         throw new Error(t('agent.failedToFetchKeyStatus'))
       }
       const data: KeysStatusResponse = await response.json()
-      setKeysStatus(data.keys)
+      setKeysStatus(data.keys || [])
       setRegisteredProviders(data.registeredProviders || [])
-      setConfigPath(data.configPath)
+      setConfigPath(data.configPath || '')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('agent.failedToConnect'))
     } finally {
@@ -402,21 +394,17 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
               <p className="text-sm text-muted-foreground mb-4">
                 {t('agent.noProvidersDescription')}
               </p>
-
               <div className="bg-secondary/50 rounded-lg p-4 mb-4 text-left">
-                <p className="text-xs text-muted-foreground mb-2">{t('agent.envVarHint')}</p>
+                <p className="text-xs font-medium text-foreground mb-2">{t('agent.envVarsTitle')}</p>
                 <div className="space-y-1">
-                  {API_PROVIDER_ENV_VARS.map((envVar) => (
-                    <code
-                      key={envVar}
-                      className="block px-2 py-1 rounded bg-background font-mono text-xs text-foreground"
-                    >
-                      {envVar}
-                    </code>
-                  ))}
+                  <code className="block text-xs text-muted-foreground font-mono">ANTHROPIC_API_KEY=sk-ant-...</code>
+                  <code className="block text-xs text-muted-foreground font-mono">OPENAI_API_KEY=sk-...</code>
+                  <code className="block text-xs text-muted-foreground font-mono">GEMINI_API_KEY=...</code>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {t('agent.envVarsHint')}
+                </p>
               </div>
-
               <button
                 onClick={fetchKeysStatus}
                 className="text-sm text-primary hover:underline"
