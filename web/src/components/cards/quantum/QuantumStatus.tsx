@@ -66,6 +66,7 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
   const [statusData, setStatusData] = useState<QuantumStatusResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isFailed, setIsFailed] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [pollInterval, setPollInterval] = useState(STATUS_POLL_MS_DEFAULT)
 
@@ -90,6 +91,7 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
         })
         if (!response.ok) {
+          setError(`Failed to fetch quantum status (${response.status})`)
           setIsFailed(true)
           setConsecutiveFailures((prev) => prev + 1)
           setStatusData(DEMO_STATUS)
@@ -97,9 +99,12 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
         }
         const data = await response.json()
         setStatusData(data)
+        setError(null)
         setIsFailed(false)
         setConsecutiveFailures(0)
       } catch (error) {
+        console.error('Failed to fetch quantum status:', error)
+        setError(error instanceof Error ? error.message : 'Unable to load quantum status')
         setIsFailed(true)
         setConsecutiveFailures((prev) => prev + 1)
         setStatusData(DEMO_STATUS)
@@ -160,7 +165,7 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
   if (!statusData) {
     return (
       <div className="p-4 text-center text-muted-foreground">
-        <p>Unable to load quantum status</p>
+        <p>{error ?? 'Unable to load quantum status'}</p>
       </div>
     )
   }
@@ -180,6 +185,7 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
 
   return (
     <div className="p-4 space-y-4">
+        {error && <p className="text-sm text-red-400">{error}</p>}
         {/* Refresh Interval Control */}
         <div className="bg-secondary/30 rounded-lg p-3 border border-border">
           <Slider

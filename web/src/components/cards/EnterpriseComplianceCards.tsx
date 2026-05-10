@@ -35,6 +35,7 @@ function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
       })
       .then(setData)
       .catch((err: unknown) => {
+        console.error(`[EnterpriseComplianceCards] ${endpoint} fetch failed:`, err)
         setError(CARD_LOAD_ERROR)
       })
   }, [endpoint])
