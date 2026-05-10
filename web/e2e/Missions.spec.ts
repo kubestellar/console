@@ -58,6 +58,19 @@ async function setupMissionsTest(page: Page) {
     })
   )
 
+  // #12929 — Mock GitHub SHA polling to stabilize networkidle timing
+  // (versionUtils.ts polls this route when developer channel is selected)
+  await page.route('**/api/github/repos/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ref: 'refs/heads/main',
+        object: { sha: 'mock-sha-12345' },
+      }),
+    })
+  )
+
   // #11896 — Mock API endpoints that were previously unmocked and caused real
   // backend calls. These endpoints are probed by various hooks on app startup.
   await page.route('**/api/kagent/status', (route) =>
@@ -135,11 +148,15 @@ async function setupMissionsTest(page: Page) {
 
   // Seed auth token + onboarded flag BEFORE any page script runs
   await page.addInitScript(() => {
+    // #12930 — Clear OAuth session state to prevent hidden polling
+    localStorage.removeItem('kc-has-session')
     localStorage.removeItem('kc_mission_control_state')
+    // #12929 — Clear update channel to prevent GitHub SHA polling
+    localStorage.removeItem('kc-update-channel')
+    
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
-    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc-backend-status', JSON.stringify({
       available: true,

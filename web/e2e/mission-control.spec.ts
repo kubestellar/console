@@ -23,6 +23,19 @@ async function setupMissionControlTest(page: Page) {
     })
   )
 
+  // #12929 — Mock GitHub SHA polling to stabilize networkidle timing
+  // (versionUtils.ts polls this route when developer channel is selected)
+  await page.route('**/api/github/repos/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ref: 'refs/heads/main',
+        object: { sha: 'mock-sha-12345' },
+      }),
+    })
+  )
+
   await page.route('**/api/mcp/**', (route) => {
     const url = route.request().url()
     if (url.includes('/clusters')) {
@@ -51,10 +64,15 @@ async function setupMissionControlTest(page: Page) {
   )
 
   await page.addInitScript(() => {
+    // #12930 — Clear OAuth session state to prevent hidden polling
+    localStorage.removeItem('kc-has-session')
+    localStorage.removeItem('kc_mission_control_state')
+    // #12929 — Clear update channel to prevent GitHub SHA polling
+    localStorage.removeItem('kc-update-channel')
+    
     localStorage.setItem('token', 'test-token')
     localStorage.setItem('kc-demo-mode', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
-    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('kc-agent-setup-dismissed', 'true')
     localStorage.setItem('kc-backend-status', JSON.stringify({
       available: true,
@@ -73,13 +91,9 @@ test.describe('Mission Control Pipeline', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const trigger = page.getByTestId('mission-sidebar-toggle')
-      .or(page.getByRole('button', { name: /mission/i }))
-    if (await trigger.first().isVisible({ timeout: VISIBLE_TIMEOUT_MS }).catch(() => false)) {
-      await trigger.first().click()
-      await expect(
-        page.getByTestId('mission-sidebar')
-          .or(page.locator('[data-tour="ai-missions"]'))
-      ).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
+    if (await trigger.isVisible({ timeout: VISIBLE_TIMEOUT_MS }).catch(() => false)) {
+      await trigger.click()
+      await expect(page.getByTestId('mission-sidebar')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
     }
   })
 
@@ -87,9 +101,8 @@ test.describe('Mission Control Pipeline', () => {
     await page.goto('/?browse=missions&demo=true')
     await page.waitForLoadState('domcontentloaded')
 
-    const missionItems = page.locator('[data-testid*="mission"]')
-      .or(page.locator('[data-tour*="mission"]'))
-    await expect(missionItems.first()).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
+    const missionBrowser = page.getByTestId('mission-browser')
+    await expect(missionBrowser).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
   })
 
   test('mission detail page shows steps', async ({ page }) => {
