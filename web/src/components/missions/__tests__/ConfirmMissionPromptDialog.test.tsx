@@ -1,6 +1,6 @@
 import type React from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -45,117 +45,65 @@ vi.mock('../../ui/TextArea', () => ({
   TextArea: ({ children, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props}>{children}</textarea>,
 }))
 
-vi.mock('../../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => ({ status: 'connected' }),
-}))
-
-const runToolPreflightCheckMock = vi.fn()
-vi.mock('../../../lib/missions/preflightCheck', () => ({
-  resolveRequiredTools: (missionType?: string) => missionType === 'deploy' ? ['kubectl', 'helm'] : [],
-  runToolPreflightCheck: (...args: unknown[]) => runToolPreflightCheckMock(...args),
-}))
-
-vi.mock('../../../hooks/mcp/agentFetch', () => ({
-  agentFetch: vi.fn(),
-}))
-
 import { ConfirmMissionPromptDialog } from '../ConfirmMissionPromptDialog'
 
 describe('ConfirmMissionPromptDialog', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('shows a ready notice and keeps Run mission enabled when tools are present', async () => {
-    runToolPreflightCheckMock.mockResolvedValue({
-      ok: true,
-      tools: [
-        { name: 'kubectl', installed: true, version: 'v1.31.0' },
-        { name: 'helm', installed: true, version: 'v3.16.0' },
-      ],
-    })
-
+  it('shows the review copy, mission details, and editable prompt', () => {
     render(
       <ConfirmMissionPromptDialog
         open
         missionTitle="Install live data"
         missionDescription="Install live data components"
         initialPrompt="Install the missing components"
-        missionType="deploy"
         onCancel={vi.fn()}
         onConfirm={vi.fn()}
       />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('Local tools ready')).toBeInTheDocument()
-    })
-
-    expect(screen.getByText('Required local tools detected: kubectl, helm.')).toBeInTheDocument()
+    expect(screen.getByText('Review AI mission prompt')).toBeInTheDocument()
+    expect(screen.getByText('Install live data')).toBeInTheDocument()
+    expect(screen.getByText('Install live data components')).toBeInTheDocument()
+    expect(screen.getByLabelText('Prompt sent to the AI agent')).toHaveValue('Install the missing components')
     expect(screen.getByRole('button', { name: 'Run mission' })).toBeEnabled()
   })
 
-  it('disables Run mission and shows install guidance when required tools are missing', async () => {
-    runToolPreflightCheckMock.mockResolvedValue({
-      ok: false,
-      error: {
-        code: 'MISSING_TOOLS',
-        message: 'Required tools not found: kubectl, helm',
-        details: { missingTools: ['kubectl', 'helm'] },
-      },
-    })
-
+  it('disables Run mission and shows validation when the prompt is blank', () => {
     render(
       <ConfirmMissionPromptDialog
         open
-        missionTitle="Install live data"
-        missionDescription="Install live data components"
-        initialPrompt="Install the missing components"
-        missionType="deploy"
+        missionTitle="Create cluster"
+        initialPrompt="Create a cluster"
         onCancel={vi.fn()}
         onConfirm={vi.fn()}
       />,
     )
 
-    expect(screen.getByText('Checking for required local tools…')).toBeInTheDocument()
-
-    await waitFor(() => {
-      expect(screen.getByText('Install local tools before running')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Prompt sent to the AI agent'), {
+      target: { value: '   ' },
     })
 
-    expect(screen.getByText('This mission requires kubectl, helm to be installed locally before it can run.')).toBeInTheDocument()
+    expect(screen.getByText('Prompt cannot be empty.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run mission' })).toBeDisabled()
-    expect(screen.getByRole('link', { name: 'Install kubectl' })).toHaveAttribute('href', 'https://kubernetes.io/docs/tasks/tools/')
-    expect(screen.getByRole('link', { name: 'Install helm' })).toHaveAttribute('href', 'https://helm.sh/docs/intro/install/')
   })
 
-  it('keeps Run mission enabled when missing tools are warnings only', async () => {
-    runToolPreflightCheckMock.mockResolvedValue({
-      ok: false,
-      error: {
-        code: 'MISSING_TOOLS',
-        message: 'Required tools not found: kubectl',
-        details: { missingTools: ['kubectl'] },
-      },
-    })
+  it('submits the edited prompt when Run mission is clicked', () => {
+    const onConfirm = vi.fn()
 
     render(
       <ConfirmMissionPromptDialog
         open
         missionTitle="Create cluster"
-        missionDescription="Bootstrap a cluster"
         initialPrompt="Create a cluster"
-        missionType="deploy"
-        missionContext={{ allowMissingLocalTools: true }}
         onCancel={vi.fn()}
-        onConfirm={vi.fn()}
+        onConfirm={onConfirm}
       />,
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('Local tools recommended')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Prompt sent to the AI agent'), {
+      target: { value: 'Create a production cluster' },
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Run mission' }))
 
-    expect(screen.getByRole('button', { name: 'Run mission' })).toBeEnabled()
+    expect(onConfirm).toHaveBeenCalledWith('Create a production cluster')
   })
 })
