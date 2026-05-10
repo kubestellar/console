@@ -301,7 +301,7 @@ export function Events() {
     const now = new Date()
     const oneHourAgo = new Date(now.getTime() - MILLISECONDS_PER_HOUR)
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    filteredEvents.forEach(event => {
+    ;(filteredEvents || []).forEach(event => {
       const eventTime = parseEventTime(event.lastSeen)
       if (eventTime === null) {
         groups.unknownTime.push(event)
@@ -485,7 +485,7 @@ export function Events() {
         <div className="space-y-6">
           <div className="glass p-6 rounded-lg">
             <h3 className="text-lg font-medium text-foreground mb-6 flex items-center gap-2"><Calendar className="w-5 h-5" />{t('events.sections.eventTimeline')}</h3>
-            {filteredEvents.length === 0 ? (
+            {(filteredEvents || []).length === 0 ? (
               <div className="text-center py-12"><Clock className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" /><p className="text-muted-foreground">{t('events.empty.noEventsToDisplay')}</p></div>
             ) : (
               <div className="relative">
@@ -618,7 +618,7 @@ export function Events() {
                 {t('events.loadError.retry')}
               </button>
             </div>
-          ) : filteredEvents.length === 0 ? (
+          ) : (filteredEvents || []).length === 0 ? (
             <div className="text-center py-12">
               <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">{t('events.empty.noEventsFound')}</p>
