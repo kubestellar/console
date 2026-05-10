@@ -6,6 +6,8 @@ const mockUseClusters = vi.fn()
 const mockUsePodIssues = vi.fn()
 const mockUseBackendHealth = vi.fn()
 const mockUseLocalAgent = vi.fn()
+const mockGetDemoMode = vi.fn()
+const mockWasAgentEverConnected = vi.fn()
 
 vi.mock('../useAlerts', () => ({
   useAlerts: () => mockUseAlerts(),
@@ -22,6 +24,11 @@ vi.mock('../useBackendHealth', () => ({
 
 vi.mock('../useLocalAgent', () => ({
   useLocalAgent: () => mockUseLocalAgent(),
+  wasAgentEverConnected: () => mockWasAgentEverConnected(),
+}))
+
+vi.mock('../../lib/demoMode', () => ({
+  getDemoMode: () => mockGetDemoMode(),
 }))
 
 // Default all tests to a "connected" backend so pre-existing cases stay
@@ -29,6 +36,8 @@ vi.mock('../useLocalAgent', () => ({
 beforeEach(() => {
   mockUseBackendHealth.mockReturnValue({ status: 'connected' })
   mockUseLocalAgent.mockReturnValue({ status: 'connected', dataErrorCount: 0 })
+  mockGetDemoMode.mockReturnValue(false)
+  mockWasAgentEverConnected.mockReturnValue(false)
 })
 
 import { useDashboardHealth } from '../useDashboardHealth'
@@ -124,6 +133,8 @@ describe('useDashboardHealth', () => {
 
   it('flags disconnected backend as critical (issue #8162)', () => {
     mockUseBackendHealth.mockReturnValue({ status: 'disconnected' })
+    mockWasAgentEverConnected.mockReturnValue(true)
+    mockGetDemoMode.mockReturnValue(false)
     mockUseAlerts.mockReturnValue({ activeAlerts: [] })
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
@@ -133,6 +144,23 @@ describe('useDashboardHealth', () => {
     expect(result.current.criticalCount).toBe(1)
     expect(result.current.details).toContain('Backend API unreachable')
     expect(result.current.navigateTo).toBe('/alerts')
+  })
+
+  it('ignores backend disconnection in demo mode or before first agent connection', () => {
+    mockUseBackendHealth.mockReturnValue({ status: 'disconnected' })
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ healthy: true, reachable: true }], isLoading: false })
+    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('healthy')
+    expect(result.current.criticalCount).toBe(0)
+
+    mockGetDemoMode.mockReturnValue(true)
+
+    const { result: demoResult } = renderHook(() => useDashboardHealth())
+    expect(demoResult.current.status).toBe('healthy')
+    expect(demoResult.current.criticalCount).toBe(0)
   })
 
   it('ignores connecting backend status (not yet confirmed down)', () => {

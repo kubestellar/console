@@ -2,9 +2,10 @@ import { useMemo } from 'react'
 import { ROUTES } from '@/config/routes'
 import { useAlerts } from './useAlerts'
 import { useBackendHealth } from './useBackendHealth'
-import { useLocalAgent } from './useLocalAgent'
+import { useLocalAgent, wasAgentEverConnected } from './useLocalAgent'
 import { useClusters, usePodIssues } from './useMCP'
 import { summarizeClusterHealth } from '../components/clusters/utils'
+import { getDemoMode } from '../lib/demoMode'
 
 export type DashboardHealthStatus = 'healthy' | 'warning' | 'critical'
 
@@ -35,7 +36,10 @@ export function useDashboardHealth(): DashboardHealthInfo {
     let warningCount = 0
     let hasAgentDegradation = false
 
-    if (backendStatus === 'disconnected') {
+    const isDemoActive = getDemoMode()
+    const agentWasConnected = wasAgentEverConnected()
+
+    if (backendStatus === 'disconnected' && !isDemoActive && agentWasConnected) {
       criticalCount += 1
       details.push('Backend API unreachable')
     }
