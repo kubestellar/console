@@ -42,10 +42,11 @@ export function CardConfigModal({
         <div className="space-y-4">
           {/* Cluster Filter */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="card-config-cluster" className="block text-sm font-medium text-foreground mb-2">
               Filter by Cluster
             </label>
             <select
+              id="card-config-cluster"
               value={(config.cluster as string) || ''}
               onChange={(e) => setConfig(prev => ({ ...prev, cluster: e.target.value || undefined }))}
               className="w-full px-3 py-2 bg-secondary/50 border border-border rounded-lg text-foreground"
@@ -59,10 +60,11 @@ export function CardConfigModal({
 
           {/* Namespace Filter */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="card-config-namespace" className="block text-sm font-medium text-foreground mb-2">
               Filter by Namespace
             </label>
             <input
+              id="card-config-namespace"
               type="text"
               value={(config.namespace as string) || ''}
               onChange={(e) => setConfig(prev => ({ ...prev, namespace: e.target.value || undefined }))}
@@ -87,10 +89,11 @@ export function CardConfigModal({
 
           {/* Max Items */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label htmlFor="card-config-max-items" className="block text-sm font-medium text-foreground mb-2">
               Max Items to Display
             </label>
             <input
+              id="card-config-max-items"
               type="number"
               value={(config.maxItems as number) || 10}
               onChange={(e) => setConfig(prev => ({ ...prev, maxItems: parseInt(e.target.value) || 10 }))}
