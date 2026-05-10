@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 import { CheckCircle, XCircle, RefreshCw, Clock, AlertTriangle, ChevronRight, ExternalLink, AlertCircle, Play, Loader2 } from 'lucide-react'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
@@ -101,6 +101,13 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
 
   // Card-specific status filter
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
+  const handleFilterSelect = (filter: 'all' | 'outOfSync' | 'unhealthy') => () => setSelectedFilter(filter)
+  const handleFilterKeyDown = (filter: 'all' | 'outOfSync' | 'unhealthy') => (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setSelectedFilter(filter)
+    }
+  }
 
   // Step 2: Pre-filter by config and status filter (card-specific)
   const preFiltered = (() => {
@@ -258,32 +265,32 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              role="button" tabIndex={0}
              aria-label={`Show all applications (${stats.synced} synced)`}
-             onClick={() => setSelectedFilter('all')}
-             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('all') } }}>
+             onClick={handleFilterSelect('all')}
+             onKeyDown={handleFilterKeyDown('all')}>
           <p className="text-lg font-bold text-green-400">{stats.synced}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.synced')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-yellow-500/10 cursor-pointer hover:bg-yellow-500/20"
              role="button" tabIndex={0}
              aria-label={`Filter out of sync applications (${stats.outOfSync} out of sync)`}
-             onClick={() => setSelectedFilter('outOfSync')}
-             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('outOfSync') } }}>
+             onClick={handleFilterSelect('outOfSync')}
+             onKeyDown={handleFilterKeyDown('outOfSync')}>
           <p className="text-lg font-bold text-yellow-400">{stats.outOfSync}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.outOfSync')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-green-500/10 cursor-pointer hover:bg-green-500/20"
              role="button" tabIndex={0}
              aria-label={`Show all applications (${stats.healthy} healthy)`}
-             onClick={() => setSelectedFilter('all')}
-             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('all') } }}>
+             onClick={handleFilterSelect('all')}
+             onKeyDown={handleFilterKeyDown('all')}>
           <p className="text-lg font-bold text-green-400">{stats.healthy}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.healthy')}</p>
         </div>
         <div className="text-center p-2 rounded-lg bg-red-500/10 cursor-pointer hover:bg-red-500/20"
              role="button" tabIndex={0}
              aria-label={`Filter unhealthy applications (${stats.unhealthy} unhealthy)`}
-             onClick={() => setSelectedFilter('unhealthy')}
-             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedFilter('unhealthy') } }}>
+             onClick={handleFilterSelect('unhealthy')}
+             onKeyDown={handleFilterKeyDown('unhealthy')}>
           <p className="text-lg font-bold text-red-400">{stats.unhealthy}</p>
           <p className="text-xs text-muted-foreground">{t('argoCDApplications.unhealthy')}</p>
         </div>

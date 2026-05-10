@@ -362,8 +362,10 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
   const { startMission } = useMissions()
   const { isConnected: agentConnected } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
-  const [clusterVersions, setClusterVersions] = useState<Record<string, string>>({})
-  const [fetchCompleted, setFetchCompleted] = useState(false)
+  const [{ clusterVersions, fetchCompleted }, setVersionState] = useState({
+    clusterVersions: {} as Record<string, string>,
+    fetchCompleted: false,
+  })
 
   // Managed WebSocket handle — created once per mount, destroyed on unmount
   const wsHandleRef = useRef<VersionWsHandle | null>(null)
@@ -426,8 +428,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     for (const c of allClusters) {
       demoVersions[c.name] = getDemoVersionForCluster(c.name)
     }
-    setClusterVersions(demoVersions)
-    setFetchCompleted(true)
+    setVersionState(prev => ({ ...prev, clusterVersions: demoVersions, fetchCompleted: true }))
   }, [isDemoMode, allClusters])
 
   // Fetch real versions from clusters via local agent
@@ -437,12 +438,12 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
     if (!agentConnected || allClusters.length === 0) {
       // If not connected, mark fetch as completed so we show '-' instead of 'loading...'
       // But preserve any cached versions we already have
-      setFetchCompleted(true)
+      setVersionState(prev => ({ ...prev, fetchCompleted: true }))
       return
     }
 
     let cancelled = false
-    setFetchCompleted(false)
+    setVersionState(prev => ({ ...prev, fetchCompleted: false }))
 
     const fetchVersions = async () => {
       // Only fetch for healthy/reachable clusters that we haven't cached yet
@@ -454,7 +455,7 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
       )
 
       if (clustersToFetch.length === 0) {
-        if (!cancelled) setFetchCompleted(true)
+        if (!cancelled) setVersionState(prev => ({ ...prev, fetchCompleted: true }))
         return
       }
 
@@ -486,10 +487,11 @@ export function UpgradeStatus({ config: _config }: UpgradeStatusProps) {
       }
 
       // Merge new versions with existing, preserving cache
-      if (hasNewData) {
-        setClusterVersions(prev => ({ ...prev, ...newVersions }))
-      }
-      setFetchCompleted(true)
+      setVersionState(prev => ({
+        ...prev,
+        clusterVersions: hasNewData ? { ...prev.clusterVersions, ...newVersions } : prev.clusterVersions,
+        fetchCompleted: true,
+      }))
     }
 
     fetchVersions()
