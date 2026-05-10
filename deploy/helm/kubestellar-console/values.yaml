@@ -1,5 +1,11 @@
 replicaCount: 1
 
+# Owner label applied to chart resources to satisfy cluster policies.
+owner: kubestellar
+
+# Extra labels added to all chart resources. Avoid setting `owner` here; use `.Values.owner` instead.
+commonLabels: {}
+
 image:
   repository: ghcr.io/kubestellar/console
   pullPolicy: IfNotPresent

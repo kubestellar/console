@@ -32,12 +32,17 @@ Create chart name and version as used by the chart label.
 Common labels
 */}}
 {{- define "kubestellar-console.labels" -}}
+{{- $commonLabels := .Values.commonLabels | default dict -}}
 helm.sh/chart: {{ include "kubestellar-console.chart" . }}
 {{ include "kubestellar-console.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+owner: {{ default "kubestellar" .Values.owner | quote }}
+{{- with omit $commonLabels "owner" }}
+{{ toYaml . }}
+{{- end }}
 {{- end }}
 
 {{/*
