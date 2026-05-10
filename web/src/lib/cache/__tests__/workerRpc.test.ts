@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CacheWorkerRpc } from '../workerRpc'
 
 // Create a mock worker
@@ -36,6 +36,10 @@ describe('CacheWorkerRpc', () => {
   beforeEach(() => {
     mockWorker = createMockWorker()
     rpc = new CacheWorkerRpc(mockWorker as unknown as Worker)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   describe('waitForReady', () => {
@@ -260,6 +264,31 @@ describe('CacheWorkerRpc', () => {
       await expect(promise1).rejects.toThrow('Worker terminated')
       await expect(promise2).rejects.toThrow('Worker terminated')
       await expect(promise3).rejects.toThrow('Worker terminated')
+    })
+  })
+
+  describe('worker error logging', () => {
+    it('logs expected OPFS fallback worker errors at debug level', () => {
+      const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      mockWorker.simulateError('missing SharedArrayBuffer/Atomics support')
+
+      expect(debugSpy).toHaveBeenCalledWith(
+        '[CacheWorkerRpc] Worker falling back to IndexedDB:',
+        'missing SharedArrayBuffer/Atomics support'
+      )
+      expect(errorSpy).not.toHaveBeenCalled()
+    })
+
+    it('keeps unexpected worker errors at error level', () => {
+      const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      mockWorker.simulateError('worker crashed')
+
+      expect(errorSpy).toHaveBeenCalledWith('[CacheWorkerRpc] Worker error:', 'worker crashed')
+      expect(debugSpy).not.toHaveBeenCalled()
     })
   })
 

@@ -10,6 +10,7 @@
 
 import type { WorkerRequest, WorkerResponse, CacheEntry, CacheMeta } from './workerMessages'
 import { CREATE_TABLES_SQL } from './schema'
+import { logOpfsFallback } from './opfsFallback'
 
 // We use a dynamic import for SQLite WASM to keep the worker bundle small
 // and let Vite handle the WASM file resolution.
@@ -64,7 +65,7 @@ async function initDatabase(): Promise<void> {
       // WAL may not be supported on all VFS backends
     }
   } catch (e: unknown) {
-    console.warn('[CacheWorker] SQLite OPFS unavailable, falling back to IndexedDB:', e)
+    logOpfsFallback('[CacheWorker] SQLite OPFS unavailable, falling back to IndexedDB:', e)
     throw e
   }
 }
@@ -383,7 +384,7 @@ initDatabase()
   })
   .catch((e) => {
     const reason = e instanceof Error ? e.message : String(e)
-    console.warn('[CacheWorker] Init using IndexedDB fallback:', e)
+    logOpfsFallback('[CacheWorker] Init using IndexedDB fallback:', e)
     // Reject all queued messages so callers aren't left waiting
     for (const queued of pendingMessages) {
       respondError(queued.id, `Worker init failed: ${reason}`)

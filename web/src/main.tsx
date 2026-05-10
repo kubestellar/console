@@ -15,8 +15,8 @@ import {
   initPreloadedMeta,
   migrateIDBToSQLite,
   migrateFromLocalStorage,
-
 } from './lib/cache'
+import { logOpfsFallback } from './lib/cache/opfsFallback'
 // Import dynamic card/stats persistence loaders
 import { loadDynamicCards, getAllDynamicCards, loadDynamicStats } from './lib/dynamic-cards'
 import { STORAGE_KEY_SQLITE_MIGRATED } from './lib/constants'
@@ -165,7 +165,7 @@ enableMocking()
         const { meta } = await rpc.preloadAll()
         initPreloadedMeta(meta)
       } catch (e: unknown) {
-        console.warn('[Cache] SQLite worker init: using IndexedDB fallback:', e)
+        logOpfsFallback('[Cache] SQLite worker init: using IndexedDB fallback:', e)
         try { await migrateFromLocalStorage() } catch (migrateErr: unknown) { console.warn('[Cache] failed to migrate from localStorage:', migrateErr) }
       }
     })()

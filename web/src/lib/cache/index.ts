@@ -30,6 +30,7 @@ import { registerCacheReset, registerRefetch } from '../modeTransition'
 import { STORAGE_KEY_KUBECTL_HISTORY } from '../constants'
 import { CacheWorkerRpc } from './workerRpc'
 import type { CacheEntry as WorkerCacheEntry, CacheMeta as WorkerCacheMeta } from './workerMessages'
+import { logOpfsFallback } from './opfsFallback'
 
 // ============================================================================
 // Configuration
@@ -525,7 +526,7 @@ export async function initCacheWorker(): Promise<CacheWorkerRpc> {
     cacheStorage = new WorkerStorage(rpc)
     return rpc
   } catch (e: unknown) {
-    console.warn('[Cache] SQLite Worker unavailable, using IndexedDB fallback:', e)
+    logOpfsFallback('[Cache] SQLite Worker unavailable, using IndexedDB fallback:', e)
     // Reuse the existing _idbStorage instance so that the snapshot hydrated by
     // preloadAll() remains consistent with the active storage backend.
     cacheStorage = _idbStorage

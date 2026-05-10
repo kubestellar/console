@@ -12,6 +12,7 @@ import type {
   PreloadResult,
   MigrationPayload,
 } from './workerMessages'
+import { isExpectedOpfsFallback } from './opfsFallback'
 
 type PendingCall = {
   resolve: (value: unknown) => void
@@ -63,6 +64,11 @@ export class CacheWorkerRpc {
     }
 
     this.worker.onerror = (event) => {
+      if (isExpectedOpfsFallback(event.message)) {
+        console.debug('[CacheWorkerRpc] Worker falling back to IndexedDB:', event.message)
+        return
+      }
+
       console.error('[CacheWorkerRpc] Worker error:', event.message)
     }
   }
