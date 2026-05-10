@@ -566,9 +566,12 @@ export async function setupDemoMode(page: Page) {
   // Seed localStorage before page scripts execute — prevents the app from
   // briefly rendering the /login screen before the demo flag is picked up.
   await page.addInitScript(() => {
+    localStorage.removeItem('kc-has-session')
+    localStorage.removeItem('kc-update-channel')
+    localStorage.removeItem('kc-releases-cache')
+    localStorage.removeItem('kc-auth-token')
     localStorage.setItem('token', 'demo-token')
     localStorage.setItem('kc-demo-mode', 'true')
-    localStorage.setItem('kc-has-session', 'true')
     localStorage.setItem('demo-user-onboarded', 'true')
     localStorage.setItem('kc-backend-status', JSON.stringify({
       available: true,
