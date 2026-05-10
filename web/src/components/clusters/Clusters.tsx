@@ -18,7 +18,7 @@ import { useApiKeyCheck, ApiKeyPromptModal } from '../cards/console-missions/sha
 import { loadMissionPrompt } from '../cards/multi-tenancy/missionLoader'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { emitClusterStatsDrillDown } from '../../lib/analytics'
 import { ROUTES } from '../../config/routes'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
@@ -67,7 +67,7 @@ export function Clusters() {
   // When demo mode is OFF and agent is not connected, force skeleton display
   // Also show skeleton during mode switching for smooth transitions
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode()
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
   const { isClusterAdmin, loading: permissionsLoading } = usePermissions()
   const {
     selectedClusters: globalSelectedClusters,

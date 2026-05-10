@@ -19,7 +19,7 @@ import { StatBlockModePicker } from './StatBlockModePicker'
 const LazySparkline = safeLazy(() => import('../charts/Sparkline'), 'Sparkline')
 import { Gauge } from '../charts/Gauge'
 import { CircularProgress } from '../charts/ProgressBar'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useIsModeSwitching } from '../../lib/unified/demo'
@@ -460,7 +460,7 @@ export function StatsOverview({
   // When demo mode is OFF and agent is confirmed disconnected, force skeleton display
   // Don't force skeleton during 'connecting' - show cached data to prevent flicker
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceLoadingForOffline = !isDemoMode && !isDemoData && isAgentOffline && !isInClusterMode()
+  const forceLoadingForOffline = !isDemoMode && !isDemoData && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
   // Show skeleton during mode switching for smooth transitions
   const effectiveIsLoading = isLoading || forceLoadingForOffline || isModeSwitching
   const effectiveHasData = forceLoadingForOffline ? false : hasData

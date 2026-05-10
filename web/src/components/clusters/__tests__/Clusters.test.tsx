@@ -26,6 +26,7 @@ vi.mock('../../../hooks/useMissions', () => ({
 
 vi.mock('../../../hooks/useLocalAgent', () => ({
   useLocalAgent: () => ({ isConnected: false, status: 'disconnected' }),
+  wasAgentEverConnected: () => false,
 }))
 
 vi.mock('../../../hooks/useDemoMode', () => ({
