@@ -350,7 +350,7 @@ export function useKyverno() {
     () => allClusters.filter(c => c.reachable === true).map(c => c.name),
     [allClusters]
   )
-  const clusterNamesKey = useMemo(() => clusters.join('|'), [clusters])
+  const clusterNamesKey = useMemo(() => (clusters || []).join('|'), [clusters])
 
   const refetch = useCallback(async (silent = false) => {
     // In-cluster mode: kubectlProxy requires kc-agent which isn't available.

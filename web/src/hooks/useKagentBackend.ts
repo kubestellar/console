@@ -3,10 +3,11 @@ import { fetchKagentStatus, fetchKagentAgents, type KagentAgent, type KagentStat
 import { fetchKagentiProviderStatus, fetchKagentiProviderAgents, type KagentiProviderAgent, type KagentiProviderStatus } from '../lib/kagentiProviderBackend'
 
 const POLL_INTERVAL_MS = 30_000
+const BACKEND_CACHE_TTL_MS = POLL_INTERVAL_MS
 const BACKEND_REFRESH_MIN_INTERVAL_MS = 2_000
-const KAGENT_SELECTED_AGENT_KEY = 'kc_kagent_selected_agent'
-const KAGENTI_SELECTED_AGENT_KEY = 'kc_kagenti_selected_agent'
-const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
+const KAGENT_SELECTED_AGENT_STORAGE_KEY = 'kc_kagent_selected_agent'
+const KAGENTI_SELECTED_AGENT_STORAGE_KEY = 'kc_kagenti_selected_agent'
+const BACKEND_PREFERENCE_STORAGE_KEY = 'kc_agent_backend_preference'
 
 type BackendState = {
   kagentStatus: KagentStatus | null
@@ -77,7 +78,7 @@ function setStoredValue(key: string, value: string): void {
 }
 
 function getStoredPreferredBackend(): AgentBackendType {
-  const saved = getStoredValue(BACKEND_PREF_KEY)
+  const saved = getStoredValue(BACKEND_PREFERENCE_STORAGE_KEY)
   if (saved === 'kagent' || saved === 'kagenti') return saved
   return 'kc-agent'
 }
@@ -177,13 +178,13 @@ async function runRefresh(bypassThrottle = false): Promise<void> {
         selectedKagentAgent: restoreSelectedAgent(
           current.selectedKagentAgent,
           kagentAgentsList,
-          KAGENT_SELECTED_AGENT_KEY,
+          KAGENT_SELECTED_AGENT_STORAGE_KEY,
           kStatus.available,
         ),
         selectedKagentiAgent: restoreSelectedAgent(
           current.selectedKagentiAgent,
           kagentiAgentsList,
-          KAGENTI_SELECTED_AGENT_KEY,
+          KAGENTI_SELECTED_AGENT_STORAGE_KEY,
           kiStatus.available,
         ),
         hasPolled: true,
@@ -248,17 +249,17 @@ export function __resetForTest(): void {
 }
 
 function selectKagentAgentInStore(agent: KagentAgent): void {
-  setStoredValue(KAGENT_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
+  setStoredValue(KAGENT_SELECTED_AGENT_STORAGE_KEY, `${agent.namespace}/${agent.name}`)
   setSharedState(current => ({ ...current, selectedKagentAgent: agent }))
 }
 
 function selectKagentiAgentInStore(agent: KagentiProviderAgent): void {
-  setStoredValue(KAGENTI_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
+  setStoredValue(KAGENTI_SELECTED_AGENT_STORAGE_KEY, `${agent.namespace}/${agent.name}`)
   setSharedState(current => ({ ...current, selectedKagentiAgent: agent }))
 }
 
 function setPreferredBackendInStore(backend: AgentBackendType): void {
-  setStoredValue(BACKEND_PREF_KEY, backend)
+  setStoredValue(BACKEND_PREFERENCE_STORAGE_KEY, backend)
   setSharedState(current => ({ ...current, preferredBackend: backend }))
 }
 
@@ -325,5 +326,6 @@ export function useKagentBackend(): UseKagentBackendResult {
 }
 
 export const __testables = {
+  BACKEND_CACHE_TTL_MS,
   BACKEND_REFRESH_MIN_INTERVAL_MS,
 }

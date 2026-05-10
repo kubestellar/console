@@ -17,7 +17,8 @@ export interface ActiveUsersInfo {
   totalConnections: number
 }
 
-const POLL_INTERVAL = 10_000 // Poll every 10 seconds
+const ACTIVE_USERS_CACHE_TTL_MS = 10_000
+const POLL_INTERVAL = ACTIVE_USERS_CACHE_TTL_MS // Poll every 10 seconds
 const HEARTBEAT_INTERVAL = 30_000 // Heartbeat every 30 seconds
 const HEARTBEAT_JITTER = 3_000 // Jitter (0-3s) to spread heartbeats without long delays
 const HEARTBEAT_REQUEST_TIMEOUT_MS = 5_000
@@ -554,6 +555,7 @@ export const __testables = {
   isJsonResponse,
   getSessionId,
   disconnectPresence,
+  ACTIVE_USERS_CACHE_TTL_MS,
   POLL_INTERVAL,
   HEARTBEAT_INTERVAL,
   MAX_FAILURES,

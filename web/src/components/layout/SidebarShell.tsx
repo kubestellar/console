@@ -563,7 +563,7 @@ export function SidebarShell({
                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50 border-l-[3px] border-transparent',
               isCollapsed ? 'justify-center p-3' : 'px-3 py-2'
             )}
-            title={navItemTitle.join(' — ')}
+            title={(navItemTitle || []).join(' — ')}
           >
             <span className="relative shrink-0">
               {renderIcon(item.icon, isCollapsed ? 'w-6 h-6' : 'w-5 h-5')}
