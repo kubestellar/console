@@ -2949,6 +2949,150 @@ Install the console locally with the KubeStellar Console agent to use AI mission
       }
     }))
 
+    // Route kagenti follow-up messages through SSE proxy, matching initial
+    // message path. Without this check, follow-ups fall through to local-agent
+    // WebSocket and fail in in-cluster deployments (#12992).
+    if (selectedAgentRef.current === 'kagenti') {
+      const startedAt = Date.now()
+      const assistantMessageId = generateMessageId('kagenti-stream')
+      const mission = missionsRef.current.find(m => m.id === missionId)
+      const missionType = mission?.type || 'unknown'
+
+      void (async () => {
+        let target = getSelectedKagentiAgentFromStorage()
+        if (!target) {
+          const discovered = await fetchKagentiProviderAgents()
+          if ((discovered || []).length > 0) {
+            target = {
+              namespace: discovered[0].namespace,
+              name: discovered[0].name,
+            }
+          }
+        }
+
+        if (!target) {
+          executingMissions.current.delete(missionId)
+          const errorContent = `**Kagenti Agent Not Selected**\n\nSelect a Kagenti agent in Settings → Agent Backend, then retry this mission.`
+          setMissions(prev => prev.map(m =>
+            m.id === missionId
+              ? {
+                  ...m,
+                  status: 'failed',
+                  currentStep: undefined,
+                  messages: [
+                    ...getMissionMessages(m.messages),
+                    {
+                      id: generateMessageId('kagenti-missing-agent'),
+                      role: 'system',
+                      content: errorContent,
+                      timestamp: new Date(),
+                    },
+                  ],
+                }
+              : m
+          ))
+          emitMissionError(missionType, 'kagenti_agent_missing', 'no_selected_kagenti_agent')
+          return
+        }
+
+        await kagentiProviderChat(target.name, target.namespace, content, {
+          contextId: missionId,
+          onChunk: (text: string) => {
+            setMissions(prev => prev.map(m => {
+              if (m.id !== missionId) return m
+
+              const missionMessages = getMissionMessages(m.messages)
+              const idx = missionMessages.findIndex(msg => msg.id === assistantMessageId)
+              if (idx === -1) {
+                return {
+                  ...m,
+                  currentStep: `Processing with ${selectedAgentRef.current || 'kagenti'}...`,
+                  messages: [
+                    ...missionMessages,
+                    {
+                      id: assistantMessageId,
+                      role: 'assistant',
+                      content: text,
+                      timestamp: new Date(),
+                      agent: selectedAgentRef.current || 'kagenti',
+                    },
+                  ],
+                }
+              }
+
+              const nextMessages = [...missionMessages]
+              nextMessages[idx] = {
+                ...nextMessages[idx],
+                content: `${nextMessages[idx].content}${text}`,
+                timestamp: new Date(),
+              }
+              return {
+                ...m,
+                currentStep: `Processing with ${selectedAgentRef.current || 'kagenti'}...`,
+                messages: nextMessages,
+              }
+            }))
+          },
+          onDone: () => {
+            executingMissions.current.delete(missionId)
+            const durationMs = Math.max(0, Date.now() - startedAt)
+            emitMissionCompleted(missionType, durationMs)
+
+            setMissions(prev => prev.map(m => {
+              if (m.id !== missionId) return m
+
+              const missionMessages = getMissionMessages(m.messages)
+              const hasAssistant = missionMessages.some(msg => msg.id === assistantMessageId && msg.content.trim().length > 0)
+              return {
+                ...m,
+                status: 'completed',
+                currentStep: undefined,
+                updatedAt: new Date(),
+                messages: hasAssistant
+                  ? missionMessages
+                  : [
+                      ...missionMessages,
+                      {
+                        id: assistantMessageId,
+                        role: 'assistant',
+                        content: 'Task completed.',
+                        timestamp: new Date(),
+                        agent: selectedAgentRef.current || 'kagenti',
+                      },
+                    ],
+              }
+            }))
+          },
+          onError: (error: string) => {
+            executingMissions.current.delete(missionId)
+            emitMissionError(missionType, 'kagenti_chat_error', error)
+
+            setMissions(prev => prev.map(m =>
+              m.id === missionId
+                ? {
+                    ...m,
+                    status: 'failed',
+                    currentStep: undefined,
+                    updatedAt: new Date(),
+                    messages: [
+                      ...getMissionMessages(m.messages),
+                      {
+                        id: generateMessageId('kagenti-error'),
+                        role: 'system',
+                        content: `**Kagenti Request Failed**\n\n${error}`,
+                        timestamp: new Date(),
+                      },
+                    ],
+                  }
+                : m
+            ))
+          },
+        })
+      })()
+
+      return
+    }
+
     ensureConnection().then(() => {
       const requestId = generateRequestId()
       pendingRequests.current.set(requestId, missionId)
