@@ -46,6 +46,14 @@ interface BackendState {
   watchdogStage: string | null
 }
 
+function resolveInClusterMode(state: BackendState): boolean {
+  if (state.status === 'connected') {
+    return state.inCluster
+  }
+
+  return state.inCluster || readInClusterFromSession()
+}
+
 class BackendHealthManager {
   private state: BackendState = {
     status: 'connecting',
@@ -288,7 +296,7 @@ export function useBackendHealth() {
     lastCheck: state.lastCheck,
     versionChanged: state.versionChanged,
     inCluster: state.inCluster,
-    isInClusterMode: state.status === 'connected' && state.inCluster,
+    isInClusterMode: resolveInClusterMode(state),
     watchdogStage: state.watchdogStage,
   }
 }
@@ -297,12 +305,8 @@ export function isBackendConnected(): boolean {
   return backendHealthManager.getState().status === 'connected'
 }
 
-/** Returns true only when backend is connected AND running in-cluster (not localhost) */
+/** Returns true for confirmed in-cluster mode, including reconnect windows in the same session. */
 export function isInClusterMode(): boolean {
   const state = backendHealthManager.getState()
-  // Fast path: confirmed by live health check
-  if (state.status === 'connected' && state.inCluster) return true
-  // Synchronous fallback: use value persisted from a previous health check this session.
-  // This avoids the timing race on page reload where data fetches fire before /health responds.
-  return readInClusterFromSession()
+  return resolveInClusterMode(state)
 }

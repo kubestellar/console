@@ -199,5 +199,7 @@ describe('useBackendHealth — expanded edge cases', () => {
 
     await waitFor(() => expect(result.current.status).toBe('disconnected'))
     expect(result.current.inCluster).toBe(true)
+    expect(result.current.isInClusterMode).toBe(true)
+    expect(isInClusterMode()).toBe(true)
   })
 })
