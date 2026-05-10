@@ -115,7 +115,7 @@ export function ProviderHealth() {
       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
         <p className="text-sm">{t('providerHealth.noProviders')}</p>
         <p className="text-xs mt-1">
-          <button onClick={goToSettings} className="text-purple-400 hover:underline">
+          <button onClick={goToSettings} className="text-purple-400 hover:underline" aria-label={t('providerHealth.configureAIKeys')}>
             {t('providerHealth.configureAIKeys')}
           </button>
           {' '}{t('providerHealth.orConnectClusters')}
