@@ -709,14 +709,16 @@ export function MissionSidebar() {
   }
 
 
+  const shouldRenderMinimizedSidebar = isSidebarOpen && isSidebarMinimized && !isMobile
+  const shouldRenderExpandedSidebar = isSidebarOpen && !isSidebarMinimized
+
   // Minimized sidebar view (thin strip) - desktop only
-  if (isSidebarMinimized && !isMobile) {
+  if (shouldRenderMinimizedSidebar) {
     return (
       <div
         className={cn(
         "fixed top-16 right-0 bottom-0 w-12 bg-card/95 backdrop-blur-xs border-l border-border shadow-xl z-sidebar flex flex-col items-center py-4",
-        "transition-transform duration-300 ease-in-out",
-        !isSidebarOpen && "translate-x-full pointer-events-none"
+        "transition-transform duration-300 ease-in-out"
       )}>
         <button
           onClick={expandSidebar}
@@ -746,48 +748,47 @@ export function MissionSidebar() {
 
   return (
     <>
-      {/* Mobile backdrop */}
-      {/* issue 6742 — tabIndex=-1 removes the backdrop from the Tab order, aria-hidden
-          hides it from assistive tech. The sidebar itself handles close semantics. */}
-      {isMobile && isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
-          onClick={closeSidebar}
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-      )}
-      {/* Tablet backdrop — the sidebar renders as an overlay at < lg so main
-          content isn't squeezed. A tap-out backdrop mirrors mobile UX (issue 6388). */}
-      {!isMobile && isTablet && isSidebarOpen && !isFullScreen && (
-        <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-overlay lg:hidden"
-          onClick={closeSidebar}
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-      )}
+      {shouldRenderExpandedSidebar && (
+        <>
+          {/* Mobile backdrop */}
+          {/* issue 6742 — tabIndex=-1 removes the backdrop from the Tab order, aria-hidden
+              hides it from assistive tech. The sidebar itself handles close semantics. */}
+          {isMobile && (
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-overlay md:hidden"
+              onClick={closeSidebar}
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+          )}
+          {/* Tablet backdrop — the sidebar renders as an overlay at < lg so main
+              content isn't squeezed. A tap-out backdrop mirrors mobile UX (issue 6388). */}
+          {!isMobile && isTablet && !isFullScreen && (
+            <div
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs z-overlay lg:hidden"
+              onClick={closeSidebar}
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+          )}
 
-      <div
-        data-tour="ai-missions"
-        data-testid="mission-sidebar"
-        className={cn(
-          "fixed bg-card border-border flex flex-col overflow-hidden shadow-2xl",
-          isMobile ? "z-modal" : "z-sidebar",
-          !isResizing && "transition-[width,top,border,transform] duration-300 ease-in-out",
-          // Mobile: bottom sheet
-          // vh fallback before dvh so browsers without dynamic-viewport-unit
-          // support still cap the sheet height (#6548).
-          isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80vh] max-h-[80dvh]",
-          isMobile && !isSidebarOpen && "translate-y-full pointer-events-none",
-          isMobile && isSidebarOpen && "translate-y-0",
-          // Desktop: right sidebar
-          !isMobile && isFullScreen && "inset-0 top-16 border-l-0 rounded-none",
-          !isMobile && !isFullScreen && "top-16 right-0 bottom-0 border-l shadow-xl",
-          !isMobile && !isSidebarOpen && "translate-x-full pointer-events-none"
-        )}
-        style={!isMobile && !isFullScreen ? { width: sidebarWidth } : undefined}
-      >
+          <div
+            data-tour="ai-missions"
+            data-testid="mission-sidebar"
+            className={cn(
+              "fixed bg-card border-border flex flex-col overflow-hidden shadow-2xl",
+              isMobile ? "z-modal" : "z-sidebar",
+              !isResizing && "transition-[width,top,border,transform] duration-300 ease-in-out",
+              // Mobile: bottom sheet
+              // vh fallback before dvh so browsers without dynamic-viewport-unit
+              // support still cap the sheet height (#6548).
+              isMobile && "inset-x-0 bottom-0 rounded-t-2xl border-t max-h-[80vh] max-h-[80dvh] translate-y-0",
+              // Desktop: right sidebar
+              !isMobile && isFullScreen && "inset-0 top-16 border-l-0 rounded-none",
+              !isMobile && !isFullScreen && "top-16 right-0 bottom-0 border-l shadow-xl"
+            )}
+            style={!isMobile && !isFullScreen ? { width: sidebarWidth } : undefined}
+          >
       {/* Desktop resize handle (left edge) */}
       {!isMobile && !isFullScreen && isSidebarOpen && (
         <div
@@ -1503,7 +1504,9 @@ export function MissionSidebar() {
           )}
         </div>
       )}
-    </div>
+          </div>
+        </>
+      )}
 
       {/* Saved Mission Detail Modal */}
       {viewingMission && (
