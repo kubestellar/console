@@ -102,7 +102,7 @@ test.describe('SSE stream reconnection (live backend)', () => {
     const initialTimestamp = await page.locator('[data-last-updated]').first().textContent().catch(() => null)
 
     // Trigger a refresh to get new SSE stream
-    const refreshButton = page.locator('button[aria-label*="Refresh"]').or(page.locator('button:has-text("Refresh")')).first()
+    const refreshButton = page.getByTestId('dashboard-refresh-button')
     if (await refreshButton.isVisible().catch(() => false)) {
       await refreshButton.click()
       await page.waitForTimeout(SSE_CHUNK_WAIT_MS)

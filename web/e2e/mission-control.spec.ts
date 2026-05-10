@@ -73,13 +73,9 @@ test.describe('Mission Control Pipeline', () => {
     await page.waitForLoadState('domcontentloaded')
 
     const trigger = page.getByTestId('mission-sidebar-toggle')
-      .or(page.getByRole('button', { name: /mission/i }))
-    if (await trigger.first().isVisible({ timeout: VISIBLE_TIMEOUT_MS }).catch(() => false)) {
-      await trigger.first().click()
-      await expect(
-        page.getByTestId('mission-sidebar')
-          .or(page.locator('[data-tour="ai-missions"]'))
-      ).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
+    if (await trigger.isVisible({ timeout: VISIBLE_TIMEOUT_MS }).catch(() => false)) {
+      await trigger.click()
+      await expect(page.getByTestId('mission-sidebar')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
     }
   })
 
@@ -87,9 +83,8 @@ test.describe('Mission Control Pipeline', () => {
     await page.goto('/?browse=missions&demo=true')
     await page.waitForLoadState('domcontentloaded')
 
-    const missionItems = page.locator('[data-testid*="mission"]')
-      .or(page.locator('[data-tour*="mission"]'))
-    await expect(missionItems.first()).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
+    await expect(page.getByTestId('mission-browser')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
+    await expect(page.getByTestId('mission-grid')).toBeVisible({ timeout: VISIBLE_TIMEOUT_MS })
   })
 
   test('mission detail page shows steps', async ({ page }) => {

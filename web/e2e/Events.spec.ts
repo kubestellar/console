@@ -75,19 +75,16 @@ test.describe('Events Page', () => {
 
   test.describe('Event List', () => {
     test('displays events page', async ({ page }) => {
-      // Wait for dashboard header (Events uses DashboardPage)
+      // Wait for dashboard header.
       const header = page.getByTestId('dashboard-header')
-        .or(page.getByTestId('dashboard-page'))
-      const headerVisible = await header.first().isVisible({ timeout: 10000 }).catch(() => false)
+      const headerVisible = await header.isVisible({ timeout: 10000 }).catch(() => false)
       if (!headerVisible) {
         test.skip()
         return
       }
 
-      // Should have Events title — may be a heading or plain text
-      const heading = page.getByRole('heading', { name: /events/i })
-        .or(page.getByText(/events/i).first())
-      await expect(heading.first()).toBeVisible({ timeout: 5000 })
+      // Should have Events title in the dashboard header.
+      await expect(page.getByTestId('dashboard-title')).toHaveText(/events/i, { timeout: 5000 })
     })
 
     test('shows event types (Warning/Normal)', async ({ page }) => {
@@ -169,17 +166,14 @@ test.describe('Events Page', () => {
 
     test('page has heading', async ({ page }) => {
       const header = page.getByTestId('dashboard-header')
-        .or(page.getByTestId('dashboard-page'))
-      const headerVisible = await header.first().isVisible({ timeout: 10000 }).catch(() => false)
+      const headerVisible = await header.isVisible({ timeout: 10000 }).catch(() => false)
       if (!headerVisible) {
         test.skip()
         return
       }
 
-      // Should have Events heading — may be a heading element or plain text
-      const heading = page.getByRole('heading', { name: /events/i })
-        .or(page.getByText(/events/i).first())
-      await expect(heading.first()).toBeVisible({ timeout: 5000 })
+      // Should have Events title in the dashboard header.
+      await expect(page.getByTestId('dashboard-title')).toHaveText(/events/i, { timeout: 5000 })
     })
   })
 })

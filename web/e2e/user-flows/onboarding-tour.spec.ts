@@ -35,12 +35,10 @@ test.describe('Onboarding Tour', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
 
-    // Look for tour prompt, welcome dialog, or onboarding modal
-    const tourPrompt = page.getByRole('dialog')
-      .or(page.getByTestId('tour-tooltip'))
-      .or(page.getByText(/welcome|take a tour|get started/i))
+    // The tour renders a dedicated skip button when the prompt is active.
+    const tourPrompt = page.getByRole('button', { name: /skip tour|skip/i })
 
-    const hasTour = await tourPrompt.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const hasTour = await tourPrompt.isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
     if (!hasTour) {
       test.info().annotations.push({ type: 'ux-finding', description: 'No tour prompt shown for fresh user — may be disabled or deferred' })
     }
@@ -58,18 +56,16 @@ test.describe('Onboarding Tour', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_TIMEOUT_MS }).catch(() => {})
 
-    const tooltip = page.getByTestId('tour-tooltip')
-      .or(page.locator('[class*="tour"], [class*="joyride"], [class*="onboarding"]'))
-
-    const hasTooltip = await tooltip.first().isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
+    const skipBtn = page.getByRole('button', { name: /skip tour|skip/i })
+    const hasTooltip = await skipBtn.isVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS }).catch(() => false)
     if (!hasTooltip) {
       test.skip()
       return
     }
 
-    const nextBtn = page.getByRole('button', { name: /next/i })
-    const skipBtn = page.getByRole('button', { name: /skip/i })
-    await expect(nextBtn.or(skipBtn).first()).toBeVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS })
+    const nextBtn = page.getByRole('button', { name: /next|get started/i })
+    await expect(skipBtn).toBeVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS })
+    await expect(nextBtn).toBeVisible({ timeout: TOUR_TOOLTIP_TIMEOUT_MS })
   })
 
   test('Next advances tour step (tooltip content changes)', async ({ page }) => {
