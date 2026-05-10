@@ -183,9 +183,9 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
         throw new Error(t('agent.failedToFetchKeyStatus'))
       }
       const data: KeysStatusResponse = await response.json()
-      setKeysStatus(data.keys)
+      setKeysStatus(data.keys || [])
       setRegisteredProviders(data.registeredProviders || [])
-      setConfigPath(data.configPath)
+      setConfigPath(data.configPath || '')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('agent.failedToConnect'))
     } finally {
@@ -376,6 +376,35 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                 </div>
               </div>
 
+              <button
+                onClick={fetchKeysStatus}
+                className="text-sm text-primary hover:underline"
+              >
+                {t('agent.retryConnection')}
+              </button>
+            </div>
+          ) : filteredKeys.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="p-3 rounded-full bg-secondary w-fit mx-auto mb-4">
+                <Key className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                {t('agent.noProvidersTitle')}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t('agent.noProvidersDescription')}
+              </p>
+              <div className="bg-secondary/50 rounded-lg p-4 mb-4 text-left">
+                <p className="text-xs font-medium text-foreground mb-2">{t('agent.envVarsTitle')}</p>
+                <div className="space-y-1">
+                  <code className="block text-xs text-muted-foreground font-mono">ANTHROPIC_API_KEY=sk-ant-...</code>
+                  <code className="block text-xs text-muted-foreground font-mono">OPENAI_API_KEY=sk-...</code>
+                  <code className="block text-xs text-muted-foreground font-mono">GEMINI_API_KEY=...</code>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {t('agent.envVarsHint')}
+                </p>
+              </div>
               <button
                 onClick={fetchKeysStatus}
                 className="text-sm text-primary hover:underline"

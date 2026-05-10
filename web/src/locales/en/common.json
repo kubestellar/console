@@ -1873,6 +1873,8 @@
   "agent": {
     "connectingToAgent": "Connecting to agent...",
     "noAgentsAvailable": "No AI agents available",
+    "noProvidersDescription": "API keys for cloud AI providers are configured via environment variables. Set the variables below and restart the console to enable AI features.",
+    "noProvidersTitle": "No API Providers Available",
     "demoMode": "Demo Mode",
     "demoModeTitle": "Demo Mode - showing sample data",
     "degraded": "Degraded",
@@ -1940,6 +1942,8 @@
     "installAgentPrompt": "Install and start the local agent to configure API keys.",
     "runInstallCommand": "Run this command to install:",
     "retryConnection": "Retry Connection",
+    "envVarsTitle": "Environment Variables",
+    "envVarsHint": "Set these in your .env file or shell environment, then restart the console.",
     "validationFailedModel": "API key validation failed - the model may not be available for your account",
     "invalidApiKey": "Invalid API key - please check and try again",
     "rateLimitExceeded": "Rate limit exceeded - please try again later",
