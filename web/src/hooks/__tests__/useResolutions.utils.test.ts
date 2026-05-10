@@ -805,10 +805,26 @@ describe('useResolutions', () => {
       })
     })
 
-    // Verify localStorage was updated by the useEffect
     const stored = JSON.parse(localStorage.getItem('kc_resolutions') || '[]')
     expect(stored.length).toBe(1)
     expect(stored[0].title).toBe('Persisted Resolution')
+  })
+
+  it('keeps multiple hook instances in sync after saving a resolution', () => {
+    const primary = renderHook(() => useResolutions())
+    const secondary = renderHook(() => useResolutions())
+
+    act(() => {
+      primary.result.current.saveResolution({
+        missionId: 'mission-sync',
+        title: 'Synced Resolution',
+        issueSignature: { type: 'CrashLoopBackOff', resourceKind: 'Pod' },
+        resolution: { summary: 'Restart the pod', steps: ['kubectl delete pod'] },
+      })
+    })
+
+    expect(secondary.result.current.resolutions).toHaveLength(1)
+    expect(secondary.result.current.allResolutions[0].title).toBe('Synced Resolution')
   })
 
   it('saveResolution with context stores the context object', () => {

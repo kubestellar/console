@@ -1607,6 +1607,7 @@ export function MissionSidebar() {
           mission={activeMission}
           isOpen={showSaveResolutionDialog}
           onClose={() => setShowSaveResolutionDialog(false)}
+          onSaved={() => setResolutionPanelView('history')}
         />
       )}
     </>
