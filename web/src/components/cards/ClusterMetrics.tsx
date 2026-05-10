@@ -9,6 +9,7 @@ import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
+import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 type MetricType = 'cpu' | 'memory' | 'pods' | 'nodes'
@@ -256,20 +257,13 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
 
   // Load history from localStorage
   const loadSavedHistory = (): MetricPoint[] => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) {
-        const parsed = JSON.parse(saved) as { data: MetricPoint[]; timestamp: number }
-        // Guard: validate parsed.data is an array before using it.
-        // Malformed or legacy localStorage data could return a non-array
-        // value (e.g. undefined, null, or an object), which would cause
-        // history.filter() to throw a TypeError during render.
-        if (Date.now() - parsed.timestamp < MAX_AGE_MS && Array.isArray(parsed.data)) {
-          return parsed.data
-        }
-      }
-    } catch {
-      // Ignore parse errors
+    const parsed = safeGetJSON<{ data: MetricPoint[]; timestamp: number }>(STORAGE_KEY)
+    // Guard: validate parsed.data is an array before using it.
+    // Malformed or legacy localStorage data could return a non-array
+    // value (e.g. undefined, null, or an object), which would cause
+    // history.filter() to throw a TypeError during render.
+    if (parsed && Date.now() - parsed.timestamp < MAX_AGE_MS && Array.isArray(parsed.data)) {
+      return parsed.data
     }
     return []
   }
@@ -284,13 +278,9 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
   useEffect(() => {
     if (isDemoMode || history.length === 0) return
 
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        data: history,
-        timestamp: Date.now() }))
-    } catch {
-      // Ignore storage errors
-    }
+    safeSetJSON(STORAGE_KEY, {
+      data: history,
+      timestamp: Date.now() })
   }, [history, isDemoMode])
 
   // Calculate real current values from cluster data

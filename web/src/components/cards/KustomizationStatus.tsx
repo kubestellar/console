@@ -11,6 +11,7 @@ import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions }
 import { useCardData } from '../../lib/cards/cardHooks'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
+import { safeGetJSON } from '../../lib/utils/localStorage'
 
 interface KustomizationStatusProps {
   config?: {
@@ -35,15 +36,10 @@ const KUSTOMIZATION_CACHE_KEY = 'kc-kustomization-status-cache'
 // Load from localStorage
 function loadKustomizationsFromStorage(): { data: Kustomization[], timestamp: number } {
   if (typeof window === 'undefined') return { data: [], timestamp: 0 }
-  try {
-    const stored = localStorage.getItem(KUSTOMIZATION_CACHE_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      if (Array.isArray(parsed.data)) {
-        return { data: parsed.data, timestamp: parsed.timestamp || 0 }
-      }
-    }
-  } catch { /* ignore */ }
+  const parsed = safeGetJSON<{ data?: Kustomization[]; timestamp?: number }>(KUSTOMIZATION_CACHE_KEY)
+  if (parsed && Array.isArray(parsed.data)) {
+    return { data: parsed.data, timestamp: parsed.timestamp || 0 }
+  }
   return { data: [], timestamp: 0 }
 }
 

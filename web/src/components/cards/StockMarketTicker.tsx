@@ -13,8 +13,10 @@ import { FETCH_EXTERNAL_TIMEOUT_MS } from '../../lib/constants'
 import { GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import { useToast } from '../ui/Toast'
 import type { TFunction } from 'i18next'
+import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
 
 const SEARCH_DEBOUNCE_MS = 300
+const SAVED_STOCKS_STORAGE_KEY = 'stock-ticker-saved-stocks'
 
 // Stock search result interface
 interface StockSearchResult {
@@ -530,25 +532,16 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   const [stockSearchResults, setStockSearchResults] = useState<StockSearchResult[]>([])
   const [showStockDropdown, setShowStockDropdown] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
-  const [savedStocks, setSavedStocks] = useState<SavedStock[]>(() => {
-    try {
-      const saved = localStorage.getItem('stock-ticker-saved-stocks')
-      return saved ? JSON.parse(saved) : []
-    } catch {
-      return []
-    }
-  })
+  const [savedStocks, setSavedStocks] = useState<SavedStock[]>(
+    () => safeGetJSON<SavedStock[]>(SAVED_STOCKS_STORAGE_KEY) || []
+  )
   const [activeSymbols, setActiveSymbols] = useState<string[]>(symbols)
 
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Save stocks to localStorage whenever they change
   useEffect(() => {
-    try {
-      localStorage.setItem('stock-ticker-saved-stocks', JSON.stringify(savedStocks))
-    } catch {
-      // Ignore storage errors (e.g. private browsing, quota exceeded)
-    }
+    safeSetJSON(SAVED_STOCKS_STORAGE_KEY, savedStocks)
   }, [savedStocks])
 
   // Stock data via useCache (persists across navigation)

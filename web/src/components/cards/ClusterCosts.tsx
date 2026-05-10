@@ -11,6 +11,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
+import { safeGetJSON, safeRemoveItem, safeSetJSON } from '../../lib/utils/localStorage'
 
 type CloudProvider = 'estimate' | 'aws' | 'gcp' | 'azure' | 'oci' | 'openshift'
 
@@ -34,15 +35,7 @@ const PROVIDER_OVERRIDES_KEY = 'kubestellar-cluster-provider-overrides'
 // Load persisted overrides from localStorage (moved outside component)
 const loadPersistedOverrides = (configOverrides?: Record<string, CloudProvider>): Record<string, CloudProvider> => {
   if (typeof window === 'undefined') return configOverrides || {}
-  try {
-    const saved = localStorage.getItem(PROVIDER_OVERRIDES_KEY)
-    if (saved) {
-      return JSON.parse(saved)
-    }
-  } catch {
-    // Ignore parse errors
-  }
-  return configOverrides || {}
+  return safeGetJSON<Record<string, CloudProvider>>(PROVIDER_OVERRIDES_KEY) || configOverrides || {}
 }
 type PricingMode = 'uniform' | 'per-cluster'
 type SortByOption = 'cost' | 'name' | 'cpus'
@@ -211,15 +204,11 @@ export const ClusterCosts = memo(function ClusterCosts({ config }: ClusterCostsP
 
   // Persist provider overrides to localStorage
   useEffect(() => {
-    try {
-      if (Object.keys(clusterProviderOverrides).length > 0) {
-        localStorage.setItem(PROVIDER_OVERRIDES_KEY, JSON.stringify(clusterProviderOverrides))
-      } else {
-        localStorage.removeItem(PROVIDER_OVERRIDES_KEY)
-      }
-    } catch {
-      // Silently ignore quota errors or private browsing restrictions
+    if (Object.keys(clusterProviderOverrides).length > 0) {
+      safeSetJSON(PROVIDER_OVERRIDES_KEY, clusterProviderOverrides)
+      return
     }
+    safeRemoveItem(PROVIDER_OVERRIDES_KEY)
   }, [clusterProviderOverrides])
 
   // Auto-detect cloud provider from cluster names

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Layers, Box, Activity, AlertTriangle, Server } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useClusters } from '../../hooks/useMCP'
@@ -11,8 +11,8 @@ import { ClusterBadge } from '../ui/ClusterBadge'
 import { StatusBadge } from '../ui/StatusBadge'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
 import { useCardLoadingState } from './CardDataContext'
-import { useToast } from '../ui/Toast'
 import { STORAGE_KEY_NS_OVERVIEW_CLUSTER, STORAGE_KEY_NS_OVERVIEW_NAMESPACE } from '../../lib/constants/storage'
+import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 
 interface NamespaceOverviewProps {
   config?: {
@@ -23,39 +23,15 @@ interface NamespaceOverviewProps {
 
 export function NamespaceOverview({ config }: NamespaceOverviewProps) {
   const { t } = useTranslation(['common', 'cards'])
-  const { showToast } = useToast()
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, isFailed: clustersFailed, consecutiveFailures: clustersConsecutiveFailures } = useClusters()
 
-  // Track if we've shown restore error toast (prevent duplicate toasts on re-render)
-  const hasShownRestoreErrorRef = useRef(false)
-
   // Initialize from config prop (card-level override) or persisted localStorage value (#3115)
-  const [selectedCluster, setSelectedCluster] = useState<string>(() => {
-    if (config?.cluster) return config.cluster
-    try { 
-      return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER) || '' 
-    } catch (e: unknown) { 
-      console.error('[NamespaceOverview] failed to restore cluster selection:', e)
-      if (!hasShownRestoreErrorRef.current) {
-        hasShownRestoreErrorRef.current = true
-        setTimeout(() => showToast(t('errors:messages.storageRestoreFailed', { defaultValue: 'Failed to restore saved selection' }), 'warning'), 0)
-      }
-      return '' 
-    }
-  })
-  const [selectedNamespace, setSelectedNamespace] = useState<string>(() => {
-    if (config?.namespace) return config.namespace
-    try { 
-      return localStorage.getItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE) || '' 
-    } catch (e: unknown) { 
-      console.error('[NamespaceOverview] failed to restore namespace selection:', e)
-      if (!hasShownRestoreErrorRef.current) {
-        hasShownRestoreErrorRef.current = true
-        setTimeout(() => showToast(t('errors:messages.storageRestoreFailed', { defaultValue: 'Failed to restore saved selection' }), 'warning'), 0)
-      }
-      return '' 
-    }
-  })
+  const [selectedCluster, setSelectedCluster] = useState<string>(
+    () => config?.cluster || safeGetItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER) || ''
+  )
+  const [selectedNamespace, setSelectedNamespace] = useState<string>(
+    () => config?.namespace || safeGetItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE) || ''
+  )
 
   const {
     selectedClusters: globalSelectedClusters,
@@ -84,13 +60,13 @@ export function NamespaceOverview({ config }: NamespaceOverviewProps) {
 
   // Persist cluster selection so it survives page navigation (#3115)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster) } catch (e: unknown) { console.error('[NamespaceOverview] failed to persist cluster selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
-  }, [selectedCluster, showToast, t])
+    safeSetItem(STORAGE_KEY_NS_OVERVIEW_CLUSTER, selectedCluster)
+  }, [selectedCluster])
 
   // Persist namespace selection so it survives page navigation (#3115)
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace) } catch (e: unknown) { console.error('[NamespaceOverview] failed to persist namespace selection:', e); showToast(t('errors.storagePersistFailed'), 'warning') }
-  }, [selectedNamespace, showToast, t])
+    safeSetItem(STORAGE_KEY_NS_OVERVIEW_NAMESPACE, selectedNamespace)
+  }, [selectedNamespace])
 
   // Auto-select first available cluster when none is selected (#3113 — works in both demo and live mode)
   useEffect(() => {
