@@ -26,6 +26,7 @@ vi.mock('../../hooks/useCachedData', () => ({
 
 vi.mock('./CardDataContext', () => ({
   useCardLoadingState: (opts: Record<string, unknown>) => mockUseCardLoadingState(opts),
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 vi.mock('../../hooks/useDrillDown', () => ({

@@ -42,6 +42,7 @@ const mockUseCardLoadingState = vi.fn()
 vi.mock('../CardDataContext', () => ({
   useReportCardDataState: vi.fn(),
   useCardLoadingState: (opts: unknown) => mockUseCardLoadingState(opts),
+  useCardDemoState: () => ({ shouldUseDemoData: false, reason: null, showDemoBadge: false }),
 }))
 
 const mockGPUNodes = vi.fn()
@@ -72,7 +73,7 @@ describe('ClusterComparison', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockGPUNodes.mockReturnValue({ nodes: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
-    mockDrillDown.mockReturnValue({ drillToResources: vi.fn() })
+    mockDrillDown.mockReturnValue({ drillToCluster: vi.fn() })
   })
 
   it('renders without crashing', () => {
