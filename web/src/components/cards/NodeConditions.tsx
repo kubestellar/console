@@ -25,14 +25,15 @@ export function NodeConditions() {
   const { isDemoMode } = useDemoMode()
   const { execute } = useKubectl()
 
+  const isUsingDemoData = isDemoMode || isDemoFallback
   const hasData = nodes.length > 0
   const { showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode || isDemoFallback,
-    isFailed,
-    consecutiveFailures })
+    isDemoData: isUsingDemoData,
+    isFailed: isUsingDemoData ? false : isFailed,
+    consecutiveFailures: isUsingDemoData ? 0 : consecutiveFailures })
 
   const [filter, setFilter] = useState<ConditionFilter>('all')
   const [actionPending, setActionPending] = useState<string | null>(null)

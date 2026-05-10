@@ -73,6 +73,22 @@ describe('NodeConditions', () => {
       const pulses = document.querySelectorAll('.animate-pulse')
       expect(pulses.length).toBeGreaterThan(0)
     })
+
+    it('suppresses refresh failures when demo fallback data is active', async () => {
+      const { useCachedNodes } = await import('../../../hooks/useCachedData')
+      const { useCardLoadingState } = await import('../CardDataContext')
+      vi.mocked(useCachedNodes).mockReturnValue({
+        nodes: [makeNode()], isLoading: false, isRefreshing: true, isDemoFallback: true, isFailed: true, consecutiveFailures: 21,
+      } as never)
+
+      render(<NodeConditions />)
+
+      expect(vi.mocked(useCardLoadingState)).toHaveBeenCalledWith(expect.objectContaining({
+        isDemoData: true,
+        isFailed: false,
+        consecutiveFailures: 0,
+      }))
+    })
   })
 
   describe('Filter pills', () => {
