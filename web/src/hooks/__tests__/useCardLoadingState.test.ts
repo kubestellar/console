@@ -150,6 +150,19 @@ describe('useCardLoadingState', () => {
       expect(result.current.showSkeleton).toBe(false)
       expect(result.current.hasData).toBe(true)
     })
+
+    it('override branch: isRefreshing: true reaches CardWrapper even when isLoading is false', () => {
+      // With isLoading=false, effectiveIsLoading=false so the default expression
+      // (effectiveIsLoading && hasData) = false. Only the override keeps it true.
+      const { reports } = renderCardLoadingState({
+        isLoading: false,
+        hasAnyData: true,
+        isRefreshing: true,
+      })
+
+      const lastReport = reports[reports.length - 1]
+      expect(lastReport.isRefreshing).toBe(true)
+    })
   })
 
   // ── 4. Failure tracking ──────────────────────────────────────────────────
