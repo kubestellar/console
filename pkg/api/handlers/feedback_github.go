@@ -674,6 +674,15 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		if diagnostics.PageURL != "" {
 			diag.WriteString(fmt.Sprintf("| Page URL | %s |\n", diagnostics.PageURL))
 		}
+		if diagnostics.ConsoleDeployMode != "" {
+			diag.WriteString(fmt.Sprintf("| Console Deploy Mode | %s |\n", diagnostics.ConsoleDeployMode))
+		}
+		if diagnostics.ActiveAgentBackend != "" {
+			diag.WriteString(fmt.Sprintf("| Active Agent Backend | %s |\n", diagnostics.ActiveAgentBackend))
+		}
+		if diagnostics.BackendWSStatus != "" {
+			diag.WriteString(fmt.Sprintf("| Backend WS Status | %s |\n", diagnostics.BackendWSStatus))
+		}
 		if len(diagnostics.AgentConnectionLog) > 0 {
 			shown := diagnostics.AgentConnectionLog
 			if len(shown) > maxAgentConnectionLogLines {

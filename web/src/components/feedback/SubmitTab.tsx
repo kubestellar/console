@@ -16,6 +16,8 @@ import { compressScreenshot } from '../../lib/imageCompression'
 import { copyBlobToClipboard } from '../../lib/clipboard'
 import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
+import { useBackendHealth } from '../../hooks/useBackendHealth'
+import { useKagentBackend } from '../../hooks/useKagentBackend'
 
 import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
@@ -490,6 +492,9 @@ export function SubmitForm({
         screen_resolution: `${screen.width}x${screen.height}`,
         window_size: `${window.innerWidth}x${window.innerHeight}`,
         page_url: `${window.location.origin}${window.location.pathname}`,
+        console_deploy_mode: isInClusterMode ? 'in-cluster' : 'local',
+        active_agent_backend: activeBackend,
+        backend_ws_status: backendStatus,
       }
 
       const result = await onSubmit(
