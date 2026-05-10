@@ -6,9 +6,8 @@ import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { Skeleton } from '../ui/Skeleton'
 import { RefreshIndicator } from '../ui/RefreshIndicator'
-import { useCardLoadingState } from './CardDataContext'
+import { useCardDemoState, useCardLoadingState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
-import { useDemoMode } from '../../hooks/useDemoMode'
 import { DynamicCardErrorBoundary } from './DynamicCardErrorBoundary'
 import { Button } from '../ui/Button'
 
@@ -28,7 +27,7 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
   const { deduplicatedClusters: rawClusters, isLoading: clustersLoading, isFailed, consecutiveFailures } = useClusters()
   const { nodes: gpuNodes, isDemoFallback, isRefreshing, lastRefresh } = useCachedGPUNodes()
   const [selectedClusters, setSelectedClusters] = useState<string[]>(config?.clusters || [])
-  const { isDemoMode } = useDemoMode()
+  const { showDemoBadge } = useCardDemoState({ requires: 'agent' })
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = rawClusters.length > 0
@@ -36,7 +35,7 @@ function ClusterComparisonInternal({ config }: ClusterComparisonProps) {
     isLoading: clustersLoading && !hasData,
     isRefreshing,
     hasAnyData: hasData,
-    isDemoData: isDemoMode || isDemoFallback,
+    isDemoData: showDemoBadge || isDemoFallback,
     isFailed,
     consecutiveFailures,
     lastRefresh })

@@ -15,8 +15,8 @@ import { Skeleton, SkeletonStats, SkeletonList } from '../../ui/Skeleton'
 import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { Button } from '../../ui/Button'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
+import { useCardData } from '../../../lib/cards/cardHooks'
 import { useCubefsStatus } from './useCubefsStatus'
-import { useDemoMode } from '../../../hooks/useDemoMode'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import type {
   CubefsVolume,
@@ -34,6 +34,8 @@ const USAGE_HIGH_THRESHOLD = 80
 const USAGE_MED_THRESHOLD = 50
 const VOLUMES_TAB = 'volumes' as const
 const NODES_TAB = 'nodes' as const
+const DEFAULT_SORT = 'default' as const
+
 type Tab = typeof VOLUMES_TAB | typeof NODES_TAB
 
 // ---------------------------------------------------------------------------
@@ -294,7 +296,6 @@ function TabButton({
 
 export function CubefsStatus() {
   const { t } = useTranslation('cards')
-  useDemoMode()
 
   const {
     data,
@@ -308,11 +309,26 @@ export function CubefsStatus() {
   const { drillToAllStorage } = useDrillDownActions()
 
   const [activeTab, setActiveTab] = useState<Tab>(VOLUMES_TAB)
-  const [search, setSearch] = useState('')
 
   // Guard against undefined nested data from API/cache
   const volumes = data.volumes || []
   const nodes = data.nodes || []
+  const {
+    items: filteredVolumes,
+    filters: { search: volumeSearch, setSearch: setVolumeSearch },
+  } = useCardData<CubefsVolume, typeof DEFAULT_SORT>(volumes, {
+    filter: { searchFields: ['name', 'owner', 'status'], storageKey: 'cubefs-volumes' },
+    sort: { defaultField: DEFAULT_SORT, defaultDirection: 'asc', comparators: { [DEFAULT_SORT]: () => 0 } },
+    defaultLimit: 'unlimited',
+  })
+  const {
+    items: filteredNodes,
+    filters: { search: nodeSearch, setSearch: setNodeSearch },
+  } = useCardData<CubefsNode, typeof DEFAULT_SORT>(nodes, {
+    filter: { searchFields: ['address', 'role', 'status'], storageKey: 'cubefs-nodes' },
+    sort: { defaultField: DEFAULT_SORT, defaultDirection: 'asc', comparators: { [DEFAULT_SORT]: () => 0 } },
+    defaultLimit: 'unlimited',
+  })
 
   // Derived stats
   const masterNodes = nodes.filter(n => n.role === 'master')
@@ -325,29 +341,6 @@ export function CubefsStatus() {
       volumes.filter(v => v.status === 'inactive' || v.status === 'unknown').length +
       nodes.filter(n => n.status !== 'active').length,
   }
-
-  // Filtered lists
-  const filteredVolumes = (() => {
-    if (!search.trim()) return volumes
-    const q = search.toLowerCase()
-    return volumes.filter(
-      v =>
-        v.name.toLowerCase().includes(q) ||
-        v.owner.toLowerCase().includes(q) ||
-        v.status.toLowerCase().includes(q),
-    )
-  })()
-
-  const filteredNodes = (() => {
-    if (!search.trim()) return nodes
-    const q = search.toLowerCase()
-    return nodes.filter(
-      n =>
-        n.address.toLowerCase().includes(q) ||
-        n.role.toLowerCase().includes(q) ||
-        n.status.toLowerCase().includes(q),
-    )
-  })()
 
   // Drill-down handlers
   const handleVolumeDrill = (volume: CubefsVolume) => {
@@ -484,14 +477,14 @@ export function CubefsStatus() {
       <div className="flex items-center gap-1">
         <TabButton
           active={activeTab === VOLUMES_TAB}
-          onClick={() => { setActiveTab(VOLUMES_TAB); setSearch('') }}
+          onClick={() => { setActiveTab(VOLUMES_TAB); setVolumeSearch('') }}
           icon={<Database className="w-3.5 h-3.5" />}
           label={t('cubefs.volumesTab', 'Volumes')}
           count={volumes.length}
         />
         <TabButton
           active={activeTab === NODES_TAB}
-          onClick={() => { setActiveTab(NODES_TAB); setSearch('') }}
+          onClick={() => { setActiveTab(NODES_TAB); setNodeSearch('') }}
           icon={<Server className="w-3.5 h-3.5" />}
           label={t('cubefs.nodesTab', 'Nodes')}
           count={nodes.length}
@@ -500,8 +493,8 @@ export function CubefsStatus() {
 
       {/* ── Search ── */}
       <CardSearchInput
-        value={search}
-        onChange={setSearch}
+        value={activeTab === VOLUMES_TAB ? volumeSearch : nodeSearch}
+        onChange={activeTab === VOLUMES_TAB ? setVolumeSearch : setNodeSearch}
         placeholder={
           activeTab === VOLUMES_TAB
             ? t('cubefs.searchVolumesPlaceholder', 'Search volumes…')
