@@ -3,6 +3,7 @@ import { fetchKagentStatus, fetchKagentAgents, type KagentAgent, type KagentStat
 import { fetchKagentiProviderStatus, fetchKagentiProviderAgents, type KagentiProviderAgent, type KagentiProviderStatus } from '../lib/kagentiProviderBackend'
 
 const POLL_INTERVAL_MS = 30_000
+const BACKEND_REFRESH_MIN_INTERVAL_MS = 2_000
 const KAGENT_SELECTED_AGENT_KEY = 'kc_kagent_selected_agent'
 const KAGENTI_SELECTED_AGENT_KEY = 'kc_kagenti_selected_agent'
 const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
@@ -25,6 +26,8 @@ let sharedState = createInitialState()
 let pollIntervalRef: ReturnType<typeof setInterval> | null = null
 let activeRefreshController: AbortController | null = null
 let refreshPromise: Promise<void> | null = null
+let refreshTimerRef: ReturnType<typeof setTimeout> | null = null
+let lastRefreshAt = 0
 
 export type AgentBackendType = 'kc-agent' | 'kagent' | 'kagenti'
 
@@ -127,9 +130,25 @@ function computeActiveBackend(
   return 'kc-agent'
 }
 
-async function runRefresh(): Promise<void> {
+function scheduleRefresh(delayMs: number): void {
+  if (refreshTimerRef) return
+
+  refreshTimerRef = setTimeout(() => {
+    refreshTimerRef = null
+    void runRefresh(true)
+  }, delayMs)
+}
+
+async function runRefresh(bypassThrottle = false): Promise<void> {
   if (refreshPromise) return refreshPromise
 
+  const elapsedSinceLastRefresh = Date.now() - lastRefreshAt
+  if (!bypassThrottle && elapsedSinceLastRefresh < BACKEND_REFRESH_MIN_INTERVAL_MS) {
+    scheduleRefresh(BACKEND_REFRESH_MIN_INTERVAL_MS - elapsedSinceLastRefresh)
+    return
+  }
+
+  lastRefreshAt = Date.now()
   const controller = new AbortController()
   activeRefreshController = controller
 
@@ -197,11 +216,34 @@ function stopPolling(): void {
     clearInterval(pollIntervalRef)
     pollIntervalRef = null
   }
+  if (refreshTimerRef) {
+    clearTimeout(refreshTimerRef)
+    refreshTimerRef = null
+  }
 
   const controller = activeRefreshController
   activeRefreshController = null
   refreshPromise = null
   controller?.abort()
+  sharedState = createInitialState()
+}
+
+export function __resetForTest(): void {
+  if (pollIntervalRef) {
+    clearInterval(pollIntervalRef)
+    pollIntervalRef = null
+  }
+  if (refreshTimerRef) {
+    clearTimeout(refreshTimerRef)
+    refreshTimerRef = null
+  }
+
+  const controller = activeRefreshController
+  activeRefreshController = null
+  refreshPromise = null
+  controller?.abort()
+  listeners.clear()
+  lastRefreshAt = 0
   sharedState = createInitialState()
 }
 
@@ -240,7 +282,7 @@ export function useKagentBackend(): UseKagentBackendResult {
     }
   }, [])
 
-  const refresh = useCallback(() => runRefresh(), [])
+  const refresh = useCallback(() => runRefresh(true), [])
 
   const selectKagentAgent = useCallback((agent: KagentAgent) => {
     selectKagentAgentInStore(agent)
@@ -280,4 +322,8 @@ export function useKagentBackend(): UseKagentBackendResult {
     hasPolled: state.hasPolled,
     refresh,
   }
+}
+
+export const __testables = {
+  BACKEND_REFRESH_MIN_INTERVAL_MS,
 }
