@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { fetchKagentStatus, fetchKagentAgents, type KagentAgent, type KagentStatus } from '../lib/kagentBackend'
 import { fetchKagentiProviderStatus, fetchKagentiProviderAgents, type KagentiProviderAgent, type KagentiProviderStatus } from '../lib/kagentiProviderBackend'
 
@@ -6,6 +6,25 @@ const POLL_INTERVAL_MS = 30_000
 const KAGENT_SELECTED_AGENT_KEY = 'kc_kagent_selected_agent'
 const KAGENTI_SELECTED_AGENT_KEY = 'kc_kagenti_selected_agent'
 const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
+
+type BackendState = {
+  kagentStatus: KagentStatus | null
+  kagentAgents: KagentAgent[]
+  selectedKagentAgent: KagentAgent | null
+  kagentiStatus: KagentiProviderStatus | null
+  kagentiAgents: KagentiProviderAgent[]
+  selectedKagentiAgent: KagentiProviderAgent | null
+  preferredBackend: AgentBackendType
+  hasPolled: boolean
+}
+
+type BackendListener = (state: BackendState) => void
+
+const listeners = new Set<BackendListener>()
+let sharedState = createInitialState()
+let pollIntervalRef: ReturnType<typeof setInterval> | null = null
+let activeRefreshController: AbortController | null = null
+let refreshPromise: Promise<void> | null = null
 
 export type AgentBackendType = 'kc-agent' | 'kagent' | 'kagenti'
 
@@ -41,128 +60,224 @@ export interface UseKagentBackendResult {
   /** True once the first status poll has completed */
   hasPolled: boolean
   /** Refresh all statuses */
-  refresh: () => void
+  refresh: () => Promise<void>
+}
+
+function getStoredValue(key: string): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(key)
+}
+
+function setStoredValue(key: string, value: string): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(key, value)
+}
+
+function getStoredPreferredBackend(): AgentBackendType {
+  const saved = getStoredValue(BACKEND_PREF_KEY)
+  if (saved === 'kagent' || saved === 'kagenti') return saved
+  return 'kc-agent'
+}
+
+function createInitialState(): BackendState {
+  return {
+    kagentStatus: null,
+    kagentAgents: [],
+    selectedKagentAgent: null,
+    kagentiStatus: null,
+    kagentiAgents: [],
+    selectedKagentiAgent: null,
+    preferredBackend: getStoredPreferredBackend(),
+    hasPolled: false,
+  }
+}
+
+function emitState(): void {
+  listeners.forEach(listener => listener(sharedState))
+}
+
+function setSharedState(updater: (current: BackendState) => BackendState): void {
+  sharedState = updater(sharedState)
+  emitState()
+}
+
+function restoreSelectedAgent<T extends { name: string; namespace: string }>(
+  currentSelection: T | null,
+  agents: T[],
+  storageKey: string,
+  isAvailable: boolean,
+): T | null {
+  if (!isAvailable || currentSelection) return currentSelection
+
+  const savedName = getStoredValue(storageKey)
+  if (!savedName) return currentSelection
+
+  return (agents || []).find(agent => `${agent.namespace}/${agent.name}` === savedName) ?? currentSelection
+}
+
+function computeActiveBackend(
+  preferredBackend: AgentBackendType,
+  hasPolled: boolean,
+  kagentAvailable: boolean,
+  kagentiAvailable: boolean,
+): AgentBackendType {
+  if (!hasPolled) return preferredBackend
+  if (preferredBackend === 'kagenti' && kagentiAvailable) return 'kagenti'
+  if (preferredBackend === 'kagent' && kagentAvailable) return 'kagent'
+  return 'kc-agent'
+}
+
+async function runRefresh(): Promise<void> {
+  if (refreshPromise) return refreshPromise
+
+  const controller = new AbortController()
+  activeRefreshController = controller
+
+  refreshPromise = (async () => {
+    try {
+      const [kStatus, kiStatus] = await Promise.all([
+        fetchKagentStatus({ signal: controller.signal }),
+        fetchKagentiProviderStatus({ signal: controller.signal }),
+      ])
+
+      if (controller.signal.aborted) return
+
+      const [kagentAgentsList, kagentiAgentsList] = await Promise.all([
+        kStatus.available ? fetchKagentAgents({ signal: controller.signal }) : Promise.resolve([] as KagentAgent[]),
+        kiStatus.available ? fetchKagentiProviderAgents({ signal: controller.signal }) : Promise.resolve([] as KagentiProviderAgent[]),
+      ])
+
+      if (controller.signal.aborted) return
+
+      setSharedState(current => ({
+        ...current,
+        kagentStatus: kStatus,
+        kagentiStatus: kiStatus,
+        kagentAgents: kagentAgentsList,
+        kagentiAgents: kagentiAgentsList,
+        selectedKagentAgent: restoreSelectedAgent(
+          current.selectedKagentAgent,
+          kagentAgentsList,
+          KAGENT_SELECTED_AGENT_KEY,
+          kStatus.available,
+        ),
+        selectedKagentiAgent: restoreSelectedAgent(
+          current.selectedKagentiAgent,
+          kagentiAgentsList,
+          KAGENTI_SELECTED_AGENT_KEY,
+          kiStatus.available,
+        ),
+        hasPolled: true,
+      }))
+    } catch (error: unknown) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      setSharedState(current => ({ ...current, hasPolled: true }))
+    } finally {
+      if (activeRefreshController === controller) {
+        activeRefreshController = null
+      }
+      refreshPromise = null
+    }
+  })()
+
+  return refreshPromise
+}
+
+function startPolling(): void {
+  if (pollIntervalRef) return
+
+  void runRefresh()
+  pollIntervalRef = setInterval(() => {
+    void runRefresh()
+  }, POLL_INTERVAL_MS)
+}
+
+function stopPolling(): void {
+  if (pollIntervalRef) {
+    clearInterval(pollIntervalRef)
+    pollIntervalRef = null
+  }
+
+  const controller = activeRefreshController
+  activeRefreshController = null
+  refreshPromise = null
+  controller?.abort()
+  sharedState = createInitialState()
+}
+
+function selectKagentAgentInStore(agent: KagentAgent): void {
+  setStoredValue(KAGENT_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
+  setSharedState(current => ({ ...current, selectedKagentAgent: agent }))
+}
+
+function selectKagentiAgentInStore(agent: KagentiProviderAgent): void {
+  setStoredValue(KAGENTI_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
+  setSharedState(current => ({ ...current, selectedKagentiAgent: agent }))
+}
+
+function setPreferredBackendInStore(backend: AgentBackendType): void {
+  setStoredValue(BACKEND_PREF_KEY, backend)
+  setSharedState(current => ({ ...current, preferredBackend: backend }))
 }
 
 export function useKagentBackend(): UseKagentBackendResult {
-  // Kagent state
-  const [kagentStatus, setKagentStatus] = useState<KagentStatus | null>(null)
-  const [kagentAgents, setKagentAgents] = useState<KagentAgent[]>([])
-  const [selectedKagentAgent, setSelectedKagentAgent] = useState<KagentAgent | null>(null)
+  const [state, setState] = useState(sharedState)
 
-  // Kagenti state
-  const [kagentiStatus, setKagentiStatus] = useState<KagentiProviderStatus | null>(null)
-  const [kagentiAgents, setKagentiAgents] = useState<KagentiProviderAgent[]>([])
-  const [selectedKagentiAgent, setSelectedKagentiAgent] = useState<KagentiProviderAgent | null>(null)
-
-  // Track whether the first status poll has finished (to avoid blinking activeBackend)
-  const [hasPolled, setHasPolled] = useState(false)
-
-  const [preferredBackend, setPreferredBackendState] = useState<AgentBackendType>(() => {
-    const saved = localStorage.getItem(BACKEND_PREF_KEY)
-    if (saved === 'kagent' || saved === 'kagenti') return saved
-    return 'kc-agent'
-  })
-
-  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined)
-  const refreshInFlightRef = useRef(false)
-  const selectedKagentRef = useRef(selectedKagentAgent)
-  const selectedKagentiRef = useRef(selectedKagentiAgent)
   useEffect(() => {
-    selectedKagentRef.current = selectedKagentAgent
-    selectedKagentiRef.current = selectedKagentiAgent
-  }, [selectedKagentAgent, selectedKagentiAgent])
+    const listener: BackendListener = nextState => {
+      setState(nextState)
+    }
 
-  const refresh = useCallback(async () => {
-    // Guard against overlapping fetches on slow networks
-    if (refreshInFlightRef.current) return
-    refreshInFlightRef.current = true
-    try {
-      const [kStatus, kiStatus] = await Promise.all([
-        fetchKagentStatus(),
-        fetchKagentiProviderStatus(),
-      ])
+    listeners.add(listener)
+    setState(sharedState)
+    startPolling()
 
-      setKagentStatus(kStatus)
-      setKagentiStatus(kiStatus)
-
-      // Fetch agent lists concurrently for available backends
-      const [kagentAgentsList, kagentiAgentsList] = await Promise.all([
-        kStatus.available ? fetchKagentAgents() : Promise.resolve([] as KagentAgent[]),
-        kiStatus.available ? fetchKagentiProviderAgents() : Promise.resolve([] as KagentiProviderAgent[]),
-      ])
-
-      // Update kagent agents
-      setKagentAgents(kagentAgentsList)
-      if (kStatus.available) {
-        const savedName = localStorage.getItem(KAGENT_SELECTED_AGENT_KEY)
-        if (savedName && !selectedKagentRef.current) {
-          const found = kagentAgentsList.find(a => `${a.namespace}/${a.name}` === savedName)
-          if (found) setSelectedKagentAgent(found)
-        }
+    return () => {
+      listeners.delete(listener)
+      if (listeners.size === 0) {
+        stopPolling()
       }
-
-      // Update kagenti agents
-      setKagentiAgents(kagentiAgentsList)
-      if (kiStatus.available) {
-        const savedName = localStorage.getItem(KAGENTI_SELECTED_AGENT_KEY)
-        if (savedName && !selectedKagentiRef.current) {
-          const found = kagentiAgentsList.find(a => `${a.namespace}/${a.name}` === savedName)
-          if (found) setSelectedKagentiAgent(found)
-        }
-      }
-    } finally {
-      refreshInFlightRef.current = false
-      setHasPolled(true)
     }
   }, [])
 
-  useEffect(() => {
-    refresh()
-    pollRef.current = setInterval(refresh, POLL_INTERVAL_MS)
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
-  }, [refresh])
+  const refresh = useCallback(() => runRefresh(), [])
 
-  const selectKagentAgent = (agent: KagentAgent) => {
-    setSelectedKagentAgent(agent)
-    localStorage.setItem(KAGENT_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
-  }
+  const selectKagentAgent = useCallback((agent: KagentAgent) => {
+    selectKagentAgentInStore(agent)
+  }, [])
 
-  const selectKagentiAgent = (agent: KagentiProviderAgent) => {
-    setSelectedKagentiAgent(agent)
-    localStorage.setItem(KAGENTI_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
-  }
+  const selectKagentiAgent = useCallback((agent: KagentiProviderAgent) => {
+    selectKagentiAgentInStore(agent)
+  }, [])
 
-  const setPreferredBackend = (backend: AgentBackendType) => {
-    setPreferredBackendState(backend)
-    localStorage.setItem(BACKEND_PREF_KEY, backend)
-  }
+  const setPreferredBackend = useCallback((backend: AgentBackendType) => {
+    setPreferredBackendInStore(backend)
+  }, [])
 
-  const kagentAvailable = kagentStatus?.available ?? false
-  const kagentiAvailable = kagentiStatus?.available ?? false
-
-  // Use stored preference before the first poll completes to avoid activeBackend
-  // snapping to kc-agent while kagentiAvailable is still false.
-  const activeBackend: AgentBackendType =
-    !hasPolled ? preferredBackend :
-    preferredBackend === 'kagenti' && kagentiAvailable ? 'kagenti' :
-    preferredBackend === 'kagent' && kagentAvailable ? 'kagent' :
-    'kc-agent'
+  const kagentAvailable = state.kagentStatus?.available ?? false
+  const kagentiAvailable = state.kagentiStatus?.available ?? false
+  const activeBackend = computeActiveBackend(
+    state.preferredBackend,
+    state.hasPolled,
+    kagentAvailable,
+    kagentiAvailable,
+  )
 
   return {
     kagentAvailable,
-    kagentStatus,
-    kagentAgents,
-    selectedKagentAgent,
+    kagentStatus: state.kagentStatus,
+    kagentAgents: state.kagentAgents,
+    selectedKagentAgent: state.selectedKagentAgent,
     selectKagentAgent,
     kagentiAvailable,
-    kagentiStatus,
-    kagentiAgents,
-    selectedKagentiAgent,
+    kagentiStatus: state.kagentiStatus,
+    kagentiAgents: state.kagentiAgents,
+    selectedKagentiAgent: state.selectedKagentiAgent,
     selectKagentiAgent,
-    preferredBackend,
+    preferredBackend: state.preferredBackend,
     setPreferredBackend,
     activeBackend,
-    hasPolled,
-    refresh }
+    hasPolled: state.hasPolled,
+    refresh,
+  }
 }

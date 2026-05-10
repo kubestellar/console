@@ -382,6 +382,40 @@ describe('useKagentBackend', () => {
     clearIntervalSpy.mockRestore()
   })
 
+  it('shares a single polling cycle across multiple consumers', async () => {
+    setupBothUnavailable()
+    const first = renderHook(() => useKagentBackend())
+    const second = renderHook(() => useKagentBackend())
+
+    await waitFor(() => expect(first.result.current.hasPolled).toBe(true))
+    await waitFor(() => expect(second.result.current.hasPolled).toBe(true))
+
+    expect(mockFetchKagentStatus).toHaveBeenCalledTimes(1)
+    expect(mockFetchKagentiProviderStatus).toHaveBeenCalledTimes(1)
+
+    first.unmount()
+    second.unmount()
+  })
+
+  it('aborts in-flight polling when the last consumer unmounts', () => {
+    let observedSignal: AbortSignal | undefined
+
+    mockFetchKagentStatus.mockImplementation(({ signal }: { signal?: AbortSignal } = {}) => {
+      observedSignal = signal
+      return new Promise(() => {})
+    })
+    mockFetchKagentiProviderStatus.mockImplementation(() => new Promise(() => {}))
+
+    const { unmount } = renderHook(() => useKagentBackend())
+
+    expect(observedSignal).toBeDefined()
+    expect(observedSignal?.aborted).toBe(false)
+
+    unmount()
+
+    expect(observedSignal?.aborted).toBe(true)
+  })
+
   it('refresh triggers an immediate re-fetch', async () => {
     setupBothUnavailable()
     const { result, unmount } = renderHook(() => useKagentBackend())

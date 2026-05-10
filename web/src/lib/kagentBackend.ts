@@ -1,6 +1,8 @@
 import { authFetch } from './api'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+const KAGENT_STATUS_TIMEOUT_MS = 5_000
+const KAGENT_TOOL_CALL_TIMEOUT_MS = 30_000
 
 export interface KagentAgent {
   name: string
@@ -16,27 +18,38 @@ export interface KagentStatus {
   reason?: string
 }
 
-export async function fetchKagentStatus(): Promise<KagentStatus> {
+function getRequestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs)
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+}
+
+export async function fetchKagentStatus(options: { signal?: AbortSignal } = {}): Promise<KagentStatus> {
   try {
     const resp = await authFetch(`${API_BASE}/api/kagent/status`, {
-      signal: AbortSignal.timeout(5000),
+      signal: getRequestSignal(KAGENT_STATUS_TIMEOUT_MS, options.signal),
     })
     if (!resp.ok) return { available: false, reason: `HTTP ${resp.status}` }
     return resp.json()
-  } catch {
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error
+    }
     return { available: false, reason: 'unreachable' }
   }
 }
 
-export async function fetchKagentAgents(): Promise<KagentAgent[]> {
+export async function fetchKagentAgents(options: { signal?: AbortSignal } = {}): Promise<KagentAgent[]> {
   try {
     const resp = await authFetch(`${API_BASE}/api/kagent/agents`, {
-      signal: AbortSignal.timeout(5000),
+      signal: getRequestSignal(KAGENT_STATUS_TIMEOUT_MS, options.signal),
     })
     if (!resp.ok) return []
     const data = await resp.json()
     return data.agents || []
-  } catch {
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error
+    }
     return []
   }
 }
@@ -125,7 +138,7 @@ export async function kagentCallTool(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ agent, namespace, tool, args }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(KAGENT_TOOL_CALL_TIMEOUT_MS),
   })
   if (!resp.ok) throw new Error(`Tool call failed: HTTP ${resp.status}`)
   return resp.json()

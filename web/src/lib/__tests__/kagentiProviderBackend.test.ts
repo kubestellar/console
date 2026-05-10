@@ -54,6 +54,12 @@ describe('fetchKagentiProviderStatus', () => {
     expect(result.available).toBe(false)
     expect(result.reason).toBe('unreachable')
   })
+
+  it('rethrows AbortError so callers can cancel polling cleanly', async () => {
+    mockAuthFetch.mockRejectedValueOnce(new DOMException('The operation was aborted', 'AbortError'))
+
+    await expect(fetchKagentiProviderStatus()).rejects.toThrow('The operation was aborted')
+  })
 })
 
 describe('fetchKagentiProviderAgents', () => {

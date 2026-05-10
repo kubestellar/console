@@ -21,27 +21,38 @@ export interface KagentiProviderStatus {
   reason?: string
 }
 
-export async function fetchKagentiProviderStatus(): Promise<KagentiProviderStatus> {
+function getRequestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal {
+  const timeoutSignal = AbortSignal.timeout(timeoutMs)
+  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+}
+
+export async function fetchKagentiProviderStatus(options: { signal?: AbortSignal } = {}): Promise<KagentiProviderStatus> {
   try {
     const resp = await authFetch(`${API_BASE}/api/kagenti-provider/status`, {
-      signal: AbortSignal.timeout(KAGENTI_STATUS_TIMEOUT_MS),
+      signal: getRequestSignal(KAGENTI_STATUS_TIMEOUT_MS, options.signal),
     })
     if (!resp.ok) return { available: false, reason: `HTTP ${resp.status}` }
     return resp.json()
-  } catch {
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error
+    }
     return { available: false, reason: 'unreachable' }
   }
 }
 
-export async function fetchKagentiProviderAgents(): Promise<KagentiProviderAgent[]> {
+export async function fetchKagentiProviderAgents(options: { signal?: AbortSignal } = {}): Promise<KagentiProviderAgent[]> {
   try {
     const resp = await authFetch(`${API_BASE}/api/kagenti-provider/agents`, {
-      signal: AbortSignal.timeout(KAGENTI_STATUS_TIMEOUT_MS),
+      signal: getRequestSignal(KAGENTI_STATUS_TIMEOUT_MS, options.signal),
     })
     if (!resp.ok) return []
     const data = await resp.json()
     return data.agents || []
-  } catch {
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw error
+    }
     return []
   }
 }
