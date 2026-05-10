@@ -44,6 +44,8 @@ export function MissionBrowserTopBar({
       ? 'Search installers… (AND logic: "argo events" = argo AND events)'
       : activeTab === 'fixes'
         ? 'Search fixes…'
+        : activeTab === 'schedule'
+          ? 'Search disabled on Schedule Action tab'
         : 'Search missions by name, tag, or description…'
 
   const filterLabel = showFilters
@@ -60,6 +62,7 @@ export function MissionBrowserTopBar({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={searchPlaceholder}
+          disabled={activeTab === 'schedule'}
           className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-purple-500/40"
           data-testid="mission-search"
           autoFocus

@@ -30,6 +30,8 @@ export function MissionBrowserTabBar({
       ? !missionCache.installersDone
       : activeTab === 'fixes'
         ? !missionCache.fixesDone
+        : activeTab === 'schedule'
+          ? false
         : !missionCache.installersDone || !missionCache.fixesDone
 
   return (

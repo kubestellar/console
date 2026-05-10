@@ -22,6 +22,8 @@ import (
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
+	"github.com/kubestellar/console/pkg/stellar/scheduler"
+	"github.com/kubestellar/console/pkg/stellar/watcher"
 	"github.com/kubestellar/console/pkg/store"
 )
 

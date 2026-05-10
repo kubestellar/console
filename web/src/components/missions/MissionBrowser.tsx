@@ -91,6 +91,7 @@ import { MissionBrowserSidebar } from './MissionBrowserSidebar'
 import { MissionBrowserRecommendedTab } from './MissionBrowserRecommendedTab'
 import { MissionBrowserInstallersTab } from './MissionBrowserInstallersTab'
 import { MissionBrowserFixesTab } from './MissionBrowserFixesTab'
+import { MissionBrowserScheduleActionTab } from './MissionBrowserScheduleActionTab'
 
 // ============================================================================
 // Layout constants
@@ -1275,7 +1276,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       />
 
       {/* Filter panel */}
-      {showFilters && (
+      {showFilters && activeTab !== 'schedule' && (
         <MissionBrowserFilterPanel
           activeFilterCount={activeFilterCount}
           onClearAllFilters={clearAllFilters}
@@ -1500,6 +1501,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
                 onImportMission={handleImport}
                 onCopyLink={handleCopyLink}
               />
+            )}
+
+            {!selectedMission && !unstructuredContent && activeTab === 'schedule' && (
+              <MissionBrowserScheduleActionTab isActive={activeTab === 'schedule'} />
             )}
           </div>
         </div>

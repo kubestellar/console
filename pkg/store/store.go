@@ -46,6 +46,110 @@ type UserTokenUsage struct {
 	UpdatedAt          time.Time
 }
 
+// StellarPreferences captures per-user assistant behavior and routing defaults.
+// This is the persistence anchor for "sticky assistant" behavior across
+// reconnects/restarts.
+type StellarPreferences struct {
+	UserID          string    `json:"userId"`
+	DefaultProvider string    `json:"defaultProvider"`
+	ExecutionMode   string    `json:"executionMode"`
+	Timezone        string    `json:"timezone"`
+	ProactiveMode   bool      `json:"proactiveMode"`
+	PinnedClusters  []string  `json:"pinnedClusters"`
+	UpdatedAt       time.Time `json:"updatedAt"`
+}
+
+// StellarMission stores a user-owned long-running or scheduled assistant task.
+type StellarMission struct {
+	ID             string     `json:"id"`
+	UserID         string     `json:"userId"`
+	Name           string     `json:"name"`
+	Goal           string     `json:"goal"`
+	Schedule       string     `json:"schedule"`
+	TriggerType    string     `json:"triggerType"`
+	ProviderPolicy string     `json:"providerPolicy"`
+	MemoryScope    string     `json:"memoryScope"`
+	Enabled        bool       `json:"enabled"`
+	ToolBindings   []string   `json:"toolBindings"`
+	LastRunAt      *time.Time `json:"lastRunAt,omitempty"`
+	NextRunAt      *time.Time `json:"nextRunAt,omitempty"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
+}
+
+// StellarExecution captures one mission run (manual, scheduled, or event-driven).
+type StellarExecution struct {
+	ID            string     `json:"id"`
+	MissionID     string     `json:"missionId"`
+	UserID        string     `json:"userId"`
+	TriggerType   string     `json:"triggerType"`
+	TriggerData   string     `json:"triggerData"`
+	Status        string     `json:"status"`
+	RawInput      string     `json:"rawInput,omitempty"`
+	EnrichedInput string     `json:"enrichedInput,omitempty"`
+	Output        string     `json:"output,omitempty"`
+	ActionsTaken  string     `json:"actionsTaken,omitempty"`
+	TokensInput   int        `json:"tokensInput"`
+	TokensOutput  int        `json:"tokensOutput"`
+	DurationMs    int        `json:"durationMs"`
+	StartedAt     time.Time  `json:"startedAt"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty"`
+}
+
+// StellarMemoryEntry stores long-term memory for the assistant.
+type StellarMemoryEntry struct {
+	ID          string     `json:"id"`
+	UserID      string     `json:"userId"`
+	Cluster     string     `json:"cluster"`
+	Namespace   string     `json:"namespace,omitempty"`
+	Category    string     `json:"category"`
+	Summary     string     `json:"summary"`
+	RawContent  string     `json:"rawContent,omitempty"`
+	Tags        []string   `json:"tags"`
+	MissionID   string     `json:"missionId,omitempty"`
+	ExecutionID string     `json:"executionId,omitempty"`
+	ExpiresAt   *time.Time `json:"expiresAt,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+}
+
+// StellarAction represents a pending/scheduled cluster action.
+type StellarAction struct {
+	ID           string     `json:"id"`
+	UserID       string     `json:"userId"`
+	Description  string     `json:"description"`
+	ActionType   string     `json:"actionType"`
+	Parameters   string     `json:"parameters"`
+	Cluster      string     `json:"cluster"`
+	Namespace    string     `json:"namespace,omitempty"`
+	ScheduledAt  *time.Time `json:"scheduledAt,omitempty"`
+	CronExpr     string     `json:"cronExpr,omitempty"`
+	Status       string     `json:"status"`
+	ApprovedBy   string     `json:"approvedBy,omitempty"`
+	ApprovedAt   *time.Time `json:"approvedAt,omitempty"`
+	ExecutedAt   *time.Time `json:"executedAt,omitempty"`
+	Outcome      string     `json:"outcome,omitempty"`
+	RejectReason string     `json:"rejectReason,omitempty"`
+	CreatedBy    string     `json:"createdBy"`
+	CreatedAt    time.Time  `json:"createdAt"`
+}
+
+// StellarNotification is an item shown in the persistent Stellar feed.
+type StellarNotification struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"userId"`
+	Type      string    `json:"type"`
+	Severity  string    `json:"severity"`
+	Title     string    `json:"title"`
+	Body      string    `json:"body"`
+	Cluster   string    `json:"cluster,omitempty"`
+	Namespace string    `json:"namespace,omitempty"`
+	MissionID string    `json:"missionId,omitempty"`
+	ActionID  string    `json:"actionId,omitempty"`
+	DedupeKey string    `json:"dedupeKey,omitempty"`
+	Read      bool      `json:"read"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 // AuditEntry represents a single row in the audit_log table (#8670 Phase 3).
 type AuditEntry struct {
 	ID        int64  `json:"id"`
