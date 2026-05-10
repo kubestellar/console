@@ -897,7 +897,7 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
 
       {/* Floating scroll-to-bottom button — appears when user scrolls up (#10452) */}
       <button
-        onClick={scrollToBottom}
+        onClick={() => scrollToBottom('smooth')}
         className={cn(
           'absolute bottom-4 right-4 z-10 p-2 rounded-full',
           'bg-primary/90 text-primary-foreground shadow-lg',
