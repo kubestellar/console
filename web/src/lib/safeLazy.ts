@@ -1,18 +1,27 @@
 import { lazy, type ComponentType } from 'react'
 
-/** Maximum number of retry attempts before giving up on a failed dynamic import */
-const LAZY_IMPORT_MAX_RETRIES = 2
-/** Base delay in ms between retry attempts (doubles each retry via exponential backoff) */
-const LAZY_IMPORT_RETRY_BASE_MS = 1_000
+/**
+ * Maximum number of retry attempts before giving up on a failed dynamic import.
+ * Reduced from 2 to 1 to keep worst-case total time under 15 seconds
+ * (Playwright assertion window) during cold-start chunk loading.
+ */
+const LAZY_IMPORT_MAX_RETRIES = 1
+/**
+ * Base delay in ms between retry attempts (doubles each retry via exponential backoff).
+ * Worst-case total ≈ 10.5s (2 attempts × 5s + 500ms backoff), fitting within
+ * Playwright's 15-second assertion windows even during cold Vite startup.
+ */
+const LAZY_IMPORT_RETRY_BASE_MS = 500
 /**
  * Per-attempt timeout for a dynamic import. If the backend that serves the
  * chunk is restarting (#6098), the native `import()` has no built-in timeout
  * and can hang indefinitely, leaving the Suspense fallback stuck on a
  * "loading" spinner until the user manually closes and reopens the view.
  * Racing the import against this timeout turns a hang into a recoverable
- * rejection that feeds into the existing retry + error-boundary recovery.
+ * rejection that feeds into the existing retry + error-boundary recovery while
+ * keeping the full retry budget within typical E2E assertion windows.
  */
-const LAZY_IMPORT_ATTEMPT_TIMEOUT_MS = 8_000
+const LAZY_IMPORT_ATTEMPT_TIMEOUT_MS = 5_000
 
 /**
  * Safe wrapper around React.lazy() for named exports.
