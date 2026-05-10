@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test'
-import { mockApiFallback } from './helpers/setup'
+import { mockApiFallback, waitForNetworkIdleBestEffort } from './helpers/setup'
 
 /**
  * Missions.spec.ts — E2E coverage for the AI Missions (Mission Control) feature.
@@ -26,9 +26,9 @@ import { mockApiFallback } from './helpers/setup'
  * data-testid="mission-control-dialog" attribute.
  *
  * #11895 — The URL param ?mission-control=open is processed by MissionSidebar
- * which is lazily loaded. Tests must wait for networkidle (not just
- * domcontentloaded) to ensure the sidebar chunk has loaded and processed the
- * param before asserting.
+ * which is lazily loaded. Tests should wait for the Mission Control panel
+ * itself (and only use best-effort networkidle when a deterministic element
+ * wait is not enough).
  *
  * #11896 — Comprehensive API mocking added to prevent unmocked calls to
  * /api/kagent/status, /api/kagent-provider/status, /api/feedback/queue,
@@ -159,14 +159,10 @@ test.describe('AI Missions', () => {
     // Start from a clean route first so this test proves the URL param opens
     // the panel instead of accidentally passing due to stale state.
     await page.goto('/')
-    await page.waitForLoadState('networkidle')
+    await waitForNetworkIdleBestEffort(page)
     await expect(panel).toBeHidden()
 
-    // #11895 — The URL param is processed by MissionSidebar which is lazily
-    // loaded via safeLazy(). We must wait for networkidle so the chunk is
-    // downloaded and the useEffect that reads the param has fired.
     await page.goto('/?mission-control=open')
-    await page.waitForLoadState('networkidle')
 
     // #11891 — MissionControlDialog renders as a fixed-position inline panel
     // (not a floating modal). It has role="dialog" but depending on browser
@@ -181,7 +177,6 @@ test.describe('AI Missions', () => {
 
   test('Mission Control panel exposes a close control', async ({ page }) => {
     await page.goto('/?mission-control=open')
-    await page.waitForLoadState('networkidle')
 
     const panel = page.locator('[data-testid="mission-control-dialog"]')
     await expect(panel).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
@@ -216,7 +211,7 @@ test.describe('AI Missions', () => {
     )
 
     await page.goto('/?browse=missions')
-    await page.waitForLoadState('networkidle')
+    await waitForNetworkIdleBestEffort(page, PANEL_VISIBLE_TIMEOUT_MS, 'missions browser')
 
     const browser = page.getByTestId('mission-browser')
     await expect(browser).toBeVisible({ timeout: PANEL_VISIBLE_TIMEOUT_MS })
