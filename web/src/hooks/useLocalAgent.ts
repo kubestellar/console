@@ -117,7 +117,7 @@ class AgentManager {
   private successCount = 0 // Track consecutive successes for hysteresis
   /** Whether the agent has been connected at least once this session.
    *  Used to decide if going offline should preserve cached data (#10470). */
-  private wasEverConnected = false
+  private wasEverConnected = Boolean(safeGetItem(STORAGE_KEY_FIRST_AGENT_CONNECT))
   private dataErrorTimestamps: number[] = [] // Track recent data errors
   private isChecking = false
   private isStarted = false
