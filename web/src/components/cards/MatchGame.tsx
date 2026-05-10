@@ -10,6 +10,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { useTranslation } from 'react-i18next'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useToast } from '../ui/Toast'
+import { safeGetItem, safeSetItem } from '@/lib/utils/localStorage'
 import type { CSSProperties } from 'react'
 
 // Inline style constants
@@ -80,7 +81,7 @@ export function MatchGame(_props: CardComponentProps) {
   // Load high scores from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('matchGameHighScores')
+      const stored = safeGetItem('matchGameHighScores')
       if (stored) {
         setHighScores(JSON.parse(stored))
       }
@@ -144,11 +145,7 @@ export function MatchGame(_props: CardComponentProps) {
           [difficulty]: { difficulty, moves, time, date: new Date().toISOString() }
         }
         setHighScores(newHighScores)
-        try {
-          localStorage.setItem('matchGameHighScores', JSON.stringify(newHighScores))
-        } catch {
-          // Ignore storage errors (e.g. private browsing, quota exceeded)
-        }
+        safeSetItem('matchGameHighScores', JSON.stringify(newHighScores))
       }
       
       emitGameEnded('match', 'win', moves)

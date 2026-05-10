@@ -5,6 +5,7 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
+import { safeGetItem, safeSetItem } from '@/lib/utils/localStorage'
 
 type Grid = (number | null)[][]
 
@@ -13,7 +14,7 @@ const BEST_SCORE_STORAGE_KEY = 'kube2048-best'
 
 function getStoredBestScore(): number {
   try {
-    const parsedBestScore = parseInt(localStorage.getItem(BEST_SCORE_STORAGE_KEY) || '0', 10)
+    const parsedBestScore = parseInt(safeGetItem(BEST_SCORE_STORAGE_KEY) || '0', 10)
     return Number.isFinite(parsedBestScore) && parsedBestScore >= 0 ? parsedBestScore : 0
   } catch {
     return 0
@@ -209,11 +210,7 @@ export function Game2048(_props: CardComponentProps) {
 
       if (newScore > bestScore) {
         setBestScore(newScore)
-        try {
-          localStorage.setItem(BEST_SCORE_STORAGE_KEY, String(newScore))
-        } catch {
-          // Ignore storage errors (e.g. private browsing, quota exceeded)
-        }
+        safeSetItem(BEST_SCORE_STORAGE_KEY, String(newScore))
       }
 
       // Check win

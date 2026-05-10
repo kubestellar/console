@@ -5,6 +5,7 @@ import { useCardExpanded } from './CardWrapper'
 import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
+import { safeGetItem, safeSetItem } from '@/lib/utils/localStorage'
 
 // Game constants
 /** Default canvas resolution when the card is collapsed (px) */
@@ -55,7 +56,7 @@ export function KubeSnake() {
   const [score, setScore] = useState(0)
   const [highScore, setHighScore] = useState(() => {
     try {
-      const saved = localStorage.getItem('kubeSnakeHighScore')
+      const saved = safeGetItem('kubeSnakeHighScore')
       return saved ? parseInt(saved, 10) : 0
     } catch {
       return 0
@@ -125,11 +126,7 @@ export function KubeSnake() {
       emitGameEnded('snake', 'loss', score)
       if (score > highScore) {
         setHighScore(score)
-        try {
-          localStorage.setItem('kubeSnakeHighScore', score.toString())
-        } catch {
-          // Ignore storage errors (e.g. private browsing, quota exceeded)
-        }
+        safeSetItem('kubeSnakeHighScore', score.toString())
       }
       return
     }
@@ -140,11 +137,7 @@ export function KubeSnake() {
       emitGameEnded('snake', 'loss', score)
       if (score > highScore) {
         setHighScore(score)
-        try {
-          localStorage.setItem('kubeSnakeHighScore', score.toString())
-        } catch {
-          // Ignore storage errors (e.g. private browsing, quota exceeded)
-        }
+        safeSetItem('kubeSnakeHighScore', score.toString())
       }
       return
     }
