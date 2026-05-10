@@ -1,7 +1,8 @@
 replicaCount: 1
 
 # Owner label applied to chart resources to satisfy cluster policies.
-owner: kubestellar
+# Leave blank to default to "kubestellar" in the shared labels helper.
+owner: ""
 
 # Extra labels added to all chart resources. Avoid setting `owner` here; use `.Values.owner` instead.
 commonLabels: {}
