@@ -1,15 +1,11 @@
 import { lazy, type ComponentType } from 'react'
 
-/**
- * Maximum number of retry attempts before giving up on a failed dynamic import.
- * Reduced from 2 to 1 to keep worst-case total time under 15 seconds
- * (Playwright assertion window) during cold-start chunk loading.
- */
-const LAZY_IMPORT_MAX_RETRIES = 1
+/** Maximum number of retry attempts before giving up on a failed dynamic import */
+const LAZY_IMPORT_MAX_RETRIES = 2
 /**
  * Base delay in ms between retry attempts (doubles each retry via exponential backoff).
- * Worst-case total ≈ 10.5s (2 attempts × 5s + 500ms backoff), fitting within
- * Playwright's 15-second assertion windows even during cold Vite startup.
+ * Worst-case total ≈ 16.5s (3 attempts × 5s + backoff gaps), fitting within
+ * typical E2E assertion windows.
  */
 const LAZY_IMPORT_RETRY_BASE_MS = 500
 /**
