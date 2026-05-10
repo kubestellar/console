@@ -74,7 +74,6 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
         }
         setCircuitAscii(preMatch[1].trimEnd())
       } catch (error) {
-        console.error('Error fetching quantum circuit:', error)
         setIsFailed(true)
       } finally {
         setIsLoading(false)

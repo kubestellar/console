@@ -146,11 +146,6 @@ export const QuantumControlPanel: React.FC = () => {
 
       if (!res.ok) {
       const errorBody = await res.text()
-      console.error('[Quantum] Request failed:', {
-          status: res.status,
-          statusText: res.statusText,
-          body: errorBody,
-      })
       throw new Error(`Failed to fetch status (${res.status}): ${errorBody}`)
       }
 
@@ -177,7 +172,6 @@ export const QuantumControlPanel: React.FC = () => {
       }))
       }
     } catch (err) {
-      console.error('Error fetching status:', err)
       console.debug('[Quantum] Auth Debug:', {
       hasCredentials: true,
       url: '/api/quantum/status',
@@ -213,7 +207,7 @@ export const QuantumControlPanel: React.FC = () => {
       setIbmAuthenticated(data.authenticated === true)
       }
     } catch (err) {
-      console.error('Error fetching auth status:', err)
+      // Auth status is optional, silently handle errors
     }
   }, [])
 
@@ -279,7 +273,6 @@ export const QuantumControlPanel: React.FC = () => {
       setShowClearCredentialsDialog(false)
       setError(null)
     } catch (err) {
-      console.error('Error clearing credentials:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setIsClearing(false)
@@ -386,7 +379,7 @@ export const QuantumControlPanel: React.FC = () => {
             }))
           }
       } catch (err) {
-          console.error('Error polling after execution:', err)
+          // Polling errors are non-critical, silently handle
       }
       }, EXECUTION_STATUS_POLL_DELAY_MS)
     } catch (err) {

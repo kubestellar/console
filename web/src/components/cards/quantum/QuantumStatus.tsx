@@ -100,7 +100,6 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
         setIsFailed(false)
         setConsecutiveFailures(0)
       } catch (error) {
-        console.error('Failed to fetch quantum status:', error)
         setIsFailed(true)
         setConsecutiveFailures((prev) => prev + 1)
         setStatusData(DEMO_STATUS)
