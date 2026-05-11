@@ -1,8 +1,8 @@
 export interface StellarNotification {
   id: string
-  userId: string
-  type: string
-  severity: 'info' | 'warning' | 'critical' | string
+  userId?: string
+  type: 'event' | 'action' | 'system' | string
+  severity: 'info' | 'warning' | 'critical'
   title: string
   body: string
   cluster?: string
@@ -11,6 +11,7 @@ export interface StellarNotification {
   actionId?: string
   dedupeKey?: string
   read: boolean
+  readAt?: string
   createdAt: string
 }
 
@@ -31,15 +32,16 @@ export interface StellarMission {
 
 export interface StellarAction {
   id: string
-  userId: string
+  userId?: string
   description: string
   actionType: string
-  parameters: string
+  parameters: Record<string, unknown> | string
   cluster: string
   namespace?: string
   scheduledAt?: string
+  status: 'pending_approval' | 'approved' | 'running' | 'completed' | 'failed' | 'rejected' | string
+  confirmToken?: string
   cronExpr?: string
-  status: string
   approvedBy?: string
   approvedAt?: string
   executedAt?: string
@@ -64,11 +66,18 @@ export interface StellarClusterEvent {
 export interface StellarOperationalState {
   generatedAt: string
   clustersWatching: string[]
-  eventCounts: Record<string, number>
+  eventCounts: { critical: number; warning: number; info: number } & Record<string, number>
   recentEvents: StellarClusterEvent[]
-  unreadAlerts: number
+  unreadAlerts?: number
   activeMissionIds: string[]
   pendingActionIds: string[]
+}
+
+export interface ProviderSession {
+  provider: string
+  model: string
+  configId?: string
+  source: 'request' | 'user-default' | 'env-default' | 'fallback'
 }
 
 export interface StellarDigest {

@@ -91,6 +91,8 @@ type StellarExecution struct {
 	ActionsTaken  string     `json:"actionsTaken,omitempty"`
 	TokensInput   int        `json:"tokensInput"`
 	TokensOutput  int        `json:"tokensOutput"`
+	Provider      string     `json:"provider,omitempty"`
+	Model         string     `json:"model,omitempty"`
 	DurationMs    int        `json:"durationMs"`
 	StartedAt     time.Time  `json:"startedAt"`
 	CompletedAt   *time.Time `json:"completedAt,omitempty"`
@@ -106,6 +108,9 @@ type StellarMemoryEntry struct {
 	Summary     string     `json:"summary"`
 	RawContent  string     `json:"rawContent,omitempty"`
 	Tags        []string   `json:"tags"`
+	Importance  int        `json:"importance"`
+	IncidentID  string     `json:"incidentId,omitempty"`
+	Embedding   []byte     `json:"-"`
 	MissionID   string     `json:"missionId,omitempty"`
 	ExecutionID string     `json:"executionId,omitempty"`
 	ExpiresAt   *time.Time `json:"expiresAt,omitempty"`
@@ -114,40 +119,80 @@ type StellarMemoryEntry struct {
 
 // StellarAction represents a pending/scheduled cluster action.
 type StellarAction struct {
-	ID           string     `json:"id"`
-	UserID       string     `json:"userId"`
-	Description  string     `json:"description"`
-	ActionType   string     `json:"actionType"`
-	Parameters   string     `json:"parameters"`
-	Cluster      string     `json:"cluster"`
-	Namespace    string     `json:"namespace,omitempty"`
-	ScheduledAt  *time.Time `json:"scheduledAt,omitempty"`
-	CronExpr     string     `json:"cronExpr,omitempty"`
-	Status       string     `json:"status"`
-	ApprovedBy   string     `json:"approvedBy,omitempty"`
-	ApprovedAt   *time.Time `json:"approvedAt,omitempty"`
-	ExecutedAt   *time.Time `json:"executedAt,omitempty"`
-	Outcome      string     `json:"outcome,omitempty"`
-	RejectReason string     `json:"rejectReason,omitempty"`
-	CreatedBy    string     `json:"createdBy"`
-	CreatedAt    time.Time  `json:"createdAt"`
+	ID              string     `json:"id"`
+	UserID          string     `json:"userId"`
+	Description     string     `json:"description"`
+	ActionType      string     `json:"actionType"`
+	Parameters      string     `json:"parameters"`
+	Cluster         string     `json:"cluster"`
+	Namespace       string     `json:"namespace,omitempty"`
+	ScheduledAt     *time.Time `json:"scheduledAt,omitempty"`
+	CronExpr        string     `json:"cronExpr,omitempty"`
+	Status          string     `json:"status"`
+	StartedAt       *time.Time `json:"startedAt,omitempty"`
+	CompletedAt     *time.Time `json:"completedAt,omitempty"`
+	ApprovedBy      string     `json:"approvedBy,omitempty"`
+	ApprovedAt      *time.Time `json:"approvedAt,omitempty"`
+	RejectedBy      string     `json:"rejectedBy,omitempty"`
+	RejectedAt      *time.Time `json:"rejectedAt,omitempty"`
+	RejectionReason string     `json:"rejectionReason,omitempty"`
+	ExecutedAt      *time.Time `json:"executedAt,omitempty"`
+	Outcome         string     `json:"outcome,omitempty"`
+	RejectReason    string     `json:"rejectReason,omitempty"`
+	RetryCount      int        `json:"retryCount"`
+	MaxRetries      int        `json:"maxRetries"`
+	AuditLog        string     `json:"auditLog,omitempty"`
+	IdempotencyKey  string     `json:"idempotencyKey,omitempty"`
+	ConfirmToken    string     `json:"confirmToken,omitempty"`
+	CreatedBy       string     `json:"createdBy"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
 }
 
 // StellarNotification is an item shown in the persistent Stellar feed.
 type StellarNotification struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"userId"`
-	Type      string    `json:"type"`
-	Severity  string    `json:"severity"`
-	Title     string    `json:"title"`
-	Body      string    `json:"body"`
-	Cluster   string    `json:"cluster,omitempty"`
-	Namespace string    `json:"namespace,omitempty"`
-	MissionID string    `json:"missionId,omitempty"`
-	ActionID  string    `json:"actionId,omitempty"`
-	DedupeKey string    `json:"dedupeKey,omitempty"`
-	Read      bool      `json:"read"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID        string     `json:"id"`
+	UserID    string     `json:"userId"`
+	Type      string     `json:"type"`
+	Severity  string     `json:"severity"`
+	Title     string     `json:"title"`
+	Body      string     `json:"body"`
+	Cluster   string     `json:"cluster,omitempty"`
+	Namespace string     `json:"namespace,omitempty"`
+	MissionID string     `json:"missionId,omitempty"`
+	ActionID  string     `json:"actionId,omitempty"`
+	DedupeKey string     `json:"dedupeKey,omitempty"`
+	Read      bool       `json:"read"`
+	ReadAt    *time.Time `json:"readAt,omitempty"`
+	CreatedAt time.Time  `json:"createdAt"`
+}
+
+type StellarProviderConfig struct {
+	ID          string     `json:"id"`
+	UserID      string     `json:"userId"`
+	Provider    string     `json:"provider"`
+	DisplayName string     `json:"displayName"`
+	BaseURL     string     `json:"baseUrl"`
+	Model       string     `json:"model"`
+	APIKeyEnc   []byte     `json:"-"`
+	APIKeyMask  string     `json:"apiKeyMask,omitempty"`
+	IsDefault   bool       `json:"isDefault"`
+	IsActive    bool       `json:"isActive"`
+	LastTested  *time.Time `json:"lastTested,omitempty"`
+	LastLatency int        `json:"lastLatency"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
+}
+
+type StellarAuditEntry struct {
+	ID         string    `json:"id"`
+	Ts         time.Time `json:"ts"`
+	UserID     string    `json:"userId"`
+	Action     string    `json:"action"`
+	EntityType string    `json:"entityType"`
+	EntityID   string    `json:"entityId"`
+	Cluster    string    `json:"cluster"`
+	Detail     string    `json:"detail"`
 }
 
 // AuditEntry represents a single row in the audit_log table (#8670 Phase 3).

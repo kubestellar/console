@@ -726,6 +726,64 @@ func (s *SQLiteStore) migrate() error {
 		// generated feed events in older databases.
 		"ALTER TABLE stellar_notifications ADD COLUMN dedupe_key TEXT NOT NULL DEFAULT ''",
 		"CREATE UNIQUE INDEX IF NOT EXISTS idx_stellar_notifications_user_dedupe ON stellar_notifications(user_id, dedupe_key)",
+		"ALTER TABLE stellar_notifications ADD COLUMN read_at DATETIME",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_notif_read ON stellar_notifications(read, created_at DESC)",
+
+		"ALTER TABLE stellar_memory_entries ADD COLUMN embedding BLOB",
+		"ALTER TABLE stellar_memory_entries ADD COLUMN importance INTEGER NOT NULL DEFAULT 5",
+		"ALTER TABLE stellar_memory_entries ADD COLUMN incident_id TEXT",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_mem_cluster ON stellar_memory_entries(cluster, created_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_mem_expires ON stellar_memory_entries(expires_at)",
+
+		"ALTER TABLE stellar_actions ADD COLUMN approved_by TEXT NOT NULL DEFAULT ''",
+		"ALTER TABLE stellar_actions ADD COLUMN approved_at DATETIME",
+		"ALTER TABLE stellar_actions ADD COLUMN rejected_by TEXT NOT NULL DEFAULT ''",
+		"ALTER TABLE stellar_actions ADD COLUMN rejected_at DATETIME",
+		"ALTER TABLE stellar_actions ADD COLUMN rejection_reason TEXT NOT NULL DEFAULT ''",
+		"ALTER TABLE stellar_actions ADD COLUMN started_at DATETIME",
+		"ALTER TABLE stellar_actions ADD COLUMN completed_at DATETIME",
+		"ALTER TABLE stellar_actions ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0",
+		"ALTER TABLE stellar_actions ADD COLUMN max_retries INTEGER NOT NULL DEFAULT 0",
+		"ALTER TABLE stellar_actions ADD COLUMN audit_log TEXT NOT NULL DEFAULT '[]'",
+		"ALTER TABLE stellar_actions ADD COLUMN idempotency_key TEXT",
+		"ALTER TABLE stellar_actions ADD COLUMN confirm_token TEXT",
+		"ALTER TABLE stellar_actions ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_stellar_actions_idempotency ON stellar_actions(idempotency_key) WHERE idempotency_key IS NOT NULL",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_actions_due ON stellar_actions(status, scheduled_at)",
+
+		"ALTER TABLE stellar_executions ADD COLUMN provider TEXT NOT NULL DEFAULT ''",
+		"ALTER TABLE stellar_executions ADD COLUMN model TEXT NOT NULL DEFAULT ''",
+
+		`CREATE TABLE IF NOT EXISTS stellar_provider_configs (
+			id           TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			user_id      TEXT NOT NULL,
+			provider     TEXT NOT NULL,
+			display_name TEXT NOT NULL DEFAULT '',
+			base_url     TEXT NOT NULL DEFAULT '',
+			model        TEXT NOT NULL DEFAULT '',
+			api_key_enc  BLOB NOT NULL DEFAULT '',
+			is_default   INTEGER NOT NULL DEFAULT 0,
+			is_active    INTEGER NOT NULL DEFAULT 1,
+			last_tested  TEXT,
+			last_latency INTEGER DEFAULT 0,
+			created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+			updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
+		)`,
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_stellar_provider_user_default ON stellar_provider_configs(user_id) WHERE is_default = 1",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_provider_user ON stellar_provider_configs(user_id, is_active)",
+
+		`CREATE TABLE IF NOT EXISTS stellar_audit_log (
+			id          TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			ts          TEXT NOT NULL DEFAULT (datetime('now')),
+			user_id     TEXT NOT NULL,
+			action      TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			entity_id   TEXT NOT NULL,
+			cluster     TEXT NOT NULL DEFAULT '',
+			detail      TEXT NOT NULL DEFAULT '{}'
+		)`,
+		"CREATE INDEX IF NOT EXISTS idx_audit_user_ts ON stellar_audit_log(user_id, ts DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_entity ON stellar_audit_log(entity_type, entity_id)",
 	}
 	for i, migration := range migrations {
 		if _, err := s.db.ExecContext(ctx, migration); err != nil {

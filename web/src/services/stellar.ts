@@ -12,9 +12,35 @@ export interface AskResponse {
   executionId: string
   model: string
   provider: string
+  providerSource: 'request' | 'user-default' | 'env-default' | 'fallback'
   tokens: number
   durationMs: number
+  fallbackUsed?: boolean
+  fallbackReason?: string
   state: StellarOperationalState
+}
+
+export interface ProviderInfo {
+  name: string
+  displayName: string
+  model: string
+  available: boolean
+  latencyMs: number
+  supportsStreaming: boolean
+  isUserDefined?: boolean
+  configId?: string
+}
+
+export interface UserProviderConfig {
+  id: string
+  provider: string
+  displayName: string
+  model: string
+  baseUrl: string
+  apiKeyMask?: string
+  isDefault: boolean
+  isActive: boolean
+  lastLatency: number
 }
 
 export const stellarApi = {
@@ -46,8 +72,8 @@ export const stellarApi = {
     return data
   },
 
-  async approveAction(id: string): Promise<StellarAction> {
-    const { data } = await api.post<StellarAction>(`/api/stellar/actions/${encodeURIComponent(id)}/approve`, {})
+  async approveAction(id: string, confirmToken?: string): Promise<StellarAction> {
+    const { data } = await api.post<StellarAction>(`/api/stellar/actions/${encodeURIComponent(id)}/approve`, { confirmToken })
     return data
   },
 
@@ -76,6 +102,29 @@ export const stellarApi = {
     const { data } = await api.get<{ digest: string; model: string; provider: string }>('/api/stellar/digest')
     return data
   },
+
+  async getProviders(): Promise<{ global: ProviderInfo[]; user: UserProviderConfig[] }> {
+    const { data } = await api.get<{ global: ProviderInfo[]; user: UserProviderConfig[] }>('/api/stellar/providers')
+    return data
+  },
+
+  async createProvider(payload: { provider: string; displayName: string; apiKey: string; model: string; baseUrl?: string }): Promise<UserProviderConfig> {
+    const { data } = await api.post<UserProviderConfig>('/api/stellar/providers', payload)
+    return data
+  },
+
+  async testProvider(id: string): Promise<{ available: boolean; latencyMs: number; error?: string }> {
+    const { data } = await api.post<{ available: boolean; latencyMs: number; error?: string }>(`/api/stellar/providers/${encodeURIComponent(id)}/test`, {})
+    return data
+  },
+
+  async deleteProvider(id: string): Promise<void> {
+    await api.delete(`/api/stellar/providers/${encodeURIComponent(id)}`)
+  },
+
+  async setDefaultProvider(id: string): Promise<void> {
+    await api.post(`/api/stellar/providers/${encodeURIComponent(id)}/default`, {})
+  },
 }
 
 export async function getStellarState(): Promise<StellarOperationalState> {
@@ -98,8 +147,8 @@ export async function getStellarActions(status?: string, limit = 50): Promise<St
   return stellarApi.getActions(status, limit)
 }
 
-export async function approveStellarAction(id: string): Promise<StellarAction> {
-  return stellarApi.approveAction(id)
+export async function approveStellarAction(id: string, confirmToken?: string): Promise<StellarAction> {
+  return stellarApi.approveAction(id, confirmToken)
 }
 
 export async function rejectStellarAction(id: string, reason: string): Promise<StellarAction> {

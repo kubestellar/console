@@ -1,11 +1,14 @@
 package providers
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -32,20 +35,20 @@ func NewOllama(baseURL string) *OllamaProvider {
 
 func (o *OllamaProvider) Name() string { return "ollama" }
 
-func (o *OllamaProvider) IsAvailable(ctx context.Context) bool {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/api/tags", nil)
-	if err != nil {
-		return false
-	}
+func (o *OllamaProvider) Health(ctx context.Context) HealthResult {
+	start := time.Now()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/api/tags", nil)
 	resp, err := o.client.Do(req)
+	latency := int(time.Since(start).Milliseconds())
 	if err != nil {
-		return false
+		return HealthResult{Available: false, Error: err.Error(), LatencyMs: latency}
 	}
-	defer resp.Body.Close()
-	return resp.StatusCode == http.StatusOK
+	resp.Body.Close()
+	return HealthResult{Available: resp.StatusCode == http.StatusOK, LatencyMs: latency}
 }
 
 func (o *OllamaProvider) Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
+	start := time.Now()
 	maxTokens := req.MaxTokens
 	if maxTokens <= 0 {
 		maxTokens = defaultPromptTokenCap
@@ -53,7 +56,7 @@ func (o *OllamaProvider) Generate(ctx context.Context, req GenerateRequest) (*Ge
 	payload := map[string]any{
 		"model":    req.Model,
 		"messages": req.Messages,
-		"stream":   false,
+		"stream":   req.Stream && req.StreamCh != nil,
 		"options": map[string]any{
 			"temperature": req.Temperature,
 			"num_predict": maxTokens,
@@ -79,6 +82,60 @@ func (o *OllamaProvider) Generate(ctx context.Context, req GenerateRequest) (*Ge
 		return nil, fmt.Errorf("ollama: unexpected status %d", resp.StatusCode)
 	}
 
+	if req.Stream && req.StreamCh != nil {
+		type streamResp struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+			Done            bool   `json:"done"`
+			PromptEvalCount int    `json:"prompt_eval_count"`
+			EvalCount       int    `json:"eval_count"`
+			Model           string `json:"model"`
+		}
+		reader := bufio.NewReader(resp.Body)
+		var full strings.Builder
+		last := streamResp{}
+		for {
+			line, readErr := reader.ReadBytes('\n')
+			if len(bytes.TrimSpace(line)) > 0 {
+				var chunk streamResp
+				if unmarshalErr := json.Unmarshal(bytes.TrimSpace(line), &chunk); unmarshalErr == nil {
+					last = chunk
+					if chunk.Message.Content != "" {
+						full.WriteString(chunk.Message.Content)
+						req.StreamCh <- chunk.Message.Content
+					}
+					if chunk.Done {
+						close(req.StreamCh)
+						return &GenerateResponse{
+							Content:      full.String(),
+							TokensInput:  chunk.PromptEvalCount,
+							TokensOutput: chunk.EvalCount,
+							Model:        chunk.Model,
+							Provider:     "ollama",
+							DurationMs:   int(time.Since(start).Milliseconds()),
+						}, nil
+					}
+				}
+			}
+			if readErr != nil {
+				if readErr == io.EOF {
+					close(req.StreamCh)
+					return &GenerateResponse{
+						Content:      full.String(),
+						TokensInput:  last.PromptEvalCount,
+						TokensOutput: last.EvalCount,
+						Model:        last.Model,
+						Provider:     "ollama",
+						DurationMs:   int(time.Since(start).Milliseconds()),
+					}, nil
+				}
+				close(req.StreamCh)
+				return nil, fmt.Errorf("ollama stream read: %w", readErr)
+			}
+		}
+	}
+
 	var result struct {
 		Message struct {
 			Content string `json:"content"`
@@ -90,12 +147,14 @@ func (o *OllamaProvider) Generate(ctx context.Context, req GenerateRequest) (*Ge
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("ollama decode: %w", err)
 	}
-
 	return &GenerateResponse{
 		Content:      result.Message.Content,
 		TokensInput:  result.PromptEvalCount,
 		TokensOutput: result.EvalCount,
 		Model:        result.Model,
 		Provider:     "ollama",
+		DurationMs:   int(time.Since(start).Milliseconds()),
 	}, nil
 }
+
+func (o *OllamaProvider) SupportsStreaming() bool { return true }

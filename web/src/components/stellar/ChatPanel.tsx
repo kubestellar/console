@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { stellarApi } from '../../services/stellar'
+import { MessageBubble } from './MessageBubble'
+import { ProviderSelector } from './ProviderSelector'
+import type { ProviderSession } from '../../types/stellar'
+import { TextArea } from '../ui/TextArea'
 
 interface Msg {
   id: string
@@ -17,12 +21,18 @@ const WELCOME: Msg = {
   ts: new Date(),
 }
 
-export function ChatPanel() {
+export function ChatPanel({
+  providerSession,
+  onProviderChange,
+}: {
+  providerSession: ProviderSession | null
+  onProviderChange: (session: ProviderSession | null) => void
+}) {
   const [msgs, setMsgs] = useState<Msg[]>([WELCOME])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const textRef = useRef<HTMLTextAreaElement>(null)
+  const textRef = useRef<HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -37,7 +47,11 @@ export function ChatPanel() {
     const loadMsg: Msg = { id: crypto.randomUUID(), role: 'stellar', content: '', ts: new Date(), loading: true }
     setMsgs(prev => [...prev, userMsg, loadMsg])
     try {
-      const response = await stellarApi.ask({ prompt })
+      const response = await stellarApi.ask({
+        prompt,
+        provider: providerSession?.provider || '',
+        model: providerSession?.model || '',
+      })
       setMsgs(prev => prev.map(message => (message.loading ? {
         ...message,
         content: response.answer,
@@ -56,7 +70,7 @@ export function ChatPanel() {
       setBusy(false)
       textRef.current?.focus()
     }
-  }, [busy, input])
+  }, [busy, input, providerSession?.model, providerSession?.provider])
 
   const handleKey = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -86,12 +100,8 @@ export function ChatPanel() {
           Chat
         </span>
         <div style={{ flex: 1 }} />
-        <button
-          onClick={() => setMsgs([WELCOME])}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--s-text-dim)' }}
-        >
-          clear
-        </button>
+        <ProviderSelector session={providerSession} onSelect={onProviderChange} />
+        <button onClick={() => setMsgs([WELCOME])} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 10, color: 'var(--s-text-dim)' }}>clear</button>
       </div>
 
       <div
@@ -106,7 +116,7 @@ export function ChatPanel() {
           minHeight: 0,
         }}
       >
-        {msgs.map(msg => <MsgBubble key={msg.id} msg={msg} />)}
+        {msgs.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
         <div ref={bottomRef} />
       </div>
 
@@ -120,7 +130,7 @@ export function ChatPanel() {
           borderRadius: 'var(--s-r)',
           padding: '7px 10px',
         }}>
-          <textarea
+          <TextArea
             ref={textRef}
             value={input}
             onChange={event => setInput(event.target.value)}
@@ -166,66 +176,6 @@ export function ChatPanel() {
           Enter to send · Shift+Enter for newline
         </div>
       </div>
-    </div>
-  )
-}
-
-function MsgBubble({ msg }: { msg: Msg }) {
-  const isUser = msg.role === 'user'
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: isUser ? 'flex-end' : 'flex-start' }}>
-      <div style={{
-        fontSize: 10,
-        color: 'var(--s-text-dim)',
-        fontFamily: 'var(--s-mono)',
-        marginBottom: 3,
-        letterSpacing: '0.04em',
-      }}>
-        {isUser ? 'you' : '● stellar'}
-      </div>
-
-      <div style={{
-        maxWidth: '93%',
-        background: isUser ? 'var(--s-surface-2)' : 'transparent',
-        border: isUser ? '1px solid var(--s-border-muted)' : 'none',
-        borderRadius: isUser ? 'var(--s-r) var(--s-rs) var(--s-r) var(--s-r)' : 'var(--s-rs) var(--s-r) var(--s-r) var(--s-r)',
-        padding: isUser ? '8px 10px' : '2px 0',
-        fontSize: 13,
-        color: 'var(--s-text)',
-        lineHeight: 1.6,
-      }}>
-        {msg.loading ? (
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center', padding: '4px 0' }}>
-            {[0, 1, 2].map(i => (
-              <div
-                key={i}
-                style={{
-                  width: 5,
-                  height: 5,
-                  borderRadius: '50%',
-                  background: 'var(--s-brand)',
-                  animation: `s-pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
-                }}
-              />
-            ))}
-          </div>
-        ) : (
-          <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {msg.content}
-          </div>
-        )}
-      </div>
-
-      {msg.meta && (
-        <div style={{
-          fontSize: 10,
-          color: 'var(--s-text-dim)',
-          marginTop: 3,
-          fontFamily: 'var(--s-mono)',
-        }}>
-          {msg.meta.provider} · {msg.meta.model} · {msg.meta.tokens} tok · {msg.meta.durationMs}ms
-        </div>
-      )}
     </div>
   )
 }

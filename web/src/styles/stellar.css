@@ -50,3 +50,18 @@
     transform: scale(1);
   }
 }
+
+.stellar-markdown { line-height: 1.6; }
+.stellar-markdown p { margin: 0 0 8px; }
+.stellar-markdown p:last-child { margin-bottom: 0; }
+.stellar-markdown code {
+  font-family: var(--s-mono); font-size: 11px;
+  background: var(--s-surface-2); border: 1px solid var(--s-border);
+  border-radius: 3px; padding: 1px 4px;
+}
+.stellar-markdown pre { background: var(--s-bg); border: 1px solid var(--s-border);
+  border-radius: var(--s-r); padding: 10px; overflow-x: auto; }
+.stellar-markdown pre code { background: none; border: none; padding: 0; }
+.stellar-markdown ul, .stellar-markdown ol { padding-left: 18px; margin: 4px 0 8px; }
+.stellar-markdown li { margin-bottom: 2px; }
+.stellar-markdown strong { color: var(--s-text); font-weight: 600; }

@@ -13,6 +13,8 @@ export function StellarSidebar() {
     state,
     notifications,
     pendingActions,
+    providerSession,
+    setProviderSession,
     acknowledgeNotification,
     approveAction,
     rejectAction,
@@ -113,7 +115,7 @@ export function StellarSidebar() {
         display: 'flex',
         flexDirection: 'column',
       }}>
-        <ChatPanel />
+        <ChatPanel providerSession={providerSession} onProviderChange={setProviderSession} />
       </div>
     </div>
   )

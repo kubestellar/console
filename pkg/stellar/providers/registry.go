@@ -1,76 +1,137 @@
 package providers
 
 import (
-	"fmt"
+	"context"
 	"os"
+	"sync"
 )
 
-const (
-	defaultProviderName = "ollama"
-	defaultModelName    = "llama3"
-)
+type ResolvedProvider struct {
+	Provider Provider
+	Model    string
+	Source   string
+}
+
+type ResolvedUserProvider struct {
+	Provider Provider
+	Model    string
+	ConfigID string
+}
 
 type Registry struct {
-	providers map[string]Provider
-	defaults  struct {
-		provider string
-		model    string
-	}
+	mu           sync.RWMutex
+	global       map[string]Provider
+	defaultName  string
+	defaultModel string
 }
 
 func NewRegistry() *Registry {
-	r := &Registry{
-		providers: make(map[string]Provider),
+	r := &Registry{global: map[string]Provider{}}
+	r.global["ollama"] = NewOllama(os.Getenv("OLLAMA_BASE_URL"))
+
+	if k := os.Getenv("OPENAI_API_KEY"); k != "" {
+		r.global["openai"] = NewOpenAICompat("https://api.openai.com/v1", k, "openai")
+	}
+	if k := os.Getenv("ANTHROPIC_API_KEY"); k != "" {
+		r.global["anthropic"] = NewAnthropicProvider(k)
+	}
+	if k := os.Getenv("GROQ_API_KEY"); k != "" {
+		r.global["groq"] = NewOpenAICompat("https://api.groq.com/openai/v1", k, "groq")
+	}
+	if k := os.Getenv("OPENROUTER_API_KEY"); k != "" {
+		r.global["openrouter"] = NewOpenAICompat("https://openrouter.ai/api/v1", k, "openrouter")
+	}
+	if k := os.Getenv("TOGETHER_API_KEY"); k != "" {
+		r.global["together"] = NewOpenAICompat("https://api.together.xyz/v1", k, "together")
 	}
 
-	r.providers["ollama"] = NewOllama(os.Getenv("OLLAMA_BASE_URL"))
-	if key := os.Getenv("OPENAI_API_KEY"); key != "" {
-		r.providers["openai"] = NewOpenAICompat("https://api.openai.com/v1", key, "openai")
+	r.defaultName = os.Getenv("STELLAR_DEFAULT_PROVIDER")
+	if r.defaultName == "" {
+		r.defaultName = "ollama"
 	}
-	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
-		r.providers["anthropic"] = NewOpenAICompat("https://api.anthropic.com/v1", key, "anthropic")
+	r.defaultModel = os.Getenv("STELLAR_DEFAULT_MODEL")
+	if r.defaultModel == "" {
+		r.defaultModel = "llama3"
 	}
-	if key := os.Getenv("GROQ_API_KEY"); key != "" {
-		r.providers["groq"] = NewOpenAICompat("https://api.groq.com/openai/v1", key, "groq")
-	}
-
-	r.defaults.provider = os.Getenv("STELLAR_DEFAULT_PROVIDER")
-	if r.defaults.provider == "" {
-		r.defaults.provider = defaultProviderName
-	}
-	r.defaults.model = os.Getenv("STELLAR_DEFAULT_MODEL")
-	if r.defaults.model == "" {
-		r.defaults.model = defaultModelName
-	}
-
 	return r
 }
 
-func (r *Registry) Get(name string) (Provider, error) {
-	provider, ok := r.providers[name]
-	if !ok {
-		return nil, fmt.Errorf("provider %q not found", name)
+func (r *Registry) Resolve(requestProvider, requestModel string, userCfg *ResolvedUserProvider) ResolvedProvider {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if requestProvider != "" {
+		if p, ok := r.global[requestProvider]; ok {
+			model := requestModel
+			if model == "" {
+				model = r.defaultModel
+			}
+			return ResolvedProvider{Provider: p, Model: model, Source: "request"}
+		}
 	}
-	return provider, nil
+	if userCfg != nil && userCfg.Provider != nil {
+		model := userCfg.Model
+		if model == "" {
+			model = r.defaultModel
+		}
+		return ResolvedProvider{Provider: userCfg.Provider, Model: model, Source: "user-default"}
+	}
+	if p, ok := r.global[r.defaultName]; ok {
+		return ResolvedProvider{Provider: p, Model: r.defaultModel, Source: "env-default"}
+	}
+	return ResolvedProvider{Provider: r.global["ollama"], Model: r.defaultModel, Source: "fallback"}
 }
 
-func (r *Registry) GetDefault() (Provider, string) {
-	if provider, ok := r.providers[r.defaults.provider]; ok {
-		return provider, r.defaults.model
+func (r *Registry) GetGlobal(name string) (Provider, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	p, ok := r.global[name]
+	return p, ok
+}
+
+func (r *Registry) ListProviderInfo(ctx context.Context) []ProviderInfo {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]ProviderInfo, 0, len(r.global))
+	for name, p := range r.global {
+		h := p.Health(ctx)
+		model := r.defaultModel
+		if d, ok := ProviderDefaults[name]; ok && d.DefaultModel != "" {
+			model = d.DefaultModel
+		}
+		out = append(out, ProviderInfo{
+			Name:              name,
+			DisplayName:       displayName(name),
+			Model:             model,
+			Available:         h.Available,
+			LatencyMs:         h.LatencyMs,
+			SupportsStreaming: p.SupportsStreaming(),
+		})
 	}
-	if provider, ok := r.providers[defaultProviderName]; ok {
-		return provider, r.defaults.model
-	}
-	for _, provider := range r.providers {
-		return provider, r.defaults.model
-	}
-	return nil, r.defaults.model
+	return out
 }
 
 func (r *Registry) Available() []string {
-	out := make([]string, 0, len(r.providers))
-	for name := range r.providers {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, 0, len(r.global))
+	for name := range r.global {
 		out = append(out, name)
 	}
 	return out
+}
+
+func displayName(name string) string {
+	m := map[string]string{
+		"ollama":     "Ollama",
+		"openai":     "OpenAI",
+		"anthropic":  "Anthropic",
+		"groq":       "Groq",
+		"openrouter": "OpenRouter",
+		"together":   "Together AI",
+	}
+	if d, ok := m[name]; ok {
+		return d
+	}
+	return name
 }

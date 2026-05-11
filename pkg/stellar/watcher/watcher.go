@@ -2,9 +2,9 @@ package watcher
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
@@ -13,47 +13,69 @@ import (
 
 const bootstrapWindow = 5 * time.Minute
 
-type Store interface {
-	CreateStellarNotification(ctx context.Context, notification *store.StellarNotification) error
-	NotificationExistsByDedup(ctx context.Context, userID, dedupeKey string) (bool, error)
-	ListStellarUserIDs(ctx context.Context) ([]string, error)
-}
-
 type K8sClient interface {
-	DeduplicatedClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
 	ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
 	GetWarningEvents(ctx context.Context, cluster, namespace string, limit int) ([]k8s.Event, error)
 	GetPods(ctx context.Context, cluster, namespace string) ([]k8s.PodInfo, error)
 }
 
 type Watcher struct {
-	store     Store
-	k8sClient K8sClient
-	interval  time.Duration
-	lastSeen  map[string]time.Time
+	store       NotificationStore
+	client      K8sClient
+	interval    time.Duration
+	mu          sync.Mutex
+	lastSeen    map[string]time.Time
+	broadcaster Broadcaster
 }
 
-func New(store Store, client K8sClient, interval time.Duration) *Watcher {
+func New(store NotificationStore, client K8sClient, interval time.Duration, broadcaster ...Broadcaster) *Watcher {
 	if interval <= 0 {
 		interval = 30 * time.Second
 	}
+	var b Broadcaster
+	if len(broadcaster) > 0 {
+		b = broadcaster[0]
+	}
 	return &Watcher{
-		store:     store,
-		k8sClient: client,
-		interval:  interval,
-		lastSeen:  make(map[string]time.Time),
+		store:       store,
+		client:      client,
+		interval:    interval,
+		lastSeen:    make(map[string]time.Time),
+		broadcaster: b,
 	}
 }
 
 func (w *Watcher) Start(ctx context.Context) {
+	slog.Info("stellar/watcher: starting", "interval", w.interval.String())
+	defer slog.Info("stellar/watcher: stopped")
+	for {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("stellar/watcher: recovered from panic", "error", r)
+				}
+			}()
+			w.runLoop(ctx)
+		}()
+		if ctx.Err() != nil {
+			return
+		}
+		slog.Warn("stellar/watcher: restarting after panic")
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(5 * time.Second):
+		}
+	}
+}
+
+func (w *Watcher) runLoop(ctx context.Context) {
+	w.poll(ctx)
 	ticker := time.NewTicker(w.interval)
 	defer ticker.Stop()
-	slog.Info("stellar/watcher: started", "interval", w.interval.String())
-	w.poll(ctx)
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("stellar/watcher: stopped")
 			return
 		case <-ticker.C:
 			w.poll(ctx)
@@ -62,132 +84,152 @@ func (w *Watcher) Start(ctx context.Context) {
 }
 
 func (w *Watcher) poll(ctx context.Context) {
-	if w.k8sClient == nil || w.store == nil {
+	if w.client == nil || w.store == nil {
 		return
 	}
-	clusters, err := w.k8sClient.DeduplicatedClusters(ctx)
+	pollCtx, cancel := context.WithTimeout(ctx, w.interval/2)
+	defer cancel()
+	clusters, err := w.client.ListClusters(pollCtx)
 	if err != nil {
-		clusters, err = w.k8sClient.ListClusters(ctx)
-		if err != nil {
-			slog.Warn("stellar/watcher: list clusters failed", "error", err)
-			return
-		}
-	}
-	userIDs, err := w.store.ListStellarUserIDs(ctx)
-	if err != nil {
-		slog.Warn("stellar/watcher: list user ids failed", "error", err)
+		slog.Warn("stellar/watcher: list clusters failed", "error", err)
 		return
 	}
-	if len(userIDs) == 0 {
-		return
+
+	start := time.Now()
+	newNotifs := 0
+	var countMu sync.Mutex
+	sem := make(chan struct{}, 5)
+	var wg sync.WaitGroup
+	for _, c := range clusters {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(name string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			added := w.pollCluster(pollCtx, name)
+			countMu.Lock()
+			newNotifs += added
+			countMu.Unlock()
+		}(c.Name)
 	}
-	for _, cluster := range clusters {
-		w.pollCluster(ctx, cluster.Name, userIDs)
-	}
+	wg.Wait()
+	slog.Info("stellar/watcher: poll complete", "clusters", len(clusters), "new_notifs", newNotifs, "duration_ms", int(time.Since(start).Milliseconds()))
 }
 
-func (w *Watcher) pollCluster(ctx context.Context, clusterName string, userIDs []string) {
-	cutoff := w.lastSeen[clusterName]
+func (w *Watcher) pollCluster(ctx context.Context, cluster string) int {
+	userIDs, err := w.store.ListStellarUserIDs(ctx)
+	if err != nil || len(userIDs) == 0 {
+		return 0
+	}
+	w.mu.Lock()
+	cutoff := w.lastSeen[cluster]
 	if cutoff.IsZero() {
 		cutoff = time.Now().UTC().Add(-bootstrapWindow)
+		w.lastSeen[cluster] = cutoff
 	}
+	w.mu.Unlock()
 
-	events, err := w.k8sClient.GetWarningEvents(ctx, clusterName, "", 100)
-	if err != nil {
-		slog.Warn("stellar/watcher: warning events failed", "cluster", clusterName, "error", err)
-	} else {
+	newCount := 0
+	events, err := w.client.GetWarningEvents(ctx, cluster, "", 100)
+	if err == nil {
 		for _, ev := range events {
 			ts := parseEventTimestamp(ev.LastSeen)
 			if !ts.After(cutoff) {
 				continue
 			}
-			objectKind, objectName := splitObjectRef(ev.Object)
-			dedupeKey := fmt.Sprintf("ev:%s:%s:%s:%s", clusterName, ev.Namespace, objectName, ev.Reason)
-			severity := "warning"
-			if isCriticalReason(ev.Reason) {
-				severity = "critical"
-			}
-			narration := fmt.Sprintf(
-				"I noticed %s on %s/%s in cluster %s. Reason: %s. This has occurred %d time(s) — last seen %s ago.",
-				ev.Reason,
-				ev.Namespace,
-				objectName,
-				clusterName,
-				truncate(ev.Message, 120),
-				ev.Count,
-				time.Since(ts).Round(time.Minute),
-			)
+			resource := splitEventObjectName(ev.Object)
+			dedup := DedupKeyEvent(cluster, ev.Namespace, resource, ev.Reason)
+			severity := InferSeverity(ev.Reason, ev.Type)
+			body := NarrateEvent(cluster, ev.Namespace, resource, ev.Reason, ev.Message, int(ev.Count), time.Since(ts))
 			for _, userID := range userIDs {
-				exists, dedupeErr := w.store.NotificationExistsByDedup(ctx, userID, dedupeKey)
-				if dedupeErr != nil {
+				exists, dedupeErr := w.store.NotificationExistsByDedup(ctx, userID, dedup)
+				if dedupeErr != nil || exists {
 					continue
 				}
-				if exists {
-					continue
-				}
-				_ = w.store.CreateStellarNotification(ctx, &store.StellarNotification{
+				notif := &store.StellarNotification{
 					UserID:    userID,
-					Type:      "Event",
+					Type:      "event",
 					Severity:  severity,
-					Title:     fmt.Sprintf("%s — %s/%s (%s)", ev.Reason, ev.Namespace, objectName, objectKind),
-					Body:      narration,
-					Cluster:   clusterName,
+					Title:     ev.Reason + " — " + ev.Namespace + "/" + resource,
+					Body:      body,
+					Cluster:   cluster,
 					Namespace: ev.Namespace,
-					DedupeKey: dedupeKey,
-				})
+					DedupeKey: dedup,
+				}
+				if createErr := w.store.CreateStellarNotification(ctx, notif); createErr == nil {
+					newCount++
+					if severity == "critical" {
+						_ = w.store.CreateStellarMemoryEntry(ctx, &store.StellarMemoryEntry{
+							UserID:     userID,
+							Cluster:    cluster,
+							Namespace:  ev.Namespace,
+							Category:   "incident",
+							Summary:    notif.Title + " — " + truncate(notif.Body, 180),
+							Importance: 8,
+							IncidentID: notif.ID,
+							ExpiresAt:  ptr(time.Now().AddDate(0, 0, 90)),
+						})
+					}
+					if w.broadcaster != nil {
+						w.broadcaster.Broadcast(SSEEvent{Type: "notification", Data: notif})
+					}
+				}
 			}
-			if ts.After(w.lastSeen[clusterName]) {
-				w.lastSeen[clusterName] = ts
+			w.mu.Lock()
+			if ts.After(w.lastSeen[cluster]) {
+				w.lastSeen[cluster] = ts
 			}
+			w.mu.Unlock()
 		}
 	}
 
-	pods, err := w.k8sClient.GetPods(ctx, clusterName, "")
+	pods, err := w.client.GetPods(ctx, cluster, "")
 	if err != nil {
-		return
+		return newCount
 	}
 	for _, pod := range pods {
 		for _, c := range pod.Containers {
 			if c.Reason != "CrashLoopBackOff" {
 				continue
 			}
-			dedupeKey := fmt.Sprintf("crash:%s:%s:%s:%s", clusterName, pod.Namespace, pod.Name, c.Name)
-			body := fmt.Sprintf(
-				"I'm seeing %s (container: %s) in CrashLoopBackOff on cluster %s. It has restarted %d times. Want me to pull the last 100 lines of logs?",
-				pod.Namespace+"/"+pod.Name,
-				c.Name,
-				clusterName,
-				pod.Restarts,
-			)
+			dedup := DedupKeyCrash(cluster, pod.Namespace, pod.Name, c.Name)
+			body := "I'm seeing " + pod.Namespace + "/" + pod.Name + " in CrashLoopBackOff on cluster " + cluster + "."
 			for _, userID := range userIDs {
-				exists, dedupeErr := w.store.NotificationExistsByDedup(ctx, userID, dedupeKey)
+				exists, dedupeErr := w.store.NotificationExistsByDedup(ctx, userID, dedup)
 				if dedupeErr != nil || exists {
 					continue
 				}
-				_ = w.store.CreateStellarNotification(ctx, &store.StellarNotification{
+				notif := &store.StellarNotification{
 					UserID:    userID,
-					Type:      "Event",
+					Type:      "event",
 					Severity:  "critical",
-					Title:     fmt.Sprintf("CrashLoopBackOff — %s/%s", pod.Namespace, pod.Name),
+					Title:     "CrashLoopBackOff — " + pod.Namespace + "/" + pod.Name,
 					Body:      body,
-					Cluster:   clusterName,
+					Cluster:   cluster,
 					Namespace: pod.Namespace,
-					DedupeKey: dedupeKey,
-				})
+					DedupeKey: dedup,
+				}
+				if createErr := w.store.CreateStellarNotification(ctx, notif); createErr == nil {
+					newCount++
+					if w.broadcaster != nil {
+						w.broadcaster.Broadcast(SSEEvent{Type: "notification", Data: notif})
+					}
+				}
 			}
 		}
 	}
+	return newCount
 }
 
-func splitObjectRef(object string) (kind, name string) {
+func splitEventObjectName(object string) string {
 	parts := strings.SplitN(strings.TrimSpace(object), "/", 2)
 	if len(parts) == 2 {
-		return parts[0], parts[1]
+		return parts[1]
 	}
 	if len(parts) == 1 {
-		return "Object", parts[0]
+		return parts[0]
 	}
-	return "Object", "unknown"
+	return "unknown"
 }
 
 func parseEventTimestamp(value string) time.Time {
@@ -198,19 +240,11 @@ func parseEventTimestamp(value string) time.Time {
 	return ts
 }
 
-func isCriticalReason(reason string) bool {
-	criticals := []string{"OOM", "BackOff", "Failed", "FailedMount", "Evicted", "NodeNotReady"}
-	for _, critical := range criticals {
-		if strings.Contains(reason, critical) {
-			return true
-		}
+func truncate(v string, max int) string {
+	if len(v) <= max {
+		return v
 	}
-	return false
+	return v[:max] + "..."
 }
 
-func truncate(value string, max int) string {
-	if len(value) <= max {
-		return value
-	}
-	return value[:max] + "..."
-}
+func ptr[T any](v T) *T { return &v }

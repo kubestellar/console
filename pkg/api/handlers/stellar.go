@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -119,6 +121,16 @@ type StellarHandler struct {
 	store            StellarStore
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
+	broadcaster      SSEBroadcaster
+}
+
+type SSEBroadcaster interface {
+	Broadcast(event SSEEvent)
+}
+
+type SSEEvent struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
 }
 
 func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient) *StellarHandler {
@@ -127,6 +139,16 @@ func NewStellarHandler(s StellarStore, k8sClient *k8s.MultiClusterClient) *Stell
 		k8sClient:        k8sClient,
 		providerRegistry: providers.NewRegistry(),
 	}
+}
+
+func (h *StellarHandler) SetProviderRegistry(reg *providers.Registry) {
+	if reg != nil {
+		h.providerRegistry = reg
+	}
+}
+
+func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
+	h.broadcaster = b
 }
 
 func (h *StellarHandler) GetPreferences(c *fiber.Ctx) error {
@@ -462,21 +484,61 @@ func (h *StellarHandler) ApproveAction(c *fiber.Ctx) error {
 	if userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
 	}
+	if s, ok := h.store.(store.Store); ok {
+		if err := requireEditorOrAdmin(c, s); err != nil {
+			return err
+		}
+	}
 	actionID := strings.TrimSpace(c.Params("id"))
 	if actionID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
 	}
-	if err := h.store.ApproveStellarAction(c.UserContext(), userID, actionID, userID); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to approve action"})
-	}
-	_ = h.processDueActions(c.UserContext(), userID)
 	item, err := h.store.GetStellarAction(c.UserContext(), userID, actionID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load action"})
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to approve action"})
 	}
 	if item == nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "action not found"})
 	}
+	if item.Status != "pending_approval" {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "action is not pending approval"})
+	}
+	var req struct {
+		ConfirmToken string `json:"confirmToken"`
+	}
+	_ = c.BodyParser(&req)
+	destructive := isDestructiveAction(item.ActionType)
+	if destructive {
+		if req.ConfirmToken == "" || req.ConfirmToken != item.ConfirmToken {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "confirm_token required for destructive action"})
+		}
+		if item.CreatedBy == userID {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "cannot self-approve destructive actions"})
+		}
+	}
+	if err := h.store.ApproveStellarAction(c.UserContext(), userID, actionID, userID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to approve action"})
+	}
+	if auditable, ok := h.store.(interface {
+		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
+	}); ok {
+		_ = auditable.CreateAuditEntry(c.UserContext(), &store.StellarAuditEntry{
+			UserID:     userID,
+			Action:     "approve_action",
+			EntityType: "action",
+			EntityID:   actionID,
+			Cluster:    item.Cluster,
+			Detail:     fmt.Sprintf(`{"confirmToken":"%s"}`, req.ConfirmToken),
+		})
+	}
+	if h.broadcaster != nil {
+		h.broadcaster.Broadcast(SSEEvent{
+			Type: "action_updated",
+			Data: map[string]string{"id": actionID, "status": "approved"},
+		})
+	}
+	_ = h.processDueActions(c.UserContext(), userID)
+	item, _ = h.store.GetStellarAction(c.UserContext(), userID, actionID)
 	return c.JSON(item)
 }
 
@@ -651,12 +713,15 @@ func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
 		summary.WriteString(fmt.Sprintf("\n%d mission executions ran.\n", executionCount))
 	}
 
-	provider, model := h.resolveProviderAndModel(c.UserContext(), "", "")
-	if provider == nil {
+	resolved, err := h.resolveProviderAndModel(c.UserContext(), userID, "", "")
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "provider resolution failed: " + err.Error()})
+	}
+	if resolved.Provider == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no AI provider configured"})
 	}
-	response, err := provider.Generate(c.UserContext(), providers.GenerateRequest{
-		Model:       model,
+	response, err := resolved.Provider.Generate(c.UserContext(), providers.GenerateRequest{
+		Model:       resolved.Model,
 		MaxTokens:   600,
 		Temperature: 0.4,
 		Messages: []providers.Message{
@@ -667,6 +732,15 @@ func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "digest generation failed: " + err.Error()})
 	}
+	_ = h.store.CreateStellarMemoryEntry(c.UserContext(), &store.StellarMemoryEntry{
+		UserID:     userID,
+		Cluster:    "",
+		Category:   "digest",
+		Summary:    truncateString(response.Content, 300),
+		Tags:       []string{"digest"},
+		Importance: 5,
+		ExpiresAt:  ptr(time.Now().AddDate(0, 0, 30)),
+	})
 
 	return c.JSON(fiber.Map{
 		"digest":      response.Content,
@@ -692,13 +766,16 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 	if err := c.BodyParser(&body); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})
 	}
-	body.Prompt = strings.TrimSpace(body.Prompt)
+	body.Prompt = sanitizePromptInput(body.Prompt)
 	body.Cluster = strings.TrimSpace(body.Cluster)
 	body.Provider = strings.TrimSpace(body.Provider)
 	body.Model = strings.TrimSpace(body.Model)
 	if body.Prompt == "" || len(body.Prompt) > stellarMaxPromptLength {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "prompt is required and must be <= 5000 chars"})
 	}
+
+	userCfg, _ := h.resolveUserProvider(c.UserContext(), userID)
+	resolved := h.providerRegistry.Resolve(body.Provider, body.Model, userCfg)
 
 	state, err := h.buildOperationalState(c.UserContext(), userID, body.Cluster)
 	if err != nil {
@@ -713,14 +790,13 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 	memories, _ := h.store.ListStellarMemoryEntries(c.UserContext(), userID, body.Cluster, "", 5, 0)
 	contextString := buildLLMContext(state, memories, body.Cluster)
 
-	provider, model := h.resolveProviderAndModel(c.UserContext(), body.Provider, body.Model)
-	if provider == nil {
+	if resolved.Provider == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no AI provider configured"})
 	}
 
 	startTime := time.Now()
-	generated, err := provider.Generate(c.UserContext(), providers.GenerateRequest{
-		Model:       model,
+	generated, err := resolved.Provider.Generate(c.UserContext(), providers.GenerateRequest{
+		Model:       resolved.Model,
 		MaxTokens:   800,
 		Temperature: 0.3,
 		Messages: []providers.Message{
@@ -728,11 +804,33 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 			{Role: "user", Content: "Current cluster state:\n" + contextString + "\n\nQuestion: " + body.Prompt},
 		},
 	})
+	fallbackUsed := false
+	fallbackReason := ""
+	durationMs := int(time.Since(startTime).Milliseconds())
+	if err != nil {
+		fallbackName := os.Getenv("STELLAR_FALLBACK_PROVIDER")
+		if fallbackName != "" && fallbackName != resolved.Provider.Name() {
+			if fp, ok := h.providerRegistry.GetGlobal(fallbackName); ok {
+				fallbackUsed = true
+				fallbackReason = fmt.Sprintf("%s failed after %dms: %s. Falling back to %s.", resolved.Provider.Name(), durationMs, err.Error(), fallbackName)
+				startTime = time.Now()
+				generated, err = fp.Generate(c.UserContext(), providers.GenerateRequest{
+					Model:       resolved.Model,
+					MaxTokens:   800,
+					Temperature: 0.3,
+					Messages: []providers.Message{
+						{Role: "system", Content: prompts.QuickAsk},
+						{Role: "user", Content: "Current cluster state:\n" + contextString + "\n\nQuestion: " + body.Prompt},
+					},
+				})
+				durationMs = int(time.Since(startTime).Milliseconds())
+			}
+		}
+	}
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "AI provider error: " + err.Error()})
 	}
 	now := time.Now().UTC()
-	durationMs := int(time.Since(startTime).Milliseconds())
 	execution := &store.StellarExecution{
 		UserID:       userID,
 		MissionID:    "quick-ask",
@@ -743,6 +841,8 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		Output:       generated.Content,
 		TokensInput:  generated.TokensInput,
 		TokensOutput: generated.TokensOutput,
+		Provider:     generated.Provider,
+		Model:        generated.Model,
 		DurationMs:   durationMs,
 		StartedAt:    now,
 		CompletedAt:  &now,
@@ -755,16 +855,33 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		Summary:    summarizeQuickAsk(body.Prompt, generated.Content),
 		RawContent: generated.Content,
 		Tags:       []string{"quick-ask"},
+		Importance: 3,
+		ExpiresAt:  ptr(now.AddDate(0, 0, 7)),
 	})
+	if auditable, ok := h.store.(interface {
+		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
+	}); ok {
+		_ = auditable.CreateAuditEntry(c.UserContext(), &store.StellarAuditEntry{
+			UserID:     userID,
+			Action:     "ask",
+			EntityType: "execution",
+			EntityID:   execution.ID,
+			Cluster:    body.Cluster,
+			Detail:     fmt.Sprintf(`{"provider":"%s","model":"%s"}`, generated.Provider, generated.Model),
+		})
+	}
 
 	return c.JSON(fiber.Map{
-		"answer":      generated.Content,
-		"executionId": execution.ID,
-		"provider":    generated.Provider,
-		"model":       generated.Model,
-		"tokens":      generated.TokensInput + generated.TokensOutput,
-		"durationMs":  durationMs,
-		"state":       state,
+		"answer":         generated.Content,
+		"executionId":    execution.ID,
+		"provider":       generated.Provider,
+		"model":          generated.Model,
+		"providerSource": resolved.Source,
+		"tokens":         generated.TokensInput + generated.TokensOutput,
+		"durationMs":     durationMs,
+		"fallbackUsed":   fallbackUsed,
+		"fallbackReason": fallbackReason,
+		"state":          state,
 	})
 }
 
@@ -818,7 +935,7 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 			}
 			if len(items) > 0 && items[0].ID != lastSentID {
 				lastSentID = items[0].ID
-				if writeSSE(w, "notifications", fiber.Map{"items": items}) != nil {
+				if writeSSE(w, "notification", items[0]) != nil {
 					return false
 				}
 			}
@@ -826,7 +943,14 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 			if err != nil {
 				return writeSSE(w, "error", fiber.Map{"message": "failed to build state"}) == nil
 			}
-			return writeSSE(w, "state", state) == nil
+			if writeSSE(w, "state", fiber.Map{
+				"clustersWatching":   state.ClustersWatching,
+				"unreadCount":        state.UnreadAlerts,
+				"pendingActionCount": len(state.PendingActionIDs),
+			}) != nil {
+				return false
+			}
+			return writeSSE(w, "heartbeat", fiber.Map{"ts": time.Now().UTC().Format(time.RFC3339)}) == nil
 		}
 		if !send() {
 			return
@@ -838,6 +962,163 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 		}
 	})
 	return nil
+}
+
+func (h *StellarHandler) ListProviders(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	global := h.providerRegistry.ListProviderInfo(c.UserContext())
+	userItems := make([]store.StellarProviderConfig, 0)
+	if providerStore, ok := h.store.(interface {
+		GetUserProviderConfigs(context.Context, string) ([]store.StellarProviderConfig, error)
+	}); ok {
+		items, _ := providerStore.GetUserProviderConfigs(c.UserContext(), userID)
+		for i := range items {
+			if len(items[i].APIKeyEnc) > 0 {
+				if raw, err := providers.DecryptAPIKey(items[i].APIKeyEnc); err == nil {
+					items[i].APIKeyMask = providers.MaskAPIKey(raw)
+				}
+			}
+		}
+		userItems = items
+	}
+	return c.JSON(fiber.Map{"global": global, "user": userItems})
+}
+
+func (h *StellarHandler) CreateProvider(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	var req struct {
+		Provider    string `json:"provider"`
+		DisplayName string `json:"displayName"`
+		APIKey      string `json:"apiKey"`
+		Model       string `json:"model"`
+		BaseURL     string `json:"baseUrl"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON"})
+	}
+	upsert, ok := h.store.(interface {
+		UpsertProviderConfig(context.Context, *store.StellarProviderConfig) error
+	})
+	if !ok {
+		return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{"error": "provider store unavailable"})
+	}
+	keyEnc := []byte{}
+	if strings.TrimSpace(req.APIKey) != "" {
+		enc, err := providers.EncryptAPIKey(strings.TrimSpace(req.APIKey))
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		}
+		keyEnc = enc
+	}
+	cfg := &store.StellarProviderConfig{
+		UserID:      userID,
+		Provider:    strings.TrimSpace(req.Provider),
+		DisplayName: strings.TrimSpace(req.DisplayName),
+		BaseURL:     strings.TrimSpace(req.BaseURL),
+		Model:       strings.TrimSpace(req.Model),
+		APIKeyEnc:   keyEnc,
+		IsActive:    true,
+	}
+	if err := upsert.UpsertProviderConfig(c.UserContext(), cfg); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save provider"})
+	}
+	cfg.APIKeyMask = providers.MaskAPIKey(req.APIKey)
+	return c.Status(fiber.StatusCreated).JSON(cfg)
+}
+
+func (h *StellarHandler) DeleteProvider(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	id := strings.TrimSpace(c.Params("id"))
+	del, ok := h.store.(interface {
+		DeleteProviderConfig(context.Context, string, string) error
+	})
+	if !ok {
+		return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{"error": "provider store unavailable"})
+	}
+	if err := del.DeleteProviderConfig(c.UserContext(), id, userID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "delete failed"})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *StellarHandler) SetDefaultProvider(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	id := strings.TrimSpace(c.Params("id"))
+	setter, ok := h.store.(interface {
+		SetUserDefaultProvider(context.Context, string, string) error
+	})
+	if !ok {
+		return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{"error": "provider store unavailable"})
+	}
+	if err := setter.SetUserDefaultProvider(c.UserContext(), userID, id); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to set default"})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *StellarHandler) TestProvider(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	id := strings.TrimSpace(c.Params("id"))
+	providerStore, ok := h.store.(interface {
+		GetUserProviderConfigs(context.Context, string) ([]store.StellarProviderConfig, error)
+		UpdateProviderLatency(context.Context, string, int) error
+	})
+	if !ok {
+		return c.Status(fiber.StatusNotImplemented).JSON(fiber.Map{"error": "provider store unavailable"})
+	}
+	configs, err := providerStore.GetUserProviderConfigs(c.UserContext(), userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load provider config"})
+	}
+	var cfg *store.StellarProviderConfig
+	for i := range configs {
+		if configs[i].ID == id {
+			cfg = &configs[i]
+			break
+		}
+	}
+	if cfg == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "provider not found"})
+	}
+	rawKey := ""
+	if len(cfg.APIKeyEnc) > 0 {
+		rawKey, err = providers.DecryptAPIKey(cfg.APIKeyEnc)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid encrypted API key"})
+		}
+	}
+	baseURL := cfg.BaseURL
+	if baseURL == "" {
+		baseURL = providers.ProviderDefaults[cfg.Provider].BaseURL
+	}
+	var p providers.Provider
+	if cfg.Provider == "anthropic" {
+		p = providers.NewAnthropicProvider(rawKey)
+	} else if cfg.Provider == "ollama" {
+		p = providers.NewOllama(baseURL)
+	} else {
+		p = providers.NewOpenAICompat(baseURL, rawKey, cfg.Provider)
+	}
+	testCtx, cancel := context.WithTimeout(c.UserContext(), 10*time.Second)
+	defer cancel()
+	health := p.Health(testCtx)
+	_ = providerStore.UpdateProviderLatency(c.UserContext(), cfg.ID, health.LatencyMs)
+	return c.JSON(fiber.Map{"available": health.Available, "latencyMs": health.LatencyMs, "error": health.Error})
 }
 
 func (h *StellarHandler) processDueActions(ctx context.Context, userID string) error {
@@ -984,6 +1265,9 @@ func (h *StellarHandler) buildOperationalState(ctx context.Context, userID, focu
 		state.PendingActionIDs = append(state.PendingActionIDs, action.ID)
 	}
 	if len(state.RecentEvents) > 20 {
+		sort.Slice(state.RecentEvents, func(i, j int) bool {
+			return state.RecentEvents[i].LastSeen > state.RecentEvents[j].LastSeen
+		})
 		state.RecentEvents = state.RecentEvents[:20]
 	}
 	return state, nil
@@ -1198,26 +1482,54 @@ func firstOrUnknown(items []string) string {
 	return items[0]
 }
 
-func (h *StellarHandler) resolveProviderAndModel(ctx context.Context, preferredProvider, preferredModel string) (providers.Provider, string) {
+func (h *StellarHandler) resolveProviderAndModel(ctx context.Context, userID, preferredProvider, preferredModel string) (providers.ResolvedProvider, error) {
 	if h.providerRegistry == nil {
 		h.providerRegistry = providers.NewRegistry()
 	}
-	provider, model := h.providerRegistry.GetDefault()
-	if preferredProvider != "" {
-		if resolved, err := h.providerRegistry.Get(preferredProvider); err == nil && resolved.IsAvailable(ctx) {
-			provider = resolved
+	userCfg, err := h.resolveUserProvider(ctx, userID)
+	if err != nil {
+		return providers.ResolvedProvider{}, err
+	}
+	return h.providerRegistry.Resolve(preferredProvider, preferredModel, userCfg), nil
+}
+
+func (h *StellarHandler) resolveUserProvider(ctx context.Context, userID string) (*providers.ResolvedUserProvider, error) {
+	providerStore, ok := h.store.(interface {
+		GetUserDefaultProvider(context.Context, string) (*store.StellarProviderConfig, error)
+	})
+	if !ok {
+		return nil, nil
+	}
+	cfg, err := providerStore.GetUserDefaultProvider(ctx, userID)
+	if err != nil || cfg == nil {
+		return nil, err
+	}
+	rawKey := ""
+	if len(cfg.APIKeyEnc) > 0 {
+		rawKey, err = providers.DecryptAPIKey(cfg.APIKeyEnc)
+		if err != nil {
+			return nil, err
 		}
 	}
-	if provider != nil && !provider.IsAvailable(ctx) {
-		if fallback, fallbackModel := h.providerRegistry.GetDefault(); fallback != nil && fallback.IsAvailable(ctx) {
-			provider = fallback
-			model = fallbackModel
-		}
+	def := providers.ProviderDefaults[cfg.Provider]
+	baseURL := cfg.BaseURL
+	if baseURL == "" {
+		baseURL = def.BaseURL
 	}
-	if preferredModel != "" {
-		model = preferredModel
+	var p providers.Provider
+	switch cfg.Provider {
+	case "ollama":
+		p = providers.NewOllama(baseURL)
+	case "anthropic":
+		p = providers.NewAnthropicProvider(rawKey)
+	default:
+		p = providers.NewOpenAICompat(baseURL, rawKey, cfg.Provider)
 	}
-	return provider, model
+	model := cfg.Model
+	if model == "" {
+		model = def.DefaultModel
+	}
+	return &providers.ResolvedUserProvider{Provider: p, Model: model, ConfigID: cfg.ID}, nil
 }
 
 func buildLLMContext(state *StellarOperationalState, memories []store.StellarMemoryEntry, cluster string) string {
@@ -1298,4 +1610,29 @@ func isCriticalReason(reason string) bool {
 		}
 	}
 	return false
+}
+
+func isDestructiveAction(t string) bool {
+	return t == "DeleteCluster" || t == "DeletePod" || t == "CordonNode"
+}
+
+func sanitizePromptInput(s string) string {
+	s = strings.ReplaceAll(s, "```", "'''")
+	s = strings.ReplaceAll(s, "<system>", "")
+	s = strings.ReplaceAll(s, "</system>", "")
+	s = strings.ReplaceAll(s, "[INST]", "")
+	s = strings.ReplaceAll(s, "[/INST]", "")
+	if len(s) > 2000 {
+		s = s[:2000]
+	}
+	return strings.TrimSpace(s)
+}
+
+func ptr[T any](v T) *T { return &v }
+
+func truncateString(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
 }
