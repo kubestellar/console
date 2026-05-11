@@ -1,4 +1,6 @@
 {
+  "share": "Share",
+  "yaml": "YAML",
   "help": {
     "sidebarNavItem": "Click to navigate. Hover a collapsed icon to see its name and what it opens.",
     "themeToggle": "Switch between dark, light, and system themes. Your choice is saved across sessions.",
@@ -2030,6 +2032,7 @@
     "needsAttention_other": "{{count}} needs attention",
     "mission": "mission",
     "missions": "missions",
+    "missionCount": "{{count}} missions",
     "missionCount_one": "{{count}} mission",
     "missionCount_other": "{{count}} missions",
     "resizeHandleTooltip": "Drag to resize",
@@ -2041,7 +2044,13 @@
     "viewHistory_one": "View {{count}} previous mission",
     "viewHistory_other": "View {{count}} previous missions",
     "missionHistory": "Mission History",
-    "headerActions": "Mission sidebar actions"
+    "headerActions": "Mission sidebar actions",
+    "importingMission": "Importing mission...",
+    "searchMissions": "Search missions...",
+    "loadMore": "Load more ({{visible}}/{{total}})",
+    "loadMore_one": "Load more ({{visible}}/{{total}})",
+    "loadMore_other": "Load more ({{visible}}/{{total}})",
+    "noSearchResults": "No missions match your search."
   },
   "feedback": {
     "share": "Share",
@@ -2864,6 +2873,7 @@
     "cancel": "Cancel",
     "done": "Done",
     "close": "Close",
+    "dismiss": "Dismiss",
     "delete": "Delete",
     "edit": "Edit",
     "copy": "Copy",
