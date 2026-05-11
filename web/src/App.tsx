@@ -423,7 +423,8 @@ const ROUTE_TITLES: Record<string, string> = {
 
 
 /** Map route paths to dashboard IDs for duration analytics */
-function pathToDashboardId(path: string): string | null {
+function pathToDashboardId(path?: string | null): string | null {
+  if (!path) return null
   if (path === ROUTES.HOME) return 'main'
   const customPrefix = ROUTES.CUSTOM_DASHBOARD.replace(':id', '')
   if (path.startsWith(customPrefix)) return path.replace(customPrefix, 'custom-')

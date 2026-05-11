@@ -48,22 +48,24 @@ interface A11yReport {
 // Constants
 // ---------------------------------------------------------------------------
 
+import { ROUTES } from '../../src/config/routes'
+
 const ROUTES_TO_AUDIT = [
-  { name: 'Dashboard', path: '/' },
-  { name: 'Clusters', path: '/clusters' },
-  { name: 'Settings', path: '/settings' },
-  { name: 'Compute', path: '/compute' },
-  { name: 'Security', path: '/security' },
-  { name: 'Deployments', path: '/deployments' },
-  { name: 'Helm', path: '/helm' },
-  { name: 'GPU Reservations', path: '/gpu-reservations' },
-  { name: 'AI/ML', path: '/ai-ml' },
-  { name: 'Logs', path: '/logs' },
-  { name: 'Events', path: '/events' },
-  { name: 'Pods', path: '/pods' },
-  { name: 'Services', path: '/services' },
-  { name: 'Nodes', path: '/nodes' },
-  { name: 'Workloads', path: '/workloads' },
+  { name: 'Dashboard', path: ROUTES.HOME },
+  { name: 'Clusters', path: ROUTES.CLUSTERS },
+  { name: 'Settings', path: ROUTES.SETTINGS },
+  { name: 'Compute', path: ROUTES.COMPUTE },
+  { name: 'Security', path: ROUTES.SECURITY },
+  { name: 'Deployments', path: ROUTES.DEPLOYMENTS },
+  { name: 'Helm', path: ROUTES.HELM },
+  { name: 'GPU Reservations', path: ROUTES.GPU_RESERVATIONS },
+  { name: 'AI/ML', path: ROUTES.AI_ML },
+  { name: 'Logs', path: ROUTES.LOGS },
+  { name: 'Events', path: ROUTES.EVENTS },
+  { name: 'Pods', path: ROUTES.PODS },
+  { name: 'Services', path: ROUTES.SERVICES },
+  { name: 'Nodes', path: ROUTES.NODES },
+  { name: 'Workloads', path: ROUTES.WORKLOADS },
 ]
 
 const IS_CI = !!process.env.CI
@@ -219,7 +221,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
   console.log('[A11y] Phase 3: Testing keyboard navigation')
 
   // Navigate to dashboard for keyboard tests
-  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
+  await page.goto(ROUTES.HOME, { waitUntil: 'domcontentloaded', timeout: PAGE_LOAD_TIMEOUT_MS })
   try {
     await page.waitForSelector('[data-testid="sidebar"]', { timeout: 8_000 })
   } catch { /* continue */ }
@@ -257,7 +259,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
 
   if (focusRate >= 0.8) {
     addCheck({
-      route: '/',
+      route: ROUTES.HOME,
       routeName: 'Dashboard',
       category: 'keyboard-nav',
       status: 'pass',
@@ -266,7 +268,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
     })
   } else if (focusRate >= 0.5) {
     addCheck({
-      route: '/',
+      route: ROUTES.HOME,
       routeName: 'Dashboard',
       category: 'keyboard-nav',
       status: 'warn',
@@ -275,7 +277,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
     })
   } else {
     addCheck({
-      route: '/',
+      route: ROUTES.HOME,
       routeName: 'Dashboard',
       category: 'keyboard-nav',
       status: 'fail',
@@ -306,7 +308,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
         const dialogClosed = await page.locator('[role="dialog"]').count() === 0
 
         addCheck({
-          route: '/',
+          route: ROUTES.HOME,
           routeName: 'Dashboard',
           category: 'focus-management',
           status: dialogClosed ? 'pass' : 'warn',
@@ -315,7 +317,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
         })
       } else {
         addCheck({
-          route: '/',
+          route: ROUTES.HOME,
           routeName: 'Dashboard',
           category: 'focus-management',
           status: 'skip',
@@ -325,7 +327,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
       }
     } catch {
       addCheck({
-        route: '/',
+        route: ROUTES.HOME,
         routeName: 'Dashboard',
         category: 'focus-management',
         status: 'skip',
@@ -335,7 +337,7 @@ test('a11y compliance — WCAG 2.1 AA multi-route audit', async ({ page }, testI
     }
   } else {
     addCheck({
-      route: '/',
+      route: ROUTES.HOME,
       routeName: 'Dashboard',
       category: 'focus-management',
       status: 'skip',

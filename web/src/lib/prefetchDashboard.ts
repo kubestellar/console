@@ -80,8 +80,8 @@ const CARD_DATA_PREFETCH: Record<string, Array<{ key: string; fetcher: () => Pro
 /** Avoid re-triggering for the same link on repeated hover */
 let lastPrefetchedHref: string | null = null
 
-export function prefetchDashboard(href: string): void {
-  if (href === lastPrefetchedHref) return
+export function prefetchDashboard(href?: string | null): void {
+  if (!href || href === lastPrefetchedHref) return
   lastPrefetchedHref = href
 
   // Demo mode uses synchronous data — no fetching needed
