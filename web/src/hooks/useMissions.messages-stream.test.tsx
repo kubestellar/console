@@ -237,7 +237,7 @@ describe('sendMessage', () => {
     expect(JSON.parse(chatCall![0]).payload.prompt).toBe('another message')
   })
 
-  it('is a no-op when the mission does not exist', async () => {
+  it('leaves missions unchanged but still sends the request when the mission does not exist', async () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     const initialMissionCount = result.current.missions.length
 
@@ -246,7 +246,20 @@ describe('sendMessage', () => {
     })
 
     expect(result.current.missions.length).toBe(initialMissionCount)
-    expect(MockWebSocket.lastInstance?.send).not.toHaveBeenCalled()
+
+    await act(async () => {
+      MockWebSocket.lastInstance?.simulateOpen()
+      await Promise.resolve()
+    })
+
+    const chatCall = MockWebSocket.lastInstance?.send.mock.calls.find(
+      (call: string[]) => JSON.parse(call[0]).type === 'chat',
+    )
+    expect(chatCall).toBeDefined()
+    expect(JSON.parse(chatCall![0]).payload).toEqual(expect.objectContaining({
+      prompt: 'hello',
+      sessionId: 'nonexistent-id',
+    }))
   })
 
   it.each(['stop', 'cancel', 'abort', 'halt', 'quit'])(

@@ -7,11 +7,8 @@ import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMission
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
-vi.mock('./mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  clusterCacheRef: { clusters: [] },
-  REFRESH_INTERVAL_MS: 120_000,
-  CLUSTER_POLL_INTERVAL_MS: 60_000,
+vi.mock('./mcp/agentFetch', () => ({
+  agentFetch: vi.fn((...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?]))),
 }))
 
 vi.mock('./useDemoMode', () => ({
@@ -344,6 +341,7 @@ describe('agent selection logic', () => {
     await act(async () => {
       result.current.connectToAgent()
       MockWebSocket.lastInstance?.simulateOpen()
+      await Promise.resolve()
     })
 
     act(() => {
@@ -361,11 +359,13 @@ describe('agent selection logic', () => {
       })
     })
 
-    const selectCalls = MockWebSocket.lastInstance?.send.mock.calls.filter(
-      (call: string[]) => JSON.parse(call[0]).type === 'select_agent',
-    )
-    expect(selectCalls?.length).toBeGreaterThan(0)
-    expect(JSON.parse(selectCalls![0][0]).payload.agent).toBe('gemini-cli')
+    await waitFor(() => {
+      const selectCalls = MockWebSocket.lastInstance?.send.mock.calls.filter(
+        (call: string[]) => JSON.parse(call[0]).type === 'select_agent',
+      )
+      expect(selectCalls?.length).toBeGreaterThan(0)
+      expect(JSON.parse(selectCalls![0][0]).payload.agent).toBe('gemini-cli')
+    })
   })
 
   it('selectAgent with "none" does not send WebSocket message', () => {
@@ -447,10 +447,13 @@ describe('sendMessage edge cases', () => {
     // Simulate connection error
     await act(async () => {
       MockWebSocket.lastInstance?.simulateError()
+      await Promise.resolve()
     })
 
-    const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    await waitFor(() => {
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('failed')
+    })
   })
 })
 
