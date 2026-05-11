@@ -2,16 +2,20 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -23,9 +27,30 @@ func newStellarTestApp(t *testing.T) (*fiber.App, store.Store) {
 	sqlStore, err := store.NewSQLiteStore(dbPath)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = sqlStore.Close() })
+	testUserID := uuid.New()
+	require.NoError(t, sqlStore.CreateUser(context.Background(), &models.User{
+		ID:          testUserID,
+		GitHubLogin: "stellar-test-user",
+		Role:        models.UserRoleAdmin,
+	}))
+
+	ollamaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/tags":
+			_, _ = w.Write([]byte(`{"models":[{"name":"llama3:latest"}]}`))
+		case "/api/chat":
+			_, _ = w.Write([]byte(`{"message":{"content":"Test answer"},"prompt_eval_count":5,"eval_count":10,"model":"llama3:latest"}`))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(ollamaServer.Close)
+	t.Setenv("OLLAMA_BASE_URL", ollamaServer.URL)
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("userID", testUserID)
 		c.Locals("githubLogin", "stellar-test-user")
 		return c.Next()
 	})

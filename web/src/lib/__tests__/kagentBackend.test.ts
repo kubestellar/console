@@ -141,10 +141,11 @@ describe('kagentChat', () => {
 
   it('calls onError when HTTP response is not ok', async () => {
     let errorMsg = ''
-    mockAuthFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-    } as Response)
+    mockAuthFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+      } as Response)
 
     await kagentChat('agent-1', 'default', 'Hello', {
       onChunk: () => {},
@@ -153,6 +154,41 @@ describe('kagentChat', () => {
     })
 
     expect(errorMsg).toContain('HTTP 500')
+  })
+
+  it('falls back to kagenti-provider chat when kagent returns 503', async () => {
+    const chunks: string[] = []
+    let done = false
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode('data: fallback\n\n'))
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+        controller.close()
+      },
+    })
+
+    mockAuthFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        body: stream,
+      } as unknown as Response)
+
+    await kagentChat('agent-1', 'default', 'Hello', {
+      onChunk: (text) => { chunks.push(text) },
+      onDone: () => { done = true },
+      onError: () => {},
+    })
+
+    expect(chunks).toEqual(['fallback'])
+    expect(done).toBe(true)
+    expect(mockAuthFetch).toHaveBeenCalledTimes(2)
+    expect(String(mockAuthFetch.mock.calls[0][0])).toContain('/api/kagent/chat')
+    expect(String(mockAuthFetch.mock.calls[1][0])).toContain('/api/kagenti-provider/chat')
   })
 
   it('calls onError when no response stream', async () => {

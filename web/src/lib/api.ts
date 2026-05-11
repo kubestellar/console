@@ -19,6 +19,11 @@ const DEFAULT_TIMEOUT = MCP_HOOK_TIMEOUT_MS
 const BACKEND_CHECK_INTERVAL = 10_000 // 10 seconds between backend checks when unavailable
 /** How long to trust a cached backend-availability check (5 minutes) */
 const BACKEND_CACHE_TTL_MS = 300_000
+/**
+ * Routes whose 5xx responses indicate an optional upstream/dependency issue,
+ * not that the console backend itself is down.
+ */
+const BACKEND_OUTAGE_EXEMPT_PREFIXES = ['/api/kagent/', '/api/kagenti-provider/']
 /** Delay before redirecting to login after session expiry (lets user see the banner) */
 const SESSION_EXPIRY_REDIRECT_MS = 3_000
 const TOKEN_REFRESH_HEADER = 'X-Token-Refresh' // server signals when token should be refreshed
@@ -781,6 +786,28 @@ class ApiClient {
   }
 }
 
+function extractRequestPath(input: RequestInfo | URL): string {
+  const raw = typeof input === 'string'
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url
+
+  try {
+    return new URL(raw, window.location.origin).pathname
+  } catch {
+    return raw
+  }
+}
+
+function shouldTreatAsBackendOutage(input: RequestInfo | URL, status: number): boolean {
+  if (!shouldMarkBackendUnavailable(status)) {
+    return false
+  }
+  const path = extractRequestPath(input)
+  return !BACKEND_OUTAGE_EXEMPT_PREFIXES.some(prefix => path.startsWith(prefix))
+}
+
 export const api = new ApiClient()
 
 /**
@@ -830,7 +857,7 @@ export async function authFetch(input: RequestInfo | URL, init?: RequestInit): P
 
   try {
     const response = await fetch(input, { ...init, headers, signal })
-    if (shouldMarkBackendUnavailable(response.status)) {
+    if (shouldTreatAsBackendOutage(input, response.status)) {
       markBackendFailure(response.status)
     } else {
       markBackendSuccess(response.status)

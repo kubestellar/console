@@ -167,6 +167,55 @@ type StellarNotification struct {
 	CreatedAt time.Time  `json:"createdAt"`
 }
 
+// StellarTask represents durable operator work tracked by Stellar.
+type StellarTask struct {
+	ID          string     `json:"id"`
+	SessionID   string     `json:"sessionId"`
+	UserID      string     `json:"userId"`
+	Cluster     string     `json:"cluster"`
+	Title       string     `json:"title"`
+	Description string     `json:"description"`
+	Status      string     `json:"status"` // open|in_progress|blocked|done|dismissed
+	Priority    int        `json:"priority"`
+	Source      string     `json:"source"` // user|stellar|watcher|scheduler
+	ParentID    string     `json:"parentId,omitempty"`
+	DueAt       *time.Time `json:"dueAt,omitempty"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+	ContextJSON string     `json:"contextJson"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
+}
+
+// StellarObservation is Stellar's internal observation journal entry.
+type StellarObservation struct {
+	ID          string    `json:"id"`
+	Cluster     string    `json:"cluster"`
+	Kind        string    `json:"kind"` // noticed|suggested|acted|reminded|escalated
+	Summary     string    `json:"summary"`
+	Detail      string    `json:"detail"`
+	RefType     string    `json:"refType,omitempty"`
+	RefID       string    `json:"refId,omitempty"`
+	ShownToUser bool      `json:"shownToUser"`
+	CreatedAt   time.Time `json:"createdAt"`
+}
+
+// StellarWatch represents a resource that Stellar is actively monitoring.
+type StellarWatch struct {
+	ID           string     `json:"id"`
+	UserID       string     `json:"userId"`
+	Cluster      string     `json:"cluster"`
+	Namespace    string     `json:"namespace"`
+	ResourceKind string     `json:"resourceKind"`
+	ResourceName string     `json:"resourceName"`
+	Reason       string     `json:"reason"`
+	Status       string     `json:"status"` // active|resolved|dismissed
+	LastChecked  *time.Time `json:"lastChecked,omitempty"`
+	LastUpdate   string     `json:"lastUpdate"`
+	ResolvedAt   *time.Time `json:"resolvedAt,omitempty"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
+}
+
 type StellarProviderConfig struct {
 	ID          string     `json:"id"`
 	UserID      string     `json:"userId"`

@@ -12,6 +12,8 @@ interface Msg {
   role: 'user' | 'stellar'
   content: string
   loading?: boolean
+  watchCreated?: boolean
+  watchId?: string
   meta?: MessageMeta
 }
 
@@ -35,6 +37,26 @@ export function MessageBubble({ msg }: { msg: Msg }) {
           </div>
         )}
       </div>
+      {msg.watchCreated && (
+        <div style={{
+          marginTop: 6,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+          fontSize: 11,
+          color: 'var(--s-info)',
+        }}>
+          <div style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: 'var(--s-info)',
+            boxShadow: '0 0 0 2px rgba(56,139,253,0.2)',
+            animation: 's-pulse 2s ease-in-out infinite',
+          }} />
+          Stellar is watching this. Updates will appear in the sidebar.
+        </div>
+      )}
       {msg.meta && (
         <div style={{ fontSize: 10, color: 'var(--s-text-dim)', marginTop: 3, fontFamily: 'var(--s-mono)' }}>
           {msg.meta.provider} · {msg.meta.model} · {msg.meta.tokens} tok · {msg.meta.durationMs}ms

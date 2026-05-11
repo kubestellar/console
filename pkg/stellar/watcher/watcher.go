@@ -2,7 +2,9 @@ package watcher
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -84,6 +86,10 @@ func (w *Watcher) runLoop(ctx context.Context) {
 }
 
 func (w *Watcher) poll(ctx context.Context) {
+	if isQuietWindow() {
+		slog.Debug("stellar/watcher: quiet window active, skipping poll")
+		return
+	}
 	if w.client == nil || w.store == nil {
 		return
 	}
@@ -169,6 +175,25 @@ func (w *Watcher) pollCluster(ctx context.Context, cluster string) int {
 							IncidentID: notif.ID,
 							ExpiresAt:  ptr(time.Now().AddDate(0, 0, 90)),
 						})
+						// Auto-watch on recurrence
+						recentMems, _ := w.store.GetRecentMemoryEntries(ctx, userID, cluster, 20)
+						recurrenceCount := 0
+						for _, m := range recentMems {
+							if strings.Contains(m.Summary, resource) && strings.Contains(m.Summary, ev.Reason) {
+								recurrenceCount++
+							}
+						}
+						if recurrenceCount >= 2 {
+							_, _ = w.store.CreateWatch(ctx, &store.StellarWatch{
+								UserID:       userID,
+								Cluster:      cluster,
+								Namespace:    ev.Namespace,
+								ResourceKind: strings.Split(ev.Object, "/")[0],
+								ResourceName: resource,
+								Reason:       fmt.Sprintf("Auto-watch: %s has recurred %d times", ev.Reason, recurrenceCount+1),
+								Status:       "active",
+							})
+						}
 					}
 					if w.broadcaster != nil {
 						w.broadcaster.Broadcast(SSEEvent{Type: "notification", Data: notif})
@@ -248,3 +273,18 @@ func truncate(v string, max int) string {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// isQuietWindow returns true if the current time falls within the configured
+// quiet window (STELLAR_QUIET_START / STELLAR_QUIET_END env vars, 24h format).
+func isQuietWindow() bool {
+	start := os.Getenv("STELLAR_QUIET_START")
+	end := os.Getenv("STELLAR_QUIET_END")
+	if start == "" || end == "" {
+		return false
+	}
+	now := time.Now().Format("15:04")
+	if start < end {
+		return now >= start && now < end
+	}
+	return now >= start || now < end
+}

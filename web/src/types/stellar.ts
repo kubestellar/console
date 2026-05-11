@@ -81,6 +81,32 @@ export interface ProviderSession {
   isCli?: boolean
 }
 
+export interface StellarTask {
+  id: string
+  sessionId: string
+  userId: string
+  cluster: string
+  title: string
+  description: string
+  status: 'open' | 'in_progress' | 'blocked' | 'done' | 'dismissed' | string
+  priority: number
+  source: 'user' | 'stellar' | 'watcher' | 'scheduler' | string
+  parentId?: string
+  dueAt?: string
+  completedAt?: string
+  contextJson?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StellarObservation {
+  id: string
+  summary: string
+  suggest?: string
+  reasoning?: string
+  ts?: string
+}
+
 export interface StellarDigest {
   generatedAt: string
   windowHours: number
@@ -88,4 +114,29 @@ export interface StellarDigest {
   incidents: string[]
   changes: string[]
   recommendedActions: string[]
+}
+
+export interface StellarWatch {
+  id: string
+  cluster: string
+  namespace: string
+  resourceKind: string
+  resourceName: string
+  reason: string
+  status: 'active' | 'resolved' | 'dismissed'
+  lastUpdate: string
+  lastChecked?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StellarAuditEntry {
+  id: string
+  ts: string
+  userId: string
+  action: string
+  entityType: string
+  entityId: string
+  cluster: string
+  detail: string
 }

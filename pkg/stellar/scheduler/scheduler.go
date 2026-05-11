@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -17,12 +21,28 @@ type SchedulerStore interface {
 	ActionCompletedByIdempotencyKey(ctx context.Context, key string) bool
 	IncrementRetry(ctx context.Context, id string) error
 	CreateStellarMemoryEntry(ctx context.Context, entry *store.StellarMemoryEntry) error
+	// Sprint 5: digest scheduler
+	GetNotificationsSince(ctx context.Context, since time.Time) ([]store.StellarNotification, error)
+	GetExecutionsSince(ctx context.Context, since time.Time) ([]store.StellarExecution, error)
 }
 
 type Scheduler struct {
 	store       SchedulerStore
 	k8sClient   *k8s.MultiClusterClient
 	concurrency int
+	broadcaster Broadcaster
+	registry    *providers.Registry
+}
+
+// Broadcaster allows the scheduler to push SSE events to connected clients.
+type Broadcaster interface {
+	Broadcast(event BroadcastEvent)
+}
+
+// BroadcastEvent is a minimal SSE event for the scheduler.
+type BroadcastEvent struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
 }
 
 func New(store SchedulerStore, client *k8s.MultiClusterClient, concurrency ...int) *Scheduler {
@@ -33,7 +53,11 @@ func New(store SchedulerStore, client *k8s.MultiClusterClient, concurrency ...in
 	if n <= 0 {
 		n = 3
 	}
-	return &Scheduler{store: store, k8sClient: client, concurrency: n}
+	return &Scheduler{store: store, k8sClient: client, concurrency: n, registry: providers.NewRegistry()}
+}
+
+func (s *Scheduler) SetBroadcaster(b Broadcaster) {
+	s.broadcaster = b
 }
 
 func (s *Scheduler) Start(ctx context.Context) {
@@ -119,3 +143,106 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 }
 
 func ptr[T any](v T) *T { return &v }
+
+// ─── Sprint 5: Scheduled digest ───────────────────────────────────────────────
+
+// StartDigestScheduler fires a daily digest at STELLAR_DIGEST_HOUR (default 9).
+func (s *Scheduler) StartDigestScheduler(ctx context.Context) {
+	digestHour := 9
+	if v := os.Getenv("STELLAR_DIGEST_HOUR"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 && n <= 23 {
+			digestHour = n
+		}
+	}
+	slog.Info("stellar/scheduler: digest scheduler started", "hour", digestHour)
+	for {
+		now := time.Now()
+		next := time.Date(now.Year(), now.Month(), now.Day(), digestHour, 0, 0, 0, now.Location())
+		if now.After(next) {
+			next = next.Add(24 * time.Hour)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(time.Until(next)):
+			s.pushScheduledDigest(ctx)
+		}
+	}
+}
+
+func (s *Scheduler) pushScheduledDigest(ctx context.Context) {
+	since := time.Now().Add(-24 * time.Hour)
+	notifications, _ := s.store.GetNotificationsSince(ctx, since)
+	executions, _ := s.store.GetExecutionsSince(ctx, since)
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Period: last 24 hours (since %s UTC)\n\n", since.UTC().Format("2006-01-02 15:04")))
+	if len(notifications) == 0 {
+		sb.WriteString("No notable events logged.\n")
+	} else {
+		sb.WriteString(fmt.Sprintf("Events logged (%d):\n", len(notifications)))
+		for _, n := range notifications {
+			sb.WriteString(fmt.Sprintf("  [%s] %s: %s\n", n.Severity, n.Title, truncate(n.Body, 100)))
+		}
+	}
+	if len(executions) > 0 {
+		sb.WriteString(fmt.Sprintf("\n%d mission executions ran.\n", len(executions)))
+	}
+
+	digestContent := sb.String()
+
+	// Try LLM enrichment
+	if s.registry != nil {
+		resolved := s.registry.Resolve("", "", nil)
+		if resolved.Provider != nil {
+			resp, err := resolved.Provider.Generate(ctx, providers.GenerateRequest{
+				Model: resolved.Model, MaxTokens: 400, Temperature: 0.4,
+				Messages: []providers.Message{
+					{Role: "system", Content: digestPrompt},
+					{Role: "user", Content: sb.String()},
+				},
+			})
+			if err == nil {
+				digestContent = resp.Content
+			}
+		}
+	}
+
+	// Store as memory entry
+	_ = s.store.CreateStellarMemoryEntry(ctx, &store.StellarMemoryEntry{
+		Category:   "digest",
+		Importance: 6,
+		Summary:    truncate(digestContent, 500),
+		ExpiresAt:  ptr(time.Now().AddDate(0, 0, 30)),
+	})
+
+	// Broadcast to all connected SSE clients
+	if s.broadcaster != nil {
+		s.broadcaster.Broadcast(BroadcastEvent{
+			Type: "digest",
+			Data: map[string]string{
+				"content": digestContent,
+				"period":  "last 24h",
+			},
+		})
+	}
+
+	slog.Info("stellar/scheduler: digest pushed", "date", time.Now().Format("2006-01-02"))
+}
+
+const digestPrompt = `You are Stellar. Deliver a shift-handoff operational digest.
+
+Format exactly:
+**Overall** — one sentence health summary
+**Incidents** — bullet list of failures/alerts and their status
+**Changes** — deployments rolled, scaling events, restarts
+**Do today** — 1-3 specific recommended actions
+
+Under 350 words. Direct. No preamble.`
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "..."
+}

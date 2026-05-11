@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { stellarApi } from '../../services/stellar'
 import { MessageBubble } from './MessageBubble'
 import { ProviderSelector } from './ProviderSelector'
-import type { ProviderSession } from '../../types/stellar'
+import type { ProviderSession, StellarObservation } from '../../types/stellar'
 import { TextArea } from '../ui/TextArea'
-import { kagentChat } from '../../lib/kagentBackend'
+import { localAgentChat } from '../../lib/localAgentChat'
+import { ProactiveNudge } from './ProactiveNudge'
+import { CatchUpBanner } from './CatchUpBanner'
+import type { CatchUpState } from '../../hooks/useStellar'
 
 interface Msg {
   id: string
@@ -12,7 +15,10 @@ interface Msg {
   content: string
   ts: Date
   loading?: boolean
+  watchCreated?: boolean
+  watchId?: string
   meta?: { model: string; tokens: number; provider: string; durationMs: number }
+  suggestedTask?: string
 }
 
 const WELCOME: Msg = {
@@ -25,9 +31,23 @@ const WELCOME: Msg = {
 export function ChatPanel({
   providerSession,
   onProviderChange,
+  nudge,
+  onDismissNudge,
+  catchUp,
+  onDismissCatchUp,
+  initialInput,
+  onInputConsumed,
+  createTask,
 }: {
   providerSession: ProviderSession | null
   onProviderChange: (session: ProviderSession | null) => void
+  nudge: StellarObservation | null
+  onDismissNudge: () => void
+  catchUp: CatchUpState | null
+  onDismissCatchUp: () => void
+  initialInput?: string
+  onInputConsumed?: () => void
+  createTask: (title: string, description?: string, source?: string) => Promise<unknown>
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([WELCOME])
   const [input, setInput] = useState('')
@@ -35,6 +55,16 @@ export function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLTextAreaElement | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Consume initialInput (e.g. rollback prompt pre-filled from EventCard)
+  useEffect(() => {
+    if (initialInput) {
+      setInput(initialInput)
+      onInputConsumed?.()
+      textRef.current?.focus()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialInput])
 
   useEffect(() => {
     return () => {
@@ -60,29 +90,27 @@ export function ChatPanel({
         let accumulated = ''
         const start = Date.now()
         await new Promise<void>((resolve, reject) => {
-          void kagentChat(
-            providerSession.provider,
-            'default', // Default namespace
-            prompt,
-            {
-              onChunk: (chunk) => {
-                accumulated += chunk
-                setMsgs(prev => prev.map(m => m.loading ? { ...m, content: accumulated } : m))
-              },
-              onDone: () => {
-                const durationMs = Date.now() - start
-                setMsgs(prev => prev.map(m => m.loading ? {
-                  ...m,
-                  content: accumulated,
-                  loading: false,
-                  meta: { model: 'cli', tokens: 0, provider: providerSession.provider, durationMs },
-                } : m))
-                resolve()
-              },
-              onError: (err) => reject(new Error(err)),
-              signal: abortControllerRef.current?.signal,
-            }
-          )
+          localAgentChat(prompt, {
+            agent: providerSession.provider,
+            signal: abortControllerRef.current?.signal,
+            onChunk: (chunk) => {
+              accumulated += chunk
+              setMsgs(prev => prev.map(m => m.loading ? { ...m, content: accumulated } : m))
+            },
+            onDone: () => {
+              const durationMs = Date.now() - start
+              const suggestedTask = extractSuggestedTask(accumulated)
+              setMsgs(prev => prev.map(m => m.loading ? {
+                ...m,
+                content: accumulated,
+                loading: false,
+                meta: { model: 'cli', tokens: 0, provider: providerSession.provider, durationMs },
+                suggestedTask,
+              } : m))
+              resolve()
+            },
+            onError: (err) => reject(new Error(err)),
+          })
         })
       } else {
         const response = await stellarApi.ask({
@@ -94,6 +122,9 @@ export function ChatPanel({
           ...message,
           content: response.answer,
           loading: false,
+          watchCreated: response.watchCreated,
+          watchId: response.watchId,
+          suggestedTask: extractSuggestedTask(response.answer),
           meta: {
             model: response.model,
             tokens: response.tokens,
@@ -156,7 +187,44 @@ export function ChatPanel({
           minHeight: 0,
         }}
       >
-        {msgs.map(msg => <MessageBubble key={msg.id} msg={msg} />)}
+        {catchUp && (
+          <CatchUpBanner catchUp={catchUp} onDismiss={onDismissCatchUp} />
+        )}
+        {nudge && (
+          <ProactiveNudge
+            nudge={nudge}
+            onDismiss={onDismissNudge}
+            onApplySuggestion={(suggest) => {
+              setInput(suggest)
+              onDismissNudge()
+              textRef.current?.focus()
+            }}
+          />
+        )}
+        {msgs.map(msg => (
+          <div key={msg.id}>
+            <MessageBubble msg={msg} />
+            {msg.suggestedTask && (
+              <div style={{ paddingLeft: 8, marginTop: -8 }}>
+                <button
+                  onClick={() => { void createTask(msg.suggestedTask || '', `From Stellar chat message ${msg.id}`, 'stellar') }}
+                  style={{
+                    marginTop: 4,
+                    background: 'none',
+                    border: '1px solid var(--s-border)',
+                    borderRadius: 'var(--s-rs)',
+                    padding: '2px 8px',
+                    fontSize: 11,
+                    color: 'var(--s-text-muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  + Log as task
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
         <div ref={bottomRef} />
       </div>
 
@@ -218,4 +286,17 @@ export function ChatPanel({
       </div>
     </div>
   )
+}
+
+function extractSuggestedTask(answer: string): string | undefined {
+  const normalized = (answer || '').trim()
+  if (!normalized) {
+    return undefined
+  }
+  const lines = normalized.split('\n').map(line => line.trim()).filter(Boolean)
+  const candidate = lines.find(line => /^(I recommend|You should|Consider)\b/i.test(line))
+  if (!candidate) {
+    return undefined
+  }
+  return candidate.replace(/^[•*-]\s*/, '').replace(/\.$/, '')
 }

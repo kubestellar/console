@@ -683,6 +683,308 @@ func (s *SQLiteStore) CountUnreadStellarNotifications(ctx context.Context, userI
 	return total, nil
 }
 
+func (s *SQLiteStore) CreateTask(ctx context.Context, task *StellarTask) (string, error) {
+	if task.ID == "" {
+		task.ID = uuid.NewString()
+	}
+	if strings.TrimSpace(task.SessionID) == "" {
+		task.SessionID = "default"
+	}
+	if strings.TrimSpace(task.Status) == "" {
+		task.Status = "open"
+	}
+	if task.Priority < 1 || task.Priority > 10 {
+		task.Priority = 5
+	}
+	if strings.TrimSpace(task.Source) == "" {
+		task.Source = "user"
+	}
+	if strings.TrimSpace(task.ContextJSON) == "" {
+		task.ContextJSON = "{}"
+	}
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO stellar_tasks (
+		id, session_id, user_id, cluster, title, description, status, priority, source, parent_id, due_at, completed_at, context_json, created_at, updated_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP), CURRENT_TIMESTAMP)`,
+		task.ID,
+		task.SessionID,
+		task.UserID,
+		task.Cluster,
+		task.Title,
+		task.Description,
+		task.Status,
+		task.Priority,
+		task.Source,
+		task.ParentID,
+		task.DueAt,
+		task.CompletedAt,
+		task.ContextJSON,
+		nullableTime(task.CreatedAt),
+	); err != nil {
+		return "", err
+	}
+	return task.ID, nil
+}
+
+func (s *SQLiteStore) GetOpenTasks(ctx context.Context, userID string) ([]StellarTask, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, user_id, cluster, title, description, status, priority, source, parent_id, due_at, completed_at, context_json, created_at, updated_at
+		FROM stellar_tasks
+		WHERE user_id = ? AND status NOT IN ('done','dismissed')
+		ORDER BY priority ASC, updated_at DESC, created_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarTask, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarTaskRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) UpdateTaskStatus(ctx context.Context, id, status, userID string) error {
+	normalized := strings.TrimSpace(strings.ToLower(status))
+	completedAt := interface{}(nil)
+	if normalized == "done" {
+		completedAt = time.Now().UTC()
+	}
+	_, err := s.db.ExecContext(ctx, `UPDATE stellar_tasks SET status = ?, completed_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
+		normalized, completedAt, id, userID)
+	return err
+}
+
+func (s *SQLiteStore) GetTasksForCluster(ctx context.Context, cluster string, limit int) ([]StellarTask, error) {
+	lim := resolvePageLimit(limit, 50)
+	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, user_id, cluster, title, description, status, priority, source, parent_id, due_at, completed_at, context_json, created_at, updated_at
+		FROM stellar_tasks
+		WHERE cluster = ?
+		ORDER BY priority ASC, updated_at DESC, created_at DESC
+		LIMIT ?`, cluster, lim)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarTask, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarTaskRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) CreateObservation(ctx context.Context, obs *StellarObservation) (string, error) {
+	if obs.ID == "" {
+		obs.ID = uuid.NewString()
+	}
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO stellar_observations (
+		id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
+		obs.ID,
+		obs.Cluster,
+		obs.Kind,
+		obs.Summary,
+		obs.Detail,
+		obs.RefType,
+		obs.RefID,
+		boolToInt(obs.ShownToUser),
+		nullableTime(obs.CreatedAt),
+	); err != nil {
+		return "", err
+	}
+	return obs.ID, nil
+}
+
+func (s *SQLiteStore) GetRecentObservations(ctx context.Context, cluster string, limit int) ([]StellarObservation, error) {
+	lim := resolvePageLimit(limit, 20)
+	query := `SELECT id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
+		FROM stellar_observations`
+	args := make([]interface{}, 0, 2)
+	if strings.TrimSpace(cluster) != "" {
+		query += ` WHERE cluster = ?`
+		args = append(args, cluster)
+	}
+	query += ` ORDER BY created_at DESC LIMIT ?`
+	args = append(args, lim)
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarObservation, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarObservationRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) GetUnshownObservations(ctx context.Context) ([]StellarObservation, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, cluster, kind, summary, detail, ref_type, ref_id, shown_to_user, created_at
+		FROM stellar_observations
+		WHERE shown_to_user = 0
+		ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarObservation, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarObservationRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) MarkObservationShown(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE stellar_observations SET shown_to_user = 1 WHERE id = ?`, id)
+	return err
+}
+
+// Watch methods
+func (s *SQLiteStore) CreateWatch(ctx context.Context, w *StellarWatch) (string, error) {
+	if w.ID == "" {
+		w.ID = uuid.NewString()
+	}
+	if strings.TrimSpace(w.Status) == "" {
+		w.Status = "active"
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO stellar_watches (
+		id, user_id, cluster, namespace, resource_kind, resource_name, reason, status, last_checked, last_update, resolved_at, created_at, updated_at
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+		w.ID, w.UserID, w.Cluster, w.Namespace, w.ResourceKind, w.ResourceName, w.Reason, w.Status, w.LastChecked, w.LastUpdate, w.ResolvedAt)
+	return w.ID, err
+}
+
+func (s *SQLiteStore) GetActiveWatches(ctx context.Context, userID string) ([]StellarWatch, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, cluster, namespace, resource_kind, resource_name, reason, status, last_checked, last_update, resolved_at, created_at, updated_at
+		FROM stellar_watches
+		WHERE user_id = ? AND status = 'active'
+		ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarWatch, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarWatchRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) GetActiveWatchesForCluster(ctx context.Context, cluster string) ([]StellarWatch, error) {
+	query := `SELECT id, user_id, cluster, namespace, resource_kind, resource_name, reason, status, last_checked, last_update, resolved_at, created_at, updated_at
+		FROM stellar_watches
+		WHERE status = 'active'`
+	args := make([]interface{}, 0)
+	if strings.TrimSpace(cluster) != "" {
+		query += ` AND cluster = ?`
+		args = append(args, cluster)
+	}
+	query += ` ORDER BY created_at DESC`
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarWatch, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarWatchRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLiteStore) UpdateWatchStatus(ctx context.Context, id, status, lastUpdate string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE stellar_watches SET status = ?, last_update = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		status, lastUpdate, id)
+	return err
+}
+
+func (s *SQLiteStore) ResolveWatch(ctx context.Context, id string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE stellar_watches SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, id)
+	return err
+}
+
+func (s *SQLiteStore) SetWatchLastChecked(ctx context.Context, id string, ts time.Time) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE stellar_watches SET last_checked = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, ts.UTC(), id)
+	return err
+}
+
+func (s *SQLiteStore) GetRecentMemoryEntries(ctx context.Context, userID, cluster string, limit int) ([]StellarMemoryEntry, error) {
+	lim := resolvePageLimit(limit, 20)
+	query := `SELECT id, user_id, cluster, namespace, category, summary, raw_content, tags, mission_id, execution_id, expires_at, created_at
+		FROM stellar_memory_entries WHERE user_id = ?`
+	args := []interface{}{userID}
+	if strings.TrimSpace(cluster) != "" {
+		query += ` AND cluster = ?`
+		args = append(args, cluster)
+	}
+	query += ` ORDER BY importance DESC, created_at DESC LIMIT ?`
+	args = append(args, lim)
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	results := make([]StellarMemoryEntry, 0)
+	for rows.Next() {
+		entry, scanErr := scanStellarMemoryRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		results = append(results, *entry)
+	}
+	return results, rows.Err()
+}
+
+func scanStellarWatchRow(rows *sql.Rows) (*StellarWatch, error) {
+	var w StellarWatch
+	var lastChecked, resolvedAt sql.NullTime
+	if err := rows.Scan(
+		&w.ID,
+		&w.UserID,
+		&w.Cluster,
+		&w.Namespace,
+		&w.ResourceKind,
+		&w.ResourceName,
+		&w.Reason,
+		&w.Status,
+		&lastChecked,
+		&w.LastUpdate,
+		&resolvedAt,
+		&w.CreatedAt,
+		&w.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+	if lastChecked.Valid {
+		w.LastChecked = &lastChecked.Time
+	}
+	if resolvedAt.Valid {
+		w.ResolvedAt = &resolvedAt.Time
+	}
+	return &w, nil
+}
+
 func scanStellarMissionRow(rows *sql.Rows) (*StellarMission, error) {
 	var mission StellarMission
 	var enabledInt int
@@ -880,6 +1182,62 @@ func scanStellarNotificationRow(rows *sql.Rows) (*StellarNotification, error) {
 	return &item, nil
 }
 
+func scanStellarTaskRow(rows *sql.Rows) (*StellarTask, error) {
+	var item StellarTask
+	var parentID sql.NullString
+	var dueAt sql.NullTime
+	var completedAt sql.NullTime
+	if err := rows.Scan(
+		&item.ID,
+		&item.SessionID,
+		&item.UserID,
+		&item.Cluster,
+		&item.Title,
+		&item.Description,
+		&item.Status,
+		&item.Priority,
+		&item.Source,
+		&parentID,
+		&dueAt,
+		&completedAt,
+		&item.ContextJSON,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+	if parentID.Valid {
+		item.ParentID = parentID.String
+	}
+	if dueAt.Valid {
+		item.DueAt = &dueAt.Time
+	}
+	if completedAt.Valid {
+		item.CompletedAt = &completedAt.Time
+	}
+	return &item, nil
+}
+
+func scanStellarObservationRow(rows *sql.Rows) (*StellarObservation, error) {
+	var item StellarObservation
+	var shownInt int
+	if err := rows.Scan(
+		&item.ID,
+		&item.Cluster,
+		&item.Kind,
+		&item.Summary,
+		&item.Detail,
+		&item.RefType,
+		&item.RefID,
+		&shownInt,
+		&item.CreatedAt,
+	); err != nil {
+		return nil, err
+	}
+	item.ShownToUser = shownInt == 1
+	return &item, nil
+}
+
 func likeQuery(query string) string {
 	trimmed := strings.TrimSpace(query)
 	if trimmed == "" {
@@ -919,30 +1277,6 @@ func (s *SQLiteStore) UnreadCount(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	return count, nil
-}
-
-func (s *SQLiteStore) GetRecentMemoryEntries(ctx context.Context, cluster string, limit int) ([]StellarMemoryEntry, error) {
-	if limit <= 0 {
-		limit = 5
-	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id, user_id, cluster, namespace, category, summary, raw_content, tags, mission_id, execution_id, expires_at, created_at
-		FROM stellar_memory_entries
-		WHERE cluster = ? OR cluster = ''
-		ORDER BY importance DESC, created_at DESC
-		LIMIT ?`, cluster, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := make([]StellarMemoryEntry, 0)
-	for rows.Next() {
-		item, scanErr := scanStellarMemoryRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-		out = append(out, *item)
-	}
-	return out, rows.Err()
 }
 
 func (s *SQLiteStore) GetExecutionsSince(ctx context.Context, since time.Time) ([]StellarExecution, error) {
@@ -1122,4 +1456,140 @@ func (s *SQLiteStore) IncrementRetry(ctx context.Context, id string) error {
 		SET retry_count = retry_count + 1, status = 'approved', updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?`, id)
 	return err
+}
+
+// ─── Sprint 5: User Sessions (catch-up / away detection) ─────────────────────
+
+func (s *SQLiteStore) UpsertUserLastSeen(ctx context.Context, userID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO stellar_user_sessions(user_id, last_seen_at)
+		 VALUES(?, datetime('now'))
+		 ON CONFLICT(user_id) DO UPDATE SET last_seen_at = datetime('now')`,
+		userID)
+	return err
+}
+
+func (s *SQLiteStore) GetUserLastSeen(ctx context.Context, userID string) (*time.Time, error) {
+	row := s.db.QueryRowContext(ctx,
+		`SELECT last_seen_at FROM stellar_user_sessions WHERE user_id = ?`, userID)
+	var raw string
+	if err := row.Scan(&raw); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	t, err := time.Parse("2006-01-02T15:04:05Z", raw)
+	if err != nil {
+		// Try alternate SQLite datetime format
+		t, err = time.Parse("2006-01-02 15:04:05", raw)
+		if err != nil {
+			return nil, err
+		}
+	}
+	t = t.UTC()
+	return &t, nil
+}
+
+func (s *SQLiteStore) SetUserLastDigest(ctx context.Context, userID string) error {
+	_, err := s.db.ExecContext(ctx,
+		`INSERT INTO stellar_user_sessions(user_id, last_seen_at, last_digest_at)
+		 VALUES(?, datetime('now'), datetime('now'))
+		 ON CONFLICT(user_id) DO UPDATE SET last_digest_at = datetime('now')`,
+		userID)
+	return err
+}
+
+// ─── Sprint 5: Watch deduplication ───────────────────────────────────────────
+
+func (s *SQLiteStore) GetWatchByResource(ctx context.Context, userID, cluster, namespace, kind, name string) (*StellarWatch, error) {
+	row := s.db.QueryRowContext(ctx,
+		`SELECT id, user_id, cluster, namespace, resource_kind, resource_name, reason, status, last_checked, last_update, resolved_at, created_at, updated_at
+		 FROM stellar_watches
+		 WHERE user_id = ? AND cluster = ? AND namespace = ? AND resource_kind = ? AND resource_name = ? AND status = 'active'
+		 LIMIT 1`,
+		userID, cluster, namespace, kind, name)
+	var w StellarWatch
+	var lastChecked, resolvedAt sql.NullTime
+	if err := row.Scan(
+		&w.ID, &w.UserID, &w.Cluster, &w.Namespace, &w.ResourceKind, &w.ResourceName,
+		&w.Reason, &w.Status, &lastChecked, &w.LastUpdate, &resolvedAt, &w.CreatedAt, &w.UpdatedAt,
+	); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if lastChecked.Valid {
+		w.LastChecked = &lastChecked.Time
+	}
+	if resolvedAt.Valid {
+		w.ResolvedAt = &resolvedAt.Time
+	}
+	return &w, nil
+}
+
+// ─── Sprint 5: Watch snooze ───────────────────────────────────────────────────
+
+func (s *SQLiteStore) SnoozeWatch(ctx context.Context, id string, until time.Time) error {
+	_, err := s.db.ExecContext(ctx,
+		`UPDATE stellar_watches SET last_checked = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		until.UTC(), id)
+	return err
+}
+
+// ─── Sprint 5: GetWatchesSince ────────────────────────────────────────────────
+
+func (s *SQLiteStore) GetWatchesSince(ctx context.Context, userID string, since time.Time, status string) ([]StellarWatch, error) {
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, user_id, cluster, namespace, resource_kind, resource_name, reason, status, last_checked, last_update, resolved_at, created_at, updated_at
+		 FROM stellar_watches
+		 WHERE user_id = ? AND updated_at >= ? AND status = ?
+		 ORDER BY updated_at DESC`,
+		userID, since.UTC(), status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarWatch, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarWatchRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
+// ─── Sprint 5: Audit log listing ─────────────────────────────────────────────
+
+func (s *SQLiteStore) ListStellarAuditLog(ctx context.Context, limit int) ([]StellarAuditEntry, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, ts, user_id, action, entity_type, entity_id, cluster, detail
+		 FROM stellar_audit_log
+		 ORDER BY ts DESC
+		 LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarAuditEntry, 0)
+	for rows.Next() {
+		var e StellarAuditEntry
+		var tsRaw string
+		if err := rows.Scan(&e.ID, &tsRaw, &e.UserID, &e.Action, &e.EntityType, &e.EntityID, &e.Cluster, &e.Detail); err != nil {
+			return nil, err
+		}
+		t, _ := time.Parse("2006-01-02T15:04:05Z", tsRaw)
+		if t.IsZero() {
+			t, _ = time.Parse("2006-01-02 15:04:05", tsRaw)
+		}
+		e.Ts = t.UTC()
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }

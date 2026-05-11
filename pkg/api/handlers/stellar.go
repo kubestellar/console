@@ -113,6 +113,24 @@ type StellarStore interface {
 	NotificationExistsByDedup(ctx context.Context, userID, dedupeKey string) (bool, error)
 	ListStellarUserIDs(ctx context.Context) ([]string, error)
 
+	CreateTask(ctx context.Context, task *store.StellarTask) (string, error)
+	GetOpenTasks(ctx context.Context, userID string) ([]store.StellarTask, error)
+	UpdateTaskStatus(ctx context.Context, id, status, userID string) error
+	GetTasksForCluster(ctx context.Context, cluster string, limit int) ([]store.StellarTask, error)
+
+	CreateObservation(ctx context.Context, obs *store.StellarObservation) (string, error)
+	GetRecentObservations(ctx context.Context, cluster string, limit int) ([]store.StellarObservation, error)
+	GetUnshownObservations(ctx context.Context) ([]store.StellarObservation, error)
+	MarkObservationShown(ctx context.Context, id string) error
+
+	GetActiveWatchesForCluster(ctx context.Context, cluster string) ([]store.StellarWatch, error)
+	GetActiveWatches(ctx context.Context, userID string) ([]store.StellarWatch, error)
+	CreateWatch(ctx context.Context, w *store.StellarWatch) (string, error)
+	UpdateWatchStatus(ctx context.Context, id, status, lastUpdate string) error
+	ResolveWatch(ctx context.Context, id string) error
+	SetWatchLastChecked(ctx context.Context, id string, ts time.Time) error
+	GetRecentMemoryEntries(ctx context.Context, userID, cluster string, limit int) ([]store.StellarMemoryEntry, error)
+
 	QueryTimeline(ctx context.Context, filter store.TimelineFilter) ([]store.ClusterEvent, error)
 
 	ActionCompletedByIdempotencyKey(ctx context.Context, key string) bool
@@ -120,6 +138,17 @@ type StellarStore interface {
 	PruneOldNotifications(ctx context.Context, retentionDays int) (int64, error)
 	PruneOldExecutions(ctx context.Context, retentionDays int) (int64, error)
 	PruneExpiredMemory(ctx context.Context) (int64, error)
+
+	// Sprint 5
+	GetNotificationsSince(ctx context.Context, since time.Time) ([]store.StellarNotification, error)
+	GetExecutionsSince(ctx context.Context, since time.Time) ([]store.StellarExecution, error)
+	UpsertUserLastSeen(ctx context.Context, userID string) error
+	GetUserLastSeen(ctx context.Context, userID string) (*time.Time, error)
+	SetUserLastDigest(ctx context.Context, userID string) error
+	GetWatchByResource(ctx context.Context, userID, cluster, namespace, kind, name string) (*store.StellarWatch, error)
+	SnoozeWatch(ctx context.Context, id string, until time.Time) error
+	GetWatchesSince(ctx context.Context, userID string, since time.Time, status string) ([]store.StellarWatch, error)
+	ListStellarAuditLog(ctx context.Context, limit int) ([]store.StellarAuditEntry, error)
 }
 
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.
@@ -763,6 +792,39 @@ type quickAskRequest struct {
 	Model    string `json:"model"`
 }
 
+type watchSuggestion struct {
+	Cluster      string
+	Namespace    string
+	ResourceKind string
+	ResourceName string
+	Reason       string
+}
+
+func parseWatchLine(content string) (string, *watchSuggestion) {
+	idx := strings.Index(content, "\nWATCH:")
+	if idx == -1 {
+		return content, nil
+	}
+	line := strings.TrimSpace(content[idx+7:])
+	// line format: "prod-a/payments/Deployment/payment-worker — monitoring recovery"
+	parts := strings.SplitN(line, " — ", 2)
+	reason := ""
+	if len(parts) == 2 {
+		reason = strings.TrimSpace(parts[1])
+	}
+	segments := strings.SplitN(strings.TrimSpace(parts[0]), "/", 4)
+	if len(segments) != 4 {
+		return strings.TrimSpace(content[:idx]), nil // malformed, strip line, no watch
+	}
+	return strings.TrimSpace(content[:idx]), &watchSuggestion{
+		Cluster:      segments[0],
+		Namespace:    segments[1],
+		ResourceKind: segments[2],
+		ResourceName: segments[3],
+		Reason:       reason,
+	}
+}
+
 func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 	userID := resolveStellarUserID(c)
 	if userID == "" {
@@ -794,7 +856,8 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		}
 	}
 	memories, _ := h.store.ListStellarMemoryEntries(c.UserContext(), userID, body.Cluster, "", 5, 0)
-	contextString := buildLLMContext(state, memories, body.Cluster)
+	tasks, _ := h.store.GetOpenTasks(c.UserContext(), userID)
+	contextString := buildLLMContext(state, memories, tasks, body.Cluster)
 
 	if resolved.Provider == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no AI provider configured"})
@@ -836,6 +899,40 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "AI provider error: " + err.Error()})
 	}
+
+	// Parse WATCH: line from LLM response before persisting
+	cleanContent, watch := parseWatchLine(generated.Content)
+	generated.Content = cleanContent
+
+	var watchCreated bool
+	var watchID string
+	if watch != nil {
+		// Q2: Deduplication — don't create a duplicate active watch for the same resource
+		existing, _ := h.store.GetWatchByResource(c.UserContext(), userID, watch.Cluster, watch.Namespace, watch.ResourceKind, watch.ResourceName)
+		if existing != nil {
+			watchCreated = true
+			watchID = existing.ID
+		} else {
+			id, wErr := h.store.CreateWatch(c.UserContext(), &store.StellarWatch{
+				UserID:       userID,
+				Cluster:      watch.Cluster,
+				Namespace:    watch.Namespace,
+				ResourceKind: watch.ResourceKind,
+				ResourceName: watch.ResourceName,
+				Reason:       watch.Reason,
+			})
+			if wErr == nil {
+				watchCreated = true
+				watchID = id
+				if h.broadcaster != nil {
+					h.broadcaster.Broadcast(SSEEvent{Type: "watch_created", Data: map[string]string{
+						"id": id, "cluster": watch.Cluster,
+					}})
+				}
+			}
+		}
+	}
+
 	now := time.Now().UTC()
 	execution := &store.StellarExecution{
 		UserID:       userID,
@@ -887,6 +984,8 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		"durationMs":     durationMs,
 		"fallbackUsed":   fallbackUsed,
 		"fallbackReason": fallbackReason,
+		"watchCreated":   watchCreated,
+		"watchId":        watchID,
 		"state":          state,
 	})
 }
@@ -921,21 +1020,156 @@ func (h *StellarHandler) MarkNotificationRead(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+func (h *StellarHandler) ListTasks(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	items, err := h.store.GetOpenTasks(c.UserContext(), userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load tasks"})
+	}
+	return c.JSON(fiber.Map{"items": items})
+}
+
+func (h *StellarHandler) CreateTask(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	var body struct {
+		SessionID   string `json:"sessionId"`
+		Cluster     string `json:"cluster"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Priority    int    `json:"priority"`
+		Source      string `json:"source"`
+		ParentID    string `json:"parentId"`
+		DueAt       string `json:"dueAt"`
+		ContextJSON string `json:"contextJson"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})
+	}
+	body.Title = strings.TrimSpace(body.Title)
+	if body.Title == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "title is required"})
+	}
+	if body.Priority < 1 || body.Priority > 10 {
+		body.Priority = 5
+	}
+	source := strings.TrimSpace(body.Source)
+	if source == "" {
+		source = "user"
+	}
+	var dueAt *time.Time
+	if raw := strings.TrimSpace(body.DueAt); raw != "" {
+		parsed, err := time.Parse(time.RFC3339, raw)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "dueAt must be RFC3339"})
+		}
+		dueAt = &parsed
+	}
+	contextJSON := strings.TrimSpace(body.ContextJSON)
+	if contextJSON == "" {
+		contextJSON = "{}"
+	}
+	task := &store.StellarTask{
+		SessionID:   strings.TrimSpace(body.SessionID),
+		UserID:      userID,
+		Cluster:     strings.TrimSpace(body.Cluster),
+		Title:       body.Title,
+		Description: strings.TrimSpace(body.Description),
+		Status:      "open",
+		Priority:    body.Priority,
+		Source:      source,
+		ParentID:    strings.TrimSpace(body.ParentID),
+		DueAt:       dueAt,
+		ContextJSON: contextJSON,
+	}
+	id, err := h.store.CreateTask(c.UserContext(), task)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create task"})
+	}
+	task.ID = id
+	return c.Status(fiber.StatusCreated).JSON(task)
+}
+
+func (h *StellarHandler) UpdateTaskStatus(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	taskID := strings.TrimSpace(c.Params("id"))
+	if taskID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
+	}
+	var body struct {
+		Status string `json:"status"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})
+	}
+	status := strings.TrimSpace(strings.ToLower(body.Status))
+	switch status {
+	case "open", "in_progress", "blocked", "done", "dismissed":
+	default:
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid status"})
+	}
+	if err := h.store.UpdateTaskStatus(c.UserContext(), taskID, status, userID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to update task status"})
+	}
+	items, err := h.store.GetOpenTasks(c.UserContext(), userID)
+	if err != nil {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"id": taskID, "status": status})
+	}
+	return c.JSON(fiber.Map{"id": taskID, "status": status, "items": items})
+}
+
+func (h *StellarHandler) ListObservations(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	_ = userID
+	cluster := strings.TrimSpace(c.Query("cluster"))
+	limit := readListLimit(c)
+	items, err := h.store.GetRecentObservations(c.UserContext(), cluster, limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load observations"})
+	}
+	return c.JSON(fiber.Map{"items": items, "limit": limit})
+}
+
 func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 	userID := resolveStellarUserID(c)
 	if userID == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
 	}
+
+	// Sprint 5: detect returning user and update last-seen
+	lastSeen, _ := h.store.GetUserLastSeen(c.UserContext(), userID)
+	awayThreshold := 15 * time.Minute
+	isReturning := lastSeen != nil && time.Since(*lastSeen) > awayThreshold
+	_ = h.store.UpsertUserLastSeen(c.UserContext(), userID)
+
 	c.Set("Content-Type", "text/event-stream")
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		// If returning after a gap, push catch-up summary after stream establishes
+		if isReturning && lastSeen != nil {
+			go h.pushCatchUpSummary(context.Background(), w, userID, *lastSeen)
+		}
+
 		ticker := time.NewTicker(stellarStreamInterval)
 		defer ticker.Stop()
 		lastSentID := ""
 		send := func() bool {
 			_ = h.syncTimelineNotifications(context.Background(), userID)
-			items, err := h.store.ListStellarNotifications(context.Background(), userID, 30, false)
+			// Stream only unread notifications so dismissed/read items do not
+			// get re-sent to clients after "dismiss" or "clear all".
+			items, err := h.store.ListStellarNotifications(context.Background(), userID, 30, true)
 			if err != nil {
 				return writeSSE(w, "error", fiber.Map{"message": "failed to load notifications"}) == nil
 			}
@@ -944,6 +1178,21 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 				if writeSSE(w, "notification", items[0]) != nil {
 					return false
 				}
+			}
+			observations, err := h.store.GetUnshownObservations(context.Background())
+			if err == nil && len(observations) > 0 {
+				next := observations[0]
+				payload := fiber.Map{
+					"id":      next.ID,
+					"summary": next.Summary,
+				}
+				if suggest := extractObservationSuggest(next.Detail); suggest != "" {
+					payload["suggest"] = suggest
+				}
+				if writeSSE(w, "observation", payload) != nil {
+					return false
+				}
+				_ = h.store.MarkObservationShown(context.Background(), next.ID)
 			}
 			state, err := h.buildState(context.Background(), userID)
 			if err != nil {
@@ -954,6 +1203,11 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 				"unreadCount":        state.UnreadAlerts,
 				"pendingActionCount": len(state.PendingActionIDs),
 			}) != nil {
+				return false
+			}
+			// Push current active watches so the frontend stays in sync
+			activeWatches, _ := h.store.GetActiveWatches(context.Background(), userID)
+			if writeSSE(w, "watches", activeWatches) != nil {
 				return false
 			}
 			return writeSSE(w, "heartbeat", fiber.Map{"ts": time.Now().UTC().Format(time.RFC3339)}) == nil
@@ -1481,6 +1735,17 @@ func summarizeQuickAsk(prompt, answer string) string {
 	return fmt.Sprintf("Q: %s | A: %s", prompt, answer)
 }
 
+func extractObservationSuggest(detail string) string {
+	raw := strings.TrimSpace(detail)
+	if raw == "" {
+		return ""
+	}
+	if strings.HasPrefix(strings.ToUpper(raw), "SUGGEST:") {
+		return strings.TrimSpace(raw[len("SUGGEST:"):])
+	}
+	return ""
+}
+
 func firstOrUnknown(items []string) string {
 	if len(items) == 0 {
 		return "unknown"
@@ -1538,7 +1803,7 @@ func (h *StellarHandler) resolveUserProvider(ctx context.Context, userID string)
 	return &providers.ResolvedUserProvider{Provider: p, Model: model, ConfigID: cfg.ID}, nil
 }
 
-func buildLLMContext(state *StellarOperationalState, memories []store.StellarMemoryEntry, cluster string) string {
+func buildLLMContext(state *StellarOperationalState, memories []store.StellarMemoryEntry, tasks []store.StellarTask, cluster string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Time: %s UTC\n", state.GeneratedAt.UTC().Format("2006-01-02 15:04")))
 	sb.WriteString(fmt.Sprintf("Clusters: %s\n", strings.Join(state.ClustersWatching, ", ")))
@@ -1570,13 +1835,61 @@ func buildLLMContext(state *StellarOperationalState, memories []store.StellarMem
 			))
 		}
 	}
+	if len(tasks) > 0 {
+		sb.WriteString("\nOpen tasks:\n")
+		taskCount := minInt(len(tasks), 3)
+		for i := 0; i < taskCount; i++ {
+			t := tasks[i]
+			sb.WriteString(fmt.Sprintf("  [%s] %s\n", priorityLabel(t.Priority), t.Title))
+		}
+	}
 	if len(memories) > 0 {
 		sb.WriteString("\nOperational memory:\n")
-		for _, memory := range memories {
+		scored := scoreAndSortMemories(memories)
+		memoryCount := minInt(len(scored), 5)
+		for i := 0; i < memoryCount; i++ {
+			memory := scored[i]
 			sb.WriteString(fmt.Sprintf("  [%s] %s\n", memory.CreatedAt.UTC().Format("Jan 02 15:04"), memory.Summary))
 		}
 	}
 	return sb.String()
+}
+
+func scoreAndSortMemories(memories []store.StellarMemoryEntry) []store.StellarMemoryEntry {
+	scored := make([]store.StellarMemoryEntry, 0, len(memories))
+	scored = append(scored, memories...)
+	sort.Slice(scored, func(i, j int) bool {
+		iScore := memoryScore(scored[i])
+		jScore := memoryScore(scored[j])
+		if iScore == jScore {
+			return scored[i].CreatedAt.After(scored[j].CreatedAt)
+		}
+		return iScore > jScore
+	})
+	return scored
+}
+
+func memoryScore(memory store.StellarMemoryEntry) float64 {
+	hours := time.Since(memory.CreatedAt).Hours()
+	return float64(memory.Importance*10) - hours
+}
+
+func priorityLabel(priority int) string {
+	switch {
+	case priority <= 3:
+		return "HIGH"
+	case priority <= 6:
+		return "MED"
+	default:
+		return "LOW"
+	}
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func splitEventObjectKind(object string) string {
@@ -1641,4 +1954,220 @@ func truncateString(s string, n int) string {
 		return s
 	}
 	return s[:n] + "..."
+}
+
+
+// Watch handlers
+func (h *StellarHandler) ListWatches(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	watches, err := h.store.(interface {
+		GetActiveWatches(ctx context.Context, userID string) ([]store.StellarWatch, error)
+	}).GetActiveWatches(c.UserContext(), userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load watches"})
+	}
+	return c.JSON(fiber.Map{"items": watches})
+}
+
+type createWatchRequest struct {
+	Cluster      string `json:"cluster"`
+	Namespace    string `json:"namespace"`
+	ResourceKind string `json:"resourceKind"`
+	ResourceName string `json:"resourceName"`
+	Reason       string `json:"reason"`
+}
+
+func (h *StellarHandler) CreateWatch(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	var body createWatchRequest
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})
+	}
+	body.Cluster = strings.TrimSpace(body.Cluster)
+	body.Namespace = strings.TrimSpace(body.Namespace)
+	body.ResourceKind = strings.TrimSpace(body.ResourceKind)
+	body.ResourceName = strings.TrimSpace(body.ResourceName)
+	body.Reason = strings.TrimSpace(body.Reason)
+	if body.Cluster == "" || body.ResourceKind == "" || body.ResourceName == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster, resourceKind, and resourceName are required"})
+	}
+	watch := &store.StellarWatch{
+		UserID:       userID,
+		Cluster:      body.Cluster,
+		Namespace:    body.Namespace,
+		ResourceKind: body.ResourceKind,
+		ResourceName: body.ResourceName,
+		Reason:       body.Reason,
+		Status:       "active",
+	}
+	id, err := h.store.(interface {
+		CreateWatch(ctx context.Context, w *store.StellarWatch) (string, error)
+	}).CreateWatch(c.UserContext(), watch)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create watch"})
+	}
+	watch.ID = id
+	return c.Status(fiber.StatusCreated).JSON(watch)
+}
+
+func (h *StellarHandler) ResolveWatch(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	watchID := strings.TrimSpace(c.Params("id"))
+	if watchID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
+	}
+	if err := h.store.(interface {
+		ResolveWatch(ctx context.Context, id string) error
+	}).ResolveWatch(c.UserContext(), watchID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to resolve watch"})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *StellarHandler) DismissWatch(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	watchID := strings.TrimSpace(c.Params("id"))
+	if watchID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
+	}
+	if err := h.store.(interface {
+		UpdateWatchStatus(ctx context.Context, id, status, lastUpdate string) error
+	}).UpdateWatchStatus(c.UserContext(), watchID, "dismissed", ""); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to dismiss watch"})
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// ─── Sprint 5: Snooze watch ───────────────────────────────────────────────────
+
+func (h *StellarHandler) SnoozeWatch(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	watchID := strings.TrimSpace(c.Params("id"))
+	if watchID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id is required"})
+	}
+	var body struct {
+		Minutes int `json:"minutes"`
+	}
+	if err := c.BodyParser(&body); err != nil || body.Minutes <= 0 {
+		body.Minutes = 60
+	}
+	until := time.Now().Add(time.Duration(body.Minutes) * time.Minute)
+	if err := h.store.SnoozeWatch(c.UserContext(), watchID, until); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to snooze watch"})
+	}
+	return c.JSON(fiber.Map{"id": watchID, "snoozedUntil": until.UTC().Format(time.RFC3339)})
+}
+
+// ─── Sprint 5: Audit log ──────────────────────────────────────────────────────
+
+func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	limit := readListLimit(c)
+	entries, err := h.store.ListStellarAuditLog(c.UserContext(), limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to load audit log"})
+	}
+	return c.JSON(fiber.Map{"items": entries})
+}
+
+// ─── Sprint 5: Catch-up summary ───────────────────────────────────────────────
+
+func (h *StellarHandler) pushCatchUpSummary(ctx context.Context, w *bufio.Writer, userID string, since time.Time) {
+	// Give SSE stream 2 seconds to establish before pushing
+	time.Sleep(2 * time.Second)
+
+	notifications, _ := h.store.GetNotificationsSince(ctx, since)
+	resolvedWatches, _ := h.store.GetWatchesSince(ctx, userID, since, "resolved")
+	activeWatches, _ := h.store.GetActiveWatches(ctx, userID)
+	memories, _ := h.store.GetRecentMemoryEntries(ctx, userID, "", 5)
+
+	if len(notifications) == 0 && len(resolvedWatches) == 0 {
+		// Nothing happened — push clean bill of health
+		_ = writeSSE(w, "catchup", map[string]string{
+			"summary": fmt.Sprintf("All clear while you were away (%s). Nothing notable happened.", formatDuration(time.Since(since))),
+			"kind":    "clean",
+		})
+		return
+	}
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("The operator was away for %s (since %s UTC).\n\n",
+		formatDuration(time.Since(since)), since.UTC().Format("15:04")))
+
+	if len(notifications) > 0 {
+		sb.WriteString(fmt.Sprintf("Events that fired (%d):\n", len(notifications)))
+		for _, n := range notifications {
+			sb.WriteString(fmt.Sprintf("  [%s] %s: %s\n", n.Severity, n.Title, truncateString(n.Body, 100)))
+		}
+	}
+	if len(resolvedWatches) > 0 {
+		sb.WriteString(fmt.Sprintf("\nWatches resolved (%d):\n", len(resolvedWatches)))
+		for _, rw := range resolvedWatches {
+			sb.WriteString(fmt.Sprintf("  ✓ %s/%s — %s\n", rw.Namespace, rw.ResourceName, rw.LastUpdate))
+		}
+	}
+	if len(activeWatches) > 0 {
+		sb.WriteString(fmt.Sprintf("\nStill watching (%d resources).\n", len(activeWatches)))
+	}
+	_ = memories // available for future enrichment
+
+	resolved, err := h.resolveProviderAndModel(ctx, userID, "", "")
+	if err != nil || resolved.Provider == nil {
+		// Fallback: push raw summary without LLM
+		_ = writeSSE(w, "catchup", map[string]string{
+			"summary": sb.String(),
+			"kind":    "summary",
+		})
+		return
+	}
+
+	resp, err := resolved.Provider.Generate(ctx, providers.GenerateRequest{
+		Model: resolved.Model, MaxTokens: 250, Temperature: 0.3,
+		Messages: []providers.Message{
+			{Role: "system", Content: prompts.CatchUp},
+			{Role: "user", Content: sb.String()},
+		},
+	})
+	if err != nil {
+		_ = writeSSE(w, "catchup", map[string]string{
+			"summary": sb.String(),
+			"kind":    "summary",
+		})
+		return
+	}
+
+	_ = writeSSE(w, "catchup", map[string]string{
+		"summary": resp.Content,
+		"kind":    "summary",
+	})
+	_ = h.store.SetUserLastDigest(ctx, userID)
+}
+
+func formatDuration(d time.Duration) string {
+	d = d.Round(time.Minute)
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	if h > 0 {
+		return fmt.Sprintf("%dh %dm", h, m)
+	}
+	return fmt.Sprintf("%dm", m)
 }

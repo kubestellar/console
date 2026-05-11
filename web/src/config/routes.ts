@@ -109,6 +109,9 @@ export const ROUTES = {
   MISSIONS: '/missions',
   MISSION: '/missions/:missionId',
 
+  // Stellar
+  STELLAR_AUDIT: '/stellar/audit',
+
   // Widget
   WIDGET: '/widget',
 

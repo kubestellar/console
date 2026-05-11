@@ -71,20 +71,34 @@ export async function kagentChat(
   }
 ): Promise<void> {
   try {
-    const resp = await authFetch(`${API_BASE}/api/kagent/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        agent,
-        namespace,
-        message,
-        contextId: options.contextId,
-      }),
-      signal: options.signal,
+    const payload = JSON.stringify({
+      agent,
+      namespace,
+      message,
+      contextId: options.contextId,
     })
+    const tryChat = async (endpoint: string): Promise<ChatStreamResponse> => {
+      const response = await authFetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        signal: options.signal,
+      })
+      return { response, endpoint }
+    }
+
+    let { response: resp, endpoint } = await tryChat('/api/kagent/chat')
+    // Fallback to kagenti-provider when kagent is not configured.
+    if (resp.status === 503) {
+      const fallback = await tryChat('/api/kagenti-provider/chat')
+      if (fallback.response.ok) {
+        resp = fallback.response
+        endpoint = fallback.endpoint
+      }
+    }
 
     if (!resp.ok) {
-      options.onError(`Chat failed: HTTP ${resp.status}`)
+      options.onError(`Chat failed (${endpoint}): HTTP ${resp.status}`)
       return
     }
 

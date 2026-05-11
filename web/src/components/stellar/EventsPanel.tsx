@@ -13,16 +13,20 @@ interface EventsPanelProps {
   notifications: StellarNotification[]
   pendingActions: StellarAction[]
   acknowledgeNotification: (id: string) => Promise<void>
+  dismissAllNotifications: () => Promise<void>
   approveAction: (id: string, confirmToken?: string) => Promise<void>
   rejectAction: (id: string, reason: string) => Promise<void>
+  onRollback?: (prompt: string) => void
 }
 
 export function EventsPanel({
   notifications,
   pendingActions,
   acknowledgeNotification,
+  dismissAllNotifications,
   approveAction,
   rejectAction,
+  onRollback,
 }: EventsPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -71,8 +75,7 @@ export function EventsPanel({
         {notifications.length > 0 && (
           <button
             onClick={() => {
-              // Dismiss ALL notifications (read + unread)
-              ;(notifications || []).forEach((notification) => { void acknowledgeNotification(notification.id) })
+              void dismissAllNotifications()
             }}
             style={{
               background: 'none',
@@ -138,6 +141,7 @@ export function EventsPanel({
               key={notification.id}
               notification={notification}
               onDismiss={() => { void acknowledgeNotification(notification.id) }}
+              onRollback={onRollback}
             />
           ))
         )}

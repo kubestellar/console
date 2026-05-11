@@ -597,6 +597,33 @@ describe('api.ts', () => {
       const headers = call[1]?.headers as Headers
       expect(headers.has('Authorization')).toBe(false)
     })
+
+    it('marks backend unavailable on 503 for core API routes', async () => {
+      vi.mocked(fetch).mockResolvedValue(makeResponse({ error: 'unavailable' }, { status: 503 }))
+
+      const { authFetch, isBackendUnavailable } = await importFresh()
+      await authFetch('/api/mcp/clusters')
+
+      expect(isBackendUnavailable()).toBe(true)
+    })
+
+    it('does not mark backend unavailable on 503 for kagent routes', async () => {
+      vi.mocked(fetch).mockResolvedValue(makeResponse({ error: 'kagent not configured' }, { status: 503 }))
+
+      const { authFetch, isBackendUnavailable } = await importFresh()
+      await authFetch('/api/kagent/chat')
+
+      expect(isBackendUnavailable()).toBe(false)
+    })
+
+    it('does not mark backend unavailable on 503 for kagenti-provider routes', async () => {
+      vi.mocked(fetch).mockResolvedValue(makeResponse({ error: 'kagenti not configured' }, { status: 503 }))
+
+      const { authFetch, isBackendUnavailable } = await importFresh()
+      await authFetch('/api/kagenti-provider/chat')
+
+      expect(isBackendUnavailable()).toBe(false)
+    })
   })
 
   // ── handle429 (via api.get 429 responses) ──────────────────────────────

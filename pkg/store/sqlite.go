@@ -687,6 +687,40 @@ func (s *SQLiteStore) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_stellar_notifications_unread ON stellar_notifications(user_id, read, created_at DESC);
 	CREATE UNIQUE INDEX IF NOT EXISTS idx_stellar_notifications_user_dedupe ON stellar_notifications(user_id, dedupe_key);
 
+	-- Durable stellar task graph.
+	CREATE TABLE IF NOT EXISTS stellar_tasks (
+		id           TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+		session_id   TEXT NOT NULL,
+		user_id      TEXT NOT NULL,
+		cluster      TEXT NOT NULL DEFAULT '',
+		title        TEXT NOT NULL,
+		description  TEXT NOT NULL DEFAULT '',
+		status       TEXT NOT NULL DEFAULT 'open',
+		priority     INTEGER NOT NULL DEFAULT 5,
+		source       TEXT NOT NULL DEFAULT 'user',
+		parent_id    TEXT,
+		due_at       DATETIME,
+		completed_at DATETIME,
+		context_json TEXT NOT NULL DEFAULT '{}',
+		created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_stellar_tasks_user_status ON stellar_tasks(user_id, status, priority);
+
+	-- Stellar observer journal.
+	CREATE TABLE IF NOT EXISTS stellar_observations (
+		id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+		cluster       TEXT NOT NULL DEFAULT '',
+		kind          TEXT NOT NULL,
+		summary       TEXT NOT NULL,
+		detail        TEXT NOT NULL DEFAULT '',
+		ref_type      TEXT NOT NULL DEFAULT '',
+		ref_id        TEXT NOT NULL DEFAULT '',
+		shown_to_user INTEGER NOT NULL DEFAULT 0,
+		created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE INDEX IF NOT EXISTS idx_stellar_obs_cluster_ts ON stellar_observations(cluster, created_at DESC);
+
 	-- OAuth credentials persisted by the GitHub App Manifest one-click flow.
 	-- Single-row table (CHECK constraint) so only one app registration exists.
 	CREATE TABLE IF NOT EXISTS oauth_credentials (
@@ -784,6 +818,64 @@ func (s *SQLiteStore) migrate() error {
 		)`,
 		"CREATE INDEX IF NOT EXISTS idx_audit_user_ts ON stellar_audit_log(user_id, ts DESC)",
 		"CREATE INDEX IF NOT EXISTS idx_audit_entity ON stellar_audit_log(entity_type, entity_id)",
+		`CREATE TABLE IF NOT EXISTS stellar_tasks (
+			id           TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			session_id   TEXT NOT NULL,
+			user_id      TEXT NOT NULL,
+			cluster      TEXT NOT NULL DEFAULT '',
+			title        TEXT NOT NULL,
+			description  TEXT NOT NULL DEFAULT '',
+			status       TEXT NOT NULL DEFAULT 'open',
+			priority     INTEGER NOT NULL DEFAULT 5,
+			source       TEXT NOT NULL DEFAULT 'user',
+			parent_id    TEXT,
+			due_at       DATETIME,
+			completed_at DATETIME,
+			context_json TEXT NOT NULL DEFAULT '{}',
+			created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		"CREATE INDEX IF NOT EXISTS idx_stellar_tasks_user_status ON stellar_tasks(user_id, status, priority)",
+		`CREATE TABLE IF NOT EXISTS stellar_observations (
+			id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			cluster       TEXT NOT NULL DEFAULT '',
+			kind          TEXT NOT NULL,
+			summary       TEXT NOT NULL,
+			detail        TEXT NOT NULL DEFAULT '',
+			ref_type      TEXT NOT NULL DEFAULT '',
+			ref_id        TEXT NOT NULL DEFAULT '',
+			shown_to_user INTEGER NOT NULL DEFAULT 0,
+			created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		"CREATE INDEX IF NOT EXISTS idx_stellar_obs_cluster_ts ON stellar_observations(cluster, created_at DESC)",
+		`CREATE TABLE IF NOT EXISTS stellar_watches (
+			id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			user_id       TEXT NOT NULL,
+			cluster       TEXT NOT NULL,
+			namespace     TEXT NOT NULL DEFAULT '',
+			resource_kind TEXT NOT NULL,
+			resource_name TEXT NOT NULL,
+			reason        TEXT NOT NULL DEFAULT '',
+			status        TEXT NOT NULL DEFAULT 'active',
+			last_checked  DATETIME,
+			last_update   TEXT NOT NULL DEFAULT '',
+			resolved_at   DATETIME,
+			created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		"CREATE INDEX IF NOT EXISTS idx_stellar_watches_active ON stellar_watches(user_id, status, cluster) WHERE status = 'active'",
+
+		// Sprint 5: stellar_user_sessions for catch-up summary (away detection)
+		`CREATE TABLE IF NOT EXISTS stellar_user_sessions (
+			user_id         TEXT PRIMARY KEY,
+			last_seen_at    TEXT NOT NULL DEFAULT (datetime('now')),
+			last_digest_at  TEXT
+		)`,
+
+		// Sprint 5: reasoning column on stellar_observations for trust layer
+		"ALTER TABLE stellar_observations ADD COLUMN reasoning TEXT NOT NULL DEFAULT ''",
+
+		// Sprint 5: snooze support — last_checked already exists on stellar_watches
 	}
 	for i, migration := range migrations {
 		if _, err := s.db.ExecContext(ctx, migration); err != nil {
