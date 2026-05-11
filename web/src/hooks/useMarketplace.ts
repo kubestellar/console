@@ -333,11 +333,11 @@ export function useMarketplace() {
         signal: AbortSignal.timeout(FETCH_EXTERNAL_TIMEOUT_MS) })
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'network error'
-      emitMarketplaceInstallFailed(item.type, item.name, msg)
+      emitMarketplaceInstallFailed(item.type, item.name, msg, 'download')
       throw e
     }
     if (!response.ok) {
-      emitMarketplaceInstallFailed(item.type, item.name, `HTTP ${response.status}`)
+      emitMarketplaceInstallFailed(item.type, item.name, `HTTP ${response.status}`, 'http_error')
       throw new Error(`Download failed: ${response.status}`)
     }
     const json = await response.json()
@@ -356,7 +356,7 @@ export function useMarketplace() {
       }
       if (!card_type) {
         const msg = 'card-preset payload missing card_type'
-        emitMarketplaceInstallFailed(item.type, item.name, msg)
+        emitMarketplaceInstallFailed(item.type, item.name, msg, 'parse')
         throw new Error(msg)
       }
 
@@ -382,7 +382,7 @@ export function useMarketplace() {
         await api.post(`/api/dashboards/${target.id}/cards`, newCard)
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'backend persist failed'
-        emitMarketplaceInstallFailed(item.type, item.name, msg)
+        emitMarketplaceInstallFailed(item.type, item.name, msg, 'persist')
         throw e
       }
 

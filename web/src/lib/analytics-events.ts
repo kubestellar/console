@@ -287,8 +287,18 @@ export function emitMarketplaceRemove(itemType: string) {
 }
 
 /** Fired when a marketplace install attempt fails */
-export function emitMarketplaceInstallFailed(itemType: string, itemName: string, error: string) {
-  send('ksc_marketplace_install_failed', { item_type: itemType, item_name: itemName, error_detail: error.slice(0, 100) })
+export function emitMarketplaceInstallFailed(
+  itemType: string,
+  itemName: string,
+  error: string,
+  failureStage: 'download' | 'http_error' | 'parse' | 'persist'
+) {
+  send('ksc_marketplace_install_failed', {
+    item_type: itemType,
+    item_name: itemName,
+    error_detail: error.slice(0, 100),
+    failure_stage: failureStage,
+  })
 }
 
 // ── Theme ─────────────────────────────────────────────────────────
