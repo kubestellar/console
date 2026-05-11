@@ -35,6 +35,7 @@
     "replace": "Replace",
     "delete": "Delete",
     "copy": "Copy",
+    "import": "Import",
     "apply": "Apply",
     "search": "Search",
     "filter": "Filter",
