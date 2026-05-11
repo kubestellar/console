@@ -260,7 +260,7 @@ jobs:
           retention-days: 30
 
       - name: Update coverage badge gist (with regression guard)
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           GIST_ID: ${{ env.GIST_ID }}
           COVERAGE_PCT: ${{ steps.cov.outputs.pct }}
@@ -373,7 +373,7 @@ jobs:
 
       - name: Open issue for test failures
         if: needs.test-shard.result == 'failure'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           FAILED_TESTS: ${{ steps.failures.outputs.list }}
           FAILED_COUNT: ${{ steps.failures.outputs.count }}
