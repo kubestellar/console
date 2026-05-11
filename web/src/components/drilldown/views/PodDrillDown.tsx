@@ -7,7 +7,12 @@ import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Terminal, Zap, Code, Info, Tag, Loader2, Box, Layers, Server, AlertTriangle, RefreshCw, TerminalSquare } from 'lucide-react'
+import { safeLazy } from '../../../lib/safeLazy'
 const PodExecTerminal = lazy(() => import('../../terminal/PodExecTerminal'))
+const PodLabelsTab = safeLazy(() => import('./pod-drilldown/PodLabelsTab'), 'PodLabelsTab')
+const PodRelatedTab = safeLazy(() => import('./pod-drilldown/PodRelatedTab'), 'PodRelatedTab')
+const PodOutputTab = safeLazy(() => import('./pod-drilldown/PodOutputTab'), 'PodOutputTab')
+const PodAiAnalysis = safeLazy(() => import('./pod-drilldown/PodAiAnalysis'), 'PodAiAnalysis')
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
@@ -17,10 +22,6 @@ import {
   getPodDiagnosis,
   UNHEALTHY_STATUSES, RAPID_REOPEN_THRESHOLD_MS,
   getPodCache, setPodCache, cleanupPodCache,
-  PodLabelsTab,
-  PodRelatedTab,
-  PodOutputTab,
-  PodAiAnalysis,
   PodDeleteSection
 } from './pod-drilldown'
 import type { TabType, RelatedResource, CachedData } from './pod-drilldown'
@@ -80,6 +81,14 @@ const DIAGNOSIS_STEP_KEYS = {
     'drilldown.diagnosis.steps.reviewPodSpec',
   ],
 } as const
+
+function TabLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-transparent border-t-primary" />
+    </div>
+  )
+}
 
 export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const { t } = useTranslation()
@@ -1725,104 +1734,112 @@ Please:
         )}
 
         {activeTab === 'labels' && (
-          <PodLabelsTab
-            labels={labels}
-            annotations={annotations}
-            describeLoading={describeLoading}
-            agentConnected={agentConnected}
-            copiedField={copiedField}
-            showAllLabels={showAllLabels}
-            setShowAllLabels={setShowAllLabels}
-            editingLabels={editingLabels}
-            setEditingLabels={setEditingLabels}
-            pendingLabelChanges={pendingLabelChanges}
-            newLabelKey={newLabelKey}
-            setNewLabelKey={setNewLabelKey}
-            newLabelValue={newLabelValue}
-            setNewLabelValue={setNewLabelValue}
-            labelSaving={labelSaving}
-            labelError={labelError}
-            handleLabelChange={handleLabelChange}
-            handleLabelRemove={handleLabelRemove}
-            undoLabelChange={undoLabelChange}
-            saveLabels={saveLabels}
-            cancelLabelEdit={cancelLabelEdit}
-            showAllAnnotations={showAllAnnotations}
-            setShowAllAnnotations={setShowAllAnnotations}
-            editingAnnotations={editingAnnotations}
-            setEditingAnnotations={setEditingAnnotations}
-            pendingAnnotationChanges={pendingAnnotationChanges}
-            newAnnotationKey={newAnnotationKey}
-            setNewAnnotationKey={setNewAnnotationKey}
-            newAnnotationValue={newAnnotationValue}
-            setNewAnnotationValue={setNewAnnotationValue}
-            annotationSaving={annotationSaving}
-            annotationError={annotationError}
-            handleAnnotationChange={handleAnnotationChange}
-            handleAnnotationRemove={handleAnnotationRemove}
-            undoAnnotationChange={undoAnnotationChange}
-            saveAnnotations={saveAnnotations}
-            cancelAnnotationEdit={cancelAnnotationEdit}
-            handleCopy={handleCopy}
-          />
+          <Suspense fallback={<TabLoadingFallback />}>
+            <PodLabelsTab
+              labels={labels}
+              annotations={annotations}
+              describeLoading={describeLoading}
+              agentConnected={agentConnected}
+              copiedField={copiedField}
+              showAllLabels={showAllLabels}
+              setShowAllLabels={setShowAllLabels}
+              editingLabels={editingLabels}
+              setEditingLabels={setEditingLabels}
+              pendingLabelChanges={pendingLabelChanges}
+              newLabelKey={newLabelKey}
+              setNewLabelKey={setNewLabelKey}
+              newLabelValue={newLabelValue}
+              setNewLabelValue={setNewLabelValue}
+              labelSaving={labelSaving}
+              labelError={labelError}
+              handleLabelChange={handleLabelChange}
+              handleLabelRemove={handleLabelRemove}
+              undoLabelChange={undoLabelChange}
+              saveLabels={saveLabels}
+              cancelLabelEdit={cancelLabelEdit}
+              showAllAnnotations={showAllAnnotations}
+              setShowAllAnnotations={setShowAllAnnotations}
+              editingAnnotations={editingAnnotations}
+              setEditingAnnotations={setEditingAnnotations}
+              pendingAnnotationChanges={pendingAnnotationChanges}
+              newAnnotationKey={newAnnotationKey}
+              setNewAnnotationKey={setNewAnnotationKey}
+              newAnnotationValue={newAnnotationValue}
+              setNewAnnotationValue={setNewAnnotationValue}
+              annotationSaving={annotationSaving}
+              annotationError={annotationError}
+              handleAnnotationChange={handleAnnotationChange}
+              handleAnnotationRemove={handleAnnotationRemove}
+              undoAnnotationChange={undoAnnotationChange}
+              saveAnnotations={saveAnnotations}
+              cancelAnnotationEdit={cancelAnnotationEdit}
+              handleCopy={handleCopy}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'related' && (
-          <PodRelatedTab
-            podName={podName}
-            namespace={namespace}
-            cluster={cluster}
-            agentConnected={agentConnected}
-            relatedLoading={relatedLoading}
-            ownerChain={ownerChain}
-            configMaps={configMaps}
-            secrets={secrets}
-            pvcs={pvcs}
-            serviceAccount={serviceAccount}
-            fetchRelatedResources={fetchRelatedResources}
-            drillToDeployment={drillToDeployment}
-            drillToReplicaSet={drillToReplicaSet}
-            drillToConfigMap={drillToConfigMap}
-            drillToSecret={drillToSecret}
-            drillToServiceAccount={drillToServiceAccount}
-            drillToPVC={drillToPVC}
-          />
+          <Suspense fallback={<TabLoadingFallback />}>
+            <PodRelatedTab
+              podName={podName}
+              namespace={namespace}
+              cluster={cluster}
+              agentConnected={agentConnected}
+              relatedLoading={relatedLoading}
+              ownerChain={ownerChain}
+              configMaps={configMaps}
+              secrets={secrets}
+              pvcs={pvcs}
+              serviceAccount={serviceAccount}
+              fetchRelatedResources={fetchRelatedResources}
+              drillToDeployment={drillToDeployment}
+              drillToReplicaSet={drillToReplicaSet}
+              drillToConfigMap={drillToConfigMap}
+              drillToSecret={drillToSecret}
+              drillToServiceAccount={drillToServiceAccount}
+              drillToPVC={drillToPVC}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'describe' && (
-          <PodOutputTab
-            output={describeOutput}
-            loading={describeLoading}
-            agentConnected={agentConnected}
-            error={describeError}
-            copyField="describe"
-            copiedField={copiedField}
-            kubectlComment={`# kubectl describe pod ${podName} -n ${namespace}`}
-            loadingMessage={t('drilldown.status.runningDescribe')}
-            notConnectedMessage={t('drilldown.empty.connectAgentDescribe')}
-            emptyMessage={t('drilldown.empty.failedFetchDescribe')}
-            handleCopy={handleCopy}
-            onRefresh={() => fetchDescribe(true)}
-          />
+          <Suspense fallback={<TabLoadingFallback />}>
+            <PodOutputTab
+              output={describeOutput}
+              loading={describeLoading}
+              agentConnected={agentConnected}
+              error={describeError}
+              copyField="describe"
+              copiedField={copiedField}
+              kubectlComment={`# kubectl describe pod ${podName} -n ${namespace}`}
+              loadingMessage={t('drilldown.status.runningDescribe')}
+              notConnectedMessage={t('drilldown.empty.connectAgentDescribe')}
+              emptyMessage={t('drilldown.empty.failedFetchDescribe')}
+              handleCopy={handleCopy}
+              onRefresh={() => fetchDescribe(true)}
+            />
+          </Suspense>
         )}
 
         {activeTab === 'logs' && (
-          <PodOutputTab
-            output={logsOutput}
-            loading={logsLoading}
-            agentConnected={agentConnected}
-            error={logsError}
-            copyField="logs"
-            copiedField={copiedField}
-            kubectlComment={`# kubectl logs ${podName} -n ${namespace} --tail=500`}
-            loadingMessage={t('drilldown.status.fetchingLogs')}
-            notConnectedMessage={t('drilldown.empty.connectAgentLogs')}
-            emptyMessage={t('drilldown.empty.noLogsAvailable')}
-            handleCopy={handleCopy}
-            onRefresh={() => fetchLogs(true)}
-            refreshIcon={Terminal}
-            refreshLabel="Refresh"
-          />
+          <Suspense fallback={<TabLoadingFallback />}>
+            <PodOutputTab
+              output={logsOutput}
+              loading={logsLoading}
+              agentConnected={agentConnected}
+              error={logsError}
+              copyField="logs"
+              copiedField={copiedField}
+              kubectlComment={`# kubectl logs ${podName} -n ${namespace} --tail=500`}
+              loadingMessage={t('drilldown.status.fetchingLogs')}
+              notConnectedMessage={t('drilldown.empty.connectAgentLogs')}
+              emptyMessage={t('drilldown.empty.noLogsAvailable')}
+              handleCopy={handleCopy}
+              onRefresh={() => fetchLogs(true)}
+              refreshIcon={Terminal}
+              refreshLabel="Refresh"
+            />
+          </Suspense>
         )}
 
         {activeTab === 'exec' && (
@@ -1840,41 +1857,45 @@ Please:
         )}
 
         {activeTab === 'events' && (
-          <PodOutputTab
-            output={eventsOutput}
-            loading={eventsLoading}
-            agentConnected={agentConnected}
-            error={eventsError}
-            copyField="events"
-            copiedField={copiedField}
-            kubectlComment={`# kubectl get events -n ${namespace} --field-selector involvedObject.name=${podName}`}
-            loadingMessage={t('drilldown.status.fetchingEvents')}
-            notConnectedMessage={t('drilldown.empty.connectAgentEvents')}
-            emptyMessage={t('drilldown.empty.noEventsFound', { resource: 'pod' })}
-            handleCopy={handleCopy}
-            onRefresh={() => fetchEvents(true)}
-            refreshIcon={Zap}
-            refreshLabel="Refresh"
-          />
+          <Suspense fallback={<TabLoadingFallback />}>
+            <PodOutputTab
+              output={eventsOutput}
+              loading={eventsLoading}
+              agentConnected={agentConnected}
+              error={eventsError}
+              copyField="events"
+              copiedField={copiedField}
+              kubectlComment={`# kubectl get events -n ${namespace} --field-selector involvedObject.name=${podName}`}
+              loadingMessage={t('drilldown.status.fetchingEvents')}
+              notConnectedMessage={t('drilldown.empty.connectAgentEvents')}
+              emptyMessage={t('drilldown.empty.noEventsFound', { resource: 'pod' })}
+              handleCopy={handleCopy}
+              onRefresh={() => fetchEvents(true)}
+              refreshIcon={Zap}
+              refreshLabel="Refresh"
+            />
+          </Suspense>
         )}
 
         {activeTab === 'yaml' && (
-          <PodOutputTab
-            output={yamlOutput}
-            loading={yamlLoading}
-            agentConnected={agentConnected}
-            error={yamlError}
-            copyField="yaml"
-            copiedField={copiedField}
-            kubectlComment={`# kubectl get pod ${podName} -n ${namespace} -o yaml`}
-            loadingMessage={t('drilldown.status.fetchingYaml')}
-            notConnectedMessage={t('drilldown.empty.connectAgentYaml')}
-            emptyMessage={t('drilldown.empty.failedFetchYaml')}
-            handleCopy={handleCopy}
-            onRefresh={() => fetchYaml(true)}
-            refreshIcon={Code}
-            refreshLabel="Refresh"
-          />
+          <Suspense fallback={<TabLoadingFallback />}>
+            <PodOutputTab
+              output={yamlOutput}
+              loading={yamlLoading}
+              agentConnected={agentConnected}
+              error={yamlError}
+              copyField="yaml"
+              copiedField={copiedField}
+              kubectlComment={`# kubectl get pod ${podName} -n ${namespace} -o yaml`}
+              loadingMessage={t('drilldown.status.fetchingYaml')}
+              notConnectedMessage={t('drilldown.empty.connectAgentYaml')}
+              emptyMessage={t('drilldown.empty.failedFetchYaml')}
+              handleCopy={handleCopy}
+              onRefresh={() => fetchYaml(true)}
+              refreshIcon={Code}
+              refreshLabel="Refresh"
+            />
+          </Suspense>
         )}
       </div>
 
@@ -1889,15 +1910,17 @@ Please:
               </div>
             </div>
           )}
-          <PodAiAnalysis
-            aiAnalysis={aiAnalysis}
-            aiAnalysisLoading={aiAnalysisLoading}
-            aiAnalysisError={aiAnalysisError}
-            actionsDisabled={backendActionUnavailable}
-            actionsDisabledReason={backendUnavailableMessage}
-            fetchAiAnalysis={fetchAiAnalysis}
-            handleRepairPod={handleRepairPod}
-          />
+          <Suspense fallback={<TabLoadingFallback />}>
+            <PodAiAnalysis
+              aiAnalysis={aiAnalysis}
+              aiAnalysisLoading={aiAnalysisLoading}
+              aiAnalysisError={aiAnalysisError}
+              actionsDisabled={backendActionUnavailable}
+              actionsDisabledReason={backendUnavailableMessage}
+              fetchAiAnalysis={fetchAiAnalysis}
+              handleRepairPod={handleRepairPod}
+            />
+          </Suspense>
           <PodDeleteSection
             podName={podName}
             agentConnected={agentConnected}
