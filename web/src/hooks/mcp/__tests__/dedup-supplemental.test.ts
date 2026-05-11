@@ -104,13 +104,15 @@ describe('deduplicateClustersByServer — pvcCount / pvcBoundCount in bestMetric
     const primary = makeCluster({
       name: 'primary',
       server: SHARED_SERVER,
-      cpuCores: PRIMARY_CPU_CORES,
-      pvcCount: PVC_COUNT,
-      pvcBoundCount: PVC_BOUND_COUNT,
+      // cpuCores, pvcCount and pvcBoundCount intentionally absent so the only
+      // path for these fields to reach the output is via bestMetrics (dedup.ts:198-200).
     })
     const alias = makeCluster({
       name: AUTO_NAME_6443,
       server: SHARED_SERVER,
+      cpuCores: PRIMARY_CPU_CORES,
+      pvcCount: PVC_COUNT,
+      pvcBoundCount: PVC_BOUND_COUNT,
     })
 
     const result = deduplicateClustersByServer([primary, alias])
