@@ -15,7 +15,6 @@ import {
 } from '../../agent/AgentApprovalDialog'
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
-import { useDashboardHealth } from '../../../hooks/useDashboardHealth'
 import {
   TOAST_DISMISS_MS,
   LOCAL_AGENT_HTTP_URL,
@@ -25,6 +24,7 @@ import { agentFetch } from '@/hooks/mcp/shared'
 import type { AgentInfo } from '../../../types/agent'
 
 const CONNECTING_DEBOUNCE_MS = 300
+const CONNECTION_LOG_LIMIT = 20
 
 interface AgentStatusIndicatorProps {
   /** Force label text to be visible (used in overflow menu) */
@@ -50,7 +50,6 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
     isInClusterMode,
   } = useBackendHealth()
   const { isDemoMode: isDemoModeHook, toggleDemoMode } = useDemoMode()
-  const dashboardHealth = useDashboardHealth()
   // Synchronous fallback prevents flash of WifiOff icon during React transitions
   const isDemoMode = isDemoModeHook || getDemoMode()
   const [showAgentStatus, setShowAgentStatus] = useState(false)
@@ -82,7 +81,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
           'antigravity': 'google-ag',
           'bob': 'bob',
           'vscode': 'microsoft' }
-        setDiscoveredAgents(data.availableProviders.map((p: { name: string; displayName: string; capabilities: number }) => ({
+        setDiscoveredAgents((data.availableProviders || []).map((p: { name: string; displayName: string; capabilities: number }) => ({
           name: p.name,
           displayName: p.displayName,
           description: '',
@@ -221,7 +220,6 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
   // showDemoStyle is sticky: stays true after demo toggle until agent connects.
   const showAsDemoMode = isDemoMode || showDemoStyle
   const isClusterBacked = isInClusterMode && !showAsDemoMode
-  const systemHealthTooltip = [dashboardHealth.message, ...dashboardHealth.details].join('\n')
 
   // Backend health affects the indicator when agent is connected (but not in demo mode)
   const backendIssue =
@@ -237,23 +235,14 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
           message: t('agent.usingInClusterService'),
         },
       ]
-    : connectionEvents
+    : (connectionEvents || [])
 
-  const degradedTooltip = [
-    t('agent.degradedTitle', { count: dataErrorCount }),
-    systemHealthTooltip,
-  ]
-    .filter(Boolean)
-    .join('\n')
-  const connectedTooltip = [
-    t('agent.localAgentConnected'),
-    systemHealthTooltip,
-  ]
-    .filter(Boolean)
-    .join('\n')
-  const liveTooltip = [t('agent.liveMode'), systemHealthTooltip]
-    .filter(Boolean)
-    .join('\n')
+  const degradedTooltip = backendIssue
+    ? t('agent.backendUnavailable')
+    : t('agent.degradedTitle', { count: dataErrorCount })
+  const connectedTooltip = isLiveMode
+    ? t('agent.liveMode')
+    : t('agent.localAgentConnected')
 
   const pillStyle = showAsDemoMode
     ? {
@@ -263,7 +252,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
         Icon: Box,
         title: t('agent.demoModeTitle'),
       }
-    : stableStatus === 'degraded'
+    : stableStatus === 'degraded' || (stableConnected && backendIssue)
       ? {
           bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
           dot: 'bg-yellow-400 animate-pulse',
@@ -279,53 +268,39 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
             Icon: Wifi,
             title: t('agent.authErrorTitle'),
           }
-        : stableConnected && backendIssue
+        : stableConnected
           ? {
-              bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
-              dot: 'bg-yellow-400 animate-pulse',
-              label: t('agent.aiLabel'),
+              bg: isLiveMode
+                ? 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
+                : 'bg-green-500/10 text-green-400 hover:bg-green-500/20',
+              dot: isLiveMode ? 'bg-cyan-400' : 'bg-green-400',
+              label: t('networkUtils.online'),
               Icon: Wifi,
-              title: t('agent.backendUnavailable'),
+              title: connectedTooltip,
             }
-          : stableConnected && isLiveMode
+          : stableStatus === 'connecting'
             ? {
-                bg: 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20',
-                dot: 'bg-cyan-400',
-                label: t('agent.liveLabel'),
+                bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
+                dot: 'bg-yellow-400 animate-pulse',
+                label: t('agent.connecting'),
                 Icon: Wifi,
-                title: liveTooltip,
+                title: t('agent.connecting'),
               }
-            : stableConnected
+            : isInClusterMode
               ? {
-                  bg: 'bg-green-500/10 text-green-400 hover:bg-green-500/20',
-                  dot: 'bg-green-400',
-                  label: t('agent.aiLabel'),
-                  Icon: Wifi,
-                  title: connectedTooltip,
+                  bg: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20',
+                  dot: 'bg-blue-400',
+                  label: t('agent.cluster'),
+                  Icon: Server,
+                  title: t('agent.inClusterModeTitle'),
                 }
-              : stableStatus === 'connecting'
-                ? {
-                    bg: 'bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20',
-                    dot: 'bg-yellow-400 animate-pulse',
-                    label: t('agent.aiLabel'),
-                    Icon: Wifi,
-                    title: t('agent.connecting'),
-                  }
-                : isInClusterMode
-                  ? {
-                      bg: 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20',
-                      dot: 'bg-blue-400',
-                      label: t('agent.cluster'),
-                      Icon: Server,
-                      title: t('agent.inClusterModeTitle'),
-                    }
-                  : {
-                      bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
-                      dot: 'bg-red-400',
-                      label: t('agent.offline'),
-                      Icon: WifiOff,
-                      title: t('agent.localAgentDisconnected'),
-                    }
+              : {
+                  bg: 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
+                  dot: 'bg-red-400',
+                  label: t('networkUtils.offline'),
+                  Icon: WifiOff,
+                  title: t('agent.localAgentDisconnected'),
+                }
 
   // Loading state: show spinner while initial agent status is resolving (#6772)
   if (stableStatus === 'connecting' && !showAsDemoMode && !isInClusterMode) {
@@ -358,7 +333,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
         title={pillStyle.title}
       >
         <pillStyle.Icon className="w-4 h-4" />
-        <span className={cn("text-sm font-medium whitespace-nowrap", showLabel ? 'inline' : 'hidden sm:inline')}>
+        <span className={cn('text-sm font-medium whitespace-nowrap', showLabel ? 'inline' : 'hidden sm:inline')}>
           {pillStyle.label}
         </span>
         <span
@@ -476,7 +451,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
               selectedAgent &&
               selectedAgent !== 'none' &&
               (() => {
-                const activeAgent = agents.find((a) => a.name === selectedAgent)
+                const activeAgent = (agents || []).find((a) => a.name === selectedAgent)
                 return activeAgent ? (
                   <div className="flex items-center gap-2 mt-1.5">
                     <span className="text-xs text-foreground font-medium">
@@ -574,7 +549,7 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
               </div>
             ) : (
               <div className="space-y-1">
-                {visibleConnectionEvents.slice(0, 20).map((event, i) => (
+                {(visibleConnectionEvents || []).slice(0, CONNECTION_LOG_LIMIT).map((event, i) => (
                   <div
                     key={i}
                     className="flex items-start gap-2 px-2 py-1.5 rounded hover:bg-secondary/30"

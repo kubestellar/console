@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
@@ -51,20 +51,14 @@ vi.mock('../../../../hooks/useMissions', () => ({
   useMissions: () => ({ selectedAgent: vi.fn(), agents: [] }),
 }))
 
+const mockUseBackendHealth = vi.fn(() => ({
+  status: '',
+  isConnected: false,
+  isInClusterMode: null,
+}))
+
 vi.mock('../../../../hooks/useBackendHealth', () => ({
-  useBackendHealth: () => ({ status: '', isConnected: false, isInClusterMode: null }),
-}))
-
-const mockUseDashboardHealth = vi.fn(() => ({
-  status: 'healthy',
-  message: 'All systems healthy',
-  details: [],
-  criticalCount: 0,
-  warningCount: 0,
-}))
-
-vi.mock('../../../../hooks/useDashboardHealth', () => ({
-  useDashboardHealth: () => mockUseDashboardHealth(),
+  useBackendHealth: () => mockUseBackendHealth(),
 }))
 
 vi.mock('../../../../lib/cn', () => ({
@@ -74,6 +68,24 @@ vi.mock('../../../../lib/cn', () => ({
 import { AgentStatusIndicator } from '../AgentStatusIndicator'
 
 describe('AgentStatusIndicator', () => {
+  beforeEach(() => {
+    mockUseLocalAgent.mockReturnValue({
+      status: '',
+      health: {},
+      connectionEvents: [],
+      isConnected: false,
+      isDegraded: false,
+      isAuthError: false,
+      dataErrorCount: 0,
+      lastDataError: null,
+    })
+    mockUseBackendHealth.mockReturnValue({
+      status: '',
+      isConnected: false,
+      isInClusterMode: null,
+    })
+  })
+
   it('renders without crashing', () => {
     const { container } = render(<AgentStatusIndicator />)
     expect(container).toBeTruthy()
@@ -97,19 +109,44 @@ describe('AgentStatusIndicator', () => {
     expect(screen.getByText('agent.authError')).toBeTruthy()
   })
 
-  it('uses agent connection state over dashboard health for the top pill', () => {
-    mockUseDashboardHealth.mockReturnValueOnce({
-      status: 'warning',
-      message: 'Degraded',
-      details: ['Local agent degraded (3 errors)'],
-      criticalCount: 0,
-      warningCount: 1,
+  it('shows explicit online state when the agent is connected', () => {
+    mockUseLocalAgent.mockReturnValueOnce({
+      status: 'connected',
+      health: { version: '1.2.3' },
+      connectionEvents: [],
+      isConnected: true,
+      isDegraded: false,
+      isAuthError: false,
+      dataErrorCount: 0,
+      lastDataError: null,
     })
 
     render(<AgentStatusIndicator />)
 
-    expect(screen.queryByText('Degraded')).toBeNull()
-    expect(screen.getByText('agent.offline')).toBeTruthy()
-    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.localAgentDisconnected')
+    expect(screen.getByText('networkUtils.online')).toBeTruthy()
+    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.localAgentConnected')
+  })
+
+  it('shows degraded state when backend connectivity is unhealthy', () => {
+    mockUseLocalAgent.mockReturnValueOnce({
+      status: 'connected',
+      health: { version: '1.2.3' },
+      connectionEvents: [],
+      isConnected: true,
+      isDegraded: false,
+      isAuthError: false,
+      dataErrorCount: 0,
+      lastDataError: null,
+    })
+    mockUseBackendHealth.mockReturnValueOnce({
+      status: 'disconnected',
+      isConnected: false,
+      isInClusterMode: null,
+    })
+
+    render(<AgentStatusIndicator />)
+
+    expect(screen.getByText('agent.degraded')).toBeTruthy()
+    expect(screen.getByTestId('navbar-agent-status-btn').getAttribute('title')).toBe('agent.backendUnavailable')
   })
 })
