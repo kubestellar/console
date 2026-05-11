@@ -340,6 +340,7 @@ describe('agent selection logic', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     await act(async () => {
       result.current.connectToAgent()
+      await Promise.resolve()
       MockWebSocket.lastInstance?.simulateOpen()
       await Promise.resolve()
     })
@@ -446,6 +447,7 @@ describe('sendMessage edge cases', () => {
 
     // Simulate connection error
     await act(async () => {
+      await Promise.resolve()
       MockWebSocket.lastInstance?.simulateError()
       await Promise.resolve()
     })

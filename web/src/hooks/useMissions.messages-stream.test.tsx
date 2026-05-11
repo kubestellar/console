@@ -248,6 +248,7 @@ describe('sendMessage', () => {
     expect(result.current.missions.length).toBe(initialMissionCount)
 
     await act(async () => {
+      await Promise.resolve()
       MockWebSocket.lastInstance?.simulateOpen()
       await Promise.resolve()
     })
