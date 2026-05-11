@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Maximize2, Minimize2, AlertTriangle, Loader2, Database } from 'lucide-react'
 import { Tier1CardRuntime } from '../cards/DynamicCard'
@@ -25,6 +25,7 @@ interface LivePreviewPanelProps {
 
 const DEBOUNCE_TIER1_MS = 300  // Debounce for Tier 1 (declarative) config changes
 const DEBOUNCE_TIER2_MS = 800  // Longer debounce for Tier 2 (code) changes to avoid excessive recompilation
+const COMPILE_TIMEOUT_MS = 10000  // Max time to wait for compilation before showing error
 
 export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }: LivePreviewPanelProps) {
   const { t } = useTranslation()
@@ -171,20 +172,28 @@ function T2Preview({ source }: { source?: string }) {
   }, [source])
 
   // Compile when debounced source updates
-  const compiledKey = useMemo(() => debouncedSource, [debouncedSource])
-
   useEffect(() => {
-    if (!compiledKey) {
+    if (!debouncedSource) {
       setCardComponent(null)
       setError(null)
+      setCompiling(false)
       return
     }
 
     let cancelled = false
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
     setCompiling(true)
     setError(null)
 
-    compileCardCode(compiledKey).then(result => {
+    const compileWithTimeout = Promise.race([
+      compileCardCode(debouncedSource),
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error('Compilation timed out')), COMPILE_TIMEOUT_MS)
+      }),
+    ])
+
+    compileWithTimeout.then(result => {
+      if (timeoutId) clearTimeout(timeoutId)
       if (cancelled) return
       if (result.error) {
         setError(result.error)
@@ -203,13 +212,18 @@ function T2Preview({ source }: { source?: string }) {
       setCardComponent(() => componentResult.component)
       setCompiling(false)
     }).catch((err: unknown) => {
+      if (timeoutId) clearTimeout(timeoutId)
       if (cancelled) return
       setError(err instanceof Error ? err.message : 'Compilation failed')
+      setCardComponent(null)
       setCompiling(false)
     })
 
-    return () => { cancelled = true }
-  }, [compiledKey])
+    return () => {
+      cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [debouncedSource])
 
   if (!source) {
     return (
