@@ -2,6 +2,8 @@
 
 This page documents the Kagenti integration as it exists in the current codebase.
 
+> **IMPORTANT**: Before reading this technical integration guide, ensure you have Kagenti deployed correctly. See the [Kagenti Deployment Guide](../kagenti-deployment-guide.md) for setup instructions. Deploying only the `kagenti-backend` controller is not sufficient — you must also deploy at least one Kagenti agent.
+
 ## Scope
 
 The Console has two Kagenti-facing paths:

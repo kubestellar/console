@@ -46,7 +46,7 @@ export function useMissionToolCheck({
   })
 
   useEffect(() => {
-    if (!enabled || !isConnected || requiredTools.length === 0) {
+    if (!enabled || !isConnected || requiredTools.length === 0 || !LOCAL_AGENT_HTTP_URL) {
       setResult({ status: 'idle', missingTools: [], errorMessage: undefined })
       return
     }
