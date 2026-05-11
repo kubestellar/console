@@ -695,13 +695,16 @@ describe('mission reconnection on WebSocket open', () => {
       await Promise.resolve()
     })
 
+    await waitFor(() => {
+      expect(result.current.missions[0].context?.needsReconnect).toBe(false)
+      expect(result.current.missions[0].currentStep).toBe('Resuming...')
+    })
+
     // Wait for the MISSION_RECONNECT_DELAY_MS (500ms) timer to fire.
     // Fake timers are active (set in beforeEach), so we must advance the
     // clock rather than relying on a real setTimeout that would never fire.
     await act(async () => {
-      vi.advanceTimersByTime(600)
-      await Promise.resolve()
-      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(600)
     })
 
     const allCalls = MockWebSocket.lastInstance?.send.mock.calls ?? []
@@ -717,9 +720,14 @@ describe('mission reconnection on WebSocket open', () => {
     )
     expect(chatCalls.length).toBeGreaterThan(0)
     const payload = JSON.parse(chatCalls[chatCalls.length - 1][0]).payload
-    expect(payload.prompt).toBe('Help me')
-    expect(payload.history).toBeDefined()
-    expect(result.current.missions[0].context?.needsReconnect).toBe(false)
+    expect(payload).toMatchObject({
+      prompt: 'Help me',
+      sessionId: 'reconnect-m-2',
+      agent: 'claude-code',
+      history: [],
+      resumeKey: 'resume-reconnect-m-2',
+      isResume: true,
+    })
   })
 })
 
