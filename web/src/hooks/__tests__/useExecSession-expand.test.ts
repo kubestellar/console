@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-vi.mock('../../lib/constants', async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>
-  return { ...actual, STORAGE_KEY_TOKEN: 'kc-auth-token' }
-})
+vi.mock('../../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => Promise.resolve(url),
+}))
 
 import { useExecSession } from '../useExecSession'
 import type { ExecSessionConfig } from '../useExecSession'
@@ -55,12 +54,32 @@ const DEFAULT_CONFIG: ExecSessionConfig = {
   container: 'main',
 }
 
+function flushPendingConnection() {
+  act(() => {
+    vi.runAllTicks()
+  })
+}
+
+function connectSession(result: { current: { connect: (config: ExecSessionConfig) => void } }, config: ExecSessionConfig = DEFAULT_CONFIG) {
+  act(() => {
+    result.current.connect(config)
+  })
+  flushPendingConnection()
+}
+
+function advanceTimersAndFlush(ms: number) {
+  act(() => {
+    vi.advanceTimersByTime(ms)
+    vi.runAllTicks()
+  })
+}
+
 describe('useExecSession — expanded edge cases', () => {
   let mockWs: MockWebSocket
 
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('kc-auth-token', 'test-jwt')
+    localStorage.setItem('kc-agent-token', 'test-jwt')
     vi.clearAllMocks()
     vi.useFakeTimers()
 
@@ -83,7 +102,7 @@ describe('useExecSession — expanded edge cases', () => {
   // 1. Reconnect countdown decrements every second
   it('reconnect countdown decrements with interval', () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     // Simulate unexpected close
@@ -92,7 +111,7 @@ describe('useExecSession — expanded edge cases', () => {
     const initialCountdown = result.current.reconnectCountdown
     expect(initialCountdown).toBeGreaterThan(0)
     // Advance 1 second
-    act(() => { vi.advanceTimersByTime(1000) })
+    advanceTimersAndFlush(1000)
     expect(result.current.reconnectCountdown).toBeLessThan(initialCountdown)
   })
 
@@ -100,7 +119,7 @@ describe('useExecSession — expanded edge cases', () => {
   it('gives up after MAX_RECONNECT_ATTEMPTS and shows error', () => {
     const MAX_ATTEMPTS = 5
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
 
@@ -112,7 +131,7 @@ describe('useExecSession — expanded edge cases', () => {
     // Force the internal counter to max
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
       // Advance past the reconnect delay
-      act(() => { vi.advanceTimersByTime(20000) })
+      advanceTimersAndFlush(20000)
     }
     // After all retries, status should settle
     // (Exact assertion depends on timing, but should not crash)
@@ -122,7 +141,7 @@ describe('useExecSession — expanded edge cases', () => {
   // 3. sendInput is no-op when WS is in CLOSED state
   it('sendInput does nothing when WS is closed', () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { result.current.disconnect() })
@@ -134,7 +153,7 @@ describe('useExecSession — expanded edge cases', () => {
   // 4. resize is no-op when WS is closed
   it('resize does nothing when WS is closed', () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { result.current.disconnect() })
     const msgsBefore = mockWs.sentMessages.length
     act(() => { result.current.resize(100, 50) })
@@ -146,7 +165,7 @@ describe('useExecSession — expanded edge cases', () => {
     const exitCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onExit(exitCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'exit' }) })
@@ -156,7 +175,7 @@ describe('useExecSession — expanded edge cases', () => {
   // 6. Exit message marks intentional disconnect to prevent reconnect
   it('does not attempt reconnect after exit message', () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'exit', exitCode: 0 }) })
@@ -185,13 +204,15 @@ describe('useExecSession — expanded edge cases', () => {
         configurable: true,
       })
 
-      const constructorSpy = vi.fn().mockReturnValue(mockWs)
+      const constructorSpy = vi.fn(function MockedWebSocket() {
+        return mockWs
+      })
       vi.stubGlobal('WebSocket', Object.assign(constructorSpy, {
         CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3,
       }))
 
       const { result } = renderHook(() => useExecSession())
-      act(() => { result.current.connect(DEFAULT_CONFIG) })
+      connectSession(result)
       // Build expected URL from the same constant the source uses, so the
       // assertion tracks any future change to LOCAL_AGENT_WS_URL.
       expect(constructorSpy).toHaveBeenCalledWith(EXPECTED_EXEC_WS_URL)
@@ -208,19 +229,19 @@ describe('useExecSession — expanded edge cases', () => {
   // 8. Error clears on new connect
   it('clears previous error when reconnecting', () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'error', data: 'failed' }) })
     expect(result.current.error).toBe('failed')
 
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     expect(result.current.error).toBeNull()
   })
 
   // 9. Disconnect clears reconnect timers
   it('disconnect clears any pending reconnect timers', () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerClose(1006) })
@@ -235,7 +256,7 @@ describe('useExecSession — expanded edge cases', () => {
   // 10. Multiple close events do not crash
   it('handles multiple close events without crashing', () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerClose(1006) })
     act(() => { mockWs.triggerClose(1006) })
     expect(result.current.status).toBe('error')
@@ -246,7 +267,7 @@ describe('useExecSession — expanded edge cases', () => {
     const dataCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onData(dataCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'unknown_type', data: 'something' }) })
     expect(dataCb).not.toHaveBeenCalled()
@@ -258,7 +279,7 @@ describe('useExecSession — expanded edge cases', () => {
     const statusCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onStatusChange(statusCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { result.current.disconnect() })
@@ -268,7 +289,7 @@ describe('useExecSession — expanded edge cases', () => {
   // 13. Reconnect attempt counter is exposed
   it('reconnectAttempt increments on each reconnect schedule', () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerClose(1006) })
@@ -280,7 +301,7 @@ describe('useExecSession — expanded edge cases', () => {
     const dataCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onData(dataCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerClose(1006) })

@@ -60,10 +60,33 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
   LOCAL_AGENT_WS_URL: 'ws://127.0.0.1:8585/ws',
 } })
 
+vi.mock('../../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => Promise.resolve(url),
+}))
+
 // Assign mock to global before importing the hook
 vi.stubGlobal('WebSocket', MockWebSocket)
 
 import { useClusterProgress } from '../useClusterProgress'
+
+function flushPendingWebSocketSetup() {
+  act(() => {
+    vi.runAllTicks()
+  })
+}
+
+function renderClusterProgressHook() {
+  const hook = renderHook(() => useClusterProgress())
+  flushPendingWebSocketSetup()
+  return hook
+}
+
+function advanceTimersAndFlush(ms: number) {
+  act(() => {
+    vi.advanceTimersByTime(ms)
+    vi.runAllTicks()
+  })
+}
 
 describe('useClusterProgress', () => {
   beforeEach(() => {
@@ -81,7 +104,7 @@ describe('useClusterProgress', () => {
   // ── Initial state ──────────────────────────────────────────────────────
 
   it('returns null progress initially', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
 
     expect(result.current.progress).toBeNull()
     expect(typeof result.current.dismiss).toBe('function')
@@ -90,7 +113,7 @@ describe('useClusterProgress', () => {
   // ── WebSocket connection ───────────────────────────────────────────────
 
   it('creates a WebSocket connection on mount', () => {
-    renderHook(() => useClusterProgress())
+    renderClusterProgressHook()
 
     expect(wsInstances.length).toBe(1)
   })
@@ -98,7 +121,7 @@ describe('useClusterProgress', () => {
   // ── Parses local_cluster_progress messages ─────────────────────────────
 
   it('updates progress when receiving a local_cluster_progress message', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     const payload = {
@@ -121,7 +144,7 @@ describe('useClusterProgress', () => {
   // ── Ignores non-matching message types ─────────────────────────────────
 
   it('ignores messages with a different type', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -139,7 +162,7 @@ describe('useClusterProgress', () => {
   // ── Ignores malformed JSON ─────────────────────────────────────────────
 
   it('ignores malformed JSON messages', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -152,7 +175,7 @@ describe('useClusterProgress', () => {
   // ── Handles step updates ───────────────────────────────────────────────
 
   it('updates progress through multiple status changes', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     // Step 1: validating
@@ -213,7 +236,7 @@ describe('useClusterProgress', () => {
   // ── Dismiss clears progress ────────────────────────────────────────────
 
   it('dismiss() clears the progress state', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -242,7 +265,7 @@ describe('useClusterProgress', () => {
 
   it('reconnects when the WebSocket closes', () => {
     const WS_RECONNECT_DELAY_MS = 10000
-    renderHook(() => useClusterProgress())
+    renderClusterProgressHook()
 
     expect(wsInstances.length).toBe(1)
 
@@ -252,9 +275,7 @@ describe('useClusterProgress', () => {
     })
 
     // Advance past reconnect delay
-    act(() => {
-      vi.advanceTimersByTime(WS_RECONNECT_DELAY_MS)
-    })
+    advanceTimersAndFlush(WS_RECONNECT_DELAY_MS)
 
     // A new WebSocket should have been created
     expect(wsInstances.length).toBe(2)
@@ -263,7 +284,7 @@ describe('useClusterProgress', () => {
   // ── Cleanup on unmount ─────────────────────────────────────────────────
 
   it('closes WebSocket and clears timers on unmount', () => {
-    const { unmount } = renderHook(() => useClusterProgress())
+    const { unmount } = renderClusterProgressHook()
 
     const ws = wsInstances[0]
     unmount()
@@ -274,7 +295,7 @@ describe('useClusterProgress', () => {
   // ── Ignores messages with no payload ───────────────────────────────────
 
   it('ignores local_cluster_progress messages with no payload', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -289,7 +310,7 @@ describe('useClusterProgress', () => {
   // ── Regression: onerror triggers close ─────────────────────────────────
 
   it('closes the WebSocket when onerror fires', () => {
-    renderHook(() => useClusterProgress())
+    renderClusterProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -303,7 +324,7 @@ describe('useClusterProgress', () => {
 
   it('reconnects after an onerror -> onclose cycle', () => {
     const WS_RECONNECT_DELAY_MS = 10_000
-    renderHook(() => useClusterProgress())
+    renderClusterProgressHook()
 
     expect(wsInstances.length).toBe(1)
 
@@ -312,9 +333,7 @@ describe('useClusterProgress', () => {
       wsInstances[0].onerror!()
     })
 
-    act(() => {
-      vi.advanceTimersByTime(WS_RECONNECT_DELAY_MS)
-    })
+    advanceTimersAndFlush(WS_RECONNECT_DELAY_MS)
 
     expect(wsInstances.length).toBe(2)
   })
@@ -322,7 +341,7 @@ describe('useClusterProgress', () => {
   // ── Regression: progress at boundary values ───────────────────────────
 
   it('accepts progress at 0% (start of operation)', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     const payload = {
@@ -344,7 +363,7 @@ describe('useClusterProgress', () => {
   })
 
   it('accepts progress at 100% (completed operation)', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     const payload = {
@@ -368,7 +387,7 @@ describe('useClusterProgress', () => {
   // ── Regression: deleting status flow ──────────────────────────────────
 
   it('tracks the full deleting lifecycle (validating -> deleting -> done)', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     const statuses: Array<{ status: string; progress: number; message: string }> = [
@@ -394,7 +413,7 @@ describe('useClusterProgress', () => {
   // ── Regression: failed status ─────────────────────────────────────────
 
   it('correctly reflects a failed status with error message', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     const payload = {
@@ -419,7 +438,7 @@ describe('useClusterProgress', () => {
   // ── Regression: dismiss returns a stable callback reference ───────────
 
   it('dismiss is callable after re-render', () => {
-    const { result, rerender } = renderHook(() => useClusterProgress())
+    const { result, rerender } = renderClusterProgressHook()
     rerender()
     // React Compiler handles memoization — just verify dismiss is still callable
     expect(typeof result.current.dismiss).toBe('function')
@@ -428,7 +447,7 @@ describe('useClusterProgress', () => {
   // ── Regression: new message after dismiss resets progress ─────────────
 
   it('accepts new messages after dismiss was called', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     // Set initial progress
@@ -470,7 +489,7 @@ describe('useClusterProgress', () => {
   // ── Regression: rapid messages retain only the last value ─────────────
 
   it('retains only the latest progress when multiple messages arrive', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -495,7 +514,7 @@ describe('useClusterProgress', () => {
 
   it('does not reconnect after unmount even if close triggered a timer', () => {
     const WS_RECONNECT_DELAY_MS = 10_000
-    const { unmount } = renderHook(() => useClusterProgress())
+    const { unmount } = renderClusterProgressHook()
 
     // Trigger close -> schedules reconnect
     act(() => {
@@ -508,9 +527,7 @@ describe('useClusterProgress', () => {
     const instancesBefore = wsInstances.length
 
     // Advance past reconnect delay
-    act(() => {
-      vi.advanceTimersByTime(WS_RECONNECT_DELAY_MS)
-    })
+    advanceTimersAndFlush(WS_RECONNECT_DELAY_MS)
 
     // No new WebSocket should have been created
     expect(wsInstances.length).toBe(instancesBefore)
@@ -519,7 +536,7 @@ describe('useClusterProgress', () => {
   // ── Regression: payload retains all fields including tool and name ────
 
   it('preserves all ClusterProgress fields from the payload', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     const payload = {
@@ -546,7 +563,7 @@ describe('useClusterProgress', () => {
   // ── Regression: empty string messages are valid ───────────────────────
 
   it('handles empty string message in payload', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -567,7 +584,7 @@ describe('useClusterProgress', () => {
   // ── Regression: different cluster tools tracked correctly ─────────────
 
   it('tracks progress for different cluster tools (kind, k3d)', () => {
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
     const ws = wsInstances[0]
 
     // First with kind
@@ -638,13 +655,13 @@ describe('max reconnect attempts exceeded', () => {
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-    renderHook(() => useClusterProgress())
+    renderClusterProgressHook()
 
     // Advance through enough reconnect cycles to exceed MAX_WS_RECONNECT_ATTEMPTS (5)
     // Each cycle: 0ms (initial close fires) + backoff delays
     // We advance generously to let all timers fire
     for (let i = 0; i < 10; i++) {
-      act(() => { vi.advanceTimersByTime(60_000) })
+      advanceTimersAndFlush(60_000)
     }
 
     // After 5+ failed reconnects, the warning should have been issued
@@ -697,13 +714,13 @@ describe('WebSocket constructor throws', () => {
     }
     vi.stubGlobal('WebSocket', ThrowingWebSocket)
 
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
 
     // Initially no progress (constructor threw)
     expect(result.current.progress).toBeNull()
 
     // Advance timers to trigger retry after backoff
-    act(() => { vi.advanceTimersByTime(30_000) })
+    advanceTimersAndFlush(30_000)
 
     // After retries, a successful WebSocket should have been created
     // progress is still null but no error thrown
@@ -735,11 +752,11 @@ describe('WebSocket constructor throws', () => {
     }
     vi.stubGlobal('WebSocket', AlwaysThrowingWebSocket)
 
-    const { result } = renderHook(() => useClusterProgress())
+    const { result } = renderClusterProgressHook()
 
     // Advance timers to let catch-block retries fire
     for (let i = 0; i < 5; i++) {
-      act(() => { vi.advanceTimersByTime(60_000) })
+      advanceTimersAndFlush(60_000)
     }
 
     // No error thrown — hook is still alive with null progress
