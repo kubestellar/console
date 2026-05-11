@@ -61,9 +61,15 @@ func TestGetConfigMaps_MissingCluster(t *testing.T) {
 	resp, err := env.App.Test(req, 5000)
 	require.NoError(t, err)
 
-	// Should return 500 because the handler currently wraps the lookup failure
-	// in a generic error instead of distinguishing "cluster not found" (#4907, #4908).
-	assert.Equal(t, 500, resp.StatusCode)
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+	var response map[string]interface{}
+	body, readErr := io.ReadAll(resp.Body)
+	require.NoError(t, readErr)
+	err = json.Unmarshal(body, &response)
+	require.NoError(t, err)
+	assert.Equal(t, "not_found", response["clusterStatus"])
+	assert.Equal(t, "not_found", response["errorType"])
 }
 
 func TestGetSecrets(t *testing.T) {
