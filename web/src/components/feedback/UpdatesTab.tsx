@@ -768,24 +768,30 @@ function PreviewSection({
             <Eye className="w-4 h-4 text-green-400" />
             <span className="text-xs text-green-400 font-medium">Preview Available</span>
           </div>
-          <a href={previewUrl} target="_blank" rel="noopener noreferrer"
-            className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1"
-            onClick={e => e.stopPropagation()}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              window.open(previewUrl, '_blank', 'noopener,noreferrer')
+            }}
+            className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1">
             <ExternalLink className="w-3 h-3" />
             Try It
-          </a>
+          </button>
         </div>
       </div>
     )
   }
   if (previewUrl) {
     return (
-      <a href={previewUrl} target="_blank" rel="noopener noreferrer"
-        className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1"
-        onClick={e => e.stopPropagation()}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          window.open(previewUrl, '_blank', 'noopener,noreferrer')
+        }}
+        className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1 bg-transparent border-0 p-0 cursor-pointer">
         <Eye className="w-3 h-3" />
         Preview
-      </a>
+      </button>
     )
   }
   if (request.pr_number && request.status === 'fix_ready') {
