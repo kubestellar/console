@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
+import { renderHook, act, render, screen } from '@testing-library/react'
 import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
@@ -695,10 +695,12 @@ describe('mission reconnection on WebSocket open', () => {
       await Promise.resolve()
     })
 
-    await waitFor(() => {
-      expect(result.current.missions[0].context?.needsReconnect).toBe(false)
-      expect(result.current.missions[0].currentStep).toBe('Resuming...')
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
     })
+
+    expect(result.current.missions[0].context?.needsReconnect).toBe(false)
+    expect(result.current.missions[0].currentStep).toBe('Resuming...')
 
     // Wait for the MISSION_RECONNECT_DELAY_MS (500ms) timer to fire.
     // Fake timers are active (set in beforeEach), so we must advance the
