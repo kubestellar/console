@@ -303,7 +303,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
                     <span
                       key={col.field}
                       className="text-2xs font-medium text-muted-foreground uppercase"
-                      style={{ width: col.width, flex: col.width ? 'none' : '1' }}
+                      style={{ width: col.width, flex: col.width ? 'none' : '1', minWidth: col.width ? undefined : 0 }}
                     >
                       {col.label}
                     </span>
@@ -332,7 +332,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
                       <span
                         key={col.field}
                         className="text-xs text-foreground truncate"
-                        style={{ width: col.width, flex: col.width ? 'none' : '1' }}
+                        style={{ width: col.width, flex: col.width ? 'none' : '1', minWidth: col.width ? undefined : 0 }}
                       >
                         {val}
                       </span>
