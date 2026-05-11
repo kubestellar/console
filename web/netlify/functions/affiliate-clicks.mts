@@ -19,6 +19,7 @@
 const GA4_DATA_API = "https://analyticsdata.googleapis.com/v1beta";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const JWT_EXPIRY_SECONDS = 3600;
+const FETCH_TIMEOUT_MS = 10_000;
 
 /** Map GitHub login → utm_term for intern affiliate links */
 const INTERN_MAP: Record<string, string> = {
@@ -170,6 +171,7 @@ async function getAccessToken(serviceAccount: ServiceAccountKey): Promise<string
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion: jwt,
     }),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (!resp.ok) {
@@ -201,6 +203,7 @@ async function runReport(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     }
   );
 

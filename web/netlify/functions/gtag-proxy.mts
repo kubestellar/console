@@ -19,6 +19,7 @@ import type { Config } from "@netlify/functions"
 
 const GTAG_BASE_URL = "https://www.googletagmanager.com/gtag/js"
 const CACHE_MAX_AGE_SECS = 3600 // 1 hour — matches Go backend
+const FETCH_TIMEOUT_MS = 10_000
 
 export default async (req: Request) => {
   const url = new URL(req.url)
@@ -32,6 +33,7 @@ export default async (req: Request) => {
       headers: {
         "User-Agent": req.headers.get("user-agent") || "",
       },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
 
     if (!resp.ok) {

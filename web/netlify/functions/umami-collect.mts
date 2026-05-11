@@ -12,6 +12,7 @@ import type { Config } from "@netlify/functions"
 import { buildCorsHeaders, handlePreflight, isAllowedOrigin } from "./_shared/cors"
 
 const UMAMI_COLLECT_URL = "https://analytics.kubestellar.io/api/send"
+const FETCH_TIMEOUT_MS = 10_000
 
 /**
  * Hosts allowed via Referer fallback when Origin is absent. Keep
@@ -80,6 +81,7 @@ export default async (req: Request) => {
         ...(clientIp && { "X-Forwarded-For": clientIp }),
       },
       body,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
 
     const isNullBody = resp.status === 204 || resp.status === 304

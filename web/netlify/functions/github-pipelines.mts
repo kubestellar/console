@@ -219,6 +219,7 @@ function jsonResponse(
 /** GitHub API fetch with auth + typed error */
 const GH_RETRY_MAX_ATTEMPTS = 3;
 const GH_RETRY_BASE_DELAY_MS = 1_000;
+const FETCH_TIMEOUT_MS = 10_000;
 
 async function gh(path: string, token: string, init: RequestInit = {}): Promise<Response> {
   const url = path.startsWith("http") ? path : `${GITHUB_API}${path}`;
@@ -228,7 +229,7 @@ async function gh(path: string, token: string, init: RequestInit = {}): Promise<
     ...(init.headers ?? {}),
   };
   for (let attempt = 0; attempt < GH_RETRY_MAX_ATTEMPTS; attempt++) {
-    const resp = await fetch(url, { ...init, headers });
+    const resp = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
     if (resp.status !== 429 && resp.status !== 403) return resp;
     if (attempt === GH_RETRY_MAX_ATTEMPTS - 1) {
       console.warn(`[github-pipelines] retries exhausted for ${path}, status=${resp.status}`);

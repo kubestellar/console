@@ -14,6 +14,7 @@ import type { Config } from "@netlify/functions"
 /** Upstream Umami instance — the custom script name is "ksc" */
 const UMAMI_SCRIPT_URL = "https://analytics.kubestellar.io/ksc"
 const CACHE_MAX_AGE_SECS = 3600 // 1 hour — matches Go backend
+const FETCH_TIMEOUT_MS = 10_000
 
 export default async (req: Request) => {
   try {
@@ -21,6 +22,7 @@ export default async (req: Request) => {
       headers: {
         "User-Agent": req.headers.get("user-agent") || "",
       },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     })
 
     if (!resp.ok) {

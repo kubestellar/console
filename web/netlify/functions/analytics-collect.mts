@@ -19,6 +19,8 @@ const ALLOWED_HOSTS = new Set([
   "127.0.0.1",
 ]);
 
+const FETCH_TIMEOUT_MS = 10_000;
+
 function getAllowedCorsOrigin(origin: string): string {
   if (!origin) return "https://console.kubestellar.io";
   try {
@@ -132,6 +134,7 @@ export default async (req: Request) => {
         ...(clientIp && { "X-Forwarded-For": clientIp }),
       },
       body: postBody,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     // 204/304 are null-body statuses — Response constructor throws if body is non-null

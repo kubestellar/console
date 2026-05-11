@@ -8,6 +8,7 @@
 
 const PLAYLIST_ID = "PL1ALKGr_qZKc-xehA_8iUCdiKsCo6p6nD";
 const FEED_URL = `https://www.youtube.com/feeds/videos.xml?playlist_id=${PLAYLIST_ID}`;
+const FETCH_TIMEOUT_MS = 10_000;
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
   "https://console-deploy-preview.kubestellar.io",
@@ -124,6 +125,7 @@ export default async (req: Request) => {
     // Fallback: RSS feed
     const resp = await fetch(FEED_URL, {
       headers: { "User-Agent": "KubeStellar-Console/1.0" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (resp.ok) {

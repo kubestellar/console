@@ -13,6 +13,7 @@ import DOMPurify from "isomorphic-dompurify";
 
 const MEDIUM_FEED_URL = "https://medium.com/feed/@kubestellar";
 const MEDIUM_CHANNEL_URL = "https://medium.com/@kubestellar";
+const FETCH_TIMEOUT_MS = 10_000;
 
 /** Only return posts published on or after this date */
 const CUTOFF_DATE = "2026-04-07";
@@ -140,6 +141,7 @@ export default async (req: Request) => {
   try {
     const resp = await fetch(MEDIUM_FEED_URL, {
       headers: { "User-Agent": "KubeStellar-Console/1.0" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
     if (!resp.ok) {
