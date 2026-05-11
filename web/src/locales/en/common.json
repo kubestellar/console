@@ -3975,6 +3975,9 @@
     "startingUp": "Starting up…",
     "newVersionAvailable": "A new version is available",
     "reload": "Reload",
+    "autonomousBannerMessage": "This project is fully autonomous — maintained by AI agents.",
+    "watchLive": "Watch them live",
+    "watchLiveMobile": "Watch live →",
     "sidebar": {
       "expandSidebar": "Expand sidebar",
       "collapseSidebar": "Collapse sidebar",
