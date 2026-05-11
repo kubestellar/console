@@ -1296,7 +1296,7 @@ export function MissionSidebar() {
                     </button>
                   </div>
                   {/* Panel content */}
-                  <div className="p-1.5">
+                  <div className="min-w-0 p-1.5">
                     {resolutionPanelView === 'related' ? (
                       <ResolutionKnowledgePanel
                         relatedResolutions={relatedResolutions}

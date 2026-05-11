@@ -20,7 +20,7 @@ import {
   Clock,
   Tag,
   AlertCircle,
-  X,
+  ArrowLeft,
 } from 'lucide-react'
 import { useResolutions, type Resolution } from '../../hooks/useResolutions'
 import { cn } from '../../lib/cn'
@@ -127,7 +127,7 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
 
   if (totalResolutions === 0) {
     return (
-      <div className="shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
+      <div className="min-w-0 flex flex-col gap-4">
         <div className="bg-card border border-border rounded-lg p-4">
           <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <BookMarked className="w-4 h-4 text-purple-400" />
@@ -148,134 +148,11 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
   }
 
   return (
-    <div className="shrink-0 flex flex-col gap-4 overflow-y-auto scroll-enhanced">
-      <div className="bg-card border border-border rounded-lg p-4">
-        <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
-          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 min-w-0">
-            <BookMarked className="w-4 h-4 text-purple-400 shrink-0" />
-            <span className="min-w-0 break-words">{t('navigation.history')}</span>
-            <span className="text-xs text-muted-foreground font-normal shrink-0">
-              {totalResolutions} saved
-            </span>
-          </h4>
-          <div className="flex flex-wrap items-center justify-end gap-2 max-w-full">
-            {selectedIds.size > 0 && (
-              <>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleDeleteSelected}
-                  icon={<Trash2 className="w-3.5 h-3.5" />}
-                >
-                  {t('actions.deleteSelected')} ({selectedIds.size})
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDeselectAll}
-                >
-                  {t('actions.deselectAll')}
-                </Button>
-              </>
-            )}
-            {selectedIds.size === 0 && totalResolutions > 0 && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSelectAll}
-                >
-                  {t('actions.selectAll')}
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={handleClearAll}
-                  icon={<Trash2 className="w-3.5 h-3.5" />}
-                >
-                  {t('actions.clearAll')}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Personal Resolutions */}
-        {resolutions.length > 0 && (
-          <div className="mb-4">
-            <button
-              onClick={() => setShowPersonal(!showPersonal)}
-              className="w-full flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-foreground transition-colors"
-            >
-              {showPersonal ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-              <Star className="w-3.5 h-3.5 text-yellow-400" />
-              Your Resolutions ({resolutions.length})
-            </button>
-            {showPersonal && (
-              <div className="space-y-2">
-                {(resolutions || []).map(resolution => (
-                  <ResolutionCard
-                    key={resolution.id}
-                    resolution={resolution}
-                    isExpanded={expandedId === resolution.id}
-                    isSelected={selectedIds.has(resolution.id)}
-                    onToggle={() => toggleExpand(resolution.id)}
-                    onToggleSelect={() => toggleSelect(resolution.id)}
-                    onView={() => setViewingResolution(resolution)}
-                    onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
-                    onDelete={() => handleDelete(resolution.id)}
-                    onShare={() => handleShare(resolution.id)}
-                    onExport={() => setExportResolution(resolution)}
-                    onSubmitToKB={() => setSubmitKBResolution(resolution)}
-                    isDeleteConfirm={deleteConfirmId === resolution.id}
-                    canShare
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Shared Resolutions */}
-        {sharedResolutions.length > 0 && (
-          <div>
-            <button
-              onClick={() => setShowShared(!showShared)}
-              className="w-full flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-foreground transition-colors"
-            >
-              {showShared ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-              <Building2 className="w-3.5 h-3.5 text-blue-400" />
-              Team Shared ({sharedResolutions.length})
-            </button>
-            {showShared && (
-              <div className="space-y-2">
-                {(sharedResolutions || []).map(resolution => (
-                  <ResolutionCard
-                    key={resolution.id}
-                    resolution={resolution}
-                    isExpanded={expandedId === resolution.id}
-                    isSelected={selectedIds.has(resolution.id)}
-                    onToggle={() => toggleExpand(resolution.id)}
-                    onToggleSelect={() => toggleSelect(resolution.id)}
-                    onView={() => setViewingResolution(resolution)}
-                    onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
-                    onDelete={() => handleDelete(resolution.id)}
-                    onExport={() => setExportResolution(resolution)}
-                    onSubmitToKB={() => setSubmitKBResolution(resolution)}
-                    isDeleteConfirm={deleteConfirmId === resolution.id}
-                    showSharedBy
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {viewingResolution && (
-        <ResolutionDetailDialog
+    <div className="min-w-0 flex flex-col gap-4">
+      {viewingResolution ? (
+        <ResolutionDetailPanel
           resolution={viewingResolution}
-          onClose={() => setViewingResolution(null)}
+          onBack={() => setViewingResolution(null)}
           onApply={onApplyResolution ? () => {
             onApplyResolution(viewingResolution)
             setViewingResolution(null)
@@ -284,6 +161,129 @@ export function ResolutionHistoryPanel({ onApplyResolution }: ResolutionHistoryP
           onExport={() => setExportResolution(viewingResolution)}
           onSubmitToKB={() => setSubmitKBResolution(viewingResolution)}
         />
+      ) : (
+        <div className="min-w-0 bg-card border border-border rounded-lg p-4">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+            <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 min-w-0">
+              <BookMarked className="w-4 h-4 text-purple-400 shrink-0" />
+              <span className="min-w-0 break-words">{t('navigation.history')}</span>
+              <span className="text-xs text-muted-foreground font-normal shrink-0">
+                {totalResolutions} saved
+              </span>
+            </h4>
+            <div className="flex flex-wrap items-center justify-end gap-2 max-w-full">
+              {selectedIds.size > 0 && (
+                <>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleDeleteSelected}
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                  >
+                    {t('actions.deleteSelected')} ({selectedIds.size})
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDeselectAll}
+                  >
+                    {t('actions.deselectAll')}
+                  </Button>
+                </>
+              )}
+              {selectedIds.size === 0 && totalResolutions > 0 && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    {t('actions.selectAll')}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={handleClearAll}
+                    icon={<Trash2 className="w-3.5 h-3.5" />}
+                  >
+                    {t('actions.clearAll')}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Personal Resolutions */}
+          {resolutions.length > 0 && (
+            <div className="mb-4">
+              <button
+                onClick={() => setShowPersonal(!showPersonal)}
+                className="w-full flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-foreground transition-colors"
+              >
+                {showPersonal ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                <Star className="w-3.5 h-3.5 text-yellow-400" />
+                Your Resolutions ({resolutions.length})
+              </button>
+              {showPersonal && (
+                <div className="space-y-2">
+                  {(resolutions || []).map(resolution => (
+                    <ResolutionCard
+                      key={resolution.id}
+                      resolution={resolution}
+                      isExpanded={expandedId === resolution.id}
+                      isSelected={selectedIds.has(resolution.id)}
+                      onToggle={() => toggleExpand(resolution.id)}
+                      onToggleSelect={() => toggleSelect(resolution.id)}
+                      onView={() => setViewingResolution(resolution)}
+                      onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
+                      onDelete={() => handleDelete(resolution.id)}
+                      onShare={() => handleShare(resolution.id)}
+                      onExport={() => setExportResolution(resolution)}
+                      onSubmitToKB={() => setSubmitKBResolution(resolution)}
+                      isDeleteConfirm={deleteConfirmId === resolution.id}
+                      canShare
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Shared Resolutions */}
+          {sharedResolutions.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowShared(!showShared)}
+                className="w-full flex items-center gap-2 text-xs text-muted-foreground mb-2 hover:text-foreground transition-colors"
+              >
+                {showShared ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                <Building2 className="w-3.5 h-3.5 text-blue-400" />
+                Team Shared ({sharedResolutions.length})
+              </button>
+              {showShared && (
+                <div className="space-y-2">
+                  {(sharedResolutions || []).map(resolution => (
+                    <ResolutionCard
+                      key={resolution.id}
+                      resolution={resolution}
+                      isExpanded={expandedId === resolution.id}
+                      isSelected={selectedIds.has(resolution.id)}
+                      onToggle={() => toggleExpand(resolution.id)}
+                      onToggleSelect={() => toggleSelect(resolution.id)}
+                      onView={() => setViewingResolution(resolution)}
+                      onApply={onApplyResolution ? () => onApplyResolution(resolution) : undefined}
+                      onDelete={() => handleDelete(resolution.id)}
+                      onExport={() => setExportResolution(resolution)}
+                      onSubmitToKB={() => setSubmitKBResolution(resolution)}
+                      isDeleteConfirm={deleteConfirmId === resolution.id}
+                      showSharedBy
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Export dialog */}
@@ -517,23 +517,23 @@ function ResolutionCard({
   )
 }
 
-interface ResolutionDetailDialogProps {
+interface ResolutionDetailPanelProps {
   resolution: Resolution
-  onClose: () => void
+  onBack: () => void
   onApply?: () => void
   onShare?: () => void
   onExport: () => void
   onSubmitToKB: () => void
 }
 
-function ResolutionDetailDialog({
+function ResolutionDetailPanel({
   resolution,
-  onClose,
+  onBack,
   onApply,
   onShare,
   onExport,
   onSubmitToKB,
-}: ResolutionDetailDialogProps) {
+}: ResolutionDetailPanelProps) {
   const { t } = useTranslation()
   const { effectiveness } = resolution
   const successRate = effectiveness.timesUsed > 0
@@ -541,52 +541,50 @@ function ResolutionDetailDialog({
     : null
 
   return (
-    <div
-      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose()
-        }
-      }}
-    >
-      <div className="w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-xl border border-border bg-card shadow-2xl flex flex-col">
-        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 shrink-0">
-          <div className="min-w-0 space-y-2">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+      <div className="flex flex-col border-b border-border px-4 py-3 sm:px-5 sm:py-4 gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              icon={<ArrowLeft className="w-4 h-4" />}
+              className="w-full justify-start sm:w-auto"
+            >
+              {t('common.back', { defaultValue: 'Back' })}
+            </Button>
             <h3 className="text-lg font-semibold text-foreground break-words">{resolution.title}</h3>
-            <div className="flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-2 py-1">
-                <Tag className="w-3 h-3" />
-                {resolution.issueSignature.type}
-                {resolution.issueSignature.resourceKind ? ` (${resolution.issueSignature.resourceKind})` : ''}
-              </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-2 py-1">
-                <Clock className="w-3 h-3" />
-                {new Date(resolution.createdAt).toLocaleString()}
-              </span>
-              {successRate !== null && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-2 py-1 text-green-400">
-                  <CheckCircle className="w-3 h-3" />
-                  {effectiveness.timesSuccessful}/{effectiveness.timesUsed} · {successRate}%
-                </span>
-              )}
-              {resolution.sharedBy && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary/40 px-2 py-1 text-blue-400">
-                  @{resolution.sharedBy}
-                </span>
-              )}
-            </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            icon={<X className="w-4 h-4" />}
-          >
-            {t('actions.close')}
-          </Button>
         </div>
+        <div className="flex flex-wrap items-center gap-2 text-2xs text-muted-foreground min-w-0">
+          <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-secondary/40 px-2 py-1 break-words">
+            <Tag className="w-3 h-3 shrink-0" />
+            <span className="break-words">
+              {resolution.issueSignature.type}
+              {resolution.issueSignature.resourceKind ? ` (${resolution.issueSignature.resourceKind})` : ''}
+            </span>
+          </span>
+          <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-secondary/40 px-2 py-1 break-words">
+            <Clock className="w-3 h-3 shrink-0" />
+            <span className="break-words">{new Date(resolution.createdAt).toLocaleString()}</span>
+          </span>
+          {successRate !== null && (
+            <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-secondary/40 px-2 py-1 text-green-400 break-words">
+              <CheckCircle className="w-3 h-3 shrink-0" />
+              <span className="break-words">{effectiveness.timesSuccessful}/{effectiveness.timesUsed} · {successRate}%</span>
+            </span>
+          )}
+          {resolution.sharedBy && (
+            <span className="inline-flex max-w-full items-center gap-1 rounded-full border border-border bg-secondary/40 px-2 py-1 text-blue-400 break-words">
+              <span className="break-words">@{resolution.sharedBy}</span>
+            </span>
+          )}
+        </div>
+      </div>
 
-        <div className="flex-1 overflow-y-auto scroll-enhanced px-5 py-4 space-y-5">
+      <div className="flex max-h-[calc(100vh-16rem)] min-h-0 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto scroll-enhanced px-4 py-4 sm:px-5 space-y-5">
           <section className="space-y-2">
             <h4 className="text-sm font-semibold text-foreground">{t('common.summary')}</h4>
             <div className="rounded-lg border border-border bg-secondary/20 p-4 text-sm leading-relaxed text-foreground break-words whitespace-pre-wrap">
@@ -601,7 +599,7 @@ function ResolutionDetailDialog({
                 {(resolution.resolution.steps || []).map((step, index) => (
                   <li key={`${resolution.id}-step-${index}`} className="rounded-lg border border-border bg-secondary/20 p-4 text-sm text-foreground break-words">
                     <span className="font-medium text-primary mr-2">{index + 1}.</span>
-                    <span className="whitespace-pre-wrap">{step}</span>
+                    <span className="whitespace-pre-wrap break-words">{step}</span>
                   </li>
                 ))}
               </ol>
@@ -611,20 +609,22 @@ function ResolutionDetailDialog({
           {resolution.resolution.yaml && (
             <section className="space-y-2">
               <h4 className="text-sm font-semibold text-foreground">{t('yaml', { defaultValue: 'YAML' })}</h4>
-              <pre className="rounded-lg border border-border bg-background p-4 text-xs text-foreground overflow-x-auto whitespace-pre-wrap break-words">
+              <pre className="rounded-lg border border-border bg-background p-4 text-xs text-foreground overflow-x-auto whitespace-pre-wrap break-words max-w-full">
                 {resolution.resolution.yaml}
               </pre>
             </section>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-4 shrink-0">
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border px-4 py-3 sm:flex-row sm:flex-wrap sm:justify-end sm:px-5 sm:py-4">
           {onShare && (
             <Button
               variant="secondary"
               size="sm"
               onClick={onShare}
               icon={<Share2 className="w-3.5 h-3.5" />}
+              fullWidth
+              className="sm:w-auto"
             >
               {t('share', { defaultValue: 'Share' })}
             </Button>
@@ -634,6 +634,8 @@ function ResolutionDetailDialog({
             size="sm"
             onClick={onExport}
             icon={<Download className="w-3.5 h-3.5" />}
+            fullWidth
+            className="sm:w-auto"
           >
             {t('common.export')}
           </Button>
@@ -642,6 +644,8 @@ function ResolutionDetailDialog({
             size="sm"
             onClick={onSubmitToKB}
             icon={<BookUp className="w-3.5 h-3.5" />}
+            fullWidth
+            className="sm:w-auto"
           >
             {t('common.submit')}
           </Button>
@@ -651,6 +655,8 @@ function ResolutionDetailDialog({
               size="sm"
               onClick={onApply}
               icon={<CheckCircle className="w-3.5 h-3.5" />}
+              fullWidth
+              className="sm:w-auto"
             >
               {t('actions.apply')}
             </Button>
