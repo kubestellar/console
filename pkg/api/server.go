@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -347,20 +348,26 @@ func NewServer(cfg Config) (*Server, error) {
 	if err != nil {
 		slog.Warn("Kubernetes client initialization failed — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 	} else {
-		if err := k8sClient.LoadConfig(); err != nil {
+		k8sClient.SetOnReload(func() {
+			hub.BroadcastAll(handlers.Message{
+				Type: "kubeconfig_changed",
+				Data: map[string]string{"message": "Kubeconfig updated"},
+			})
+			slog.Info("Broadcasted kubeconfig change to all clients")
+		})
+
+		if !k8sClient.HasClusterConfig() {
+			slog.Warn("No kubeconfig found; starting in no-cluster mode", "path", k8sClient.KubeconfigPath())
+			if err := k8sClient.StartWatching(); err != nil && !errors.Is(err, k8s.ErrNoClusterConfigured) {
+				slog.Warn("Kubeconfig file watcher failed to start", "error", err)
+			}
+		} else if err := k8sClient.LoadConfig(); err != nil {
 			slog.Warn("Failed to load kubeconfig — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 		} else {
 			slog.Info("Kubernetes client initialized successfully")
 			// Warmup: probe all clusters to populate health cache before serving.
 			// Without this, first load hits ALL clusters (including offline) = 30s+ load.
 			k8sClient.WarmupHealthCache()
-			k8sClient.SetOnReload(func() {
-				hub.BroadcastAll(handlers.Message{
-					Type: "kubeconfig_changed",
-					Data: map[string]string{"message": "Kubeconfig updated"},
-				})
-				slog.Info("Broadcasted kubeconfig change to all clients")
-			})
 			if err := k8sClient.StartWatching(); err != nil {
 				slog.Warn("Kubeconfig file watcher failed to start", "error", err)
 			}

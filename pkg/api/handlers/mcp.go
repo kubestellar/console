@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -68,6 +69,11 @@ var sanitizedErrorMessages = map[string]string{
 // All other errors are returned as 500 Internal Server Error.
 // Raw error details are only logged server-side and never sent to the client (#4753).
 func handleK8sError(c *fiber.Ctx, err error) error {
+	if errors.Is(err, k8s.ErrNoClusterConfigured) {
+		slog.Info("[MCP] no cluster configured")
+		return errNoClusterAccess(c)
+	}
+
 	errType := k8s.ClassifyError(err.Error())
 	switch errType {
 	case "not_found":
@@ -192,4 +198,3 @@ func (h *MCPHandlers) GetDeployTools(c *fiber.Ctx) error {
 	tools := h.bridge.GetDeployTools()
 	return c.JSON(fiber.Map{"tools": tools})
 }
-

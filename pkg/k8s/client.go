@@ -29,6 +29,7 @@ package k8s
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -83,6 +84,10 @@ import (
 // alias, not a rename.
 type PrivilegedClient = MultiClusterClient
 
+// ErrNoClusterConfigured indicates the process has neither a readable
+// kubeconfig nor an in-cluster ServiceAccount config.
+var ErrNoClusterConfigured = errors.New("no cluster configured")
+
 const (
 	clusterHealthCheckTimeout = 8 * time.Second
 	clusterProbeTimeout       = 5 * time.Second
@@ -130,6 +135,7 @@ type MultiClusterClient struct {
 	inClusterConfig *rest.Config         // In-cluster config when running inside k8s
 	inClusterName   string               // Detected friendly name for in-cluster (e.g. "fmaas-vllm-d")
 	slowClusters    map[string]time.Time // clusters that recently timed out (reduced timeout)
+	noClusterMode   bool                 // true when no kubeconfig/in-cluster config is available
 }
 
 // IsInCluster returns true if the server is running inside a Kubernetes cluster
@@ -232,14 +238,36 @@ func (m *MultiClusterClient) InjectRestConfig(contextName string, config *rest.C
 
 // Reload reloads the kubeconfig from disk
 func (m *MultiClusterClient) Reload() error {
-	config, err := clientcmd.LoadFromFile(m.kubeconfig)
-	if err != nil {
-		return err
-	}
-	m.mu.Lock()
-	m.rawConfig = config
-	m.mu.Unlock()
-	return nil
+	return m.LoadConfig()
+}
+
+// HasClusterConfig reports whether the client currently has a readable
+// kubeconfig or a valid in-cluster configuration.
+func (m *MultiClusterClient) HasClusterConfig() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.inClusterConfig != nil || !m.noClusterMode
+}
+
+// KubeconfigPath returns the resolved kubeconfig path, if any.
+func (m *MultiClusterClient) KubeconfigPath() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.kubeconfig
+}
+
+func (m *MultiClusterClient) enterNoClusterModeLocked() {
+	m.rawConfig = nil
+	m.clients = make(map[string]kubernetes.Interface)
+	m.dynamicClients = make(map[string]dynamic.Interface)
+	m.configs = make(map[string]*rest.Config)
+	m.healthCache = make(map[string]*ClusterHealth)
+	m.cacheTime = make(map[string]time.Time)
+	m.noClusterMode = m.inClusterConfig == nil
+}
+
+func (m *MultiClusterClient) clearNoClusterModeLocked() {
+	m.noClusterMode = false
 }
 
 // ClusterInfo represents basic cluster information
@@ -870,6 +898,8 @@ func NewMultiClusterClient(kubeconfig string) (*MultiClusterClient, error) {
 			client.inClusterConfig = inClusterConfig
 			client.inClusterName = detectInClusterName(inClusterConfig)
 			slog.Info("detected in-cluster name", "name", client.inClusterName)
+		} else {
+			client.noClusterMode = true
 		}
 	}
 
@@ -938,12 +968,24 @@ func (m *MultiClusterClient) LoadConfig() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// If we have in-cluster config and no kubeconfig file, use that
+	// If we have in-cluster config and no kubeconfig file, use that.
 	if m.inClusterConfig != nil {
+		if m.kubeconfig == "" {
+			m.rawConfig = nil
+			m.clearNoClusterModeLocked()
+			m.clients = make(map[string]kubernetes.Interface)
+			m.dynamicClients = make(map[string]dynamic.Interface)
+			m.configs = make(map[string]*rest.Config)
+			m.healthCache = make(map[string]*ClusterHealth)
+			m.cacheTime = make(map[string]time.Time)
+			return nil
+		}
 		if _, err := os.Stat(m.kubeconfig); os.IsNotExist(err) {
 			slog.Info("No kubeconfig file, using in-cluster config only")
 			m.rawConfig = nil
+			m.clearNoClusterModeLocked()
 			m.clients = make(map[string]kubernetes.Interface)
+			m.dynamicClients = make(map[string]dynamic.Interface)
 			m.configs = make(map[string]*rest.Config)
 			m.healthCache = make(map[string]*ClusterHealth)
 			m.cacheTime = make(map[string]time.Time)
@@ -951,12 +993,22 @@ func (m *MultiClusterClient) LoadConfig() error {
 		}
 	}
 
+	if m.kubeconfig == "" {
+		m.enterNoClusterModeLocked()
+		return ErrNoClusterConfigured
+	}
+
 	config, err := clientcmd.LoadFromFile(m.kubeconfig)
 	if err != nil {
+		if os.IsNotExist(err) {
+			m.enterNoClusterModeLocked()
+			return ErrNoClusterConfigured
+		}
 		return fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
 
 	m.rawConfig = config
+	m.clearNoClusterModeLocked()
 	// Clear cached clients when config reloads
 	m.clients = make(map[string]kubernetes.Interface)
 	m.dynamicClients = make(map[string]dynamic.Interface)
@@ -1052,22 +1104,37 @@ func (m *MultiClusterClient) StartWatching() error {
 		slog.Info("kubeconfig watcher already running, skipping StartWatching")
 		return nil
 	}
+	if m.kubeconfig == "" {
+		return ErrNoClusterConfigured
+	}
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return fmt.Errorf("failed to create watcher: %w", err)
 	}
 
-	// Watch the kubeconfig file
-	if err := watcher.Add(m.kubeconfig); err != nil {
+	watchDir, err := existingWatchDir(m.kubeconfig)
+	if err != nil {
 		watcher.Close()
-		return fmt.Errorf("failed to watch kubeconfig: %w", err)
+		return fmt.Errorf("failed to find kubeconfig watch directory: %w", err)
 	}
 
-	// Also watch the directory (for editors that do atomic saves)
-	dir := filepath.Dir(m.kubeconfig)
-	if err := watcher.Add(dir); err != nil {
-		slog.Warn("could not watch kubeconfig directory", "error", err)
+	// Watch the kubeconfig file when it already exists. If it doesn't, rely on
+	// the nearest existing parent directory so fresh installs can create
+	// ~/.kube/config later without a restart.
+	if _, statErr := os.Stat(m.kubeconfig); statErr == nil {
+		if err := watcher.Add(m.kubeconfig); err != nil {
+			watcher.Close()
+			return fmt.Errorf("failed to watch kubeconfig: %w", err)
+		}
+	} else if !os.IsNotExist(statErr) {
+		watcher.Close()
+		return fmt.Errorf("failed to stat kubeconfig: %w", statErr)
+	}
+
+	if err := watcher.Add(watchDir); err != nil {
+		watcher.Close()
+		return fmt.Errorf("failed to watch kubeconfig directory: %w", err)
 	}
 
 	m.watcher = watcher
@@ -1088,7 +1155,7 @@ func (m *MultiClusterClient) StartWatching() error {
 	m.watching = true
 
 	go m.watchLoop(stopCh, w)
-	slog.Info("watching kubeconfig for changes", "path", m.kubeconfig)
+	slog.Info("watching kubeconfig for changes", "path", m.kubeconfig, "watchDir", watchDir)
 	return nil
 }
 
@@ -1098,7 +1165,11 @@ func (m *MultiClusterClient) StartWatching() error {
 func (m *MultiClusterClient) reloadAndNotify() {
 	slog.Info("Kubeconfig changed, reloading...")
 	if err := m.LoadConfig(); err != nil {
-		slog.Error("error reloading kubeconfig", "error", err)
+		if errors.Is(err, ErrNoClusterConfigured) {
+			slog.Warn("kubeconfig unavailable; entering no-cluster state", "path", m.kubeconfig)
+		} else {
+			slog.Error("error reloading kubeconfig", "error", err)
+		}
 		m.mu.RLock()
 		errCallback := m.onWatchError
 		m.mu.RUnlock()
@@ -1185,12 +1256,16 @@ func (m *MultiClusterClient) watchLoop(stopCh <-chan struct{}, watcher *fsnotify
 			if !ok {
 				return
 			}
-			// Check if this event is for our kubeconfig file
-			if event.Name == m.kubeconfig || filepath.Base(event.Name) == filepath.Base(m.kubeconfig) {
-				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) != 0 {
+			// Watch both the kubeconfig file itself and any parent directory events
+			// that could create, replace, or remove it (for example when ~/.kube
+			// does not exist yet on a fresh Windows install).
+			if pathAffectsKubeconfig(event.Name, m.kubeconfig) {
+				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename|fsnotify.Remove) != 0 {
 					// Update lastModTime so the poller doesn't double-trigger
 					if info, err := os.Stat(m.kubeconfig); err == nil {
 						lastModTime = info.ModTime()
+					} else if os.IsNotExist(err) {
+						lastModTime = time.Time{}
 					}
 					triggerReload()
 				}
@@ -1256,6 +1331,47 @@ func (m *MultiClusterClient) StopWatching() {
 	}
 }
 
+func existingWatchDir(path string) (string, error) {
+	if path == "" {
+		return "", ErrNoClusterConfigured
+	}
+
+	watchDir := filepath.Dir(path)
+	for {
+		info, err := os.Stat(watchDir)
+		if err == nil {
+			if !info.IsDir() {
+				return "", fmt.Errorf("%s is not a directory", watchDir)
+			}
+			return watchDir, nil
+		}
+		if !os.IsNotExist(err) {
+			return "", err
+		}
+		parent := filepath.Dir(watchDir)
+		if parent == watchDir {
+			return "", err
+		}
+		watchDir = parent
+	}
+}
+
+func pathAffectsKubeconfig(eventName, kubeconfig string) bool {
+	if eventName == "" || kubeconfig == "" {
+		return false
+	}
+	cleanEvent := filepath.Clean(eventName)
+	cleanKubeconfig := filepath.Clean(kubeconfig)
+	if cleanEvent == cleanKubeconfig {
+		return true
+	}
+	rel, err := filepath.Rel(cleanEvent, cleanKubeconfig)
+	if err == nil && rel != "." && rel != "" && !strings.HasPrefix(rel, "..") {
+		return true
+	}
+	return filepath.Dir(cleanEvent) == filepath.Dir(cleanKubeconfig) && filepath.Base(cleanEvent) == filepath.Base(cleanKubeconfig)
+}
+
 // SetOnReload sets a callback to be called when kubeconfig is reloaded
 func (m *MultiClusterClient) SetOnReload(callback func()) {
 	m.mu.Lock()
@@ -1276,10 +1392,17 @@ func (m *MultiClusterClient) ListClusters(ctx context.Context) ([]ClusterInfo, e
 	m.mu.RLock()
 	rawConfig := m.rawConfig
 	inClusterConfig := m.inClusterConfig
+	noClusterMode := m.noClusterMode
 	m.mu.RUnlock()
 
 	if rawConfig == nil && inClusterConfig == nil {
+		if noClusterMode {
+			return []ClusterInfo{}, nil
+		}
 		if err := m.LoadConfig(); err != nil {
+			if errors.Is(err, ErrNoClusterConfigured) {
+				return []ClusterInfo{}, nil
+			}
 			return nil, err
 		}
 		m.mu.RLock()
@@ -1607,7 +1730,12 @@ func (m *MultiClusterClient) GetClient(contextName string) (kubernetes.Interface
 	inClusterConfig := m.inClusterConfig
 	kubeconfigPath := m.kubeconfig
 	inClusterName := m.inClusterName
+	noClusterMode := m.noClusterMode
 	m.mu.RUnlock()
+
+	if noClusterMode && inClusterConfig == nil {
+		return nil, ErrNoClusterConfigured
+	}
 
 	// Build the client OUTSIDE the lock so concurrent callers for distinct
 	// contexts don't serialize on a single write lock (#9334). It is
@@ -1685,7 +1813,12 @@ func (m *MultiClusterClient) GetDynamicClient(contextName string) (dynamic.Inter
 	inClusterConfig := m.inClusterConfig
 	kubeconfigPath := m.kubeconfig
 	inClusterName := m.inClusterName
+	noClusterMode := m.noClusterMode
 	m.mu.RUnlock()
+
+	if noClusterMode && inClusterConfig == nil {
+		return nil, ErrNoClusterConfigured
+	}
 
 	// Build the client OUTSIDE the lock so concurrent callers for distinct
 	// contexts don't serialize on a single write lock (#10255). It is
