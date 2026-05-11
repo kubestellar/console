@@ -101,13 +101,6 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
 
   // Card-specific status filter
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
-  const handleFilterSelect = (filter: 'all' | 'outOfSync' | 'unhealthy') => () => setSelectedFilter(filter)
-  const handleFilterKeyDown = (filter: 'all' | 'outOfSync' | 'unhealthy') => (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      setSelectedFilter(filter)
-    }
-  }
 
   // Step 2: Pre-filter by config and status filter (card-specific)
   const preFiltered = (() => {
@@ -155,6 +148,21 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       defaultDirection: 'asc' as SortDirection,
       comparators: ARGO_SORT_COMPARATORS },
     defaultLimit: 5 })
+
+  // selectedFilter is a pre-useCardData filter so useCardData's internal page-reset effect
+  // never fires for it. Always jump to page 1 when the filter changes so users see the
+  // beginning of the filtered results (same pattern as DeploymentStatus, see #9257).
+  const handleFilterSelect = (filter: 'all' | 'outOfSync' | 'unhealthy') => () => {
+    setSelectedFilter(filter)
+    goToPage(1)
+  }
+  const handleFilterKeyDown = (filter: 'all' | 'outOfSync' | 'unhealthy') => (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setSelectedFilter(filter)
+      goToPage(1)
+    }
+  }
 
   // Stats computed from preFiltered (reflects status counts before search/pagination)
   const stats = {
@@ -303,7 +311,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
           <Button
             variant="accent"
             size="sm"
-            onClick={() => setSelectedFilter('all')}
+            onClick={handleFilterSelect('all')}
             className="px-2 py-0.5"
             aria-label={`Clear filter: ${selectedFilter === 'outOfSync' ? t('argoCDApplications.outOfSync') : t('argoCDApplications.unhealthy')}`}
           >
