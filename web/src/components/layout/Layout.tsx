@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Plug,
   AlertTriangle,
+  ExternalLink,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
@@ -45,7 +46,7 @@ import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
-import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../../lib/utils/localStorage'
 import { MS_PER_DAY } from '../../lib/constants/time'
 import {
   NAVBAR_HEIGHT_PX,
@@ -208,6 +209,10 @@ export function Layout({ children: _children }: LayoutProps) {
   const { kagentAvailable, kagentiAvailable } = useKagentBackend()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
+  const AUTONOMOUS_BANNER_STORAGE_KEY = 'kc-autonomous-banner-dismissed'
+  const [autonomousBannerDismissed, setAutonomousBannerDismissed] = useState(
+    () => safeGetItem(AUTONOMOUS_BANNER_STORAGE_KEY) === 'true'
+  )
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showInClusterAgentDialog, setShowInClusterAgentDialog] =
     useState(false)
@@ -585,6 +590,50 @@ export function Layout({ children: _children }: LayoutProps) {
               <X className="w-3.5 h-3.5 text-orange-400" />
             </button>
           </div>
+        </div>
+      ),
+    })
+  }
+
+  if (!autonomousBannerDismissed) {
+    const HIVE_DASHBOARD_URL = 'https://kubestellar.io/live/hive'
+    activeBanners.push({
+      id: 'autonomous',
+      className: 'right-0 z-10 bg-purple-500/10 border-b border-purple-500/20',
+      content: (
+        <div className="flex items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
+          <span className="text-sm" aria-hidden="true">🐝</span>
+          <span className="text-sm text-purple-300 font-medium">
+            This project is fully autonomous — maintained by AI agents.
+          </span>
+          <a
+            href={HIVE_DASHBOARD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded transition-colors whitespace-nowrap"
+          >
+            Watch them live
+            <ExternalLink className="w-3 h-3" aria-hidden="true" />
+          </a>
+          <a
+            href={HIVE_DASHBOARD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sm:hidden text-xs text-purple-300 underline underline-offset-2 whitespace-nowrap"
+          >
+            Watch live →
+          </a>
+          <button
+            onClick={() => {
+              setAutonomousBannerDismissed(true)
+              safeSetItem(AUTONOMOUS_BANNER_STORAGE_KEY, 'true')
+            }}
+            className="ml-1 md:ml-2 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-purple-500/20 rounded-full transition-colors"
+            aria-label={t('buttons.dismissBanner')}
+            title={t('buttons.dismissBanner')}
+          >
+            <X className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
+          </button>
         </div>
       ),
     })
