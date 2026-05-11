@@ -23,7 +23,7 @@ describe('useUnifiedDemoContext (without provider)', () => {
   })
 
   it('provides toggleDemoMode that warns', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {})
     const { result } = renderHook(() => useUnifiedDemoContext())
     result.current.toggleDemoMode()
     expect(spy).toHaveBeenCalledWith('UnifiedDemoProvider not mounted')
@@ -31,7 +31,7 @@ describe('useUnifiedDemoContext (without provider)', () => {
   })
 
   it('provides setDemoMode that warns', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {})
     const { result } = renderHook(() => useUnifiedDemoContext())
     result.current.setDemoMode(true)
     expect(spy).toHaveBeenCalledWith('UnifiedDemoProvider not mounted')
@@ -47,7 +47,7 @@ describe('useUnifiedDemoContext (without provider)', () => {
   })
 
   it('provides registerGenerator that warns', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {})
     const { result } = renderHook(() => useUnifiedDemoContext())
     result.current.registerGenerator('test', { generate: () => [] })
     expect(spy).toHaveBeenCalledWith('UnifiedDemoProvider not mounted')
@@ -55,7 +55,7 @@ describe('useUnifiedDemoContext (without provider)', () => {
   })
 
   it('provides regenerate that warns', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {})
     const { result } = renderHook(() => useUnifiedDemoContext())
     result.current.regenerate('test')
     expect(spy).toHaveBeenCalledWith('UnifiedDemoProvider not mounted')
@@ -63,7 +63,7 @@ describe('useUnifiedDemoContext (without provider)', () => {
   })
 
   it('provides regenerateAll that warns', () => {
-    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const spy = vi.spyOn(console, 'debug').mockImplementation(() => {})
     const { result } = renderHook(() => useUnifiedDemoContext())
     result.current.regenerateAll()
     expect(spy).toHaveBeenCalledWith('UnifiedDemoProvider not mounted')
