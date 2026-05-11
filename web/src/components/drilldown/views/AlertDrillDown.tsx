@@ -219,8 +219,8 @@ Please:
 
     closeDrillDown() // Close panel so mission sidebar is visible
     startMission({
-      title: `Diagnose Alert: ${alertName}`,
-      description: `Analyze ${alertSeverity} alert and provide remediation guidance`,
+      title: t('drilldown.alertDetail.diagnoseMissionTitle', { alertName }),
+      description: t('drilldown.alertDetail.diagnoseMissionDescription', { severity: alertSeverity }),
       type: 'troubleshoot',
       cluster,
       initialPrompt: prompt,
@@ -242,10 +242,10 @@ Please:
   const displayedLabels = labelEntries.slice(0, 6)
 
   const TABS: { id: TabType; label: string; icon: typeof Info }[] = [
-    { id: 'overview', label: 'Overview', icon: Info },
-    { id: 'labels', label: 'Labels', icon: Tag },
-    { id: 'source', label: 'Source', icon: Code },
-    { id: 'ai', label: 'AI Analysis', icon: Stethoscope },
+    { id: 'overview', label: t('drilldown.tabs.overview'), icon: Info },
+    { id: 'labels', label: t('drilldown.tabs.labels'), icon: Tag },
+    { id: 'source', label: t('common.source'), icon: Code },
+    { id: 'ai', label: t('drilldown.tabs.aiAnalysis'), icon: Stethoscope },
   ]
 
   // Extract related resource from labels
@@ -350,13 +350,13 @@ Please:
                     {alertStartsAt && (
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        <span>Started: {new Date(alertStartsAt).toLocaleString()}</span>
+                        <span>{t('drilldown.alertDetail.started')}: {new Date(alertStartsAt).toLocaleString()}</span>
                       </div>
                     )}
                     {alertSource && (
                       <div className="flex items-center gap-1">
                         <ExternalLink className="w-3 h-3" />
-                        <span>Source: {alertSource}</span>
+                        <span>{t('drilldown.fields.source')} {alertSource}</span>
                       </div>
                     )}
                   </div>
@@ -381,14 +381,14 @@ Please:
 
             {/* Related Resources */}
             <div className="p-4 rounded-lg border border-border bg-card/50">
-              <h4 className="text-sm font-medium text-foreground mb-3">Related Resources</h4>
+              <h4 className="text-sm font-medium text-foreground mb-3">{t('drilldown.alertDetail.relatedResources')}</h4>
               <div className="flex flex-wrap gap-2">
                 {relatedPod && relatedNamespace && (
                   <button
                     onClick={() => drillToPod(cluster, relatedNamespace, relatedPod)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 transition-colors text-sm"
                   >
-                    <span>Pod: {relatedPod}</span>
+                    <span>{t('drilldown.fields.pod')} {relatedPod}</span>
                   </button>
                 )}
                 {relatedDeployment && relatedNamespace && (
@@ -396,7 +396,7 @@ Please:
                     onClick={() => drillToDeployment(cluster, relatedNamespace, relatedDeployment)}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20 transition-colors text-sm"
                   >
-                    <span>Deployment: {relatedDeployment}</span>
+                    <span>{t('drilldown.fields.deployment')} {relatedDeployment}</span>
                   </button>
                 )}
                 {alertRuleName && (
@@ -416,7 +416,9 @@ Please:
               <div className="p-4 rounded-lg border border-border bg-card/50">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-medium text-foreground">{t('common.labels')}</h4>
-                  <span className="text-xs text-muted-foreground">{labelEntries.length} labels</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t('drilldown.alertDetail.labelsCount', { count: labelEntries.length })}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {displayedLabels.map(([key, value]) => (
@@ -433,7 +435,7 @@ Please:
                       onClick={() => setActiveTab('labels')}
                       className="text-xs text-primary hover:underline"
                     >
-                      +{labelEntries.length - 6} more
+                      {t('drilldown.tabs.more', { count: labelEntries.length - 6 })}
                     </button>
                   )}
                 </div>
@@ -445,7 +447,7 @@ Please:
         {activeTab === 'labels' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-foreground">All Labels ({labelEntries.length})</h4>
+              <h4 className="text-sm font-medium text-foreground">{t('drilldown.alertDetail.allLabels', { count: labelEntries.length })}</h4>
             </div>
             <div className="space-y-2">
               {labelEntries.map(([key, value]) => (
@@ -464,7 +466,8 @@ Please:
                   <button
                     onClick={() => handleCopy(key, `${key}=${value}`)}
                     className="p-1.5 rounded hover:bg-secondary transition-colors shrink-0"
-                    title="Copy label"
+                    title={t('drilldown.alertDetail.copyLabel')}
+                    aria-label={t('drilldown.alertDetail.copyLabel')}
                   >
                     {copiedField === key ? (
                       <Check className="w-4 h-4 text-green-400" />
@@ -480,7 +483,7 @@ Please:
 
         {activeTab === 'source' && (
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-foreground">Alert Rule Source</h4>
+            <h4 className="text-sm font-medium text-foreground">{t('drilldown.alertDetail.alertRuleSource')}</h4>
             {sourceLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -504,7 +507,7 @@ Please:
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
                 <ConsoleAIIcon className="w-5 h-5" />
-                AI Analysis
+                {t('drilldown.ai.title')}
               </h4>
               <button
                 onClick={handleDiagnose}
@@ -512,15 +515,15 @@ Please:
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
               >
                 <Stethoscope className="w-4 h-4" />
-                Diagnose Alert
+                {t('drilldown.alertDetail.diagnoseAlert')}
               </button>
             </div>
 
             {!isAgentConnected ? (
               <div className="text-center py-12 text-muted-foreground">
                 <ConsoleAIIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>AI agent not connected</p>
-                <p className="text-xs mt-1">Configure the local agent in Settings to enable AI analysis</p>
+                <p>{t('drilldown.ai.notConnected')}</p>
+                <p className="text-xs mt-1">{t('drilldown.ai.configureAgent')}</p>
               </div>
             ) : aiAnalysisLoading ? (
               <div className="flex items-center justify-center py-12">

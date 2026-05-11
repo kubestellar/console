@@ -2419,7 +2419,8 @@
       "revisionHistory": "Revision History Limit:",
       "minReadySeconds": "Min Ready Seconds:",
       "progressDeadline": "Progress Deadline:",
-      "pod": "Pod:"
+      "pod": "Pod:",
+      "deployment": "Deployment:"
     },
     "status": {
       "fetchingEvents": "Fetching events...",
@@ -2658,6 +2659,16 @@
     },
     "alertDetail": {
       "alertRule": "Alert Rule",
+      "alertRuleSource": "Alert Rule Source",
+      "relatedResources": "Related Resources",
+      "allLabels": "All Labels ({{count}})",
+      "copyLabel": "Copy label",
+      "started": "Started",
+      "labelsCount_one": "{{count}} label",
+      "labelsCount_other": "{{count}} labels",
+      "diagnoseAlert": "Diagnose Alert",
+      "diagnoseMissionTitle": "Diagnose Alert: {{alertName}}",
+      "diagnoseMissionDescription": "Analyze {{severity}} alert and provide remediation guidance",
       "ruleNotAvailable": "Alert rule source not available",
       "clickDiagnose": "Click \"Diagnose Alert\" to get AI-powered analysis",
       "connectAgentRule": "Connect the agent to fetch PrometheusRule definitions",
@@ -4062,6 +4073,11 @@
     "browser": {
       "showFilters": "Show Filters",
       "hideFilters": "Hide Filters",
+      "copyShareableLink": "Copy shareable link",
+      "linkCopied": "Link copied",
+      "copied": "Copied",
+      "stepsCount_one": "{{count}} step",
+      "stepsCount_other": "{{count}} steps",
       "importSuccess": "Imported \"{{title}}\" successfully."
     },
     "preflight": {

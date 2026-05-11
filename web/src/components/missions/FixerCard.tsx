@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, Check } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { StatusBadge } from '../ui/StatusBadge'
@@ -28,6 +29,7 @@ interface FixerCardProps {
 }
 
 export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: FixerCardProps) {
+  const { t } = useTranslation()
   const [linkCopied, setLinkCopied] = useState(false)
   const typeStyle = TYPE_COLORS[mission.type] ?? TYPE_COLORS.custom
   const linkCopiedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -55,12 +57,14 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
             {mission.category}
           </StatusBadge>
         )}
-        <span className="text-2xs text-muted-foreground shrink-0">{mission.steps?.length ?? 0} steps</span>
+        <span className="text-2xs text-muted-foreground shrink-0">
+          {t('missions.browser.stepsCount', { count: mission.steps?.length ?? 0 })}
+        </span>
         <button
           onClick={(e) => { e.stopPropagation(); onImport() }}
           className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors shrink-0"
         >
-          Import
+          {t('actions.import')}
         </button>
       </div>
     )
@@ -86,8 +90,8 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
                 linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
               }}
               className="p-0.5 rounded text-muted-foreground/50 hover:text-purple-400 transition-colors"
-              title="Copy shareable link"
-              aria-label={linkCopied ? 'Link copied' : 'Copy shareable link'}
+              title={t('missions.browser.copyShareableLink')}
+              aria-label={linkCopied ? t('missions.browser.linkCopied') : t('missions.browser.copyShareableLink')}
             >
               {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Link className="w-3.5 h-3.5" />}
             </button>
@@ -134,7 +138,7 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
               <span className="truncate max-w-[80px]">{mission.authorGithub}</span>
             </a>
           ) : (
-            <span className="text-2xs">{mission.steps?.length ?? 0} steps</span>
+            <span className="text-2xs">{t('missions.browser.stepsCount', { count: mission.steps?.length ?? 0 })}</span>
           )}
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -148,10 +152,11 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
                 linkCopiedTimeoutRef.current = setTimeout(() => setLinkCopied(false), UI_FEEDBACK_TIMEOUT_MS)
               }}
               className="inline-flex items-center gap-1 px-2 py-1 text-2xs font-medium rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
-              title="Copy shareable link"
+              title={t('missions.browser.copyShareableLink')}
+              aria-label={linkCopied ? t('missions.browser.linkCopied') : t('missions.browser.copyShareableLink')}
             >
               {linkCopied ? <Check className="w-3 h-3 text-green-400" /> : <Link className="w-3 h-3" />}
-              {linkCopied ? 'Copied' : 'Share'}
+              {linkCopied ? t('missions.browser.copied') : t('feedback.share')}
             </button>
           )}
           <button
@@ -161,7 +166,7 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
             }}
             className="px-2 py-1 text-2xs font-medium rounded bg-purple-600 hover:bg-purple-500 text-white transition-colors"
           >
-            Import
+            {t('actions.import')}
           </button>
         </div>
       </div>
