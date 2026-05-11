@@ -2577,6 +2577,7 @@
       "allLevels": "All Levels",
       "showing": "Showing {{lines}} of last {{tail}} lines",
       "generatedAt": "Generated at {{time}}",
+      "noLogsMatchFilter": "No logs match this filter.",
       "mockNotice": "Live log streaming is not yet available — showing placeholder content. Connect the local agent to stream real logs when available."
     },
     "deployment": {
