@@ -10,6 +10,10 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   return { ...actual, LOCAL_AGENT_WS_URL: 'ws://localhost:8585/ws' }
 })
 
+vi.mock('../../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: async (url: string) => url,
+}))
+
 import { useKubectl, kubectlService } from '../useKubectl'
 import { getDemoMode } from '../useDemoMode'
 
@@ -21,6 +25,18 @@ const WS_CLOSING = 2
 const WS_CLOSED = 3
 
 /** Helper to build a minimal mock WebSocket */
+async function flushMicrotasks() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
+}
+
+async function renderKubectlHook() {
+  const hook = renderHook(() => useKubectl())
+  await flushMicrotasks()
+  return hook
+}
+
 function createMockWebSocket() {
   const handlers: Record<string, ((...args: unknown[]) => void) | null> = {
     onopen: null,
@@ -94,27 +110,29 @@ describe('useKubectl', () => {
     vi.unstubAllGlobals()
   })
 
-  it('returns execute function', () => {
-    const { result } = renderHook(() => useKubectl())
+  it('returns execute function', async () => {
+    const { result } = await renderKubectlHook()
     expect(typeof result.current.execute).toBe('function')
   })
 
-  it('cleans up on unmount without throwing', () => {
-    const { unmount } = renderHook(() => useKubectl())
+  it('cleans up on unmount without throwing', async () => {
+    const { unmount } = await renderKubectlHook()
     expect(() => unmount()).not.toThrow()
   })
 
-  it('execute returns a promise', () => {
-    const { result } = renderHook(() => useKubectl())
+  it('execute returns a promise', async () => {
+    const { result } = await renderKubectlHook()
     const promise = result.current.execute('my-cluster', ['get', 'pods'])
     expect(promise).toBeInstanceOf(Promise)
     // Let it timeout silently rather than leaving pending
-    vi.advanceTimersByTime(30000)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30000)
+    })
     promise.catch(() => {})
   })
 
   it('execute resolves with output when WebSocket responds', async () => {
-    const { result } = renderHook(() => useKubectl())
+    const { result } = await renderKubectlHook()
 
     let resolvedValue: string | undefined
     act(() => {
@@ -147,7 +165,7 @@ describe('useKubectl', () => {
   })
 
   it('execute rejects when WebSocket responds with error', async () => {
-    const { result } = renderHook(() => useKubectl())
+    const { result } = await renderKubectlHook()
 
     let rejectedError: Error | undefined
     act(() => {
@@ -174,7 +192,7 @@ describe('useKubectl', () => {
   })
 
   it('execute resolves empty string when payload has no output or error', async () => {
-    const { result } = renderHook(() => useKubectl())
+    const { result } = await renderKubectlHook()
 
     let resolvedValue: string | undefined
     act(() => {
@@ -200,7 +218,7 @@ describe('useKubectl', () => {
   })
 
   it('execute rejects with timeout after REQUEST_TIMEOUT', async () => {
-    const { result } = renderHook(() => useKubectl())
+    const { result } = await renderKubectlHook()
 
     let rejectedError: Error | undefined
     act(() => {
@@ -212,7 +230,7 @@ describe('useKubectl', () => {
     act(() => { mockWs.simulateOpen() })
 
     // Advance past the 30s timeout
-    act(() => { vi.advanceTimersByTime(30000) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
 
     await vi.waitFor(() => {
       expect(rejectedError).toBeInstanceOf(Error)
@@ -220,8 +238,8 @@ describe('useKubectl', () => {
     })
   })
 
-  it('queues requests when WebSocket is not yet open', () => {
-    const { result } = renderHook(() => useKubectl())
+  it('queues requests when WebSocket is not yet open', async () => {
+    const { result } = await renderKubectlHook()
 
     act(() => {
       result.current.execute('my-cluster', ['get', 'nodes']).catch(() => {})
@@ -237,7 +255,7 @@ describe('useKubectl', () => {
   })
 
   it('rejects all pending requests when connection closes', async () => {
-    const { result } = renderHook(() => useKubectl())
+    const { result } = await renderKubectlHook()
 
     let rejectedError: Error | undefined
     act(() => {
@@ -255,11 +273,11 @@ describe('useKubectl', () => {
     })
   })
 
-  it('skips WebSocket connection in demo mode', () => {
+  it('skips WebSocket connection in demo mode', async () => {
     vi.mocked(getDemoMode).mockReturnValue(true)
 
     // Reset the service by unsubscribing and re-subscribing
-    const { unmount } = renderHook(() => useKubectl())
+    const { unmount } = await renderKubectlHook()
     unmount()
 
     // WebSocket constructor should not have been called for connections in demo mode
@@ -267,14 +285,14 @@ describe('useKubectl', () => {
     const wsCalls = vi.mocked(WebSocket).mock.calls
     // The key test: when getDemoMode returns true, no new WS connections are made
     const callCountBefore = wsCalls.length
-    renderHook(() => useKubectl())
+    await renderKubectlHook()
     const callCountAfter = vi.mocked(WebSocket).mock.calls.length
     // No new WebSocket connections should be created
     expect(callCountAfter).toBe(callCountBefore)
   })
 
-  it('ignores messages with unparseable JSON', () => {
-    const { result } = renderHook(() => useKubectl())
+  it('ignores messages with unparseable JSON', async () => {
+    const { result } = await renderKubectlHook()
 
     act(() => {
       result.current.execute('my-cluster', ['get', 'pods']).catch(() => {})
@@ -290,7 +308,7 @@ describe('useKubectl', () => {
   })
 
   it('ignores messages with non-matching request IDs', async () => {
-    const { result } = renderHook(() => useKubectl())
+    const { result } = await renderKubectlHook()
 
     let resolved = false
     act(() => {
@@ -313,19 +331,19 @@ describe('useKubectl', () => {
     expect(resolved).toBe(false)
 
     // Clean up by timing out
-    act(() => { vi.advanceTimersByTime(30000) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
   })
 
-  it('multiple hooks share the same singleton service', () => {
-    const { result: result1 } = renderHook(() => useKubectl())
-    const { result: result2 } = renderHook(() => useKubectl())
+  it('multiple hooks share the same singleton service', async () => {
+    const { result: result1 } = await renderKubectlHook()
+    const { result: result2 } = await renderKubectlHook()
 
     // Both hooks return the same function signature (shared service)
     expect(typeof result1.current.execute).toBe('function')
     expect(typeof result2.current.execute).toBe('function')
   })
 
-  it('kubectlService is exported and has execute method', () => {
+  it('kubectlService is exported and has execute method', async () => {
     expect(kubectlService).toBeDefined()
     expect(typeof kubectlService.execute).toBe('function')
     expect(typeof kubectlService.subscribe).toBe('function')

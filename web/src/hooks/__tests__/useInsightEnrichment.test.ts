@@ -7,7 +7,7 @@
  * - Edge cases (empty insights, missing enrichments, agent disconnected)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 
 // ── Module-level mock state ──────────────────────────────────────────────
 
@@ -35,6 +35,10 @@ vi.mock('../../lib/constants', async (importOriginal) => {
   }
 })
 
+vi.mock('../../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: async (url: string) => url,
+}))
+
 import { mergeEnrichments, useInsightEnrichment } from '../useInsightEnrichment'
 import type { MultiClusterInsight } from '../../types/insights'
 
@@ -54,10 +58,33 @@ function makeInsight(overrides: Partial<MultiClusterInsight> = {}): MultiCluster
   } as MultiClusterInsight
 }
 
+async function flushMicrotasks() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
+}
+
+async function renderInsightEnrichmentHook(insights: MultiClusterInsight[]) {
+  const hook = renderHook(() => useInsightEnrichment(insights))
+  await flushMicrotasks()
+  return hook
+}
+
+class MockWebSocket {
+  onopen: (() => void) | null = null
+  onmessage: ((event: { data: string }) => void) | null = null
+  onclose: (() => void) | null = null
+  onerror: (() => void) | null = null
+
+  close() {
+    this.onclose?.()
+  }
+}
+
 // ── Tests ────────────────────────────────────────────────────────────────
 
 describe('mergeEnrichments (pure function)', () => {
-  it('returns insights unchanged when no enrichments exist', () => {
+  it('returns insights unchanged when no enrichments exist', async () => {
     const insights = [makeInsight({ id: 'i1' }), makeInsight({ id: 'i2' })]
     const result = mergeEnrichments(insights)
 
@@ -66,7 +93,7 @@ describe('mergeEnrichments (pure function)', () => {
     expect(result[1].source).toBe('heuristic')
   })
 
-  it('returns empty array for empty input', () => {
+  it('returns empty array for empty input', async () => {
     const result = mergeEnrichments([])
     expect(result).toEqual([])
   })
@@ -80,6 +107,7 @@ describe('useInsightEnrichment hook', () => {
     vi.useFakeTimers()
     fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('WebSocket', MockWebSocket)
     mockAgentConnected = false
     mockAgentUnavailable = false
   })
@@ -89,64 +117,70 @@ describe('useInsightEnrichment hook', () => {
     vi.unstubAllGlobals()
   })
 
-  it('returns expected shape', () => {
+  it('returns expected shape', async () => {
     const insights = [makeInsight()]
-    const { result } = renderHook(() => useInsightEnrichment(insights))
+    const { result } = await renderInsightEnrichmentHook(insights)
 
     expect(result.current).toHaveProperty('enrichedInsights')
     expect(result.current).toHaveProperty('hasEnrichments')
     expect(result.current).toHaveProperty('enrichmentCount')
   })
 
-  it('returns insights unchanged when agent is not connected', () => {
+  it('returns insights unchanged when agent is not connected', async () => {
     mockAgentConnected = false
     const insights = [makeInsight({ id: 'test-1' })]
-    const { result } = renderHook(() => useInsightEnrichment(insights))
+    const { result } = await renderInsightEnrichmentHook(insights)
 
     expect(result.current.enrichedInsights).toHaveLength(1)
     expect(result.current.enrichedInsights[0].id).toBe('test-1')
     expect(result.current.enrichedInsights[0].source).toBe('heuristic')
   })
 
-  it('does not fetch when agent is unavailable', () => {
+  it('does not fetch when agent is unavailable', async () => {
     mockAgentConnected = true
     mockAgentUnavailable = true
     const insights = [makeInsight()]
-    renderHook(() => useInsightEnrichment(insights))
+    await renderInsightEnrichmentHook(insights)
 
     // Advance past the debounce
-    vi.advanceTimersByTime(3000)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
 
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('does not fetch for empty insights', () => {
+  it('does not fetch for empty insights', async () => {
     mockAgentConnected = true
     mockAgentUnavailable = false
-    renderHook(() => useInsightEnrichment([]))
+    await renderInsightEnrichmentHook([])
 
-    vi.advanceTimersByTime(3000)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000)
+    })
 
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('returns hasEnrichments false when no enrichments have arrived', () => {
+  it('returns hasEnrichments false when no enrichments have arrived', async () => {
     const insights = [makeInsight()]
-    const { result } = renderHook(() => useInsightEnrichment(insights))
+    const { result } = await renderInsightEnrichmentHook(insights)
 
     expect(result.current.hasEnrichments).toBe(false)
     expect(result.current.enrichmentCount).toBe(0)
   })
 
-  it('cleans up timeout on unmount', () => {
+  it('cleans up timeout on unmount', async () => {
     mockAgentConnected = true
     const insights = [makeInsight()]
-    const { unmount } = renderHook(() => useInsightEnrichment(insights))
+    const { unmount } = await renderInsightEnrichmentHook(insights)
 
     unmount()
 
     // Should not throw or leak timers
-    vi.advanceTimersByTime(10000)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10000)
+    })
     // If cleanup didn't work, fetch would be called — but we don't assert here
     // because the internal timeout ref is cleaned up
   })

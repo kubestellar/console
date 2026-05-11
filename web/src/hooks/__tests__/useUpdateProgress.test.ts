@@ -75,7 +75,7 @@ vi.mock('../../lib/demoMode', () => ({
 }))
 
 vi.mock('../../lib/utils/wsAuth', () => ({
-  appendWsAuthToken: (url: string) => url,
+  appendWsAuthToken: async (url: string) => url,
 }))
 
 // Assign mock to global before importing the hook
@@ -90,6 +90,18 @@ function sendProgress(ws: MockWebSocketInstance, payload: Record<string, unknown
       data: JSON.stringify({ type: 'update_progress', payload }),
     })
   })
+}
+
+async function flushMicrotasks() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
+}
+
+async function renderUpdateProgressHook() {
+  const hook = renderHook(() => useUpdateProgress())
+  await flushMicrotasks()
+  return hook
 }
 
 describe('useUpdateProgress', () => {
@@ -107,8 +119,8 @@ describe('useUpdateProgress', () => {
 
   // ── Initial state ──────────────────────────────────────────────────────
 
-  it('returns null progress and empty step history initially', () => {
-    const { result } = renderHook(() => useUpdateProgress())
+  it('returns null progress and empty step history initially', async () => {
+    const { result } = await renderUpdateProgressHook()
 
     expect(result.current.progress).toBeNull()
     expect(result.current.stepHistory).toEqual([])
@@ -117,16 +129,16 @@ describe('useUpdateProgress', () => {
 
   // ── WebSocket connection ───────────────────────────────────────────────
 
-  it('creates a WebSocket connection on mount', () => {
-    renderHook(() => useUpdateProgress())
+  it('creates a WebSocket connection on mount', async () => {
+    await renderUpdateProgressHook()
 
     expect(wsInstances.length).toBe(1)
   })
 
   // ── Parses update_progress messages ────────────────────────────────────
 
-  it('updates progress when receiving an update_progress message', () => {
-    const { result } = renderHook(() => useUpdateProgress())
+  it('updates progress when receiving an update_progress message', async () => {
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     sendProgress(ws, {
@@ -146,8 +158,8 @@ describe('useUpdateProgress', () => {
 
   // ── Ignores non-matching message types ─────────────────────────────────
 
-  it('ignores messages with a different type', () => {
-    const { result } = renderHook(() => useUpdateProgress())
+  it('ignores messages with a different type', async () => {
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -170,8 +182,8 @@ describe('useUpdateProgress', () => {
 
   // ── Ignores malformed JSON ─────────────────────────────────────────────
 
-  it('ignores malformed JSON messages', () => {
-    const { result } = renderHook(() => useUpdateProgress())
+  it('ignores malformed JSON messages', async () => {
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -183,9 +195,9 @@ describe('useUpdateProgress', () => {
 
   // ── Tracks step history ────────────────────────────────────────────────
 
-  it('builds step history from update_progress messages with step info', () => {
+  it('builds step history from update_progress messages with step info', async () => {
     const TOTAL_STEPS = 7
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     // Step 1 active
@@ -217,9 +229,9 @@ describe('useUpdateProgress', () => {
 
   // ── Handles step updates progressing through all steps ─────────────────
 
-  it('marks all steps as completed when the last step is active', () => {
+  it('marks all steps as completed when the last step is active', async () => {
     const TOTAL_STEPS = 7
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     // Jump straight to step 7
@@ -242,9 +254,9 @@ describe('useUpdateProgress', () => {
 
   // ── Step history uses known labels from DEV_UPDATE_STEP_LABELS ────────
 
-  it('uses known step labels for developer channel steps', () => {
+  it('uses known step labels for developer channel steps', async () => {
     const TOTAL_STEPS = 7
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     sendProgress(ws, {
@@ -268,8 +280,8 @@ describe('useUpdateProgress', () => {
 
   // ── Messages without step info do not alter step history ──────────────
 
-  it('does not update step history if step or totalSteps is missing', () => {
-    const { result } = renderHook(() => useUpdateProgress())
+  it('does not update step history if step or totalSteps is missing', async () => {
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     sendProgress(ws, {
@@ -285,9 +297,9 @@ describe('useUpdateProgress', () => {
 
   // ── Dismiss clears progress and step history ───────────────────────────
 
-  it('dismiss() clears both progress and step history', () => {
+  it('dismiss() clears both progress and step history', async () => {
     const TOTAL_STEPS = 7
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     sendProgress(ws, {
@@ -311,9 +323,9 @@ describe('useUpdateProgress', () => {
 
   // ── Reconnects on WebSocket close ──────────────────────────────────────
 
-  it('reconnects when the WebSocket closes', () => {
+  it('reconnects when the WebSocket closes', async () => {
     const WS_RECONNECT_MS = 5000
-    renderHook(() => useUpdateProgress())
+    await renderUpdateProgressHook()
 
     expect(wsInstances.length).toBe(1)
 
@@ -323,9 +335,10 @@ describe('useUpdateProgress', () => {
     })
 
     // Advance past reconnect delay
-    act(() => {
-      vi.advanceTimersByTime(WS_RECONNECT_MS)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS)
     })
+    await flushMicrotasks()
 
     // A new WebSocket should have been created
     expect(wsInstances.length).toBe(2)
@@ -333,15 +346,16 @@ describe('useUpdateProgress', () => {
 
   // ── Multiple reconnects ───────────────────────────────────────────────
 
-  it('reconnects multiple times on repeated disconnects', () => {
+  it('reconnects multiple times on repeated disconnects', async () => {
     const WS_RECONNECT_MS = 5000
     const RECONNECT_COUNT = 3
-    renderHook(() => useUpdateProgress())
+    await renderUpdateProgressHook()
     expect(wsInstances.length).toBe(1)
 
     for (let i = 0; i < RECONNECT_COUNT; i++) {
       act(() => { wsInstances[wsInstances.length - 1].close() })
-      act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
     }
 
     // Original + 3 reconnects
@@ -350,8 +364,8 @@ describe('useUpdateProgress', () => {
 
   // ── Cleanup on unmount ─────────────────────────────────────────────────
 
-  it('closes WebSocket and clears timers on unmount', () => {
-    const { unmount } = renderHook(() => useUpdateProgress())
+  it('closes WebSocket and clears timers on unmount', async () => {
+    const { unmount } = await renderUpdateProgressHook()
 
     const ws = wsInstances[0]
     unmount()
@@ -361,8 +375,8 @@ describe('useUpdateProgress', () => {
 
   // ── Ignores messages with no payload ───────────────────────────────────
 
-  it('ignores update_progress messages with no payload', () => {
-    const { result } = renderHook(() => useUpdateProgress())
+  it('ignores update_progress messages with no payload', async () => {
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -376,9 +390,9 @@ describe('useUpdateProgress', () => {
 
   // ── WebSocket onerror triggers close ──────────────────────────────────
 
-  it('closes the WebSocket on error (which triggers reconnect)', () => {
+  it('closes the WebSocket on error (which triggers reconnect)', async () => {
     const WS_RECONNECT_MS = 5000
-    renderHook(() => useUpdateProgress())
+    await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     act(() => {
@@ -388,21 +402,22 @@ describe('useUpdateProgress', () => {
     // onerror calls ws.close(), which triggers onclose and schedules reconnect
     expect(ws.close).toHaveBeenCalled()
 
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
     expect(wsInstances.length).toBe(2)
   })
 
   // ── Stale detection during active update ──────────────────────────────
 
-  it('transitions to failed status when WebSocket stays disconnected during active update', () => {
+  it('transitions to failed status when WebSocket stays disconnected during active update', async () => {
     const STALE_TIMEOUT_MS = 45_000
     const STALE_CHECK_INTERVAL_MS = 5_000
     const WS_RECONNECT_MS = 5_000
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     // Trigger onopen to set lastMessageTimeRef
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     // Start an active update
     sendProgress(ws, {
@@ -429,11 +444,12 @@ describe('useUpdateProgress', () => {
     })
 
     // Advance past reconnect delay (the reconnect attempt throws, wsRef stays null)
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
 
     // Now advance past the stale timeout + one check interval
-    act(() => {
-      vi.advanceTimersByTime(STALE_TIMEOUT_MS + STALE_CHECK_INTERVAL_MS)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(STALE_TIMEOUT_MS + STALE_CHECK_INTERVAL_MS)
     })
 
     // The hook should have detected the stale state (no WS, active update, long silence)
@@ -443,13 +459,13 @@ describe('useUpdateProgress', () => {
 
   // ── Stale detection stops when update completes ───────────────────────
 
-  it('stops stale detection timer when update status is done', () => {
+  it('stops stale detection timer when update status is done', async () => {
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     // Trigger onopen
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     // Start active update (starts stale detection)
     sendProgress(ws, {
@@ -477,12 +493,12 @@ describe('useUpdateProgress', () => {
 
   // ── Stale detection stops when update fails ───────────────────────────
 
-  it('stops stale detection timer when update status is failed', () => {
+  it('stops stale detection timer when update status is failed', async () => {
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     sendProgress(ws, {
       status: 'building',
@@ -504,9 +520,9 @@ describe('useUpdateProgress', () => {
 
   // ── Step history preserves completed step timestamps ───────────────────
 
-  it('preserves timestamps of previously completed steps', () => {
+  it('preserves timestamps of previously completed steps', async () => {
     const TOTAL_STEPS = 7
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     // Step 1
@@ -529,9 +545,9 @@ describe('useUpdateProgress', () => {
 
   // ── Step history for unknown step labels ──────────────────────────────
 
-  it('falls back to "Step N" for steps beyond the known label map', () => {
+  it('falls back to "Step N" for steps beyond the known label map', async () => {
     const TOTAL_STEPS = 10 // beyond the 7-step dev label map
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     sendProgress(ws, {
@@ -550,11 +566,11 @@ describe('useUpdateProgress', () => {
   it('triggers waitForBackend when WebSocket reconnects during restarting status', async () => {
     const WS_RECONNECT_MS = 5000
     const BACKEND_POLL_MS = 2000
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     // Trigger onopen
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     // Set status to restarting
     sendProgress(ws, {
@@ -584,7 +600,8 @@ describe('useUpdateProgress', () => {
 
     // Close and reconnect — reconnect during restarting triggers waitForBackend
     act(() => { ws.close() })
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
 
     // Trigger onopen of the new WebSocket
     const ws2 = wsInstances[wsInstances.length - 1]
@@ -594,7 +611,7 @@ describe('useUpdateProgress', () => {
 
     // Advance through poll iterations
     for (let i = 0; i < 5; i++) {
-      await act(async () => { vi.advanceTimersByTime(BACKEND_POLL_MS) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(BACKEND_POLL_MS) })
       // Allow pending microtasks (fetch promises) to resolve
       await act(async () => { await Promise.resolve() })
     }
@@ -613,10 +630,10 @@ describe('useUpdateProgress', () => {
   it('shows progressive messages during backend health polling', async () => {
     const WS_RECONNECT_MS = 5000
     const BACKEND_POLL_MS = 2000
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     sendProgress(ws, {
       status: 'restarting',
@@ -633,7 +650,8 @@ describe('useUpdateProgress', () => {
     ))
 
     act(() => { ws.close() })
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
 
     const ws2 = wsInstances[wsInstances.length - 1]
     act(() => {
@@ -647,7 +665,7 @@ describe('useUpdateProgress', () => {
     // Advance several polls to get elapsed time > 10s
     const POLLS_FOR_10S = 6 // 6 * 2000ms = 12s
     for (let i = 0; i < POLLS_FOR_10S; i++) {
-      await act(async () => { vi.advanceTimersByTime(BACKEND_POLL_MS) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(BACKEND_POLL_MS) })
       await act(async () => { await Promise.resolve() })
     }
 
@@ -663,10 +681,10 @@ describe('useUpdateProgress', () => {
   it('continues polling when fetch throws during waitForBackend', async () => {
     const WS_RECONNECT_MS = 5000
     const BACKEND_POLL_MS = 2000
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     sendProgress(ws, {
       status: 'restarting',
@@ -688,7 +706,8 @@ describe('useUpdateProgress', () => {
     }))
 
     act(() => { ws.close() })
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
 
     const ws2 = wsInstances[wsInstances.length - 1]
     act(() => {
@@ -697,7 +716,7 @@ describe('useUpdateProgress', () => {
 
     // Advance through polls — errors should be swallowed
     for (let i = 0; i < 5; i++) {
-      await act(async () => { vi.advanceTimersByTime(BACKEND_POLL_MS) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(BACKEND_POLL_MS) })
       await act(async () => { await Promise.resolve() })
     }
 
@@ -713,10 +732,10 @@ describe('useUpdateProgress', () => {
   it('continues polling when /health returns non-ok response', async () => {
     const WS_RECONNECT_MS = 5000
     const BACKEND_POLL_MS = 2000
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     sendProgress(ws, {
       status: 'restarting',
@@ -737,7 +756,8 @@ describe('useUpdateProgress', () => {
     }))
 
     act(() => { ws.close() })
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
 
     const ws2 = wsInstances[wsInstances.length - 1]
     act(() => {
@@ -745,7 +765,7 @@ describe('useUpdateProgress', () => {
     })
 
     for (let i = 0; i < 5; i++) {
-      await act(async () => { vi.advanceTimersByTime(BACKEND_POLL_MS) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(BACKEND_POLL_MS) })
       await act(async () => { await Promise.resolve() })
     }
 
@@ -761,10 +781,10 @@ describe('useUpdateProgress', () => {
     const WS_RECONNECT_MS = 5000
     const BACKEND_POLL_MS = 2000
     const BACKEND_POLL_MAX = 90
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     sendProgress(ws, {
       status: 'restarting',
@@ -781,7 +801,8 @@ describe('useUpdateProgress', () => {
     ))
 
     act(() => { ws.close() })
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
 
     const ws2 = wsInstances[wsInstances.length - 1]
     act(() => {
@@ -790,7 +811,7 @@ describe('useUpdateProgress', () => {
 
     // Advance through all 90 attempts
     for (let i = 0; i < BACKEND_POLL_MAX + 1; i++) {
-      await act(async () => { vi.advanceTimersByTime(BACKEND_POLL_MS) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(BACKEND_POLL_MS) })
       await act(async () => { await Promise.resolve() })
     }
 
@@ -804,7 +825,7 @@ describe('useUpdateProgress', () => {
 
   // ── WebSocket constructor throws — catch block in connect() ──
 
-  it('retries connection when WebSocket constructor throws', () => {
+  it('retries connection when WebSocket constructor throws', async () => {
     const WS_RECONNECT_MS = 5000
 
     // First make the constructor throw
@@ -812,15 +833,17 @@ describe('useUpdateProgress', () => {
       constructor() { throw new Error('Connection refused') }
     })
 
-    renderHook(() => useUpdateProgress())
+    await renderUpdateProgressHook()
 
     // No instances created because constructor threw
     // But the hook should schedule a reconnect
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
 
     // Restore MockWebSocket for the retry
     vi.stubGlobal('WebSocket', MockWebSocket)
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
 
     // Now a new instance should have been created
     expect(wsInstances.length).toBeGreaterThanOrEqual(1)
@@ -828,13 +851,13 @@ describe('useUpdateProgress', () => {
 
   // ── Stale detection: interval clears when status becomes non-active ──
 
-  it('stale detection timer clears itself when progress is no longer active', () => {
+  it('stale detection timer clears itself when progress is no longer active', async () => {
     const STALE_CHECK_INTERVAL_MS = 5000
     const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     // Start active update to start stale detection
     sendProgress(ws, {
@@ -852,7 +875,7 @@ describe('useUpdateProgress', () => {
 
     // Advance past a stale check interval — the interval callback should detect
     // non-active status and clear itself
-    act(() => { vi.advanceTimersByTime(STALE_CHECK_INTERVAL_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(STALE_CHECK_INTERVAL_MS) })
 
     expect(result.current.progress?.status).toBe('idle')
     expect(clearIntervalSpy).toHaveBeenCalled()
@@ -861,13 +884,13 @@ describe('useUpdateProgress', () => {
 
   // ── Stale detection: does not trigger when WS is still connected ──
 
-  it('stale detection does not trigger failure when WebSocket is still connected', () => {
+  it('stale detection does not trigger failure when WebSocket is still connected', async () => {
     const STALE_TIMEOUT_MS = 45_000
     const STALE_CHECK_INTERVAL_MS = 5_000
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     sendProgress(ws, {
       status: 'building',
@@ -876,8 +899,8 @@ describe('useUpdateProgress', () => {
     })
 
     // Advance past the stale timeout but keep WS connected (wsRef is not null)
-    act(() => {
-      vi.advanceTimersByTime(STALE_TIMEOUT_MS + STALE_CHECK_INTERVAL_MS)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(STALE_TIMEOUT_MS + STALE_CHECK_INTERVAL_MS)
     })
 
     // Since WS is still connected, stale detection should NOT trigger failure
@@ -886,9 +909,9 @@ describe('useUpdateProgress', () => {
 
   // ── Step history: active step uses empty message when payload message is empty ──
 
-  it('uses label from step map when active step message is empty', () => {
+  it('uses label from step map when active step message is empty', async () => {
     const TOTAL_STEPS = 7
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     sendProgress(ws, {
@@ -905,14 +928,14 @@ describe('useUpdateProgress', () => {
 
   // ── Stale detection: error message includes elapsed time ──
 
-  it('stale detection error message includes elapsed seconds', () => {
+  it('stale detection error message includes elapsed seconds', async () => {
     const STALE_TIMEOUT_MS = 45_000
     const STALE_CHECK_INTERVAL_MS = 5_000
     const WS_RECONNECT_MS = 5_000
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     sendProgress(ws, {
       status: 'pulling',
@@ -929,8 +952,9 @@ describe('useUpdateProgress', () => {
       if (ws.onclose) ws.onclose()
     })
 
-    act(() => { vi.advanceTimersByTime(WS_RECONNECT_MS) })
-    act(() => { vi.advanceTimersByTime(STALE_TIMEOUT_MS + STALE_CHECK_INTERVAL_MS) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(WS_RECONNECT_MS) })
+    await flushMicrotasks()
+    await act(async () => { await vi.advanceTimersByTimeAsync(STALE_TIMEOUT_MS + STALE_CHECK_INTERVAL_MS) })
 
     expect(result.current.progress?.status).toBe('failed')
     expect(result.current.progress?.error).toMatch(/No response from kc-agent for \d+s/)
@@ -942,12 +966,12 @@ describe('useUpdateProgress', () => {
 
   // ── Stale detection does not restart if already running ──
 
-  it('does not start a second stale detection timer when one is already running', () => {
+  it('does not start a second stale detection timer when one is already running', async () => {
     const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
-    act(() => { vi.advanceTimersByTime(0) })
+    await flushMicrotasks()
 
     // First active update — starts stale detection
     sendProgress(ws, {
@@ -974,9 +998,9 @@ describe('useUpdateProgress', () => {
 
   // ── Pending steps have timestamp 0 ──
 
-  it('sets timestamp to 0 for pending steps', () => {
+  it('sets timestamp to 0 for pending steps', async () => {
     const TOTAL_STEPS = 7
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     sendProgress(ws, {
@@ -996,9 +1020,9 @@ describe('useUpdateProgress', () => {
 
   // ── Completed step without prior entry uses Date.now() ──
 
-  it('assigns Date.now() to completed steps without prior history entry', () => {
+  it('assigns Date.now() to completed steps without prior history entry', async () => {
     const TOTAL_STEPS = 7
-    const { result } = renderHook(() => useUpdateProgress())
+    const { result } = await renderUpdateProgressHook()
     const ws = wsInstances[0]
 
     // Jump directly to step 3 — steps 1 and 2 have no prior history entries
