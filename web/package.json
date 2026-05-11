@@ -125,7 +125,7 @@
     "vite": "^8.0.5",
     "vite-plugin-compression2": "^2.5.3",
     "vite-plugin-istanbul": "^8.0.0",
-    "vitest": "^4.1.5",
+    "vitest": "^4.1.6",
     "wait-on": "^9.0.3",
     "ws": "^8.20.0"
   },
