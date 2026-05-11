@@ -358,7 +358,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setDescribeLoading(true)
 
     try {
-      const ws = openTrackedWs()
+      const ws = await openTrackedWs()
       const requestId = `describe-${Date.now()}`
 
       ws.onopen = () => {
@@ -430,7 +430,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setLogsLoading(true)
 
     try {
-      const ws = openTrackedWs()
+      const ws = await openTrackedWs()
       const requestId = `logs-${Date.now()}`
 
       ws.onopen = () => {
@@ -474,7 +474,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     setEventsLoading(true)
 
     try {
-      const ws = openTrackedWs()
+      const ws = await openTrackedWs()
       const requestId = `events-${Date.now()}`
 
       ws.onopen = () => {
@@ -526,9 +526,9 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
 
     try {
       // Helper to run a kubectl command and get output
-      const runKubectl = (args: string[]): Promise<string> => {
-        return new Promise(async (resolve) => {
-          const ws = openTrackedWs()
+      const runKubectl = async (args: string[]): Promise<string> => {
+        const ws = await openTrackedWs()
+        return new Promise((resolve) => {
           const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
 
@@ -658,7 +658,7 @@ ${annotations ? Object.entries(annotations).map(([k, v]) => `${k}=${v}`).join('\
 `.trim()
 
       // Now request AI analysis via Claude
-      const ws = openTrackedWs()
+      const ws = await openTrackedWs()
       const requestId = `ai-analyze-${Date.now()}`
 
       ws.onopen = () => {
@@ -750,7 +750,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     setPodStatusLoading(true)
 
     try {
-      const ws = openTrackedWs()
+      const ws = await openTrackedWs()
       const requestId = `status-${Date.now()}`
 
       ws.onopen = () => {
@@ -794,7 +794,7 @@ Be specific and reference actual values from the data. Keep response to 3-4 sent
     setYamlLoading(true)
 
     try {
-      const ws = openTrackedWs()
+      const ws = await openTrackedWs()
       const requestId = `yaml-${Date.now()}`
 
       ws.onopen = () => {
@@ -966,7 +966,7 @@ Please:
     setDeleteError(null)
 
     try {
-      const ws = openTrackedWs()
+      const ws = await openTrackedWs()
       const requestId = `delete-pod-${Date.now()}`
 
       ws.onopen = () => {
@@ -1022,9 +1022,9 @@ Please:
     setLabelError(null)
 
     try {
-      const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
-        return new Promise(async (resolve) => {
-          const ws = openTrackedWs()
+      const runKubectl = async (args: string[]): Promise<{ success: boolean; error?: string }> => {
+        const ws = await openTrackedWs()
+        return new Promise((resolve) => {
           const requestId = `label-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
           const timeout = setTimeout(() => {
@@ -1160,9 +1160,9 @@ Please:
     setAnnotationError(null)
 
     try {
-      const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
-        return new Promise(async (resolve) => {
-          const ws = openTrackedWs()
+      const runKubectl = async (args: string[]): Promise<{ success: boolean; error?: string }> => {
+        const ws = await openTrackedWs()
+        return new Promise((resolve) => {
           const requestId = `annotate-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
           const timeout = setTimeout(() => {
@@ -1297,9 +1297,9 @@ Please:
     setRelatedLoading(true)
 
     try {
-      const runKubectl = (args: string[]): Promise<string> => {
-        return new Promise(async (resolve) => {
-          const ws = openTrackedWs()
+      const runKubectl = async (args: string[]): Promise<string> => {
+        const ws = await openTrackedWs()
+        return new Promise((resolve) => {
           const requestId = `related-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
 
