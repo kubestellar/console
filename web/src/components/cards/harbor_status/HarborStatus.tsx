@@ -242,6 +242,7 @@ export function HarborStatus() {
     showSkeleton,
     showEmptyState,
     isRefreshing,
+    lastRefresh,
   } = useHarborStatus()
   const { drillToAllStorage } = useDrillDownActions()
 
