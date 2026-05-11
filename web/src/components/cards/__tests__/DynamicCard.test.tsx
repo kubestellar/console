@@ -361,7 +361,7 @@ describe('Tier1CardRuntime', () => {
       expect(badge.className).toContain('bg-green-500/20')
     })
 
-    it('keeps header and row columns aligned when badge columns have no fixed width', () => {
+    it('uses a shared grid with compact badge columns so rows stay aligned after resize', () => {
       const def: DynamicCardDefinition_T1 = {
         ...BASE_T1_DEF,
         columns: [
@@ -379,10 +379,9 @@ describe('Tier1CardRuntime', () => {
 
       render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
 
-      const headerRow = screen.getByTestId('dynamic-card-header-row')
-      const dataRow = screen.getByTestId('dynamic-card-data-row')
-      expect(headerRow).toHaveStyle({ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' })
-      expect(dataRow).toHaveStyle({ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' })
+      const listGrid = screen.getByTestId('dynamic-card-list-grid')
+      expect(listGrid).toHaveStyle({ gridTemplateColumns: 'minmax(0, 1fr) fit-content(8rem)' })
+      expect(screen.getAllByTestId('dynamic-card-data-row')).toHaveLength(2)
       expect(screen.getByText('Healthy').className).not.toContain('shrink-0')
     })
   })
