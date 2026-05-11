@@ -8,7 +8,7 @@ const TOOL_INSTALL_LINKS: Record<string, string> = {
 }
 
 function formatToolList(tools: string[]): string {
-  return tools.join(', ')
+  return (tools || []).join(', ')
 }
 
 export function MissionToolPrerequisiteNotice({
