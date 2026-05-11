@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, act, render, screen } from '@testing-library/react'
+import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
-import { MissionProvider, useMissions } from './useMissions'
+import { MissionProvider, useMissions, __missionsTestables } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 
@@ -672,6 +672,8 @@ describe('mission reconnection on WebSocket open', () => {
   })
 
   it('sends reconnection chat message after delay', async () => {
+    vi.useRealTimers()
+
     localStorage.setItem('kc_missions', JSON.stringify([{
       id: 'reconnect-m-2',
       title: 'Running Mission 2',
@@ -695,41 +697,36 @@ describe('mission reconnection on WebSocket open', () => {
       await Promise.resolve()
     })
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0)
+    await waitFor(() => {
+      expect(result.current.missions[0].context?.needsReconnect).toBe(false)
+      expect(result.current.missions[0].currentStep).toBe('Resuming...')
     })
 
-    expect(result.current.missions[0].context?.needsReconnect).toBe(false)
-    expect(result.current.missions[0].currentStep).toBe('Resuming...')
+    // This specific reconnect flow is more reliable on real timers because
+    // waitFor and the delayed resume send share the same timer queue.
+    await waitFor(() => {
+      const allCalls = MockWebSocket.lastInstance?.send.mock.calls ?? []
+      const allTypes = allCalls.map((call: string[]) => {
+        try { return JSON.parse(call[0]).type } catch { return 'unparseable' }
+      })
+      expect(allTypes).toContain('list_agents')
 
-    // Wait for the MISSION_RECONNECT_DELAY_MS (500ms) timer to fire.
-    // Fake timers are active (set in beforeEach), so we must advance the
-    // clock rather than relying on a real setTimeout that would never fire.
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(600)
-    })
-
-    const allCalls = MockWebSocket.lastInstance?.send.mock.calls ?? []
-    const allTypes = allCalls.map((call: string[]) => {
-      try { return JSON.parse(call[0]).type } catch { return 'unparseable' }
-    })
-    expect(allTypes).toContain('list_agents')
-
-    const chatCalls = allCalls.filter(
-      (call: string[]) => {
-        try { return JSON.parse(call[0]).type === 'chat' } catch { return false }
-      },
-    )
-    expect(chatCalls.length).toBeGreaterThan(0)
-    const payload = JSON.parse(chatCalls[chatCalls.length - 1][0]).payload
-    expect(payload).toMatchObject({
-      prompt: 'Help me',
-      sessionId: 'reconnect-m-2',
-      agent: 'claude-code',
-      history: [],
-      resumeKey: 'resume-reconnect-m-2',
-      isResume: true,
-    })
+      const chatCalls = allCalls.filter(
+        (call: string[]) => {
+          try { return JSON.parse(call[0]).type === 'chat' } catch { return false }
+        },
+      )
+      expect(chatCalls.length).toBeGreaterThan(0)
+      const payload = JSON.parse(chatCalls[chatCalls.length - 1][0]).payload
+      expect(payload).toMatchObject({
+        prompt: 'Help me',
+        sessionId: 'reconnect-m-2',
+        agent: 'claude-code',
+        history: [],
+        resumeKey: 'resume-reconnect-m-2',
+        isResume: true,
+      })
+    }, { timeout: __missionsTestables.MISSION_RECONNECT_DELAY_MS * 3 })
   })
 })
 
