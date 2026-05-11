@@ -196,7 +196,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
                   <div className="flex items-center gap-3">
                     <ShieldAlert className="w-5 h-5 text-amber-400" />
                     <div>
-                      <div className="text-white font-medium">{f.finding_type.replace(/_/g, ' ')}</div>
+                      <div className="text-white font-medium">{(f.finding_type ?? '').replace(/_/g, ' ')}</div>
                       <div className="text-sm text-gray-400">{f.subject} — {f.cluster}/{f.namespace}</div>
                     </div>
                   </div>
