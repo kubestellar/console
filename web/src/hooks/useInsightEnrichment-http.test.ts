@@ -41,6 +41,10 @@ vi.mock('../lib/constants', async (importOriginal) => {
   LOCAL_AGENT_WS_URL: 'ws://127.0.0.1:8585/ws',
 } })
 
+vi.mock('../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: async (url: string) => url,
+}))
+
 // ── WebSocket mock ──────────────────────────────────────────────────────────────
 // A lightweight stand-in that captures instances and exposes simulation helpers.
 
@@ -113,6 +117,35 @@ function makeEnrichment(overrides: Partial<AIInsightEnrichment> = {}): AIInsight
   }
 }
 
+type UseInsightEnrichmentHook = (insights: MultiClusterInsight[]) => {
+  enrichedInsights: MultiClusterInsight[]
+  hasEnrichments: boolean
+  enrichmentCount: number
+}
+
+async function flushMicrotasks() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+}
+
+async function renderInsightEnrichmentHook(
+  useInsightEnrichment: UseInsightEnrichmentHook,
+  insights: MultiClusterInsight[],
+) {
+  const hook = renderHook(() => useInsightEnrichment(insights))
+  await flushMicrotasks()
+  return hook
+}
+
+async function advanceTime(ms: number) {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms)
+  })
+  await flushMicrotasks()
+}
+
 // ── mergeEnrichments — empty enrichments map ───────────────────────────────────
 
 
@@ -139,7 +172,7 @@ describe('useInsightEnrichment — HTTP enrichment request', () => {
   it('does not call fetch immediately — waits for the 2s debounce', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     // No timers advanced yet
     expect(mockFetch).not.toHaveBeenCalled()
@@ -154,9 +187,9 @@ describe('useInsightEnrichment — HTTP enrichment request', () => {
       json: async () => ({ enrichments: [], timestamp: new Date().toISOString() }),
     })
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
 
     expect(mockFetch).toHaveBeenCalledOnce()
     expect(mockFetch.mock.calls[0][0]).toContain('/insights/enrich')
@@ -173,9 +206,9 @@ describe('useInsightEnrichment — HTTP enrichment request', () => {
       json: async () => ({ enrichments: [], timestamp: new Date().toISOString() }),
     })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body as string) as {
       insights: Array<{ id: string; title: string; severity: string }>
@@ -200,10 +233,10 @@ describe('useInsightEnrichment — HTTP enrichment request', () => {
       }),
     })
 
-    const { result } = renderHook(() => useInsightEnrichment([insight]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     // Advance 2 s to fire the debounce timer
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
     // Flush the fetch promise chain and resulting React state updates
     await act(async () => {})
 
@@ -223,15 +256,15 @@ describe('useInsightEnrichment — HTTP enrichment request', () => {
     })
 
     // First mount — triggers the request
-    const { unmount } = renderHook(() => useInsightEnrichment(insights))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    const { unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, insights)
+    await advanceTime(2_000)
     expect(mockFetch).toHaveBeenCalledOnce()
 
     unmount()
 
     // Second mount with same insights — endpoint is disabled, no new request
-    renderHook(() => useInsightEnrichment(insights))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, insights)
+    await advanceTime(2_000)
 
     expect(mockFetch).toHaveBeenCalledOnce()
   })
@@ -240,9 +273,9 @@ describe('useInsightEnrichment — HTTP enrichment request', () => {
     mockIsAgentConnected.mockReturnValue(false)
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
 
     expect(mockFetch).not.toHaveBeenCalled()
   })
@@ -250,9 +283,9 @@ describe('useInsightEnrichment — HTTP enrichment request', () => {
   it('does not send fetch when the insights array is empty', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [])
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
 
     expect(mockFetch).not.toHaveBeenCalled()
   })
@@ -278,7 +311,7 @@ describe('useInsightEnrichment — return value shape', () => {
   it('returns enrichedInsights (array), hasEnrichments (boolean), enrichmentCount (number)', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     expect(Array.isArray(result.current.enrichedInsights)).toBe(true)
     expect(typeof result.current.hasEnrichments).toBe('boolean')
@@ -288,7 +321,7 @@ describe('useInsightEnrichment — return value shape', () => {
   it('hasEnrichments is false and enrichmentCount is 0 when no enrichments have been applied', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     expect(result.current.hasEnrichments).toBe(false)
     expect(result.current.enrichmentCount).toBe(0)
@@ -298,7 +331,7 @@ describe('useInsightEnrichment — return value shape', () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
     const insight = makeInsight({ title: 'My Insight' })
 
-    const { result } = renderHook(() => useInsightEnrichment([insight]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     expect(result.current.enrichedInsights).toHaveLength(1)
     expect(result.current.enrichedInsights[0].title).toBe('My Insight')
@@ -309,7 +342,7 @@ describe('useInsightEnrichment — return value shape', () => {
     const insight = makeInsight({ id: 'count-test' })
     const enrichment = makeEnrichment({ insightId: 'count-test' })
 
-    const { result } = renderHook(() => useInsightEnrichment([insight]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -359,18 +392,18 @@ describe('useInsightEnrichment — cache TTL and hash dedup', () => {
       }),
     })
 
-    const { unmount } = renderHook(() => useInsightEnrichment([insight]))
+    const { unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     // First request after debounce
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
     await act(async () => {}) // flush promise
     expect(mockFetch).toHaveBeenCalledOnce()
 
     unmount()
 
     // Re-mount with identical insights — same hash, cache still valid
-    renderHook(() => useInsightEnrichment([insight]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
+    await advanceTime(2_000)
     await act(async () => {})
 
     // Should NOT have made a second request
@@ -390,10 +423,10 @@ describe('useInsightEnrichment — cache TTL and hash dedup', () => {
       }),
     })
 
-    const { unmount } = renderHook(() => useInsightEnrichment([insight]))
+    const { unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     // First request
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
     await act(async () => {})
     expect(mockFetch).toHaveBeenCalledOnce()
 
@@ -401,11 +434,11 @@ describe('useInsightEnrichment — cache TTL and hash dedup', () => {
 
     // Advance past the 5-minute cache TTL
     const CACHE_TTL_MS = 5 * 60_000
-    await act(async () => { await vi.advanceTimersByTimeAsync(CACHE_TTL_MS + 1) })
+    await advanceTime(CACHE_TTL_MS + 1)
 
     // Re-mount — cache expired so same hash should trigger new request
-    renderHook(() => useInsightEnrichment([insight]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
+    await advanceTime(2_000)
     await act(async () => {})
 
     expect(mockFetch).toHaveBeenCalledTimes(2)
@@ -424,9 +457,9 @@ describe('useInsightEnrichment — cache TTL and hash dedup', () => {
     })
 
     const insightA = makeInsight({ id: 'hash-a', severity: 'warning' })
-    const { unmount } = renderHook(() => useInsightEnrichment([insightA]))
+    const { unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [insightA])
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
     await act(async () => {})
     expect(mockFetch).toHaveBeenCalledOnce()
 
@@ -434,8 +467,8 @@ describe('useInsightEnrichment — cache TTL and hash dedup', () => {
 
     // Different insight — different hash
     const insightB = makeInsight({ id: 'hash-b', severity: 'critical' })
-    renderHook(() => useInsightEnrichment([insightB]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insightB])
+    await advanceTime(2_000)
     await act(async () => {})
 
     expect(mockFetch).toHaveBeenCalledTimes(2)
@@ -467,7 +500,7 @@ describe('useInsightEnrichment — multiple enrichments and overwrite', () => {
       makeInsight({ id: 'multi-3', title: 'Third' }),
     ]
 
-    const { result } = renderHook(() => useInsightEnrichment(insights))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, insights)
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -496,7 +529,7 @@ describe('useInsightEnrichment — multiple enrichments and overwrite', () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
     const insight = makeInsight({ id: 'overwrite-test' })
 
-    const { result } = renderHook(() => useInsightEnrichment([insight]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -562,7 +595,7 @@ describe('mergeEnrichments — severity edge cases', () => {
     const insight = makeInsight({ id: 'sev-info-warn', severity: 'info' })
     const enrichment = makeEnrichment({ insightId: 'sev-info-warn', severity: 'warning' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -579,7 +612,7 @@ describe('mergeEnrichments — severity edge cases', () => {
     const insight = makeInsight({ id: 'sev-info-crit', severity: 'info' })
     const enrichment = makeEnrichment({ insightId: 'sev-info-crit', severity: 'critical' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -596,7 +629,7 @@ describe('mergeEnrichments — severity edge cases', () => {
     const insight = makeInsight({ id: 'sev-crit-info', severity: 'critical' })
     const enrichment = makeEnrichment({ insightId: 'sev-crit-info', severity: 'info' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -615,7 +648,7 @@ describe('mergeEnrichments — severity edge cases', () => {
     const enrichment = makeEnrichment({ insightId: 'sev-undef' })
     delete (enrichment as Record<string, unknown>).severity
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -662,7 +695,7 @@ describe('mergeEnrichments — remediation fallback', () => {
     const insight = makeInsight({ id: 'rem-empty', remediation: 'Original fix' })
     const enrichment = makeEnrichment({ insightId: 'rem-empty', remediation: '' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -680,7 +713,7 @@ describe('mergeEnrichments — remediation fallback', () => {
     const insight = makeInsight({ id: 'rem-both', remediation: 'Original fix' })
     const enrichment = makeEnrichment({ insightId: 'rem-both', remediation: 'AI fix' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
