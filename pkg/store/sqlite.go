@@ -369,6 +369,7 @@ func (s *SQLiteStore) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_events_user_time ON user_events(user_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_card_history_user ON card_history(user_id, swapped_out_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_pending_swaps_due ON pending_swaps(status, swap_at);
+	CREATE INDEX IF NOT EXISTS idx_pending_swaps_user ON pending_swaps(user_id);
 
 	-- Feature requests from users (bugs/features submitted via console)
 	CREATE TABLE IF NOT EXISTS feature_requests (
