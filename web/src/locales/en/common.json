@@ -376,6 +376,7 @@
       "personalAccessToken": "Personal Access Token",
       "testing": "Testing...",
       "saved": "Saved!",
+      "saveSuccessToast": "GitHub token saved and validated.",
       "saveAndTest": "Save & Test",
       "clear": "Clear",
       "howToCreate": "How to create a token:",

@@ -8,6 +8,7 @@ import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constan
 import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_CLASSIC_URL } from '../../../lib/constants/github-token'
 import { ConfirmDialog } from '../../../lib/modals'
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../../../lib/utils/localStorage'
+import { useToast } from '../../ui/Toast'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -36,6 +37,7 @@ function authHeaders(): Record<string, string> {
 
 export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProps) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [tokenInput, setTokenInput] = useState('')
   const [hasToken, setHasToken] = useState(false)
   const [tokenSource, setTokenSource] = useState<string | null>(null)
@@ -196,6 +198,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         setTokenInput('') // Clear from input field
         setTokenSaved(true)
         setTimeout(() => setTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
+        showToast(t('settings.github.saveSuccessToast'), 'success')
 
         emitGitHubTokenConfigured()
         emitConversionStep(6, 'github_token')
