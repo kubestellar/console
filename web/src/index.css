@@ -446,7 +446,7 @@ layer(base);
 
 /* Quantum circuit display — monospace with proper line height for ASCII art */
 .quantum-circuit-display {
-  font-family: var(--font-mono);
+  font-family: 'DejaVu Sans Mono', 'Noto Sans Mono', 'Cascadia Code', var(--font-mono), monospace;
   font-size: 0.75rem;
   line-height: 1.5;
 }
