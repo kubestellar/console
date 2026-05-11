@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom'
 import { useDashboards } from '../../../hooks/useDashboards'
 import { useSidebarConfig } from '../../../hooks/useSidebarConfig'
 import { suggestIconSync } from '../../../lib/iconSuggester'
+import { useToast } from '../../ui/Toast'
 import type { CardSuggestion, HoveredCard } from '../shared/cardCatalog'
 import type { DashboardTemplate } from '../templates'
 
@@ -88,6 +89,7 @@ export function DashboardCustomizer({
   const globalSearch = ''
   const { dashboards, createDashboard: _createDashboard } = useDashboards()
   const { addItem } = useSidebarConfig()
+  const { showToast } = useToast()
   const navigate = useNavigate()
 
   const handleHoverCard = useCallback((card: HoveredCard | null) => setHoveredCard(card), [])
@@ -169,7 +171,10 @@ export function DashboardCustomizer({
                 const localId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
                 const href = `/custom-dashboard/${localId}`
                 addItem({ name, icon: suggestIconSync(name), href, type: 'link' }, 'primary')
-                await _createDashboard(name).catch(() => { /* offline — sidebar item already added */ })
+                await _createDashboard(name).catch((error) => {
+                  console.error('Failed to save dashboard:', error)
+                  showToast('Failed to save dashboard — it may not persist', 'error')
+                })
                 onClose()
                 navigate(href)
               }}

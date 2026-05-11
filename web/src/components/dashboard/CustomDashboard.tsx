@@ -551,9 +551,10 @@ export function CustomDashboard() {
     showToast(`Deleted "${displayName}"`, 'success')
     navigate(ROUTES.HOME)
 
-    // Try to delete from backend in the background (may fail offline)
-    deleteDashboard(id).catch(() => {
-      // Backend deletion is optional — sidebar + localStorage are the source of truth
+    // Try to delete from backend in the background so it does not reappear on reload.
+    deleteDashboard(id).catch((error) => {
+      console.error('Failed to delete dashboard:', error)
+      showToast('Failed to delete dashboard — it will reappear on reload', 'error')
     })
   }
 
