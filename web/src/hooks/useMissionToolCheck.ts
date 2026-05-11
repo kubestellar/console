@@ -54,7 +54,7 @@ export function useMissionToolCheck({
     let isActive = true
     setResult({ status: 'checking', missingTools: [], errorMessage: undefined })
 
-    void runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
+    runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
       .then((toolResult) => {
         if (!isActive) return
 
@@ -80,6 +80,7 @@ export function useMissionToolCheck({
         setResult({ status: 'ready', missingTools: [], errorMessage: undefined })
       })
       .catch((error: unknown) => {
+        console.error('[MissionToolCheck] preflight failed:', error)
         if (!isActive) return
         setResult({
           status: 'error',
