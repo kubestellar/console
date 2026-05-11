@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, act, cleanup, fireEvent } from '@testing-library/react'
+import { ToastProvider } from '../../../ui/Toast'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -35,6 +36,14 @@ vi.mock('react-i18next', () => ({
 
 import { GitHubTokenSection } from '../GitHubTokenSection'
 
+function renderGitHubTokenSection() {
+  return render(
+    <ToastProvider>
+      <GitHubTokenSection forceVersionCheck={vi.fn()} />
+    </ToastProvider>
+  )
+}
+
 function mockJsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -61,7 +70,7 @@ describe('GitHubTokenSection', () => {
   it('renders without crashing', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(mockJsonResponse({ hasToken: false, source: '' }))
 
-    const { container } = render(<GitHubTokenSection forceVersionCheck={vi.fn()} />)
+    const { container } = renderGitHubTokenSection()
 
     expect(container).toBeTruthy()
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/github/token/status', expect.any(Object)))
@@ -84,7 +93,7 @@ describe('GitHubTokenSection', () => {
       .mockResolvedValueOnce(mockJsonResponse({}))
       .mockImplementationOnce(() => rateLimitPromise)
 
-    render(<GitHubTokenSection forceVersionCheck={vi.fn()} />)
+    renderGitHubTokenSection()
 
     const clearButton = await screen.findByRole('button', { name: 'settings.github.clear' })
     const tokenInput = screen.getByLabelText('settings.github.feedbackToken')
@@ -109,7 +118,7 @@ describe('GitHubTokenSection', () => {
     vi.mocked(fetch).mockResolvedValueOnce(mockJsonResponse({ hasToken: false, source: '' }))
     window.history.replaceState({}, '', '/settings#github-token')
 
-    const { container } = render(<GitHubTokenSection forceVersionCheck={vi.fn()} />)
+    const { container } = renderGitHubTokenSection()
 
     await act(async () => {
       await Promise.resolve()
