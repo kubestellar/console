@@ -25,7 +25,6 @@ interface LivePreviewPanelProps {
 
 const DEBOUNCE_TIER1_MS = 300  // Debounce for Tier 1 (declarative) config changes
 const DEBOUNCE_TIER2_MS = 800  // Longer debounce for Tier 2 (code) changes to avoid excessive recompilation
-const COMPILE_TIMEOUT_MS = 10000  // Max time to wait for compilation before showing error
 
 export function LivePreviewPanel({ tier, t1Config, t2Source, title, width = 6 }: LivePreviewPanelProps) {
   const { t } = useTranslation()
@@ -174,55 +173,44 @@ function T2Preview({ source }: { source?: string }) {
   // Compile when debounced source updates
   useEffect(() => {
     if (!debouncedSource) {
-      setCardComponent(null)
-      setError(null)
-      setCompiling(false)
       return
     }
 
     let cancelled = false
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-    setCompiling(true)
-    setError(null)
 
-    const compileWithTimeout = Promise.race([
-      compileCardCode(debouncedSource),
-      new Promise<never>((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error('Compilation timed out')), COMPILE_TIMEOUT_MS)
-      }),
-    ])
+    Promise.resolve().then(async () => {
+      if (cancelled) return
+      setCompiling(true)
+      setError(null)
 
-    compileWithTimeout.then(result => {
-      if (timeoutId) clearTimeout(timeoutId)
-      if (cancelled) return
-      if (result.error) {
-        setError(result.error)
+      try {
+        const result = await compileCardCode(debouncedSource)
+        if (cancelled) return
+        if (result.error) {
+          setError(result.error)
+          setCompiling(false)
+          setCardComponent(null)
+          return
+        }
+        const componentResult = createCardComponent(result.code!)
+        if (cancelled) return
+        if (componentResult.error) {
+          setError(componentResult.error)
+          setCompiling(false)
+          setCardComponent(null)
+          return
+        }
+        setCardComponent(() => componentResult.component)
         setCompiling(false)
+      } catch (err: unknown) {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Compilation failed')
         setCardComponent(null)
-        return
-      }
-      const componentResult = createCardComponent(result.code!)
-      if (cancelled) return
-      if (componentResult.error) {
-        setError(componentResult.error)
         setCompiling(false)
-        setCardComponent(null)
-        return
       }
-      setCardComponent(() => componentResult.component)
-      setCompiling(false)
-    }).catch((err: unknown) => {
-      if (timeoutId) clearTimeout(timeoutId)
-      if (cancelled) return
-      setError(err instanceof Error ? err.message : 'Compilation failed')
-      setCardComponent(null)
-      setCompiling(false)
     })
 
-    return () => {
-      cancelled = true
-      if (timeoutId) clearTimeout(timeoutId)
-    }
+    return () => { cancelled = true }
   }, [debouncedSource])
 
   if (!source) {
