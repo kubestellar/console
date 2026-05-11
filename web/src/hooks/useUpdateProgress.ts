@@ -186,9 +186,9 @@ export function useUpdateProgress() {
       setProgress({ status: 'done', message: 'Update complete — restart successful', progress: 100 })
     }
 
-    function connect(attemptNumber = 0) {
+    async function connect(attemptNumber = 0) {
       try {
-        const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
         wsRef.current = ws
         reconnectAttemptsRef.current = attemptNumber
 

@@ -42,8 +42,11 @@ export function _resetAgentTokenState(): void {
  *
  * Negative results (empty token or fetch error) are cached in memory for
  * AGENT_TOKEN_NEGATIVE_CACHE_MS to avoid repeated 5s timeouts (#11120).
+ *
+ * Exported for use by appendWsAuthToken() to prevent race condition where
+ * WebSocket connections open before token fetch completes (#13034).
  */
-function getAgentToken(): Promise<string> {
+export function getAgentToken(): Promise<string> {
   if (isDemoMode() || isNetlifyDeployment || isLocalAgentSuppressed()) return Promise.resolve('')
 
   const cached = localStorage.getItem(AGENT_TOKEN_STORAGE_KEY)

@@ -134,14 +134,14 @@ function applyEnrichments(newEnrichments: AIInsightEnrichment[]): void {
 }
 
 /** Connect WebSocket for real-time enrichments */
-function connectWebSocket(): void {
+async function connectWebSocket(): Promise<void> {
   if (wsConnection) return
   if (!isAgentConnected() || isAgentUnavailable()) return
   if (wsReconnectAttempts >= MAX_WS_RECONNECT_ATTEMPTS) return
 
   try {
     // LOCAL_AGENT_WS_URL already includes /ws — don't append it again
-    wsConnection = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+    wsConnection = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
     wsConnection.onopen = () => {
       // Reset backoff on successful connection

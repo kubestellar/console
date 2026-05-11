@@ -123,7 +123,7 @@ function createVersionWsHandle(): VersionWsHandle {
     }
 
     if (connecting) {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         const checkInterval = setInterval(() => {
           if (destroyed) { clearInterval(checkInterval); reject(new Error('Handle destroyed')); return }
           if (ws?.readyState === WebSocket.OPEN) { clearInterval(checkInterval); resolve(ws) }
@@ -143,9 +143,9 @@ function createVersionWsHandle(): VersionWsHandle {
 
     connecting = true
 
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
-        ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
       } catch {
         connecting = false
         reject(new Error('Failed to create WebSocket'))
@@ -217,7 +217,7 @@ function createVersionWsHandle(): VersionWsHandle {
       const socket = await ensureWs()
       const requestId = `version-${clusterName}-${Date.now()}`
 
-      return new Promise((resolve) => {
+      return new Promise(async (resolve) => {
         const timeout = setTimeout(() => {
           pendingRequests.delete(requestId)
           resolve(getCachedVersion(clusterName))

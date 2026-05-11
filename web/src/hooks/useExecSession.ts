@@ -209,7 +209,7 @@ export function useExecSession(): UseExecSessionResult {
     }, delay)
   }
 
-  const connectInternal = useCallback((config: ExecSessionConfig, isReconnect = false) => {
+  const connectInternal = useCallback(async (config: ExecSessionConfig, isReconnect = false) => {
     // Clean up existing WebSocket connection
     closeWebSocket(wsRef.current)
     wsRef.current = null
@@ -237,7 +237,7 @@ export function useExecSession(): UseExecSessionResult {
 
     let ws: WebSocket
     try {
-      ws = new WebSocket(appendWsAuthToken(wsUrl))
+      ws = new WebSocket(await appendWsAuthToken(wsUrl))
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to create WebSocket connection'
       updateStatus(

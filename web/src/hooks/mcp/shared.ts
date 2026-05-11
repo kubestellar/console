@@ -632,7 +632,7 @@ let wsLastBackendCheck = 0
 const WS_BACKEND_RECHECK_INTERVAL = 120000 // Re-check backend every 2 minutes
 
 // Connect to shared WebSocket for kubeconfig change notifications
-export function connectSharedWebSocket() {
+export async function connectSharedWebSocket() {
   // Don't attempt WebSocket if not authenticated or using demo token
   if (isDemoToken()) {
     return
@@ -681,7 +681,7 @@ export function connectSharedWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//${window.location.host}/ws`
 
-    const ws = new WebSocket(appendWsAuthToken(wsUrl))
+    const ws = new WebSocket(await appendWsAuthToken(wsUrl))
 
     ws.onopen = () => {
       // Guard against race condition where onclose fires before onopen

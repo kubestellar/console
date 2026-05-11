@@ -247,9 +247,9 @@ function startPresenceConnection() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || (protocol === 'wss:' ? '443' : '80')}/ws`
 
-  function connect() {
+  async function connect() {
     try {
-      presenceWs = new WebSocket(appendWsAuthToken(wsUrl))
+      presenceWs = new WebSocket(await appendWsAuthToken(wsUrl))
     } catch {
       presenceStarted = false
       return

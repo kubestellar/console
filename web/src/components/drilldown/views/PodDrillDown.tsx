@@ -178,8 +178,8 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
   const activeWsRef = useRef(new Set<WebSocket>())
 
   /** Create a tracked WebSocket — automatically removed from the set when closed. */
-  const openTrackedWs = useCallback((): WebSocket => {
-    const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+  const openTrackedWs = useCallback(async (): Promise<WebSocket> => {
+    const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
     activeWsRef.current.add(ws)
     const origClose = ws.close.bind(ws)
     ws.close = (...args: Parameters<WebSocket['close']>) => {
@@ -527,7 +527,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     try {
       // Helper to run a kubectl command and get output
       const runKubectl = (args: string[]): Promise<string> => {
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) => {
           const ws = openTrackedWs()
           const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''
@@ -1023,7 +1023,7 @@ Please:
 
     try {
       const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) => {
           const ws = openTrackedWs()
           const requestId = `label-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
@@ -1161,7 +1161,7 @@ Please:
 
     try {
       const runKubectl = (args: string[]): Promise<{ success: boolean; error?: string }> => {
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) => {
           const ws = openTrackedWs()
           const requestId = `annotate-${Date.now()}-${Math.random().toString(36).slice(2)}`
 
@@ -1298,7 +1298,7 @@ Please:
 
     try {
       const runKubectl = (args: string[]): Promise<string> => {
-        return new Promise((resolve) => {
+        return new Promise(async (resolve) => {
           const ws = openTrackedWs()
           const requestId = `related-${Date.now()}-${Math.random().toString(36).slice(2)}`
           let output = ''

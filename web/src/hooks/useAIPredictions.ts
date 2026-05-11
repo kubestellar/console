@@ -292,11 +292,11 @@ async function fetchAIPredictions(signal?: AbortSignal): Promise<void> {
 /**
  * Connect to WebSocket for real-time prediction updates
  */
-function connectWebSocket(): void {
+async function connectWebSocket(): Promise<void> {
   if (getDemoMode() || ws) return
 
   try {
-    ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+    ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
     ws.onopen = () => {
       wsConnected = true

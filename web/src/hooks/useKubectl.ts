@@ -42,7 +42,7 @@ class KubectlService {
     }
   }
 
-  private connect() {
+  private async connect() {
     if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
       return
     }
@@ -59,7 +59,7 @@ class KubectlService {
 
     this.isConnecting = true
     try {
-      this.ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+      this.ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
       this.ws.onopen = () => {
         this.isConnecting = false

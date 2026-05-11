@@ -656,7 +656,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       return Promise.resolve()
     }
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>(async (resolve, reject) => {
       // Show loading state while connecting
       setAgentsLoading(true)
 
@@ -681,7 +681,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         // The backoff is reset later, after the first application-layer
         // message actually arrives, not here.
         connectionEstablished.current = false
-        wsRef.current = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        wsRef.current = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)

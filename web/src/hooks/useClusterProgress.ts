@@ -36,11 +36,11 @@ export function useClusterProgress() {
   useEffect(() => {
     let unmounted = false
 
-    function connect(attemptNumber = 0) {
+    async function connect(attemptNumber = 0) {
       if (unmounted) return
 
       try {
-        const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
         wsRef.current = ws
         reconnectAttemptsRef.current = attemptNumber
 

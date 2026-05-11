@@ -193,7 +193,7 @@ class KubectlProxy {
         throw new Error('Local agent unavailable (cooldown)')
       }
 
-      return new Promise<void>((resolve, reject) => {
+      return new Promise<void>(async (resolve, reject) => {
         let settled = false
         let connectTimeout: ReturnType<typeof setTimeout> | null = null
         const finalize = (cb: () => void) => {
@@ -203,7 +203,7 @@ class KubectlProxy {
           cb()
         }
         try {
-          this.ws = new WebSocket(appendWsAuthToken(wsURL))
+          this.ws = new WebSocket(await appendWsAuthToken(wsURL))
           connectTimeout = setTimeout(() => {
             try {
               this.ws?.close()
