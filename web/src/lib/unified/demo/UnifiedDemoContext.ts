@@ -26,22 +26,22 @@ const defaultContextValue: UnifiedDemoContextValue = {
   isDemoMode: false,
   isForced: false,
   toggleDemoMode: () => {
-    console.warn('UnifiedDemoProvider not mounted')
+    console.debug('UnifiedDemoProvider not mounted')
   },
   setDemoMode: () => {
-    console.warn('UnifiedDemoProvider not mounted')
+    console.debug('UnifiedDemoProvider not mounted')
   },
   isModeSwitching: false,
   modeVersion: 0,
   getDemoData: <T = unknown>() => createDefaultDemoDataState<T>(),
   registerGenerator: () => {
-    console.warn('UnifiedDemoProvider not mounted')
+    console.debug('UnifiedDemoProvider not mounted')
   },
   regenerate: () => {
-    console.warn('UnifiedDemoProvider not mounted')
+    console.debug('UnifiedDemoProvider not mounted')
   },
   regenerateAll: () => {
-    console.warn('UnifiedDemoProvider not mounted')
+    console.debug('UnifiedDemoProvider not mounted')
   },
 }
 
