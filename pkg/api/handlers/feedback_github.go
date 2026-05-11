@@ -760,13 +760,13 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 	return createdIssue.Number, createdIssue.Warning, validScreenshots, ssResult, err
 }
 
-// uploadScreenshotCommentsAsync posts each screenshot to the given issue as
-// a separate comment. It is intended to be called from a goroutine with a
-// context rooted in context.Background() so slow uploads do not block the
-// request path (#9898). Failures are logged via slog — the FeatureRequest
-// and its GitHub issue have already been persisted, so a missed screenshot
-// does not lose the user's submission.
-func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, issueNumber int, repoName string, screenshots []string) {
+// uploadScreenshotCommentsAsync uploads each screenshot to GitHub and posts
+// them as inline markdown images in separate comments. It is intended to be
+// called from a goroutine with a context rooted in context.Background() so
+// slow uploads do not block the request path (#9898). Failures are logged via
+// slog — the FeatureRequest and its GitHub issue have already been persisted,
+// so a missed screenshot does not lose the user's submission.
+func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, issueNumber int, repoOwner, repoName, requestID string, screenshots []string) {
 	if len(screenshots) == 0 {
 		return
 	}
@@ -779,9 +779,18 @@ func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, iss
 				"issue", issueNumber, "remaining", len(screenshots)-i, "reason", ctx.Err())
 			break
 		}
-		commentBody := fmt.Sprintf(
-			"<!-- screenshot-base64:%d -->\n<details>\n<summary>Screenshot %d (processing...)</summary>\n\n```\n%s\n```\n\n</details>",
-			i+1, i+1, dataURI)
+		
+		// Upload the screenshot to GitHub and get the permanent URL
+		downloadURL, uploadErr := h.uploadScreenshotToGitHub(repoOwner, repoName, requestID, i, dataURI)
+		if uploadErr != nil {
+			slog.Warn("[Feedback] async screenshot upload failed",
+				"index", i+1, "issue", issueNumber, "error", uploadErr)
+			failed++
+			continue
+		}
+		
+		// Post as a proper markdown image instead of base64 code block
+		commentBody := fmt.Sprintf("![Screenshot %d](%s)", i+1, downloadURL)
 		if commentErr := h.addIssueComment(ctx, issueNumber, commentBody, repoName); commentErr != nil {
 			slog.Warn("[Feedback] async screenshot comment upload failed",
 				"index", i+1, "issue", issueNumber, "error", commentErr)
