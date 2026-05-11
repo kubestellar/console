@@ -80,6 +80,7 @@ export default async (req: Request) => {
         ...(clientIp && { "X-Forwarded-For": clientIp }),
       },
       body,
+      signal: AbortSignal.timeout(10_000),
     })
 
     const isNullBody = resp.status === 204 || resp.status === 304

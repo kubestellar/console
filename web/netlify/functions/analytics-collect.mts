@@ -132,6 +132,7 @@ export default async (req: Request) => {
         ...(clientIp && { "X-Forwarded-For": clientIp }),
       },
       body: postBody,
+      signal: AbortSignal.timeout(10_000),
     });
 
     // 204/304 are null-body statuses — Response constructor throws if body is non-null

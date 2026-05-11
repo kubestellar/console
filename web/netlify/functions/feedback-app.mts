@@ -378,7 +378,8 @@ export default async function handler(request: Request): Promise<Response> {
     user = await verifyClientAuth(clientAuth);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return jsonResponse(request, 401, { error: `Client auth invalid: ${msg}` });
+    console.error("[feedback-app] Client auth failed:", msg);
+    return jsonResponse(request, 401, { error: "Client authentication failed" });
   }
 
   if (request.method === "GET" || mode === "capabilities") {
@@ -387,7 +388,8 @@ export default async function handler(request: Request): Promise<Response> {
       return jsonResponse(request, 200, { can_link_parent: permissions.push });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      return jsonResponse(request, 502, { error: `Repo capability check failed: ${msg}` });
+      console.error("[feedback-app] Repo capability check failed:", msg);
+      return jsonResponse(request, 502, { error: "Repository capability check failed" });
     }
   }
 
@@ -396,7 +398,8 @@ export default async function handler(request: Request): Promise<Response> {
     installCred = await getInstallationCred();
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    return jsonResponse(request, 502, { error: `App credential unavailable: ${msg}` });
+    console.error("[feedback-app] App credential unavailable:", msg);
+    return jsonResponse(request, 502, { error: "Service temporarily unavailable" });
   }
 
   if (!payload) {
@@ -432,8 +435,9 @@ export default async function handler(request: Request): Promise<Response> {
       );
       if (!resp.ok) {
         const txt = await resp.text();
+        console.error("[feedback-app] GitHub issue comment failed:", resp.status, txt);
         return jsonResponse(request, resp.status, {
-          error: `GitHub issue comment failed: ${txt}`,
+          error: "Failed to add comment to issue",
         });
       }
       const data = (await resp.json()) as { html_url: string };
@@ -461,8 +465,9 @@ export default async function handler(request: Request): Promise<Response> {
       );
       if (!resp.ok) {
         const txt = await resp.text();
+        console.error("[feedback-app] GitHub issue update failed:", resp.status, txt);
         return jsonResponse(request, resp.status, {
-          error: `GitHub issue update failed: ${txt}`,
+          error: "Failed to update issue state",
         });
       }
       const data = (await resp.json()) as { html_url: string; state: string };
@@ -498,8 +503,9 @@ export default async function handler(request: Request): Promise<Response> {
     );
     if (!resp.ok) {
       const txt = await resp.text();
+      console.error("[feedback-app] GitHub issue create failed:", resp.status, txt);
       return jsonResponse(request, resp.status, {
-        error: `GitHub issue create failed: ${txt}`,
+        error: "Failed to create issue",
       });
     }
     const data = (await resp.json()) as { id: number; number: number; html_url: string };

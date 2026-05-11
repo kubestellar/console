@@ -228,7 +228,7 @@ async function gh(path: string, token: string, init: RequestInit = {}): Promise<
     ...(init.headers ?? {}),
   };
   for (let attempt = 0; attempt < GH_RETRY_MAX_ATTEMPTS; attempt++) {
-    const resp = await fetch(url, { ...init, headers });
+    const resp = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(10_000) });
     if (resp.status !== 429 && resp.status !== 403) return resp;
     if (attempt === GH_RETRY_MAX_ATTEMPTS - 1) {
       console.warn(`[github-pipelines] retries exhausted for ${path}, status=${resp.status}`);

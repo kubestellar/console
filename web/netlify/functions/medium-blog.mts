@@ -140,6 +140,7 @@ export default async (req: Request) => {
   try {
     const resp = await fetch(MEDIUM_FEED_URL, {
       headers: { "User-Agent": "KubeStellar-Console/1.0" },
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!resp.ok) {

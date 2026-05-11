@@ -21,6 +21,7 @@ const CACHE_ACTIVE_TTL_MS = 2 * 60 * 1000; // 2 minutes when jobs running
 const STALE_SERVE_WINDOW_MS = 60 * 60 * 1000; // serve stale data up to 1 hour past TTL
 const IMAGE_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes for image tags
 const ARTIFACT_FETCH_TIMEOUT_MS = 10_000;   // timeout for individual artifact downloads
+const GH_API_TIMEOUT_MS = 10_000;           // timeout for GitHub API calls
 const RUNS_PER_PAGE = 7;
 const GITHUB_API = "https://api.github.com";
 const IMAGE_REPO = "llm-d/llm-d";
@@ -232,7 +233,7 @@ async function fetchGuideYAMLFiles(token: string): Promise<TreeEntry[]> {
   const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(GH_API_TIMEOUT_MS) });
   if (!res.ok) return [];
 
   const data = await res.json();
@@ -259,7 +260,7 @@ async function fetchBlob(sha: string, token: string): Promise<string> {
   const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(GH_API_TIMEOUT_MS) });
   if (!res.ok) return "";
 
   const blob = await res.json();
@@ -476,7 +477,7 @@ async function fetchWorkflowRuns(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(GH_API_TIMEOUT_MS) });
 
   if (res.status === 404) return []; // Workflow doesn't exist yet
   if (!res.ok) {
@@ -545,7 +546,7 @@ async function detectGPUFailure(
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(GH_API_TIMEOUT_MS) });
     if (!res.ok) return "test_failure";
 
     const data = await res.json();
