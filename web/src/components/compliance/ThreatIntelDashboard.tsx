@@ -322,7 +322,7 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
                   <td className="p-3">
                     <span className="flex items-center gap-1.5">
                       {IOC_STATUS_ICON[ioc.status]}
-                      <span className="text-gray-300 capitalize">{ioc.status.replace('_', ' ')}</span>
+                      <span className="text-gray-300 capitalize">{(ioc.status ?? '').replace('_', ' ')}</span>
                     </span>
                   </td>
                   <td className="p-3 text-white">{ioc.matched_resource}</td>

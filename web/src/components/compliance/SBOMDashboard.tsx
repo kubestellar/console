@@ -123,7 +123,7 @@ function buildVulnerabilities(packages: SBOMPackage[]): SBOMVulnerability[] {
 function buildLicenseSummary(packages: SBOMPackage[]) {
   return packages.reduce(
     (counts, pkg) => {
-      const normalizedLicense = pkg.license.trim().toLowerCase()
+      const normalizedLicense = (pkg.license ?? '').trim().toLowerCase()
       if (!normalizedLicense || normalizedLicense === 'unknown') {
         counts.unknown += 1
       } else if (normalizedLicense.includes('gpl') || normalizedLicense.includes('agpl') || normalizedLicense.includes('sspl')) {

@@ -250,7 +250,7 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
                           {sigs.map(s => (
                             <span key={s.id} className={`px-2 py-0.5 rounded text-xs border ${MEANING_STYLES[s.meaning] || ''}`}>
                               <PenTool className="w-3 h-3 inline mr-1" />
-                              {s.meaning} by {s.user_id.split('@')[0]} ({s.auth_method})
+                              {s.meaning} by {(s.user_id ?? '').split('@')[0]} ({s.auth_method})
                             </span>
                           ))}
                         </div>

@@ -161,7 +161,7 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
           </div>
           <div className="bg-card rounded-lg p-4 border border-border shadow-sm">
             <p className="text-sm text-muted-foreground">Authorization</p>
-            <p className={`text-2xl font-bold capitalize ${authorizationStatusStyle(score.authorization_status)}`}>{score.authorization_status.replace('_', ' ')}</p>
+            <p className={`text-2xl font-bold capitalize ${authorizationStatusStyle(score.authorization_status ?? '')}`}>{(score.authorization_status ?? 'unknown').replace('_', ' ')}</p>
           </div>
           <div className="bg-card rounded-lg p-4 border border-green-500/30 shadow-sm">
             <p className="text-sm text-muted-foreground">Satisfied</p>
@@ -293,7 +293,7 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Authorization Status</p>
-                <p className={`text-xl font-bold capitalize ${authorizationStatusStyle(score.authorization_status)}`}>{score.authorization_status.replace('_', ' ')}</p>
+                <p className={`text-xl font-bold capitalize ${authorizationStatusStyle(score.authorization_status ?? '')}`}>{(score.authorization_status ?? 'unknown').replace('_', ' ')}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Overall Score</p>
