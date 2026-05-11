@@ -71,6 +71,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
     let readyPods = 0
     let secrets = 0
     let anyError = false
+    let successCount = 0
 
     for (const cluster of clusters) {
       try {
@@ -78,6 +79,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
           ['get', 'pods', '-A', '-l', 'app.kubernetes.io/name=vault', '-o', 'json'],
           { context: cluster.name, timeout: KUBECTL_DEFAULT_TIMEOUT_MS }
         )
+        successCount++
         if (podsResult.exitCode === 0 && podsResult.output) {
           const data = JSON.parse(podsResult.output)
           const items = data.items || []
@@ -102,7 +104,7 @@ export function VaultSecrets({ config: _config }: CardConfig) {
       }
     }
 
-    if (anyError && !found && secrets === 0) {
+    if (anyError && successCount === 0) {
       // All clusters failed — mark as failed fetch
       setFetchError(true)
       setConsecutiveFailures(prev => prev + 1)
@@ -300,6 +302,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
     let failed = 0
     let pending = 0
     let anyError = false
+    let successCount = 0
 
     for (const cluster of clusters) {
       try {
@@ -307,6 +310,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
           ['get', 'crd', 'externalsecrets.external-secrets.io', '-o', 'name'],
           { context: cluster.name, timeout: METRICS_SERVER_TIMEOUT_MS }
         )
+        successCount++
         if (crdCheck.exitCode !== 0) continue
         found = true
 
@@ -339,7 +343,7 @@ export function ExternalSecrets({ config: _config }: CardConfig) {
       }
     }
 
-    if (anyError && !found && totalES === 0) {
+    if (anyError && successCount === 0) {
       setFetchError(true)
       setConsecutiveFailures(prev => prev + 1)
     } else {
