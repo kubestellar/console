@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, act, cleanup, fireEvent } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -20,6 +20,7 @@ vi.mock('../../../../hooks/useDemoMode', () => ({
 vi.mock('../../../../lib/analytics', () => ({
   emitNavigate: vi.fn(), emitLogin: vi.fn(), emitEvent: vi.fn(), analyticsReady: Promise.resolve(),
   emitAddCardModalOpened: vi.fn(), emitCardExpanded: vi.fn(), emitCardRefreshed: vi.fn(),
+  emitGitHubTokenConfigured: vi.fn(), emitGitHubTokenRemoved: vi.fn(), emitConversionStep: vi.fn(),
 }))
 
 vi.mock('../../../../hooks/useTokenUsage', () => ({
@@ -34,9 +35,101 @@ vi.mock('react-i18next', () => ({
 
 import { GitHubTokenSection } from '../GitHubTokenSection'
 
+function mockJsonResponse(body: unknown, status = 200): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    json: vi.fn().mockResolvedValue(body),
+  } as unknown as Response
+}
+
 describe('GitHubTokenSection', () => {
-  it('renders without crashing', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+    localStorage.clear()
+    window.history.replaceState({}, '', '/settings')
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    localStorage.clear()
+    window.history.replaceState({}, '', '/settings')
+  })
+
+  it('renders without crashing', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(mockJsonResponse({ hasToken: false, source: '' }))
+
     const { container } = render(<GitHubTokenSection forceVersionCheck={vi.fn()} />)
+
     expect(container).toBeTruthy()
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/github/token/status', expect.any(Object)))
+  })
+
+  it('disables the Clear button while token validation is in progress', async () => {
+    const INITIAL_RATE_LIMIT = {
+      limit: 5000,
+      remaining: 4999,
+      reset: 1_700_000_000,
+    }
+    let resolveRateLimit: ((value: Response) => void) | null = null
+    const rateLimitPromise = new Promise<Response>((resolve) => {
+      resolveRateLimit = resolve
+    })
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(mockJsonResponse({ hasToken: true, source: 'settings' }))
+      .mockResolvedValueOnce(mockJsonResponse({ rate: INITIAL_RATE_LIMIT }))
+      .mockResolvedValueOnce(mockJsonResponse({}))
+      .mockImplementationOnce(() => rateLimitPromise)
+
+    render(<GitHubTokenSection forceVersionCheck={vi.fn()} />)
+
+    const clearButton = await screen.findByRole('button', { name: 'settings.github.clear' })
+    const tokenInput = screen.getByLabelText('settings.github.feedbackToken')
+    const saveButton = screen.getByRole('button', { name: 'settings.github.saveAndTest' })
+
+    fireEvent.change(tokenInput, { target: { value: 'github_pat_test' } })
+    fireEvent.click(saveButton)
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/github/token', expect.objectContaining({ method: 'POST' })))
+    expect(clearButton).toBeDisabled()
+
+    await act(async () => {
+      resolveRateLimit?.(mockJsonResponse({ rate: INITIAL_RATE_LIMIT }))
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(clearButton).not.toBeDisabled())
+  })
+
+  it('scrolls the GitHub token section itself for deep links', async () => {
+    vi.useFakeTimers()
+    vi.mocked(fetch).mockResolvedValueOnce(mockJsonResponse({ hasToken: false, source: '' }))
+    window.history.replaceState({}, '', '/settings#github-token')
+
+    const { container } = render(<GitHubTokenSection forceVersionCheck={vi.fn()} />)
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    const section = container.querySelector('#github-token-settings') as HTMLElement
+    const input = screen.getByLabelText('settings.github.feedbackToken') as HTMLInputElement
+    const scrollIntoView = vi.fn()
+    const focus = vi.fn()
+
+    Object.defineProperty(section, 'scrollIntoView', { value: scrollIntoView, configurable: true })
+    Object.defineProperty(input, 'focus', { value: focus, configurable: true })
+
+    await act(async () => {
+      vi.runAllTimers()
+      await Promise.resolve()
+    })
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' })
+    expect(focus).toHaveBeenCalled()
   })
 })
