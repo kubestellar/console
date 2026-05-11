@@ -527,11 +527,11 @@ function LightweightShell({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
     <AppErrorBoundary>
     <ChunkErrorBoundary>
-    <PageViewTracker />
     <PageErrorBoundary>
-      <Suspense fallback={<LoadingFallback />}>
-        {children}
-      </Suspense>
+    <PageViewTracker />
+    <Suspense fallback={<LoadingFallback />}>
+      {children}
+    </Suspense>
     </PageErrorBoundary>
     </ChunkErrorBoundary>
     </AppErrorBoundary>
@@ -710,6 +710,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
       </PageErrorBoundary>
       <OrbitAutoRunner />
       <ChunkErrorBoundary>
+      <PageErrorBoundary>
       <Routes location={liveLocation}>
         <Route path={ROUTES.LOGIN} element={<PageErrorBoundary><Login /></PageErrorBoundary>} />
         <Route path={ROUTES.AUTH_CALLBACK} element={<PageErrorBoundary><AuthCallback /></PageErrorBoundary>} />
@@ -837,6 +838,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
 
         <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />
       </Routes>
+      </PageErrorBoundary>
       </ChunkErrorBoundary>
       </AppErrorBoundary>
       </DrillDownProvider>
