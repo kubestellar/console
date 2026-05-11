@@ -517,6 +517,41 @@ case "get_services":
 - **Tool callback URL**: The Kagenti agent must be configured to call tools back to the console endpoint (`/api/kagenti-provider/tools/call-direct`)
 - **Agent-to-agent communication**: If using the Kagenti A2A protocol, agents must have network access to the console backend
 
+### Controller mode vs direct-agent mode
+
+Mission Control can reach Kagenti in two supported in-cluster layouts:
+
+1. **Controller mode (default)**
+   - The console talks to the Kagenti controller and discovers agents from `GET /api/kagenti-provider/agents`
+   - Missions require **at least one registered agent** in that discovery list
+   - If the controller is reachable but returns zero agents, Mission Control cannot start a mission
+
+2. **Direct-agent mode**
+   - The console skips controller discovery and targets one agent service directly
+   - Use this when you want Missions to always talk to a specific agent
+
+**Helm values**
+
+```yaml
+kagenti:
+  directAgentUrl: "http://my-agent.my-namespace.svc:8080"
+  directAgentName: "my-agent"
+  directAgentNamespace: "my-namespace"
+```
+
+**Equivalent environment variables**
+
+```bash
+KAGENTI_AGENT_URL=http://my-agent.my-namespace.svc:8080
+KAGENTI_AGENT_NAME=my-agent
+KAGENTI_AGENT_NAMESPACE=my-namespace
+```
+
+- `kagenti.directAgentUrl` / `KAGENTI_AGENT_URL` enables direct-agent mode
+- `kagenti.directAgentName` / `KAGENTI_AGENT_NAME` controls the displayed agent name in the console
+- `kagenti.directAgentNamespace` / `KAGENTI_AGENT_NAMESPACE` controls the displayed namespace in the console
+- If you stay in controller mode, make sure at least one Kagenti agent is registered before opening Mission Control
+
 ### Performance Considerations
 
 - **Cluster context timeout**: Context gathering has a 10-second timeout per chat invocation. For clusters with slow API servers, context may be omitted
@@ -562,6 +597,22 @@ case "get_services":
 3. Check for slow API servers or large namespaces
 
 **Solution:** Increase `clusterContextTimeout` in `pkg/api/handlers/kagenti_provider_proxy.go` or optimize cluster queries.
+
+### Mission Control reports zero Kagenti agents discovered
+
+**Symptom:** Mission Control says Kagenti is available, but no agents are discovered.
+
+**Diagnostic path:**
+1. Call `GET /api/kagenti-provider/status`
+   - If `available=false`, fix connectivity first (controller URL, Service, RBAC, or direct-agent URL)
+2. Call `GET /api/kagenti-provider/agents`
+   - If the response is `{"agents":[]}`, the console can reach Kagenti but no agent is registered for Mission Control to use
+3. Check which deployment mode you intended:
+   - **Controller mode:** confirm at least one agent is registered with the Kagenti controller
+   - **Direct-agent mode:** confirm `kagenti.directAgentUrl`, `kagenti.directAgentName`, and `kagenti.directAgentNamespace` (or the `KAGENTI_AGENT_*` env vars) are set on the console deployment
+4. If using Helm, inspect the rendered Deployment and verify the `KAGENTI_AGENT_URL`, `KAGENTI_AGENT_NAME`, and `KAGENTI_AGENT_NAMESPACE` environment variables are present when direct-agent mode is expected
+
+**Solution:** Register at least one Kagenti agent in controller mode, or configure direct-agent mode so the console can synthesize a single reachable agent.
 
 ### Context block is missing from agent messages
 

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, ReactNode } from 'react'
+import i18n from '../lib/i18n'
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { AgentCapabilityToolExec } from '../types/agent'
 import type { Mission, MissionMessage, MissionStatus, MissionFeedback, StartMissionParams, PendingReviewEntry, SaveMissionParams, SavedMissionUpdates } from './useMissionTypes'
@@ -16,13 +17,17 @@ import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory
 import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
 import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
+import {
+  kagentiProviderChat,
+  discoverKagentiProviderAgent,
+  type KagentiProviderAgentDiscoveryResult,
+} from '../lib/kagentiProviderBackend'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
 import {
   MISSIONS_STORAGE_KEY, CROSS_TAB_ECHO_IGNORE_MS,
   SELECTED_AGENT_KEY,
   loadMissions, saveMissions, loadUnreadMissionIds, saveUnreadMissionIds,
-  mergeMissions, getSelectedKagentiAgentFromStorage,
+  mergeMissions, getSelectedKagentiAgentFromStorage, persistSelectedKagentiAgentToStorage,
 } from './useMissionStorage'
 import {
   generateMessageId, buildEnhancedPrompt, buildSystemMessages,
@@ -31,6 +36,20 @@ import {
 
 function getMissionMessages(messages?: MissionMessage[]): MissionMessage[] {
   return messages || []
+}
+
+const KAGENTI_PROVIDER_UNAVAILABLE_EVENT = 'kagenti_provider_unavailable'
+const KAGENTI_NO_AGENTS_DISCOVERED_EVENT = 'kagenti_no_agents_discovered'
+
+type KagentiDiscoveryFailure = Extract<KagentiProviderAgentDiscoveryResult, { ok: false }>
+
+function buildKagentiDiscoveryErrorMessage(result: KagentiDiscoveryFailure): string {
+  if (result.reason === 'provider_unreachable') {
+    const reasonSuffix = result.detail ? ` (${result.detail})` : ''
+    return `**${i18n.t('missions.kagenti.providerUnavailableTitle')}**\n\n${i18n.t('missions.kagenti.providerUnavailableDescription', { reasonSuffix })}`
+  }
+
+  return `**${i18n.t('missions.kagenti.noAgentsTitle')}**\n\n${i18n.t('missions.kagenti.noAgentsDescription')}`
 }
 
 const MISSION_RECONNECT_DELAY_MS = 500
@@ -2084,38 +2103,43 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       void (async () => {
         let target = getSelectedKagentiAgentFromStorage()
         if (!target) {
-          const discovered = await fetchKagentiProviderAgents()
-          if (discovered?.[0]) {
+          const discovery = await discoverKagentiProviderAgent()
+          if (discovery.ok) {
             target = {
-              namespace: discovered[0].namespace,
-              name: discovered[0].name,
+              namespace: discovery.agent.namespace,
+              name: discovery.agent.name,
             }
+            persistSelectedKagentiAgentToStorage(target)
+          } else {
+            executingMissions.current.delete(missionId)
+            const errorContent = buildKagentiDiscoveryErrorMessage(discovery)
+            setMissions(prev => prev.map(m =>
+              m.id === missionId
+                ? {
+                    ...m,
+                    status: 'failed',
+                    currentStep: undefined,
+                    messages: [
+                      ...getMissionMessages(m.messages),
+                      {
+                        id: generateMessageId('kagenti-missing-agent'),
+                        role: 'system',
+                        content: errorContent,
+                        timestamp: new Date(),
+                      },
+                    ],
+                  }
+                : m
+            ))
+            emitMissionError(
+              missionType,
+              discovery.reason === 'provider_unreachable'
+                ? KAGENTI_PROVIDER_UNAVAILABLE_EVENT
+                : KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
+              discovery.reason,
+            )
+            return
           }
-        }
-
-        if (!target) {
-          executingMissions.current.delete(missionId)
-          const errorContent = `**Kagenti Agent Not Selected**\n\nSelect a Kagenti agent in Settings → Agent Backend, then retry this mission.`
-          setMissions(prev => prev.map(m =>
-            m.id === missionId
-              ? {
-                  ...m,
-                  status: 'failed',
-                  currentStep: undefined,
-                  messages: [
-                    ...getMissionMessages(m.messages),
-                    {
-                      id: generateMessageId('kagenti-missing-agent'),
-                      role: 'system',
-                      content: errorContent,
-                      timestamp: new Date(),
-                    },
-                  ],
-                }
-              : m
-          ))
-          emitMissionError(missionType, 'kagenti_agent_missing', 'no_selected_kagenti_agent')
-          return
         }
 
         await kagentiProviderChat(target.name, target.namespace, enhancedPrompt, {

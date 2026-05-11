@@ -487,8 +487,16 @@ export async function runToolPreflightCheck(
   requiredTools: string[],
   fetchFn: typeof fetch = fetch,
 ): Promise<ToolPreflightResult> {
+  const normalizedAgentBaseUrl = agentBaseUrl.trim()
+  if (!normalizedAgentBaseUrl) {
+    return {
+      ok: true,
+      tools: [],
+    }
+  }
+
   try {
-    const url = new URL('/local-cluster-tools', agentBaseUrl)
+    const url = new URL('/local-cluster-tools', normalizedAgentBaseUrl)
     const normalizedRequiredTools = [...new Set(requiredTools.map(tool => tool.toLowerCase()))]
     normalizedRequiredTools.forEach(tool => url.searchParams.append('tool', tool))
 
