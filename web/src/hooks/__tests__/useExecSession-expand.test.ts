@@ -54,23 +54,25 @@ const DEFAULT_CONFIG: ExecSessionConfig = {
   container: 'main',
 }
 
-function flushPendingConnection() {
-  act(() => {
-    vi.runAllTicks()
+async function flushPendingConnection() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
   })
 }
 
-function connectSession(result: { current: { connect: (config: ExecSessionConfig) => void } }, config: ExecSessionConfig = DEFAULT_CONFIG) {
+async function connectSession(result: { current: { connect: (config: ExecSessionConfig) => void } }, config: ExecSessionConfig = DEFAULT_CONFIG) {
   act(() => {
     result.current.connect(config)
   })
-  flushPendingConnection()
+  await flushPendingConnection()
 }
 
-function advanceTimersAndFlush(ms: number) {
-  act(() => {
+async function advanceTimersAndFlush(ms: number) {
+  await act(async () => {
     vi.advanceTimersByTime(ms)
-    vi.runAllTicks()
+    await Promise.resolve()
+    await Promise.resolve()
   })
 }
 
@@ -100,9 +102,9 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 1. Reconnect countdown decrements every second
-  it('reconnect countdown decrements with interval', () => {
+  it('reconnect countdown decrements with interval', async () => {
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     // Simulate unexpected close
@@ -111,15 +113,15 @@ describe('useExecSession — expanded edge cases', () => {
     const initialCountdown = result.current.reconnectCountdown
     expect(initialCountdown).toBeGreaterThan(0)
     // Advance 1 second
-    advanceTimersAndFlush(1000)
+    await advanceTimersAndFlush(1000)
     expect(result.current.reconnectCountdown).toBeLessThan(initialCountdown)
   })
 
   // 2. Max reconnect attempts result in error
-  it('gives up after MAX_RECONNECT_ATTEMPTS and shows error', () => {
+  it('gives up after MAX_RECONNECT_ATTEMPTS and shows error', async () => {
     const MAX_ATTEMPTS = 5
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
 
@@ -131,7 +133,7 @@ describe('useExecSession — expanded edge cases', () => {
     // Force the internal counter to max
     for (let i = 0; i < MAX_ATTEMPTS; i++) {
       // Advance past the reconnect delay
-      advanceTimersAndFlush(20000)
+      await advanceTimersAndFlush(20000)
     }
     // After all retries, status should settle
     // (Exact assertion depends on timing, but should not crash)
@@ -139,9 +141,9 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 3. sendInput is no-op when WS is in CLOSED state
-  it('sendInput does nothing when WS is closed', () => {
+  it('sendInput does nothing when WS is closed', async () => {
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { result.current.disconnect() })
@@ -151,9 +153,9 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 4. resize is no-op when WS is closed
-  it('resize does nothing when WS is closed', () => {
+  it('resize does nothing when WS is closed', async () => {
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { result.current.disconnect() })
     const msgsBefore = mockWs.sentMessages.length
     act(() => { result.current.resize(100, 50) })
@@ -161,11 +163,11 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 5. exit with no exitCode defaults to 0
-  it('exit callback receives 0 when exitCode is undefined', () => {
+  it('exit callback receives 0 when exitCode is undefined', async () => {
     const exitCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onExit(exitCb) })
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'exit' }) })
@@ -173,9 +175,9 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 6. Exit message marks intentional disconnect to prevent reconnect
-  it('does not attempt reconnect after exit message', () => {
+  it('does not attempt reconnect after exit message', async () => {
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'exit', exitCode: 0 }) })
@@ -193,7 +195,7 @@ describe('useExecSession — expanded edge cases', () => {
   // via a local WebSocket to `LOCAL_AGENT_WS_URL` — always ws://127.0.0.1:8585
   // in the non-Netlify build. The page protocol no longer affects the URL,
   // so this test asserts the new, stable target (see useExecSession.ts:235).
-  it('builds kc-agent /ws/exec URL regardless of page protocol', () => {
+  it('builds kc-agent /ws/exec URL regardless of page protocol', async () => {
     // Save original so we can restore it even if an expectation throws.
     const originalLocation = window.location
     try {
@@ -212,7 +214,7 @@ describe('useExecSession — expanded edge cases', () => {
       }))
 
       const { result } = renderHook(() => useExecSession())
-      connectSession(result)
+      await connectSession(result)
       // Build expected URL from the same constant the source uses, so the
       // assertion tracks any future change to LOCAL_AGENT_WS_URL.
       expect(constructorSpy).toHaveBeenCalledWith(EXPECTED_EXEC_WS_URL)
@@ -227,21 +229,21 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 8. Error clears on new connect
-  it('clears previous error when reconnecting', () => {
+  it('clears previous error when reconnecting', async () => {
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'error', data: 'failed' }) })
     expect(result.current.error).toBe('failed')
 
-    connectSession(result)
+    await connectSession(result)
     expect(result.current.error).toBeNull()
   })
 
   // 9. Disconnect clears reconnect timers
-  it('disconnect clears any pending reconnect timers', () => {
+  it('disconnect clears any pending reconnect timers', async () => {
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerClose(1006) })
@@ -254,20 +256,20 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 10. Multiple close events do not crash
-  it('handles multiple close events without crashing', () => {
+  it('handles multiple close events without crashing', async () => {
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerClose(1006) })
     act(() => { mockWs.triggerClose(1006) })
     expect(result.current.status).toBe('error')
   })
 
   // 11. Unknown message types are silently ignored
-  it('ignores unknown message types', () => {
+  it('ignores unknown message types', async () => {
     const dataCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onData(dataCb) })
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'unknown_type', data: 'something' }) })
     expect(dataCb).not.toHaveBeenCalled()
@@ -275,11 +277,11 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 12. statusChange callback fires on disconnect
-  it('statusChange callback fires with disconnected on disconnect', () => {
+  it('statusChange callback fires with disconnected on disconnect', async () => {
     const statusCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onStatusChange(statusCb) })
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { result.current.disconnect() })
@@ -287,9 +289,9 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 13. Reconnect attempt counter is exposed
-  it('reconnectAttempt increments on each reconnect schedule', () => {
+  it('reconnectAttempt increments on each reconnect schedule', async () => {
     const { result } = renderHook(() => useExecSession())
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerClose(1006) })
@@ -297,11 +299,11 @@ describe('useExecSession — expanded edge cases', () => {
   })
 
   // 14. Reconnect message includes attempt info
-  it('data callback receives reconnect message with attempt info', () => {
+  it('data callback receives reconnect message with attempt info', async () => {
     const dataCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onData(dataCb) })
-    connectSession(result)
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerClose(1006) })
