@@ -120,6 +120,11 @@ describe('AgentStatusIndicator', () => {
       dataErrorCount: 0,
       lastDataError: null,
     })
+    mockUseBackendHealth.mockReturnValueOnce({
+      status: 'connected',
+      isConnected: true,
+      isInClusterMode: null,
+    })
 
     render(<AgentStatusIndicator />)
 
