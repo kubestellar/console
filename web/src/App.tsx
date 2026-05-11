@@ -759,7 +759,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
         {/* Layout route — all dashboard routes share a single Layout instance.
             KeepAliveOutlet preserves component state across navigations so that
             warm-nav is near-instant (no unmount/remount). */}
-        <Route element={<ProtectedRoute><PageErrorBoundary><Layout /></PageErrorBoundary></ProtectedRoute>}>
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           <Route path={ROUTES.DASHBOARD_ALIAS} element={<Navigate to={ROUTES.HOME} replace />} />
           <Route path={ROUTES.MISSIONS} element={<Dashboard />} />
