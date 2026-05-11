@@ -108,3 +108,6 @@ export const STORAGE_KEY_NS_OVERVIEW_NAMESPACE = 'kc-ns-overview-namespace'
 // AI/ML endpoint management pattern.
 export const STORAGE_KEY_DRASI_CONNECTIONS = 'ksc-drasi-connections'
 export const STORAGE_KEY_DRASI_ACTIVE_CONNECTION = 'ksc-drasi-active-connection'
+
+// ── Banners ───────────────────────────────────────────────────────────
+export const STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED = 'kc-autonomous-banner-dismissed'

@@ -56,6 +56,7 @@ import {
   SIDEBAR_CONTROLS_OFFSET_PX,
 } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
+import { STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED } from '../../lib/constants/storage'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
@@ -209,9 +210,8 @@ export function Layout({ children: _children }: LayoutProps) {
   const { kagentAvailable, kagentiAvailable } = useKagentBackend()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
-  const AUTONOMOUS_BANNER_STORAGE_KEY = 'kc-autonomous-banner-dismissed'
   const [autonomousBannerDismissed, setAutonomousBannerDismissed] = useState(
-    () => safeGetItem(AUTONOMOUS_BANNER_STORAGE_KEY) === 'true'
+    () => safeGetItem(STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED) === 'true'
   )
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showInClusterAgentDialog, setShowInClusterAgentDialog] =
@@ -604,7 +604,7 @@ export function Layout({ children: _children }: LayoutProps) {
         <div className="flex items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
           <span className="text-sm" aria-hidden="true">🐝</span>
           <span className="text-sm text-purple-300 font-medium">
-            This project is fully autonomous — maintained by AI agents.
+            {t('layout.autonomousBannerMessage')}
           </span>
           <a
             href={HIVE_DASHBOARD_URL}
@@ -612,7 +612,7 @@ export function Layout({ children: _children }: LayoutProps) {
             rel="noopener noreferrer"
             className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded transition-colors whitespace-nowrap"
           >
-            Watch them live
+            {t('layout.watchLive')}
             <ExternalLink className="w-3 h-3" aria-hidden="true" />
           </a>
           <a
@@ -621,12 +621,12 @@ export function Layout({ children: _children }: LayoutProps) {
             rel="noopener noreferrer"
             className="sm:hidden text-xs text-purple-300 underline underline-offset-2 whitespace-nowrap"
           >
-            Watch live →
+            {t('layout.watchLiveMobile')}
           </a>
           <button
             onClick={() => {
               setAutonomousBannerDismissed(true)
-              safeSetItem(AUTONOMOUS_BANNER_STORAGE_KEY, 'true')
+              safeSetItem(STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED, 'true')
             }}
             className="ml-1 md:ml-2 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-purple-500/20 rounded-full transition-colors"
             aria-label={t('buttons.dismissBanner')}
