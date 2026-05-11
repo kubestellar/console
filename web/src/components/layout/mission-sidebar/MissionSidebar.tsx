@@ -354,27 +354,18 @@ export function MissionSidebar() {
       return
     }
 
-    if (activeMission?.id !== fullScreenMissionFromUrl.id) {
-      setActiveMission(fullScreenMissionFromUrl.id)
-    }
-    if (!isSidebarOpen) {
-      openSidebar()
-    }
-    if (isSidebarMinimized) {
-      expandSidebar()
-    }
-    if (!isFullScreen) {
-      setFullScreen(true)
-    }
+    // Hydrate sidebar state from URL once when view=chat is present.
+    // Deps are limited to URL-derived values only — including isSidebarOpen,
+    // isSidebarMinimized, isFullScreen, or activeMission?.id would make this
+    // effect re-run after user-initiated close/minimize/back actions and undo
+    // them while the URL still shows view=chat (#13149).
+    setActiveMission(fullScreenMissionFromUrl.id)
+    openSidebar() // also clears isSidebarMinimized
+    setFullScreen(true)
   }, [
-    activeMission?.id,
     deepLinkMission,
-    expandSidebar,
     fullScreenMissionFromUrl,
-    isFullScreen,
     isMissionChatView,
-    isSidebarMinimized,
-    isSidebarOpen,
     openSidebar,
     searchParams,
     setActiveMission,
@@ -936,7 +927,15 @@ export function MissionSidebar() {
                 {/* History toggle on mobile — desktop uses a standalone icon button (#10522) */}
                 {isMobile && listTotalMissions > 0 && (
                   <button
-                    onClick={() => { setShowAddMenu(false); toggleHistoryPanel() }}
+                    onClick={() => {
+                      setShowAddMenu(false)
+                      if (activeMission) {
+                        setActiveMission(null)
+                        setShowHistoryPanel(true)
+                      } else {
+                        toggleHistoryPanel()
+                      }
+                    }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                   >
                     <History className="w-4 h-4 text-muted-foreground" />
@@ -955,10 +954,19 @@ export function MissionSidebar() {
               On mobile, the toggle is inside the + menu to avoid crowding the header. */}
           {!isMobile && (
             <button
-              onClick={toggleHistoryPanel}
+              onClick={() => {
+                if (activeMission) {
+                  // In chat mode the history panel is hidden behind the chat view;
+                  // navigate back to the list and open history so the click is visible.
+                  setActiveMission(null)
+                  setShowHistoryPanel(true)
+                } else {
+                  toggleHistoryPanel()
+                }
+              }}
               className={cn(
                 "relative p-1.5 rounded transition-colors ring-1 mr-1 shrink-0",
-                showHistoryPanel
+                showHistoryPanel && !activeMission
                   ? "bg-primary text-primary-foreground ring-primary"
                   : "bg-secondary/50 text-muted-foreground ring-border hover:bg-secondary hover:text-foreground"
               )}
