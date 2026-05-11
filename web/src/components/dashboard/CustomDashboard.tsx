@@ -552,8 +552,9 @@ export function CustomDashboard() {
     navigate(ROUTES.HOME)
 
     // Try to delete from backend in the background (may fail offline)
-    deleteDashboard(id).catch(() => {
+    deleteDashboard(id).catch((err) => {
       // Backend deletion is optional — sidebar + localStorage are the source of truth
+      console.warn('[CustomDashboard] backend delete failed (non-critical):', err)
     })
   }
 
