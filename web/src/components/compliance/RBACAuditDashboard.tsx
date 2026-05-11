@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { rbacAuditDashboardConfig } from '../../config/dashboards/rbac-audit'
 import {
@@ -45,6 +46,7 @@ const RISK_STYLES: Record<string, string> = {
 }
 
 export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent() {
+  const { t } = useTranslation()
   const [bindings, setBindings] = useState<RBACBinding[]>([])
   const [findings, setFindings] = useState<RBACFinding[]>([])
   const [summary, setSummary] = useState<RBACSummary | null>(null)
@@ -99,7 +101,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">Retry</button>
+      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 

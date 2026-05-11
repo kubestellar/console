@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { gxpDashboardConfig } from '../../config/dashboards/gxp'
 import {
@@ -44,6 +45,7 @@ const ACTION_STYLES: Record<string, string> = {
 }
 
 export const GxPDashboardContent = memo(function GxPDashboardContent() {
+  const { t } = useTranslation()
   const [summary, setSummary] = useState<GxPSummary | null>(null)
   const [records, setRecords] = useState<AuditRecord[]>([])
   const [signatures, setSignatures] = useState<Signature[]>([])
@@ -103,7 +105,7 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">Retry</button>
+      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 

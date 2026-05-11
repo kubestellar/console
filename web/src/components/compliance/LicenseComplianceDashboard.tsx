@@ -6,6 +6,7 @@
  * (LGPL, MPL), and provides a fleet-wide license inventory.
  */
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   BookOpen,
@@ -60,6 +61,7 @@ const RISK_ICONS: Record<LicenseRisk, typeof CheckCircle2> = {
 }
 
 export default function LicenseComplianceDashboard() {
+  const { t } = useTranslation()
   const [packages, setPackages] = useState<LicensePackage[]>([])
   const [categories, setCategories] = useState<LicenseCategory[]>([])
   const [summary, setSummary] = useState<LicenseSummary | null>(null)
@@ -106,7 +108,7 @@ export default function LicenseComplianceDashboard() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">Retry</button>
+      <button onClick={fetchData} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 

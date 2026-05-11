@@ -6,6 +6,7 @@
  * operators can enforce supply chain integrity controls.
  */
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   BadgeCheck, XCircle, AlertTriangle, Loader2,
   Shield, ShieldAlert, ShieldOff, Server,
@@ -58,6 +59,7 @@ const MODE_STYLES: Record<string, string> = {
 }
 
 export default function SigningStatusDashboard() {
+  const { t } = useTranslation()
   const [images, setImages] = useState<SignedImage[]>([])
   const [policies, setPolicies] = useState<SigningPolicy[]>([])
   const [summary, setSummary] = useState<SigningSummary | null>(null)
@@ -104,7 +106,7 @@ export default function SigningStatusDashboard() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm">Retry</button>
+      <button onClick={fetchData} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 
