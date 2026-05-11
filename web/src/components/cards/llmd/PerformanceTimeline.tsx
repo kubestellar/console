@@ -26,6 +26,8 @@ const MODES: { key: MetricMode; label: string; unit: string; higherBetter: boole
   { key: 'p99', label: 'p99 Latency', unit: 'ms', higherBetter: false },
 ]
 
+const HEATMAP_UNIFORM_COLOR = 'hsl(var(--primary) / 0.5)'
+
 interface CellData {
   isl: number
   osl: number
@@ -44,7 +46,7 @@ function extractMetric(r: BenchmarkReport, mode: MetricMode): number {
 }
 
 function getColor(value: number, min: number, max: number, higherBetter: boolean): string {
-  if (max === min) return 'rgba(59, 130, 246, 0.5)'
+  if (max === min) return HEATMAP_UNIFORM_COLOR
   const ratio = higherBetter
     ? (value - min) / (max - min)
     : 1 - (value - min) / (max - min)

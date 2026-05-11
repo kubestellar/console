@@ -46,6 +46,9 @@ const TIME_RANGE_BUCKETS: Record<TimeRange, { bucketMinutes: number; numBuckets:
   '24h': { bucketMinutes: 60, numBuckets: 24 },
 }
 
+const WARNING_AREA_GRADIENT_END = 'color-mix(in srgb, var(--chart-warning) 0%, transparent)'
+const SUCCESS_AREA_GRADIENT_END = 'color-mix(in srgb, var(--chart-success) 0%, transparent)'
+
 // Group events by time buckets
 function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firstSeen?: string; count: number }>, bucketMinutes = 5, numBuckets = 12): TimePoint[] {
   const now = Date.now()
@@ -238,7 +241,7 @@ function EventsTimelineInternal() {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
               { offset: 0, color: 'var(--chart-warning-opaque)' },
-              { offset: 1, color: 'rgba(249,115,22,0)' },
+              { offset: 1, color: WARNING_AREA_GRADIENT_END },
             ],
           },
         },
@@ -257,7 +260,7 @@ function EventsTimelineInternal() {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
               { offset: 0, color: 'var(--chart-success-opaque)' },
-              { offset: 1, color: 'rgba(34,197,94,0)' },
+              { offset: 1, color: SUCCESS_AREA_GRADIENT_END },
             ],
           },
         },
