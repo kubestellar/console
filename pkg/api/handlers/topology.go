@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -84,19 +85,23 @@ func (h *TopologyHandlers) GetTopology(c *fiber.Ctx) error {
 
 	exports, err := h.k8sClient.ListServiceExports(ctx)
 	if err != nil {
-		partialErrors = append(partialErrors, fmt.Sprintf("service_exports: %v", err))
+		slog.Warn("[Topology] service_exports fetch failed", "error", err)
+		partialErrors = append(partialErrors, "service_exports")
 	}
 	imports, err := h.k8sClient.ListServiceImports(ctx)
 	if err != nil {
-		partialErrors = append(partialErrors, fmt.Sprintf("service_imports: %v", err))
+		slog.Warn("[Topology] service_imports fetch failed", "error", err)
+		partialErrors = append(partialErrors, "service_imports")
 	}
 	gateways, err := h.k8sClient.ListGateways(ctx)
 	if err != nil {
-		partialErrors = append(partialErrors, fmt.Sprintf("gateways: %v", err))
+		slog.Warn("[Topology] gateways fetch failed", "error", err)
+		partialErrors = append(partialErrors, "gateways")
 	}
 	httpRoutes, err := h.k8sClient.ListHTTPRoutes(ctx)
 	if err != nil {
-		partialErrors = append(partialErrors, fmt.Sprintf("http_routes: %v", err))
+		slog.Warn("[Topology] http_routes fetch failed", "error", err)
+		partialErrors = append(partialErrors, "http_routes")
 	}
 
 	// Build the topology graph

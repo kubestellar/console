@@ -1394,7 +1394,8 @@ func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/jobs/%s/logs", repo, jobStr))
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[GitHubPipelines] failed to fetch job logs", "repo", repo, "job", jobStr, "error", err)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream service error"})
 	}
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusNotFound {
@@ -1457,13 +1458,15 @@ func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ghpGitHubAPIBase+path, nil)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[GitHubPipelines] failed to create mutation request", "repo", repo, "run", run, "op", op, "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Authorization", "Bearer "+h.mutationToken)
 	res, err := h.httpClient.Do(req)
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[GitHubPipelines] failed to send mutation request", "repo", repo, "run", run, "op", op, "error", err)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream service error"})
 	}
 	defer res.Body.Close()
 	if res.StatusCode >= 400 {

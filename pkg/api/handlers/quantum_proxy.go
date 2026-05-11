@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -64,7 +63,8 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	// Create HTTP client request
 	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to create request: %v", err))
+		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
 	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
@@ -78,7 +78,8 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, fmt.Sprintf("Quantum service unavailable: %v", err))
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()
 
@@ -106,7 +107,8 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 
 	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to create request: %v", err))
+		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
 	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
@@ -120,7 +122,8 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, fmt.Sprintf("Quantum service unavailable: %v", err))
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()
 
@@ -153,7 +156,8 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	// Create HTTP client request
 	req, err := http.NewRequest(http.MethodPost, targetURL, strings.NewReader(string(c.Body())))
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to create request: %v", err))
+		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
 	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
@@ -167,7 +171,8 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, fmt.Sprintf("Quantum service unavailable: %v", err))
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()
 
