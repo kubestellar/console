@@ -450,17 +450,23 @@ func (h *OrbitHandler) saveToDiskLocked() {
 	// Best-effort cleanup if we bail out before the rename.
 	defer func() {
 		if _, err := os.Stat(tmpPath); err == nil {
-			_ = os.Remove(tmpPath)
+			if err := os.Remove(tmpPath); err != nil {
+				slog.Warn("orbit: failed to clean up temp file", "path", tmpPath, "error", err)
+			}
 		}
 	}()
 	if _, err := tmp.Write(data); err != nil {
 		slog.Error("orbit: failed to write temp data file", "path", tmpPath, "error", err)
-		_ = tmp.Close()
+		if err := tmp.Close(); err != nil {
+			slog.Warn("orbit: failed to close temp file after write error", "path", tmpPath, "error", err)
+		}
 		return
 	}
 	if err := tmp.Sync(); err != nil {
 		slog.Error("orbit: failed to fsync temp data file", "path", tmpPath, "error", err)
-		_ = tmp.Close()
+		if err := tmp.Close(); err != nil {
+			slog.Warn("orbit: failed to close temp file after sync error", "path", tmpPath, "error", err)
+		}
 		return
 	}
 	if err := tmp.Close(); err != nil {
