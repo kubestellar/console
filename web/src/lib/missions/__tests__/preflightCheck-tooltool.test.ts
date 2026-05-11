@@ -97,6 +97,15 @@ describe('runToolPreflightCheck', () => {
     expect(result.error).toBeUndefined()
   })
 
+  it('skips the local tool preflight when the agent base URL is empty', async () => {
+    const mockFetch = vi.mocked(fetch)
+
+    const result = await runToolPreflightCheck('', ['kubectl'])
+
+    expect(result).toEqual({ ok: true, tools: [] })
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
   it('returns ok:false with MISSING_TOOLS when a required tool is absent', async () => {
     const mockFetch = vi.mocked(fetch)
     mockFetch.mockResolvedValueOnce({

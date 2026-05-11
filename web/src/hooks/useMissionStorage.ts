@@ -278,3 +278,11 @@ export function getSelectedKagentiAgentFromStorage(): { name: string; namespace:
     return null
   }
 }
+
+export function persistSelectedKagentiAgentToStorage(agent: { name: string; namespace: string }): void {
+  try {
+    localStorage.setItem(KAGENTI_SELECTED_AGENT_KEY, `${agent.namespace}/${agent.name}`)
+  } catch {
+    // Ignore localStorage errors.
+  }
+}

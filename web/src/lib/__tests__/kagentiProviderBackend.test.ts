@@ -12,6 +12,7 @@ const mockAuthFetch = vi.mocked(authFetch)
 // Import the module under test (need to import after mock setup)
 let fetchKagentiProviderStatus: typeof import('../kagentiProviderBackend').fetchKagentiProviderStatus
 let fetchKagentiProviderAgents: typeof import('../kagentiProviderBackend').fetchKagentiProviderAgents
+let discoverKagentiProviderAgent: typeof import('../kagentiProviderBackend').discoverKagentiProviderAgent
 let updateKagentiProviderConfig: typeof import('../kagentiProviderBackend').updateKagentiProviderConfig
 let kagentiProviderCallTool: typeof import('../kagentiProviderBackend').kagentiProviderCallTool
 let kagentiProviderChat: typeof import('../kagentiProviderBackend').kagentiProviderChat
@@ -21,6 +22,7 @@ beforeEach(async () => {
   const mod = await import('../kagentiProviderBackend')
   fetchKagentiProviderStatus = mod.fetchKagentiProviderStatus
   fetchKagentiProviderAgents = mod.fetchKagentiProviderAgents
+  discoverKagentiProviderAgent = mod.discoverKagentiProviderAgent
   updateKagentiProviderConfig = mod.updateKagentiProviderConfig
   kagentiProviderCallTool = mod.kagentiProviderCallTool
   kagentiProviderChat = mod.kagentiProviderChat
@@ -117,6 +119,15 @@ describe('fetchKagentiProviderAgents', () => {
     expect(result).toEqual([])
   })
 
+  it('throws on HTTP error when strict discovery is requested', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 503,
+    } as Response)
+
+    await expect(fetchKagentiProviderAgents({ throwOnUnavailable: true })).rejects.toThrow('HTTP 503')
+  })
+
   it('returns empty array on network error', async () => {
     mockAuthFetch.mockRejectedValueOnce(new Error('Timeout'))
 
@@ -132,6 +143,55 @@ describe('fetchKagentiProviderAgents', () => {
 
     const result = await fetchKagentiProviderAgents()
     expect(result).toEqual([])
+  })
+})
+
+describe('discoverKagentiProviderAgent', () => {
+  it('returns the first discovered agent when the provider is available', async () => {
+    mockAuthFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ available: true }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ agents: [{ name: 'agent-1', namespace: 'default' }] }),
+      } as Response)
+
+    await expect(discoverKagentiProviderAgent()).resolves.toEqual({
+      ok: true,
+      agent: { name: 'agent-1', namespace: 'default' },
+    })
+  })
+
+  it('reports provider_unreachable when status is unavailable', async () => {
+    mockAuthFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ available: false, reason: 'unreachable' }),
+    } as Response)
+
+    await expect(discoverKagentiProviderAgent()).resolves.toEqual({
+      ok: false,
+      reason: 'provider_unreachable',
+      detail: 'unreachable',
+    })
+  })
+
+  it('reports no_agents_discovered when the provider is reachable but returns zero agents', async () => {
+    mockAuthFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ available: true }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ agents: [] }),
+      } as Response)
+
+    await expect(discoverKagentiProviderAgent()).resolves.toEqual({
+      ok: false,
+      reason: 'no_agents_discovered',
+    })
   })
 })
 

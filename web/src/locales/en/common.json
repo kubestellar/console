@@ -4099,6 +4099,12 @@
       "stepsCount_other": "{{count}} steps",
       "importSuccess": "Imported \"{{title}}\" successfully."
     },
+    "kagenti": {
+      "providerUnavailableTitle": "Kagenti provider unavailable",
+      "providerUnavailableDescription": "Mission Control could not reach the Kagenti provider{{reasonSuffix}}. Verify your in-cluster Kagenti deployment or direct-agent configuration, then retry.",
+      "noAgentsTitle": "No Kagenti agents discovered",
+      "noAgentsDescription": "Kagenti is reachable, but it did not report any registered agents. Register at least one agent with the controller or configure direct-agent mode, then retry."
+    },
     "preflight": {
       "toolCheck": {
         "agentAuthFailed": "Agent authentication failed. Check that KC_AGENT_TOKEN is correctly set and matches between the console and kc-agent.",
