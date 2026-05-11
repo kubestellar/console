@@ -163,7 +163,7 @@ export function WorkloadMonitorDiagnose({
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
             >
               <Ban className="w-3 h-3" />
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </button>
           )}
           {(state.phase === 'complete' || state.phase === 'failed') && (
@@ -172,7 +172,7 @@ export function WorkloadMonitorDiagnose({
               className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
-              Reset
+              {t('common.reset', 'Reset')}
             </button>
           )}
         </div>
