@@ -37,6 +37,8 @@ const (
 	workloadWriteTimeout = 30 * time.Second
 	// workloadDeployLogsTimeout is the timeout for fetching deploy logs (events + pod queries).
 	workloadDeployLogsTimeout = 15 * time.Second
+	// defaultDemoReplicas is the replica count returned for deployments in demo mode.
+	defaultDemoReplicas = 3
 )
 
 const (
@@ -259,8 +261,8 @@ func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 			"namespace":     c.Params("namespace"),
 			"name":          c.Params("name"),
 			"status":        "Running",
-			"replicas":      3,
-			"readyReplicas": 3,
+			"replicas":      defaultDemoReplicas,
+			"readyReplicas": defaultDemoReplicas,
 		})
 	}
 	if h.k8sClient == nil {
