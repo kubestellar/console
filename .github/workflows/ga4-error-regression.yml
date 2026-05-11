@@ -47,7 +47,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4.2.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout: |
             .github
@@ -60,19 +60,38 @@ jobs:
       - name: Install googleapis
         run: npm install --ignore-scripts googleapis@144.0.0
 
+      - name: Ensure ga4-regression label exists
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          github-token: ${{ secrets.CONSOLE_AUTO }}
+          script: |
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: 'ga4-regression',
+                color: 'e11d48',
+                description: 'GA4 week-over-week error rate regression',
+              });
+            } catch (err) {
+              if (err.status !== 422) throw err;
+            }
+
       - name: Compare error rates week-over-week
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           GA4_SERVICE_ACCOUNT_KEY: ${{ secrets.GA4_SERVICE_ACCOUNT_KEY }}
           GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+          INPUT_SPIKE_THRESHOLD_PCT: ${{ inputs.spike_threshold_pct }}
+          INPUT_MIN_ERROR_COUNT: ${{ inputs.min_error_count }}
         with:
           github-token: ${{ secrets.CONSOLE_AUTO }}
           script: |
             const { google } = require('googleapis');
 
-            const spikePct    = parseInt('${{ inputs.spike_threshold_pct }}' || process.env.SPIKE_THRESHOLD_PCT);
-            const minCount    = parseInt('${{ inputs.min_error_count }}' || process.env.MIN_ERROR_COUNT);
-            const maxIssues   = parseInt(process.env.MAX_ISSUES_PER_RUN);
+            const spikePct    = parseInt(process.env.INPUT_SPIKE_THRESHOLD_PCT || process.env.SPIKE_THRESHOLD_PCT);
+            const minCount    = parseInt(process.env.INPUT_MIN_ERROR_COUNT || process.env.MIN_ERROR_COUNT);
+            const maxIssues   = parseInt(process.env.MAX_ISSUES_PER_RUN) || 5;
             const prefix      = process.env.ISSUE_PREFIX;
             const propertyId  = process.env.GA4_PROPERTY_ID;
 
@@ -130,10 +149,16 @@ jobs:
 
             core.info('Querying GA4: last 7 complete days (yesterday through 7 days ago) vs previous 7 days (8–14 days ago)…');
 
-            const [thisWeek, lastWeek] = await Promise.all([
-              queryErrorsByCategory('7daysAgo', 'yesterday'),
-              queryErrorsByCategory('14daysAgo', '8daysAgo'),
-            ]);
+            let thisWeek, lastWeek;
+            try {
+              [thisWeek, lastWeek] = await Promise.all([
+                queryErrorsByCategory('7daysAgo', 'yesterday'),
+                queryErrorsByCategory('14daysAgo', '8daysAgo'),
+              ]);
+            } catch (err) {
+              core.setFailed(`GA4 API query failed: ${err.message}`);
+              return;
+            }
 
             core.info('This week error counts:');
             for (const [cat, cnt] of thisWeek) core.info(`  ${cat}: ${cnt}`);
@@ -187,7 +212,10 @@ jobs:
             });
 
             const normalizeTitle = (t) =>
-              t.replace(/\[GA4-Regression\]\s*/, '').replace(/\d+/g, 'N').toLowerCase().trim();
+              t.replace(/\[GA4-Regression\]\s*/, '')
+               .replace(/\(\d+\s*vs\s*\d+[^)]*\)/g, '(N vs N)')
+               .replace(/\+?\d+%/g, '+N%')
+               .toLowerCase().trim();
 
             const runUrl   = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const nowLabel = new Date().toISOString().split('T')[0];
@@ -255,7 +283,7 @@ jobs:
                 '',
                 '---',
                 `*Auto-filed by [GA4 Error Rate Regression workflow](${runUrl}) on ${nowLabel}.*`,
-                `*Compares \`7daysAgo…today\` vs \`14daysAgo…8daysAgo\` using GA4 Data API.*`,
+                `*Compares \`7daysAgo…yesterday\` vs \`14daysAgo…8daysAgo\` using GA4 Data API.*`,
               ].join('\n');
 
               const { data: issue } = await github.rest.issues.create({
