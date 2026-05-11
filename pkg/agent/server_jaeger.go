@@ -86,7 +86,7 @@ func (s *Server) handleJaegerStatus(w http.ResponseWriter, r *http.Request) {
 
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	var results []jaegerClusterResult
+	results := make([]jaegerClusterResult, 0)
 
 	for _, cl := range clusters {
 		wg.Add(1)
@@ -180,7 +180,7 @@ func (s *Server) queryJaegerCluster(ctx context.Context, contextName, clusterNam
 func (s *Server) aggregateJaegerResults(results []jaegerClusterResult) jaegerStatusResponse {
 	found := false
 	version := "1.57.0"
-	var allCollectors []jaegerCollector
+	allCollectors := make([]jaegerCollector, 0)
 	unhealthyCount := 0
 
 	for _, r := range results {

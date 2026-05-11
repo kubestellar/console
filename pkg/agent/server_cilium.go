@@ -120,7 +120,7 @@ func (s *Server) handleCiliumStatus(w http.ResponseWriter, r *http.Request) {
 	// Fan out queries to all clusters concurrently.
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	var results []ciliumClusterResult
+	results := make([]ciliumClusterResult, 0)
 
 	for _, cl := range clusters {
 		wg.Add(1)
