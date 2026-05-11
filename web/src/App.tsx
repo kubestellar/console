@@ -20,6 +20,7 @@ import { useOrbitAutoRun } from './hooks/useOrbitAutoRun'
 import { UnifiedDemoProvider } from './lib/unified/demo'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
+import { PageErrorBoundary } from './components/PageErrorBoundary'
 import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { SHORT_DELAY_MS } from './lib/constants/network'
@@ -219,7 +220,11 @@ function OrbitAutoRunner() { useOrbitAutoRun(); return null }
 // change is immediate. Without this, React 18's concurrent transitions
 // keep the OLD route visible while the new lazy component loads.
 function SuspenseRoute({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+  return (
+    <PageErrorBoundary>
+      <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+    </PageErrorBoundary>
+  )
 }
 
 // Loading fallback component with delay to prevent flash on fast navigation
@@ -523,9 +528,11 @@ function LightweightShell({ children }: { children: React.ReactNode }) {
     <AppErrorBoundary>
     <ChunkErrorBoundary>
     <PageViewTracker />
-    <Suspense fallback={<LoadingFallback />}>
-      {children}
-    </Suspense>
+    <PageErrorBoundary>
+      <Suspense fallback={<LoadingFallback />}>
+        {children}
+      </Suspense>
+    </PageErrorBoundary>
     </ChunkErrorBoundary>
     </AppErrorBoundary>
     </ThemeProvider>
@@ -695,13 +702,17 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
       <DashboardProvider>
       <DrillDownProvider>
       <AppErrorBoundary>
-      <Suspense fallback={null}><DrillDownModal /></Suspense>
-      <NPSSurvey />
+      <PageErrorBoundary>
+        <Suspense fallback={null}><DrillDownModal /></Suspense>
+      </PageErrorBoundary>
+      <PageErrorBoundary>
+        <NPSSurvey />
+      </PageErrorBoundary>
       <OrbitAutoRunner />
       <ChunkErrorBoundary>
       <Routes location={liveLocation}>
-        <Route path={ROUTES.LOGIN} element={<Login />} />
-        <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallback />} />
+        <Route path={ROUTES.LOGIN} element={<PageErrorBoundary><Login /></PageErrorBoundary>} />
+        <Route path={ROUTES.AUTH_CALLBACK} element={<PageErrorBoundary><AuthCallback /></PageErrorBoundary>} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path={ROUTES.WIDGET} element={<SuspenseRoute><MiniDashboard /></SuspenseRoute>} />
 
@@ -748,7 +759,7 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
         {/* Layout route — all dashboard routes share a single Layout instance.
             KeepAliveOutlet preserves component state across navigations so that
             warm-nav is near-instant (no unmount/remount). */}
-        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route element={<ProtectedRoute><PageErrorBoundary><Layout /></PageErrorBoundary></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           <Route path={ROUTES.DASHBOARD_ALIAS} element={<Navigate to={ROUTES.HOME} replace />} />
           <Route path={ROUTES.MISSIONS} element={<Dashboard />} />
