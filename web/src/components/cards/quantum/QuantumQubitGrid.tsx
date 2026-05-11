@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import DOMPurify from 'dompurify'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
 import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
@@ -342,7 +343,7 @@ export const QuantumQubitGrid: React.FC = () => {
         {/* SVG Grid */}
         <div className="flex justify-center p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
           <div
-            dangerouslySetInnerHTML={{ __html: svgContent }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svgContent, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
             style={{ filter: isDemoFallback ? 'brightness(0.9)' : 'none' }}
           />
         </div>
