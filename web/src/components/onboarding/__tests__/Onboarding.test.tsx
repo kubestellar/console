@@ -46,8 +46,8 @@ vi.mock('../../../lib/utils/localStorage', () => ({
 import { DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDED, STORAGE_KEY_ONBOARDING_RESPONSES } from '../../../lib/constants'
 import { Onboarding } from '../Onboarding'
 
-const CONTINUE_LABEL = 'Continue'
-const COMPLETE_SETUP_LABEL = 'Complete Setup'
+const CONTINUE_LABEL = 'onboarding.continue'
+const COMPLETE_SETUP_LABEL = 'onboarding.complete'
 const FALLBACK_ERROR_MESSAGE = 'Failed to complete onboarding. Please try again.'
 const REFRESH_FAILURE_MESSAGE = 'Demo onboarding failed'
 
