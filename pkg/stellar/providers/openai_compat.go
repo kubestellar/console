@@ -17,11 +17,24 @@ var ProviderDefaults = map[string]struct {
 	BaseURL      string
 	DefaultModel string
 }{
-	"openai":     {"https://api.openai.com/v1", "gpt-4o"},
-	"anthropic":  {"https://api.anthropic.com/v1", "claude-sonnet-4-20250514"},
-	"groq":       {"https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"},
-	"openrouter": {"https://openrouter.ai/api/v1", "meta-llama/llama-3-70b-instruct"},
-	"together":   {"https://api.together.xyz/v1", "meta-llama/Llama-3-70b-chat-hf"},
+	"openai":         {"https://api.openai.com/v1", "gpt-4o"},
+	"anthropic":      {"https://api.anthropic.com/v1", "claude-sonnet-4-20250514"},
+	"groq":           {"https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"},
+	"openrouter":     {"https://openrouter.ai/api/v1", "meta-llama/llama-3-70b-instruct"},
+	"together":       {"https://api.together.xyz/v1", "meta-llama/Llama-3-70b-chat-hf"},
+	"llamacpp":       {"", ""},
+	"lm-studio":      {"http://127.0.0.1:1234/v1", ""},
+	"localai":        {"", ""},
+	"vllm":           {"", ""},
+	"rhaiis":         {"", ""},
+	"ramalama":       {"", ""},
+	"claude-desktop": {"", ""},
+	"google-ag":      {"", ""},
+	"goose":          {"", ""},
+	"codex":          {"", ""},
+	"gemini":         {"", ""},
+	"bob":            {"", ""},
+	"claude-code":    {"", ""},
 }
 
 type OpenAICompatProvider struct {
@@ -62,6 +75,39 @@ func (o *OpenAICompatProvider) SupportsStreaming() bool { return true }
 
 func (o *OpenAICompatProvider) Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
 	start := time.Now()
+
+	// Just use the model that the user has access to if not explicitly set or if it's a default that might not exist locally
+	if req.Model == "" || req.Model == "llama3" || req.Model == "gpt-4o" {
+		if modelsReq, err := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/models", nil); err == nil {
+			if o.APIKey != "" {
+				modelsReq.Header.Set("Authorization", "Bearer "+o.APIKey)
+			}
+			if modelsResp, err := o.client.Do(modelsReq); err == nil {
+				defer modelsResp.Body.Close()
+				var models struct {
+					Data []struct {
+						ID string `json:"id"`
+					} `json:"data"`
+				}
+				if err := json.NewDecoder(modelsResp.Body).Decode(&models); err == nil && len(models.Data) > 0 {
+					found := false
+					if req.Model != "" {
+						for _, m := range models.Data {
+							if m.ID == req.Model {
+								found = true
+								break
+							}
+						}
+					}
+					// Fallback to first available model
+					if !found {
+						req.Model = models.Data[0].ID
+					}
+				}
+			}
+		}
+	}
+
 	payload := map[string]any{
 		"model":       req.Model,
 		"messages":    req.Messages,

@@ -114,6 +114,12 @@ type StellarStore interface {
 	ListStellarUserIDs(ctx context.Context) ([]string, error)
 
 	QueryTimeline(ctx context.Context, filter store.TimelineFilter) ([]store.ClusterEvent, error)
+
+	ActionCompletedByIdempotencyKey(ctx context.Context, key string) bool
+	IncrementRetry(ctx context.Context, id string) error
+	PruneOldNotifications(ctx context.Context, retentionDays int) (int64, error)
+	PruneOldExecutions(ctx context.Context, retentionDays int) (int64, error)
+	PruneExpiredMemory(ctx context.Context) (int64, error)
 }
 
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.

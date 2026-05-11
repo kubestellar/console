@@ -60,24 +60,27 @@ func (r *Registry) Resolve(requestProvider, requestModel string, userCfg *Resolv
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	resolveModel := func(providerName, requestedModel string) string {
+		if requestedModel != "" {
+			return requestedModel
+		}
+		if d, ok := ProviderDefaults[providerName]; ok && d.DefaultModel != "" {
+			return d.DefaultModel
+		}
+		return r.defaultModel
+	}
+
 	if requestProvider != "" {
 		if p, ok := r.global[requestProvider]; ok {
-			model := requestModel
-			if model == "" {
-				model = r.defaultModel
-			}
-			return ResolvedProvider{Provider: p, Model: model, Source: "request"}
+			return ResolvedProvider{Provider: p, Model: resolveModel(requestProvider, requestModel), Source: "request"}
 		}
 	}
 	if userCfg != nil && userCfg.Provider != nil {
-		model := userCfg.Model
-		if model == "" {
-			model = r.defaultModel
-		}
-		return ResolvedProvider{Provider: userCfg.Provider, Model: model, Source: "user-default"}
+		providerName := userCfg.Provider.Name()
+		return ResolvedProvider{Provider: userCfg.Provider, Model: resolveModel(providerName, userCfg.Model), Source: "user-default"}
 	}
 	if p, ok := r.global[r.defaultName]; ok {
-		return ResolvedProvider{Provider: p, Model: r.defaultModel, Source: "env-default"}
+		return ResolvedProvider{Provider: p, Model: resolveModel(r.defaultName, ""), Source: "env-default"}
 	}
 	return ResolvedProvider{Provider: r.global["ollama"], Model: r.defaultModel, Source: "fallback"}
 }
@@ -123,12 +126,25 @@ func (r *Registry) Available() []string {
 
 func displayName(name string) string {
 	m := map[string]string{
-		"ollama":     "Ollama",
-		"openai":     "OpenAI",
-		"anthropic":  "Anthropic",
-		"groq":       "Groq",
-		"openrouter": "OpenRouter",
-		"together":   "Together AI",
+		"ollama":         "Ollama",
+		"openai":         "OpenAI",
+		"anthropic":      "Anthropic",
+		"groq":           "Groq",
+		"openrouter":     "OpenRouter",
+		"together":       "Together AI",
+		"llamacpp":       "llama.cpp (Local)",
+		"lm-studio":      "LM Studio (Local)",
+		"localai":        "LocalAI (Local)",
+		"vllm":           "vLLM (Local)",
+		"rhaiis":         "Red Hat AI Inference Server",
+		"ramalama":       "RamaLama (Local)",
+		"claude-desktop": "Claude Desktop (Local)",
+		"google-ag":      "Antigravity",
+		"goose":          "Goose",
+		"codex":          "OpenAI Codex",
+		"gemini":         "Google Gemini CLI",
+		"bob":            "Bob",
+		"claude-code":    "Claude Code",
 	}
 	if d, ok := m[name]; ok {
 		return d

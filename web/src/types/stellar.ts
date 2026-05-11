@@ -78,6 +78,7 @@ export interface ProviderSession {
   model: string
   configId?: string
   source: 'request' | 'user-default' | 'env-default' | 'fallback'
+  isCli?: boolean
 }
 
 export interface StellarDigest {

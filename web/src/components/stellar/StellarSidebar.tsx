@@ -3,6 +3,7 @@ import { useStellar } from '../../hooks/useStellar'
 import { EventsPanel } from './EventsPanel'
 import { ChatPanel } from './ChatPanel'
 import { StellarHeader } from './StellarHeader'
+
 import '../../styles/stellar.css'
 
 export function StellarSidebar() {

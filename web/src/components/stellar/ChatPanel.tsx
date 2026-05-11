@@ -4,6 +4,7 @@ import { MessageBubble } from './MessageBubble'
 import { ProviderSelector } from './ProviderSelector'
 import type { ProviderSession } from '../../types/stellar'
 import { TextArea } from '../ui/TextArea'
+import { kagentChat } from '../../lib/kagentBackend'
 
 interface Msg {
   id: string
@@ -33,6 +34,13 @@ export function ChatPanel({
   const [busy, setBusy] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLTextAreaElement | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort()
+    }
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -47,30 +55,62 @@ export function ChatPanel({
     const loadMsg: Msg = { id: crypto.randomUUID(), role: 'stellar', content: '', ts: new Date(), loading: true }
     setMsgs(prev => [...prev, userMsg, loadMsg])
     try {
-      const response = await stellarApi.ask({
-        prompt,
-        provider: providerSession?.provider || '',
-        model: providerSession?.model || '',
-      })
-      setMsgs(prev => prev.map(message => (message.loading ? {
-        ...message,
-        content: response.answer,
-        loading: false,
-        meta: {
-          model: response.model,
-          tokens: response.tokens,
-          provider: response.provider,
-          durationMs: response.durationMs,
-        },
-      } : message)))
+      if (providerSession?.isCli) {
+        abortControllerRef.current = new AbortController()
+        let accumulated = ''
+        const start = Date.now()
+        await new Promise<void>((resolve, reject) => {
+          void kagentChat(
+            providerSession.provider,
+            'default', // Default namespace
+            prompt,
+            {
+              onChunk: (chunk) => {
+                accumulated += chunk
+                setMsgs(prev => prev.map(m => m.loading ? { ...m, content: accumulated } : m))
+              },
+              onDone: () => {
+                const durationMs = Date.now() - start
+                setMsgs(prev => prev.map(m => m.loading ? {
+                  ...m,
+                  content: accumulated,
+                  loading: false,
+                  meta: { model: 'cli', tokens: 0, provider: providerSession.provider, durationMs },
+                } : m))
+                resolve()
+              },
+              onError: (err) => reject(new Error(err)),
+              signal: abortControllerRef.current?.signal,
+            }
+          )
+        })
+      } else {
+        const response = await stellarApi.ask({
+          prompt,
+          provider: providerSession?.provider || '',
+          model: providerSession?.model || '',
+        })
+        setMsgs(prev => prev.map(message => (message.loading ? {
+          ...message,
+          content: response.answer,
+          loading: false,
+          meta: {
+            model: response.model,
+            tokens: response.tokens,
+            provider: response.provider,
+            durationMs: response.durationMs,
+          },
+        } : message)))
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Request failed'
       setMsgs(prev => prev.map(item => item.loading ? { ...item, content: `Error: ${message}`, loading: false } : item))
     } finally {
       setBusy(false)
+      abortControllerRef.current = null
       textRef.current?.focus()
     }
-  }, [busy, input, providerSession?.model, providerSession?.provider])
+  }, [busy, input, providerSession?.model, providerSession?.provider, providerSession?.isCli])
 
   const handleKey = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {

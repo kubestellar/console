@@ -49,6 +49,38 @@ func (o *OllamaProvider) Health(ctx context.Context) HealthResult {
 
 func (o *OllamaProvider) Generate(ctx context.Context, req GenerateRequest) (*GenerateResponse, error) {
 	start := time.Now()
+	
+	// Just use the model that the user has access to if not explicitly set
+	if req.Model == "" || req.Model == "llama3" {
+		if tagsReq, err := http.NewRequestWithContext(ctx, http.MethodGet, o.BaseURL+"/api/tags", nil); err == nil {
+			if tagsResp, err := o.client.Do(tagsReq); err == nil {
+				defer tagsResp.Body.Close()
+				var tags struct {
+					Models []struct {
+						Name string `json:"name"`
+					} `json:"models"`
+				}
+				if err := json.NewDecoder(tagsResp.Body).Decode(&tags); err == nil && len(tags.Models) > 0 {
+					// Check if requested model exists
+					found := false
+					if req.Model != "" {
+						for _, m := range tags.Models {
+							if m.Name == req.Model || strings.HasPrefix(m.Name, req.Model+":") {
+								found = true
+								req.Model = m.Name
+								break
+							}
+						}
+					}
+					// Fallback to first available model
+					if !found {
+						req.Model = tags.Models[0].Name
+					}
+				}
+			}
+		}
+	}
+
 	maxTokens := req.MaxTokens
 	if maxTokens <= 0 {
 		maxTokens = defaultPromptTokenCap

@@ -68,10 +68,11 @@ export function EventsPanel({
           </span>
         )}
         <div style={{ flex: 1 }} />
-        {sorted.length > 0 && (
+        {notifications.length > 0 && (
           <button
             onClick={() => {
-              unread.forEach((notification) => { void acknowledgeNotification(notification.id) })
+              // Dismiss ALL notifications (read + unread)
+              ;(notifications || []).forEach((notification) => { void acknowledgeNotification(notification.id) })
             }}
             style={{
               background: 'none',
