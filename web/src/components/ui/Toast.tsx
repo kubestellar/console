@@ -15,14 +15,16 @@ interface ToastContextValue {
   showToast: (message: string, type?: ToastType) => void
 }
 
+const NOOP_TOAST_CONTEXT: ToastContextValue = {
+  // Allow isolated renders (tests/storybook) without a provider; the app still
+  // mounts ToastProvider globally for real toast delivery.
+  showToast: () => undefined,
+}
+
 const ToastContext = createContext<ToastContextValue | null>(null)
 
 export function useToast() {
-  const context = useContext(ToastContext)
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider')
-  }
-  return context
+  return useContext(ToastContext) ?? NOOP_TOAST_CONTEXT
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
