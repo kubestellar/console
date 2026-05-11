@@ -815,11 +815,30 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           const missionsToReconnect: Mission[] = []
           // Missions that have already had one reconnect attempt — don't
           // replay the prompt again; fail them instead (#5930).
-          const missionsToFailDuplicate: string[] = []
+          const missionsToFailDuplicate = new Set<string>()
           // Missions whose last update was so long ago that the backend
           // session is almost certainly gone. Don't auto-resume these —
           // mark them as needing a manual restart (#6371).
-          const missionsToMarkStale: string[] = []
+          const missionsToMarkStale = new Set<string>()
+
+          // #7074 — Build reconnect candidates SYNCHRONOUSLY from refs before
+          // entering the state updater. React may defer updater execution, so
+          // any arrays populated inside `setMissions` are not safe to use for
+          // same-tick side effects like the delayed wsSend below.
+          const reconnectCandidates = (missionsRef.current || []).filter(m =>
+            (m.status === 'running' || m.status === 'waiting_input') && m.context?.needsReconnect
+          )
+          const now = Date.now()
+          for (const mission of reconnectCandidates) {
+            const ageMs = now - new Date(mission.updatedAt).getTime()
+            if (ageMs > MISSION_RECONNECT_MAX_AGE_MS) {
+              missionsToMarkStale.add(mission.id)
+            } else if (mission.context?.reconnectAttempted) {
+              missionsToFailDuplicate.add(mission.id)
+            } else {
+              missionsToReconnect.push(mission)
+            }
+          }
 
           // #7074 — Build the waiting_input set SYNCHRONOUSLY from the ref
           // before entering the state updater. If React batches or delays the
@@ -832,32 +851,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           )
 
           setMissions(prev => {
-            const candidates = prev.filter(m =>
-              (m.status === 'running' || m.status === 'waiting_input') && m.context?.needsReconnect
-            )
-
-            if (candidates.length > 0) {
-              // Split candidates into first-attempt (safe to replay) vs
-              // already-attempted (unsafe — would duplicate execution on
-              // non-idempotent agents, see #5930) vs stale (backend session
-              // has very likely expired, see #6371).
-              const now = Date.now()
-              for (const m of (candidates || [])) {
-                const ageMs = now - new Date(m.updatedAt).getTime()
-                if (ageMs > MISSION_RECONNECT_MAX_AGE_MS) {
-                  missionsToMarkStale.push(m.id)
-                } else if (m.context?.reconnectAttempted) {
-                  missionsToFailDuplicate.push(m.id)
-                } else {
-                  missionsToReconnect.push(m)
-                }
-              }
-
+            if (reconnectCandidates.length > 0) {
               // Clear the needsReconnect flag and mark reconnectAttempted
               // so a subsequent reconnect won't replay the prompt again.
               return prev.map(m => {
                 if (!m.context?.needsReconnect) return m
-                if (missionsToMarkStale.includes(m.id)) {
+                if (missionsToMarkStale.has(m.id)) {
                   // Issue 9157: if the agent's LAST message was a substantive
                   // assistant response, the mission almost certainly completed
                   // before the session went stale — the only thing missing is
@@ -915,7 +914,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                     ]
                   }
                 }
-                if (missionsToFailDuplicate.includes(m.id)) {
+                if (missionsToFailDuplicate.has(m.id)) {
                   return {
                     ...m,
                     status: 'failed' as MissionStatus,
