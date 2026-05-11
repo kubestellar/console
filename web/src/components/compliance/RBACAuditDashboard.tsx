@@ -156,7 +156,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === tab ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                activeTab === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
               }`}
             >
               {tab === 'findings' ? 'Findings' : 'Bindings'}
