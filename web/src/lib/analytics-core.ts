@@ -1054,6 +1054,10 @@ export function emitError(
     error_type: errorType,
     component_name: componentName,
     ...(cardId && { card_id: cardId }),
+    // Issue #13040 — also send card_type to match the dimension used in all
+    // other card events (ksc_card_added, ksc_card_expanded, etc.), enabling
+    // BigQuery joins between error data and card usage analytics.
+    ...(cardId && { card_type: cardId }),
   })
 }
 
