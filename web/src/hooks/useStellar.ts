@@ -81,7 +81,8 @@ export function useStellar() {
 
   const acknowledgeNotification = useCallback(async (id: string) => {
     const previous = notifications
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+    // Remove the notification from local state immediately so it disappears
+    setNotifications(prev => prev.filter(n => n.id !== id))
     try {
       await stellarApi.acknowledgeNotification(id)
     } catch (error) {
