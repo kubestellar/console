@@ -67,10 +67,13 @@ const ATTENTION_MISSION_STATUSES: ReadonlySet<Mission['status']> = new Set(['wai
 const MISSION_BROWSER_QUERY_KEY = 'browse'
 const MISSION_BROWSER_QUERY_VALUE = 'missions'
 const MISSION_DEEP_LINK_QUERY_KEY = 'mission'
+const MISSION_VIEW_QUERY_KEY = 'view'
+const MISSION_CHAT_VIEW = 'chat'
 const MISSION_IMPORT_QUERY_KEY = 'import'
 const MISSION_CONTROL_QUERY_KEY = 'mission-control'
 const MISSION_PLAN_QUERY_KEY = 'plan'
 const MISSION_BROWSER_HISTORY_STATE_KEY = 'kscMissionBrowserOpen'
+const FULLSCREEN_KNOWLEDGE_PANEL_WIDTH_CLASS = 'w-80 xl:w-96'
 
 function getMissionAttentionCount(missions: Mission[]): number {
   return missions.filter(mission => ATTENTION_MISSION_STATUSES.has(mission.status)).length
@@ -280,11 +283,16 @@ export function MissionSidebar() {
   const navigate = useNavigate()
   const browserHistoryEntryRef = useRef(false)
   const deepLinkMission = searchParams.get(MISSION_DEEP_LINK_QUERY_KEY)
+  const missionViewParam = searchParams.get(MISSION_VIEW_QUERY_KEY)
   const directImportSlug = searchParams.get(MISSION_IMPORT_QUERY_KEY)
   const browseParam = searchParams.get(MISSION_BROWSER_QUERY_KEY)
   const missionControlParam = searchParams.get(MISSION_CONTROL_QUERY_KEY)
   const isMissionBrowserRoute = location.pathname === ROUTES.MISSIONS
-  const isMissionBrowserDeepLink = Boolean(deepLinkMission) || browseParam === MISSION_BROWSER_QUERY_VALUE || isMissionBrowserRoute
+  const isMissionChatView = missionViewParam === MISSION_CHAT_VIEW
+  const fullScreenMissionFromUrl = isMissionChatView && deepLinkMission
+    ? missions.find(mission => mission.id === deepLinkMission) || null
+    : null
+  const isMissionBrowserDeepLink = !isMissionChatView && (Boolean(deepLinkMission) || browseParam === MISSION_BROWSER_QUERY_VALUE || isMissionBrowserRoute)
   /** Mission pre-fetched by MissionLandingPage and passed via navigation state */
   const prefetchedMission = (location.state as { prefetchedMission?: MissionExport } | null)?.prefetchedMission
 
@@ -332,6 +340,67 @@ export function MissionSidebar() {
       setShowBrowser(true)
     }
   }, [isMissionBrowserDeepLink])
+
+  useEffect(() => {
+    if (!isMissionChatView) return
+
+    if (!fullScreenMissionFromUrl) {
+      if (deepLinkMission) {
+        const nextParams = new URLSearchParams(searchParams)
+        nextParams.delete(MISSION_DEEP_LINK_QUERY_KEY)
+        nextParams.delete(MISSION_VIEW_QUERY_KEY)
+        setSearchParams(nextParams, { replace: true })
+      }
+      return
+    }
+
+    if (activeMission?.id !== fullScreenMissionFromUrl.id) {
+      setActiveMission(fullScreenMissionFromUrl.id)
+    }
+    if (!isSidebarOpen) {
+      openSidebar()
+    }
+    if (isSidebarMinimized) {
+      expandSidebar()
+    }
+    if (!isFullScreen) {
+      setFullScreen(true)
+    }
+  }, [
+    activeMission?.id,
+    deepLinkMission,
+    expandSidebar,
+    fullScreenMissionFromUrl,
+    isFullScreen,
+    isMissionChatView,
+    isSidebarMinimized,
+    isSidebarOpen,
+    openSidebar,
+    searchParams,
+    setActiveMission,
+    setFullScreen,
+    setSearchParams,
+  ])
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (isFullScreen && activeMission) {
+      nextParams.set(MISSION_DEEP_LINK_QUERY_KEY, activeMission.id)
+      nextParams.set(MISSION_VIEW_QUERY_KEY, MISSION_CHAT_VIEW)
+    } else if (searchParams.get(MISSION_VIEW_QUERY_KEY) === MISSION_CHAT_VIEW) {
+      nextParams.delete(MISSION_VIEW_QUERY_KEY)
+      if (!activeMission || searchParams.get(MISSION_DEEP_LINK_QUERY_KEY) === activeMission.id) {
+        nextParams.delete(MISSION_DEEP_LINK_QUERY_KEY)
+      }
+    } else {
+      return
+    }
+
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true })
+    }
+  }, [activeMission, isFullScreen, searchParams, setSearchParams])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -1113,7 +1182,10 @@ export function MissionSidebar() {
         )}>
           {/* Fullscreen: left sidebar with saved missions + related knowledge */}
           {isFullScreen && (
-            <div className="w-64 border-r border-border bg-secondary/20 flex flex-col overflow-hidden shrink-0">
+            <div className={cn(
+              FULLSCREEN_KNOWLEDGE_PANEL_WIDTH_CLASS,
+              "border-r border-border bg-secondary/20 flex flex-col overflow-hidden shrink-0"
+            )}>
               <div className="flex-1 overflow-y-auto scroll-enhanced">
                 {/* Saved Missions section */}
                 {savedMissions.length > 0 && (
