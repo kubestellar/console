@@ -103,10 +103,21 @@ async function fetchAllNodes(): Promise<NodesFetchResult> {
     const message = error instanceof Error ? error.message : 'Unknown error'
     nodesFetchConsecutiveFailures += 1
     nodesFetchError = message
+    
+    // Fix for #13038: In local k3d/k3s environments, the /nodes endpoint may not be
+    // configured, causing persistent JSON parse errors. Suppress excessive logging
+    // after the first few failures to reduce console noise.
+    const isJsonParseError = message.includes('Unexpected token') || message.includes('JSON')
+    const shouldLogError = nodesFetchConsecutiveFailures <= OFFLINE_DETECTION_FAILURE_THRESHOLD || !isJsonParseError
+    
     if (nodesCache.length > 0) {
-      console.warn('[OfflineDetection] Node fetch degraded:', message)
+      if (shouldLogError) {
+        console.warn('[OfflineDetection] Node fetch degraded:', message)
+      }
     } else {
-      console.error('[OfflineDetection] Error fetching nodes:', error)
+      if (shouldLogError) {
+        console.error('[OfflineDetection] Error fetching nodes:', error)
+      }
     }
   } finally {
     nodesFetchInProgress = false
