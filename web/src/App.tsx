@@ -154,7 +154,7 @@ if (typeof window !== 'undefined') {
   const PREFETCH_DASHBOARD_TIMEOUT_MS = 2_000
 
   /** Routes where chunk prefetching is skipped to avoid errors during OAuth flow (#9767) */
-  const SKIP_PREFETCH_PATHS = new Set(['/login', '/auth/callback'])
+  const SKIP_PREFETCH_PATHS: Set<string> = new Set([ROUTES.LOGIN, ROUTES.AUTH_CALLBACK])
 
   const prefetchRoutes = async () => {
     // Skip prefetching on auth pages — during OAuth redirects, the browser
@@ -298,7 +298,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // Save the intended destination so AuthCallback can return here after login.
     // This preserves deep-link params like ?mission= through the OAuth round-trip.
     const destination = location.pathname + location.search
-    if (destination !== '/' && destination !== '/login') {
+    if (destination !== ROUTES.HOME && destination !== ROUTES.LOGIN) {
       safeSet(RETURN_TO_KEY, destination)
     }
     return <Navigate to={ROUTES.LOGIN} replace />
@@ -424,8 +424,9 @@ const ROUTE_TITLES: Record<string, string> = {
 
 /** Map route paths to dashboard IDs for duration analytics */
 function pathToDashboardId(path: string): string | null {
-  if (path === '/') return 'main'
-  if (path.startsWith('/custom-dashboard/')) return path.replace('/custom-dashboard/', 'custom-')
+  if (path === ROUTES.HOME) return 'main'
+  const customPrefix = ROUTES.CUSTOM_DASHBOARD.replace(':id', '')
+  if (path.startsWith(customPrefix)) return path.replace(customPrefix, 'custom-')
   const id = path.replace(/^\//, '')
   return id || null
 }
@@ -602,7 +603,7 @@ function useLiveUrl(): string {
       }
     },
     getLiveUrl,
-    () => '/',
+    () => ROUTES.HOME,
   )
 }
 
