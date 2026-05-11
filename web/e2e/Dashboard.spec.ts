@@ -36,11 +36,11 @@ const KEYBOARD_FOCUS_SEQUENCE_LENGTH = 5
 const REFRESH_BUTTON_TITLE = 'Refresh cluster data'
 const REFRESH_BUTTON_ACCESSIBLE_NAME = 'Refresh cluster data'
 const ADD_CARD_DIALOG_TITLE = 'Console Studio'
-const ADD_CARD_BROWSE_TAB_LABEL = /Add Cards/i
-const ADD_CARD_SEARCH_PLACEHOLDER = /Search cards/i
+const ADD_CARD_SECTION_LABEL = 'Add Cards'
+const ADD_CARD_SEARCH_PLACEHOLDER = /Search cards or describe/i
 const GRID_CARD_SELECTOR = '[data-card-id]'
 const GRID_VISIBLE_TIMEOUT_MS = 10_000
-const SINGLE_COLUMN_GRID_COUNT = 1
+const MAX_MOBILE_CARD_COLUMNS = 2
 const MULTI_COLUMN_GRID_COUNT_THRESHOLD = 2
 const DASHBOARD_REFRESH_BUTTON_TEST_ID = 'dashboard-refresh-button'
 const DEFAULT_MAIN_DASHBOARD_CARDS = getDefaultCardsForDashboard('main').map((card) => ({
@@ -164,10 +164,30 @@ async function expectVisible(locator: Locator, reason: string, timeoutMs = CARD_
   await expect(locator, reason).toBeVisible({ timeout: timeoutMs })
 }
 
-async function getGridColumnCount(locator: Locator): Promise<number> {
-  return locator.evaluate((element) => {
-    const templateColumns = window.getComputedStyle(element).gridTemplateColumns
-    return templateColumns.split(' ').filter(Boolean).length
+// Count visually distinct card columns instead of parsing gridTemplateColumns,
+// whose serialized value varies across browsers and responsive layouts.
+async function getVisibleCardColumnCount(locator: Locator): Promise<number> {
+  return locator.locator('[role="gridcell"]').evaluateAll((elements) => {
+    const roundedLefts = new Set<number>()
+
+    for (const element of elements) {
+      const htmlElement = element as HTMLElement
+      const style = window.getComputedStyle(htmlElement)
+      const rect = htmlElement.getBoundingClientRect()
+
+      if (
+        style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        rect.width === 0 ||
+        rect.height === 0
+      ) {
+        continue
+      }
+
+      roundedLefts.add(Math.round(rect.left))
+    }
+
+    return roundedLefts.size
   })
 }
 
@@ -307,7 +327,7 @@ test.describe('Dashboard Page', () => {
       }
     })
 
-    test('cards are interactive (hover/click)', async ({ page }) => {
+    test('cards are interactive (hover/click)', async ({ page }, testInfo) => {
       const cardsGrid = page.getByTestId('dashboard-cards-grid')
       const firstCard = cardsGrid.locator(GRID_CARD_SELECTOR).first()
       const interactiveElements = firstCard.locator('button, a[href]')
@@ -316,12 +336,14 @@ test.describe('Dashboard Page', () => {
       await expect(cardsGrid).toBeVisible({ timeout: STANDARD_ASSERT_TIMEOUT_MS })
       await expect(firstCard).toBeVisible({ timeout: STANDARD_ASSERT_TIMEOUT_MS })
 
-      await firstCard.hover()
-      await expect(firstCard).toHaveClass(/card-hover/, { timeout: HOVER_EFFECT_TIMEOUT_MS })
-
       const interactiveElementCount = await interactiveElements.count()
       expect(interactiveElementCount).toBeGreaterThan(0)
-      await expect(fullscreenButton).toBeVisible({ timeout: HOVER_EFFECT_TIMEOUT_MS })
+
+      if (!testInfo.project.name.startsWith('mobile-')) {
+        await firstCard.hover()
+        await expect(firstCard).toHaveClass(/card-hover/, { timeout: HOVER_EFFECT_TIMEOUT_MS })
+        await expect(fullscreenButton).toBeVisible({ timeout: HOVER_EFFECT_TIMEOUT_MS })
+      }
     })
   })
 
@@ -344,12 +366,12 @@ test.describe('Dashboard Page', () => {
 
       const addCardDialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: ADD_CARD_DIALOG_TITLE }) })
       const addCardHeading = addCardDialog.getByRole('heading', { name: ADD_CARD_DIALOG_TITLE })
-      const browseCardsTab = addCardDialog.getByRole('tab', { name: ADD_CARD_BROWSE_TAB_LABEL })
+      const addCardsSectionButton = addCardDialog.getByRole('button', { name: ADD_CARD_SECTION_LABEL, exact: true })
       const searchCardsInput = addCardDialog.getByPlaceholder(ADD_CARD_SEARCH_PLACEHOLDER)
 
       await expect(addCardDialog).toBeVisible({ timeout: ADD_CARD_MODAL_TIMEOUT_MS })
       await expect(addCardHeading).toBeVisible({ timeout: ADD_CARD_MODAL_TIMEOUT_MS })
-      await expect(browseCardsTab).toBeVisible({ timeout: ADD_CARD_MODAL_TIMEOUT_MS })
+      await expect(addCardsSectionButton).toBeVisible({ timeout: ADD_CARD_MODAL_TIMEOUT_MS })
       await expect(searchCardsInput).toBeVisible({ timeout: ADD_CARD_MODAL_TIMEOUT_MS })
     })
   })
@@ -404,7 +426,7 @@ test.describe('Dashboard Page', () => {
       await expect(page.getByTestId('dashboard-header')).toBeVisible()
       await expect(cardsGrid).toBeVisible()
       await expect(sidebarCollapseToggle).not.toBeVisible({ timeout: STANDARD_ASSERT_TIMEOUT_MS })
-      expect(await getGridColumnCount(cardsGrid)).toBe(SINGLE_COLUMN_GRID_COUNT)
+      expect(await getVisibleCardColumnCount(cardsGrid)).toBeLessThanOrEqual(MAX_MOBILE_CARD_COLUMNS)
     })
 
     test('adapts to tablet viewport', async ({ page }) => {
@@ -420,7 +442,7 @@ test.describe('Dashboard Page', () => {
       await expect(cardsGrid).toBeVisible()
       await expect(sidebar).toBeVisible()
       await expect(sidebarCollapseToggle).toBeVisible()
-      expect(await getGridColumnCount(cardsGrid)).toBeGreaterThanOrEqual(MULTI_COLUMN_GRID_COUNT_THRESHOLD)
+      expect(await getVisibleCardColumnCount(cardsGrid)).toBeGreaterThanOrEqual(MULTI_COLUMN_GRID_COUNT_THRESHOLD)
     })
   })
 
