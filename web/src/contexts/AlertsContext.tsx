@@ -53,7 +53,6 @@ function generateId(): string {
 
 // Local development distributions that may have transient node readiness issues
 const LOCAL_DEV_DISTRIBUTIONS = ['k3d', 'k3s', 'kind', 'minikube']
-const NODE_READINESS_GRACE_PERIOD_MS = 5 * 60 * 1000 // 5 minutes
 
 /**
  * Detect if a cluster is a local development environment that may have
