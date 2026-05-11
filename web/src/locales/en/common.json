@@ -2665,6 +2665,7 @@
       "allLabels": "All Labels ({{count}})",
       "copyLabel": "Copy label",
       "started": "Started",
+      "labelsCount": "{{count}} labels",
       "labelsCount_one": "{{count}} label",
       "labelsCount_other": "{{count}} labels",
       "diagnoseAlert": "Diagnose Alert",
@@ -4077,6 +4078,7 @@
       "copyShareableLink": "Copy shareable link",
       "linkCopied": "Link copied",
       "copied": "Copied",
+      "stepsCount": "{{count}} steps",
       "stepsCount_one": "{{count}} step",
       "stepsCount_other": "{{count}} steps",
       "importSuccess": "Imported \"{{title}}\" successfully."
