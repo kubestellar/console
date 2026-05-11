@@ -360,6 +360,31 @@ describe('Tier1CardRuntime', () => {
       const badge = screen.getByText('Healthy')
       expect(badge.className).toContain('bg-green-500/20')
     })
+
+    it('keeps header and row columns aligned when badge columns have no fixed width', () => {
+      const def: DynamicCardDefinition_T1 = {
+        ...BASE_T1_DEF,
+        columns: [
+          { field: 'name', label: 'Name' },
+          {
+            field: 'status',
+            label: 'Status',
+            format: 'badge',
+            badgeColors: { Healthy: 'bg-green-500/20 text-green-300' },
+          },
+        ],
+        staticData: [{ name: 'Alpha', status: 'Healthy' }],
+      }
+      mockUseCardData.mockReturnValue(makeUseCardDataReturn([{ name: 'Alpha', status: 'Healthy' }]))
+
+      render(<Tier1CardRuntime definition={definition} cardDefinition={def} />)
+
+      const headerRow = screen.getByTestId('dynamic-card-header-row')
+      const dataRow = screen.getByTestId('dynamic-card-data-row')
+      expect(headerRow).toHaveStyle({ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' })
+      expect(dataRow).toHaveStyle({ gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' })
+      expect(screen.getByText('Healthy').className).not.toContain('shrink-0')
+    })
   })
 
   describe('pagination', () => {

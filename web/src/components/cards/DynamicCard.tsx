@@ -16,6 +16,15 @@ import type { CardComponentProps, CardComponent } from './cardRegistry'
 import { useTranslation } from 'react-i18next'
 
 const MAX_AUTO_GRID_COLS = 3
+const DEFAULT_DYNAMIC_CARD_COLUMN_WIDTH = 'minmax(0, 1fr)'
+
+function buildDynamicCardColumnTemplate(columns: DynamicCardDefinition_T1['columns'] | undefined): string | undefined {
+  if (!columns || columns.length === 0) return undefined
+
+  return columns
+    .map(column => column.width?.trim() || DEFAULT_DYNAMIC_CARD_COLUMN_WIDTH)
+    .join(' ')
+}
 
 /**
  * DynamicCard: Meta-component that renders dynamic card definitions.
@@ -240,6 +249,8 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
 
   const showStats = cardDefinition.layout === 'stats' || cardDefinition.layout === 'stats-and-list'
   const showList = cardDefinition.layout === 'list' || cardDefinition.layout === 'stats-and-list'
+  const columnTemplate = buildDynamicCardColumnTemplate(cardDefinition.columns)
+  const columnLayoutStyle = columnTemplate ? { gridTemplateColumns: columnTemplate } : undefined
 
   return (
     <div className="h-full flex flex-col min-h-card">
@@ -298,12 +309,15 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
             <div className="space-y-0.5">
               {/* Column headers */}
               {cardDefinition.columns && cardDefinition.columns.length > 0 && (
-                <div className="flex items-center gap-2 py-1 px-1.5 border-b border-border/50">
+                <div
+                  className="grid items-center gap-2 py-1 px-1.5 border-b border-border/50"
+                  style={columnLayoutStyle}
+                  data-testid="dynamic-card-header-row"
+                >
                   {cardDefinition.columns.map(col => (
                     <span
                       key={col.field}
-                      className="text-2xs font-medium text-muted-foreground uppercase"
-                      style={{ width: col.width, flex: col.width ? 'none' : '1' }}
+                      className="min-w-0 truncate text-2xs font-medium text-muted-foreground uppercase"
                     >
                       {col.label}
                     </span>
@@ -312,7 +326,12 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
               )}
               {/* Rows */}
               {items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 py-1 px-1.5 rounded hover:bg-card/30 transition-colors">
+                <div
+                  key={idx}
+                  className="grid items-center gap-2 py-1 px-1.5 rounded hover:bg-card/30 transition-colors"
+                  style={columnLayoutStyle}
+                  data-testid="dynamic-card-data-row"
+                >
                   {(cardDefinition.columns || []).map(col => {
                     const val = String((item as Record<string, unknown>)[col.field] ?? '-')
                     if (col.format === 'badge') {
@@ -321,8 +340,10 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
                       return (
                         <span
                           key={col.field}
-                          className={cn('text-2xs px-1 py-0.5 rounded shrink-0', badgeColor)}
-                          style={{ width: col.width, flex: col.width ? 'none' : undefined }}
+                          className={cn(
+                            'inline-flex max-w-full justify-self-start overflow-hidden text-ellipsis whitespace-nowrap rounded px-1 py-0.5 text-2xs',
+                            badgeColor,
+                          )}
                         >
                           {val}
                         </span>
@@ -331,8 +352,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
                     return (
                       <span
                         key={col.field}
-                        className="text-xs text-foreground truncate"
-                        style={{ width: col.width, flex: col.width ? 'none' : '1' }}
+                        className="min-w-0 truncate text-xs text-foreground"
                       >
                         {val}
                       </span>
