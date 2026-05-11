@@ -111,12 +111,10 @@ function getVClusterActionMessage(feedback: VClusterActionFeedback, t: TFunction
   if (feedback.state === 'error') {
     return feedback.message
       ? friendlyErrorMessage(feedback.message)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      : String(t(`${keyBase}Fallback` as any, { name: feedback.name, namespace: feedback.namespace }))
+      : String(t(`${keyBase}Fallback`, { name: feedback.name, namespace: feedback.namespace, defaultValue: '' }))
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return String(t(keyBase as any, { name: feedback.name, namespace: feedback.namespace }))
+  return String(t(keyBase, { name: feedback.name, namespace: feedback.namespace, defaultValue: '' }))
 }
 
 function VClusterActionBanner({
