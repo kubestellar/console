@@ -783,11 +783,12 @@ export function Layout({ children: _children }: LayoutProps) {
               key={banner.id}
               style={{
                 top: NAVBAR_HEIGHT_PX + (index * BANNER_HEIGHT_PX),
+                height: BANNER_HEIGHT_PX,
                 left: sidebarWidthPx,
                 ...banner.style,
               }}
               className={cn(
-                'fixed transition-[left,right] duration-300',
+                'fixed transition-[left,right] duration-300 overflow-hidden',
                 banner.className,
               )}
             >
