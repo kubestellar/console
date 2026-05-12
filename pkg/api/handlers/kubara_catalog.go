@@ -174,11 +174,11 @@ func (h *KubaraCatalogHandler) fetchUpstream() ([]KubaraCatalogEntry, error) {
 	}
 
 	// GitHub Contents API returns an array of objects for directory listings
-	var raw []struct {
+	raw := make([]struct {
 		Name string `json:"name"`
 		Path string `json:"path"`
 		Type string `json:"type"`
-	}
+	}, 0)
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, err
 	}

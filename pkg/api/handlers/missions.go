@@ -656,7 +656,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	// response was an object, crashing frontend iterators. Now we attempt to
 	// unmarshal as an array first; if that fails, try a single object and wrap
 	// it in an array so the frontend always receives a consistent shape.
-	var ghEntries []map[string]interface{}
+	ghEntries := make([]map[string]interface{}, 0)
 	if err := json.Unmarshal(body, &ghEntries); err != nil {
 		var single map[string]interface{}
 		if singleErr := json.Unmarshal(body, &single); singleErr != nil {
@@ -843,7 +843,7 @@ func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"invalid mission JSON format"}})
 	}
 
-	var errs []string
+	errs := make([]string, 0)
 	if mission.APIVersion != "kc-mission-v1" {
 		errs = append(errs, "apiVersion must be 'kc-mission-v1'")
 	}

@@ -524,7 +524,7 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "repos marshal failed"})
 	}
-	var body []byte
+	body := make([]byte, 0)
 	if len(inner) > 2 && inner[0] == '{' {
 		// Merge repos into existing object.
 		// Guard against integer overflow before computing the allocation size
@@ -999,7 +999,7 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 		if relRes.StatusCode == http.StatusOK {
 			// Store rate limit headers from the successful API call
 			ctx = ghpStoreRateLimitHeaders(ctx, relRes)
-			var arr []struct {
+			arr := make([]struct {
 				TagName     string  `json:"tag_name"`
 				PublishedAt *string `json:"published_at"`
 				CreatedAt   *string `json:"created_at"`
@@ -1051,7 +1051,7 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 		if tagRes.StatusCode == http.StatusOK {
 			// Store rate limit headers from the successful API call
 			ctx = ghpStoreRateLimitHeaders(ctx, tagRes)
-			var tags []struct {
+			tags := make([]struct {
 				Name string `json:"name"`
 			}
 			if err := json.NewDecoder(tagRes.Body).Decode(&tags); err == nil {

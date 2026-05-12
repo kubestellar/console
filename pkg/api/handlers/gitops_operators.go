@@ -52,7 +52,7 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 		allOperators := make([]Operator, 0)
 		// #7544: Surface per-cluster errors so the frontend can indicate
 		// which clusters failed rather than showing a silent empty state.
-		var clusterErrors []string
+		clusterErrors := make([]string, 0)
 
 		overallCtx, overallCancel := context.WithTimeout(c.Context(), operatorRestOverallTimeout)
 		defer overallCancel()
@@ -480,7 +480,7 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 		allSubs := make([]OperatorSubscription, 0)
 		// #7545: Surface per-cluster errors so the frontend can indicate
 		// which clusters failed rather than showing a silent empty state.
-		var clusterErrors []string
+		clusterErrors := make([]string, 0)
 
 		for _, cl := range clusters {
 			clusterName := cl.Name

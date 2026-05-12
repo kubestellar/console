@@ -395,7 +395,7 @@ func (h *OrbitHandler) loadFromDisk() {
 		return
 	}
 
-	var missions []*OrbitMission
+	missions := make([]*OrbitMission, 0)
 	if err := json.Unmarshal(data, &missions); err != nil {
 		slog.Warn("orbit: failed to parse data file", "path", h.dataFile, "error", err)
 		return
