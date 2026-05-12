@@ -94,6 +94,10 @@ describe('detectServerType', () => {
       expect(detectServerType('vllm-triton-server')).toBe('triton')
     })
 
+    it.fails('returns vllm for "vllm-deployment" instead of matching the "llm-d" substring first', () => {
+      expect(detectServerType('vllm-deployment')).toBe('vllm')
+    })
+
     it('returns unknown when labels are present but unrecognised', () => {
       expect(detectServerType('server', { 'app.kubernetes.io/name': 'other' })).toBe('unknown')
     })
