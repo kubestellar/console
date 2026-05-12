@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	quantumProxyTimeout = 30 * time.Second
+	quantumProxyTimeout        = 30 * time.Second
+	maxQuantumResponseBytes    = 10 << 20 // 10 MB
 )
 
 // quantumClient uses a shared HTTP client with timeout to prevent hanging requests
@@ -83,8 +84,8 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
+	// Read response body (bounded to prevent memory exhaustion)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
 	}
@@ -127,7 +128,7 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
 	}
@@ -176,8 +177,8 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	}
 	defer resp.Body.Close()
 
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
+	// Read response body (bounded to prevent memory exhaustion)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
 	}
