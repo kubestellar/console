@@ -23,6 +23,7 @@ type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | '
 // Maximum time to wait for initial data before forcing modal to show content (10 seconds)
 // Prevents indefinite loading when cluster is slow or unreachable
 const MAX_INITIAL_LOADING_MS = 10_000
+const MAX_HEADER_ALIASES = 2
 
 // Get console URL for a specific provider
 function getConsoleUrlForProvider(provider: string, clusterName: string, apiServerUrl?: string): string | null {
@@ -266,6 +267,12 @@ After I approve, help me execute the repairs step by step.`,
   // Effective loading state: override to false after timeout
   // This ensures the modal shows partial data rather than hanging indefinitely
   const effectiveLoading = forceShowContent ? false : isLoading
+  const aliasList = clusterInfo?.aliases || []
+  const serverAddress = clusterInfo?.server || health?.apiServer
+  const contextName = clusterInfo?.context
+  const headerAliasSummary = aliasList.length <= MAX_HEADER_ALIASES
+    ? aliasList.map(alias => alias.split('/').pop() || alias).join(', ')
+    : `${aliasList.slice(0, MAX_HEADER_ALIASES).map(alias => alias.split('/').pop() || alias).join(', ')} ${t('cluster.andMoreClusters', { count: aliasList.length - MAX_HEADER_ALIASES })}`
 
   // Group GPUs by type for summary
   const gpuByType = (() => {
@@ -313,12 +320,9 @@ After I approve, help me execute the repairs step by step.`,
             )}
             <div className="flex flex-col">
               <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
-              {clusterInfo?.aliases && clusterInfo.aliases.length > 0 && (
-                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: (clusterInfo.aliases || []).join(', ') })}>
-                  {t('clusterDetail.akaLabel')} {clusterInfo.aliases.length <= 2
-                    ? clusterInfo.aliases.map(a => a.split('/').pop()).join(', ')
-                    : `${clusterInfo.aliases.slice(0, 2).map(a => a.split('/').pop()).join(', ')} +${clusterInfo.aliases.length - 2} more`
-                  }
+              {aliasList.length > 0 && (
+                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: aliasList.join(', ') })}>
+                  {t('clusterDetail.akaLabel')} {headerAliasSummary}
                 </div>
               )}
             </div>
@@ -399,6 +403,42 @@ After I approve, help me execute the repairs step by step.`,
             external reachability (#5926) and freshness (#5927). */}
         {clusterInfo && (
           <ClusterStatusDetails cluster={clusterInfo} className="mb-4" />
+        )}
+
+        {(contextName || serverAddress || aliasList.length > 0) && (
+          <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {contextName && (
+              <div className="rounded-lg border border-border/50 bg-card/50 p-4" data-testid="cluster-detail-context">
+                <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Network className="w-4 h-4" />
+                  <span>{t('clusterDetail.context')}</span>
+                </div>
+                <div className="break-all font-mono text-sm text-foreground" title={contextName}>{contextName}</div>
+              </div>
+            )}
+            {serverAddress && (
+              <div className="rounded-lg border border-border/50 bg-card/50 p-4" data-testid="cluster-detail-server-address">
+                <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Server className="w-4 h-4" />
+                  <span>{t('clusterDetail.serverAddress')}</span>
+                </div>
+                <div className="break-all font-mono text-sm text-foreground" title={serverAddress}>{serverAddress}</div>
+              </div>
+            )}
+            {aliasList.length > 0 && (
+              <div className="rounded-lg border border-border/50 bg-card/50 p-4" data-testid="cluster-detail-aliases">
+                <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  <Layers className="w-4 h-4" />
+                  <span>{t('clusterDetail.aliases')}</span>
+                </div>
+                <div className="space-y-1">
+                  {aliasList.map(alias => (
+                    <div key={alias} className="break-all font-mono text-sm text-foreground" title={alias}>{alias}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Remove offline cluster affordance (#5901) —
