@@ -510,7 +510,9 @@ export function ReservationFormModal({
                 {clusterNamespaces.map(ns => (
                   <option key={ns} value={ns}>{ns}</option>
                 ))}
-                <option value="__new_bottom__">{t('gpuReservations.form.fields.newNamespace')}</option>
+                {clusterNamespaces.length > 0 && (
+                  <option value="__new_bottom__">{t('gpuReservations.form.fields.newNamespace')}</option>
+                )}
               </select>
             ) : (
               <div className="flex gap-2">
