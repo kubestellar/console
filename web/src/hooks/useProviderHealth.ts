@@ -7,6 +7,8 @@ import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isInClusterMode } from './useBackendHealth'
+import { fetchKagentiProviderStatus } from '../lib/kagentiProviderBackend'
+import type { KagentiProviderStatus } from '../lib/kagentiProviderBackend'
 
 /** Health status of a single provider */
 export interface ProviderHealthInfo {
@@ -83,57 +85,91 @@ const DEMO_PROVIDERS: ProviderHealthInfo[] = [
 async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): Promise<ProviderHealthInfo[]> {
   const result: ProviderHealthInfo[] = []
 
-  if (isInClusterMode()) {
-    return result
-  }
+  // --- AI Providers from /settings/keys (local mode) or Kagenti (in-cluster mode) ---
+  if (!isInClusterMode()) {
+    try {
+      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      if (response.ok) {
+        const data: KeysStatusResponse = await response.json()
+        const seen = new Set<string>()
+        for (const key of (data.keys || [])) {
+          // Skip unconfigured providers — they shouldn't appear in the health card.
+          // Local LLM runners (Ollama, LM Studio, etc.) are always registered in
+          // the backend but should only show up here if explicitly configured via
+          // API key or base URL env var/config (#12377).
+          if (!key.configured) {
+            continue
+          }
 
-  // --- AI Providers from /settings/keys ---
-  try {
-    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-    if (response.ok) {
-      const data: KeysStatusResponse = await response.json()
-      const seen = new Set<string>()
-      for (const key of (data.keys || [])) {
-        // Skip unconfigured providers — they shouldn't appear in the health card.
-        // Local LLM runners (Ollama, LM Studio, etc.) are always registered in
-        // the backend but should only show up here if explicitly configured via
-        // API key or base URL env var/config (#12377).
-        if (!key.configured) {
-          continue
+          const normalized = normalizeAIProvider(key.provider)
+          if (seen.has(normalized)) continue
+          seen.add(normalized)
+
+          const name = AI_PROVIDER_NAMES[key.provider] || key.displayName || key.provider
+          let status: ProviderHealthInfo['status'] = 'unknown'
+          let detail: string | undefined
+
+          if (key.valid === true) {
+            status = 'operational'
+            detail = 'API key configured and valid'
+          } else if (key.valid === false) {
+            status = 'down'
+            detail = key.error || 'API key invalid'
+          } else {
+            status = 'operational'
+            detail = 'API key configured'
+          }
+
+          result.push({
+            id: normalized,
+            name,
+            category: 'ai',
+            status,
+            configured: true,
+            statusUrl: STATUS_PAGES[normalized],
+            detail })
         }
-
-        const normalized = normalizeAIProvider(key.provider)
-        if (seen.has(normalized)) continue
-        seen.add(normalized)
-
-        const name = AI_PROVIDER_NAMES[key.provider] || key.displayName || key.provider
-        let status: ProviderHealthInfo['status'] = 'unknown'
-        let detail: string | undefined
-
-        if (key.valid === true) {
-          status = 'operational'
-          detail = 'API key configured and valid'
-        } else if (key.valid === false) {
-          status = 'down'
-          detail = key.error || 'API key invalid'
-        } else {
-          status = 'operational'
-          detail = 'API key configured'
-        }
-
-        result.push({
-          id: normalized,
-          name,
-          category: 'ai',
-          status,
-          configured: true,
-          statusUrl: STATUS_PAGES[normalized],
-          detail })
       }
+    } catch {
+      // Agent unreachable — no AI providers to show
     }
-  } catch {
-    // Agent unreachable — no AI providers to show
+  } else {
+    // In-cluster mode: use Kagenti provider backend
+    try {
+      const kagentiStatus: KagentiProviderStatus = await fetchKagentiProviderStatus({
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
+      })
+
+      if (kagentiStatus.available) {
+        const seen = new Set<string>()
+        const providers = (kagentiStatus.configured_providers || [])
+        
+        // Fallback to single llm_provider if configured_providers is not available
+        if (providers.length === 0 && kagentiStatus.llm_provider && kagentiStatus.api_key_configured) {
+          providers.push(kagentiStatus.llm_provider)
+        }
+
+        for (const provider of (providers || [])) {
+          const normalized = normalizeAIProvider(provider)
+          if (seen.has(normalized)) continue
+          seen.add(normalized)
+
+          const name = AI_PROVIDER_NAMES[provider] || AI_PROVIDER_NAMES[normalized] || provider
+          result.push({
+            id: normalized,
+            name,
+            category: 'ai',
+            status: 'operational',
+            configured: true,
+            statusUrl: STATUS_PAGES[normalized],
+            detail: 'API key configured'
+          })
+        }
+      }
+    } catch {
+      // Kagenti unreachable — no AI providers to show
+    }
   }
 
   // --- Cloud Providers from cluster distributions ---
