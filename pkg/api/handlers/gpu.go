@@ -82,6 +82,9 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	if input.Namespace == "" {
 		return fiber.NewError(fiber.StatusBadRequest, "Namespace is required")
 	}
+	if err := mcpValidateClusterAndNamespace(input.Cluster, input.Namespace); err != nil {
+		return err
+	}
 	if input.GPUCount < 1 {
 		return fiber.NewError(fiber.StatusBadRequest, "GPU count must be at least 1")
 	}
