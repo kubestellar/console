@@ -17,7 +17,6 @@ vi.mock('react-i18next', () => ({
 
 const clusterInfo: ClusterInfo = {
   name: 'prod-cluster',
-  context: 'team/prod/cluster-context',
   server: 'https://prod.example.com:6443',
   healthy: true,
   aliases: ['team/prod/cluster-alias', 'shared/prod/cluster-backup'],
@@ -114,12 +113,10 @@ describe('ClusterDetailModal', () => {
     expect(typeof ClusterDetailModal).toBe('function')
   })
 
-  it('shows full context, server address, and aliases', () => {
+  it('shows the server address in the header', () => {
     render(<ClusterDetailModal clusterName="prod-cluster" onClose={vi.fn()} />)
 
-    expect(screen.getByTestId('cluster-detail-context')).toHaveTextContent('team/prod/cluster-context')
     expect(screen.getByTestId('cluster-detail-server-address')).toHaveTextContent('https://prod.example.com:6443')
-    expect(screen.getByTestId('cluster-detail-aliases')).toHaveTextContent('team/prod/cluster-alias')
-    expect(screen.getByTestId('cluster-detail-aliases')).toHaveTextContent('shared/prod/cluster-backup')
+    expect(screen.getByText(/clusterDetail\.akaLabel/)).toBeInTheDocument()
   })
 })

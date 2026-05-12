@@ -3698,8 +3698,6 @@
     "openConsole": "Open {{provider}} console",
     "akaLabel": "aka:",
     "alsoKnownAs": "Also known as: {{aliases}}",
-    "aliases": "Aliases",
-    "context": "Context",
     "serverAddress": "Server Address",
     "healthy": "Healthy",
     "unhealthy": "Unhealthy",
