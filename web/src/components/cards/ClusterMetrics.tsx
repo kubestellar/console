@@ -170,7 +170,7 @@ export const buildDemoMetricHistory = (clusters: ClusterMetricSource[], now: num
     let totalPods = 0
     let totalNodes = 0
 
-    clusters.forEach((cluster, clusterIndex) => {
+    (clusters || []).forEach((cluster, clusterIndex) => {
       const values: ClusterMetricValues = {
         cpu: createDemoMetricValue(getClusterMetricBaseValue(cluster, 'cpu'), 'cpu', pointIndex, clusterIndex),
         memory: createDemoMetricValue(getClusterMetricBaseValue(cluster, 'memory'), 'memory', pointIndex, clusterIndex),
@@ -304,7 +304,7 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
     const now = Date.now()
     // Build per-cluster values for comparison mode
     const clusterValues: Record<string, ClusterMetricValues> = {}
-    clusters.forEach(c => {
+    (clusters || []).forEach(c => {
       clusterValues[c.name] = {
         cpu: c.cpuCores || 0,
         memory: c.memoryGB || 0,
