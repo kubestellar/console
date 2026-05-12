@@ -83,9 +83,14 @@ function useVersionCheckCore() {
   // should run once the new channel state is committed.
   const channelChangedRef = useRef(false)
 
+  type CheckAttemptResult = {
+    success: boolean
+    errorMessage?: string
+  }
+
   // Transient result of the last completed check — shown briefly in the UI
   // so the user gets feedback after clicking "Check Now".
-  const [lastCheckResult, setLastCheckResult] = useState<'success' | 'no-update' | null>(null)
+  const [lastCheckResult, setLastCheckResult] = useState<'success' | 'error' | null>(null)
 
   // Auto-update state
   const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState(loadAutoUpdateEnabled)
@@ -125,11 +130,20 @@ function useVersionCheckCore() {
     }
   }, [])
 
+  const updateLastCheckedTimestamp = useCallback(() => {
+    const now = Date.now()
+    setLastChecked(now)
+    localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, String(now))
+  }, [])
+
   /**
    * Fetch auto-update status from kc-agent (only if agent supports it).
    */
-  const fetchAutoUpdateStatus = useCallback(async () => {
-    if (!agentSupportsAutoUpdate) return
+  const fetchAutoUpdateStatus = useCallback(async (): Promise<CheckAttemptResult> => {
+    if (!agentSupportsAutoUpdate) {
+      return { success: false, errorMessage: 'Could not reach kc-agent' }
+    }
+
     try {
       console.debug('[version-check] Fetching auto-update status from kc-agent...')
       const resp = await fetch('/api/agent/auto-update/status', {
@@ -142,42 +156,47 @@ function useVersionCheckCore() {
         // Clear any stale error from a previous failed check
         consecutiveFailuresRef.current = 0
         setError(null)
-        // Update latestMainSHA and lastChecked from agent response
         if (data.latestSHA) {
           setLatestMainSHA(data.latestSHA)
         }
-        const now = Date.now()
-        setLastChecked(now)
-        localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, String(now))
-      } else {
-        console.debug('[version-check] Auto-update status failed:', resp.status)
-        consecutiveFailuresRef.current += 1
-        if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
-          setError(`kc-agent returned ${resp.status}`)
-        }
+        updateLastCheckedTimestamp()
+        return { success: true }
       }
+
+      const errorMessage = `kc-agent returned ${resp.status}`
+      console.debug('[version-check] Auto-update status failed:', resp.status)
+      consecutiveFailuresRef.current += 1
+      if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
+        setError(errorMessage)
+      }
+      return { success: false, errorMessage }
     } catch (err: unknown) {
+      const errorMessage = 'Could not reach kc-agent'
       console.debug('[version-check] Auto-update status error:', err)
       consecutiveFailuresRef.current += 1
       if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
-        setError('Could not reach kc-agent')
+        setError(errorMessage)
       }
+      return { success: false, errorMessage }
     }
-  }, [agentSupportsAutoUpdate])
+  }, [agentSupportsAutoUpdate, updateLastCheckedTimestamp])
 
   /**
    * Fetch latest main branch SHA directly from GitHub API.
    * Used as fallback when kc-agent doesn't support /auto-update/status.
    * Handles 403 rate-limiting by backing off and using cache.
    */
-  const fetchLatestMainSHA = useCallback(async () => {
+  const fetchLatestMainSHA = useCallback(async (): Promise<CheckAttemptResult> => {
     // Check if we're in a rate-limit backoff period
     const rateLimitUntil = localStorage.getItem('kc-github-rate-limit-until')
     if (rateLimitUntil && Date.now() < parseInt(rateLimitUntil, 10)) {
       console.debug('[version-check] GitHub API rate-limited, using cache until', new Date(parseInt(rateLimitUntil, 10)).toLocaleTimeString())
       const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
       if (cached) setLatestMainSHA(cached)
-      return
+      return {
+        success: false,
+        errorMessage: 'GitHub API rate limit — add a GitHub token in Settings for higher limits',
+      }
     }
 
     try {
@@ -196,32 +215,35 @@ function useVersionCheckCore() {
           localStorage.setItem(DEV_SHA_CACHE_KEY, sha)
           localStorage.removeItem('kc-github-rate-limit-until')
         }
-        // Update lastChecked timestamp so the UI reflects the check time
-        const now = Date.now()
-        setLastChecked(now)
-        localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, String(now))
-      } else if (resp.status === 403 || resp.status === 429) {
+        updateLastCheckedTimestamp()
+        return { success: true }
+      }
+
+      if (resp.status === 403 || resp.status === 429) {
         // Rate limited — back off for 15 minutes
         const resetHeader = resp.headers.get('X-RateLimit-Reset')
         const backoffUntil = resetHeader
           ? parseInt(resetHeader, 10) * 1000
           : Date.now() + 15 * MS_PER_MINUTE
+        const errorMessage = 'GitHub API rate limit — add a GitHub token in Settings for higher limits'
         localStorage.setItem('kc-github-rate-limit-until', String(backoffUntil))
         console.debug('[version-check] GitHub API rate-limited, backing off until', new Date(backoffUntil).toLocaleTimeString())
-        setError('GitHub API rate limit — add a GitHub token in Settings for higher limits')
-        // Still use cache
+        setError(errorMessage)
         const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
         if (cached) setLatestMainSHA(cached)
-      } else {
-        console.debug('[version-check] GitHub API error:', resp.status)
+        return { success: false, errorMessage }
       }
+
+      console.debug('[version-check] GitHub API error:', resp.status)
+      return { success: false, errorMessage: `GitHub API error: ${resp.status}` }
     } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to check for updates'
       console.debug('[version-check] Failed to fetch main SHA:', err)
-      // Load from cache as fallback
       const cached = localStorage.getItem(DEV_SHA_CACHE_KEY)
       if (cached) setLatestMainSHA(cached)
+      return { success: false, errorMessage }
     }
-  }, [])
+  }, [updateLastCheckedTimestamp])
 
   /**
    * Fetch recent commits between current build SHA and latest main HEAD.
@@ -380,7 +402,7 @@ function useVersionCheckCore() {
   /**
    * Fetch releases from GitHub API with caching.
    */
-  const fetchReleases = async (force = false): Promise<void> => {
+  const fetchReleases = async (force = false): Promise<CheckAttemptResult> => {
     setIsChecking(true)
 
     try {
@@ -389,7 +411,7 @@ function useVersionCheckCore() {
       if (!force && cache && isCacheValid(cache)) {
         setReleases(cache.data.map(parseRelease))
         setIsChecking(false)
-        return
+        return { success: true }
       }
 
       // Prepare headers for conditional request
@@ -413,13 +435,11 @@ function useVersionCheckCore() {
 
       // Handle 304 Not Modified
       if (response.status === 304 && cache) {
-        // Update cache timestamp but keep data
         saveCache(cache.data, cache.etag)
         setReleases(cache.data.map(parseRelease))
-        setLastChecked(Date.now())
-        localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, Date.now().toString())
+        updateLastCheckedTimestamp()
         setIsChecking(false)
-        return
+        return { success: true }
       }
 
       if (!response.ok) {
@@ -428,31 +448,26 @@ function useVersionCheckCore() {
 
       const data = await safeJsonParse<GitHubRelease[]>(response, 'GitHub releases')
       const etag = response.headers.get('ETag')
-
-      // Filter out drafts
       const validReleases = data.filter((r) => !r.draft)
 
-      // Save to cache
       saveCache(validReleases, etag)
-
-      // Parse and set releases
       setReleases(validReleases.map(parseRelease))
       consecutiveFailuresRef.current = 0
       setError(null)
-      setLastChecked(Date.now())
-      localStorage.setItem(UPDATE_STORAGE_KEYS.LAST_CHECK, Date.now().toString())
+      updateLastCheckedTimestamp()
+      return { success: true }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to check for updates'
+      const errorMessage = err instanceof Error ? err.message : 'Failed to check for updates'
       consecutiveFailuresRef.current += 1
       if (consecutiveFailuresRef.current >= ERROR_DISPLAY_THRESHOLD) {
-        setError(message)
+        setError(errorMessage)
       }
 
-      // Fall back to cache if available
       const cache = loadCache()
       if (cache) {
         setReleases(cache.data.map(parseRelease))
       }
+      return { success: false, errorMessage }
     } finally {
       setIsChecking(false)
     }
@@ -495,44 +510,40 @@ function useVersionCheckCore() {
 
   /**
    * Force a fresh check, bypassing cache.
-   * Sets lastCheckResult so the UI can show transient success/no-update feedback.
+   * Sets lastCheckResult so the UI can show transient success/error feedback.
    */
   const forceCheck = async (): Promise<void> => {
     console.debug('[version-check] Force check — channel:', channel, 'agentSupportsAutoUpdate:', agentSupportsAutoUpdate)
     setIsChecking(true)
-    // Clear any previous transient result while the new check is in progress
     setLastCheckResult(null)
-    // Reset consecutive failure counter on user-initiated check so a single
-    // success clears the error, and a single failure doesn't flash red.
     consecutiveFailuresRef.current = 0
     setError(null)
-    // Trigger an immediate agent health check via the shared singleton
     refreshAgent()
+
+    let checkResult: CheckAttemptResult = { success: false, errorMessage: 'Failed to check for updates' }
+
     try {
       if (channel === 'developer') {
         if (agentSupportsAutoUpdate) {
           console.debug('[version-check] Checking via kc-agent /auto-update/status')
-          await fetchAutoUpdateStatus()
+          checkResult = await fetchAutoUpdateStatus()
         } else {
           console.debug('[version-check] Checking via GitHub API (no agent auto-update support)')
-          // Clear rate-limit backoff on manual check so users can retry
           localStorage.removeItem('kc-github-rate-limit-until')
-          await fetchLatestMainSHA()
+          checkResult = await fetchLatestMainSHA()
         }
-        return
+      } else {
+        checkResult = await fetchReleases(true)
       }
-      await fetchReleases(true)
     } finally {
       setIsChecking(false)
-      // Signal a transient result so the UI can flash feedback.
-      // An error means the check failed (error state is already set above),
-      // so only set a result when there is no error.
-      if (consecutiveFailuresRef.current === 0) {
-        // hasUpdate is derived from state that was just set, but React hasn't
-        // re-rendered yet. We use 'success' here as a generic "check succeeded"
-        // signal — the UI will read hasUpdate on the next render to decide
-        // whether to show "Update available" or "Up to date".
+      updateLastCheckedTimestamp()
+
+      if (checkResult.success) {
         setLastCheckResult('success')
+      } else {
+        setLastCheckResult('error')
+        setError(checkResult.errorMessage ?? 'Failed to check for updates')
       }
     }
   }
@@ -661,6 +672,17 @@ function useVersionCheckCore() {
     }, AUTO_UPDATE_POLL_MS)
     return () => clearInterval(id)
   }, [agentConnected, agentSupportsAutoUpdate, autoUpdateEnabled, fetchAutoUpdateStatus])
+
+  // Periodic poll for release channels so cached release data stays fresh even
+  // when the user does not manually revisit System Updates.
+  useEffect(() => {
+    if (channel === 'developer') return
+    const id = setInterval(() => {
+      checkForUpdates()
+    }, VERSION_CHECK_CACHE_MAX_AGE_MS)
+    return () => clearInterval(id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [channel])
 
   // For developer channel: fetch latest main SHA client-side (fallback when kc-agent doesn't support auto-update)
   useEffect(() => {

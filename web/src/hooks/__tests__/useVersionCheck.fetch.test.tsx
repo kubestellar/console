@@ -6,6 +6,7 @@ import {
     useVersionCheck
 } from '../useVersionCheck'
 import { UPDATE_STORAGE_KEYS } from '../../types/updates'
+import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { makeGitHubRelease, jsonHeaders } from './useVersionCheck.helpers'
 
 declare const __APP_VERSION__: string;
@@ -497,6 +498,8 @@ describe('fetchRecentCommits', () => {
 })
 
 
+const VERSION_CHECK_INTERVAL_MS = 30 * MS_PER_MINUTE
+
 describe('fetchReleases edge cases', () => {
     beforeEach(() => {
         localStorage.clear()
@@ -564,8 +567,7 @@ describe('fetchReleases edge cases', () => {
         })
     })
 
-    it('falls back to cache when fetch throws an error', async () => {
-        // Seed cache
+    it('surfaces the first manual check failure and updates lastChecked', async () => {
         const cache = {
             data: [makeGitHubRelease({ tag_name: 'v1.0.0' })],
             timestamp: Date.now() - 60 * 60 * 1000,
@@ -576,21 +578,20 @@ describe('fetchReleases edge cases', () => {
         vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
 
         const { result } = renderHook(() => useVersionCheck(), { wrapper })
+        const beforeCheck = Date.now()
 
-        // ERROR_DISPLAY_THRESHOLD = 2: forceCheck resets counter then fails (counter=1),
-        // checkForUpdates does NOT reset so the second failure reaches the threshold.
         await act(async () => {
             await result.current.forceCheck()
-        })
-        await act(async () => {
-            await result.current.checkForUpdates()
         })
 
         await waitFor(() => {
             expect(result.current.error).toBe('Network error')
-            // Falls back to cached releases
             expect(result.current.releases.length).toBe(1)
+            expect(result.current.lastChecked).not.toBeNull()
         })
+
+        expect(result.current.lastChecked).toBeGreaterThanOrEqual(beforeCheck)
+        expect(localStorage.getItem(UPDATE_STORAGE_KEYS.LAST_CHECK)).toBe(String(result.current.lastChecked))
     })
 
     it('sets generic error message when thrown value is not Error', async () => {
@@ -598,12 +599,8 @@ describe('fetchReleases edge cases', () => {
 
         const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
-        // ERROR_DISPLAY_THRESHOLD = 2: need two consecutive failures to surface the error.
         await act(async () => {
             await result.current.forceCheck()
-        })
-        await act(async () => {
-            await result.current.checkForUpdates()
         })
 
         await waitFor(() => {
@@ -620,12 +617,8 @@ describe('fetchReleases edge cases', () => {
 
         const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
-        // ERROR_DISPLAY_THRESHOLD = 2: need two consecutive failures.
         await act(async () => {
             await result.current.forceCheck()
-        })
-        await act(async () => {
-            await result.current.checkForUpdates()
         })
 
         await waitFor(() => {
@@ -643,12 +636,8 @@ describe('fetchReleases edge cases', () => {
 
         const { result } = renderHook(() => useVersionCheck(), { wrapper })
 
-        // ERROR_DISPLAY_THRESHOLD = 2: need two consecutive failures.
         await act(async () => {
             await result.current.forceCheck()
-        })
-        await act(async () => {
-            await result.current.checkForUpdates()
         })
 
         await waitFor(() => {
@@ -675,6 +664,20 @@ describe('fetchReleases edge cases', () => {
             const cached = JSON.parse(localStorage.getItem(UPDATE_STORAGE_KEYS.RELEASES_CACHE)!)
             expect(cached.etag).toBe(mockEtag)
         })
+    })
+
+    it('registers a periodic release-channel refresh', () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            headers: jsonHeaders(),
+            json: async () => [makeGitHubRelease({ tag_name: 'v1.0.1' })],
+        }))
+        const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
+
+        renderHook(() => useVersionCheck(), { wrapper })
+
+        expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), VERSION_CHECK_INTERVAL_MS)
     })
 })
 
