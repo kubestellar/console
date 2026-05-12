@@ -126,7 +126,6 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 	if s.k8sClient == nil {
 		writeJSON(w, map[string]any{"agents": []any{}})
 		return
-		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
@@ -134,7 +133,6 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]any{"agents": []any{}, "error": "cluster parameter required"})
-		return
 		return
 	}
 
@@ -147,7 +145,6 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
-		return
 	}
 
 	var list *unstructured.UnstructuredList
@@ -159,7 +156,6 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// CRD not installed is expected — return empty list, not error
 		writeJSON(w, map[string]any{"agents": []any{}})
-		return
 		return
 	}
 
@@ -205,7 +201,6 @@ func (s *Server) handleKagentCRDAgents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]any{"agents": agents, "source": "agent"})
-		return
 }
 
 // extractConditionStatus checks status.conditions for a condition type and returns whether its status is "True"
@@ -243,7 +238,6 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 	if s.k8sClient == nil {
 		writeJSON(w, map[string]any{"tools": []any{}})
 		return
-		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
@@ -251,7 +245,6 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]any{"tools": []any{}, "error": "cluster parameter required"})
-		return
 		return
 	}
 
@@ -263,7 +256,6 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("error fetching kagent tools for cluster", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]any{"tools": []any{}, "error": "internal server error"})
-		return
 		return
 	}
 
@@ -340,7 +332,6 @@ func (s *Server) handleKagentCRDTools(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]any{"tools": tools, "source": "agent"})
-		return
 }
 
 // extractDiscoveredTools extracts status.discoveredTools as a slice of {name, description}
@@ -380,7 +371,6 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 	if s.k8sClient == nil {
 		writeJSON(w, map[string]any{"models": []any{}})
 		return
-		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
@@ -388,7 +378,6 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]any{"models": []any{}, "error": "cluster parameter required"})
-		return
 		return
 	}
 
@@ -400,7 +389,6 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("error fetching kagent models for cluster", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]any{"models": []any{}, "error": "internal server error"})
-		return
 		return
 	}
 
@@ -470,7 +458,6 @@ func (s *Server) handleKagentCRDModels(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, map[string]any{"models": models, "source": "agent"})
-		return
 }
 
 // extractDiscoveredModels extracts status.discoveredModels as a slice of {name, description}
@@ -510,7 +497,6 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 	if s.k8sClient == nil {
 		writeJSON(w, map[string]any{"memories": []any{}})
 		return
-		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
@@ -518,7 +504,6 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]any{"memories": []any{}, "error": "cluster parameter required"})
-		return
 		return
 	}
 
@@ -531,7 +516,6 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]any{"memories": []any{}, "error": "internal server error"})
 		return
-		return
 	}
 
 	var list *unstructured.UnstructuredList
@@ -542,7 +526,6 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 	}
 	if err != nil {
 		writeJSON(w, map[string]any{"memories": []any{}})
-		return
 		return
 	}
 
@@ -565,7 +548,6 @@ func (s *Server) handleKagentCRDMemories(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, map[string]any{"memories": memories, "source": "agent"})
-		return
 }
 
 // handleKagentCRDSummary returns an aggregated summary of kagent.dev resources for a cluster.
@@ -591,14 +573,12 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 			"byCluster": map[string]any{}, "byProvider": map[string]int{},
 		})
 		return
-		return
 	}
 
 	cluster := r.URL.Query().Get("cluster")
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		writeJSON(w, map[string]any{"error": "cluster parameter required"})
-		return
 		return
 	}
 
@@ -612,7 +592,6 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 			"byCluster": map[string]any{}, "byProvider": map[string]int{},
 			"error": "internal server error",
 		})
-		return
 		return
 	}
 
@@ -773,5 +752,4 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	}
 
 	writeJSON(w, result)
-		return
 }
