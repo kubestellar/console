@@ -53,7 +53,7 @@ func TestParseRepos(t *testing.T) {
 	}{
 		{"repo:kubestellar/console", []string{"kubestellar/console"}},
 		{"repo:kubestellar/console repo:kubestellar/kubestellar", []string{"kubestellar/console", "kubestellar/kubestellar"}},
-		{"org:kubestellar", nil},
+		{"org:kubestellar", []string{}},
 		{"repo:kubestellar/console some-other-token", []string{"kubestellar/console"}},
 	}
 
