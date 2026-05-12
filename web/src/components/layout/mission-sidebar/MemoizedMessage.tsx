@@ -83,7 +83,7 @@ export const MemoizedMessage = memo(function MemoizedMessage({ msg, missionAgent
       )}>
         {msg.role === 'user' ? (
           userAvatarUrl ? (
-            <img src={userAvatarUrl} alt="User avatar" className="w-8 h-8 rounded-full" />
+            <img src={userAvatarUrl} alt="User avatar" className="w-8 h-8 rounded-full" loading="lazy" width={32} height={32} />
           ) : (
             <User className="w-4 h-4 text-primary" />
           )

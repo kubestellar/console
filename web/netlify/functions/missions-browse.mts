@@ -45,6 +45,11 @@ interface BrowseCacheEntry {
   fetchedAt: number;
 }
 
+/** Reject path traversal patterns and URL control characters (#13230). */
+function hasInvalidPathInput(value: string): boolean {
+  return value.includes("..") || value.startsWith("/") || value.includes("#") || value.includes("?");
+}
+
 export default async (request: Request): Promise<Response> => {
   if (request.method === "OPTIONS") {
     return handlePreflight(request, CORS_OPTS);
@@ -54,6 +59,9 @@ export default async (request: Request): Promise<Response> => {
 
   const url = new URL(request.url);
   const path = url.searchParams.get("path") || "";
+  if (path && hasInvalidPathInput(path)) {
+    return jsonResponse(corsHeaders, { error: "invalid path" }, 400);
+  }
   const cacheKey = `browse:${path}`;
 
   try {
@@ -105,7 +113,7 @@ export default async (request: Request): Promise<Response> => {
         });
       }
       const code = resp.status === 403 || resp.status === 429 ? "rate_limited" : "github_error";
-      return jsonResponse(corsHeaders, { error: "GitHub API error", status: resp.status, code }, resp.status);
+      return jsonResponse(corsHeaders, { error: "upstream request failed", code }, 502);
     }
 
     const ghEntries = (await resp.json()) as GitHubEntry[];

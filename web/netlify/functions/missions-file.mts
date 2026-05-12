@@ -127,7 +127,7 @@ export default async (request: Request): Promise<Response> => {
           },
         });
       }
-      return jsonResponse(corsHeaders, { error: "GitHub raw content error", status: resp.status }, resp.status);
+      return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
     }
 
     const body = await resp.text();

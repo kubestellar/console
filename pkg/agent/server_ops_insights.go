@@ -29,7 +29,7 @@ func (s *Server) handleInsightsEnrich(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.insightWorker == nil {
-		json.NewEncoder(w).Encode(InsightEnrichmentResponse{
+		writeJSON(w, InsightEnrichmentResponse{
 			Enrichments: []AIInsightEnrichment{},
 			Timestamp:   time.Now().Format(time.RFC3339),
 		})
@@ -46,14 +46,14 @@ func (s *Server) handleInsightsEnrich(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("[insights] enrichment error", "error", err)
 		// Return empty enrichments on error, not HTTP error
-		json.NewEncoder(w).Encode(InsightEnrichmentResponse{
+		writeJSON(w, InsightEnrichmentResponse{
 			Enrichments: []AIInsightEnrichment{},
 			Timestamp:   time.Now().Format(time.RFC3339),
 		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	writeJSON(w, resp)
 }
 
 // handleInsightsAI returns cached AI enrichments
@@ -78,14 +78,14 @@ func (s *Server) handleInsightsAI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.insightWorker == nil {
-		json.NewEncoder(w).Encode(InsightEnrichmentResponse{
+		writeJSON(w, InsightEnrichmentResponse{
 			Enrichments: []AIInsightEnrichment{},
 			Timestamp:   time.Now().Format(time.RFC3339),
 		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(s.insightWorker.GetEnrichments())
+	writeJSON(w, s.insightWorker.GetEnrichments())
 }
 
 // handleVClusterCheck checks vCluster CRD presence on clusters
@@ -111,7 +111,7 @@ func (s *Server) handleVClusterCheck(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		json.NewEncoder(w).Encode(status)
+		writeJSON(w, status)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (s *Server) handleVClusterCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"clusters": results,
 	})
 }

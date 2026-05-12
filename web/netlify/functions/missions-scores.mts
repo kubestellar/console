@@ -120,7 +120,7 @@ export default async (request: Request): Promise<Response> => {
           bodyText = cached.body;
           servedFromCache = true;
         } else {
-          return jsonResponse(corsHeaders, { error: "GitHub raw content error", status: resp.status }, resp.status);
+          return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
         }
       } else {
         bodyText = await resp.text();

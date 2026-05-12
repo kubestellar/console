@@ -3,7 +3,6 @@ package agent
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -41,14 +40,10 @@ const (
 // receive a malformed/empty body with a 200 status line.
 func writePrometheusError(w http.ResponseWriter, status int, message string) {
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status": "error",
 		"error":  message,
-	}); err != nil {
-		slog.Error("failed to encode prometheus error response",
-			"status", status, "message", message, "encodeErr", err)
-		// Body may already be partially written; best we can do is log.
-	}
+	})
 }
 
 // handlePrometheusQuery proxies a Prometheus query through the K8s API server.

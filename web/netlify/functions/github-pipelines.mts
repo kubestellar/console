@@ -799,7 +799,7 @@ async function buildLog(
     return jsonResponse({ error: "Log not available (may have been purged)" }, { status: 404 });
   }
   if (!res.ok) {
-    return jsonResponse({ error: `GitHub ${res.status}` }, { status: 502 });
+    return jsonResponse({ error: "upstream request failed" }, { status: 502 });
   }
   const text = await res.text();
   const lines = text.split("\n");
@@ -835,7 +835,7 @@ async function mutate(
 
   const res = await gh(path, token, { method: "POST" });
   if (!res.ok) {
-    return jsonResponse({ error: `GitHub returned ${res.status}` }, { status: 502 });
+    return jsonResponse({ error: "upstream request failed" }, { status: 502 });
   }
   return jsonResponse({ ok: true, op, run: runId, repo });
 }
@@ -956,7 +956,7 @@ export default async (req: Request): Promise<Response> => {
         return r;
       }
       default:
-        return jsonResponse({ error: `Unknown view: ${view}` }, { status: 400, headers: baseHeaders });
+        return jsonResponse({ error: "unknown view" }, { status: 400, headers: baseHeaders });
     }
 
     // Wrap payload with the repo list so the client never hardcodes it.

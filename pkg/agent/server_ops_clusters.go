@@ -38,7 +38,7 @@ func (s *Server) handleCloudCLIStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"clis": clis,
 	})
 }
@@ -87,7 +87,7 @@ func (s *Server) handleLocalClusterTools(w http.ResponseWriter, r *http.Request)
 		tools = s.localClusters.DetectNamedTools(requestedTools)
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"tools": tools,
 	})
 }
@@ -112,7 +112,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		// List all local clusters
 		clusters := s.localClusters.ListClusters()
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, map[string]interface{}{
 			"clusters": clusters,
 		})
 
@@ -181,7 +181,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, map[string]interface{}{
 			"status":  "creating",
 			"tool":    req.Tool,
 			"name":    req.Name,
@@ -246,7 +246,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, map[string]interface{}{
 			"status":  "deleting",
 			"tool":    tool,
 			"name":    name,
@@ -346,7 +346,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 		}
 	}()
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":  req.Action + "ing",
 		"tool":    req.Tool,
 		"name":    req.Name,
@@ -376,7 +376,7 @@ func (s *Server) handleVClusterList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"vclusters": instances,
 	})
 }
@@ -455,7 +455,7 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":    "creating",
 		"name":      req.Name,
 		"namespace": req.Namespace,
@@ -527,7 +527,7 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 		"message":  fmt.Sprintf("Connected to vCluster '%s'", req.Name),
 		"progress": progressDone,
 	})
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":    "connected",
 		"name":      req.Name,
 		"namespace": req.Namespace,
@@ -599,7 +599,7 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 		"message":  fmt.Sprintf("Disconnected from vCluster '%s'", req.Name),
 		"progress": progressDone,
 	})
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":    "disconnected",
 		"name":      req.Name,
 		"namespace": req.Namespace,
@@ -680,7 +680,7 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":    "deleting",
 		"name":      req.Name,
 		"namespace": req.Namespace,

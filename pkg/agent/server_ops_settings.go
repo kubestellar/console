@@ -38,7 +38,7 @@ func (s *Server) handleSettingsKeys(w http.ResponseWriter, r *http.Request) {
 		s.handleSetKey(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "GET or POST required"})
+		writeJSON(w, protocol.ErrorPayload{Code: "method_not_allowed", Message: "GET or POST required"})
 	}
 }
 
@@ -60,7 +60,7 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 
 	if r.Method != "DELETE" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "DELETE required"})
+		writeJSON(w, protocol.ErrorPayload{Code: "method_not_allowed", Message: "DELETE required"})
 		return
 	}
 
@@ -68,7 +68,7 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 	provider := strings.TrimPrefix(r.URL.Path, "/settings/keys/")
 	if provider == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "missing_provider", Message: "Provider name required"})
+		writeJSON(w, protocol.ErrorPayload{Code: "missing_provider", Message: "Provider name required"})
 		return
 	}
 
@@ -77,7 +77,7 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 	// Check if key is from environment variable (can't delete those)
 	if cm.IsFromEnv(provider) {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{
+		writeJSON(w, protocol.ErrorPayload{
 			Code:    "env_key",
 			Message: "Cannot delete API key set via environment variable. Unset the environment variable instead.",
 		})
@@ -87,7 +87,7 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 	if err := cm.RemoveAPIKey(provider); err != nil {
 		slog.Error("delete API key error", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "delete_failed", Message: "failed to delete API key"})
+		writeJSON(w, protocol.ErrorPayload{Code: "delete_failed", Message: "failed to delete API key"})
 		return
 	}
 
@@ -98,7 +98,7 @@ func (s *Server) handleSettingsKeyByProvider(w http.ResponseWriter, r *http.Requ
 	s.refreshProviderAvailability()
 
 	slog.Info("API key removed", "provider", provider)
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	writeJSON(w, map[string]bool{"success": true})
 }
 
 // handleSettingsAll handles GET and PUT for /settings (persists to ~/.kc/settings.json)
@@ -125,39 +125,39 @@ func (s *Server) handleSettingsAll(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			slog.Error("[settings] GetAll error", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "settings_load_failed", Message: "Failed to load settings"})
+			writeJSON(w, protocol.ErrorPayload{Code: "settings_load_failed", Message: "Failed to load settings"})
 			return
 		}
-		json.NewEncoder(w).Encode(all)
+		writeJSON(w, all)
 
 	case "PUT":
 		defer r.Body.Close()
 		body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes))
 		if err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "read_error", Message: "Failed to read request body"})
+			writeJSON(w, protocol.ErrorPayload{Code: "read_error", Message: "Failed to read request body"})
 			return
 		}
 
 		var all settings.AllSettings
 		if err := json.Unmarshal(body, &all); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_body", Message: "Invalid request body"})
+			writeJSON(w, protocol.ErrorPayload{Code: "invalid_body", Message: "Invalid request body"})
 			return
 		}
 
 		if err := sm.SaveAll(&all); err != nil {
 			slog.Error("[settings] SaveAll error", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "settings_save_failed", Message: "Failed to save settings"})
+			writeJSON(w, protocol.ErrorPayload{Code: "settings_save_failed", Message: "Failed to save settings"})
 			return
 		}
 
-		json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "Settings saved"})
+		writeJSON(w, map[string]interface{}{"success": true, "message": "Settings saved"})
 
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "GET or PUT required"})
+		writeJSON(w, protocol.ErrorPayload{Code: "method_not_allowed", Message: "GET or PUT required"})
 	}
 }
 
@@ -180,7 +180,7 @@ func (s *Server) handleSettingsExport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
+		writeJSON(w, protocol.ErrorPayload{Code: "method_not_allowed", Message: "POST required"})
 		return
 	}
 
@@ -190,7 +190,7 @@ func (s *Server) handleSettingsExport(w http.ResponseWriter, r *http.Request) {
 		slog.Error("[settings] export error", "error", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "export_failed", Message: "Failed to export settings"})
+		writeJSON(w, protocol.ErrorPayload{Code: "export_failed", Message: "Failed to export settings"})
 		return
 	}
 
@@ -217,7 +217,7 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != "PUT" && r.Method != "POST" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "method_not_allowed", Message: "PUT or POST required"})
+		writeJSON(w, protocol.ErrorPayload{Code: "method_not_allowed", Message: "PUT or POST required"})
 		return
 	}
 
@@ -225,7 +225,7 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxRequestBodyBytes))
 	if err != nil || len(body) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "empty_body", Message: "Empty request body"})
+		writeJSON(w, protocol.ErrorPayload{Code: "empty_body", Message: "Empty request body"})
 		return
 	}
 
@@ -233,11 +233,11 @@ func (s *Server) handleSettingsImport(w http.ResponseWriter, r *http.Request) {
 	if err := sm.ImportEncrypted(body); err != nil {
 		slog.Error("[settings] import error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "import_failed", Message: "failed to import settings"})
+		writeJSON(w, protocol.ErrorPayload{Code: "import_failed", Message: "failed to import settings"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "message": "Settings imported"})
+	writeJSON(w, map[string]interface{}{"success": true, "message": "Settings imported"})
 }
 
 // handleGetKeysStatus returns the status of all API keys (without exposing the actual keys).
@@ -359,7 +359,7 @@ func (s *Server) handleGetKeysStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	registeredProviders := listRegistry.List()
 
-	json.NewEncoder(w).Encode(KeysStatusResponse{
+	writeJSON(w, KeysStatusResponse{
 		Keys:                keys,
 		ConfigPath:          cm.GetConfigPath(),
 		RegisteredProviders: registeredProviders,
@@ -375,13 +375,13 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	var req SetKeyRequest
 	if err := json.NewDecoder(io.LimitReader(r.Body, maxRequestBodyBytes)).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_json", Message: "Invalid JSON body"})
+		writeJSON(w, protocol.ErrorPayload{Code: "invalid_json", Message: "Invalid JSON body"})
 		return
 	}
 
 	if req.Provider == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "missing_provider", Message: "Provider name required"})
+		writeJSON(w, protocol.ErrorPayload{Code: "missing_provider", Message: "Provider name required"})
 		return
 	}
 
@@ -394,7 +394,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := registry.Get(req.Provider); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "unknown_provider", Message: fmt.Sprintf("Provider %q is not registered", req.Provider)})
+		writeJSON(w, protocol.ErrorPayload{Code: "unknown_provider", Message: fmt.Sprintf("Provider %q is not registered", req.Provider)})
 		return
 	}
 
@@ -404,7 +404,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	// the compiled-in default).
 	if req.APIKey == "" && req.BaseURL == "" && req.Model == "" && !req.ClearBaseURL {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "missing_field", Message: "At least one of apiKey, baseURL, model, or clearBaseURL is required"})
+		writeJSON(w, protocol.ErrorPayload{Code: "missing_field", Message: "At least one of apiKey, baseURL, model, or clearBaseURL is required"})
 		return
 	}
 
@@ -418,13 +418,13 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	if req.BaseURL != "" {
 		if err := validateBaseURL(req.BaseURL); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_base_url", Message: err.Error()})
+			writeJSON(w, protocol.ErrorPayload{Code: "invalid_base_url", Message: err.Error()})
 			return
 		}
 		if err := cm.SetBaseURL(req.Provider, req.BaseURL); err != nil {
 			slog.Error("save base URL error", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to save base URL"})
+			writeJSON(w, protocol.ErrorPayload{Code: "save_failed", Message: "failed to save base URL"})
 			return
 		}
 		// Invalidate cached validity for this provider — the endpoint
@@ -436,7 +436,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 		if err := cm.RemoveBaseURL(req.Provider); err != nil {
 			slog.Error("clear base URL error", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to clear base URL"})
+			writeJSON(w, protocol.ErrorPayload{Code: "save_failed", Message: "failed to clear base URL"})
 			return
 		}
 		cm.InvalidateKeyValidity(req.Provider)
@@ -451,14 +451,14 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 			if validationErr != nil {
 				slog.Error("API key validation error", "error", validationErr)
 			}
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "invalid_key", Message: "Invalid API key"})
+			writeJSON(w, protocol.ErrorPayload{Code: "invalid_key", Message: "Invalid API key"})
 			return
 		}
 
 		if err := cm.SetAPIKey(req.Provider, req.APIKey); err != nil {
 			slog.Error("save API key error", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to save API key"})
+			writeJSON(w, protocol.ErrorPayload{Code: "save_failed", Message: "failed to save API key"})
 			return
 		}
 
@@ -470,7 +470,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 		if err := cm.SetModel(req.Provider, req.Model); err != nil {
 			slog.Error("failed to save model preference", "error", err)
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(protocol.ErrorPayload{Code: "save_failed", Message: "failed to save model preference"})
+			writeJSON(w, protocol.ErrorPayload{Code: "save_failed", Message: "failed to save model preference"})
 			return
 		}
 	}
@@ -479,7 +479,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	s.refreshProviderAvailability()
 
 	slog.Info("provider configured", "provider", req.Provider, "hasKey", req.APIKey != "", "hasBaseURL", req.BaseURL != "", "hasModel", req.Model != "")
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSON(w, map[string]any{
 		"success":  true,
 		"provider": req.Provider,
 	})
@@ -872,7 +872,7 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 		Providers: results,
 		CheckedAt: time.Now().UTC().Format(time.RFC3339),
 	}
-	json.NewEncoder(w).Encode(resp)
+	writeJSON(w, resp)
 }
 
 // checkStatuspageHealth fetches a Statuspage.io JSON API and returns a health status string

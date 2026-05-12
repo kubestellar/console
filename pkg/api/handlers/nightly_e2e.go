@@ -648,7 +648,7 @@ func (h *NightlyE2EHandler) fetchGuideYAMLFiles() []treeEntry {
 		return nil
 	}
 
-	var results []treeEntry
+	results := make([]treeEntry, 0)
 	for _, entry := range tree.Tree {
 		if entry.Type != "blob" {
 			continue

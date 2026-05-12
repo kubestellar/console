@@ -1008,7 +1008,7 @@ const PRItem = memo(function PRItem({ pr }: { pr: GitHubPR }) {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <img src={pr.user.avatar_url} alt={pr.user.login} className="w-4 h-4 rounded-full" />
+              <img src={pr.user.avatar_url} alt={pr.user.login} className="w-4 h-4 rounded-full" loading="lazy" width={16} height={16} />
               {pr.user.login}
             </span>
             <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(pr.updated_at, { extended: true })}`}>
@@ -1065,7 +1065,7 @@ const IssueItem = memo(function IssueItem({ issue }: { issue: GitHubIssue }) {
           </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <img src={issue.user.avatar_url} alt={issue.user.login} className="w-4 h-4 rounded-full" />
+              <img src={issue.user.avatar_url} alt={issue.user.login} className="w-4 h-4 rounded-full" loading="lazy" width={16} height={16} />
               {issue.user.login}
             </span>
             <span className="flex items-center gap-1" title={`Updated ${formatTimeAgo(issue.updated_at, { extended: true })}`}>
@@ -1125,7 +1125,7 @@ const ContributorItem = memo(function ContributorItem({ contributor }: { contrib
       className="block p-3 rounded-lg bg-secondary/20 hover:bg-secondary/40 border border-border/50 transition-colors"
     >
       <div className="flex items-center gap-3">
-        <img src={contributor.avatar_url} alt={contributor.login} className="w-10 h-10 rounded-full" />
+        <img src={contributor.avatar_url} alt={contributor.login} className="w-10 h-10 rounded-full" loading="lazy" width={40} height={40} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium">{contributor.login}</div>
           <div className="text-xs text-muted-foreground">
