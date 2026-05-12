@@ -39,6 +39,13 @@ const ADD_CARD_DIALOG_TITLE = 'Console Studio'
 const ADD_CARD_SECTION_LABEL = 'Add Cards'
 const ADD_CARD_SEARCH_PLACEHOLDER = /Search cards or describe/i
 const GRID_CARD_SELECTOR = '[data-card-id]'
+const VISIBLE_GRID_CARD_SELECTOR = `${GRID_CARD_SELECTOR}:visible`
+const DASHBOARD_LOADING_INDICATOR_SELECTOR = [
+  `${GRID_CARD_SELECTOR}[data-loading="true"]`,
+  `${GRID_CARD_SELECTOR}[aria-busy="true"]`,
+  `${GRID_CARD_SELECTOR} [data-card-skeleton="true"]`,
+  `${GRID_CARD_SELECTOR} .animate-pulse`,
+].join(', ')
 const GRID_VISIBLE_TIMEOUT_MS = 10_000
 const MAX_MOBILE_CARD_COLUMNS = 2
 const MULTI_COLUMN_GRID_COUNT_THRESHOLD = 2
@@ -550,10 +557,10 @@ test.describe('Dashboard Live Data Loading', () => {
     await navigateToDashboard(page)
 
     const cardsGrid = page.getByTestId('dashboard-cards-grid')
-    const renderedCards = cardsGrid.locator(GRID_CARD_SELECTOR)
-    const skeletonElement = page.locator('[data-card-skeleton="true"], .animate-pulse').first()
+    const renderedCards = cardsGrid.locator(VISIBLE_GRID_CARD_SELECTOR)
+    const loadingIndicator = cardsGrid.locator(DASHBOARD_LOADING_INDICATOR_SELECTOR).first()
 
-    await expect(skeletonElement).toBeVisible({ timeout: LOADING_SKELETON_TIMEOUT_MS })
+    await expect(loadingIndicator).toBeVisible({ timeout: LOADING_SKELETON_TIMEOUT_MS })
 
     resolveMcpApi!()
 
@@ -577,10 +584,10 @@ test.describe('Dashboard Live Data Loading', () => {
     const cardsGrid = page.getByTestId('dashboard-cards-grid')
     await expect(cardsGrid).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
 
-    const cards = cardsGrid.locator('[data-card-id]')
+    const cards = cardsGrid.locator(VISIBLE_GRID_CARD_SELECTOR)
     await expect(cards.first()).toBeVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
 
-    const demoBadge = cardsGrid.getByText('Demo').first()
+    const demoBadge = cardsGrid.locator('[data-testid="demo-badge"]:visible').first()
     const demoBadgeAppeared = await demoBadge
       .isVisible({ timeout: ERROR_FALLBACK_TIMEOUT_MS })
       .catch(() => false)
