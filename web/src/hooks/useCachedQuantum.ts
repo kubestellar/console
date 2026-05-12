@@ -136,10 +136,6 @@ c: 2/═══════════╩══╩═
                 0  1`,
 }
 
-const EMPTY_CIRCUIT_DATA: QuantumCircuitAsciiData = {
-  circuitAscii: null,
-}
-
 const DEFAULT_AUTH_STATUS: QuantumAuthStatus = {
   authenticated: false,
 }
