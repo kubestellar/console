@@ -52,32 +52,52 @@ export interface UserProviderConfig {
 
 export const stellarApi = {
   async getState(): Promise<StellarOperationalState> {
-    const { data } = await api.get<StellarOperationalState>('/api/stellar/state')
-    return data
+    try {
+      const { data } = await api.get<StellarOperationalState>('/api/stellar/state')
+      return data
+    } catch (err) {
+      console.warn('stellar: getState failed:', err)
+      return { clustersWatching: [], unreadAlerts: 0, pendingActionIDs: [], generatedAt: new Date().toISOString() } as StellarOperationalState
+    }
   },
 
   async getNotifications(limit = 50, unreadOnly = false): Promise<StellarNotification[]> {
-    const query = new URLSearchParams()
-    query.set('limit', String(limit))
-    if (unreadOnly) query.set('unread', 'true')
-    const { data } = await api.get<{ items: StellarNotification[] }>(`/api/stellar/notifications?${query.toString()}`)
-    return data.items || []
+    try {
+      const query = new URLSearchParams()
+      query.set('limit', String(limit))
+      if (unreadOnly) query.set('unread', 'true')
+      const { data } = await api.get<{ items: StellarNotification[] }>(`/api/stellar/notifications?${query.toString()}`)
+      return data.items || []
+    } catch (err) {
+      console.warn('stellar: getNotifications failed:', err)
+      return []
+    }
   },
 
   async getMissions(limit = 50): Promise<StellarMission[]> {
-    const { data } = await api.get<{ items: StellarMission[] }>(`/api/stellar/missions?limit=${limit}`)
-    return data.items || []
+    try {
+      const { data } = await api.get<{ items: StellarMission[] }>(`/api/stellar/missions?limit=${limit}`)
+      return data.items || []
+    } catch (err) {
+      console.warn('stellar: getMissions failed:', err)
+      return []
+    }
   },
 
   async getActions(status?: string, limit = 50): Promise<StellarAction[]> {
-    const query = new URLSearchParams()
-    query.set('limit', String(limit))
-    if (status) query.set('status', status)
-    const { data } = await api.get<{ items: StellarAction[] }>(`/api/stellar/actions?${query.toString()}`)
-    return data.items || []
+    try {
+      const query = new URLSearchParams()
+      query.set('limit', String(limit))
+      if (status) query.set('status', status)
+      const { data } = await api.get<{ items: StellarAction[] }>(`/api/stellar/actions?${query.toString()}`)
+      return data.items || []
+    } catch (err) {
+      console.warn('stellar: getActions failed:', err)
+      return []
+    }
   },
 
-  async ask(req: { prompt: string; cluster?: string; provider?: string; model?: string }): Promise<AskResponse> {
+  async ask(req: { prompt: string; cluster?: string; provider?: string; model?: string; history?: { role: string; content: string }[] }): Promise<AskResponse> {
     const { data } = await api.post<AskResponse>('/api/stellar/ask', req, { timeout: STELLAR_CHAT_TIMEOUT_MS })
     return data
   },
@@ -97,8 +117,13 @@ export const stellarApi = {
   },
 
   async getTasks(): Promise<StellarTask[]> {
-    const { data } = await api.get<{ items: StellarTask[] }>('/api/stellar/tasks')
-    return data.items || []
+    try {
+      const { data } = await api.get<{ items: StellarTask[] }>('/api/stellar/tasks')
+      return data.items || []
+    } catch (err) {
+      console.warn('stellar: getTasks failed:', err)
+      return []
+    }
   },
 
   async createTask(payload: {
@@ -133,13 +158,23 @@ export const stellarApi = {
   },
 
   async getDigest(): Promise<{ digest: string; model: string; provider: string }> {
-    const { data } = await api.get<{ digest: string; model: string; provider: string }>('/api/stellar/digest')
-    return data
+    try {
+      const { data } = await api.get<{ digest: string; model: string; provider: string }>('/api/stellar/digest')
+      return data
+    } catch (err) {
+      console.warn('stellar: getDigest failed:', err)
+      return { digest: '', model: '', provider: '' }
+    }
   },
 
   async getProviders(): Promise<{ global: ProviderInfo[]; user: UserProviderConfig[] }> {
-    const { data } = await api.get<{ global: ProviderInfo[]; user: UserProviderConfig[] }>('/api/stellar/providers')
-    return data
+    try {
+      const { data } = await api.get<{ global: ProviderInfo[]; user: UserProviderConfig[] }>('/api/stellar/providers')
+      return data
+    } catch (err) {
+      console.warn('stellar: getProviders failed:', err)
+      return { global: [], user: [] }
+    }
   },
 
   async createProvider(payload: { provider: string; displayName: string; apiKey: string; model: string; baseUrl?: string }): Promise<UserProviderConfig> {
@@ -161,8 +196,13 @@ export const stellarApi = {
   },
 
   async getWatches(): Promise<StellarWatch[]> {
-    const { data } = await api.get<{ items: StellarWatch[] }>('/api/stellar/watches')
-    return data.items || []
+    try {
+      const { data } = await api.get<{ items: StellarWatch[] }>('/api/stellar/watches')
+      return data.items || []
+    } catch (err) {
+      console.warn('stellar: getWatches failed:', err)
+      return []
+    }
   },
 
   async resolveWatch(id: string): Promise<void> {
@@ -178,8 +218,13 @@ export const stellarApi = {
   },
 
   async getAuditLog(limit = 50): Promise<StellarAuditEntry[]> {
-    const { data } = await api.get<{ items: StellarAuditEntry[] }>(`/api/stellar/audit?limit=${limit}`)
-    return data.items || []
+    try {
+      const { data } = await api.get<{ items: StellarAuditEntry[] }>(`/api/stellar/audit?limit=${limit}`)
+      return data.items || []
+    } catch (err) {
+      console.warn('stellar: getAuditLog failed:', err)
+      return []
+    }
   },
 }
 

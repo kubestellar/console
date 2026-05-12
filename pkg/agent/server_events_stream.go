@@ -1,10 +1,13 @@
 package agent
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -129,6 +132,11 @@ func (s *Server) handleEventsStreamSSE(w http.ResponseWriter, r *http.Request) {
 
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
+
+			// Forward Warning events to Stellar backend (non-blocking)
+			if obj.Type == "Warning" {
+				go s.forwardEventToStellar(obj)
+			}
 		}
 	}
 }
@@ -172,4 +180,65 @@ func sseWriteError(w http.ResponseWriter, flusher http.Flusher, msg string) {
 // ptrInt64 returns a pointer to the given int64 value.
 func ptrInt64(v int64) *int64 {
 	return &v
+}
+
+// extractResourceKind extracts the kind from "Kind/Name" format
+func extractResourceKind(object string) string {
+	if idx := strings.Index(object, "/"); idx >= 0 {
+		return object[:idx]
+	}
+	return ""
+}
+
+// extractResourceName extracts the name from "Kind/Name" format
+func extractResourceName(object string) string {
+	if idx := strings.Index(object, "/"); idx >= 0 {
+		return object[idx+1:]
+	}
+	return object
+}
+
+// forwardEventToStellar sends a k8s event to the backend's Stellar ingestion endpoint.
+// This bridges the agent process to the backend's notification system.
+func (s *Server) forwardEventToStellar(event sseEventSummary) {
+	backendURL := os.Getenv("BACKEND_URL")
+	if backendURL == "" {
+		backendURL = "http://localhost:8080"
+	}
+	
+	payload := map[string]interface{}{
+		"cluster":   event.Cluster,
+		"namespace": event.Namespace,
+		"name":      extractResourceName(event.Object),
+		"kind":      extractResourceKind(event.Object),
+		"reason":    event.Reason,
+		"message":   event.Message,
+		"type":      event.Type,
+		"count":     1,
+	}
+	
+	body, err := json.Marshal(payload)
+	if err != nil {
+		slog.Warn("stellar: failed to marshal event", "error", err)
+		return
+	}
+	
+	req, err := http.NewRequest("POST", backendURL+"/api/stellar/events/ingest", bytes.NewReader(body))
+	if err != nil {
+		slog.Warn("stellar: failed to create request", "error", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		slog.Debug("stellar: failed to forward event to backend", "error", err)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusAccepted {
+		slog.Warn("stellar: backend rejected event", "status", resp.StatusCode)
+	}
 }

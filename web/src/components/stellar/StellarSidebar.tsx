@@ -146,6 +146,7 @@ export function StellarSidebar() {
           approveAction={approveAction}
           rejectAction={rejectAction}
           onRollback={(prompt) => setChatInput(prompt)}
+          onAction={(prompt) => setChatInput(prompt)}
         />
       </div>
 

@@ -13,6 +13,7 @@ export interface StellarNotification {
   read: boolean
   readAt?: string
   createdAt: string
+  actionHints?: string[]
 }
 
 export interface StellarMission {

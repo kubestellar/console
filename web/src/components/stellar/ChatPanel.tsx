@@ -113,10 +113,20 @@ export function ChatPanel({
           })
         })
       } else {
+        // Build history from current messages (exclude welcome and loading states)
+        const history = msgs
+          .filter(m => m.id !== 'welcome' && !m.loading && m.content.trim())
+          .slice(-10) // last 10 turns max
+          .map(m => ({
+            role: m.role === 'user' ? 'user' as const : 'assistant' as const,
+            content: m.content,
+          }))
+
         const response = await stellarApi.ask({
           prompt,
           provider: providerSession?.provider || '',
           model: providerSession?.model || '',
+          history,
         })
         setMsgs(prev => prev.map(message => (message.loading ? {
           ...message,

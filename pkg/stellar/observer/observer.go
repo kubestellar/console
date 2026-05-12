@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
@@ -28,6 +29,7 @@ type ObserverStore interface {
 	CreateObservation(ctx context.Context, obs *store.StellarObservation) (string, error)
 	GetRecentMemoryEntries(ctx context.Context, userID, cluster string, limit int) ([]store.StellarMemoryEntry, error)
 	GetActiveWatchesForCluster(ctx context.Context, cluster string) ([]store.StellarWatch, error)
+	GetActiveWatches(ctx context.Context, userID string) ([]store.StellarWatch, error)
 	UpdateWatchStatus(ctx context.Context, id, status, lastUpdate string) error
 	ResolveWatch(ctx context.Context, id string) error
 	SetWatchLastChecked(ctx context.Context, id string, ts time.Time) error
@@ -88,12 +90,37 @@ func (o *Observer) observe(ctx context.Context) {
 		slog.Warn("stellar/observer: failed to list users", "error", err)
 		return
 	}
+	
+	// Log cluster count for visibility
+	clusterCount := 0
+	eventCount := 0
+	watchCount := 0
+	if o.client != nil {
+		if clusters, clErr := o.client.ListClusters(ctx); clErr == nil {
+			clusterCount = len(clusters)
+			// Count recent events across all clusters
+			for _, cluster := range clusters {
+				if events, evErr := o.client.GetWarningEvents(ctx, cluster.Name, "", 10); evErr == nil {
+					eventCount += len(events)
+				}
+			}
+		}
+	}
+	
 	for _, userID := range userIDs {
 		if strings.TrimSpace(userID) == "" {
 			continue
 		}
+		// Count watches for this user
+		if watches, _ := o.store.GetActiveWatches(ctx, userID); watches != nil {
+			watchCount += len(watches)
+		}
 		o.observeUser(ctx, userID)
 	}
+	
+	// Log tick with real data
+	slog.Info("stellar/observer: tick", "clusters", clusterCount, "events", eventCount, "watches", watchCount, "decision", "→ NOTHING")
+	
 	// Pass 2: follow through on active watches
 	o.followThroughWatches(ctx)
 }
@@ -166,6 +193,9 @@ func (o *Observer) observeUser(ctx context.Context, userID string) {
 	}
 
 	contextPayload := buildObserverContext(tasks, events, observations) + liveEvents.String() + memoryContext.String()
+	
+	// Fix #2: Use registry.Resolve with empty strings to use default provider
+	// The registry will use the first available provider from the global registry
 	resolved := o.registry.Resolve("", "", nil)
 	if resolved.Provider == nil {
 		return
@@ -189,7 +219,11 @@ func (o *Observer) observeUser(ctx context.Context, userID string) {
 		slog.Debug("stellar/observer: NOTHING", "user", userID)
 		return
 	}
-	slog.Info("stellar/observer: SURFACE", "user", userID, "surface", surface)
+	slog.Info("stellar/observer: SURFACE", "user", userID, "surface", surface, "model", resolved.Model)
+	
+	// Fix #5: Extract reasoning from response (text before SURFACE:)
+	reasoning := extractReasoning(resp.Content, surface)
+	
 	detail := ""
 	if suggest != "" {
 		detail = "SUGGEST: " + suggest
@@ -199,6 +233,7 @@ func (o *Observer) observeUser(ctx context.Context, userID string) {
 		Kind:        "noticed",
 		Summary:     surface,
 		Detail:      detail,
+		Reasoning:   reasoning,
 		RefType:     "notification",
 		RefID:       "",
 		ShownToUser: false,
@@ -317,14 +352,43 @@ func (o *Observer) checkWatch(ctx context.Context, w store.StellarWatch) {
 		if msg == w.LastUpdate {
 			break
 		}
+
+		// Evaluate whether this state change is worth surfacing to the user
+		evaluator := stellar.NewStellarEvaluator(o.registry)
+		syntheticEvent := stellar.RawK8sEvent{
+			Cluster:   w.Cluster,
+			Namespace: w.Namespace,
+			Kind:      w.ResourceKind,
+			Name:      w.ResourceName,
+			Reason:    fmt.Sprintf("StateChange_%s", w.ResourceKind),
+			Message:   msg,
+			Type:      "Warning",
+			Count:     1,
+		}
+		eval, _ := evaluator.Evaluate(ctx, syntheticEvent, resolved)
+		if eval != nil && !eval.ShouldShow {
+			slog.Debug("stellar/observer: state change filtered",
+				"namespace", w.Namespace, "resource", w.ResourceName,
+				"severity", eval.Severity, "reasoning", eval.Reasoning)
+			_ = o.store.UpdateWatchStatus(ctx, w.ID, "active", msg)
+			break
+		}
+
+		severity := "info"
+		if eval != nil && eval.Severity != "" && eval.Severity != "ignore" {
+			severity = eval.Severity
+		}
 		_ = o.store.UpdateWatchStatus(ctx, w.ID, "active", msg)
 		_, _ = o.store.CreateObservation(ctx, &store.StellarObservation{
 			Cluster: w.Cluster,
 			Kind:    "noticed",
-			Summary: fmt.Sprintf("%s/%s update: %s", w.Namespace, w.ResourceName, msg),
+			Summary: fmt.Sprintf("[%s] %s/%s update: %s", severity, w.Namespace, w.ResourceName, msg),
 			RefType: "watch",
 			RefID:   w.ID,
 		})
+		slog.Info("stellar/observer: state change evaluated",
+			"namespace", w.Namespace, "resource", w.ResourceName,
+			"severity", severity)
 
 	case strings.HasPrefix(content, "UNCHANGED:"):
 		// Just update last_checked timestamp
@@ -443,4 +507,19 @@ func isQuietWindow() bool {
 	}
 	// Overnight window: e.g. 22:00 → 07:00
 	return now >= start || now < end
+}
+
+
+// extractReasoning extracts the reasoning text that appears before "SURFACE:" in the LLM response.
+// This is the "why Stellar flagged this" explanation.
+func extractReasoning(response, surface string) string {
+	surfaceIdx := strings.Index(strings.ToUpper(response), "SURFACE:")
+	if surfaceIdx <= 0 {
+		return ""
+	}
+	reasoning := strings.TrimSpace(response[:surfaceIdx])
+	// Remove any leading "REASONING:" prefix if present
+	reasoning = strings.TrimPrefix(strings.TrimSpace(reasoning), "REASONING:")
+	reasoning = strings.TrimSpace(reasoning)
+	return reasoning
 }

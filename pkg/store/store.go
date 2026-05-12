@@ -193,6 +193,7 @@ type StellarObservation struct {
 	Kind        string    `json:"kind"` // noticed|suggested|acted|reminded|escalated
 	Summary     string    `json:"summary"`
 	Detail      string    `json:"detail"`
+	Reasoning   string    `json:"reasoning,omitempty"` // Sprint 5: why Stellar flagged this
 	RefType     string    `json:"refType,omitempty"`
 	RefID       string    `json:"refId,omitempty"`
 	ShownToUser bool      `json:"shownToUser"`

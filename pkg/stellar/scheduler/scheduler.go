@@ -95,7 +95,7 @@ func (s *Scheduler) executeAction(ctx context.Context, a store.StellarAction) {
 	}
 	execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
-	outcome, err := s.dispatch(execCtx, a)
+	outcome, err := Dispatch(execCtx, s.k8sClient, a)
 	if err != nil {
 		slog.Error("stellar/scheduler: action failed", "action_id", a.ID, "error", err)
 		if a.RetryCount < a.MaxRetries {
@@ -204,6 +204,9 @@ func (s *Scheduler) pushScheduledDigest(ctx context.Context) {
 			})
 			if err == nil {
 				digestContent = resp.Content
+				slog.Info("stellar: digest generated", "tokens", len(resp.Content), "model", resolved.Model)
+			} else {
+				slog.Warn("stellar: digest LLM call failed", "error", err)
 			}
 		}
 	}

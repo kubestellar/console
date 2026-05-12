@@ -17,6 +17,7 @@ interface EventsPanelProps {
   approveAction: (id: string, confirmToken?: string) => Promise<void>
   rejectAction: (id: string, reason: string) => Promise<void>
   onRollback?: (prompt: string) => void
+  onAction?: (prompt: string) => void
 }
 
 export function EventsPanel({
@@ -27,6 +28,7 @@ export function EventsPanel({
   approveAction,
   rejectAction,
   onRollback,
+  onAction,
 }: EventsPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -142,6 +144,7 @@ export function EventsPanel({
               notification={notification}
               onDismiss={() => { void acknowledgeNotification(notification.id) }}
               onRollback={onRollback}
+              onAction={onAction}
             />
           ))
         )}

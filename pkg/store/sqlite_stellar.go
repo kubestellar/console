@@ -644,6 +644,28 @@ func (s *SQLiteStore) NotificationExistsByDedup(ctx context.Context, userID, ded
 	return count > 0, nil
 }
 
+// CountRecentEventsForResource counts how many notifications mention a specific
+// resource within the given time window. Used by ProcessEvent to detect recurring events.
+func (s *SQLiteStore) CountRecentEventsForResource(ctx context.Context, cluster, namespace, name string, window time.Duration) (int64, error) {
+	var count int64
+	since := time.Now().Add(-window).UTC().Format(time.RFC3339)
+	err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM stellar_notifications
+		WHERE cluster = ? AND namespace = ? AND title LIKE ?
+		  AND created_at > ?
+	`, cluster, namespace, "%"+name+"%", since).Scan(&count)
+	return count, err
+}
+
+// UpdateNotificationBody replaces the body text of a notification identified by its
+// dedupe key. Used by ProcessEvent to swap in async LLM-enriched narration after
+// the initial rule-based narration has already been stored and broadcast.
+func (s *SQLiteStore) UpdateNotificationBody(ctx context.Context, dedupeKey, newBody string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE stellar_notifications SET body = ? WHERE dedupe_key = ?`, newBody, dedupeKey)
+	return err
+}
+
+
 func (s *SQLiteStore) ListStellarUserIDs(ctx context.Context) ([]string, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT DISTINCT user_id FROM (
 		SELECT user_id FROM stellar_preferences

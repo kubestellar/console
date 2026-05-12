@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,8 +18,10 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
 	"github.com/kubestellar/console/pkg/stellar/providers"
+	"github.com/kubestellar/console/pkg/stellar/scheduler"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -149,6 +152,10 @@ type StellarStore interface {
 	SnoozeWatch(ctx context.Context, id string, until time.Time) error
 	GetWatchesSince(ctx context.Context, userID string, since time.Time, status string) ([]store.StellarWatch, error)
 	ListStellarAuditLog(ctx context.Context, limit int) ([]store.StellarAuditEntry, error)
+
+	// Event pipeline — recurring detection and async narration enrichment
+	CountRecentEventsForResource(ctx context.Context, cluster, namespace, name string, window time.Duration) (int64, error)
+	UpdateNotificationBody(ctx context.Context, dedupeKey, newBody string) error
 }
 
 // StellarHandler exposes persistence and operational APIs for the Stellar assistant.
@@ -157,6 +164,38 @@ type StellarHandler struct {
 	k8sClient        *k8s.MultiClusterClient
 	providerRegistry *providers.Registry
 	broadcaster      SSEBroadcaster
+	sseClients       map[string]chan SSEEvent
+	sseClientsMu     sync.RWMutex
+}
+
+func (h *StellarHandler) registerSSEClient(connID string, ch chan SSEEvent) {
+	h.sseClientsMu.Lock()
+	defer h.sseClientsMu.Unlock()
+	if h.sseClients == nil {
+		h.sseClients = make(map[string]chan SSEEvent)
+	}
+	h.sseClients[connID] = ch
+}
+
+func (h *StellarHandler) unregisterSSEClient(connID string) {
+	h.sseClientsMu.Lock()
+	defer h.sseClientsMu.Unlock()
+	delete(h.sseClients, connID)
+}
+
+func (h *StellarHandler) broadcastToClients(event SSEEvent) {
+	h.sseClientsMu.RLock()
+	defer h.sseClientsMu.RUnlock()
+	for _, ch := range h.sseClients {
+		select {
+		case ch <- event:
+		default: // client too slow, skip
+		}
+	}
+}
+
+func (h *StellarHandler) Broadcast(event SSEEvent) {
+	h.broadcastToClients(event)
 }
 
 type SSEBroadcaster interface {
@@ -630,6 +669,277 @@ func (h *StellarHandler) DeleteAction(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
+// executeActionMaxTimeout is the maximum duration for immediate action dispatch.
+const executeActionMaxTimeout = 2 * time.Minute
+
+type executeActionRequest struct {
+	ActionType  string         `json:"actionType"`
+	Description string         `json:"description"`
+	Cluster     string         `json:"cluster"`
+	Namespace   string         `json:"namespace"`
+	Name        string         `json:"name"`
+	Parameters  map[string]any `json:"parameters"`
+	Prompt      string         `json:"prompt"`
+}
+
+// knownDispatchableActions lists action types that can be dispatched to K8s directly.
+var knownDispatchableActions = map[string]bool{
+	"RestartDeployment": true,
+	"ScaleDeployment":   true,
+	"DeletePod":         true,
+	"CordonNode":        true,
+}
+
+// ExecuteAction creates and immediately executes a Stellar action.
+// For known K8s action types, dispatches directly via the scheduler.
+// For "investigate" or unknown types, falls back to an LLM call.
+func (h *StellarHandler) ExecuteAction(c *fiber.Ctx) error {
+	userID := resolveStellarUserID(c)
+	if userID == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "not authenticated"})
+	}
+	var body executeActionRequest
+	if err := c.BodyParser(&body); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid JSON body"})
+	}
+	body.ActionType = strings.TrimSpace(body.ActionType)
+	body.Cluster = strings.TrimSpace(body.Cluster)
+	body.Namespace = strings.TrimSpace(body.Namespace)
+	body.Name = strings.TrimSpace(body.Name)
+	body.Description = strings.TrimSpace(body.Description)
+	body.Prompt = strings.TrimSpace(body.Prompt)
+
+	if body.Cluster == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cluster is required"})
+	}
+	if body.Description == "" && body.Prompt != "" {
+		body.Description = body.Prompt
+	}
+	if body.Description == "" {
+		body.Description = fmt.Sprintf("%s on %s/%s", body.ActionType, body.Namespace, body.Name)
+	}
+
+	// Merge name/namespace into parameters for dispatch compatibility
+	params := body.Parameters
+	if params == nil {
+		params = map[string]any{}
+	}
+	if body.Name != "" {
+		params["name"] = body.Name
+	}
+	if body.Namespace != "" {
+		params["namespace"] = body.Namespace
+	}
+
+	// If it's a dispatchable K8s action and we have a k8s client, execute directly
+	if knownDispatchableActions[body.ActionType] && h.k8sClient != nil {
+		return h.executeDirectAction(c, userID, body, params)
+	}
+
+	// Fall back to LLM-based execution (investigate, scale without params, etc.)
+	return h.executeLLMAction(c, userID, body)
+}
+
+func (h *StellarHandler) executeDirectAction(c *fiber.Ctx, userID string, body executeActionRequest, params map[string]any) error {
+	parametersJSON, err := json.Marshal(params)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid parameters"})
+	}
+
+	now := time.Now().UTC()
+	action := &store.StellarAction{
+		UserID:      userID,
+		Description: body.Description,
+		ActionType:  body.ActionType,
+		Parameters:  string(parametersJSON),
+		Cluster:     body.Cluster,
+		Namespace:   body.Namespace,
+		Status:      "approved",
+		CreatedBy:   userID,
+		ApprovedBy:  userID,
+		ApprovedAt:  &now,
+	}
+	if err := h.store.CreateStellarAction(c.UserContext(), action); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create action"})
+	}
+
+	_ = h.store.UpdateStellarActionStatus(c.UserContext(), action.ID, "running", "", "")
+
+	execCtx, cancel := context.WithTimeout(c.UserContext(), executeActionMaxTimeout)
+	defer cancel()
+
+	outcome, dispatchErr := scheduler.Dispatch(execCtx, h.k8sClient, *action)
+	startTime := now
+	durationMs := int(time.Since(startTime).Milliseconds())
+
+	status := "completed"
+	if dispatchErr != nil {
+		status = "failed"
+		outcome = dispatchErr.Error()
+		slog.Error("stellar: action execution failed", "action_id", action.ID, "error", dispatchErr)
+	}
+
+	_ = h.store.UpdateStellarActionStatus(c.UserContext(), action.ID, status, outcome, "")
+
+	// Record execution
+	completedAt := time.Now().UTC()
+	_ = h.store.CreateStellarExecution(c.UserContext(), &store.StellarExecution{
+		UserID:      userID,
+		MissionID:   "action-execute",
+		TriggerType: "stellar-action",
+		TriggerData: fmt.Sprintf(`{"actionType":"%s","cluster":"%s"}`, body.ActionType, body.Cluster),
+		Status:      status,
+		RawInput:    body.Description,
+		Output:      outcome,
+		DurationMs:  durationMs,
+		StartedAt:   startTime,
+		CompletedAt: &completedAt,
+	})
+
+	// Audit entry
+	if auditable, ok := h.store.(interface {
+		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
+	}); ok {
+		_ = auditable.CreateAuditEntry(c.UserContext(), &store.StellarAuditEntry{
+			UserID:     userID,
+			Action:     "execute_action",
+			EntityType: "action",
+			EntityID:   action.ID,
+			Cluster:    body.Cluster,
+			Detail:     body.Description,
+		})
+	}
+
+	// Notification for the result
+	notifSeverity := "info"
+	notifTitle := "Action completed: " + body.ActionType
+	if status == "failed" {
+		notifSeverity = "warning"
+		notifTitle = "Action failed: " + body.ActionType
+	}
+	_ = h.store.CreateStellarNotification(c.UserContext(), &store.StellarNotification{
+		UserID:    userID,
+		Type:      "action",
+		Severity:  notifSeverity,
+		Title:     notifTitle,
+		Body:      outcome,
+		Cluster:   body.Cluster,
+		Namespace: body.Namespace,
+		ActionID:  action.ID,
+		DedupeKey: fmt.Sprintf("exec:%s", action.ID),
+	})
+
+	// Memory entry
+	_ = h.store.CreateStellarMemoryEntry(c.UserContext(), &store.StellarMemoryEntry{
+		UserID:     userID,
+		Cluster:    body.Cluster,
+		Namespace:  body.Namespace,
+		Category:   "action",
+		Summary:    fmt.Sprintf("%s %s: %s", body.ActionType, status, outcome),
+		Importance: 7,
+		ExpiresAt:  ptr(time.Now().AddDate(0, 0, 60)),
+	})
+
+	// Broadcast via SSE
+	if h.broadcaster != nil {
+		h.broadcaster.Broadcast(SSEEvent{Type: "action_update", Data: map[string]string{
+			"id": action.ID, "status": status, "outcome": outcome,
+		}})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":       action.ID,
+		"status":   status,
+		"outcome":  outcome,
+		"duration": durationMs,
+	})
+}
+
+func (h *StellarHandler) executeLLMAction(c *fiber.Ctx, userID string, body executeActionRequest) error {
+	prompt := body.Prompt
+	if prompt == "" {
+		prompt = body.Description
+	}
+
+	resolved, err := h.resolveProviderAndModel(c.UserContext(), userID, "", "")
+	if err != nil || resolved.Provider == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no AI provider configured"})
+	}
+
+	state, _ := h.buildOperationalState(c.UserContext(), userID, body.Cluster)
+	if state == nil {
+		state = &StellarOperationalState{
+			GeneratedAt:      time.Now().UTC(),
+			EventCounts:      map[string]int{"critical": 0, "warning": 0, "info": 0},
+			RecentEvents:     []store.ClusterEvent{},
+			ClustersWatching: []string{},
+		}
+	}
+	memories, _ := h.store.ListStellarMemoryEntries(c.UserContext(), userID, body.Cluster, "", 5, 0)
+	tasks, _ := h.store.GetOpenTasks(c.UserContext(), userID)
+	contextString := buildLLMContext(state, memories, tasks, body.Cluster)
+
+	messages := []providers.Message{
+		{Role: "system", Content: prompts.MissionExecution},
+		{Role: "user", Content: "Current cluster state:\n" + contextString},
+		{Role: "assistant", Content: "Got it. What do you need?"},
+		{Role: "user", Content: fmt.Sprintf("Cluster: %s\nNamespace: %s\nResource: %s\n\nTask: %s", body.Cluster, body.Namespace, body.Name, prompt)},
+	}
+
+	startTime := time.Now()
+	generated, genErr := resolved.Provider.Generate(c.UserContext(), providers.GenerateRequest{
+		Model:       resolved.Model,
+		MaxTokens:   500,
+		Temperature: 0.2,
+		Messages:    messages,
+	})
+	durationMs := int(time.Since(startTime).Milliseconds())
+
+	if genErr != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "LLM call failed: " + genErr.Error()})
+	}
+
+	completedAt := time.Now().UTC()
+	_ = h.store.CreateStellarExecution(c.UserContext(), &store.StellarExecution{
+		UserID:       userID,
+		MissionID:    "action-execute",
+		TriggerType:  "stellar-action",
+		TriggerData:  fmt.Sprintf(`{"actionType":"%s","cluster":"%s"}`, body.ActionType, body.Cluster),
+		Status:       "completed",
+		RawInput:     prompt,
+		Output:       generated.Content,
+		TokensInput:  generated.TokensInput,
+		TokensOutput: generated.TokensOutput,
+		Provider:     generated.Provider,
+		Model:        generated.Model,
+		DurationMs:   durationMs,
+		StartedAt:    startTime,
+		CompletedAt:  &completedAt,
+	})
+
+	if auditable, ok := h.store.(interface {
+		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
+	}); ok {
+		_ = auditable.CreateAuditEntry(c.UserContext(), &store.StellarAuditEntry{
+			UserID:     userID,
+			Action:     "execute_action",
+			EntityType: "mission",
+			EntityID:   "llm-action",
+			Cluster:    body.Cluster,
+			Detail:     prompt,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"id":       "llm-" + uuid.New().String()[:8],
+		"status":   "completed",
+		"outcome":  generated.Content,
+		"model":    generated.Model,
+		"provider": generated.Provider,
+		"duration": durationMs,
+	})
+}
+
 func (h *StellarHandler) ListMemory(c *fiber.Ctx) error {
 	userID := resolveStellarUserID(c)
 	if userID == "" {
@@ -785,11 +1095,15 @@ func (h *StellarHandler) GetDigest(c *fiber.Ctx) error {
 	})
 }
 
+// stellarMaxHistoryTurns caps how many conversation turns are sent to the LLM.
+const stellarMaxHistoryTurns = 10
+
 type quickAskRequest struct {
-	Prompt   string `json:"prompt"`
-	Cluster  string `json:"cluster"`
-	Provider string `json:"provider"`
-	Model    string `json:"model"`
+	Prompt   string              `json:"prompt"`
+	Cluster  string              `json:"cluster"`
+	Provider string              `json:"provider"`
+	Model    string              `json:"model"`
+	History  []providers.Message  `json:"history"`
 }
 
 type watchSuggestion struct {
@@ -863,15 +1177,33 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no AI provider configured"})
 	}
 
+	// Build message chain: system prompt → context → history → current question
+	messages := []providers.Message{
+		{Role: "system", Content: prompts.QuickAsk},
+		{Role: "user", Content: "Current cluster state:\n" + contextString},
+		{Role: "assistant", Content: "Got it. What do you need?"},
+	}
+	// Inject conversation history (capped to prevent token budget blowout)
+	history := body.History
+	if len(history) > stellarMaxHistoryTurns {
+		history = history[len(history)-stellarMaxHistoryTurns:]
+	}
+	for _, msg := range history {
+		role := strings.TrimSpace(msg.Role)
+		if role != "user" && role != "assistant" {
+			continue // skip invalid roles
+		}
+		messages = append(messages, providers.Message{Role: role, Content: msg.Content})
+	}
+	// Current user question always goes last
+	messages = append(messages, providers.Message{Role: "user", Content: body.Prompt})
+
 	startTime := time.Now()
 	generated, err := resolved.Provider.Generate(c.UserContext(), providers.GenerateRequest{
 		Model:       resolved.Model,
 		MaxTokens:   800,
 		Temperature: 0.3,
-		Messages: []providers.Message{
-			{Role: "system", Content: prompts.QuickAsk},
-			{Role: "user", Content: "Current cluster state:\n" + contextString + "\n\nQuestion: " + body.Prompt},
-		},
+		Messages:    messages,
 	})
 	fallbackUsed := false
 	fallbackReason := ""
@@ -1157,6 +1489,28 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 	c.Set("Cache-Control", "no-cache")
 	c.Set("Connection", "keep-alive")
 	c.Context().SetBodyStreamWriter(func(w *bufio.Writer) {
+		connID := fmt.Sprintf("%s-%d", userID, time.Now().UnixNano())
+		clientCh := make(chan SSEEvent, 32)
+		h.registerSSEClient(connID, clientCh)
+		defer h.unregisterSSEClient(connID)
+
+		// Send initial batch of unread notifications and state
+		initialNotifs, err := h.store.ListStellarNotifications(context.Background(), userID, 50, true)
+		if err == nil && len(initialNotifs) > 0 {
+			for i := len(initialNotifs) - 1; i >= 0; i-- {
+				_ = writeSSE(w, "notification", initialNotifs[i])
+			}
+			state, err := h.buildState(context.Background(), userID)
+			if err == nil && state != nil {
+				_ = writeSSE(w, "state", fiber.Map{
+					"clustersWatching":   state.ClustersWatching,
+					"unreadCount":        state.UnreadAlerts,
+					"pendingActionCount": len(state.PendingActionIDs),
+				})
+			}
+		}
+		_ = w.Flush()
+
 		// If returning after a gap, push catch-up summary after stream establishes
 		if isReturning && lastSeen != nil {
 			go h.pushCatchUpSummary(context.Background(), w, userID, *lastSeen)
@@ -1215,13 +1569,39 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 		if !send() {
 			return
 		}
-		for range ticker.C {
-			if !send() {
-				return
+		for {
+			select {
+			case <-ticker.C:
+				if !send() {
+					return
+				}
+			case event := <-clientCh:
+				if writeSSE(w, event.Type, event.Data) != nil {
+					return
+				}
 			}
 		}
 	})
 	return nil
+}
+
+// IngestEvent receives k8s events from the agent and forwards them to ProcessEvent.
+// This is the HTTP bridge that connects the agent process to Stellar's notification system.
+func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
+	var event IncomingEvent
+	if err := c.BodyParser(&event); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid event"})
+	}
+	
+	// Validate required fields
+	if event.Cluster == "" || event.Namespace == "" || event.Name == "" || event.Type == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing required fields"})
+	}
+	
+	// Process event asynchronously (non-blocking)
+	go h.ProcessEvent(context.Background(), event)
+	
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"status": "accepted"})
 }
 
 func (h *StellarHandler) ListProviders(c *fiber.Ctx) error {
@@ -2089,6 +2469,43 @@ func (h *StellarHandler) ListAuditLog(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"items": entries})
 }
 
+// ─── Observability: Health endpoint ───────────────────────────────────────────
+
+// Health returns a snapshot of Stellar's operational status so operators can
+// verify SSE connectivity, provider availability, and background goroutine health.
+func (h *StellarHandler) Health(c *fiber.Ctx) error {
+	ctx := c.UserContext()
+
+	h.sseClientsMu.RLock()
+	clientCount := len(h.sseClients)
+	h.sseClientsMu.RUnlock()
+
+	unread, _ := h.store.CountUnreadStellarNotifications(ctx, "system")
+	recentCount, _ := h.store.CountRecentEventsForResource(ctx, "", "", "", 1*time.Hour)
+
+	resolved, resolveErr := h.resolveProviderAndModel(ctx, "system", "", "")
+	providerName := ""
+	modelName := ""
+	providerAvailable := false
+	if resolveErr == nil && resolved.Provider != nil {
+		providerName = resolved.Provider.Name()
+		modelName = resolved.Model
+		health := resolved.Provider.Health(ctx)
+		providerAvailable = health.Available
+	}
+
+	return c.JSON(fiber.Map{
+		"status":              "ok",
+		"sseClientsConnected": clientCount,
+		"unreadNotifications": unread,
+		"eventsLastHour":      recentCount,
+		"provider":            providerName,
+		"model":               modelName,
+		"providerAvailable":   providerAvailable,
+		"ts":                  time.Now().UTC(),
+	})
+}
+
 // ─── Sprint 5: Catch-up summary ───────────────────────────────────────────────
 
 func (h *StellarHandler) pushCatchUpSummary(ctx context.Context, w *bufio.Writer, userID string, since time.Time) {
@@ -2148,6 +2565,7 @@ func (h *StellarHandler) pushCatchUpSummary(ctx context.Context, w *bufio.Writer
 		},
 	})
 	if err != nil {
+		slog.Warn("stellar: catch-up summary LLM call failed", "error", err)
 		_ = writeSSE(w, "catchup", map[string]string{
 			"summary": sb.String(),
 			"kind":    "summary",
@@ -2155,6 +2573,7 @@ func (h *StellarHandler) pushCatchUpSummary(ctx context.Context, w *bufio.Writer
 		return
 	}
 
+	slog.Info("stellar: catch-up summary generated", "tokens", len(resp.Content), "model", resolved.Model)
 	_ = writeSSE(w, "catchup", map[string]string{
 		"summary": resp.Content,
 		"kind":    "summary",
@@ -2171,3 +2590,245 @@ func formatDuration(d time.Duration) string {
 	}
 	return fmt.Sprintf("%dm", m)
 }
+
+// IncomingEvent is the normalized shape Stellar expects from the console's event pipeline.
+// The implementing agent maps whatever shape the console uses to this struct.
+type IncomingEvent struct {
+	Cluster   string
+	Namespace string
+	Name      string // resource name (pod, deployment, etc.)
+	Kind      string // resource kind
+	Reason    string // k8s event Reason field
+	Message   string // k8s event Message field
+	Type      string // "Warning" | "Normal"
+	Count     int32
+}
+
+// noiseReasons are k8s event reasons that are never worth showing to the user.
+var noiseReasons = map[string]bool{
+	"Pulling": true, "Pulled": true, "Created": true,
+	"Started": true, "Scheduled": true, "SuccessfulCreate": true,
+	"ScalingReplicaSet": true, "SuccessfulDelete": true,
+	"NoPods": true, "SuccessfulRescale": true,
+}
+
+// classifyEvent determines severity and whether the event is noise.
+// Pure rule-based — runs in microseconds, no LLM.
+func classifyEvent(e IncomingEvent) (severity string, isNoise bool) {
+	if noiseReasons[e.Reason] {
+		return "", true
+	}
+	if isCriticalReason(e.Reason) {
+		return "critical", false
+	}
+	if strings.EqualFold(e.Type, "Warning") {
+		return "warning", false
+	}
+	// Normal events that aren't noise are still not worth the sidebar
+	return "", true
+}
+
+// narrateEventFast generates a rule-based narration — instant, no LLM.
+func narrateEventFast(e IncomingEvent, recurring bool, recentCount int64) string {
+	recurringStr := ""
+	if recurring {
+		recurringStr = fmt.Sprintf(" This has happened %d times in the last hour.", recentCount)
+	}
+	switch e.Reason {
+	case "CrashLoopBackOff":
+		return fmt.Sprintf("I'm seeing %s/%s crash-looping on %s.%s Want me to pull the logs?",
+			e.Namespace, e.Name, e.Cluster, recurringStr)
+	case "OOMKilling", "OOMKilled":
+		return fmt.Sprintf("%s/%s was killed on %s — out of memory.%s Consider increasing the memory limit.",
+			e.Namespace, e.Name, e.Cluster, recurringStr)
+	case "BackOff":
+		return fmt.Sprintf("Container restart back-off for %s/%s on %s.%s",
+			e.Namespace, e.Name, e.Cluster, recurringStr)
+	case "Evicted":
+		return fmt.Sprintf("%s/%s was evicted from %s.%s Node may be under resource pressure.",
+			e.Namespace, e.Name, e.Cluster, recurringStr)
+	case "NodeNotReady":
+		return fmt.Sprintf("Node %s in cluster %s is not ready.%s This may affect scheduling.",
+			e.Name, e.Cluster, recurringStr)
+	case "FailedScheduling":
+		return fmt.Sprintf("Cannot schedule %s/%s on %s — insufficient resources or constraints.%s",
+			e.Namespace, e.Name, e.Cluster, recurringStr)
+	case "FailedMount":
+		return fmt.Sprintf("Volume mount failed for %s/%s on %s.%s Check PV/PVC bindings.",
+			e.Namespace, e.Name, e.Cluster, recurringStr)
+	default:
+		return fmt.Sprintf("%s on %s/%s in cluster %s: %s%s",
+			e.Reason, e.Namespace, e.Name, e.Cluster, truncateString(e.Message, 120), recurringStr)
+	}
+}
+
+// ProcessEvent processes an incoming k8s event from the console's event pipeline.
+// 5-step pipeline: dedup → classify → recurring check → narrate → store + broadcast.
+func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) {
+	// STEP 1 — DEDUP: cluster:namespace:name:reason keyed, 5-minute TTL via DB
+	dedupKey := fmt.Sprintf("ev:%s:%s:%s:%s",
+		event.Cluster, event.Namespace, event.Name, event.Reason)
+
+	exists, _ := h.store.NotificationExistsByDedup(ctx, "system", dedupKey)
+	if exists {
+		return
+	}
+
+	// STEP 2 — EVALUATE: LLM-driven classification with rule-based fallback
+	evaluator := stellar.NewStellarEvaluator(h.providerRegistry)
+	rawEvent := stellar.RawK8sEvent{
+		Cluster:   event.Cluster,
+		Namespace: event.Namespace,
+		Kind:      event.Kind,
+		Name:      event.Name,
+		Reason:    event.Reason,
+		Message:   event.Message,
+		Type:      event.Type,
+		Count:     event.Count,
+	}
+	resolved, resolveErr := h.resolveProviderAndModel(ctx, "system", "", "")
+	var eval *stellar.EvaluationResult
+	if resolveErr != nil || resolved.Provider == nil {
+		eval = evaluator.FallbackEvaluate(rawEvent)
+	} else {
+		eval, _ = evaluator.Evaluate(ctx, rawEvent, resolved)
+	}
+	if !eval.ShouldShow {
+		slog.Debug("stellar: filtered event",
+			"reason", event.Reason,
+			"ns", event.Namespace,
+			"name", event.Name,
+			"severity", eval.Severity,
+			"reasoning", eval.Reasoning)
+		return
+	}
+	severity := eval.Severity
+
+	// STEP 3 — RECURRING CHECK: escalate warnings that repeat 3+ times in 1h
+	recentCount, _ := h.store.CountRecentEventsForResource(ctx,
+		event.Cluster, event.Namespace, event.Name, 1*time.Hour)
+	isRecurring := recentCount >= 3
+	if isRecurring && severity == "warning" {
+		severity = "critical" // escalate recurring warnings
+	}
+
+	// STEP 4 — NARRATE: fast rule-based first, async LLM enrichment second
+	body := narrateEventFast(event, isRecurring, recentCount)
+
+	// Build title with recurring prefix
+	titlePrefix := ""
+	if isRecurring {
+		titlePrefix = "↺ Recurring — "
+	}
+	title := fmt.Sprintf("%s%s — %s/%s", titlePrefix, event.Reason, event.Namespace, event.Name)
+
+	// STEP 5 — STORE + BROADCAST immediately with rule-based narration
+	notif := &store.StellarNotification{
+		UserID:    "system",
+		Type:      "event",
+		Severity:  severity,
+		Title:     title,
+		Body:      body,
+		Cluster:   event.Cluster,
+		Namespace: event.Namespace,
+		DedupeKey: dedupKey,
+		Read:      false,
+		CreatedAt: time.Now(),
+	}
+
+	err := h.store.CreateStellarNotification(ctx, notif)
+	if err != nil {
+		slog.Error("stellar: ProcessEvent CreateNotification failed", "error", err)
+		return
+	}
+
+	// Broadcast immediately to all connected SSE clients
+	h.broadcastToClients(SSEEvent{Type: "notification", Data: notif})
+	if h.broadcaster != nil {
+		h.broadcaster.Broadcast(SSEEvent{Type: "notification", Data: notif})
+	}
+
+	slog.Info("stellar: ProcessEvent",
+		"cluster", event.Cluster,
+		"ns", event.Namespace,
+		"name", event.Name,
+		"reason", event.Reason,
+		"severity", severity,
+		"recurring", isRecurring,
+		"recentCount", recentCount)
+
+	// Async LLM narration — replaces the fast narration when ready
+	go func() {
+		resolved, resolveErr := h.resolveProviderAndModel(ctx, "system", "", "")
+		if resolveErr != nil || resolved.Provider == nil {
+			return
+		}
+		historyNote := ""
+		if isRecurring {
+			historyNote = fmt.Sprintf("\nThis same resource has had %d events in the last hour.", recentCount)
+		}
+		resp, genErr := resolved.Provider.Generate(ctx, providers.GenerateRequest{
+			Model: resolved.Model, MaxTokens: 120, Temperature: 0.3,
+			Messages: []providers.Message{
+				{Role: "system", Content: prompts.EventNarration},
+				{Role: "user", Content: fmt.Sprintf(
+					"Event: %s on %s/%s in cluster %s\nReason: %s\nMessage: %s\nCount: %d%s",
+					event.Kind, event.Namespace, event.Name, event.Cluster,
+					event.Reason, event.Message, event.Count, historyNote,
+				)},
+			},
+		})
+		if genErr == nil && resp.Content != "" {
+			if updateErr := h.store.UpdateNotificationBody(ctx, dedupKey, resp.Content); updateErr == nil {
+				// Push updated narration to SSE clients so they see the richer body
+				h.broadcastToClients(SSEEvent{Type: "notification_update", Data: map[string]string{
+					"dedupKey": dedupKey,
+					"body":     resp.Content,
+				}})
+			}
+		}
+	}()
+
+	// Auto-create watch for critical or recurring events so the user gets follow-up
+	if isRecurring || severity == "critical" {
+		h.autoCreateWatch(ctx, event)
+	}
+
+	// Critical events → persistent memory for future LLM context
+	if severity == "critical" {
+		_ = h.store.CreateStellarMemoryEntry(ctx, &store.StellarMemoryEntry{
+			UserID:     "system",
+			Cluster:    event.Cluster,
+			Category:   "incident",
+			Importance: 8,
+			Summary: fmt.Sprintf("%s on %s/%s: %s",
+				event.Reason, event.Namespace, event.Name, truncateString(body, 200)),
+			ExpiresAt: ptr(time.Now().AddDate(0, 0, 90)),
+			CreatedAt: time.Now(),
+		})
+	}
+}
+
+// autoCreateWatch creates a standing watch for a resource that has critical or
+// recurring events, so the observer goroutine will track it and report recovery.
+func (h *StellarHandler) autoCreateWatch(ctx context.Context, e IncomingEvent) {
+	existing, _ := h.store.GetWatchByResource(ctx, "system", e.Cluster, e.Namespace, e.Kind, e.Name)
+	if existing != nil {
+		return // already watching
+	}
+	id, err := h.store.CreateWatch(ctx, &store.StellarWatch{
+		UserID:       "system",
+		Cluster:      e.Cluster,
+		Namespace:    e.Namespace,
+		ResourceKind: e.Kind,
+		ResourceName: e.Name,
+		Reason:       fmt.Sprintf("Auto-watched: %s event", e.Reason),
+	})
+	if err == nil {
+		slog.Info("stellar: auto-created watch", "id", id, "resource", e.Name, "cluster", e.Cluster)
+		h.broadcastToClients(SSEEvent{Type: "watch_created", Data: map[string]string{
+			"id": id, "cluster": e.Cluster,
+		}})
+	}
+}
+

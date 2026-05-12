@@ -10,10 +10,13 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/store"
 )
 
-func (s *Scheduler) dispatch(ctx context.Context, a store.StellarAction) (string, error) {
+// Dispatch executes a StellarAction against the target cluster.
+// Exported so handlers can call it for immediate execution.
+func Dispatch(ctx context.Context, k8sClient *k8s.MultiClusterClient, a store.StellarAction) (string, error) {
 	params, err := decodeParameters(a.Parameters)
 	if err != nil {
 		return "", err
@@ -29,7 +32,7 @@ func (s *Scheduler) dispatch(ctx context.Context, a store.StellarAction) (string
 		if n < 0 || n > 100 {
 			return "", fmt.Errorf("replicas out of range: %d", n)
 		}
-		client, err := s.k8sClient.GetClient(a.Cluster)
+		client, err := k8sClient.GetClient(a.Cluster)
 		if err != nil {
 			return "", err
 		}
@@ -45,7 +48,7 @@ func (s *Scheduler) dispatch(ctx context.Context, a store.StellarAction) (string
 	case "RestartDeployment":
 		ns := readString(params, "namespace", a.Namespace)
 		name := readString(params, "name", "")
-		client, err := s.k8sClient.GetClient(a.Cluster)
+		client, err := k8sClient.GetClient(a.Cluster)
 		if err != nil {
 			return "", err
 		}
@@ -64,7 +67,7 @@ func (s *Scheduler) dispatch(ctx context.Context, a store.StellarAction) (string
 	case "DeletePod":
 		ns := readString(params, "namespace", a.Namespace)
 		name := readString(params, "name", "")
-		client, err := s.k8sClient.GetClient(a.Cluster)
+		client, err := k8sClient.GetClient(a.Cluster)
 		if err != nil {
 			return "", err
 		}
@@ -74,7 +77,7 @@ func (s *Scheduler) dispatch(ctx context.Context, a store.StellarAction) (string
 		return fmt.Sprintf("Deleted pod %s/%s on %s.", ns, name, a.Cluster), nil
 	case "CordonNode":
 		nodeName := readString(params, "node", "")
-		client, err := s.k8sClient.GetClient(a.Cluster)
+		client, err := k8sClient.GetClient(a.Cluster)
 		if err != nil {
 			return "", err
 		}
@@ -92,7 +95,7 @@ func (s *Scheduler) dispatch(ctx context.Context, a store.StellarAction) (string
 		if len(a.ID) < 8 || token != a.ID[:8] {
 			return "", fmt.Errorf("invalid confirm_token for cluster deletion")
 		}
-		if err := s.k8sClient.RemoveContext(a.Cluster); err != nil {
+		if err := k8sClient.RemoveContext(a.Cluster); err != nil {
 			return "", err
 		}
 		return "Cluster deletion initiated. Monitor cluster list for completion.", nil
