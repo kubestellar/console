@@ -4,6 +4,7 @@ import { LOCAL_AGENT_WS_URL, FETCH_DEFAULT_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { MS_PER_SECOND } from '../lib/constants/time'
 import { isNetlifyDeployment } from '../lib/demoMode'
+import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 const BACKEND_POLL_MS = 2000  // Poll interval when waiting for backend to come up
 const BACKEND_POLL_MAX = 90   // Max attempts (~3 min) before giving up
@@ -44,13 +45,35 @@ export function useUpdateProgress() {
   /** Track current reconnect attempt number */
   const reconnectAttemptsRef = useRef(0)
 
-  // Track the last time we received a WebSocket message during an active update.
-  // Used for stale-state detection.
-  const lastMessageTimeRef = useRef<number>(0)
-  const staleTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const staleDetectionRef = useRef<WsStaleDetectionController | null>(null)
 
   // Keep ref in sync so the connect closure always sees the latest value
   progressRef.current = progress
+
+  if (!staleDetectionRef.current) {
+    staleDetectionRef.current = createWsStaleDetection({
+      timeoutMs: STALE_UPDATE_TIMEOUT_MS,
+      isConnected: () => Boolean(wsRef.current),
+      shouldCheck: () => {
+        const currentProgress = progressRef.current
+        return Boolean(currentProgress && ACTIVE_UPDATE_STATUSES.has(currentProgress.status))
+      },
+      onStale: (elapsedMs) => {
+        const currentProgress = progressRef.current
+        if (!currentProgress) return
+
+        setProgress({
+          status: 'failed',
+          message: 'Update agent stopped responding — the kc-agent process may have crashed during the build.',
+          progress: currentProgress.progress,
+          error: 'No response from kc-agent for ' + Math.round(elapsedMs / 1000) + 's. '
+            + 'Try restarting manually: cd <repo> && bash startup-oauth.sh',
+        })
+      },
+    })
+  }
+
+  const staleDetection = staleDetectionRef.current!
 
   /** Build step entries from a progress event, preserving completed steps */
   const updateStepHistory = useCallback((p: UpdateProgress) => {
@@ -87,48 +110,6 @@ export function useUpdateProgress() {
       }
       return entries
     })
-  }, [])
-
-  // Start or stop the stale-state detection timer based on current progress.
-  // When an update is active, we check periodically whether the WebSocket
-  // has gone silent for too long — which means the kc-agent process likely died.
-  const startStaleDetection = useCallback(() => {
-    // Clear any existing timer
-    if (staleTimerRef.current) {
-      clearInterval(staleTimerRef.current)
-      staleTimerRef.current = null
-    }
-
-    const STALE_CHECK_INTERVAL_MS = 5000  // Check every 5 seconds
-    staleTimerRef.current = setInterval(() => {
-      const cur = progressRef.current
-      if (!cur || !ACTIVE_UPDATE_STATUSES.has(cur.status)) {
-        // Not in an active update — stop checking
-        if (staleTimerRef.current) {
-          clearInterval(staleTimerRef.current)
-          staleTimerRef.current = null
-        }
-        return
-      }
-
-      const elapsed = Date.now() - lastMessageTimeRef.current
-      if (elapsed > STALE_UPDATE_TIMEOUT_MS && !wsRef.current) {
-        // WebSocket disconnected during active update for too long — agent likely died
-        setProgress({
-          status: 'failed',
-          message: 'Update agent stopped responding — the kc-agent process may have crashed during the build.',
-          progress: cur.progress,
-          error: 'No response from kc-agent for ' + Math.round(elapsed / 1000) + 's. '
-            + 'Try restarting manually: cd <repo> && bash startup-oauth.sh',
-        })
-
-        // Stop the timer
-        if (staleTimerRef.current) {
-          clearInterval(staleTimerRef.current)
-          staleTimerRef.current = null
-        }
-      }
-    }, STALE_CHECK_INTERVAL_MS)
   }, [])
 
   useEffect(() => {
@@ -193,42 +174,35 @@ export function useUpdateProgress() {
         reconnectAttemptsRef.current = attemptNumber
 
         ws.onopen = () => {
-          // Reset reconnect attempts and stale timer on successful connection
           reconnectAttemptsRef.current = 0
-          lastMessageTimeRef.current = Date.now()
+          staleDetection.markMessageReceived()
 
-          // If we reconnected while showing "restarting", kc-agent is back -
-          // but backend may still be building. Wait for it.
-          const cur = progressRef.current
-          if (cur && cur.status === 'restarting') {
+          const currentProgress = progressRef.current
+          if (currentProgress && ACTIVE_UPDATE_STATUSES.has(currentProgress.status)) {
+            staleDetection.start()
+          }
+
+          if (currentProgress && currentProgress.status === 'restarting') {
             waitForBackend()
           }
         }
 
         ws.onmessage = (event) => {
-          // Update last-message timestamp for stale detection
-          lastMessageTimeRef.current = Date.now()
+          staleDetection.markMessageReceived()
 
           try {
             const msg = JSON.parse(event.data)
             if (msg.type === 'update_progress' && msg.payload) {
-              const p = msg.payload as UpdateProgress
+              const nextProgress = msg.payload as UpdateProgress
 
-              // Start stale detection when an active update begins
-              if (ACTIVE_UPDATE_STATUSES.has(p.status) && !staleTimerRef.current) {
-                startStaleDetection()
+              if (ACTIVE_UPDATE_STATUSES.has(nextProgress.status)) {
+                staleDetection.start()
+              } else {
+                staleDetection.stop()
               }
 
-              setProgress(p)
-              updateStepHistory(p)
-
-              // Stop stale detection when update is done, failed, or cancelled
-              if (p.status === 'done' || p.status === 'failed' || p.status === 'cancelled') {
-                if (staleTimerRef.current) {
-                  clearInterval(staleTimerRef.current)
-                  staleTimerRef.current = null
-                }
-              }
+              setProgress(nextProgress)
+              updateStepHistory(nextProgress)
             }
           } catch {
             // Ignore parse errors
@@ -283,18 +257,16 @@ export function useUpdateProgress() {
     return () => {
       unmounted = true
       clearTimeout(reconnectTimer)
-      if (staleTimerRef.current) {
-        clearInterval(staleTimerRef.current)
-        staleTimerRef.current = null
-      }
+      staleDetection.stop()
       if (wsRef.current) {
         wsRef.current.close()
         wsRef.current = null
       }
     }
-  }, [updateStepHistory, startStaleDetection])
+  }, [staleDetection, updateStepHistory])
 
   const dismiss = () => {
+    staleDetection.stop()
     setProgress(null)
     setStepHistory([])
   }

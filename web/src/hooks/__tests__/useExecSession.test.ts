@@ -102,6 +102,7 @@ describe('useExecSession', () => {
     expect(result.current.error).toBeNull()
     expect(result.current.reconnectAttempt).toBe(0)
     expect(result.current.reconnectCountdown).toBe(0)
+    expect(result.current.isStale).toBe(false)
   })
 
   it('provides connect/disconnect/sendInput/resize functions', () => {
@@ -380,6 +381,20 @@ describe('useExecSession', () => {
     expect(result.current.reconnectCountdown).toBeGreaterThan(0)
     // Data callback should have been called with reconnect message
     expect(dataCb).toHaveBeenCalledWith(expect.stringContaining('Connection lost'))
+  })
+
+  it('marks the session stale when reconnecting takes too long', async () => {
+    const { result } = renderHook(() => useExecSession())
+    await connectSession(result)
+    act(() => { mockWs.triggerOpen() })
+    act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
+    act(() => { mockWs.triggerClose(1006) })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50_000)
+    })
+
+    expect(result.current.isStale).toBe(true)
   })
 
   it('reports error message after connection is lost and max reconnects exhausted', async () => {

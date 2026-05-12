@@ -13,11 +13,13 @@ import { fullFetchClusters, clusterCache } from './mcp/shared'
 import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { FETCH_DEFAULT_TIMEOUT_MS, AI_PREDICTION_TIMEOUT_MS, UI_FEEDBACK_TIMEOUT_MS, MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
+import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 const DEGRADED_RECONNECT_INTERVAL_MS = 60_000
 const FALLBACK_AI_RESOURCE_NAME = 'Unknown resource'
 const FALLBACK_AI_CLUSTER_NAME = 'unknown'
 const FALLBACK_AI_REASON = 'AI response unavailable'
+const STALE_AI_PREDICTIONS_TIMEOUT_MS = 45_000
 
 const AGENT_HTTP_URL = LOCAL_AGENT_HTTP_URL
 const POLL_INTERVAL_MS = 30_000 // Poll every 30 seconds as fallback
@@ -60,6 +62,7 @@ let aiPredictions: AIPrediction[] = []
 let lastAnalyzed: Date | null = null
 let providers: string[] = []
 let isStale = false
+let wsConnectionIsStale = false
 let wsConnected = false
 let ws: WebSocket | null = null
 let singletonPollInterval: ReturnType<typeof setInterval> | null = null
@@ -67,11 +70,32 @@ let wsReconnectTimeout: ReturnType<typeof setTimeout> | null = null
 let degradedRetryInterval: ReturnType<typeof setInterval> | null = null
 let wsReconnectAttempts = 0  // Track current reconnect attempt number
 let inDegradedMode = false   // True when initial reconnect attempts exhausted
+let predictionStaleDetection: WsStaleDetectionController | null = null
 const subscribers = new Set<() => void>()
 
 // Notify all subscribers
 function notifySubscribers() {
   subscribers.forEach(fn => fn())
+}
+
+function getCombinedStaleState(): boolean {
+  return isStale || wsConnectionIsStale
+}
+
+function getPredictionStaleDetection(): WsStaleDetectionController {
+  if (!predictionStaleDetection) {
+    predictionStaleDetection = createWsStaleDetection({
+      timeoutMs: STALE_AI_PREDICTIONS_TIMEOUT_MS,
+      isConnected: () => wsConnected && Boolean(ws),
+      shouldCheck: () => subscribers.size > 0,
+      onStale: () => {
+        wsConnectionIsStale = true
+        notifySubscribers()
+      },
+    })
+  }
+
+  return predictionStaleDetection
 }
 
 function getRequestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal {
@@ -218,6 +242,7 @@ async function fetchAIPredictions(signal?: AbortSignal): Promise<void> {
     lastAnalyzed = new Date()
     providers = ['claude']
     isStale = false
+    wsConnectionIsStale = false
     notifySubscribers()
     return
   }
@@ -300,6 +325,10 @@ async function connectWebSocket(): Promise<void> {
 
     ws.onopen = () => {
       wsConnected = true
+      wsConnectionIsStale = false
+      getPredictionStaleDetection().markMessageReceived()
+      getPredictionStaleDetection().start()
+      notifySubscribers()
       // Reset reconnect attempts and degraded mode on successful connection
       resetWsReconnect()
       // Send current settings to backend
@@ -312,6 +341,9 @@ async function connectWebSocket(): Promise<void> {
     }
 
     ws.onmessage = (event) => {
+      wsConnectionIsStale = false
+      getPredictionStaleDetection().markMessageReceived()
+
       try {
         const message = JSON.parse(event.data)
         if (message.type === 'ai_predictions_updated') {
@@ -435,6 +467,8 @@ function stopSingleton() {
     clearInterval(degradedRetryInterval)
     degradedRetryInterval = null
   }
+  predictionStaleDetection?.stop()
+  wsConnectionIsStale = false
   inDegradedMode = false
   if (ws) {
     ws.onclose = null // Prevent reconnect from onclose handler
@@ -455,7 +489,7 @@ export function useAIPredictions() {
   )
   const [lastUpdated, setLastUpdated] = useState<Date | null>(lastAnalyzed)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [stale, setStale] = useState(isStale)
+  const [stale, setStale] = useState(getCombinedStaleState())
   const [activeProviders, setActiveProviders] = useState<string[]>(providers)
 
   // Subscribe to state updates
@@ -463,7 +497,7 @@ export function useAIPredictions() {
     const handleUpdate = () => {
       setPredictions(aiPredictions.map(aiPredictionToRisk))
       setLastUpdated(lastAnalyzed)
-      setStale(isStale)
+      setStale(getCombinedStaleState())
       setActiveProviders(providers)
     }
 

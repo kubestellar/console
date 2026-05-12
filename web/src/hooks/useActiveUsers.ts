@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getDemoMode, isDemoModeForced } from './useDemoMode'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
+import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 /**
  * Disconnect the presence WebSocket and stop the heartbeat.
@@ -24,6 +25,7 @@ const HEARTBEAT_JITTER = 3_000 // Jitter (0-3s) to spread heartbeats without lon
 const HEARTBEAT_REQUEST_TIMEOUT_MS = 5_000
 const ACTIVE_USERS_FETCH_MIN_INTERVAL_MS = 2_000
 const HEARTBEAT_MIN_INTERVAL_MS = HEARTBEAT_INTERVAL
+const STALE_PRESENCE_TIMEOUT_MS = 45_000
 
 import { MAX_WS_RECONNECT_ATTEMPTS, getWsBackoffDelay } from '../lib/constants/network'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
@@ -73,7 +75,8 @@ let hasFetchedOnce = false
 let recoveryTimer: ReturnType<typeof setTimeout> | null = null
 const MAX_FAILURES = 3
 const subscribers = new Set<(info: ActiveUsersInfo) => void>()
-const stateSubscribers = new Set<(state: { loading?: boolean; error?: boolean }) => void>()
+type ActiveUsersHookState = { loading?: boolean; error?: boolean; stale?: boolean }
+const stateSubscribers = new Set<(state: ActiveUsersHookState) => void>()
 
 // Singleton presence WebSocket connection (backend mode)
 let presenceWs: WebSocket | null = null
@@ -83,6 +86,8 @@ let presencePingInterval: ReturnType<typeof setInterval> | null = null
 let presenceReconnectTimer: ReturnType<typeof setTimeout> | null = null
 /** Track current reconnect attempt number for presence WebSocket */
 let presenceReconnectAttempts = 0
+let presenceIsStale = false
+let presenceStaleDetection: WsStaleDetectionController | null = null
 
 // Netlify heartbeat state (serverless mode)
 let heartbeatStarted = false
@@ -128,6 +133,8 @@ export function __resetForTest(): void {
   activeUsersFetchPromise = null
   lastActiveUsersFetchAt = 0
   recentCounts.length = 0
+  presenceIsStale = false
+  presenceStaleDetection?.stop()
 }
 
 // Generate a unique session ID per browser tab (survives page navigation, not tab close)
@@ -230,6 +237,8 @@ function stopPresenceConnection() {
     presenceWs = null
   }
   presenceStarted = false
+  presenceIsStale = false
+  presenceStaleDetection?.stop()
   // Reset reconnect attempts when stopping
   presenceReconnectAttempts = 0
 }
@@ -258,6 +267,10 @@ function startPresenceConnection() {
     presenceWs.onopen = () => {
       // Reset reconnect attempts on successful connection
       presenceReconnectAttempts = 0
+      presenceIsStale = false
+      getPresenceStaleDetection().markMessageReceived()
+      getPresenceStaleDetection().start()
+      notifySubscribers({ stale: false })
       // Read token fresh to avoid stale closure on reconnects
       const currentToken = localStorage.getItem(STORAGE_KEY_TOKEN)
       presenceWs?.send(JSON.stringify({ type: 'auth', token: currentToken }))
@@ -272,6 +285,9 @@ function startPresenceConnection() {
     }
 
     presenceWs.onmessage = (event) => {
+      presenceIsStale = false
+      getPresenceStaleDetection().markMessageReceived()
+
       try {
         const msg = JSON.parse(event.data)
         if (msg.type === 'authenticated') {
@@ -314,11 +330,27 @@ function startPresenceConnection() {
 }
 
 // Notify all subscribers
-function notifySubscribers(state?: { loading?: boolean; error?: boolean }) {
+function notifySubscribers(state?: ActiveUsersHookState) {
   subscribers.forEach(fn => fn(sharedInfo))
   if (state) {
     stateSubscribers.forEach(fn => fn(state))
   }
+}
+
+function getPresenceStaleDetection(): WsStaleDetectionController {
+  if (!presenceStaleDetection) {
+    presenceStaleDetection = createWsStaleDetection({
+      timeoutMs: STALE_PRESENCE_TIMEOUT_MS,
+      isConnected: () => Boolean(presenceWs),
+      shouldCheck: () => presenceStarted,
+      onStale: () => {
+        presenceIsStale = true
+        notifySubscribers({ stale: true })
+      },
+    })
+  }
+
+  return presenceStaleDetection
 }
 
 function scheduleActiveUsersFetch(delayMs: number) {
@@ -458,6 +490,7 @@ export function useActiveUsers() {
   const [info, setInfo] = useState<ActiveUsersInfo>(sharedInfo)
   const [isLoading, setIsLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
+  const [isStale, setIsStale] = useState(presenceIsStale)
   // Tick counter to force re-render when demo mode changes (so viewerCount recalculates)
   const [, setDemoTick] = useState(0)
 
@@ -475,9 +508,10 @@ export function useActiveUsers() {
     const handleUpdate = (newInfo: ActiveUsersInfo) => {
       setInfo(newInfo)
     }
-    const handleStateUpdate = (state: { loading?: boolean; error?: boolean }) => {
+    const handleStateUpdate = (state: ActiveUsersHookState) => {
       if (state.loading !== undefined) setIsLoading(state.loading)
       if (state.error !== undefined) setHasError(state.error)
+      if (state.stale !== undefined) setIsStale(state.stale)
     }
     subscribers.add(handleUpdate)
     stateSubscribers.add(handleStateUpdate)
@@ -489,6 +523,7 @@ export function useActiveUsers() {
       setIsLoading(false)
       setHasError(false)
     }
+    setIsStale(presenceIsStale)
 
     // Re-render + refetch when demo mode toggles (viewerCount switches metric)
     const handleDemoChange = () => {
@@ -546,7 +581,8 @@ export function useActiveUsers() {
     totalConnections: info.totalConnections,
     viewerCount,
     isLoading,
-    hasError,
+    hasError: hasError || isStale,
+    isStale,
     refetch
   }
 }
@@ -563,4 +599,5 @@ export const __testables = {
   SMOOTHING_WINDOW,
   ACTIVE_USERS_FETCH_MIN_INTERVAL_MS,
   HEARTBEAT_MIN_INTERVAL_MS,
+  STALE_PRESENCE_TIMEOUT_MS,
 }

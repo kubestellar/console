@@ -20,6 +20,7 @@ import { isAgentConnected, isAgentUnavailable } from './useLocalAgent'
 import { LOCAL_AGENT_HTTP_URL, LOCAL_AGENT_WS_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 /** Debounce before sending enrichment request (2 seconds) */
 const ENRICHMENT_DEBOUNCE_MS = 2_000
@@ -36,6 +37,8 @@ const WS_BASE_RECONNECT_DELAY_MS = 5_000
 const WS_MAX_RECONNECT_DELAY_MS = 2 * 60_000
 /** Maximum WebSocket reconnect attempts before giving up */
 const MAX_WS_RECONNECT_ATTEMPTS = 5
+/** Stale detection timeout for enrichment WebSocket */
+const STALE_ENRICHMENT_TIMEOUT_MS = 45_000
 
 // ── Singleton state ──────────────────────────────────────────────────────
 
@@ -51,10 +54,28 @@ let wsReconnectAttempts = 0
 let wsReconnectTimer: ReturnType<typeof setTimeout> | null = null
 /** Set to false after receiving 404 — endpoint doesn't exist */
 let enrichmentEndpointAvailable = true
+let enrichmentWsIsStale = false
+let enrichmentStaleDetection: WsStaleDetectionController | null = null
 const subscribers = new Set<() => void>()
 
 function notifySubscribers() {
   subscribers.forEach(fn => fn())
+}
+
+function getEnrichmentStaleDetection(): WsStaleDetectionController {
+  if (!enrichmentStaleDetection) {
+    enrichmentStaleDetection = createWsStaleDetection({
+      timeoutMs: STALE_ENRICHMENT_TIMEOUT_MS,
+      isConnected: () => Boolean(wsConnection),
+      shouldCheck: () => subscribers.size > 0,
+      onStale: () => {
+        enrichmentWsIsStale = true
+        notifySubscribers()
+      },
+    })
+  }
+
+  return enrichmentStaleDetection
 }
 
 /** Hash insight IDs + descriptions to detect changes */
@@ -146,9 +167,16 @@ async function connectWebSocket(): Promise<void> {
     wsConnection.onopen = () => {
       // Reset backoff on successful connection
       wsReconnectAttempts = 0
+      enrichmentWsIsStale = false
+      getEnrichmentStaleDetection().markMessageReceived()
+      getEnrichmentStaleDetection().start()
+      notifySubscribers()
     }
 
     wsConnection.onmessage = (event) => {
+      enrichmentWsIsStale = false
+      getEnrichmentStaleDetection().markMessageReceived()
+
       try {
         const msg = JSON.parse(event.data)
         if (msg.type === 'insights_enriched' && msg.data?.enrichments) {
@@ -211,6 +239,8 @@ function disconnectWebSocket(): void {
   }
   // Reset backoff so the next mount starts fresh.
   wsReconnectAttempts = 0
+  enrichmentWsIsStale = false
+  enrichmentStaleDetection?.stop()
 }
 
 // ── Public API ───────────────────────────────────────────────────────────
@@ -268,8 +298,10 @@ export function useInsightEnrichment(heuristicInsights: MultiClusterInsight[]): 
   enrichedInsights: MultiClusterInsight[]
   hasEnrichments: boolean
   enrichmentCount: number
+  isStale: boolean
 } {
   const [, forceUpdate] = useState(0)
+  const [isStale, setIsStale] = useState(enrichmentWsIsStale)
   const insightsRef = useRef(heuristicInsights)
   insightsRef.current = heuristicInsights
 
@@ -278,7 +310,10 @@ export function useInsightEnrichment(heuristicInsights: MultiClusterInsight[]): 
   // (#6204, #6205) — without this, the singleton stays open forever and
   // the reconnect loop keeps firing into the void.
   useEffect(() => {
-    const subscriber = () => forceUpdate(n => n + 1)
+    const subscriber = () => {
+      setIsStale(enrichmentWsIsStale)
+      forceUpdate(n => n + 1)
+    }
     subscribers.add(subscriber)
     return () => {
       subscribers.delete(subscriber)
@@ -324,5 +359,6 @@ export function useInsightEnrichment(heuristicInsights: MultiClusterInsight[]): 
     enrichedInsights,
     hasEnrichments: enrichmentCount > 0,
     enrichmentCount,
+    isStale,
   }
 }

@@ -104,7 +104,7 @@ export function useLocalClusterTools() {
   const [vclusterActionFeedback, setVClusterActionFeedback] = useState<VClusterActionFeedback | null>(null)
 
   // Real-time progress from kc-agent WebSocket
-  const { progress: clusterProgress, dismiss: dismissProgress } = useClusterProgress()
+  const { progress: clusterProgress, dismiss: dismissProgress, isStale: clusterProgressIsStale } = useClusterProgress()
 
   // Track pending setTimeout IDs for cleanup on unmount
   const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([])
@@ -650,6 +650,7 @@ export function useLocalClusterTools() {
     isConnected,
     isDemoMode,
     clusterProgress,
+    clusterProgressIsStale,
     dismissProgress,
     createCluster,
     deleteCluster,

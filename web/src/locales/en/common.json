@@ -583,6 +583,7 @@
       "createNew": "Create New Cluster",
       "selectTool": "Select tool...",
       "clusterName": "Cluster name",
+      "connectionStale": "Connection lost — cluster operation status may be outdated",
       "creating": "Creating...",
       "create": "Create",
       "localClustersCount": "Local Clusters ({{count}})",
@@ -808,6 +809,23 @@
       "scopeCardDataDesc": "Dashboard cards fetch live data (cluster health, pod status, metrics) on their own schedules, independent of console version updates. Card refresh intervals are not controlled by these settings.",
       "scopeMarketplaceTitle": "Marketplace Components",
       "scopeMarketplaceDesc": "Cards, themes, and integrations installed from the Marketplace are updated independently by their publishers. These items are not covered by the console version update channel above. Check the Marketplace page for available updates to installed components, or enable per-item auto-update from each item's settings."
+    },
+    "terminal": {
+      "connect": "Connect",
+      "connected": "Connected",
+      "connecting": "Connecting...",
+      "connectingToPod": "Connecting to {{pod}}...",
+      "connectionError": "Connection Error",
+      "connectionStale": "Terminal connection may be stale — reconnect if output stops responding.",
+      "connectionStaleShort": "Connection uncertain",
+      "disconnect": "Disconnect",
+      "disconnected": "Disconnected",
+      "error": "Error",
+      "reconnect": "Reconnect",
+      "reconnectNow": "Reconnect Now",
+      "reconnecting": "Reconnecting...",
+      "reconnectingCountdown": "Reconnecting ({{count}}s)",
+      "tryAgain": "Try Again"
     },
     "theme": {
       "title": "Appearance",

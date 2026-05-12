@@ -20,6 +20,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react'
 import { LOCAL_AGENT_WS_URL } from '../lib/constants/network'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
+import { createWsStaleDetection, type WsStaleDetectionController } from '../lib/ws/useWsStaleDetection'
 
 // ============================================================================
 // Constants
@@ -48,6 +49,9 @@ const COUNTDOWN_INTERVAL_MS = 1_000
 
 /** WebSocket close code for normal closure */
 const WS_CLOSE_NORMAL = 1000
+
+/** Timeout for stale connection detection */
+const STALE_EXEC_SESSION_TIMEOUT_MS = 45_000
 
 // ============================================================================
 // Types
@@ -90,6 +94,7 @@ export interface UseExecSessionResult {
   onExit: (callback: (code: number) => void) => void
   /** Register a callback for connection status changes */
   onStatusChange: (callback: (status: SessionStatus, error?: string) => void) => void
+  isStale: boolean
 }
 
 // ============================================================================
@@ -129,6 +134,8 @@ export function useExecSession(): UseExecSessionResult {
   const [error, setError] = useState<string | null>(null)
   const [reconnectAttempt, setReconnectAttempt] = useState(0)
   const [reconnectCountdown, setReconnectCountdown] = useState(0)
+  const [isStale, setIsStale] = useState(false)
+  const statusRef = useRef<SessionStatus>('disconnected')
   const dataCallbackRef = useRef<((data: string) => void) | null>(null)
   const exitCallbackRef = useRef<((code: number) => void) | null>(null)
   const statusCallbackRef = useRef<((status: SessionStatus, error?: string) => void) | null>(null)
@@ -141,6 +148,22 @@ export function useExecSession(): UseExecSessionResult {
   const intentionalDisconnectRef = useRef(false)
   /** Ref to the connect function so scheduleReconnect can call it without circular deps */
   const connectInternalRef = useRef<(config: ExecSessionConfig, isReconnect: boolean) => void>(() => {})
+  const staleDetectionRef = useRef<WsStaleDetectionController | null>(null)
+
+  statusRef.current = status
+
+  if (!staleDetectionRef.current) {
+    staleDetectionRef.current = createWsStaleDetection({
+      timeoutMs: STALE_EXEC_SESSION_TIMEOUT_MS,
+      isConnected: () => statusRef.current === 'connected' && Boolean(wsRef.current),
+      shouldCheck: () => statusRef.current === 'connected' || statusRef.current === 'reconnecting' || statusRef.current === 'connecting',
+      onStale: () => {
+        setIsStale(true)
+      },
+    })
+  }
+
+  const staleDetection = staleDetectionRef.current!
 
   const clearReconnectTimers = useCallback(() => {
     if (reconnectTimerRef.current) {
@@ -166,13 +189,15 @@ export function useExecSession(): UseExecSessionResult {
 
   const cleanup = useCallback(() => {
     clearReconnectTimers()
+    staleDetection.stop()
     closeWebSocket(wsRef.current)
     wsRef.current = null
-  }, [clearReconnectTimers])
+  }, [clearReconnectTimers, staleDetection])
 
   const scheduleReconnect = (config: ExecSessionConfig) => {
     const attempt = reconnectAttemptsRef.current
     if (attempt >= MAX_RECONNECT_ATTEMPTS) {
+      staleDetection.stop()
       updateStatus(
         'error',
         `Connection lost after ${MAX_RECONNECT_ATTEMPTS} reconnection attempts. Please try connecting manually.`,
@@ -187,6 +212,7 @@ export function useExecSession(): UseExecSessionResult {
     setReconnectAttempt(attempt + 1)
     setReconnectCountdown(delaySec)
     updateStatus('reconnecting')
+    staleDetection.start()
 
     // Countdown timer updates every second for UI feedback
     let remaining = delaySec
@@ -210,7 +236,6 @@ export function useExecSession(): UseExecSessionResult {
   }
 
   const connectInternal = useCallback(async (config: ExecSessionConfig, isReconnect = false) => {
-    // Clean up existing WebSocket connection
     closeWebSocket(wsRef.current)
     wsRef.current = null
 
@@ -220,25 +245,20 @@ export function useExecSession(): UseExecSessionResult {
       setReconnectAttempt(0)
       wasConnectedRef.current = false
       intentionalDisconnectRef.current = false
+      setIsStale(false)
+      staleDetection.stop()
     }
 
     updateStatus('connecting')
     setError(null)
 
-    // Build WebSocket URL — routes through kc-agent on 127.0.0.1:8585 so the
-    // SPDY exec stream runs under the user's own kubeconfig (#7993 Phase 3d).
-    // The apiserver enforces RBAC natively against the caller's identity,
-    // which is why the kc-agent exec handler doesn't need the #8120/#5406
-    // SubjectAccessReview that the backend handler had to simulate.
-    //
-    // LOCAL_AGENT_WS_URL is `ws://127.0.0.1:8585/ws` (or a disabled sentinel
-    // on Netlify) — we swap the trailing segment to /ws/exec.
     const wsUrl = LOCAL_AGENT_WS_URL.replace(/\/ws$/, '/ws/exec')
 
     let ws: WebSocket
     try {
       ws = new WebSocket(await appendWsAuthToken(wsUrl))
     } catch (err: unknown) {
+      staleDetection.stop()
       const message = err instanceof Error ? err.message : 'Failed to create WebSocket connection'
       updateStatus(
         'error',
@@ -249,13 +269,9 @@ export function useExecSession(): UseExecSessionResult {
     wsRef.current = ws
 
     ws.onopen = () => {
-      // #7993 Phase 3d: kc-agent validates the token on the HTTP upgrade
-      // (Authorization header or ?token= query param fallback) rather than
-      // via a first-message JWT dance the way the backend handler did. The
-      // first message the kc-agent exec handler reads is exec_init, so we
-      // send that directly without the auth preamble. If kc-agent's
-      // agentToken is configured (hardened install), the WebSocket upgrade
-      // would have been rejected before reaching this handler.
+      setIsStale(false)
+      staleDetection.markMessageReceived()
+
       const initMsg: ExecMessage & { cluster: string; namespace: string; pod: string; container: string; command: string[]; tty: boolean } = {
         type: 'exec_init',
         cluster: config.cluster,
@@ -265,11 +281,15 @@ export function useExecSession(): UseExecSessionResult {
         command: config.command || ['/bin/sh'],
         tty: config.tty !== false,
         cols: config.cols || DEFAULT_TERMINAL_COLS,
-        rows: config.rows || DEFAULT_TERMINAL_ROWS }
+        rows: config.rows || DEFAULT_TERMINAL_ROWS,
+      }
       ws.send(JSON.stringify(initMsg))
     }
 
     ws.onmessage = (event) => {
+      staleDetection.markMessageReceived()
+      setIsStale(false)
+
       try {
         const msg = JSON.parse(event.data) as ExecMessage
         switch (msg.type) {
@@ -277,6 +297,7 @@ export function useExecSession(): UseExecSessionResult {
             wasConnectedRef.current = true
             reconnectAttemptsRef.current = 0
             setReconnectAttempt(0)
+            staleDetection.start()
             updateStatus('connected')
             break
           case 'stdout':
@@ -289,11 +310,15 @@ export function useExecSession(): UseExecSessionResult {
             if (exitCallbackRef.current) {
               exitCallbackRef.current(msg.exitCode || 0)
             }
+            staleDetection.stop()
+            setIsStale(false)
             wasConnectedRef.current = false
             intentionalDisconnectRef.current = true
             updateStatus('disconnected')
             break
           case 'error':
+            staleDetection.stop()
+            setIsStale(false)
             updateStatus('error', msg.data || 'Unknown server error')
             break
         }
@@ -303,7 +328,8 @@ export function useExecSession(): UseExecSessionResult {
     }
 
     ws.onerror = () => {
-      // Only set error if we haven't already handled it via onclose
+      staleDetection.stop()
+      setIsStale(false)
       if (!wasConnectedRef.current) {
         updateStatus(
           'error',
@@ -315,14 +341,13 @@ export function useExecSession(): UseExecSessionResult {
     ws.onclose = (event) => {
       wsRef.current = null
 
-      // Don't reconnect if the disconnect was intentional
       if (intentionalDisconnectRef.current) {
+        staleDetection.stop()
+        setIsStale(false)
         return
       }
 
-      // If we were connected and the close was unexpected, attempt reconnection
       if (wasConnectedRef.current && reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
-        // Notify the data callback so the terminal can display the reconnect message
         if (dataCallbackRef.current) {
           const nextAttempt = reconnectAttemptsRef.current + 1
           const delaySec = Math.ceil(getBackoffDelay(reconnectAttemptsRef.current) / 1000)
@@ -334,7 +359,9 @@ export function useExecSession(): UseExecSessionResult {
         return
       }
 
-      // If we never connected, this is an endpoint availability issue
+      staleDetection.stop()
+      setIsStale(false)
+
       if (!wasConnectedRef.current) {
         const reason = event.code !== WS_CLOSE_NORMAL
           ? ` (code: ${event.code})`
@@ -346,16 +373,14 @@ export function useExecSession(): UseExecSessionResult {
         return
       }
 
-      // Max reconnects exhausted
       updateStatus(
         'error',
         `Connection lost after ${MAX_RECONNECT_ATTEMPTS} reconnection attempts. Please try connecting manually.`,
       )
       setReconnectAttempt(0)
     }
-  }, [updateStatus, scheduleReconnect, clearReconnectTimers])
+  }, [clearReconnectTimers, staleDetection, updateStatus])
 
-  // Keep the ref in sync so scheduleReconnect always calls the latest version
   useEffect(() => {
     connectInternalRef.current = connectInternal
   }, [connectInternal])
@@ -367,21 +392,26 @@ export function useExecSession(): UseExecSessionResult {
 
   const disconnect = useCallback(() => {
     intentionalDisconnectRef.current = true
-    reconnectAttemptsRef.current = MAX_RECONNECT_ATTEMPTS // Prevent reconnect
+    reconnectAttemptsRef.current = MAX_RECONNECT_ATTEMPTS
     clearReconnectTimers()
     setReconnectAttempt(0)
+    setIsStale(false)
     cleanup()
     updateStatus('disconnected')
   }, [cleanup, clearReconnectTimers, updateStatus])
 
   const sendInput = (data: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      staleDetection.markMessageReceived()
+      setIsStale(false)
       wsRef.current.send(JSON.stringify({ type: 'stdin', data }))
     }
   }
 
   const resize = (cols: number, rows: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      staleDetection.markMessageReceived()
+      setIsStale(false)
       wsRef.current.send(JSON.stringify({ type: 'resize', cols, rows }))
     }
   }
@@ -398,7 +428,6 @@ export function useExecSession(): UseExecSessionResult {
     statusCallbackRef.current = callback
   }
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       intentionalDisconnectRef.current = true
@@ -417,5 +446,7 @@ export function useExecSession(): UseExecSessionResult {
     resize,
     onData,
     onExit,
-    onStatusChange }
+    onStatusChange,
+    isStale,
+  }
 }
