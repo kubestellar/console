@@ -835,8 +835,7 @@ async function mutate(
 
   const res = await gh(path, token, { method: "POST" });
   if (!res.ok) {
-    const body = await res.text();
-    return jsonResponse({ error: `GitHub ${res.status}: ${body}` }, { status: 502 });
+    return jsonResponse({ error: `GitHub returned ${res.status}` }, { status: 502 });
   }
   return jsonResponse({ ok: true, op, run: runId, repo });
 }
@@ -974,7 +973,7 @@ export default async (req: Request): Promise<Response> => {
   } catch (err) {
     return jsonResponse(
       {
-        error: (err as Error).message ?? "Internal error",
+        error: "Internal error",
         repos: REPOS,
         nextCron: "0 5 * * *",
       },
