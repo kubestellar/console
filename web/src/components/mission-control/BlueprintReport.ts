@@ -9,6 +9,16 @@ import type { MissionControlState } from './types'
 import type { BlueprintLayout } from './types'
 import { generateDefaultPhases } from './BlueprintInfoPanels'
 
+/** HTML-escape a string to prevent XSS when interpolating into HTML templates. */
+function esc(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 /** Shorten cluster names like "default/api-fmaas-platform-eval-fmaas-res..." to a readable form */
 export function shortenClusterName(name: string): string {
   // Strip context prefix (e.g. "default/")
@@ -96,10 +106,10 @@ export function exportFullReport(
   const clusterRows = healthyState.assignments
     .filter(a => a.projectNames.length > 0)
     .map(a => `<tr>
-      <td>${shortenClusterName(a.clusterName)}</td>
+      <td>${esc(shortenClusterName(a.clusterName))}</td>
       <td>${a.projectNames.length}</td>
       <td>${a.projectNames.map(n =>
-        `<span class="${installedProjects.has(n) ? 'installed' : 'deploy'}">${n}</span>`
+        `<span class="${installedProjects.has(n) ? 'installed' : 'deploy'}">${esc(n)}</span>`
       ).join(' ')}</td>
     </tr>`).join('')
 
@@ -107,37 +117,37 @@ export function exportFullReport(
   const phaseRows = effectivePhases.map((phase) => {
     const projs = phase.projectNames.map(n => {
       const isInst = installedProjects.has(n)
-      return `<span class="${isInst ? 'installed' : 'deploy'}">${n}${isInst ? ' ✓' : ''}</span>`
+      return `<span class="${isInst ? 'installed' : 'deploy'}">${esc(n)}${isInst ? ' ✓' : ''}</span>`
     }).join(' ')
     const est = phase.estimatedSeconds ? `${Math.ceil(phase.estimatedSeconds / 60)} min` : ''
-    return `<tr><td>${phase.phase}. ${phase.name}</td><td>${est}</td><td>${projs}</td></tr>`
+    return `<tr><td>${phase.phase}. ${esc(phase.name)}</td><td>${est}</td><td>${projs}</td></tr>`
   }).join('')
 
   // Rollback steps
   const rollbackRows = rollbackPhases.map((phase, i) => {
     const removable = phase.projectNames.filter(n => !installedProjects.has(n))
     if (removable.length === 0) return ''
-    return `<tr><td>Step ${i + 1}</td><td>Remove ${phase.name}</td><td>${removable.map(n => `<code>helm uninstall ${n}</code>`).join('<br/>')}</td></tr>`
+    return `<tr><td>Step ${i + 1}</td><td>Remove ${esc(phase.name)}</td><td>${removable.map(n => `<code>helm uninstall ${esc(n)}</code>`).join('<br/>')}</td></tr>`
   }).filter(Boolean).join('')
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Flight Plan: ${state.title || 'Mission Control'}</title>
+<html><head><meta charset="utf-8"><title>Flight Plan: ${esc(state.title || 'Mission Control')}</title>
 <style>${REPORT_STYLES}</style></head><body>
 
-<h1>Flight Plan: ${state.title || 'Untitled Mission'}</h1>
+<h1>Flight Plan: ${esc(state.title || 'Untitled Mission')}</h1>
 <p class="meta">Generated ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} · ${state.projects.length} projects · ${healthyState.assignments.filter(a => a.projectNames.length > 0).length} clusters</p>
 
 <div class="section">
 <h2>1. Define Mission</h2>
-<div class="description">${state.description || 'No description provided'}</div>
+<div class="description">${esc(state.description || 'No description provided')}</div>
 <table>
   <thead><tr><th>Project</th><th>Category</th><th>Priority</th><th>Status</th><th>Why</th></tr></thead>
   <tbody>${state.projects.map(p => `<tr>
-    <td><strong>${p.displayName}</strong></td>
-    <td>${p.category}</td>
-    <td>${p.priority}</td>
+    <td><strong>${esc(p.displayName)}</strong></td>
+    <td>${esc(p.category)}</td>
+    <td>${esc(p.priority)}</td>
     <td><span class="${installedProjects.has(p.name) ? 'installed' : 'deploy'}">${installedProjects.has(p.name) ? 'Installed' : 'Needs Deploy'}</span></td>
-    <td style="font-size:11px">${p.reason || ''}</td>
+    <td style="font-size:11px">${esc(p.reason || '')}</td>
   </tr>`).join('')}</tbody>
 </table>
 </div>
@@ -167,7 +177,7 @@ ${svgMarkup ? `<div class="svg-container">${svgMarkup}</div>` : '<p class="meta"
 <h2>5. YOLO Mode</h2>
 <p>Launch all ${state.projects.length} projects simultaneously — no dependency gating.</p>
 <p>${state.projects.map(p =>
-  `<span class="${installedProjects.has(p.name) ? 'installed' : 'deploy'}">${p.displayName}${installedProjects.has(p.name) ? ' ✓' : ''}</span>`
+  `<span class="${installedProjects.has(p.name) ? 'installed' : 'deploy'}">${esc(p.displayName)}${installedProjects.has(p.name) ? ' ✓' : ''}</span>`
 ).join(' ')}</p>
 </div>
 
@@ -175,7 +185,7 @@ ${svgMarkup ? `<div class="svg-container">${svgMarkup}</div>` : '<p class="meta"
 <h2>6. Rollback Plan</h2>
 ${toKeep.length > 0 ? `
 <h3>Protected (will not be removed)</h3>
-<p>${toKeep.map(p => `<span class="protected">${p.displayName} ✓</span>`).join(' ')}</p>
+<p>${toKeep.map(p => `<span class="protected">${esc(p.displayName)} ✓</span>`).join(' ')}</p>
 ` : ''}
 ${toRemove.length > 0 ? `
 <h3>Removal Order (reverse phases)</h3>
