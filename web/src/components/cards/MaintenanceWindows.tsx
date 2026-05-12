@@ -68,20 +68,16 @@ export function MaintenanceWindows() {
 
   const now = useMemo(() => new Date(), [tick])
 
-  const updateStatus = () => {
-    return windows.map(w => {
+  const displayWindows = useMemo(() => {
+    const withStatus = windows.map(w => {
       const start = new Date(w.startTime)
       const end = new Date(w.endTime)
       if (now >= start && now <= end) return { ...w, status: 'active' as const }
       if (now > end) return { ...w, status: 'completed' as const }
       return { ...w, status: 'scheduled' as const }
     })
-  }
-
-  const displayWindows = useMemo(() =>
-    updateStatus().sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()),
-    [windows, now]
-  )
+    return withStatus.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+  }, [windows, now])
 
   const handleAdd = () => {
     if (!formData.cluster || !formData.startTime || !formData.endTime) return
