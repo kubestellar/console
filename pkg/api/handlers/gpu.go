@@ -126,6 +126,7 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	}
 
 	reservation := &models.GPUReservation{
+		ID:            uuid.New(),
 		UserID:        userID,
 		UserName:      user.GitHubLogin,
 		Title:         input.Title,
@@ -151,19 +152,24 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	// target cluster before persisting the reservation. This eliminates
 	// the "pending" state — the caller gets either "active" (provisioned)
 	// or an immediate error.
+	provisioned := false
 	if h.k8sClient != nil {
 		if provErr := h.provisionOnCluster(c.Context(), reservation); provErr != nil {
 			slog.Error("[gpu] synchronous provisioning failed",
 				"cluster", reservation.Cluster,
 				"namespace", reservation.Namespace,
 				"error", provErr)
-			return fiber.NewError(fiber.StatusInternalServerError,
-				fmt.Sprintf("Failed to provision namespace/quota on cluster %q: %v", reservation.Cluster, provErr))
+			return fiber.NewError(fiber.StatusServiceUnavailable,
+				fmt.Sprintf("Failed to provision namespace/quota on cluster %q", reservation.Cluster))
 		}
 		reservation.Status = models.ReservationStatusActive
+		provisioned = true
 	}
 
 	if err := h.store.CreateGPUReservationWithCapacity(c.UserContext(), reservation, capacity); err != nil {
+		if provisioned {
+			h.cleanupProvisionedResources(c.Context(), reservation)
+		}
 		if errors.Is(err, store.ErrGPUQuotaExceeded) {
 			return fiber.NewError(fiber.StatusConflict,
 				fmt.Sprintf("Over-allocation: cluster %q would exceed capacity of %d GPUs", input.Cluster, capacity))
@@ -644,4 +650,24 @@ func (h *GPUHandler) provisionOnCluster(ctx context.Context, r *models.GPUReserv
 	r.QuotaName = quotaName
 	r.QuotaEnforced = true
 	return nil
+}
+
+// cleanupProvisionedResources is a best-effort rollback when the DB insert
+// fails after k8s resources were already created. Prevents orphaned
+// namespaces/quotas when the store rejects the reservation (e.g. TOCTOU
+// quota race).
+func (h *GPUHandler) cleanupProvisionedResources(ctx context.Context, r *models.GPUReservation) {
+	if h.k8sClient == nil {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(ctx, provisionTimeoutSeconds*time.Second)
+	defer cancel()
+
+	if r.QuotaName != "" {
+		if err := h.k8sClient.DeleteResourceQuota(cleanupCtx, r.Cluster, r.Namespace, r.QuotaName); err != nil {
+			slog.Warn("[gpu] cleanup: failed to delete ResourceQuota",
+				"cluster", r.Cluster, "namespace", r.Namespace,
+				"quota", r.QuotaName, "error", err)
+		}
+	}
 }
