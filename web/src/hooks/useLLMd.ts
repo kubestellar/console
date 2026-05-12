@@ -196,6 +196,14 @@ function extractGPUInfo(deployment: DeploymentResource): { gpu?: string; gpuCoun
   return {}
 }
 
+export const __testables = {
+  detectServerType,
+  detectComponentType,
+  detectGatewayType,
+  getServerStatus,
+  extractGPUInfo,
+}
+
 /**
  * Hook to fetch LLM-d inference servers from clusters
  */
