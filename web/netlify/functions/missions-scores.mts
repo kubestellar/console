@@ -184,7 +184,7 @@ export default async (request: Request): Promise<Response> => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
     console.error("[missions-scores] Error:", message);
-    return jsonResponse(corsHeaders, { error: "upstream request failed", detail: message }, 502);
+    return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
   }
 };
 

@@ -220,8 +220,8 @@ export default async function handler(request: Request): Promise<Response> {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return new Response(JSON.stringify({ error: message }), {
+    console.error("[issue-stats] Failed to fetch issue stats:", err instanceof Error ? err.message : err);
+    return new Response(JSON.stringify({ error: "Issue stats temporarily unavailable" }), {
       status: 502,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

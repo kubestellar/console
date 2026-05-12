@@ -710,9 +710,10 @@ export default async (req: Request) => {
         }
       );
     }
+    console.error("[nightly-e2e] Failed to fetch nightly E2E data:", err instanceof Error ? err.message : err);
     return new Response(
       JSON.stringify({
-        error: `Failed to fetch nightly E2E data: ${err instanceof Error ? err.message : String(err)}`,
+        error: "Failed to fetch nightly E2E data",
       }),
       {
         status: 502,

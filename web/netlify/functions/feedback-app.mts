@@ -531,8 +531,8 @@ export default async function handler(request: Request): Promise<Response> {
       ...(warning ? { warning } : {}),
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return jsonResponse(request, 502, { error: `Feedback action failed: ${msg}` });
+    console.error("[feedback-app] Feedback action failed:", err instanceof Error ? err.message : err);
+    return jsonResponse(request, 502, { error: "Feedback action failed" });
   } finally {
     clearTimeout(timeout);
   }

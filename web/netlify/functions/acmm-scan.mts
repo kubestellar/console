@@ -587,7 +587,7 @@ export default async (req: Request) => {
     console.error("[acmm-scan] Fetch error:", msg);
     // Degrade to demo data rather than failing the card
     return new Response(
-      JSON.stringify({ ...demoScan(repo), demoFallback: true, error: msg }),
+      JSON.stringify({ ...demoScan(repo), demoFallback: true, error: "Scan temporarily unavailable" }),
       {
         status: 200,
         headers: { ...headers, "Content-Type": "application/json" },
