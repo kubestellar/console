@@ -1,4 +1,5 @@
 import { AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useServices } from '../../hooks/useMCP'
 import { useIngresses } from '../../hooks/mcp/networking'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -8,6 +9,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
+import { classifyApiError } from '../../lib/errorHandling'
 
 const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 
@@ -15,6 +17,7 @@ const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 const DEFAULT_NETWORK_CARDS = getDefaultCards('network')
 
 export function Network() {
+  const { t } = useTranslation()
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error, isFailed } = useServices()
   const { ingresses } = useIngresses()
 
@@ -121,9 +124,9 @@ export function Network() {
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-medium text-red-400">
-              {services.length > 0 ? 'Refresh failed — showing cached data' : 'Error loading network data'}
+              {services.length > 0 ? t('errors.messages.refreshFailed') + ' — showing cached data' : t('errors.messages.loadFailed')}
             </p>
-            {error && <p className="text-xs text-muted-foreground mt-1">{error}</p>}
+            {error && <p className="text-xs text-muted-foreground mt-1">{classifyApiError(error).userMessage}</p>}
           </div>
         </div>
       )}
