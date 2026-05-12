@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/kubestellar/console/pkg/k8s"
 )
 
@@ -53,7 +55,8 @@ func queryAllClustersWithTimeout[T any](
 
 	for _, cl := range clusters {
 		wg.Add(1)
-		go func(clusterName string) {
+		clusterName := cl.Name
+		safego.GoWith("mcp-query/"+clusterName, func() {
 			defer wg.Done()
 			itemCtx, cancel := context.WithTimeout(clusterCtx, perClusterTimeout)
 			defer cancel()
@@ -65,7 +68,7 @@ func queryAllClustersWithTimeout[T any](
 				results = append(results, items...)
 				mu.Unlock()
 			}
-		}(cl.Name)
+		})
 	}
 
 	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)

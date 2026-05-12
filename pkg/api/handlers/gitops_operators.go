@@ -746,7 +746,8 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 
 		for _, cl := range clusters {
 			wg.Add(1)
-			go func(clusterName string) {
+			clusterName := cl.Name
+			safego.GoWith("gitops-ops/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -762,7 +763,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 					"source":   "k8s",
 				})
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()

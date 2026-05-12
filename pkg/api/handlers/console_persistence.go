@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
@@ -199,10 +201,10 @@ func (h *ConsolePersistenceHandlers) handleResourceEvent(event k8s.ConsoleResour
 	// detached timeout.
 	const reconcileTimeout = 5 * time.Minute
 	reconcileCtx, reconcileCancel := context.WithTimeout(context.Background(), reconcileTimeout)
-	go func() {
+	safego.Go(func() {
 		defer reconcileCancel()
 		h.reconcileDeployment(reconcileCtx, wd)
-	}()
+	})
 }
 
 // =============================================================================
@@ -413,7 +415,8 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(ctx context.Context, g
 				for _, cluster := range clusters {
 					wg.Add(1)
 					sem <- struct{}{} // acquire semaphore slot
-					go func(clusterName string) {
+					clusterName := cluster.Name
+					safego.GoWith("persistence/"+clusterName, func() {
 						defer wg.Done()
 						defer func() { <-sem }() // release semaphore slot
 						nodes, nodeErr := h.k8sClient.GetNodes(ctx, clusterName)
@@ -422,7 +425,7 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(ctx context.Context, g
 							nodesByCluster[clusterName] = nodes
 							mu.Unlock()
 						}
-					}(cluster.Name)
+					})
 				}
 				wg.Wait()
 			}

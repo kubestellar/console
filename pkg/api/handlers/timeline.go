@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -153,10 +155,11 @@ func (h *TimelineHandler) collectAll() {
 	var wg sync.WaitGroup
 	for _, ci := range healthy {
 		wg.Add(1)
-		go func(cluster k8s.ClusterInfo) {
+		cluster := ci
+		safego.GoWith("timeline/"+cluster.Name, func() {
 			defer wg.Done()
 			h.collectCluster(cluster)
-		}(ci)
+		})
 	}
 	wg.Wait()
 }

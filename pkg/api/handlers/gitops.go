@@ -351,7 +351,7 @@ type helmReleaseBody struct {
 	Namespace string `json:"namespace"`
 	Version   int    `json:"version"`
 	Info      struct {
-		Status    string `json:"status"`
+		Status     string `json:"status"`
 		LastDeploy string `json:"last_deployed"`
 	} `json:"info"`
 	Chart struct {
@@ -755,7 +755,7 @@ func init() {
 // results use a 5m TTL. Must be called exactly once from getOperatorsForCluster().
 func startOperatorCacheEvictor() {
 	operatorEvictOnce.Do(func() {
-		go func() {
+		safego.Go(func() {
 			ticker := time.NewTicker(operatorCacheEvictionInterval)
 			defer ticker.Stop()
 
@@ -778,7 +778,7 @@ func startOperatorCacheEvictor() {
 					operatorCacheMu.Unlock()
 				}
 			}
-		}()
+		})
 	})
 }
 

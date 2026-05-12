@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/audit"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 )
+
 func (h *MCPHandlers) GetConfigMaps(c *fiber.Ctx) error {
 	// Demo mode: return demo data immediately
 	if isDemoMode(c) {
@@ -856,7 +859,8 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 
 	for _, cl := range clusters {
 		wg.Add(1)
-		go func(clusterName string) {
+		clusterName := cl.Name
+		safego.GoWith("mcp-resources/"+clusterName, func() {
 			defer wg.Done()
 
 			ctx, cancel := context.WithTimeout(clusterCtx, podNetworkStatsTimeout)
@@ -914,7 +918,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 					mu.Unlock()
 				}
 			}
-		}(cl.Name)
+		})
 	}
 
 	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)

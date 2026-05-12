@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/sync/singleflight"
 )
@@ -22,7 +24,7 @@ const (
 	nightlyCacheIdleTTL   = 5 * time.Minute  // cache when no jobs running
 	nightlyCacheActiveTTL = 2 * time.Minute  // cache when jobs are in progress
 	imageCacheTTL         = 30 * time.Minute // image tags change less frequently
-	nightlyRunsPerPage = 7
+	nightlyRunsPerPage    = 7
 
 	failureReasonGPU  = "gpu_unavailable"
 	failureReasonTest = "test_failure"
@@ -30,10 +32,10 @@ const (
 	// maxErrorBodyBytes is the maximum number of bytes to read from GitHub error
 	// response bodies. Prevents unbounded memory consumption on large HTML error
 	// pages during outages (#7055).
-	maxErrorBodyBytes = 10_000 // 10 KB
-	maxLogBytes       = 200_000 // 200KB tail per job log
-	logCacheTTL     = 10 * time.Minute // immutable once run completes
-	maxLogFetchJobs = 5                // limit concurrent job log fetches
+	maxErrorBodyBytes = 10_000           // 10 KB
+	maxLogBytes       = 200_000          // 200KB tail per job log
+	logCacheTTL       = 10 * time.Minute // immutable once run completes
+	maxLogFetchJobs   = 5                // limit concurrent job log fetches
 
 	// imageRepo is the GitHub repo whose guide directories contain image references
 	imageRepo = "llm-d/llm-d"
@@ -204,10 +206,10 @@ func (h *NightlyE2EHandler) prewarm() {
 	var resp *NightlyE2EResponse
 	var fetchErr error
 
-	go func() {
+	safego.Go(func() {
 		resp, fetchErr = h.fetchAllWithContext(ctx)
 		close(done)
-	}()
+	})
 
 	select {
 	case <-done:
@@ -454,11 +456,12 @@ func (h *NightlyE2EHandler) classifyFailures(repo string, runs []NightlyRun) {
 		}
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(idx int) {
+		idx := i
+		safego.Go(func() {
 			defer wg.Done()
 			defer func() { <-sem }()
 			runs[idx].FailureReason = h.detectGPUFailure(repo, runs[idx].ID)
-		}(i)
+		})
 	}
 	wg.Wait()
 }
@@ -1024,4 +1027,3 @@ func successRate(runs []NightlyRun) float64 {
 	}
 	return float64(passed) / float64(len(runs))
 }
-
