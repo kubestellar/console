@@ -16,6 +16,7 @@ import { buildCorsHeaders, handlePreflight } from "./_shared/cors";
 
 const GITHUB_API = "https://api.github.com";
 const CACHE_STORE = "issue-stats";
+const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
 /** Server-side cache TTL (1 hour) */
 const CACHE_TTL_MS = 60 * 60 * 1000;
 /** GitHub API results per page (max 100) */
@@ -132,6 +133,15 @@ export default async function handler(request: Request): Promise<Response> {
 
   const url = new URL(request.url);
   const repo = url.searchParams.get("repo") || "kubestellar/console";
+  if (!REPO_RE.test(repo)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid repo format" }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
   const daysParam = parseInt(url.searchParams.get("days") || String(DEFAULT_DAYS), 10);
   const days = Math.min(Math.max(1, daysParam), MAX_DAYS);
 
