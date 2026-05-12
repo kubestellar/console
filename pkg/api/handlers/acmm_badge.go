@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -167,7 +168,9 @@ func ACMMBadgeHandler(c *fiber.Ctx) error {
 	// Fast path: serve from cache if we have one (even if stale)
 	if cached != nil {
 		if shouldRecompute {
-			go recomputeBadge(repo, entry)
+			safego.GoWith("acmm-badge-recompute", func() {
+				recomputeBadge(repo, entry)
+			})
 		}
 		return serveBadge(c, cached, badgeCacheControlMaxAge)
 	}

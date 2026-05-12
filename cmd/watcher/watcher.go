@@ -169,7 +169,9 @@ func runWatcher(cfg WatcherConfig) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go pollBackendHealth(ctx, backendURL.String(), &backendHealthy, &backendStatus)
+	safego.GoWith("watcher-health-poll", func() {
+		pollBackendHealth(ctx, backendURL.String(), &backendHealthy, &backendStatus)
+	})
 
 	mux := http.NewServeMux()
 
@@ -253,7 +255,9 @@ func runWatcher(cfg WatcherConfig) error {
 				if acceptErr != nil {
 					return
 				}
-				go handleConn(conn, tlsCfg, srv, cfg.ListenPort)
+				safego.GoWith("watcher-conn-handler", func() {
+					handleConn(conn, tlsCfg, srv, cfg.ListenPort)
+				})
 			}
 		})
 
