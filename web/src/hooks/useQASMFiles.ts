@@ -15,11 +15,14 @@ interface UseQASMFilesResult {
   refetch: () => Promise<void>
 }
 
-export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
+export function useQASMFiles(enabled?: boolean, forceDemo?: boolean): UseQASMFilesResult {
   const { isAuthenticated } = useAuth()
   const [files, setFiles] = useState<QASMFile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Use explicit forceDemo parameter if provided, otherwise check the function
+  const isDemoMode = forceDemo ?? isQuantumForcedToDemo()
 
   const fetchFiles = async () => {
     try {
@@ -50,13 +53,13 @@ export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
   }
 
   useEffect(() => {
-    // Skip fetch if explicitly disabled, user is not authenticated, or quantum is forced to demo
+    // Skip fetch if explicitly disabled or user is not authenticated
     if (enabled === false || !isAuthenticated) {
       setIsLoading(false)
       return
     }
 
-    if (isQuantumForcedToDemo()) {
+    if (isDemoMode) {
       // In demo mode, show only bell.qasm
       setFiles([{ name: 'bell.qasm' }])
       setIsLoading(false)
@@ -64,7 +67,7 @@ export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
     }
 
     fetchFiles()
-  }, [isAuthenticated, enabled])
+  }, [isAuthenticated, enabled, isDemoMode])
 
   return { files, isLoading, error, refetch: fetchFiles }
 }

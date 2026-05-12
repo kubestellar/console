@@ -64,7 +64,7 @@ export const QuantumControlPanel: React.FC = () => {
   const hasInitializedControlRef = useRef(false)
 
   // Fetch available QASM files
-  const { files: qasmFiles, isLoading: qasmFilesLoading } = useQASMFiles()
+  const { files: qasmFiles, isLoading: qasmFilesLoading } = useQASMFiles(undefined, forceDemo)
   const {
     data: status,
     isLoading,
