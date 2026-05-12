@@ -94,7 +94,7 @@ describe('detectServerType', () => {
       expect(detectServerType('vllm-triton-server')).toBe('triton')
     })
 
-    it.fails('returns vllm for "vllm-deployment" instead of matching the "llm-d" substring first', () => {
+    it('returns vllm for "vllm-deployment" instead of matching the "llm-d" substring first', () => {
       expect(detectServerType('vllm-deployment')).toBe('vllm')
     })
 
