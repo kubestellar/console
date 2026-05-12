@@ -294,7 +294,6 @@ export default function PodExecTerminal({
             reconnectAttempt={reconnectAttempt}
             reconnectCountdown={reconnectCountdown}
             isStale={isStale}
-            t={t}
           />
         </div>
 
@@ -403,10 +402,10 @@ interface StatusIndicatorProps {
   reconnectAttempt: number
   reconnectCountdown: number
   isStale: boolean
-  t: (key: string, options?: Record<string, unknown>) => string
 }
 
-function StatusIndicator({ status, reconnectAttempt, reconnectCountdown, isStale, t }: StatusIndicatorProps) {
+function StatusIndicator({ status, reconnectAttempt, reconnectCountdown, isStale }: StatusIndicatorProps) {
+  const { t } = useTranslation()
   const config: Record<SessionStatus, { color: string; label: string; Icon?: typeof WifiOff }> = {
     disconnected: { color: 'bg-gray-600', label: t('terminal.disconnected') },
     connecting: { color: 'bg-yellow-600 animate-pulse', label: t('terminal.connecting') },
