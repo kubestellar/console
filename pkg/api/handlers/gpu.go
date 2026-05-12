@@ -163,7 +163,7 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 				"namespace", reservation.Namespace,
 				"error", provErr)
 			return fiber.NewError(fiber.StatusServiceUnavailable,
-				fmt.Sprintf("Failed to provision namespace/quota on cluster %q", reservation.Cluster))
+				"failed to provision cluster resources")
 		}
 		reservation.Status = models.ReservationStatusActive
 		provisioned = true
@@ -175,7 +175,7 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 		}
 		if errors.Is(err, store.ErrGPUQuotaExceeded) {
 			return fiber.NewError(fiber.StatusConflict,
-				fmt.Sprintf("Over-allocation: cluster %q would exceed capacity of %d GPUs", input.Cluster, capacity))
+				"requested GPUs exceed available capacity")
 		}
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create reservation")
 	}
@@ -403,7 +403,7 @@ func (h *GPUHandler) UpdateReservation(c *fiber.Ctx) error {
 			}
 			if errors.Is(err, store.ErrGPUQuotaExceeded) {
 				return fiber.NewError(fiber.StatusConflict,
-					fmt.Sprintf("Over-allocation: cluster %q would exceed capacity of %d GPUs", existing.Cluster, capacity))
+					"requested GPUs exceed available capacity")
 			}
 			return fiber.NewError(fiber.StatusInternalServerError, "Failed to update reservation")
 		}
@@ -580,13 +580,8 @@ func (h *GPUHandler) checkOverAllocationWithCapacity(ctx context.Context, cluste
 	}
 
 	if reserved+gpuCount > capacity {
-		available := capacity - reserved
-		if available < 0 {
-			available = 0
-		}
 		return fiber.NewError(fiber.StatusConflict,
-			fmt.Sprintf("Over-allocation: cluster %q has %d GPUs available (%d reserved of %d total), but %d requested",
-				cluster, available, reserved, capacity, gpuCount))
+			"requested GPUs exceed available capacity")
 	}
 
 	return nil
