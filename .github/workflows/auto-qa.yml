@@ -1960,8 +1960,8 @@ jobs:
           ISSUES=""
 
           # Find card components without demo data functions
-          # Exclude: games (client-only), modals (no data fetching), pure UI components
-          EXCLUDE_PATTERN="index\|test\|spec\|types\|utils\|KubeKong\|KubeSnake\|KubeBert\|WeatherAnimation\|NotificationVerifyIndicator\|DetailModal\|BreakdownModal\|PremiumGauge\|HorseshoeGauge\|PortalTooltip\|AlertListItem"
+          # Exclude: games (client-only), modals/dialogs (no data fetching), pure UI components
+          EXCLUDE_PATTERN="index\|test\|spec\|types\|utils\|KubeKong\|KubeSnake\|KubeBert\|WeatherAnimation\|NotificationVerifyIndicator\|Modal\|Dialog\|PremiumGauge\|HorseshoeGauge\|PortalTooltip\|AlertListItem"
           CARDS_NO_DEMO=""
           for f in $(find src/components/cards -name "*.tsx" 2>/dev/null | grep -v "$EXCLUDE_PATTERN" | head -60); do
             # Check if it's a card component (exports a component)

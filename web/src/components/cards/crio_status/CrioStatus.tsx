@@ -5,7 +5,11 @@ import { useCrioStatus } from './useCrioStatus'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 export function CrioStatus() {
   const { t } = useTranslation('cards')
-  const { data, error, showSkeleton, showEmptyState } = useCrioStatus()
+  const { data, error, isDemoData, isRefreshing, showSkeleton, showEmptyState } = useCrioStatus()
+  const cardStateAttributes = {
+    'data-demo': isDemoData ? 'true' : 'false',
+    'data-refreshing': isRefreshing ? 'true' : 'false',
+  }
 
   if (showSkeleton) {
     return (
@@ -28,7 +32,10 @@ export function CrioStatus() {
 
   if (error && showEmptyState) {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <div
+        {...cardStateAttributes}
+        className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2"
+      >
         <AlertTriangle className="w-6 h-6 text-red-400" />
         <p className="text-sm text-red-400">{t('crio.fetchError')}</p>
       </div>
@@ -37,7 +44,10 @@ export function CrioStatus() {
 
   if (!data.detected || data.health === 'not-installed') {
     return (
-      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+      <div
+        {...cardStateAttributes}
+        className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2"
+      >
         <Box className="w-6 h-6 text-muted-foreground/50" />
         <p className="text-sm font-medium">{t('crio.notInstalled')}</p>
         <p className="text-xs text-center max-w-xs">{t('crio.notInstalledHint')}</p>
@@ -65,7 +75,7 @@ export function CrioStatus() {
   })
 
   return (
-    <div className="h-full flex flex-col min-h-card content-loaded gap-4">
+    <div {...cardStateAttributes} className="h-full flex flex-col min-h-card content-loaded gap-4">
       {/* Health badge + last check */}
       <div className="flex flex-wrap items-center justify-between gap-y-2">
         <div
