@@ -10,6 +10,9 @@ import { useTranslation } from 'react-i18next'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { MS_PER_SECOND, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
 import { safeGetJSON, safeSetJSON } from '../../lib/utils/localStorage'
+import {
+  METRIC_CPU_COLOR, METRIC_MEMORY_COLOR, METRIC_PODS_COLOR, METRIC_NODES_COLOR,
+} from '../../lib/theme/chartColors'
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 type MetricType = 'cpu' | 'memory' | 'pods' | 'nodes'
@@ -105,10 +108,10 @@ const DEFAULT_TIME_RANGE: TimeRange =
 
 
 const metricConfigBase = {
-  cpu: { labelKey: 'clusterMetrics.cpuCores' as const, color: '#9333ea', unit: '', baseValue: 65, variance: 30 },
-  memory: { labelKey: 'clusterMetrics.memory' as const, color: '#3b82f6', unit: ' GB', baseValue: 72, variance: 20 },
-  pods: { labelKey: 'clusterMetrics.pods' as const, color: '#10b981', unit: '', baseValue: 150, variance: 100 },
-  nodes: { labelKey: 'clusterMetrics.nodes' as const, color: '#f59e0b', unit: '', baseValue: 10, variance: 5 } }
+  cpu: { labelKey: 'clusterMetrics.cpuCores' as const, color: METRIC_CPU_COLOR, unit: '', baseValue: 65, variance: 30 },
+  memory: { labelKey: 'clusterMetrics.memory' as const, color: METRIC_MEMORY_COLOR, unit: ' GB', baseValue: 72, variance: 20 },
+  pods: { labelKey: 'clusterMetrics.pods' as const, color: METRIC_PODS_COLOR, unit: '', baseValue: 150, variance: 100 },
+  nodes: { labelKey: 'clusterMetrics.nodes' as const, color: METRIC_NODES_COLOR, unit: '', baseValue: 10, variance: 5 } }
 
 export interface ClusterMetricValues {
   cpu: number

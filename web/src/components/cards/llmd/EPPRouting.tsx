@@ -29,6 +29,12 @@ const EPPROUTING_SVG_STYLE_1: CSSProperties = { overflow: 'visible' }
 const EPPROUTING_DIV_STYLE_3: CSSProperties = { boxShadow: '0 0 4px rgba(147,51,234,0.4)' }
 const EPPROUTING_DIV_STYLE_4: CSSProperties = { boxShadow: '0 0 4px rgba(34,197,94,0.4)' }
 
+// Node colors for EPP routing diagram
+const NODE_COLOR_SOURCE = '#3b82f6'     // blue-500 for source
+const NODE_COLOR_EPP = '#f59e0b'        // amber-500 for EPP router
+const NODE_COLOR_PREFILL = '#9333ea'    // purple-600 for prefill servers
+const NODE_COLOR_DECODE = '#22c55e'     // green-500 bright for decode servers
+
 
 type MetricType = 'load' | 'rps'
 type ViewMode = 'default' | 'horseshoe'
@@ -60,13 +66,13 @@ interface FlowLink {
 
 // Node layout - spread across viewBox (matching LLMdFlow spacing)
 const NODES: FlowNode[] = [
-  { id: 'requests', label: 'Requests', x: 12, y: 50, type: 'source', color: '#3b82f6', load: 0 },
-  { id: 'epp', label: 'EPP', x: 38, y: 50, type: 'router', color: '#f59e0b', load: 65 },
-  { id: 'prefill-0', label: 'Prefill-0', x: 65, y: 18, type: 'prefill', color: '#9333ea', load: 72 },
-  { id: 'prefill-1', label: 'Prefill-1', x: 65, y: 50, type: 'prefill', color: '#9333ea', load: 58 },
-  { id: 'prefill-2', label: 'Prefill-2', x: 65, y: 82, type: 'prefill', color: '#9333ea', load: 45 },
-  { id: 'decode-0', label: 'Decode-0', x: 90, y: 34, type: 'decode', color: '#22c55e', load: 80 },
-  { id: 'decode-1', label: 'Decode-1', x: 90, y: 66, type: 'decode', color: '#22c55e', load: 67 },
+  { id: 'requests', label: 'Requests', x: 12, y: 50, type: 'source', color: NODE_COLOR_SOURCE, load: 0 },
+  { id: 'epp', label: 'EPP', x: 38, y: 50, type: 'router', color: NODE_COLOR_EPP, load: 65 },
+  { id: 'prefill-0', label: 'Prefill-0', x: 65, y: 18, type: 'prefill', color: NODE_COLOR_PREFILL, load: 72 },
+  { id: 'prefill-1', label: 'Prefill-1', x: 65, y: 50, type: 'prefill', color: NODE_COLOR_PREFILL, load: 58 },
+  { id: 'prefill-2', label: 'Prefill-2', x: 65, y: 82, type: 'prefill', color: NODE_COLOR_PREFILL, load: 45 },
+  { id: 'decode-0', label: 'Decode-0', x: 90, y: 34, type: 'decode', color: NODE_COLOR_DECODE, load: 80 },
+  { id: 'decode-1', label: 'Decode-1', x: 90, y: 66, type: 'decode', color: NODE_COLOR_DECODE, load: 67 },
 ]
 
 // Mini sparkline for time-series data

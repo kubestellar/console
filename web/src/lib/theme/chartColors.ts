@@ -119,6 +119,10 @@ export const KAGENT_RUNTIME_BYO = '#9ca3af'
 export const KAGENT_EDGE_AGENT_TOOL = CYAN_500
 /** Agent-to-model edge color */
 export const KAGENT_EDGE_AGENT_MODEL = GREEN_500
+/** Tool server node color */
+export const KAGENT_NODE_TOOL = CYAN_500
+/** Model server node color */
+export const KAGENT_NODE_MODEL = GREEN_500
 
 // ── Utility ─────────────────────────────────────────────────────────────────
 

@@ -21,13 +21,17 @@ import {
   CHART_MARK_LINE_STROKE,
   CHART_AXIS_FONT_SIZE_SM,
   CHART_LEGEND_FONT_SIZE } from '../../lib/constants'
-import { PURPLE_600, hexToRgba } from '../../lib/theme/chartColors'
+import { PURPLE_600, GREEN_500_BRIGHT, hexToRgba } from '../../lib/theme/chartColors'
 
 const GPU_RING_SIZE_PX = 80
 const GPU_RING_CONTAINER_STYLE = { minWidth: GPU_RING_SIZE_PX, minHeight: GPU_RING_SIZE_PX } as const
 const GPU_RING_CHART_STYLE = { height: GPU_RING_SIZE_PX, width: GPU_RING_SIZE_PX } as const
 const GPU_TREND_CHART_CONTAINER_STYLE = { width: '100%', minHeight: CHART_HEIGHT_COMPACT, height: CHART_HEIGHT_COMPACT } as const
 const GPU_TREND_CHART_STYLE = { height: CHART_HEIGHT_COMPACT, width: '100%' } as const
+
+// GPU utilization pie chart colors
+const GPU_ALLOCATED_COLOR = PURPLE_600
+const GPU_AVAILABLE_COLOR = GREEN_500_BRIGHT
 
 interface GPUPoint {
   time: string
@@ -179,8 +183,8 @@ const GPUUtilization = memo(function GPUUtilization() {
       radius: ['62%', '88%'],
       center: ['50%', '50%'],
       data: [
-        { value: currentStats.allocated, name: 'Allocated', itemStyle: { color: '#9333ea' } },
-        { value: currentStats.available, name: 'Available', itemStyle: { color: '#22c55e' } },
+        { value: currentStats.allocated, name: 'Allocated', itemStyle: { color: GPU_ALLOCATED_COLOR } },
+        { value: currentStats.available, name: 'Available', itemStyle: { color: GPU_AVAILABLE_COLOR } },
       ],
       label: { show: false },
       emphasis: { scale: false },

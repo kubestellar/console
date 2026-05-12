@@ -77,6 +77,10 @@ const COLORS = {
   gateway: '#3b82f6',
   epp: '#f59e0b' }
 
+// Metric colors
+const METRIC_LOAD_COLOR = '#f59e0b'
+const METRIC_QUEUE_COLOR = '#06b6d4'
+
 // Premium gauge node with glowing arc
 interface PremiumNodeProps {
   id: string
@@ -935,8 +939,8 @@ export function LLMdFlow() {
   }
 
   const metricConfig: Record<MetricType, { label: string; color: string; unit: string }> = {
-    load: { label: 'Load', color: '#f59e0b', unit: '%' },
-    queue: { label: 'Queue', color: '#06b6d4', unit: '' },
+    load: { label: 'Load', color: METRIC_LOAD_COLOR, unit: '%' },
+    queue: { label: 'Queue', color: METRIC_QUEUE_COLOR, unit: '' },
     rps: { label: 'RPS', color: getNodeColor(selectedNode), unit: '' } }
 
   // Show empty state when no stack selected in live mode

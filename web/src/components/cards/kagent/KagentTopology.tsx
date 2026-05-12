@@ -10,7 +10,7 @@ import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useTranslation } from 'react-i18next'
 import {
   KAGENT_RUNTIME_PYTHON, KAGENT_RUNTIME_GO, KAGENT_RUNTIME_BYO,
-  KAGENT_EDGE_AGENT_TOOL, KAGENT_EDGE_AGENT_MODEL,
+  KAGENT_EDGE_AGENT_TOOL, KAGENT_EDGE_AGENT_MODEL, KAGENT_NODE_TOOL, KAGENT_NODE_MODEL,
 } from '../../../lib/theme/chartColors'
 
 const MAX_NODE_LABEL_DISPLAY = 16
@@ -134,7 +134,7 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
           label: tool.name,
           type: 'tool',
           cluster: cl,
-          color: '#06b6d4',
+          color: KAGENT_NODE_TOOL,
           x: midX,
           y: yOffset + i * rowHeight,
         })
@@ -147,7 +147,7 @@ function KagentTopologyInternal({ config }: { config?: Record<string, unknown> }
           label: model.name,
           type: 'model',
           cluster: cl,
-          color: '#10b981',
+          color: KAGENT_NODE_MODEL,
           x: rightX,
           y: yOffset + i * rowHeight,
         })
