@@ -227,7 +227,7 @@ func fetchPlaylistViaYTDLP() ([]PlaylistVideo, error) {
 		return nil, fmt.Errorf("yt-dlp failed: %w", err)
 	}
 
-	var videos []PlaylistVideo
+	videos := make([]PlaylistVideo, 0)
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		if line == "" {
 			continue

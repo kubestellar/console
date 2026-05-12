@@ -529,7 +529,7 @@ type createdGitHubIssue struct {
 // on the returned slice from a background goroutine.
 func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, consoleErrors []models.ConsoleError, failedApiCalls []models.FailedApiCall, diagnostics *models.DiagnosticInfo, parentIssueNumber *int, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
 	// Determine labels based on request type and target repo
-	var labels []string
+	labels := make([]string, 0)
 	isDocs := request.TargetRepo == models.TargetRepoDocs
 
 	if isDocs {
@@ -563,7 +563,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 	// images to the repo, and replaces the comment with a rendered image.
 	// #7062: validate screenshots upfront but only count as uploaded after
 	// successful delivery via addIssueComment (moved below).
-	var validScreenshots []string
+	validScreenshots := make([]string, 0)
 	var ssResult screenshotUploadResult
 	for i, dataURI := range screenshots {
 		parts := strings.SplitN(dataURI, ",", 2)

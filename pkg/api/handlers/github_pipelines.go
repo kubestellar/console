@@ -524,7 +524,7 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "repos marshal failed"})
 	}
-	var body []byte
+	body := make([]byte, 0)
 	if len(inner) > 2 && inner[0] == '{' {
 		// Merge repos into existing object.
 		// Guard against integer overflow before computing the allocation size

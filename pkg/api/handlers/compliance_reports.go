@@ -66,7 +66,7 @@ func (h *ComplianceReportsHandler) GenerateReport(c *fiber.Ctx) error {
 		userName = login
 	}
 
-	var data []byte
+	data := make([]byte, 0)
 	var contentType string
 	var err error
 

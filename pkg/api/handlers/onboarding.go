@@ -148,7 +148,7 @@ func generateDefaultCards(responses []models.OnboardingResponse) []models.Card {
 		respMap[r.QuestionKey] = r.Answer
 	}
 
-	var cards []models.Card
+	cards := make([]models.Card, 0)
 
 	// Always include cluster health
 	cards = append(cards, models.Card{
@@ -225,7 +225,7 @@ func generateDefaultCards(responses []models.OnboardingResponse) []models.Card {
 
 	// Deduplicate cards by type
 	seen := make(map[models.CardType]bool)
-	var unique []models.Card
+	unique := make([]models.Card, 0)
 	for _, card := range cards {
 		if !seen[card.CardType] {
 			seen[card.CardType] = true
