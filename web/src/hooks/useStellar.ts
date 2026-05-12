@@ -31,25 +31,32 @@ export function useStellar() {
   const reconnectDelay = useRef(STELLAR_RECONNECT_BASE_MS)
 
   const refreshState = useCallback(async () => {
-    const [nextState, nextNotifications, nextActions, nextTasks, nextWatches] = await Promise.all([
+    const results = await Promise.allSettled([
       stellarApi.getState(),
       stellarApi.getNotifications(STELLAR_DEFAULT_FETCH_LIMIT, true),
       stellarApi.getActions('pending_approval', STELLAR_DEFAULT_FETCH_LIMIT),
       stellarApi.getTasks(),
       stellarApi.getWatches(),
     ])
-    setState(nextState)
-    setNotifications(sortNotificationsByCreatedAt(nextNotifications || []))
-    setPendingActions(nextActions || [])
-    setTasks((nextTasks || []).slice().sort((a, b) => a.priority - b.priority))
-    setWatches(nextWatches || [])
+
+    // Apply results only if they succeeded — partial failure must not crash the hook
+    if (results[0].status === 'fulfilled') setState(results[0].value)
+    if (results[1].status === 'fulfilled') setNotifications(sortNotificationsByCreatedAt(results[1].value || []))
+    if (results[2].status === 'fulfilled') setPendingActions(results[2].value || [])
+    if (results[3].status === 'fulfilled') setTasks((results[3].value || []).slice().sort((a, b) => a.priority - b.priority))
+    if (results[4].status === 'fulfilled') setWatches(results[4].value || [])
+
+    const failures = results.filter(r => r.status === 'rejected')
+    if (failures.length > 0) {
+      console.warn('stellar: refreshState partial failure —', failures.length, 'of 5 calls failed')
+    }
   }, [])
 
   const connectSSE = useCallback(() => {
     if (esRef.current) {
       esRef.current.close()
     }
-    const es = new EventSource('/api/stellar/stream')
+    const es = new EventSource('/api/stellar/stream', { withCredentials: true })
     esRef.current = es
     es.onopen = () => {
       setIsConnected(true)
@@ -89,12 +96,52 @@ export function useStellar() {
       // Refresh watches when observer fires — lastUpdate may have changed
       stellarApi.getWatches().then(setWatches).catch(() => {/* ignore */})
     })
+    es.addEventListener('initial_batch', (e) => {
+      try {
+        const batch = JSON.parse((e as MessageEvent).data) as {
+          notifications?: StellarNotification[]
+          watches?: StellarWatch[]
+          pendingActions?: StellarAction[]
+          operationalState?: StellarOperationalState
+        }
+        if (batch.notifications) setNotifications(sortNotificationsByCreatedAt(batch.notifications))
+        if (batch.watches) setWatches(batch.watches)
+        if (batch.pendingActions) setPendingActions(batch.pendingActions)
+        if (batch.operationalState) setState(batch.operationalState)
+      } catch { /* malformed batch */ }
+    })
     es.addEventListener('watches', (e) => {
       const updated: StellarWatch[] = JSON.parse((e as MessageEvent).data)
       setWatches(updated || [])
     })
+    es.addEventListener('watch_update', (e) => {
+      try {
+        const updated: StellarWatch = JSON.parse((e as MessageEvent).data)
+        setWatches(prev => prev.map(w => w.id === updated.id ? updated : w))
+      } catch { /* ignore */ }
+    })
     es.addEventListener('watch_created', () => {
       stellarApi.getWatches().then(setWatches).catch(() => {/* ignore */})
+    })
+    es.addEventListener('action_update', (e) => {
+      try {
+        const updated: StellarAction = JSON.parse((e as MessageEvent).data)
+        setPendingActions(prev => {
+          const exists = prev.some(a => a.id === updated.id)
+          if (updated.status === 'pending_approval') {
+            return exists ? prev.map(a => a.id === updated.id ? updated : a) : [updated, ...prev]
+          }
+          return prev.filter(a => a.id !== updated.id)
+        })
+      } catch { /* ignore */ }
+    })
+    es.addEventListener('notification_update', (e) => {
+      try {
+        const payload = JSON.parse((e as MessageEvent).data) as { dedupKey: string; body: string }
+        setNotifications(prev => prev.map(n =>
+          n.dedupeKey === payload.dedupKey ? { ...n, body: payload.body } : n
+        ))
+      } catch { /* ignore */ }
     })
     es.addEventListener('catchup', (e) => {
       const d = JSON.parse((e as MessageEvent).data) as { summary: string; kind: string }
@@ -112,17 +159,45 @@ export function useStellar() {
   }, [connectSSE])
 
   useEffect(() => {
+    let cancelled = false
+
+    const waitForToken = (): Promise<void> => {
+      return new Promise((resolve) => {
+        if (localStorage.getItem('token') || document.cookie.includes('kc_auth')) {
+          resolve()
+          return
+        }
+        let attempts = 0
+        const interval = setInterval(() => {
+          attempts++
+          if (localStorage.getItem('token') || document.cookie.includes('kc_auth') || attempts > 30) {
+            clearInterval(interval)
+            resolve()
+          }
+        }, 100)
+      })
+    }
+
     const initialize = async () => {
-      await refreshState()
+      await waitForToken()
+
+      try {
+        await refreshState()
+      } catch (err) {
+        console.warn('stellar: init failed:', err)
+      }
+      
+      // Always connect SSE — even if init failed or cancelled by HMR
       connectSSE()
     }
 
     void initialize()
 
     return () => {
+      cancelled = true
       esRef.current?.close()
     }
-  }, [refreshState, connectSSE])
+  }, []) // Empty deps — run once on mount, never re-run
 
   const unreadCount = useMemo(() => notifications.filter(item => !item.read).length, [notifications])
 
