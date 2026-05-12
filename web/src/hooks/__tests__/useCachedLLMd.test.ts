@@ -643,6 +643,22 @@ describe('useCachedLLMd', () => {
       expect(byName('llm-d-custom')!.type).toBe('llm-d')
     })
 
+    it('prefers vllm over the llm-d substring in vllm-deployment names', async () => {
+      mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
+        if (args[1] === 'deployments') {
+          return mockExecJson([
+            makeDeployment('vllm-deployment', 'llm-d', { replicas: 1, readyReplicas: 1 }),
+          ])
+        }
+        return mockExecJson([])
+      })
+
+      const { fetchLLMdServers } = await loadModule()
+      const servers = await fetchLLMdServers(['c1'])
+
+      expect(servers[0]?.type).toBe('vllm')
+    })
+
     it('detects server types via labels when name does not match', async () => {
       mockKubectlProxy.exec.mockImplementation(async (args: string[]) => {
         if (args[1] === 'deployments') {
