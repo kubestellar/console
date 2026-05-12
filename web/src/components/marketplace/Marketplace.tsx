@@ -199,6 +199,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
               src={item.screenshot}
               alt={item.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
             />
           </div>
         ) : (

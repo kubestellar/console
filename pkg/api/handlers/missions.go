@@ -677,7 +677,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		"search-state.json": true,
 	}
 
-	var entries []fiber.Map
+	entries := make([]fiber.Map, 0, len(ghEntries))
 	for _, e := range ghEntries {
 		entryType, _ := e["type"].(string)
 		if entryType == "dir" {

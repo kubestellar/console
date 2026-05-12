@@ -75,6 +75,9 @@ export const FeedItemsList = memo(function FeedItemsList({
                 src={item.thumbnail}
                 alt={item.title || RSS_UI_STRINGS.feedThumbnailAlt}
                 className="w-16 h-16 object-cover rounded shrink-0"
+                loading="lazy"
+                width={64}
+                height={64}
                 onError={(e) => (e.currentTarget.style.display = 'none')}
               />
             )}

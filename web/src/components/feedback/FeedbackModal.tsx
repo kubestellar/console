@@ -599,6 +599,9 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
                                 src={s.preview}
                                 alt={`Attachment ${i + 1}`}
                                 className="w-20 h-20 object-cover rounded-lg border border-border"
+                                loading="lazy"
+                                width={80}
+                                height={80}
                               />
                             )}
                             <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 bg-black/60 rounded-lg transition-opacity">
