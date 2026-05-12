@@ -1,122 +1,52 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
 import { StatusBadge } from '../../ui/StatusBadge'
 import { Slider } from '../../ui/Slider'
-import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import {
+  useQuantumSystemStatus,
+  DEMO_QUANTUM_STATUS,
+} from '../../../hooks/useCachedQuantum'
 
 // Polling interval for status updates (can be adjusted if needed)
 const STATUS_POLL_MS_DEFAULT = 8000
 const STATUS_POLL_MIN_MS = 2000
 const STATUS_POLL_MAX_MS = 30000
 
-interface QuantumStatusResponse {
-  status: string
-  running: boolean
-  loop_mode: boolean
-  message: string
-  qasm_file: string
-  last_result_time?: string
-  execution_mode: string
-  control_system?: {
-    status: string
-    command: string
-    description: string
-  }
-  backend_info?: {
-    name?: string
-    shots?: number
-    type?: 'simulator' | 'noise_model' | 'real'
-  }
-  version_info?: {
-    version: string
-    commit: string
-    timestamp: string
-  }
-}
-
 interface QuantumStatusProps {
   isDemoData?: boolean
 }
 
-const DEMO_STATUS: QuantumStatusResponse = {
-  status: 'idle',
-  running: false,
-  loop_mode: false,
-  message: 'Quantum system ready',
-  qasm_file: 'demo.qasm',
-  execution_mode: 'control-based',
-  backend_info: {
-    name: 'aer',
-    shots: 1024,
-    type: 'simulator',
-  },
-  version_info: {
-    version: 'v0.2.58',
-    commit: 'demo',
-    timestamp: new Date().toISOString(),
-  },
-}
-
 export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false }) => {
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
-  const [statusData, setStatusData] = useState<QuantumStatusResponse | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isFailed, setIsFailed] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [pollInterval, setPollInterval] = useState(STATUS_POLL_MS_DEFAULT)
+  const forceDemo = isDemoData || isQuantumForcedToDemo()
+  const {
+    data,
+    isLoading,
+    isRefreshing,
+    isDemoData: isCachedDemoData,
+    error,
+    isFailed,
+    consecutiveFailures,
+  } = useQuantumSystemStatus({
+    isAuthenticated,
+    forceDemo,
+    pollInterval,
+  })
 
-  
-
-  useEffect(() => {
-    const fetchStatus = async () => {
-      // Skip fetch if polling is paused (e.g., dashboard settings modal open)
-      if (isGlobalQuantumPollingPaused()) return
-
-      const forceDemo = isQuantumForcedToDemo()
-      const effectiveIsDemoData = isDemoData || forceDemo
-
-      if (effectiveIsDemoData || !isAuthenticated) {
-        setStatusData(DEMO_STATUS)
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        const response = await fetch('/api/quantum/status', {
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
-        if (!response.ok) {
-          setError(`Failed to fetch quantum status (${response.status})`)
-          setIsFailed(true)
-          setConsecutiveFailures((prev) => prev + 1)
-          setStatusData(DEMO_STATUS)
-          return
-        }
-        const data = await response.json()
-        setStatusData(data)
-        setError(null)
-        setIsFailed(false)
-        setConsecutiveFailures(0)
-      } catch (error) {
-        console.error('Failed to fetch quantum status:', error)
-        setError(error instanceof Error ? error.message : 'Unable to load quantum status')
-        setIsFailed(true)
-        setConsecutiveFailures((prev) => prev + 1)
-        setStatusData(DEMO_STATUS)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchStatus()
-    const interval = setInterval(fetchStatus, pollInterval)
-    return () => clearInterval(interval)
-  }, [isDemoData, isAuthenticated, pollInterval, isQuantumForcedToDemo])
+  const statusData = data ?? DEMO_QUANTUM_STATUS
+  const effectiveIsDemoData = isAuthenticated ? isCachedDemoData : false
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: isLoading && data === null,
+    hasAnyData: data !== null,
+    isFailed,
+    consecutiveFailures,
+    isDemoData: effectiveIsDemoData,
+    isRefreshing,
+  })
 
   if (authIsLoading) {
     return (
@@ -141,16 +71,6 @@ export const QuantumStatus: React.FC<QuantumStatusProps> = ({ isDemoData = false
       </div>
     )
   }
-
-  const effectiveIsDemoData = isDemoData || isQuantumForcedToDemo()
-  const { showSkeleton } = useCardLoadingState({
-    isLoading: isLoading && statusData === null,
-    hasAnyData: statusData !== null,
-    isFailed,
-    consecutiveFailures,
-    isDemoData: effectiveIsDemoData,
-    isRefreshing: false,
-  })
 
   if (showSkeleton) {
     return (

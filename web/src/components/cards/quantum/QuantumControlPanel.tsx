@@ -1,14 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { AlertCircle, Play, RotateCcw, Zap, Key, Check, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useReportCardDataState } from '../CardDataContext'
-import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { CustomQASMModal } from './CustomQASMModal'
 import { useQASMFiles } from '../../../hooks/useQASMFiles'
 import { useAuth } from '../../../lib/auth'
 import { useDrillDown } from '../../../hooks/useDrillDown'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import {
+  useQuantumSystemStatus,
+  useQuantumAuthStatus,
+  DEMO_QUANTUM_STATUS,
+  QUANTUM_STATUS_DEFAULT_POLL_MS,
+  type QuantumSystemStatus,
+} from '../../../hooks/useCachedQuantum'
 
 interface ControlState {
   backend: string
@@ -23,49 +29,12 @@ interface ControlState {
   }
 }
 
-interface CircuitInfo {
-  num_qubits: number
-  depth?: number
-}
-
-interface ControlSystem {
-  command: string
-  description: string
-  status: string
-  timestamp: string
-}
-
-interface SystemStatus {
-  status: string
-  running: boolean
-  loop_running: boolean
-  execution_mode: string
-  loop_mode: boolean
-  circuit_info?: CircuitInfo
-  control_system?: ControlSystem
-  backend_info?: {
-    name: string
-    shots: number
-  } | null
-  last_result?: {
-    num_qubits: number
-    shots: number
-    counts: Record<string, number>
-    timestamp: string
-  } | null
-  last_result_time?: string
-  qasm_file?: string
-  message: string
-  version_info?: {
-    version: string
-    commit: string
-    timestamp: string
-  }
-}
+type SystemStatus = QuantumSystemStatus
 
 const LARGE_CIRCUIT_QASM = 'expt32.qasm'
 const LOOP_MODE_STATUS_SYNC_DELAY_MS = 100
 const EXECUTION_STATUS_POLL_DELAY_MS = 500
+const CONTROL_PANEL_POLL_MS = QUANTUM_STATUS_DEFAULT_POLL_MS
 
 const DEMO_DATA: ControlState = {
   backend: 'aer',
@@ -75,44 +44,14 @@ const DEMO_DATA: ControlState = {
   loop_mode: false,
 }
 
-const DEMO_STATUS: SystemStatus = {
-  status: 'ready',
-  running: false,
-  loop_running: false,
-  execution_mode: 'control-based',
-  loop_mode: false,
-  circuit_info: {
-    num_qubits: 2,
-  },
-  control_system: {
-    command: 'idle',
-    description: 'System idle, ready for commands',
-    status: 'ready',
-    timestamp: new Date().toISOString(),
-  },
-  backend_info: {
-    name: 'aer',
-    shots: 1024,
-  },
-  message: 'System ready',
-}
+const DEMO_STATUS: SystemStatus = DEMO_QUANTUM_STATUS
 
 export const QuantumControlPanel: React.FC = () => {
   const { t } = useTranslation('cards')
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
   const { open: openDrillDown, close: closeDrillDown } = useDrillDown()
   const [control, setControl] = useState<ControlState>(DEMO_DATA)
-  const [status, setStatus] = useState<SystemStatus | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
-  const [hasInitialized, setHasInitialized] = useState(false)
-
-  
-
-  // IBM Quantum credentials
-  const [ibmAuthenticated, setIbmAuthenticated] = useState(false)
+  const [mutationError, setMutationError] = useState<string | null>(null)
   const [showClearCredentialsDialog, setShowClearCredentialsDialog] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
 
@@ -121,104 +60,71 @@ export const QuantumControlPanel: React.FC = () => {
   const [customQasmContent, setCustomQasmContent] = useState<string>('')
   const [previousQasmFile, setPreviousQasmFile] = useState<string>(DEMO_DATA.qasm_file)
 
+  const forceDemo = isQuantumForcedToDemo()
+  const hasInitializedControlRef = useRef(false)
+
   // Fetch available QASM files
   const { files: qasmFiles, isLoading: qasmFilesLoading } = useQASMFiles()
-
-  const isDemoFallback = consecutiveFailures >= 3
-
-  useReportCardDataState({
-    isLoading: isLoading && !isDemoFallback,
+  const {
+    data: status,
+    isLoading,
     isRefreshing,
     isDemoData: isDemoFallback,
-    hasData: status !== null,
-    isFailed: error !== null,
+    error: statusError,
+    isFailed: isStatusFailed,
+    consecutiveFailures,
+    refetch: refetchStatus,
+  } = useQuantumSystemStatus({
+    isAuthenticated,
+    forceDemo,
+    pollInterval: CONTROL_PANEL_POLL_MS,
+  })
+  const {
+    data: authStatus,
+    isRefreshing: isAuthRefreshing,
+    error: authStatusError,
+    refetch: refetchAuthStatus,
+  } = useQuantumAuthStatus({
+    isAuthenticated,
+    forceDemo,
+    pollInterval: CONTROL_PANEL_POLL_MS,
+  })
+
+  const ibmAuthenticated = authStatus.authenticated
+  const error = mutationError ?? statusError ?? authStatusError
+
+  useReportCardDataState({
+    isLoading: isAuthenticated ? isLoading && status === null : false,
+    isRefreshing: isRefreshing || isAuthRefreshing,
+    isDemoData: isAuthenticated ? isDemoFallback : false,
+    hasData: isAuthenticated ? status !== null : false,
+    isFailed: isStatusFailed || error !== null,
     consecutiveFailures,
   })
 
-    // Fetch current status
-  const fetchStatus = useCallback(async (isInitialLoad: boolean = false) => {
-    try {
-      setIsRefreshing(true)
-      const res = await fetch('/api/quantum/status', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-
-      if (!res.ok) {
-      const errorBody = await res.text()
-      console.error('[Quantum] Request failed:', {
-          status: res.status,
-          statusText: res.statusText,
-          body: errorBody,
-      })
-      throw new Error(`Failed to fetch status (${res.status}): ${errorBody}`)
-      }
-
-      const data = await res.json()
-      setStatus(data)
-      setError(null)
-      setConsecutiveFailures(0)
-
-      // Fix #3: Only sync backend config on initial load, not on every poll
-      // This prevents the shots value from being overwritten by user input
-      if (isInitialLoad) {
-      const backendInfo = data.backend_info || { name: control.backend, shots: control.shots }
-      setControl(prev => ({
-          ...prev,
-          backend: backendInfo?.name || prev.backend,
-          shots: backendInfo?.shots || prev.shots,
-          loop_mode: data.loop_mode !== undefined ? data.loop_mode : prev.loop_mode,
-      }))
-      } else {
-      // On subsequent polls, only update loop_mode, not shots
-      setControl(prev => ({
-          ...prev,
-          loop_mode: data.loop_mode !== undefined ? data.loop_mode : prev.loop_mode,
-      }))
-      }
-    } catch (err) {
-      console.error('Error fetching status:', err)
-      console.debug('[Quantum] Auth Debug:', {
-      hasCredentials: true,
-      url: '/api/quantum/status',
-      error: err instanceof Error ? err.message : String(err),
-      isOnline: navigator.onLine,
-      })
-      setError(err instanceof Error ? err.message : 'Unknown error')
-      setConsecutiveFailures(prev => {
-      const newFailures = prev + 1
-      if (newFailures >= 3) {
-          console.warn('[Quantum] Falling back to demo after 3 failures')
-          setStatus(DEMO_STATUS)
-      }
-      return newFailures
-      })
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+  useEffect(() => {
+    if (!isAuthenticated || !status) {
+      hasInitializedControlRef.current = false
+      return
     }
-  }, [])//control.backend, control.shots])
 
-  // Fetch IBM Quantum auth status
-  const fetchAuthStatus = useCallback(async () => {
-    try {
-      const res = await fetch('/api/quantum/auth/status', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-      if (res.ok) {
-      const data = await res.json()
-      setIbmAuthenticated(data.authenticated === true)
-      }
-    } catch (err) {
-      console.error('Error fetching auth status:', err)
-      setError('Unable to load IBM Quantum authentication status')
+    if (!hasInitializedControlRef.current) {
+      const backendInfo = status.backend_info || { name: control.backend, shots: control.shots }
+      setControl(prev => ({
+        ...prev,
+        backend: backendInfo?.name || prev.backend,
+        shots: backendInfo?.shots || prev.shots,
+        loop_mode: status.loop_mode !== undefined ? status.loop_mode : prev.loop_mode,
+      }))
+      hasInitializedControlRef.current = true
+      return
     }
-  }, [])
+
+    setControl(prev => ({
+      ...prev,
+      loop_mode: status.loop_mode !== undefined ? status.loop_mode : prev.loop_mode,
+    }))
+  }, [control.backend, control.shots, isAuthenticated, status])
 
   // Open IBM Quantum credentials dialog via drilldown
   const handleOpenCredentialsDialog = useCallback(() => {
@@ -246,7 +152,8 @@ export const QuantumControlPanel: React.FC = () => {
         throw new Error(errorData.error || 'Failed to save credentials')
       }
 
-      setIbmAuthenticated(true)
+      setMutationError(null)
+      await refetchAuthStatus()
     }
 
     openDrillDown({
@@ -258,7 +165,7 @@ export const QuantumControlPanel: React.FC = () => {
         onClose: closeDrillDown,
       },
     })
-  }, [ibmAuthenticated, openDrillDown, closeDrillDown])
+  }, [ibmAuthenticated, openDrillDown, closeDrillDown, refetchAuthStatus])
 
   // Clear IBM Quantum credentials
   const handleClearCredentials = useCallback(async () => {
@@ -279,16 +186,16 @@ export const QuantumControlPanel: React.FC = () => {
         throw new Error(errorData.error || 'Failed to clear credentials')
       }
 
-      setIbmAuthenticated(false)
+      await refetchAuthStatus()
       setShowClearCredentialsDialog(false)
-      setError(null)
+      setMutationError(null)
     } catch (err) {
       console.error('Error clearing credentials:', err)
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      setMutationError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setIsClearing(false)
     }
-  }, [])
+  }, [refetchAuthStatus])
 
   useEffect(() => {
     if (!showClearCredentialsDialog || isClearing) return
@@ -299,32 +206,8 @@ export const QuantumControlPanel: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [showClearCredentialsDialog, isClearing])
 
-  // Initialize on mount
-  useEffect(() => {
-    fetchStatus(true)
-    fetchAuthStatus()
-    setHasInitialized(true)
-  }, [])
-
-  // Set up polling interval
-  // Reduced from 1s to 2.5s to avoid aggressive polling while still being responsive
-  // for loop_mode status updates
-  useEffect(() => {
-    if (!hasInitialized) return
-
-    // Skip polling if paused (e.g., dashboard settings modal open) or demo forced
-    if (isGlobalQuantumPollingPaused() || isQuantumForcedToDemo()) return
-
-    const CONTROL_PANEL_POLL_MS = 8000
-    const interval = setInterval(() => {
-      if (!isGlobalQuantumPollingPaused() && !isQuantumForcedToDemo()) {
-      fetchStatus(false)
-      }
-    }, CONTROL_PANEL_POLL_MS)
-    return () => clearInterval(interval)
-  }, [hasInitialized, fetchStatus])
-
   const handleExecute = async () => {
+    setMutationError(null)
     setControl(prev => ({ ...prev, executing: true }))
     try {
       let qasmFilename = control.qasm_file
@@ -383,34 +266,22 @@ export const QuantumControlPanel: React.FC = () => {
       // Only update status, don't update shots to preserve user input
       setTimeout(async () => {
       try {
-          const statusRes = await fetch('/api/quantum/status', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-          })
-          if (statusRes.ok) {
-            const data = await statusRes.json()
-            setStatus(data)
-            // Only update loop_mode, preserve shots user input
-            setControl(prev => ({
-              ...prev,
-              loop_mode: data.loop_mode !== undefined ? data.loop_mode : prev.loop_mode,
-            }))
-          }
+          await refetchStatus()
+          setMutationError(null)
       } catch (err) {
           console.error('Error polling after execution:', err)
-          setError('Execution started, but status refresh failed')
+          setMutationError('Execution started, but status refresh failed')
       }
       }, EXECUTION_STATUS_POLL_DELAY_MS)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Execution error')
+      setMutationError(err instanceof Error ? err.message : 'Execution error')
     } finally {
       setControl(prev => ({ ...prev, executing: false }))
     }
   }
 
   const handleLoopModeToggle = async () => {
+    setMutationError(null)
     try {
       const endpoint = control.loop_mode ? '/api/quantum/loop/stop' : '/api/quantum/loop/start'
       const response = await fetch(endpoint, {
@@ -427,25 +298,15 @@ export const QuantumControlPanel: React.FC = () => {
 
       // Fix #1: Don't rely on response.loop_mode - refetch status instead
       await new Promise(resolve => setTimeout(resolve, LOOP_MODE_STATUS_SYNC_DELAY_MS))
-      const statusRes = await fetch('/api/quantum/status', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-      })
-      if (statusRes.ok) {
-      const statusData = await statusRes.json()
-      setStatus(statusData)
-      setControl(prev => ({
-          ...prev,
-          loop_mode: statusData.loop_mode,
-      }))
-      }
-      setError(null)
+      await refetchStatus()
+      setMutationError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle loop mode')
+      setMutationError(err instanceof Error ? err.message : 'Failed to toggle loop mode')
     }
   }
+
+  const displayStatus = status || DEMO_STATUS
+  const isHealthy = displayStatus.status === 'ready' || displayStatus.loop_running === true
 
   if (authIsLoading) {
     return (
@@ -470,9 +331,6 @@ export const QuantumControlPanel: React.FC = () => {
       </div>
     )
   }
-
-  const displayStatus = status || DEMO_STATUS
-  const isHealthy = displayStatus.status === 'ready' || displayStatus.loop_running
 
   return (
     <div className="p-4">

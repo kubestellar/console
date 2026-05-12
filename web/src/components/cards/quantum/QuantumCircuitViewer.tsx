@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useCardLoadingState } from '../CardDataContext'
 import { Skeleton } from '../../ui/Skeleton'
-import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import {
+  useQuantumCircuitAscii,
+  QUANTUM_CIRCUIT_DEFAULT_POLL_MS,
+} from '../../../hooks/useCachedQuantum'
 
-const CIRCUIT_ASCII_POLLING_INTERVAL_MS = 10000
+const CIRCUIT_ASCII_POLLING_INTERVAL_MS = QUANTUM_CIRCUIT_DEFAULT_POLL_MS
 
 interface QuantumCircuitViewerProps {
   isDemoData?: boolean
@@ -14,10 +16,31 @@ interface QuantumCircuitViewerProps {
 
 export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDemoData = false }) => {
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
-  const [circuitAscii, setCircuitAscii] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isFailed, setIsFailed] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const forceDemo = isDemoData || isQuantumForcedToDemo()
+  const {
+    data,
+    isLoading,
+    isRefreshing,
+    isDemoData: isCachedDemoData,
+    error,
+    isFailed,
+    consecutiveFailures,
+  } = useQuantumCircuitAscii({
+    isAuthenticated,
+    forceDemo,
+    pollInterval: CIRCUIT_ASCII_POLLING_INTERVAL_MS,
+  })
+
+  const circuitAscii = data?.circuitAscii ?? null
+  const effectiveIsDemoData = isAuthenticated ? isCachedDemoData : false
+  const { showSkeleton } = useCardLoadingState({
+    isLoading: isLoading && circuitAscii === null,
+    hasAnyData: circuitAscii !== null,
+    isFailed,
+    consecutiveFailures,
+    isDemoData: effectiveIsDemoData,
+    isRefreshing,
+  })
 
   if (authIsLoading) {
     return (
@@ -40,54 +63,6 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
       </div>
     )
   }
-
-  const effectiveIsDemoData = isDemoData || isQuantumForcedToDemo()
-  const { showSkeleton } = useCardLoadingState({
-    isLoading: isLoading && circuitAscii === null,
-    hasAnyData: circuitAscii !== null,
-    isFailed,
-    consecutiveFailures: isFailed ? 1 : 0,
-    isDemoData: effectiveIsDemoData,
-    isRefreshing: false,
-  })
-
-  useEffect(() => {
-    const fetchCircuit = async () => {
-      // Skip fetch if polling is paused (e.g., dashboard settings modal open) or demo forced
-      if (isGlobalQuantumPollingPaused() || isQuantumForcedToDemo()) {
-        setIsLoading(false)
-        return
-      }
-
-      try {
-        setIsLoading(true)
-        setIsFailed(false)
-        const response = await fetch('/api/quantum/qasm/circuit/ascii', {
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
-        if (!response.ok) {
-          throw new Error(`Failed to fetch circuit: ${response.statusText}`)
-        }
-        const html = await response.text()
-        const preMatch = html.match(/<pre>([\s\S]*?)<\/pre>/)
-        if (!preMatch) {
-          throw new Error('No circuit data found in response')
-        }
-        setCircuitAscii(preMatch[1].trimEnd())
-        setError(null)
-      } catch (error) {
-        console.error('Error fetching quantum circuit:', error)
-        setError(error instanceof Error ? error.message : 'Unable to load quantum circuit diagram')
-        setIsFailed(true)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchCircuit()
-    const interval = setInterval(fetchCircuit, CIRCUIT_ASCII_POLLING_INTERVAL_MS)
-    return () => clearInterval(interval)
-  }, [isAuthenticated, isQuantumForcedToDemo])
 
   if (showSkeleton) {
     return (
