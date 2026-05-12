@@ -114,6 +114,9 @@ export function PayloadCard({ project, onRemove, onUpdatePriority, onHover, onCl
                 alt={project.displayName}
                 className="w-8 h-8 rounded object-contain"
                 onError={() => setImgFailed(true)}
+                loading="lazy"
+                width={32}
+                height={32}
               />
             ) : (
               <div

@@ -649,6 +649,9 @@ function ConsoleUsersTab({
                     src={user.avatar_url}
                     alt={isBlurred ? '' : user.github_login}
                     className="w-8 h-8 rounded-full"
+                    loading="lazy"
+                    width={32}
+                    height={32}
                   />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">

@@ -220,6 +220,7 @@ const KindIcon: React.FC<{ size: number; className?: string }> = ({ size, classN
     height={size}
     className={className}
     style={KIND_ICON_STYLE}
+    loading="lazy"
   />
 )
 

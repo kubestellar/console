@@ -391,7 +391,10 @@ func ensureTLSCert() (certFile, keyFile string, err error) {
 	if fileErr != nil {
 		return "", "", fileErr
 	}
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
+		certOut.Close()
+		return "", "", fmt.Errorf("write TLS cert: %w", err)
+	}
 	certOut.Close()
 
 	keyDER, marshalErr := x509.MarshalECPrivateKey(key)
@@ -402,7 +405,10 @@ func ensureTLSCert() (certFile, keyFile string, err error) {
 	if fileErr2 != nil {
 		return "", "", fileErr2
 	}
-	pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	if err := pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}); err != nil {
+		keyOut.Close()
+		return "", "", fmt.Errorf("write TLS key: %w", err)
+	}
 	keyOut.Close()
 
 	slog.Info("[Watcher] TLS cert generated", "cert", certFile, "key", keyFile)
