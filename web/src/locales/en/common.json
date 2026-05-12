@@ -1963,6 +1963,17 @@
     "failedToFetchKeyStatus": "Failed to fetch key status",
     "failedToConnect": "Failed to connect to agent",
     "failedToSaveKey": "Failed to save key",
+    "approval": {
+      "title": "Authorize CLI Agents",
+      "description": "Review and approve the agents that will run on your machine",
+      "executeWarning": "These agents can execute commands on your system",
+      "enabledDescription": "When enabled, AI agents run CLI tools (<kubectl>kubectl</kubectl>, <helm>helm</helm>, etc.) to diagnose and repair your Kubernetes clusters. Only approve if you trust this machine's kubeconfig access.",
+      "detectedAgents": "Detected CLI agents ({{count}})",
+      "noAgentsDetected": "No CLI agents detected on this machine.",
+      "disableHint": "You can disable AI agents at any time from the <strong>AI Agent</strong> toggle in the top navbar.",
+      "cancel": "Cancel",
+      "approveEnable": "Approve & Enable"
+    },
     "failedToDeleteKey": "Failed to delete key",
     "localAgentRequired": "Local Agent Required",
     "installAgentPrompt": "Install and start the local agent to configure API keys.",
