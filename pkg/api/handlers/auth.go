@@ -901,7 +901,7 @@ func (h *AuthHandler) getGitHubPrimaryEmail(ctx context.Context, accessToken str
 		return "", fmt.Errorf("GitHub emails API returned %d", resp.StatusCode)
 	}
 
-	var emails []gitHubEmail
+	emails := make([]gitHubEmail, 0)
 	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
 		return "", err
 	}

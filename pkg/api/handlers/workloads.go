@@ -508,7 +508,7 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
 		defer cancel()
 
-		var labelErrors []string
+		labelErrors := make([]string, 0)
 		for _, cluster := range group.Clusters {
 			if err := h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 				"kubestellar.io/group": group.Name,
@@ -571,7 +571,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 		for _, c := range group.Clusters {
 			newSet[c] = true
 		}
-		var labelErrors []string
+		labelErrors := make([]string, 0)
 		for _, cluster := range oldGroup.Clusters {
 			if !newSet[cluster] {
 				if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
@@ -631,7 +631,7 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
 		defer cancel()
 
-		var labelErrors []string
+		labelErrors := make([]string, 0)
 		for _, cluster := range group.Clusters {
 			if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
 				slog.Error("[Workloads] failed to remove label from cluster", "cluster", cluster, "error", err)
@@ -668,7 +668,7 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Request body too large")
 	}
 
-	var groups []ClusterGroup
+	groups := make([]ClusterGroup, 0)
 	if err := json.Unmarshal(c.Body(), &groups); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
@@ -1205,7 +1205,7 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 	// Collect k8s events for the deployment and its pods
 	// Use a limit to bound memory usage (#3721)
 	const maxEventsPerQuery = 50
-	var allEvents []corev1.Event
+	allEvents := make([]corev1.Event, 0)
 
 	// Events for the deployment itself
 	deployEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{

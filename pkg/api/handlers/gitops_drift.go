@@ -353,7 +353,7 @@ var kubectlErrorPatterns = []string{
 // detectKubectlErrors scans text for known kubectl/K8s error patterns
 // and returns the matching error lines. Returns nil when no errors are found.
 func detectKubectlErrors(text string) []string {
-	var errs []string
+	errs := make([]string, 0)
 	for _, line := range strings.Split(text, "\n") {
 		lineLower := strings.ToLower(line)
 		for _, pattern := range kubectlErrorPatterns {

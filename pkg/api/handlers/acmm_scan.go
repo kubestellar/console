@@ -228,7 +228,7 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 	}
 
 	// Detect criteria
-	var detected []string
+	detected := make([]string, 0)
 	for _, crit := range acmmCriteria {
 		if matchesPatterns(treePaths, crit.Patterns) {
 			detected = append(detected, crit.ID)

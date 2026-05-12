@@ -80,7 +80,7 @@ func (h *TopologyHandlers) GetTopology(c *fiber.Ctx) error {
 	defer cancel()
 
 	// Collect data from all sources, tracking partial failures (#4774)
-	var partialErrors []string
+	partialErrors := make([]string, 0)
 
 	exports, err := h.k8sClient.ListServiceExports(ctx)
 	if err != nil {
