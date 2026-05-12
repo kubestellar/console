@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -153,7 +152,7 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}})
+		writeJSON(w, map[string]any{"agents": []any{}})
 		return
 	}
 
@@ -161,7 +160,7 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]any{"agents": []any{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -172,7 +171,7 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Warn("error fetching agents", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": "internal server error"})
+		writeJSON(w, map[string]any{"agents": []any{}, "error": "internal server error"})
 		return
 	}
 
@@ -184,12 +183,12 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		if apierrors.IsNotFound(err) || isCRDNotInstalledErr(err) {
-			json.NewEncoder(w).Encode(map[string]any{"agents": []any{}})
+			writeJSON(w, map[string]any{"agents": []any{}})
 			return
 		}
 		slog.Warn("error listing kagenti agents", "cluster", cluster, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"agents": []any{}, "error": err.Error()})
+		writeJSON(w, map[string]any{"agents": []any{}, "error": err.Error()})
 		return
 	}
 
@@ -229,7 +228,7 @@ func (s *Server) handleKagentiAgents(w http.ResponseWriter, r *http.Request) {
 		agents = append(agents, a)
 	}
 
-	json.NewEncoder(w).Encode(map[string]any{"agents": agents, "source": "agent"})
+	writeJSON(w, map[string]any{"agents": agents, "source": "agent"})
 }
 
 // handleKagentiBuilds returns kagenti AgentBuild CRDs for a cluster
@@ -247,7 +246,7 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}})
+		writeJSON(w, map[string]any{"builds": []any{}})
 		return
 	}
 
@@ -255,7 +254,7 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]any{"builds": []any{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -266,7 +265,7 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Warn("error fetching builds", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}, "error": "internal server error"})
+		writeJSON(w, map[string]any{"builds": []any{}, "error": "internal server error"})
 		return
 	}
 
@@ -278,12 +277,12 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		if apierrors.IsNotFound(err) || isCRDNotInstalledErr(err) {
-			json.NewEncoder(w).Encode(map[string]any{"builds": []any{}})
+			writeJSON(w, map[string]any{"builds": []any{}})
 			return
 		}
 		slog.Warn("error listing kagenti builds", "cluster", cluster, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"builds": []any{}, "error": err.Error()})
+		writeJSON(w, map[string]any{"builds": []any{}, "error": err.Error()})
 		return
 	}
 
@@ -314,7 +313,7 @@ func (s *Server) handleKagentiBuilds(w http.ResponseWriter, r *http.Request) {
 		builds = append(builds, b)
 	}
 
-	json.NewEncoder(w).Encode(map[string]any{"builds": builds, "source": "agent"})
+	writeJSON(w, map[string]any{"builds": builds, "source": "agent"})
 }
 
 // handleKagentiCards returns kagenti AgentCard CRDs for a cluster
@@ -332,7 +331,7 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}})
+		writeJSON(w, map[string]any{"cards": []any{}})
 		return
 	}
 
@@ -340,7 +339,7 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]any{"cards": []any{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -351,7 +350,7 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Warn("error fetching cards", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}, "error": "internal server error"})
+		writeJSON(w, map[string]any{"cards": []any{}, "error": "internal server error"})
 		return
 	}
 
@@ -363,12 +362,12 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		if apierrors.IsNotFound(err) || isCRDNotInstalledErr(err) {
-			json.NewEncoder(w).Encode(map[string]any{"cards": []any{}})
+			writeJSON(w, map[string]any{"cards": []any{}})
 			return
 		}
 		slog.Warn("error listing kagenti cards", "cluster", cluster, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"cards": []any{}, "error": err.Error()})
+		writeJSON(w, map[string]any{"cards": []any{}, "error": err.Error()})
 		return
 	}
 
@@ -397,7 +396,7 @@ func (s *Server) handleKagentiCards(w http.ResponseWriter, r *http.Request) {
 		cards = append(cards, c)
 	}
 
-	json.NewEncoder(w).Encode(map[string]any{"cards": cards, "source": "agent"})
+	writeJSON(w, map[string]any{"cards": cards, "source": "agent"})
 }
 
 // handleKagentiTools returns kagenti MCPServer CRDs for a cluster
@@ -415,7 +414,7 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}})
+		writeJSON(w, map[string]any{"tools": []any{}})
 		return
 	}
 
@@ -423,7 +422,7 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "cluster parameter required"})
+		writeJSON(w, map[string]any{"tools": []any{}, "error": "cluster parameter required"})
 		return
 	}
 
@@ -434,7 +433,7 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Warn("error fetching tools", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": "internal server error"})
+		writeJSON(w, map[string]any{"tools": []any{}, "error": "internal server error"})
 		return
 	}
 
@@ -446,12 +445,12 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		if apierrors.IsNotFound(err) || isCRDNotInstalledErr(err) {
-			json.NewEncoder(w).Encode(map[string]any{"tools": []any{}})
+			writeJSON(w, map[string]any{"tools": []any{}})
 			return
 		}
 		slog.Warn("error listing kagenti tools", "cluster", cluster, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{"tools": []any{}, "error": err.Error()})
+		writeJSON(w, map[string]any{"tools": []any{}, "error": err.Error()})
 		return
 	}
 
@@ -474,7 +473,7 @@ func (s *Server) handleKagentiTools(w http.ResponseWriter, r *http.Request) {
 		tools = append(tools, t)
 	}
 
-	json.NewEncoder(w).Encode(map[string]any{"tools": tools, "source": "agent"})
+	writeJSON(w, map[string]any{"tools": tools, "source": "agent"})
 }
 
 // handleKagentiSummary returns an aggregated summary of kagenti resources for a cluster
@@ -492,7 +491,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.k8sClient == nil {
-		json.NewEncoder(w).Encode(map[string]any{
+		writeJSON(w, map[string]any{
 			"agentCount": 0, "readyAgents": 0, "buildCount": 0,
 			"activeBuilds": 0, "toolCount": 0, "cardCount": 0,
 			"frameworks": map[string]int{},
@@ -503,7 +502,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 	cluster := r.URL.Query().Get("cluster")
 	if cluster == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]any{"error": "cluster parameter required"})
+		writeJSON(w, map[string]any{"error": "cluster parameter required"})
 		return
 	}
 
@@ -511,7 +510,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Warn("error fetching kagenti summary", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]any{
+		writeJSON(w, map[string]any{
 			"agentCount": 0, "readyAgents": 0, "buildCount": 0,
 			"activeBuilds": 0, "toolCount": 0, "cardCount": 0,
 			"frameworks": map[string]int{}, "error": "internal server error",
@@ -620,7 +619,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 
 	wg.Wait()
 
-	json.NewEncoder(w).Encode(map[string]any{
+	writeJSON(w, map[string]any{
 		"agentCount":   agentCount,
 		"readyAgents":  readyAgents,
 		"buildCount":   buildCount,

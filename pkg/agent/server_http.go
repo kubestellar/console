@@ -48,11 +48,10 @@ func mapK8sErrorToHTTP(err error) (int, string) {
 	}
 }
 
-// writeJSON encodes v as JSON to w and logs any encoding error.
-// After headers have been written, the only safe action is to log the failure.
-func writeJSON(w http.ResponseWriter, v interface{}) {
+// writeJSON encodes v as JSON to w; logs on failure.
+func writeJSON(w http.ResponseWriter, v any) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("[HTTP] failed to encode JSON response", "error", err)
+		slog.Error("failed to encode JSON response", "error", err)
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -845,7 +844,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		AvailableProviders: providerSummaries,
 	}
 
-	json.NewEncoder(w).Encode(payload)
+	writeJSON(w, payload)
 }
 
 // handleStatus handles authenticated agent status probes.
@@ -865,7 +864,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	clusters, _ := s.kubectl.ListContexts()
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":   "ok",
 		"version":  Version,
 		"clusters": len(clusters),
@@ -891,7 +890,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	providerName := r.URL.Query().Get("name")
 	if providerName == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{
+		writeJSON(w, protocol.ErrorPayload{
 			Code:    "missing_name",
 			Message: "Query parameter 'name' is required",
 		})
@@ -901,7 +900,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	provider, err := s.registry.Get(providerName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(protocol.ProviderCheckResponse{
+		writeJSON(w, protocol.ProviderCheckResponse{
 			Provider: providerName,
 			Ready:    false,
 			State:    "failed",
@@ -926,7 +925,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 			resp.State = "failed"
 			resp.Message = fmt.Sprintf("%s is not available", provider.DisplayName())
 		}
-		json.NewEncoder(w).Encode(resp)
+		writeJSON(w, resp)
 		return
 	}
 
@@ -937,7 +936,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	result := hp.Handshake(ctx)
 	slog.Info("[ProviderCheck] result", "provider", providerName, "state", result.State, "ready", result.Ready, "message", result.Message)
 
-	json.NewEncoder(w).Encode(protocol.ProviderCheckResponse{
+	writeJSON(w, protocol.ProviderCheckResponse{
 		Provider:      providerName,
 		Ready:         result.Ready,
 		State:         result.State,
