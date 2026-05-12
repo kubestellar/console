@@ -25,6 +25,7 @@
 # Adding a new file to this allowlist is a security decision. Do it in the
 # same PR as the new exception and explain the rationale in the PR body.
 
+gpu.go
 mcp_resources.go
 self_upgrade.go
 console_persistence.go
