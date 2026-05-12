@@ -21,8 +21,9 @@ export function useQASMFiles(enabled?: boolean, forceDemo?: boolean): UseQASMFil
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Use explicit forceDemo parameter if provided, otherwise check the function
-  const isDemoMode = forceDemo ?? isQuantumForcedToDemo()
+  // Determine demo mode: prefer explicit forceDemo, otherwise use workload detection
+  const workloadIsDemoMode = isQuantumForcedToDemo()
+  const isDemoMode = forceDemo ?? workloadIsDemoMode
 
   const fetchFiles = async () => {
     try {
@@ -67,7 +68,7 @@ export function useQASMFiles(enabled?: boolean, forceDemo?: boolean): UseQASMFil
     }
 
     fetchFiles()
-  }, [isAuthenticated, enabled, isDemoMode])
+  }, [isAuthenticated, enabled, isDemoMode, forceDemo, workloadIsDemoMode])
 
   return { files, isLoading, error, refetch: fetchFiles }
 }

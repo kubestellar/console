@@ -98,7 +98,7 @@ describe('useQASMFiles', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('does not fetch and sets isLoading=false when isQuantumForcedToDemo returns true', async () => {
+  it('returns bell.qasm and does not fetch when isQuantumForcedToDemo returns true', async () => {
     mockIsQuantumForcedToDemo.mockReturnValue(true)
     const fetchSpy = vi.fn()
     vi.stubGlobal('fetch', fetchSpy)
@@ -108,7 +108,7 @@ describe('useQASMFiles', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     expect(fetchSpy).not.toHaveBeenCalled()
-    expect(result.current.files).toHaveLength(0)
+    expect(result.current.files).toEqual([{ name: 'bell.qasm' }])
     expect(result.current.error).toBeNull()
   })
 
