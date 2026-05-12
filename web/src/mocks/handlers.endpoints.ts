@@ -1736,7 +1736,7 @@ export function createHandlers() {
   }),
 
   // Server-side Kubara catalog endpoint (Go handler with cache — #8487).
-  // In demo mode this is intercepted by MSW; the Go handler also returns
+  // In demo mode this is intercepted by MSW; the GO handler also returns
   // demo data when it sees X-Demo-Mode, but belt-and-suspenders is safer.
   http.get('/api/kubara/catalog', () => {
     return HttpResponse.json({
@@ -1752,6 +1752,27 @@ export function createHandlers() {
       repo: 'kubara-io/kubara',
       path: 'go-binary/templates/embedded/managed-service-catalog/helm',
     })
+  }),
+
+  // ── GitHub API endpoints for version checking (#13261) ─────────────
+  // Mock GitHub API endpoints used by useVersionCheck for update notifications.
+  // Without these mocks, Firefox/WebKit/Mobile browsers timeout waiting for
+  // responses during cross-browser nightly tests.
+  http.get('/api/github/repos/kubestellar/console/git/ref/heads/main', () => {
+    return HttpResponse.json({
+      ref: 'refs/heads/main',
+      node_id: 'REF_kwDOKj5abc9yZWZzL2hlYWRzL21haW4',
+      url: 'https://api.github.com/repos/kubestellar/console/git/refs/heads/main',
+      object: {
+        sha: 'abc123def456789abc123def456789abc123def4',
+        type: 'commit',
+        url: 'https://api.github.com/repos/kubestellar/console/git/commits/abc123def456789abc123def456789abc123def4',
+      },
+    })
+  }),
+
+  http.get('/api/github/repos/kubestellar/console/releases', () => {
+    return HttpResponse.json([])
   }),
 
   // ── Optional feature status endpoints (issue #8162) ──────────────
