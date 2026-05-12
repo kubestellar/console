@@ -3624,6 +3624,14 @@
     "persistentVolumesBound": "persistent volumes (bound)",
     "classesInUse": "classes in use"
   },
+  "network": {
+    "errors": {
+      "loadFailedTitle": "Unable to load network data",
+      "refreshFailedTitle": "Unable to refresh network data — showing cached data",
+      "loadingDescription": "Please check your connection and try again.",
+      "permissionsDescription": "Please check your connection or permissions, then try again."
+    }
+  },
   "cicd": {
     "title": "CI/CD",
     "subtitle": "Monitor continuous integration and deployment pipelines",
