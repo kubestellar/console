@@ -113,7 +113,7 @@ func (h *TimelineHandler) StartEventCollector(done <-chan struct{}) {
 		slog.Info("[Timeline] no k8s client — event collector disabled")
 		return
 	}
-	go h.runCollector(done)
+	safego.GoWith("timeline/event-collector", func() { h.runCollector(done) })
 }
 
 func (h *TimelineHandler) runCollector(done <-chan struct{}) {

@@ -1155,7 +1155,7 @@ func (m *MultiClusterClient) StartWatching() error {
 	// via the error path, leaving watching=false for a clean retry).
 	m.watching = true
 
-	go m.watchLoop(stopCh, w)
+	safego.GoWith("kubeconfig/watch-loop", func() { m.watchLoop(stopCh, w) })
 	slog.Info("watching kubeconfig for changes", "path", m.kubeconfig, "watchDir", watchDir)
 	return nil
 }
