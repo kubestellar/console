@@ -419,6 +419,16 @@ export const SERVICES_CACHE_STALE_MS = 30_000
 export { MS_PER_SECOND } from './time'
 
 // ============================================================================
+// Network Latency Classification (issue #13249)
+// ============================================================================
+
+/** Latency threshold (ms) below which network latency is considered good/healthy (green) */
+export const LATENCY_GOOD_MS = 100
+
+/** Latency threshold (ms) below which network latency is considered acceptable (yellow) */
+export const LATENCY_ACCEPTABLE_MS = 300
+
+// ============================================================================
 // Service port rendering (issue #6163)
 // ============================================================================
 

@@ -7,6 +7,7 @@ import {
 import { useCardLoadingState } from './CardDataContext'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { useTranslation } from 'react-i18next'
+import { LATENCY_GOOD_MS, LATENCY_ACCEPTABLE_MS } from '@/lib/constants/network'
 
 // Types
 interface PingResult {
@@ -332,8 +333,8 @@ export function NetworkUtils() {
   const getStatusColor = (latency: number | null, status: string) => {
     if (status === 'error' || status === 'timeout') return 'text-red-400'
     if (latency === null) return 'text-muted-foreground'
-    if (latency < 100) return 'text-green-400'
-    if (latency < 300) return 'text-yellow-400'
+    if (latency < LATENCY_GOOD_MS) return 'text-green-400'
+    if (latency < LATENCY_ACCEPTABLE_MS) return 'text-yellow-400'
     return 'text-orange-400'
   }
 
