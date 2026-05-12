@@ -378,7 +378,9 @@ func (s *SQLiteStore) MoveCardWithLimit(ctx context.Context, cardID uuid.UUID, t
 		// Could be either: card doesn't exist, or limit reached.
 		// Check if card exists to distinguish.
 		var exists int
-		_ = s.db.QueryRowContext(ctx, `SELECT 1 FROM cards WHERE id = ?`, cardID.String()).Scan(&exists)
+		if err := s.db.QueryRowContext(ctx, `SELECT 1 FROM cards WHERE id = ?`, cardID.String()).Scan(&exists); err != nil && err != sql.ErrNoRows {
+			return fmt.Errorf("failed to check card existence: %w", err)
+		}
 		if exists == 1 {
 			return ErrDashboardCardLimitReached
 		}
