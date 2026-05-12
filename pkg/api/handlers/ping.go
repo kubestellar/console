@@ -35,7 +35,7 @@ var pingClient = &http.Client{
 			}
 			for _, ip := range ips {
 				if isBlockedIP(ip.IP) {
-					return nil, fmt.Errorf("blocked: private IP %s for host %s", ip.IP, host)
+					return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)
 				}
 			}
 			// Connect to the first validated IP directly — no second DNS lookup.
@@ -149,7 +149,7 @@ func PingHandler(c *fiber.Ctx) error {
 	})
 }
 
-// isPrivateHost checks whether a hostname resolves to a private/loopback IP.
+// isPrivateHost checks whether a hostname resolves to a blocked IP.
 func isPrivateHost(host string) bool {
 	// Block well-known internal hostnames
 	lower := strings.ToLower(host)
@@ -168,7 +168,7 @@ func isPrivateHost(host string) bool {
 		if ip == nil {
 			continue
 		}
-		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		if isBlockedIP(ip) {
 			return true
 		}
 	}
