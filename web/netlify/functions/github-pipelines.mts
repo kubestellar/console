@@ -881,6 +881,9 @@ export default async (req: Request): Promise<Response> => {
       const op = url.searchParams.get("op") ?? "";
       const repo = url.searchParams.get("repo") ?? "";
       const run = url.searchParams.get("run") ?? "";
+      if (!/^\d+$/.test(run)) {
+        return jsonResponse({ error: "Invalid run ID" }, { status: 400, headers: baseHeaders });
+      }
       const resp = await mutate(op, repo, run);
       // Inherit CORS headers
       for (const [k, v] of Object.entries(baseHeaders)) resp.headers.set(k, v);
@@ -945,9 +948,9 @@ export default async (req: Request): Promise<Response> => {
       case "log": {
         const repo = url.searchParams.get("repo") ?? "";
         const job = url.searchParams.get("job") ?? "";
-        if (!isValidRepo(repo) || !job) {
+        if (!isValidRepo(repo) || !job || !/^\d+$/.test(job)) {
           return jsonResponse(
-            { error: "repo and job params required" },
+            { error: "repo and valid numeric job params required" },
             { status: 400, headers: baseHeaders }
           );
         }
