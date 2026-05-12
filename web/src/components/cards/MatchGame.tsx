@@ -337,6 +337,7 @@ export function MatchGame(_props: CardComponentProps) {
             <span
               role="button"
               tabIndex={0}
+              aria-label={isPaused ? 'Resume game' : 'Pause game'}
               onClick={togglePause}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePause() } }}
               className="p-0.5 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer"
@@ -347,6 +348,7 @@ export function MatchGame(_props: CardComponentProps) {
             <span
               role="button"
               tabIndex={0}
+              aria-label={t('common.reset')}
               onClick={resetGame}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); resetGame() } }}
               className="p-0.5 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer"
@@ -372,6 +374,7 @@ export function MatchGame(_props: CardComponentProps) {
           <span
             role="button"
             tabIndex={0}
+            aria-label="Start Match Game"
             onClick={initGame}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); initGame() } }}
             className="px-4 py-2 bg-linear-to-r from-purple-500 to-blue-500 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-blue-600 transition-all transform hover:scale-105 flex items-center gap-2 cursor-pointer"

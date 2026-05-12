@@ -177,13 +177,13 @@ export function ApiKeyPromptModal({ isOpen, onDismiss, onGoToSettings, errorMess
   if (!isOpen) return null
 
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-xs rounded-lg">
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-xs rounded-lg" role="dialog" aria-modal="true" aria-labelledby="api-key-prompt-title">
       <div className="bg-card border border-border rounded-lg p-4 m-4 shadow-xl max-w-md">
         <div className="flex items-center gap-2 mb-3">
           <div className="p-1.5 rounded bg-purple-500/20">
             <Bot className="w-4 h-4 text-purple-400" />
           </div>
-          <h3 className="text-sm font-medium text-foreground">AI Agent Required</h3>
+          <h3 id="api-key-prompt-title" className="text-sm font-medium text-foreground">AI Agent Required</h3>
         </div>
         <div className="text-xs text-muted-foreground mb-4 space-y-2">
           <p>
