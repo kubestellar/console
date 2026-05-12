@@ -56,7 +56,7 @@ export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
       return
     }
     fetchFiles()
-  }, [isAuthenticated, enabled])
+  }, [isAuthenticated, enabled, isQuantumForcedToDemo])
 
   return { files, isLoading, error, refetch: fetchFiles }
 }

@@ -125,6 +125,26 @@ describe('useQASMFiles', () => {
     expect(result.current.error).toBeNull()
   })
 
+  it('fetches after demo mode transitions from true to false and user authenticates', async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false })
+    mockIsQuantumForcedToDemo.mockReturnValue(true)
+    const fetchMock = vi.fn().mockResolvedValue(makeFetchResponse(MOCK_FILES))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result, rerender } = renderHook(() => useQASMFiles())
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    mockIsQuantumForcedToDemo.mockReturnValue(false)
+    mockUseAuth.mockReturnValue({ isAuthenticated: true })
+    rerender()
+
+    await waitFor(() => expect(result.current.files).toEqual(MOCK_FILES))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(result.current.error).toBeNull()
+  })
+
   it('refetch triggers a new fetch and updates files', async () => {
     const updatedFiles = [{ name: 'bernstein-vazirani.qasm', size: 256 }]
     const fetchMock = vi.fn()
