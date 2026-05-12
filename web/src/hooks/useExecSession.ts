@@ -402,16 +402,12 @@ export function useExecSession(): UseExecSessionResult {
 
   const sendInput = (data: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      staleDetection.markMessageReceived()
-      setIsStale(false)
       wsRef.current.send(JSON.stringify({ type: 'stdin', data }))
     }
   }
 
   const resize = (cols: number, rows: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      staleDetection.markMessageReceived()
-      setIsStale(false)
       wsRef.current.send(JSON.stringify({ type: 'resize', cols, rows }))
     }
   }
