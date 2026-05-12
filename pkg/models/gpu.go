@@ -11,7 +11,6 @@ import (
 type ReservationStatus string
 
 const (
-	ReservationStatusPending   ReservationStatus = "pending"
 	ReservationStatusActive    ReservationStatus = "active"
 	ReservationStatusCompleted ReservationStatus = "completed"
 	ReservationStatusCancelled ReservationStatus = "cancelled"
@@ -19,7 +18,6 @@ const (
 
 // validStatuses enumerates the allowed reservation status values.
 var validStatuses = map[ReservationStatus]bool{
-	ReservationStatusPending:   true,
 	ReservationStatusActive:    true,
 	ReservationStatusCompleted: true,
 	ReservationStatusCancelled: true,
@@ -29,7 +27,6 @@ var validStatuses = map[ReservationStatus]bool{
 // status. The key is the current status; the value set contains the statuses
 // it may transition to.
 var allowedTransitions = map[ReservationStatus]map[ReservationStatus]bool{
-	ReservationStatusPending:   {ReservationStatusActive: true, ReservationStatusCancelled: true},
 	ReservationStatusActive:    {ReservationStatusCompleted: true, ReservationStatusCancelled: true},
 	ReservationStatusCompleted: {}, // terminal
 	ReservationStatusCancelled: {}, // terminal

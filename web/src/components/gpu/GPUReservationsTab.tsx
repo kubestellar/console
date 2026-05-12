@@ -134,7 +134,7 @@ export function GPUReservationsTab({
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={cn('px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.pending)}>
+                  <span className={cn('px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.active)}>
                     {r.status}
                   </span>
                   <ClusterBadge cluster={r.cluster} size="sm" />
@@ -260,7 +260,7 @@ export function GPUReservationsTab({
                     </div>
                     <div>
                       <div className="text-sm text-muted-foreground">{t('common:common.status')}</div>
-                      <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.pending)}>
+                      <span className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.active)}>
                         {r.status === 'active' && <span className="w-2 h-2 rounded-full bg-green-400" />}
                         {r.status}
                       </span>

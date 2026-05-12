@@ -31,7 +31,7 @@ describe('computeGPUOverviewStats', () => {
       nodes: [],
       reservations: [
         { ...BASE_RESERVATION, gpu_count: 8, status: 'active' },
-        { ...BASE_RESERVATION, id: 'reservation-2', gpu_count: 4, status: 'pending' },
+        { ...BASE_RESERVATION, id: 'reservation-2', gpu_count: 4, status: 'active' },
       ],
       gpuQuotas: EMPTY_QUOTAS,
       gpuClusters: [],
@@ -53,7 +53,7 @@ describe('computeGPUOverviewStats', () => {
       nodes,
       reservations: [
         { ...BASE_RESERVATION, gpu_count: 4, status: 'active' },
-        { ...BASE_RESERVATION, id: 'reservation-2', gpu_count: 5, status: 'pending' },
+        { ...BASE_RESERVATION, id: 'reservation-2', gpu_count: 5, status: 'active' },
         { ...BASE_RESERVATION, id: 'reservation-3', gpu_count: 20, status: 'completed' },
       ],
       gpuQuotas: EMPTY_QUOTAS,

@@ -31,6 +31,7 @@ export interface GPUOverviewTabProps {
   utilizations: Record<string, GPUUtilizationSnapshot[]> | null
   effectiveDemoMode: boolean
   showOnlyMine: boolean
+  onSelectReservation?: (id: string) => void
 }
 
 export function GPUOverviewTab({
@@ -39,6 +40,7 @@ export function GPUOverviewTab({
   utilizations,
   effectiveDemoMode,
   showOnlyMine,
+  onSelectReservation,
 }: GPUOverviewTabProps) {
   const { t } = useTranslation(['cards', 'common'])
 
@@ -162,7 +164,11 @@ export function GPUOverviewTab({
             const sparkColor = snapshots.length > 0 ? getUtilizationColor(avgUtil) : '#9333ea'
             return (
             <div key={r.id}
-              className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20"
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelectReservation?.(r.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectReservation?.(r.id) }}
+              className={cn('p-3 rounded-lg bg-purple-500/10 border border-purple-500/20', onSelectReservation && 'cursor-pointer hover:border-purple-500/40 transition-colors')}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4 min-w-0">
@@ -181,7 +187,7 @@ export function GPUOverviewTab({
                     <div className="font-medium text-foreground">{r.gpu_count} <TechnicalAcronym term="GPU">{t('common:common.gpus')}</TechnicalAcronym></div>
                     <div className="text-sm text-muted-foreground">{t('gpuReservations.overview.durationHours', { hours: r.duration_hours })}</div>
                   </div>
-                  <span className={cn('px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.pending)}>
+                  <span className={cn('px-2 py-0.5 text-xs rounded-full border', STATUS_COLORS[r.status] || STATUS_COLORS.active)}>
                     {r.status}
                   </span>
                   <ClusterBadge cluster={r.cluster} size="sm" />

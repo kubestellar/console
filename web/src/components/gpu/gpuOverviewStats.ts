@@ -6,7 +6,7 @@ import { GPU_KEYS, MAX_NAME_DISPLAY_LENGTH } from './gpu-constants'
 const CHART_COLOR_COUNT = 4
 const PERCENT_SCALE = 100
 const ELLIPSIS = '...'
-const RESERVATION_STATUSES_COUNTING_TOWARD_CAPACITY = new Set<GPUReservation['status']>(['active', 'pending'])
+const RESERVATION_STATUSES_COUNTING_TOWARD_CAPACITY = new Set<GPUReservation['status']>(['active'])
 
 export interface GPUClusterSummary {
   name: string

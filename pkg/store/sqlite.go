@@ -444,7 +444,7 @@ func (s *SQLiteStore) migrate() error {
 		start_date TEXT NOT NULL,
 		duration_hours INTEGER DEFAULT 24,
 		notes TEXT DEFAULT '',
-		status TEXT DEFAULT 'pending',
+		status TEXT DEFAULT 'active',
 		quota_name TEXT DEFAULT '',
 		quota_enforced INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -612,6 +612,16 @@ func (s *SQLiteStore) migrate() error {
 		slog.Debug("[SQLite] migration applied", "migration", migration, "version", i+1)
 	}
 	slog.Info("[SQLite] schema migrations complete", "total_migrations", len(migrations))
+
+	// Data migration: "pending" status is eliminated — reservations are now
+	// provisioned synchronously and go straight to "active". Flip any
+	// legacy pending rows so the UI no longer shows a dead state.
+	if res, err := s.db.ExecContext(ctx,
+		`UPDATE gpu_reservations SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE status = 'pending'`); err != nil {
+		slog.Warn("[SQLite] failed to migrate pending reservations", "error", err)
+	} else if n, _ := res.RowsAffected(); n > 0 {
+		slog.Info("[SQLite] migrated pending reservations to active", "count", n)
+	}
 
 	return nil
 }

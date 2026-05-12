@@ -57,7 +57,7 @@ func (s *SQLiteStore) CreateGPUReservation(ctx context.Context, reservation *mod
 	}
 	reservation.CreatedAt = time.Now()
 	if reservation.Status == "" {
-		reservation.Status = models.ReservationStatusPending
+		reservation.Status = models.ReservationStatusActive
 	}
 	reservation.NormalizeGPUTypes()
 	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
@@ -105,7 +105,7 @@ func (s *SQLiteStore) CreateGPUReservationWithCapacity(ctx context.Context, rese
 	}
 	reservation.CreatedAt = time.Now()
 	if reservation.Status == "" {
-		reservation.Status = models.ReservationStatusPending
+		reservation.Status = models.ReservationStatusActive
 	}
 	if capacity <= 0 {
 		// No capacity cap — fall through to the unchecked insert. Matches

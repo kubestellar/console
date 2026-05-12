@@ -5,7 +5,7 @@ import { isInClusterMode } from './useBackendHealth'
 
 const REFRESH_INTERVAL_MS = 30000
 
-export type ReservationStatus = 'pending' | 'active' | 'completed' | 'cancelled'
+export type ReservationStatus = 'active' | 'completed' | 'cancelled'
 
 export interface GPUReservation {
   id: string
@@ -146,7 +146,7 @@ const DEMO_RESERVATIONS: GPUReservation[] = [
     start_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     duration_hours: 24,
     notes: '',
-    status: 'pending',
+    status: 'active',
     quota_name: '',
     quota_enforced: false,
     created_at: new Date(Date.now() - 3600000).toISOString() },
