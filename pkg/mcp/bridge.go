@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -178,7 +179,7 @@ func (b *Bridge) Start(ctx context.Context) error {
 		if stopErr := b.Stop(); stopErr != nil {
 			slog.Warn("[MCP] errors during Start rollback", "error", stopErr)
 		}
-		return fmt.Errorf("failed to start MCP clients: %v", errs)
+		return fmt.Errorf("failed to start MCP clients: %w", errors.Join(errs...))
 	}
 
 	return nil
@@ -213,7 +214,7 @@ func (b *Bridge) Stop() error {
 	}
 
 	if len(errs) > 0 {
-		return fmt.Errorf("errors stopping clients: %v", errs)
+		return fmt.Errorf("errors stopping clients: %w", errors.Join(errs...))
 	}
 
 	return nil

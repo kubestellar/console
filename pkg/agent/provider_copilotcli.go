@@ -336,7 +336,7 @@ func (c *CopilotCLIProvider) doStreamChat(ctx context.Context, req *ChatRequest,
 			}
 			return nil, fmt.Errorf("copilot CLI failed: %s", errMsg)
 		}
-		return nil, fmt.Errorf("copilot CLI returned empty response (exit: %v)", waitErr)
+		return nil, fmt.Errorf("copilot CLI returned empty response (exit: %w)", waitErr)
 	}
 
 	if onProgress != nil {

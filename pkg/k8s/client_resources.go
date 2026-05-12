@@ -1593,7 +1593,7 @@ func (m *MultiClusterClient) CreateOrUpdateResourceQuota(ctx context.Context, co
 	for name, value := range spec.Hard {
 		quantity, err := resource.ParseQuantity(value)
 		if err != nil {
-			return nil, fmt.Errorf("invalid quantity for %s: %v", name, err)
+			return nil, fmt.Errorf("invalid quantity for %s: %w", name, err)
 		}
 		hard[corev1.ResourceName(name)] = quantity
 	}
@@ -1629,7 +1629,7 @@ func (m *MultiClusterClient) CreateOrUpdateResourceQuota(ctx context.Context, co
 		}
 		updated, err := client.CoreV1().ResourceQuotas(spec.Namespace).Update(ctx, existing, metav1.UpdateOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("failed to update ResourceQuota: %v", err)
+			return nil, fmt.Errorf("failed to update ResourceQuota: %w", err)
 		}
 
 		// Convert to our response type
@@ -1657,7 +1657,7 @@ func (m *MultiClusterClient) CreateOrUpdateResourceQuota(ctx context.Context, co
 	// Create new quota
 	created, err := client.CoreV1().ResourceQuotas(spec.Namespace).Create(ctx, quota, metav1.CreateOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create ResourceQuota: %v", err)
+		return nil, fmt.Errorf("failed to create ResourceQuota: %w", err)
 	}
 
 	// Convert to our response type
@@ -1687,7 +1687,7 @@ func (m *MultiClusterClient) DeleteResourceQuota(ctx context.Context, contextNam
 
 	err = client.CoreV1().ResourceQuotas(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to delete ResourceQuota: %v", err)
+		return fmt.Errorf("failed to delete ResourceQuota: %w", err)
 	}
 
 	return nil

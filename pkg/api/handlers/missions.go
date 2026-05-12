@@ -919,7 +919,7 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(index json)")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch index: %v", err)
+		return nil, fmt.Errorf("failed to fetch index: %w", err)
 	}
 
 	var body = res.Body
