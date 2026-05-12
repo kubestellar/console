@@ -1368,7 +1368,7 @@ export function MissionSidebar() {
           <p className="text-xs text-muted-foreground/70 mt-1">
             {t('missionSidebar.startMissionPrompt')}
           </p>
-          <div className="grid grid-cols-3 gap-2 mt-4 w-full max-w-sm">
+          <div className="mt-4 grid w-full max-w-sm grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2">
             {!showNewMission && (
               <button
                 onClick={() => {
@@ -1376,25 +1376,25 @@ export function MissionSidebar() {
                   setShowNewMission(true)
                   setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
                 }}
-                className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors h-[72px]"
+                className="flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                <Sparkles className="w-6 h-6 shrink-0" />
-                <span className="text-center leading-tight text-xs truncate max-w-full">{t('missionSidebar.startCustomMission')}</span>
+                <Sparkles className="h-6 w-6 shrink-0" />
+                <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('missionSidebar.startCustomMission')}</span>
               </button>
             )}
             <button
               onClick={() => openMissionBrowser()}
-              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
+              className="flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
             >
-              <Globe className="w-6 h-6 shrink-0" />
-              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.browseCommunityMissions')}</span>
+              <Globe className="h-6 w-6 shrink-0" />
+              <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
-              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-colors shadow-lg shadow-purple-500/25 h-[72px]"
+              className="flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg bg-linear-to-r from-purple-600 to-indigo-600 px-3 py-3 text-sm font-medium text-white shadow-lg shadow-purple-500/25 transition-colors hover:from-purple-500 hover:to-indigo-500"
             >
-              <Rocket className="w-6 h-6 shrink-0" />
-              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.missionControl')}</span>
+              <Rocket className="h-6 w-6 shrink-0" />
+              <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('layout.missionSidebar.missionControl')}</span>
             </button>
           </div>
           {/* Hint to open history when missions exist */}
