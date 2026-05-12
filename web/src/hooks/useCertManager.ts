@@ -218,6 +218,7 @@ export function useCertManager() {
   const [installed, setInstalled] = useState(cachedSnapshot?.installed || false)
   const [isLoading, setIsLoading] = useState(!cachedSnapshot) // Only show loading if no cache
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isDemoData, setIsDemoData] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [lastRefresh, setLastRefresh] = useState<Date | null>(
@@ -363,6 +364,7 @@ export function useCertManager() {
       setCertificates(allCertificates)
       setIssuers(allIssuers)
       setInstalled(certManagerFound)
+      setIsDemoData(false)
       setError(null)
       setConsecutiveFailures(0)
       setLastRefresh(new Date())
@@ -387,6 +389,7 @@ export function useCertManager() {
       setCertificates(getDemoCertificates())
       setIssuers(getDemoIssuers())
       setInstalled(true)
+      setIsDemoData(true)
       setIsLoading(false)
       setError(null)
       setConsecutiveFailures(0)
@@ -447,6 +450,7 @@ export function useCertManager() {
     status,
     isLoading,
     isRefreshing,
+    isDemoData,
     error,
     consecutiveFailures,
     lastRefresh,
