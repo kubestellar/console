@@ -180,20 +180,20 @@ export const QuantumQubitGrid: React.FC = () => {
 
   
 
-  const isDemoFallback = consecutiveFailures >= 3
+  const isDemoFallback = consecutiveFailures >= 3 || isQuantumForcedToDemo()
   // Show empty grid if no data AND (executing or loop_mode is active)
-  const shouldShowEmpty = data === null  // Always show empty grid when no data
+  const shouldShowEmpty = data === null && !isDemoFallback  // Show empty only when no demo
 
   useReportCardDataState({
     isLoading: isLoading && !isDemoFallback,
     isRefreshing,
     isDemoData: isDemoFallback,
-    hasData: data !== null || shouldShowEmpty,  // Show grid even when empty
-    isFailed: error !== null,
+    hasData: data !== null || shouldShowEmpty || isDemoFallback,
+    isFailed: error !== null && !isDemoFallback,
     consecutiveFailures,
   })
 
-  const displayData = shouldShowEmpty ? { num_qubits: 8, pattern: '' } : (data || DEMO_DATA)
+  const displayData = isDemoFallback && data === null ? DEMO_DATA : (shouldShowEmpty ? { num_qubits: 8, pattern: '' } : (data || DEMO_DATA))
 
   // Auto-select smallest valid mask for current qubit count
   useEffect(() => {
@@ -347,6 +347,14 @@ export const QuantumQubitGrid: React.FC = () => {
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
             <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {/* Demo mode message */}
+        {isDemoFallback && !error && (
+          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300 flex items-start gap-2">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+            <span>Quantum backend not available. Displaying demo data.</span>
           </div>
         )}
 

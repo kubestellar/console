@@ -124,14 +124,14 @@ export const QuantumControlPanel: React.FC = () => {
   // Fetch available QASM files
   const { files: qasmFiles, isLoading: qasmFilesLoading } = useQASMFiles()
 
-  const isDemoFallback = consecutiveFailures >= 3
+  const isDemoFallback = consecutiveFailures >= 3 || isQuantumForcedToDemo()
 
   useReportCardDataState({
     isLoading: isLoading && !isDemoFallback,
     isRefreshing,
     isDemoData: isDemoFallback,
-    hasData: status !== null,
-    isFailed: error !== null,
+    hasData: status !== null || isDemoFallback,
+    isFailed: error !== null && !isDemoFallback,
     consecutiveFailures,
   })
 
@@ -471,7 +471,7 @@ export const QuantumControlPanel: React.FC = () => {
     )
   }
 
-  const displayStatus = status || DEMO_STATUS
+  const displayStatus = isDemoFallback && status === null ? DEMO_STATUS : (status || DEMO_STATUS)
   const isHealthy = displayStatus.status === 'ready' || displayStatus.loop_running
 
   return (
@@ -486,6 +486,13 @@ export const QuantumControlPanel: React.FC = () => {
           <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
             <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          </div>
+      )}
+
+      {isDemoFallback && !error && (
+          <div className="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-blue-700 dark:text-blue-300">Quantum backend not available. Showing demo data.</p>
           </div>
       )}
 
