@@ -166,7 +166,7 @@ func (uc *UpdateChecker) Start() {
 	uc.cancel = cancel
 	uc.mu.Unlock()
 
-	go uc.run(ctx)
+	safego.GoWith("update-checker/run", func() { uc.run(ctx) })
 }
 
 // Stop cancels the update check loop.

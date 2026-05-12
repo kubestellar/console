@@ -342,7 +342,7 @@ func NewServer(cfg Config) (*Server, error) {
 	hub := handlers.NewHub()
 	hub.SetJWTSecret(cfg.JWTSecret)
 	hub.SetDevMode(cfg.DevMode)
-	go hub.Run()
+	safego.GoWith("api/hub-run", func() { hub.Run() })
 
 	// Initialize Kubernetes multi-cluster client
 	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)

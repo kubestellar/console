@@ -192,7 +192,7 @@ func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 		logCacheExp: make(map[string]time.Time),
 		imgCache:    make(map[string]map[string]string),
 	}
-	go h.prewarm()
+	safego.GoWith("nightly-e2e/prewarm", func() { h.prewarm() })
 	return h
 }
 

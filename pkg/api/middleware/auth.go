@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
@@ -122,7 +123,7 @@ func InitTokenRevocation(store TokenRevoker) {
 		revokedTokens.store = store
 		revokedTokens.cleanupCancel = cancel
 		revokedTokens.Unlock()
-		go revokedTokens.cleanupLoop(ctx)
+		safego.GoWith("auth/revoked-tokens-cleanup", func() { revokedTokens.cleanupLoop(ctx) })
 	})
 }
 

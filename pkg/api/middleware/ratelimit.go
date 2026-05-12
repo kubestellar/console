@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -53,7 +54,7 @@ func NewFailureTracker() *FailureTracker {
 		failures: make(map[string]*failureRecord),
 		cancel:   cancel,
 	}
-	go ft.cleanupLoop(ctx)
+	safego.GoWith("ratelimit/cleanup", func() { ft.cleanupLoop(ctx) })
 	return ft
 }
 

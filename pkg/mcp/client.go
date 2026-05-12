@@ -218,14 +218,14 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 
 	// Start reading responses
-	go c.readResponses()
+	safego.GoWith("mcp/read-responses", func() { c.readResponses() })
 
 	// #7960 — Drain the child's stderr on a dedicated goroutine. Linux
 	// pipe buffers default to 64 KiB; once a chatty MCP server fills it,
 	// every further stderr write blocks and the child stalls. Logging the
 	// drained lines via slog.Debug preserves diagnostics for operators
 	// without blocking the child.
-	go c.drainStderr()
+	safego.GoWith("mcp/drain-stderr", func() { c.drainStderr() })
 
 	// Initialize the connection
 	if err := c.initialize(ctx); err != nil {

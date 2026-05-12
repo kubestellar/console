@@ -104,7 +104,7 @@ func NewDeviceTracker(k8sClient *k8s.MultiClusterClient, broadcast func(string, 
 
 // Start begins periodic device tracking
 func (t *DeviceTracker) Start() {
-	go t.runLoop()
+	safego.GoWith("device-tracker/run-loop", func() { t.runLoop() })
 }
 
 // Stop stops the device tracker. Safe to call multiple times (#6684).

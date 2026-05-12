@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
@@ -212,7 +213,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	// that use DevMode handlers do not leak a background goroutine for
 	// the lifetime of the test process (#6125).
 	if cfg.GitHubClientID != "" {
-		go h.runOAuthStateCleanup()
+		safego.GoWith("auth/oauth-state-cleanup", func() { h.runOAuthStateCleanup() })
 	}
 
 	return h

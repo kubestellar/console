@@ -737,7 +737,7 @@ func (s *Server) Start() error {
 	slog.Info("WebSocket endpoint available", "url", "ws://"+addr+"/ws")
 
 	// Validate all configured API keys on startup (run in background to not delay startup)
-	go s.ValidateAllKeys()
+	safego.GoWith("validate-all-keys", func() { s.ValidateAllKeys() })
 
 	// Start kubeconfig file watcher (uses k8s client's built-in watcher)
 	if s.k8sClient != nil {
