@@ -2604,7 +2604,10 @@
     "removeClusterRemoving": "Removing...",
     "removeClusterSuccess": "Removed cluster \"{{name}}\" from kubeconfig",
     "removeClusterError": "Failed to remove cluster from kubeconfig",
-    "removeClusterNoAgent": "Local agent not connected"
+    "removeClusterNoAgent": "Local agent not connected",
+    "andMoreClusters": "+{{count}} more",
+    "andMoreClusters_one": "+{{count}} more",
+    "andMoreClusters_other": "+{{count}} more"
   },
   "remediation": {
     "title": "AI Remediation Console",
@@ -2910,8 +2913,7 @@
       "featureDemoIndicator": "<strong>Demo indicator</strong> - Both show demo badge when data.isDemo=true",
       "gapConfigSource": "<strong>Config source</strong> - Unified uses converted configs, legacy uses raw definitions"
     }
-  }
-,
+  },
   "drasi": {
     "statSources": "sources",
     "statContinuousQueries": "continuous queries",

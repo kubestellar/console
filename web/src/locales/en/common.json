@@ -3519,7 +3519,10 @@
     "diagnoseMissionTitle": "Diagnose {{cluster}}",
     "diagnoseMissionDescription": "Analyzing cluster health and identifying issues",
     "repairMissionTitle": "Repair {{cluster}}",
-    "repairMissionDescription": "Automatically fixing cluster issues"
+    "repairMissionDescription": "Automatically fixing cluster issues",
+    "andMoreClusters": "+{{count}} more",
+    "andMoreClusters_one": "+{{count}} more",
+    "andMoreClusters_other": "+{{count}} more"
   },
   "remediation": {
     "title": "AI Remediation Console",
