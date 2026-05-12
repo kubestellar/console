@@ -48,11 +48,17 @@ const provisionTimeoutSeconds = 30
 // reservationNSLabel tags namespaces created by the GPU reservation system.
 const reservationNSLabel = "kubestellar.io/gpu-reservation"
 
+type gpuProvisioningClient interface {
+	CreateNamespace(ctx context.Context, contextName, name string, labels map[string]string) (*models.NamespaceDetails, error)
+	CreateOrUpdateResourceQuota(ctx context.Context, contextName string, spec k8s.ResourceQuotaSpec) (*k8s.ResourceQuota, error)
+	DeleteResourceQuota(ctx context.Context, contextName, namespace, name string) error
+}
+
 // GPUHandler handles GPU reservation CRUD operations
 type GPUHandler struct {
 	store           store.Store
 	clusterCapacity ClusterCapacityProvider
-	k8sClient       *k8s.MultiClusterClient
+	k8sClient       gpuProvisioningClient
 }
 
 // NewGPUHandler creates a new GPU handler.
@@ -60,7 +66,7 @@ type GPUHandler struct {
 // over-allocation checks are skipped (safe default for tests).
 // k8sClient enables synchronous namespace+quota provisioning; if nil,
 // reservations are created with "pending" status (no cluster access).
-func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider, k8sClient *k8s.MultiClusterClient) *GPUHandler {
+func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider, k8sClient gpuProvisioningClient) *GPUHandler {
 	return &GPUHandler{store: s, clusterCapacity: capacityProvider, k8sClient: k8sClient}
 }
 

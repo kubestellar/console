@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 	"github.com/kubestellar/console/pkg/test"
@@ -31,6 +33,48 @@ type gpuTestStore struct {
 	updated            *models.GPUReservation
 	bulkSnapshots      map[string][]models.GPUUtilizationSnapshot
 	bulkSnapshotsErr   error
+}
+
+type gpuProvisioningTestClient struct {
+	createNamespaceCluster string
+	createNamespaceName    string
+	createNamespaceLabels  map[string]string
+	createNamespaceErr     error
+	quotaCluster           string
+	quotaSpec              *k8s.ResourceQuotaSpec
+	quotaErr               error
+	deleteQuotaCluster     string
+	deleteQuotaNamespace   string
+	deleteQuotaName        string
+	deleteQuotaCalls       int
+}
+
+func (c *gpuProvisioningTestClient) CreateNamespace(_ context.Context, contextName, name string, labels map[string]string) (*models.NamespaceDetails, error) {
+	c.createNamespaceCluster = contextName
+	c.createNamespaceName = name
+	c.createNamespaceLabels = labels
+	if c.createNamespaceErr != nil {
+		return nil, c.createNamespaceErr
+	}
+	return &models.NamespaceDetails{Name: name, Labels: labels}, nil
+}
+
+func (c *gpuProvisioningTestClient) CreateOrUpdateResourceQuota(_ context.Context, contextName string, spec k8s.ResourceQuotaSpec) (*k8s.ResourceQuota, error) {
+	c.quotaCluster = contextName
+	copy := spec
+	c.quotaSpec = &copy
+	if c.quotaErr != nil {
+		return nil, c.quotaErr
+	}
+	return &k8s.ResourceQuota{Name: spec.Name, Namespace: spec.Namespace}, nil
+}
+
+func (c *gpuProvisioningTestClient) DeleteResourceQuota(_ context.Context, contextName, namespace, name string) error {
+	c.deleteQuotaCluster = contextName
+	c.deleteQuotaNamespace = namespace
+	c.deleteQuotaName = name
+	c.deleteQuotaCalls++
+	return nil
 }
 
 func (s *gpuTestStore) GetUser(_ context.Context, id uuid.UUID) (*models.User, error) {
@@ -207,6 +251,95 @@ func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 	assert.Equal(t, "alice", store.created.UserName)
 	assert.Equal(t, 24, store.created.DurationHours)
 	assert.Equal(t, 1, store.created.GPUCount)
+}
+
+func TestGPUCreateReservation_ProvisioningSuccessReturnsActiveReservation(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{
+		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
+		clusterReserved: 0,
+	}
+	k8sClient := &gpuProvisioningTestClient{}
+	handler := NewGPUHandler(store, stubCapacity(8), k8sClient)
+	env.App.Post("/api/gpu/reservations", handler.CreateReservation)
+
+	body, err := json.Marshal(map[string]any{
+		"title":          "Provision now",
+		"cluster":        "cluster-a",
+		"namespace":      "ml-sync",
+		"gpu_count":      2,
+		"start_date":     "2026-03-16T00:00:00Z",
+		"duration_hours": 12,
+	})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	var reservation models.GPUReservation
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&reservation))
+	assert.Equal(t, models.ReservationStatusActive, reservation.Status)
+	assert.Equal(t, "ml-sync", reservation.Namespace)
+	assert.Equal(t, "gpu-reservation-ml-sync", reservation.QuotaName)
+	assert.True(t, reservation.QuotaEnforced)
+
+	require.NotNil(t, store.created)
+	assert.Equal(t, models.ReservationStatusActive, store.created.Status)
+	assert.Equal(t, reservation.Namespace, store.created.Namespace)
+	assert.Equal(t, reservation.QuotaName, store.created.QuotaName)
+	assert.True(t, store.created.QuotaEnforced)
+
+	require.NotNil(t, k8sClient.quotaSpec)
+	assert.Equal(t, "cluster-a", k8sClient.createNamespaceCluster)
+	assert.Equal(t, "ml-sync", k8sClient.createNamespaceName)
+	assert.Equal(t, "cluster-a", k8sClient.quotaCluster)
+	assert.Equal(t, "gpu-reservation-ml-sync", k8sClient.quotaSpec.Name)
+	assert.Equal(t, "ml-sync", k8sClient.quotaSpec.Namespace)
+	assert.Equal(t, "2", k8sClient.quotaSpec.Hard["nvidia.com/gpu"])
+	assert.Equal(t, "true", k8sClient.createNamespaceLabels[reservationNSLabel])
+	assert.Equal(t, "kubestellar-console", k8sClient.createNamespaceLabels["app.kubernetes.io/managed-by"])
+}
+
+func TestGPUCreateReservation_ProvisioningCleanupOnStoreFailure(t *testing.T) {
+	env := setupTestEnv(t)
+	store := &gpuTestStore{
+		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
+		clusterReserved: 0,
+		createErr:       errors.New("db write failed"),
+	}
+	k8sClient := &gpuProvisioningTestClient{}
+	handler := NewGPUHandler(store, stubCapacity(8), k8sClient)
+	env.App.Post("/api/gpu/reservations", handler.CreateReservation)
+
+	body, err := json.Marshal(map[string]any{
+		"title":          "Provision now",
+		"cluster":        "cluster-a",
+		"namespace":      "ml-cleanup",
+		"gpu_count":      2,
+		"start_date":     "2026-03-16T00:00:00Z",
+		"duration_hours": 12,
+	})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, "/api/gpu/reservations", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := env.App.Test(req, 5000)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	assert.Nil(t, store.created)
+	assert.Equal(t, 1, k8sClient.deleteQuotaCalls)
+	assert.Equal(t, "cluster-a", k8sClient.deleteQuotaCluster)
+	assert.Equal(t, "ml-cleanup", k8sClient.deleteQuotaNamespace)
+	assert.Equal(t, "gpu-reservation-ml-cleanup", k8sClient.deleteQuotaName)
 }
 
 func TestGPUListReservations_MineNilReturnsEmptyArray(t *testing.T) {

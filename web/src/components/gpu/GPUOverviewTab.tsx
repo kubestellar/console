@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Zap,
@@ -43,6 +44,7 @@ export function GPUOverviewTab({
   onSelectReservation,
 }: GPUOverviewTabProps) {
   const { t } = useTranslation(['cards', 'common'])
+  const isInteractive = Boolean(onSelectReservation)
 
   return (
     <div className="space-y-6">
@@ -163,12 +165,23 @@ export function GPUOverviewTab({
             const activeDays = countActiveDays(snapshots)
             const sparkColor = snapshots.length > 0 ? getUtilizationColor(avgUtil) : '#9333ea'
             return (
-            <div key={r.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelectReservation?.(r.id)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelectReservation?.(r.id) }}
-              className={cn('p-3 rounded-lg bg-purple-500/10 border border-purple-500/20', onSelectReservation && 'cursor-pointer hover:border-purple-500/40 transition-colors')}
+            <div
+              key={r.id}
+              {...(isInteractive ? {
+                role: 'button' as const,
+                tabIndex: 0,
+                onClick: () => onSelectReservation?.(r.id),
+                onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelectReservation?.(r.id)
+                  }
+                },
+              } : {})}
+              className={cn(
+                'p-3 rounded-lg bg-purple-500/10 border border-purple-500/20',
+                isInteractive && 'cursor-pointer hover:border-purple-500/40 transition-colors',
+              )}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-4 min-w-0">
