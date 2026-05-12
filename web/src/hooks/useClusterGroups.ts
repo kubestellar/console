@@ -3,6 +3,7 @@ import { usePersistence } from './usePersistence'
 import { useClusterGroups as useCRClusterGroups, ClusterGroup as CRClusterGroup } from './useConsoleCRs'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
+import { useToast } from '../components/ui/Toast'
 
 // ============================================================================
 // Types
@@ -119,6 +120,7 @@ function localGroupToCR(group: ClusterGroup): Omit<CRClusterGroup, 'apiVersion' 
 export function useClusterGroups() {
   const { isEnabled, isActive } = usePersistence()
   const shouldUseCRs = isEnabled && isActive
+  const { showToast } = useToast()
 
   // CR-backed state
   const {
@@ -167,8 +169,10 @@ export function useClusterGroups() {
           headers: authHeaders(),
           body: JSON.stringify(group),
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-      } catch {
+      } catch (err) {
         // Backend sync is best-effort; localStorage is primary
+        console.warn('[ClusterGroups] createGroup backend sync failed:', err)
+        showToast('Group saved locally. Backend sync failed — changes may not persist across devices.', 'warning')
       }
     }
   }
@@ -196,8 +200,10 @@ export function useClusterGroups() {
             headers: authHeaders(),
             body: JSON.stringify({ ...group, ...updates }),
             signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-        } catch {
+        } catch (err) {
           // best-effort
+          console.warn('[ClusterGroups] updateGroup backend sync failed:', err)
+          showToast('Group updated locally. Backend sync failed — changes may not persist across devices.', 'warning')
         }
       }
     }
@@ -214,8 +220,10 @@ export function useClusterGroups() {
           method: 'DELETE',
           headers: authHeaders(),
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-      } catch {
+      } catch (err) {
         // best-effort
+        console.warn('[ClusterGroups] deleteGroup backend sync failed:', err)
+        showToast('Group deleted locally. Backend sync failed — changes may not persist across devices.', 'warning')
       }
     }
   }
