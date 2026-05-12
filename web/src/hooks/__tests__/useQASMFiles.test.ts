@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { useQASMFiles } from '../useQASMFiles'
 
 const { mockUseAuth, mockIsQuantumForcedToDemo } = vi.hoisted(() => ({
@@ -137,7 +137,9 @@ describe('useQASMFiles', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.files).toEqual(MOCK_FILES)
 
-    await result.current.refetch()
+    await act(async () => {
+      await result.current.refetch()
+    })
 
     await waitFor(() => expect(result.current.files).toEqual(updatedFiles))
     expect(fetchMock).toHaveBeenCalledTimes(2)
