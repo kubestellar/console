@@ -28,7 +28,8 @@
  * @see https://github.com/kubestellar/console/issues/2377
  */
 
-import { lazy, ComponentType } from 'react'
+import { ComponentType } from 'react'
+import { safeLazy } from '@/lib/safeLazy'
 import type { CardVisualization } from '../../lib/cards/types'
 import type { CardComponentProps } from './cardRegistry'
 
@@ -167,7 +168,7 @@ export function registerCard(
   CARD_DESCRIPTORS.set(id, descriptor)
 
   // 1. Register lazy component
-  const LazyComponent = lazy(descriptor.component)
+  const LazyComponent = safeLazy(descriptor.component, 'default')
   targets.components[id] = LazyComponent
 
   // 2. Register chunk preloader (use explicit preloader or fall back to component import)

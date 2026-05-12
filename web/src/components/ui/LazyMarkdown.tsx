@@ -1,6 +1,7 @@
-import { lazy, Suspense, type ComponentProps } from 'react'
+import { Suspense, type ComponentProps } from 'react'
+import { safeLazy } from '@/lib/safeLazy'
 
-const ReactMarkdown = lazy(() => import('react-markdown'))
+const ReactMarkdown = safeLazy(() => import('react-markdown'), 'default')
 
 type LazyMarkdownProps = ComponentProps<typeof ReactMarkdown>
 
