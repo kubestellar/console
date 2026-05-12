@@ -8,6 +8,17 @@ import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
 
 const CIRCUIT_ASCII_POLLING_INTERVAL_MS = 10000
 
+const DEMO_CIRCUIT_ASCII = `     ┌───┐     ┌─┐
+q_0: ┤ H ├──■──┤M├───
+     └───┘┌─┴─┐└╥┘┌─┐
+q_1: ─────┤ X ├─╫─┤M├
+          └───┘ ║ └╥┘
+c: 2/═══════════╩══╩═
+                0  1
+
+File: bell.qasm | Bell State Preparation
+Shots: 1024 | Backend: aer`
+
 interface QuantumCircuitViewerProps {
   isDemoData?: boolean
 }
@@ -53,8 +64,17 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
 
   useEffect(() => {
     const fetchCircuit = async () => {
-      // Skip fetch if polling is paused (e.g., dashboard settings modal open) or demo forced
-      if (isGlobalQuantumPollingPaused() || isQuantumForcedToDemo()) {
+      // Show demo circuit if forced to demo mode
+      if (isQuantumForcedToDemo()) {
+        setCircuitAscii(DEMO_CIRCUIT_ASCII)
+        setError(null)
+        setIsFailed(false)
+        setIsLoading(false)
+        return
+      }
+
+      // Skip fetch if polling is paused
+      if (isGlobalQuantumPollingPaused()) {
         setIsLoading(false)
         return
       }
@@ -87,7 +107,7 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
     fetchCircuit()
     const interval = setInterval(fetchCircuit, CIRCUIT_ASCII_POLLING_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [isAuthenticated, isQuantumForcedToDemo])
+  }, [isAuthenticated])
 
   if (showSkeleton) {
     return (
@@ -99,17 +119,22 @@ export const QuantumCircuitViewer: React.FC<QuantumCircuitViewerProps> = ({ isDe
 
   return (
     <div className="p-4">
-        {circuitAscii ? (
-          <div className="overflow-x-auto bg-card rounded border border-border">
-            <pre className="p-4 m-0 whitespace-pre text-foreground quantum-circuit-display" style={{ minWidth: 'fit-content' }}>
-              {circuitAscii}
-            </pre>
-          </div>
-        ) : (
-          <div className="text-center text-muted-foreground">
-            <p>{error ?? 'Unable to load quantum circuit diagram'}</p>
-          </div>
-        )}
+      {effectiveIsDemoData && (
+        <div className="mb-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-sm text-blue-600 dark:text-blue-400">
+          Quantum backend not available. Displaying demo data.
+        </div>
+      )}
+      {circuitAscii ? (
+        <div className="overflow-x-auto bg-card rounded border border-border">
+          <pre className="p-4 m-0 whitespace-pre text-foreground quantum-circuit-display" style={{ minWidth: 'fit-content' }}>
+            {circuitAscii}
+          </pre>
+        </div>
+      ) : !effectiveIsDemoData && (
+        <div className="text-center text-muted-foreground">
+          <p>{error ?? 'Unable to load quantum circuit diagram'}</p>
+        </div>
+      )}
     </div>
   )
 }

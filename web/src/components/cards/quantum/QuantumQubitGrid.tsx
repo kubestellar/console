@@ -19,8 +19,8 @@ interface QubitSimpleData {
 }
 
 const DEMO_DATA: QubitSimpleData = {
-  num_qubits: 8,
-  pattern: '01010101',
+  num_qubits: 2,
+  pattern: '00',
 }
 
 // Qubit pixel coordinate mappings from QuantumKCDemo.v0_2.py
@@ -175,7 +175,7 @@ export const QuantumQubitGrid: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [refreshInterval, setRefreshInterval] = useState(QUBIT_GRID_DEFAULT_POLL_MS)
-  const [selectedMask, setSelectedMask] = useState<MaskKey>('ibm_qx5')
+  const [selectedMask, setSelectedMask] = useState<MaskKey>('ibm_qx5t')
   const [versionInfo, setVersionInfo] = useState<{ version: string; commit: string; timestamp: string } | null>(null)
 
   

@@ -47,7 +47,7 @@ const DEMO_STATUS: QuantumStatusResponse = {
   running: false,
   loop_mode: false,
   message: 'Quantum system ready',
-  qasm_file: 'demo.qasm',
+  qasm_file: 'bell.qasm',
   execution_mode: 'control-based',
   backend_info: {
     name: 'aer',
