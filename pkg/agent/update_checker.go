@@ -276,13 +276,8 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 	}
 
 	if channelOverride != "" {
-		go func() {
+		safego.GoWith("auto-update-override", func() {
 			defer cleanup()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[AutoUpdate] PANIC recovered in update goroutine", "panic", r)
-				}
-			}()
 
 			uc.mu.Lock()
 			origChannel := uc.channel
@@ -294,17 +289,12 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 			uc.mu.Lock()
 			uc.channel = origChannel
 			uc.mu.Unlock()
-		}()
+		})
 	} else {
-		go func() {
+		safego.GoWith("auto-update", func() {
 			defer cleanup()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[AutoUpdate] PANIC recovered in update goroutine", "panic", r)
-				}
-			}()
 			uc.checkAndUpdate()
-		}()
+		})
 	}
 	return true
 }

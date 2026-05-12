@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os/exec"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // handleCloudCLIStatus detects installed cloud CLIs (aws, gcloud, az, oc)
@@ -140,13 +142,8 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 
 		// Create cluster in background and return immediately
 		s.clusterOpsWG.Add(1)
-		go func() {
+		safego.GoWith("local-cluster-create", func() {
 			defer s.clusterOpsWG.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[LocalClusters] recovered from panic creating cluster", "cluster", req.Name, "panic", r)
-				}
-			}()
 			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
 				slog.Error("[LocalClusters] failed to create cluster", "cluster", req.Name, "tool", req.Tool, "error", err)
 				errMsg := sanitizeClusterError(err)
@@ -179,7 +176,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 				})
 				// Kubeconfig watcher will automatically pick up the new cluster
 			}
-		}()
+		})
 
 		writeJSON(w, map[string]interface{}{
 			"status":  "creating",
@@ -205,13 +202,8 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 
 		// Delete cluster in background
 		s.clusterOpsWG.Add(1)
-		go func() {
+		safego.GoWith("local-cluster-delete", func() {
 			defer s.clusterOpsWG.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[LocalClusters] recovered from panic deleting cluster", "cluster", name, "panic", r)
-				}
-			}()
 			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
 				slog.Error("[LocalClusters] failed to delete cluster", "cluster", name, "error", err)
 				errMsg := sanitizeClusterError(err)
@@ -244,7 +236,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 				})
 				// Kubeconfig watcher will automatically pick up the change
 			}
-		}()
+		})
 
 		writeJSON(w, map[string]interface{}{
 			"status":  "deleting",
@@ -303,13 +295,8 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 	}
 
 	s.clusterOpsWG.Add(1)
-	go func() {
+	safego.GoWith("local-cluster-lifecycle", func() {
 		defer s.clusterOpsWG.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[LocalClusters] recovered from panic during lifecycle action", "action", req.Action, "cluster", req.Name, "panic", r)
-			}
-		}()
 
 		var err error
 		switch req.Action {
@@ -344,7 +331,7 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 				"progress": 100,
 			})
 		}
-	}()
+	})
 
 	writeJSON(w, map[string]interface{}{
 		"status":  req.Action + "ing",
@@ -427,13 +414,8 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 
 	// Create vCluster in background and return immediately
 	s.clusterOpsWG.Add(1)
-	go func() {
+	safego.GoWith("vcluster-create", func() {
 		defer s.clusterOpsWG.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[vCluster] recovered from panic creating vcluster", "name", req.Name, "panic", r)
-			}
-		}()
 		if err := s.localClusters.CreateVCluster(req.Name, req.Namespace); err != nil {
 			slog.Error("[vCluster] failed to create vcluster", "name", req.Name, "error", err)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
@@ -453,7 +435,7 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 				"progress": progressDone,
 			})
 		}
-	}()
+	})
 
 	writeJSON(w, map[string]interface{}{
 		"status":    "creating",
@@ -652,13 +634,8 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 
 	// Delete vCluster in background and return immediately
 	s.clusterOpsWG.Add(1)
-	go func() {
+	safego.GoWith("vcluster-delete", func() {
 		defer s.clusterOpsWG.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[vCluster] recovered from panic deleting vcluster", "name", req.Name, "panic", r)
-			}
-		}()
 		if err := s.localClusters.DeleteVCluster(req.Name, req.Namespace); err != nil {
 			slog.Error("[vCluster] failed to delete vcluster", "name", req.Name, "error", err)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
@@ -678,7 +655,7 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 				"progress": progressDone,
 			})
 		}
-	}()
+	})
 
 	writeJSON(w, map[string]interface{}{
 		"status":    "deleting",

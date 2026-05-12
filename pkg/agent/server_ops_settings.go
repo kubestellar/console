@@ -837,35 +837,25 @@ func (s *Server) handleProvidersHealth(w http.ResponseWriter, r *http.Request) {
 	// Statuspage.io providers (Anthropic, OpenAI)
 	for id, apiURL := range providerStatusPageAPI {
 		wg.Add(1)
-		go func(providerID, url string) {
+		safego.GoWith("provider-health-statuspage", func() {
 			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[ProviderHealth] recovered from panic checking provider", "provider", providerID, "panic", r)
-				}
-			}()
-			status := checkStatuspageHealth(client, url)
+			status := checkStatuspageHealth(client, apiURL)
 			mu.Lock()
-			results = append(results, ProviderHealthStatus{ID: providerID, Status: status})
+			results = append(results, ProviderHealthStatus{ID: id, Status: status})
 			mu.Unlock()
-		}(id, apiURL)
+		})
 	}
 
 	// Ping-based providers (Google) — any HTTP response = operational
 	for id, pingURL := range providerPingEndpoints {
 		wg.Add(1)
-		go func(providerID, url string) {
+		safego.GoWith("provider-health-ping", func() {
 			defer wg.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[ProviderHealth] recovered from panic pinging provider", "provider", providerID, "panic", r)
-				}
-			}()
-			status := checkPingHealth(client, url)
+			status := checkPingHealth(client, pingURL)
 			mu.Lock()
-			results = append(results, ProviderHealthStatus{ID: providerID, Status: status})
+			results = append(results, ProviderHealthStatus{ID: id, Status: status})
 			mu.Unlock()
-		}(id, pingURL)
+		})
 	}
 
 	wg.Wait()

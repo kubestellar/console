@@ -14,6 +14,7 @@ import (
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -152,29 +153,24 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gpu-nodes-fetch", func() {
 				defer wg.Done()
-				defer func() {
-					if r := recover(); r != nil {
-						slog.Error("[GPUNodes] recovered from panic", "cluster", clusterName, "panic", r)
-					}
-				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
 				defer clusterCancel()
-				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, clusterName)
+				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, cl.Name)
 				if err != nil {
-					retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
+					retryIn := s.recordClusterResourceFailure(resourceName, cl.Name)
 					// #7750: Log per-cluster errors so GPU metric gaps are diagnosable.
-					slog.Warn("[GPUNodes] failed to list GPU nodes for cluster", "cluster", clusterName, "error", err, "retryIn", retryIn)
+					slog.Warn("[GPUNodes] failed to list GPU nodes for cluster", "cluster", cl.Name, "error", err, "retryIn", retryIn)
 					return
 				}
-				s.recordClusterResourceSuccess(resourceName, clusterName)
+				s.recordClusterResourceSuccess(resourceName, cl.Name)
 				if len(nodes) > 0 {
 					mu.Lock()
 					allNodes = append(allNodes, nodes...)
 					mu.Unlock()
 				}
-			}(cl.Name)
+			})
 		}
 		wg.Wait()
 	}
@@ -241,28 +237,23 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("nodes-fetch", func() {
 				defer wg.Done()
-				defer func() {
-					if r := recover(); r != nil {
-						slog.Error("[Nodes] recovered from panic", "cluster", clusterName, "panic", r)
-					}
-				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
 				defer clusterCancel()
-				nodes, err := s.k8sClient.GetNodes(clusterCtx, clusterName)
+				nodes, err := s.k8sClient.GetNodes(clusterCtx, cl.Name)
 				if err != nil {
-					retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
-					slog.Warn("[Nodes] failed to list nodes for cluster", "cluster", clusterName, "error", err, "retryIn", retryIn)
+					retryIn := s.recordClusterResourceFailure(resourceName, cl.Name)
+					slog.Warn("[Nodes] failed to list nodes for cluster", "cluster", cl.Name, "error", err, "retryIn", retryIn)
 					return
 				}
-				s.recordClusterResourceSuccess(resourceName, clusterName)
+				s.recordClusterResourceSuccess(resourceName, cl.Name)
 				if len(nodes) > 0 {
 					mu.Lock()
 					allNodes = append(allNodes, nodes...)
 					mu.Unlock()
 				}
-			}(cl.Name)
+			})
 		}
 		wg.Wait()
 	}

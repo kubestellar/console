@@ -289,22 +289,16 @@ func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2
 	// cancellation so prewarm timeouts don't leave goroutines running.
 	ch := make(chan result, len(nightlyWorkflows))
 	for i, wf := range nightlyWorkflows {
-		go func(idx int, wf NightlyWorkflow) {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in nightly workflow fetch", "workflow", wf.WorkflowFile, "error", r)
-					ch <- result{idx: idx, err: fmt.Errorf("panic: %v", r)}
-				}
-			}()
+		safego.GoWith("nightly-e2e-fetch-workflow", func() {
 			select {
 			case <-ctx.Done():
-				ch <- result{idx: idx, err: ctx.Err()}
+				ch <- result{idx: i, err: ctx.Err()}
 				return
 			default:
 			}
 			runs, err := h.fetchWorkflowRuns(wf)
-			ch <- result{idx: idx, runs: runs, err: err}
-		}(i, wf)
+			ch <- result{idx: i, runs: runs, err: err}
+		})
 	}
 
 	// Fetch dynamic image tags (cached separately with longer TTL)
@@ -564,14 +558,8 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 	ch := make(chan guideResult, len(guidePaths))
 
 	for _, gp := range guidePaths {
-		go func(guidePath string) {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in fetchAllGuideImages goroutine", "guide", guidePath, "error", r)
-					ch <- guideResult{path: guidePath, images: make(map[string]string)}
-				}
-			}()
-			prefix := "guides/" + guidePath + "/"
+		safego.GoWith("nightly-e2e-fetch-guide-images", func() {
+			prefix := "guides/" + gp + "/"
 			images := make(map[string]string)
 
 			// Find YAML files under this guide's directory
@@ -593,8 +581,8 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 				}
 			}
 
-			ch <- guideResult{path: guidePath, images: images}
-		}(gp)
+			ch <- guideResult{path: gp, images: images}
+		})
 	}
 
 	for range guidePaths {
@@ -868,17 +856,11 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 			continue
 		}
 		sem <- struct{}{}
-		go func(idx int, jobID int64, name, conc string) {
+		safego.GoWith("nightly-e2e-fetch-job-logs", func() {
 			defer func() { <-sem }()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in fetchJobLogs goroutine", "jobID", jobID, "error", r)
-					ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: ""}}
-				}
-			}()
-			logText := h.fetchJobLog(repo, jobID)
-			ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: logText}}
-		}(i, job.ID, job.Name, conclusion)
+			logText := h.fetchJobLog(repo, job.ID)
+			ch <- logResult{idx: i, log: JobLog{Name: job.Name, Conclusion: conclusion, Log: logText}}
+		})
 	}
 
 	logs := make([]JobLog, len(jobData.Jobs))

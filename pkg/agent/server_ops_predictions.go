@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // =============================================================================
@@ -354,13 +356,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 
 	// Prefer terminal-notifier (supports click-to-open via -open flag).
 	// Fall back to osascript display notification (no click handler support).
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[DeviceTracker] recovered from panic in notification", "panic", r)
-			}
-		}()
-
+	safego.GoWith("device-tracker-notification", func() {
 		if tnPath, err := exec.LookPath("terminal-notifier"); err == nil {
 			cmd := execCommand(tnPath,
 				"-title", "KubeStellar Console",
@@ -392,7 +388,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 		if err := cmd.Run(); err != nil {
 			slog.Error("[DeviceTracker] failed to send notification", "error", err)
 		}
-	}()
+	})
 }
 
 // cloudCLI describes a cloud provider CLI binary and its purpose.

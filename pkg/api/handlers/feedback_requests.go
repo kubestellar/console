@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const maxVerificationCommentChars = 1000
@@ -193,18 +193,10 @@ func (h *FeedbackHandler) CreateFeatureRequest(c *fiber.Ctx) error {
 	// be retried from the persisted record.
 	if len(validScreenshots) > 0 {
 		asyncCtx, cancel := context.WithTimeout(context.Background(), asyncScreenshotUploadTimeout)
-		go func(ctx context.Context, cancel context.CancelFunc, issue int, owner, repo, reqID string, shots []string) {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in async screenshot upload",
-						slog.String("operation", "uploadScreenshotCommentsAsync"),
-						slog.String("panic", fmt.Sprintf("%v", r)),
-						slog.String("stack", string(debug.Stack())))
-				}
-			}()
+		safego.GoWith("feedback-screenshot-upload", func() {
 			defer cancel()
-			h.uploadScreenshotCommentsAsync(ctx, issue, owner, repo, reqID, shots)
-		}(asyncCtx, cancel, issueNumber, h.repoOwner, targetRepoName, request.ID.String(), validScreenshots)
+			h.uploadScreenshotCommentsAsync(asyncCtx, issueNumber, h.repoOwner, targetRepoName, request.ID.String(), validScreenshots)
+		})
 	}
 
 	// Create notification for the user

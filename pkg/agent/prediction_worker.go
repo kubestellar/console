@@ -204,16 +204,10 @@ func (w *PredictionWorker) TriggerAnalysis(providers []string) error {
 		return fmt.Errorf("analysis already in progress")
 	}
 
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[PredictionWorker] panic in runAnalysis; recovered",
-					"panic", r)
-			}
-			w.running.Store(false)
-		}()
+	safego.GoWith("prediction-analysis", func() {
+		defer w.running.Store(false)
 		w.runAnalysis(providers)
-	}()
+	})
 
 	return nil
 }

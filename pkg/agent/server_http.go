@@ -15,6 +15,7 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -400,19 +401,14 @@ func (s *Server) startBackendProcess() error {
 	s.backendCmd = cmd
 
 	// Reap process in background to avoid zombies
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[Backend] recovered from panic in process reaper", "panic", r)
-			}
-		}()
+	safego.GoWith("backend-process-reaper", func() {
 		cmd.Wait()
 		s.backendMux.Lock()
 		if s.backendCmd == cmd {
 			s.backendCmd = nil
 		}
 		s.backendMux.Unlock()
-	}()
+	})
 
 	return nil
 }
