@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -119,8 +120,9 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 		g.Go(func() error {
 			client, err := h.k8sClient.GetDynamicClient(clusterName)
 			if err != nil {
+				slog.Error("[AdmissionWebhooks] failed to get dynamic client", "cluster", clusterName, "error", err)
 				mu.Lock()
-				clusterErrors[clusterName] = err.Error()
+				clusterErrors[clusterName] = "cluster client unavailable"
 				mu.Unlock()
 				return nil
 			}

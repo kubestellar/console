@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -296,9 +297,9 @@ func getPlaylistVideos() ([]PlaylistVideo, error) {
 func YouTubePlaylistHandler(c *fiber.Ctx) error {
 	videos, err := getPlaylistVideos()
 	if err != nil {
+		slog.Error("[YouTube] failed to fetch playlist", "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error":  "failed to fetch playlist",
-			"detail": err.Error(),
+			"error": "failed to fetch playlist",
 		})
 	}
 

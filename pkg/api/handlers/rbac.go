@@ -253,8 +253,9 @@ func (h *RBACHandler) ListK8sServiceAccounts(c *fiber.Ctx) error {
 		g.Go(func() error {
 			sas, err := h.k8sClient.ListServiceAccounts(gctx, clusterName, namespace)
 			if err != nil {
+				slog.Error("[RBAC] failed to list service accounts", "cluster", clusterName, "error", err)
 				mu.Lock()
-				clusterErrors[clusterName] = err.Error()
+				clusterErrors[clusterName] = "cluster client unavailable"
 				mu.Unlock()
 				return nil
 			}

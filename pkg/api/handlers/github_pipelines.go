@@ -506,11 +506,13 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 		// Distinguish client-validation errors (unknown repo, bad params) from
 		// upstream GitHub failures so callers get the correct HTTP status.
 		status := fiber.StatusBadGateway
-		msg := err.Error()
-		if msg == "unknown repo" {
+		genericMsg := "failed to fetch pipeline data"
+		if err.Error() == "unknown repo" {
 			status = fiber.StatusBadRequest
+			genericMsg = "unknown repo"
 		}
-		return c.Status(status).JSON(fiber.Map{"error": msg})
+		slog.Error("[GitHubPipelines] fetch failed", "error", err)
+		return c.Status(status).JSON(fiber.Map{"error": genericMsg})
 	}
 	// Wrap payload with the repo list so the client reads it from the
 	// response instead of hardcoding. Uses a two-step marshal: first the

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -93,10 +94,11 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 	for _, cluster := range clusters {
 		client, err := h.k8sClient.GetDynamicClient(cluster.Name)
 		if err != nil {
+			slog.Error("[ServiceExports] failed to get dynamic client", "cluster", cluster.Name, "error", err)
 			clusterErrors = append(clusterErrors, ClusterError{
 				Cluster:   cluster.Name,
 				ErrorType: "dynamic_client_unavailable",
-				Message:   err.Error(),
+				Message:   "cluster client unavailable",
 			})
 			continue
 		}
@@ -108,10 +110,11 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 			// failures — auth errors, RBAC denials, network timeouts. Surface
 			// the error so clients can distinguish "cluster has no exports"
 			// from "cluster could not be queried" (#6483).
+			slog.Error("[ServiceExports] failed to list exports", "cluster", cluster.Name, "error", err)
 			clusterErrors = append(clusterErrors, ClusterError{
 				Cluster:   cluster.Name,
 				ErrorType: "list_failed",
-				Message:   err.Error(),
+				Message:   "failed to list service exports",
 			})
 			continue
 		}

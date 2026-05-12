@@ -507,7 +507,7 @@ func classifyExchangeError(err error) (code, detail string) {
 	case strings.Contains(lower, "bad_verification_code"):
 		return "exchange_failed", "Authorization code expired or was already used — please try logging in again"
 	default:
-		return "exchange_failed", msg
+		return "exchange_failed", "Token exchange failed — please try logging in again"
 	}
 }
 
@@ -584,8 +584,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	ghUser, err := h.getGitHubUser(c.UserContext(), token.AccessToken)
 	if err != nil {
 		slog.Error("[Auth] failed to get GitHub user", "error", err)
-		detail := err.Error()
-		return h.oauthErrorRedirect(c, "user_fetch_failed", detail)
+		return h.oauthErrorRedirect(c, "user_fetch_failed", "Failed to retrieve GitHub user profile")
 	}
 
 	// Find or create user

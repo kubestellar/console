@@ -344,7 +344,8 @@ func (h *OrbitHandler) executeMission(ctx context.Context, mission *OrbitMission
 
 	result, summary, err := h.executor.Execute(ctx, mission)
 	if err != nil {
-		return "failed", err.Error()
+		slog.Error("[Orbit] mission execution failed", "error", err)
+		return "failed", "mission execution failed"
 	}
 
 	return result, summary

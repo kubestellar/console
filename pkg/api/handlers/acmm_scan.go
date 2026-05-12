@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"net/url"
@@ -189,8 +190,9 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 		select {
 		case <-waiter.done:
 			if waiter.err != nil {
+				slog.Error("[ACMMScan] in-flight scan failed", "repo", repo, "error", waiter.err)
 				return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-					"error": waiter.err.Error(),
+					"error": "ACMM scan failed",
 					"repo":  repo,
 				})
 			}
@@ -221,8 +223,9 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Repo not found", "detail": repo})
 		}
 		waiter.err = fmt.Errorf("GitHub API error: %s", err.Error())
+		slog.Error("[ACMMScan] GitHub API error", "repo", repo, "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error": waiter.err.Error(),
+			"error": "GitHub API request failed",
 			"repo":  repo,
 		})
 	}
