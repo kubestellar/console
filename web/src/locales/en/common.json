@@ -54,7 +54,8 @@
     "dismiss": "Dismiss",
     "viewNamespaceCostAria": "View cost details for namespace {{namespace}}",
     "viewOperatorAria": "View operator {{name}}",
-    "toggleGPUNodeAria": "Toggle details for GPU node {{node}}"
+    "toggleGPUNodeAria": "Toggle details for GPU node {{node}}",
+    "retry": "Retry"
   },
   "buttons": {
     "addCard": "Add Card",

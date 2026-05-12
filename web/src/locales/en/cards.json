@@ -206,6 +206,15 @@
     "yAxisLabel": "Counts",
     "lastExecution": "Last execution: {{time}}"
   },
+  "quantumControlPanel": {
+    "backendOptions": {
+      "aerSimulator": "Aer Simulator"
+    },
+    "qasmFiles": {
+      "loadingFiles": "Loading files...",
+      "customQasm": "Custom QASM..."
+    }
+  },
   "titles": {
     "cluster_health": "Cluster Health",
     "cluster_focus": "Cluster Focus",

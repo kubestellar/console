@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { AlertCircle, Play, RotateCcw, Zap, Key, Check, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useReportCardDataState } from '../CardDataContext'
 import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
@@ -97,6 +98,7 @@ const DEMO_STATUS: SystemStatus = {
 }
 
 export const QuantumControlPanel: React.FC = () => {
+  const { t } = useTranslation('cards')
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
   const { open: openDrillDown, close: closeDrillDown } = useDrillDown()
   const [control, setControl] = useState<ControlState>(DEMO_DATA)
@@ -556,7 +558,7 @@ export const QuantumControlPanel: React.FC = () => {
                   disabled={control.executing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm disabled:opacity-50"
                 >
-                  <option value="aer">Aer Simulator</option>
+                  <option value="aer">{t('quantumControlPanel.backendOptions.aerSimulator')}</option>
                   <option value="sim">QASM Simulator</option>
                   <option value="qx5">IBM 5-qubit</option>
                   {ibmAuthenticated && (
@@ -658,7 +660,7 @@ export const QuantumControlPanel: React.FC = () => {
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm disabled:opacity-50"
               >
                 {qasmFilesLoading ? (
-                  <option>Loading files...</option>
+                  <option>{t('quantumControlPanel.qasmFiles.loadingFiles')}</option>
                 ) : (
                   <>
                     {qasmFiles.length === 0 && <option disabled>No QASM files available</option>}
@@ -668,7 +670,7 @@ export const QuantumControlPanel: React.FC = () => {
                       </option>
                     ))}
                     {qasmFiles.length > 0 && <option disabled>─────────────────</option>}
-                    <option value="custom">Custom QASM...</option>
+                    <option value="custom">{t('quantumControlPanel.qasmFiles.customQasm')}</option>
                   </>
                 )}
               </select>

@@ -81,7 +81,7 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
           {isPreparingInstall ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
           <span>{isPreparingInstall ? 'Loading install flow…' : `Install ${installInfo?.project ?? 'components'} for live data`}</span>
         </button>
-        {installError && <p className="mt-2 text-[11px] text-red-300">{installError} <button type="button" className="underline underline-offset-2" onClick={() => void handleClick()}>Retry</button></p>}
+        {installError && <p className="mt-2 text-[11px] text-red-300">{installError} <button type="button" className="underline underline-offset-2" onClick={() => void handleClick()}>{t('common:actions.retry')}</button></p>}
       </div>
 
       {/* Cluster selection dialog (agent available) */}
