@@ -45,7 +45,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	// Parse payload
 	payloadBytes, err := json.Marshal(msg.Payload)
 	if err != nil {
-		safeWrite(context.Background(), s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request"))
+		safeWrite(connCtx, s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request"))
 		return
 	}
 
@@ -54,7 +54,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		// Try legacy ClaudeRequest format for backward compatibility
 		var legacyReq protocol.ClaudeRequest
 		if err := json.Unmarshal(payloadBytes, &legacyReq); err != nil {
-			safeWrite(context.Background(), s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
+			safeWrite(connCtx, s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
 			return
 		}
 		req.Prompt = legacyReq.Prompt
@@ -62,12 +62,12 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	}
 
 	if req.Prompt == "" {
-		safeWrite(context.Background(), s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty"))
+		safeWrite(connCtx, s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty"))
 		return
 	}
 
 	if len(req.Prompt) > maxPromptChars {
-		safeWrite(context.Background(), s.errorResponse(msg.ID, "prompt_too_large",
+		safeWrite(connCtx, s.errorResponse(msg.ID, "prompt_too_large",
 			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars)))
 		return
 	}
@@ -75,7 +75,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	// SECURITY: Reject new prompts when the session token quota is exhausted
 	// to prevent unbounded AI API spend (#9438).
 	if s.isSessionQuotaExceeded() {
-		safeWrite(context.Background(), s.errorResponse(msg.ID, "token_quota_exceeded", s.sessionTokenQuotaMessage()))
+		safeWrite(connCtx, s.errorResponse(msg.ID, "token_quota_exceeded", s.sessionTokenQuotaMessage()))
 		return
 	}
 
