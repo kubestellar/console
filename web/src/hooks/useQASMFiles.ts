@@ -51,12 +51,20 @@ export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
 
   useEffect(() => {
     // Skip fetch if explicitly disabled, user is not authenticated, or quantum is forced to demo
-    if (enabled === false || !isAuthenticated || isQuantumForcedToDemo()) {
+    if (enabled === false || !isAuthenticated) {
       setIsLoading(false)
       return
     }
+
+    if (isQuantumForcedToDemo()) {
+      // In demo mode, show only bell.qasm
+      setFiles([{ name: 'bell.qasm' }])
+      setIsLoading(false)
+      return
+    }
+
     fetchFiles()
-  }, [isAuthenticated, enabled, isQuantumForcedToDemo])
+  }, [isAuthenticated, enabled])
 
   return { files, isLoading, error, refetch: fetchFiles }
 }

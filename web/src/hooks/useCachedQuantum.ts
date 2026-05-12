@@ -101,7 +101,7 @@ export const DEMO_QUANTUM_STATUS: QuantumSystemStatus = {
   loop_running: false,
   loop_mode: false,
   execution_mode: 'control-based',
-  qasm_file: 'demo.qasm',
+  qasm_file: 'bell.qasm',
   message: 'Quantum system ready',
   backend_info: {
     name: 'aer',
@@ -122,8 +122,18 @@ export const DEMO_QUANTUM_STATUS: QuantumSystemStatus = {
 }
 
 export const DEMO_QUANTUM_QUBITS: QuantumQubitSimpleData = {
-  num_qubits: 8,
-  pattern: '01010101',
+  num_qubits: 2,
+  pattern: '00',
+}
+
+export const DEMO_QUANTUM_CIRCUIT: QuantumCircuitAsciiData = {
+  circuitAscii: `     ┌───┐     ┌─┐
+q_0: ┤ H ├──■──┤M├───
+     └───┘┌─┴─┐└╥┘┌─┐
+q_1: ─────┤ X ├─╫─┤M├
+          └───┘ ║ └╥┘
+c: 2/═══════════╩══╩═
+                0  1`,
 }
 
 const EMPTY_CIRCUIT_DATA: QuantumCircuitAsciiData = {
@@ -302,7 +312,7 @@ export function useQuantumCircuitAscii({
     autoRefresh: !isGlobalQuantumPollingPaused(),
     enabled: isAuthenticated && !forceDemo,
     initialData: null,
-    demoData: EMPTY_CIRCUIT_DATA,
+    demoData: DEMO_QUANTUM_CIRCUIT,
     fetcher: fetchQuantumCircuitAscii,
   })
 
