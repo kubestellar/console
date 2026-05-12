@@ -39,7 +39,7 @@ const CONTROL_PANEL_POLL_MS = QUANTUM_STATUS_DEFAULT_POLL_MS
 const DEMO_DATA: ControlState = {
   backend: 'aer',
   shots: 1024,
-  qasm_file: 'expt.qasm',
+  qasm_file: 'bell.qasm',
   executing: false,
   loop_mode: false,
 }
