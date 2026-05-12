@@ -94,7 +94,7 @@ export default function NotFound() {
                 className="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 hover:border-zinc-600 transition-colors group"
               >
                 <Icon className="w-4 h-4 text-muted-foreground group-hover:text-purple-400 transition-colors" />
-                <span className="text-xs text-muted-foreground group-hover:text-zinc-200 transition-colors">{label}</span>
+                <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
               </button>
             ))}
           </div>
@@ -104,14 +104,14 @@ export default function NotFound() {
         <div className="flex items-center justify-center gap-3 pt-2">
           <button
             onClick={() => navigate(-1)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Go back
           </button>
           <button
             onClick={() => navigate(ROUTES.HOME)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-zinc-200 border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm text-muted-foreground hover:text-foreground border border-zinc-700 hover:border-zinc-600 rounded-lg transition-colors"
           >
             <Home className="w-3.5 h-3.5" />
             Home
