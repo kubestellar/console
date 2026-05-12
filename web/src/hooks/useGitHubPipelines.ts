@@ -46,6 +46,7 @@ export type Conclusion =
   | 'cancelled'
   | 'skipped'
   | 'timed_out'
+  | 'startup_failure'
   | 'action_required'
   | 'neutral'
   | 'stale'

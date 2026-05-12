@@ -586,7 +586,7 @@ test.describe('Nightly E2E Status — console.kubestellar.io', () => {
         expect(['completed', 'in_progress', 'queued']).toContain(run.status)
 
         if (run.conclusion) {
-          expect(['success', 'failure', 'cancelled', 'skipped', 'timed_out']).toContain(run.conclusion)
+          expect(['success', 'failure', 'cancelled', 'skipped', 'timed_out', 'startup_failure']).toContain(run.conclusion)
         }
       }
 

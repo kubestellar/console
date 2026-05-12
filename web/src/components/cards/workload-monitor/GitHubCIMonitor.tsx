@@ -50,7 +50,7 @@ interface WorkflowRun {
   name: string
   repo: string
   status: 'completed' | 'in_progress' | 'queued' | 'waiting'
-  conclusion: 'success' | 'failure' | 'cancelled' | 'skipped' | 'timed_out' | 'action_required' | null
+  conclusion: 'success' | 'failure' | 'cancelled' | 'skipped' | 'timed_out' | 'startup_failure' | 'action_required' | null
   branch: string
   event: string
   runNumber: number
@@ -69,6 +69,7 @@ const CONCLUSION_BADGE: Record<string, string> = {
   cancelled: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
   skipped: 'bg-gray-500/20 dark:bg-gray-400/20 text-muted-foreground',
   timed_out: 'bg-orange-500/20 text-orange-400',
+  startup_failure: 'bg-red-500/20 text-red-400',
   action_required: 'bg-yellow-500/20 text-yellow-400' }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -79,11 +80,12 @@ const STATUS_BADGE: Record<string, string> = {
 
 const CONCLUSION_ORDER: Record<string, number> = {
   failure: 0,
-  timed_out: 1,
-  action_required: 2,
-  cancelled: 3,
-  skipped: 4,
-  success: 5 }
+  startup_failure: 1,
+  timed_out: 2,
+  action_required: 3,
+  cancelled: 4,
+  skipped: 5,
+  success: 6 }
 
 const SORT_OPTIONS = [
   { value: 'status', label: 'Status' },
@@ -230,7 +232,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
   // Stats
   const stats = (() => {
     const total = workflows.length
-    const failed = workflows.filter(w => w.conclusion === 'failure' || w.conclusion === 'timed_out').length
+    const failed = workflows.filter(w => w.conclusion === 'failure' || w.conclusion === 'timed_out' || w.conclusion === 'startup_failure').length
     const inProgress = workflows.filter(w => w.status === 'in_progress').length
     const queued = workflows.filter(w => w.status === 'queued' || w.status === 'waiting').length
     const passed = workflows.filter(w => w.conclusion === 'success').length
@@ -275,7 +277,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
   // Synthesize issues
   const issues = useMemo<MonitorIssue[]>(() => {
     return workflows
-      .filter(w => w.conclusion === 'failure' || w.conclusion === 'timed_out')
+      .filter(w => w.conclusion === 'failure' || w.conclusion === 'timed_out' || w.conclusion === 'startup_failure')
       .map(w => ({
         id: `gh-${w.id}`,
         resource: {
@@ -498,7 +500,7 @@ export function GitHubCIMonitor({ config, ref }: GitHubCIMonitorProps & { ref?: 
               <span className="text-2xs text-muted-foreground shrink-0">
                 {formatTimeAgo(w.updatedAt)}
               </span>
-              {(w.conclusion === 'failure' || w.conclusion === 'timed_out') && (
+              {(w.conclusion === 'failure' || w.conclusion === 'timed_out' || w.conclusion === 'startup_failure') && (
                 <>
                   <button
                     type="button"

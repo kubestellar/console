@@ -80,7 +80,7 @@ interface DotInfo {
 function dotColor(c: Conclusion): string {
   if (!c) return 'bg-border/50'
   if (c === 'success') return 'bg-green-400'
-  if (c === 'failure' || c === 'timed_out') return 'bg-red-400'
+  if (c === 'failure' || c === 'timed_out' || c === 'startup_failure') return 'bg-red-400'
   if (c === 'cancelled') return 'bg-gray-500 dark:bg-gray-400'
   if (c === 'action_required') return 'bg-yellow-400'
   return 'bg-yellow-400'
@@ -89,7 +89,7 @@ function dotColor(c: Conclusion): string {
 function dotTextColor(c: Conclusion): string {
   if (!c) return 'text-muted-foreground'
   if (c === 'success') return 'text-green-400'
-  if (c === 'failure' || c === 'timed_out') return 'text-red-400'
+  if (c === 'failure' || c === 'timed_out' || c === 'startup_failure') return 'text-red-400'
   return 'text-muted-foreground'
 }
 
@@ -193,15 +193,15 @@ function WorkflowRow({ wf }: { wf: MatrixWorkflow }) {
 
   const { passRate, trend } = useMemo(() => computeTrend(dots), [dots])
   const latest = dots[0]?.conclusion
-  const latestFailed = latest === 'failure' || latest === 'timed_out'
+  const latestFailed = latest === 'failure' || latest === 'timed_out' || latest === 'startup_failure'
   const isInactive = latest === 'skipped' || latest === 'cancelled' || latest === null
   const StatusIcon = !latest ? AlertTriangle
     : latest === 'success' ? CheckCircle
-    : latest === 'failure' || latest === 'timed_out' ? XCircle
+    : latest === 'failure' || latest === 'timed_out' || latest === 'startup_failure' ? XCircle
     : AlertTriangle
   const iconColor = !latest ? 'text-muted-foreground'
     : latest === 'success' ? 'text-green-400'
-    : latest === 'failure' || latest === 'timed_out' ? 'text-red-400'
+    : latest === 'failure' || latest === 'timed_out' || latest === 'startup_failure' ? 'text-red-400'
     : 'text-yellow-400'
   const shortRepo = wf.repo.split('/')[1] ?? wf.repo
 
@@ -334,11 +334,11 @@ export function NightlyReleasePulse() {
   const { lastRun, nextCron, streak, streakKind } = pulseData
   const StatusIcon = !lastRun ? AlertTriangle
     : lastRun.conclusion === 'success' ? CheckCircle
-    : lastRun.conclusion === 'failure' || lastRun.conclusion === 'timed_out' ? XCircle
+    : lastRun.conclusion === 'failure' || lastRun.conclusion === 'timed_out' || lastRun.conclusion === 'startup_failure' ? XCircle
     : lastRun.conclusion === null ? Loader2 : AlertTriangle
   const iconColor = !lastRun ? 'text-muted-foreground'
     : lastRun.conclusion === 'success' ? 'text-green-400'
-    : lastRun.conclusion === 'failure' || lastRun.conclusion === 'timed_out' ? 'text-red-400'
+    : lastRun.conclusion === 'failure' || lastRun.conclusion === 'timed_out' || lastRun.conclusion === 'startup_failure' ? 'text-red-400'
     : lastRun.conclusion === null ? 'text-blue-400 animate-spin' : 'text-yellow-400'
 
   return (

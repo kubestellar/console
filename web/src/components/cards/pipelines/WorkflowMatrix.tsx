@@ -39,6 +39,7 @@ const LABEL_FILTER_REPO = 'Filter by repo'
 const CELL_CLASS: Record<string, string> = {
   success: 'bg-green-500/70 hover:bg-green-500',
   failure: 'bg-red-500/80 hover:bg-red-500',
+  startup_failure: 'bg-red-500/80 hover:bg-red-500',
   timed_out: 'bg-orange-500/80 hover:bg-orange-500',
   cancelled: 'bg-muted/60 hover:bg-muted',
   skipped: 'bg-muted/40 hover:bg-muted/80',

@@ -23,7 +23,7 @@ export interface NightlyWorkflowConfig {
 export interface NightlyRun {
   id: number
   status: 'completed' | 'in_progress' | 'queued'
-  conclusion: 'success' | 'failure' | 'cancelled' | 'skipped' | null
+  conclusion: 'success' | 'failure' | 'cancelled' | 'skipped' | 'startup_failure' | null
   createdAt: string
   updatedAt: string
   htmlUrl: string
