@@ -8,7 +8,7 @@ import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Terminal, Zap, Code, Info, Tag, Loader2, Box, Layers, Server, AlertTriangle, RefreshCw, TerminalSquare } from 'lucide-react'
 import { safeLazy } from '../../../lib/safeLazy'
-const PodExecTerminal = safeLazy(() => import('../../terminal/PodExecTerminal'), 'PodExecTerminal')
+const PodExecTerminal = safeLazy(() => import('../../terminal/PodExecTerminal'), 'default')
 const PodLabelsTab = safeLazy(() => import('./pod-drilldown/PodLabelsTab'), 'PodLabelsTab')
 const PodRelatedTab = safeLazy(() => import('./pod-drilldown/PodRelatedTab'), 'PodRelatedTab')
 const PodOutputTab = safeLazy(() => import('./pod-drilldown/PodOutputTab'), 'PodOutputTab')

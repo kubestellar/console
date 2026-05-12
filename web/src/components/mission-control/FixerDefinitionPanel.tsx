@@ -5,7 +5,7 @@
  * Right: Info panel showing hovered project details, mission steps, and alternatives.
  */
 
-import { useState, useEffect, useId, useRef, type KeyboardEvent } from 'react'
+import { useState, useEffect, useId, useRef, type ComponentPropsWithoutRef, type KeyboardEvent, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Loader2, Plus, Search, Info, Shield, Eye, Network, Box, Lock, Layers, Server, X as XIcon, AlertTriangle, RotateCcw, ChevronDown } from 'lucide-react'
 import { Button } from '../ui/Button'
@@ -458,11 +458,11 @@ function ExecutiveAnalysis({
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeSanitize]}
                   components={{
-                    td: ({ children, ...props }) => {
+                    td: ({ children, ...props }: ComponentPropsWithoutRef<'td'> & { children?: ReactNode }) => {
                       const raw = String(children ?? '')
                       const text = raw.toLowerCase()
-                      let indicator: React.ReactNode = null
-                      let displayChildren: React.ReactNode = children
+                      let indicator: ReactNode = null
+                      let displayChildren: ReactNode = children
                       // Normalize "Missing" → "Not installed"
                       if (/^missing$/i.test(raw.trim())) {
                         displayChildren = 'Not installed'
