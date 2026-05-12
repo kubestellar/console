@@ -1,16 +1,67 @@
+import { render, screen } from '@testing-library/react'
+import type { ReactNode } from 'react'
 import { describe, it, expect, vi } from 'vitest'
 
-// Mock the heavy cardRegistry to avoid loading all card bundles
+vi.mock('@dnd-kit/sortable', () => ({
+  useSortable: () => ({
+    attributes: {},
+    listeners: {},
+    setActivatorNodeRef: vi.fn(),
+    setNodeRef: vi.fn(),
+    transform: null,
+    transition: null,
+  }),
+}))
+
+vi.mock('@dnd-kit/utilities', () => ({
+  CSS: {
+    Transform: {
+      toString: () => undefined,
+    },
+  },
+}))
+
+vi.mock('../cards/CardWrapper', () => ({
+  CardWrapper: ({ children }: { children: ReactNode }) => <div data-testid="card-wrapper">{children}</div>,
+}))
+
 vi.mock('../cards/cardRegistry', () => ({
-  CARD_COMPONENTS: {},
-  DEMO_DATA_CARDS: [],
-  LIVE_DATA_CARDS: [],
+  CARD_COMPONENTS: {
+    test_card: ({ config }: { config: { label?: string } }) => <div>{config.label ?? 'Test card content'}</div>,
+  },
+  DEMO_DATA_CARDS: new Set<string>(),
+  LIVE_DATA_CARDS: new Set<string>(),
   MODULE_MAP: {},
   CARD_SIZES: {},
   registerDynamicCardType: vi.fn(),
 }))
 
+vi.mock('../../lib/cards/cardHooks', () => ({
+  useCardCollapse: () => ({ isCollapsed: false }),
+}))
+
 import { SortableCard, DragPreviewCard } from './SharedSortableCard'
+
+const baseCard = {
+  id: 'card-1',
+  card_type: 'test_card',
+  config: { label: 'Card content' },
+  position: { w: 4, h: 2 },
+  title: 'Test Card',
+} as const
+
+function renderSortableCard(card = baseCard) {
+  return render(
+    <SortableCard
+      card={card}
+      onConfigure={vi.fn()}
+      onRemove={vi.fn()}
+      onWidthChange={vi.fn()}
+      onHeightChange={vi.fn()}
+      onRefresh={vi.fn()}
+    />
+  )
+}
 
 describe('SharedSortableCard (SortableCard) Component', () => {
   it('exports SortableCard component', () => {
@@ -21,6 +72,28 @@ describe('SharedSortableCard (SortableCard) Component', () => {
   it('exports DragPreviewCard component', () => {
     expect(DragPreviewCard).toBeDefined()
     expect(typeof DragPreviewCard).toBe('function')
+  })
+
+  it('wraps each gridcell in a row for ARIA grid semantics', () => {
+    renderSortableCard()
+
+    const row = screen.getByRole('row')
+    const cell = screen.getByRole('gridcell', { name: 'Test Card' })
+
+    expect(row).toContainElement(cell)
+  })
+
+  it('keeps the fallback card branch inside the row/gridcell hierarchy', () => {
+    renderSortableCard({
+      ...baseCard,
+      card_type: 'unknown_card',
+    })
+
+    const row = screen.getByRole('row')
+    const cell = screen.getByRole('gridcell', { name: 'Unknown Card' })
+
+    expect(row).toContainElement(cell)
+    expect(cell).toHaveTextContent('Unknown card type: unknown_card')
   })
 })
 

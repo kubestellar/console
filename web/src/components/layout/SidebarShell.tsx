@@ -830,17 +830,16 @@ export function SidebarShell({
         {features.activeUsers && !isCollapsed && (
           <div className="mt-auto pt-4 border-t border-border/30 flex flex-col items-center gap-1">
             <div className="flex items-center justify-center gap-2">
-              <div
-                className="flex items-center gap-1 px-2 text-muted-foreground/60"
-                aria-label={t('sidebar.activeViewers', { count: viewerCount })}
-              >
+              <div className="flex items-center gap-1 px-2 text-muted-foreground/60">
+                <span className="sr-only">{t('sidebar.activeViewers', { count: viewerCount })}</span>
                 <User className={cn('w-3 h-3', viewersError && 'text-red-400')} aria-hidden="true" />
                 <span className="text-2xs tabular-nums" aria-hidden="true">
                   {viewersError ? '!' : viewersLoading ? '…' : viewerCount}
                 </span>
               </div>
-              <span className="text-2xs text-muted-foreground/40 font-mono" aria-label={`Commit: ${__COMMIT_HASH__}`}>
-                #{__COMMIT_HASH__.substring(0, 7)}
+              <span className="text-2xs text-muted-foreground/40 font-mono" title={`Commit: ${__COMMIT_HASH__}`}>
+                <span className="sr-only">{`Commit: ${__COMMIT_HASH__}`}</span>
+                <span aria-hidden="true">#{__COMMIT_HASH__.substring(0, 7)}</span>
               </span>
             </div>
             {/* Developer mode: warn when running an older commit, or show upgrade progress */}
