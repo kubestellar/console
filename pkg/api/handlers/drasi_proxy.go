@@ -212,7 +212,8 @@ func (h *MCPHandlers) proxyDrasiServer(c *fiber.Ctx, upstreamPath string, upstre
 
 	req, err := buildUpstreamRequest(c, full.String())
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		slog.Error("[drasi] failed to build upstream request", "error", err)
+		return fiber.NewError(fiber.StatusBadRequest, "invalid upstream request")
 	}
 	return streamUpstream(c, drasiProxyClient, req)
 }
@@ -231,7 +232,8 @@ func (h *MCPHandlers) proxyDrasiPlatform(c *fiber.Ctx, upstreamPath string, upst
 
 	cfg, err := h.k8sClient.GetRestConfig(cluster)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("unknown cluster %q: %v", cluster, err))
+		slog.Error("[drasi] cluster config lookup failed", "cluster", cluster, "error", err)
+		return fiber.NewError(fiber.StatusBadRequest, "unknown or unreachable cluster")
 	}
 
 	// Build the Kubernetes Service proxy URL and use the cluster's
@@ -239,7 +241,8 @@ func (h *MCPHandlers) proxyDrasiPlatform(c *fiber.Ctx, upstreamPath string, upst
 	//   /api/v1/namespaces/{ns}/services/{name}:{port}/proxy/{path}
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("kubeclient init failed: %v", err))
+		slog.Error("[drasi] kubeclient init failed", "cluster", cluster, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "failed to initialize cluster client")
 	}
 
 	rawQuery := ""
@@ -275,7 +278,8 @@ func (h *MCPHandlers) proxyDrasiPlatform(c *fiber.Ctx, upstreamPath string, upst
 		} else {
 			status = fiber.StatusBadGateway
 		}
-		return fiber.NewError(status, fmt.Sprintf("drasi-platform proxy: %v", err))
+		slog.Error("[drasi] platform proxy request failed", "cluster", cluster, "path", upstreamPath, "error", err)
+		return fiber.NewError(status, "drasi-platform proxy request failed")
 	}
 	c.Set("content-type", "application/json")
 	return c.Send(body)
@@ -320,7 +324,8 @@ func streamUpstream(c *fiber.Ctx, client *http.Client, req *http.Request) error 
 	// deadline; rely on the client closing the connection.
 	resp, err := client.Do(req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadGateway, fmt.Sprintf("upstream request failed: %v", err))
+		slog.Error("[drasi] upstream request failed", "url", req.URL.Redacted(), "error", err)
+		return fiber.NewError(fiber.StatusBadGateway, "upstream request failed")
 	}
 	defer resp.Body.Close()
 

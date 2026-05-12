@@ -1191,7 +1191,8 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 		// Fallback: list all pods and filter by name prefix
 		allPods, listErr := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 		if listErr != nil {
-			return c.Status(500).JSON(fiber.Map{"error": listErr.Error()})
+			slog.Error("[workloads] failed to list pods", "namespace", namespace, "error", listErr)
+			return c.Status(500).JSON(fiber.Map{"error": "failed to list pods"})
 		}
 		filtered := allPods.DeepCopy()
 		filtered.Items = nil
