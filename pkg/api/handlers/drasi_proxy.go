@@ -29,8 +29,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -55,9 +58,72 @@ const (
 	drasiProxyDefaultTimeout = 30 * time.Second
 )
 
-// drasiProxyClient is an HTTP client with a timeout for Drasi proxy requests.
-// Using http.DefaultClient would hang indefinitely on unresponsive upstreams.
-var drasiProxyClient = &http.Client{Timeout: drasiProxyDefaultTimeout}
+// drasiBlockedCIDRs contains CIDR ranges that must never be proxied by the
+// Drasi server proxy. This is similar to blockedCIDRs in card_proxy.go but
+// deliberately EXCLUDES loopback (127.0.0.0/8, ::1/128) because drasi-server
+// runs on localhost.
+var drasiBlockedCIDRs = func() []*net.IPNet {
+	cidrs := []string{
+		"10.0.0.0/8",         // RFC 1918 private
+		"172.16.0.0/12",      // RFC 1918 private
+		"192.168.0.0/16",     // RFC 1918 private
+		"169.254.169.254/32", // cloud metadata
+		"169.254.0.0/16",     // link-local
+		"fc00::/7",           // IPv6 unique local
+		"fe80::/10",          // IPv6 link-local
+	}
+	nets := make([]*net.IPNet, 0, len(cidrs))
+	for _, cidr := range cidrs {
+		_, ipnet, err := net.ParseCIDR(cidr)
+		if err != nil {
+			slog.Error("[DrasiProxy] failed to parse blocked CIDR", "cidr", cidr, "error", err)
+			os.Exit(1)
+		}
+		nets = append(nets, ipnet)
+	}
+	return nets
+}()
+
+// isDrasiBlockedIP returns true if the IP is in a private/reserved range
+// that the Drasi proxy should not connect to. Loopback addresses are allowed.
+func isDrasiBlockedIP(ip net.IP) bool {
+	for _, cidr := range drasiBlockedCIDRs {
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// drasiProxyClient is an HTTP client hardened against SSRF for Drasi proxy
+// requests. It uses a custom DialContext that resolves DNS and validates
+// resolved IPs against blocked CIDRs before connecting, and disables
+// redirect-following to prevent redirect-based SSRF bypass.
+var drasiProxyClient = &http.Client{
+	Timeout: drasiProxyDefaultTimeout,
+	CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+	Transport: &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+			if err != nil {
+				return nil, err
+			}
+			for _, ip := range ips {
+				if isDrasiBlockedIP(ip.IP) {
+					return nil, fmt.Errorf("blocked: private/reserved IP %s for host %s", ip.IP, host)
+				}
+			}
+			dialer := &net.Dialer{Timeout: drasiProxyDefaultTimeout}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+		},
+	},
+}
 
 // drasiHopByHopHeaders are removed from both directions per RFC 7230 §6.1.
 var drasiHopByHopHeaders = map[string]bool{
@@ -131,6 +197,12 @@ func (h *MCPHandlers) proxyDrasiServer(c *fiber.Ctx, upstreamPath string, upstre
 	// Reject URL schemes other than http/https to prevent SSRF surprises.
 	if base.Scheme != "http" && base.Scheme != "https" {
 		return fiber.NewError(fiber.StatusBadRequest, "url must be http or https")
+	}
+	// Only localhost / loopback is intentionally allowed for drasi-server.
+	// Unspecified bind-all hosts must not be dialed through the proxy.
+	host := base.Hostname()
+	if host == "0.0.0.0" || host == "::" {
+		return fiber.NewError(fiber.StatusForbidden, "url host is not allowed")
 	}
 	full := *base
 	full.Path = strings.TrimRight(base.Path, "/") + upstreamPath
