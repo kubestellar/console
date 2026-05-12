@@ -36,6 +36,11 @@ vi.mock('../../lib/utils/localStorage', () => ({
   safeRemoveItem: vi.fn(),
 }))
 
+vi.mock('../../lib/analytics', () => ({
+  emitGitHubConnected: vi.fn(),
+  emitError: vi.fn(),
+}))
+
 // Mock fetch to prevent real /auth/refresh request from hanging in jsdom.
 // Return a pending promise so the effect stays in the loading state
 // (i.e., status stays 'authCallback.fetchingUserInfo' and doesn't advance

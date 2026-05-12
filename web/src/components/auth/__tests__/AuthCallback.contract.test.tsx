@@ -19,10 +19,21 @@ import type { ReactNode } from 'react'
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockNavigate = vi.fn()
-const mockSetToken = vi.fn()
-const mockRefreshUser = vi.fn().mockResolvedValue(undefined)
-const mockShowToast = vi.fn()
+const {
+  mockNavigate,
+  mockSetToken,
+  mockRefreshUser,
+  mockShowToast,
+  mockEmitGitHubConnected,
+  mockEmitError,
+} = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  mockSetToken: vi.fn(),
+  mockRefreshUser: vi.fn().mockResolvedValue(undefined),
+  mockShowToast: vi.fn(),
+  mockEmitGitHubConnected: vi.fn(),
+  mockEmitError: vi.fn(),
+}))
 
 vi.mock('../../../hooks/mcp/shared', () => ({
   agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
@@ -60,7 +71,8 @@ vi.mock('../../../config/routes', () => ({
 }))
 
 vi.mock('../../../lib/analytics', () => ({
-  emitGitHubConnected: vi.fn(),
+  emitGitHubConnected: mockEmitGitHubConnected,
+  emitError: mockEmitError,
 }))
 
 vi.mock('../../../lib/utils/localStorage', () => ({
@@ -184,5 +196,34 @@ describe('AuthCallback /auth/refresh contract (#6590)', () => {
 
     expect(mockRefreshUser).toHaveBeenCalled()
     expect(mockSetToken).not.toHaveBeenCalled()
+  })
+
+  it('emits agent_token_failure when kc-agent token fetch fails but still completes sign-in', async () => {
+    const agentError = new Error('agent token request failed')
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ refreshed: true, onboarded: true }),
+      })
+      .mockRejectedValueOnce(agentError)
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.stubGlobal('fetch', mockFetch)
+
+    renderAuthCallback()
+    await flushTimers()
+
+    expect(mockEmitError).toHaveBeenCalledWith(
+      'agent_token_failure',
+      JSON.stringify({ message: agentError.message, context: 'auth_callback' }),
+      undefined,
+      { error: agentError },
+    )
+    expect(warnSpy).toHaveBeenCalledWith(
+      'Failed to fetch kc-agent token during auth callback',
+      agentError,
+    )
+    expect(mockRefreshUser).toHaveBeenCalled()
+    expect(mockNavigate).toHaveBeenCalledWith('/')
   })
 })
