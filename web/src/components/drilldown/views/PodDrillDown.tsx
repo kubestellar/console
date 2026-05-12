@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { useMissions } from '../../../hooks/useMissions'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
 import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
@@ -8,7 +8,7 @@ import { useCanI } from '../../../hooks/usePermissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Terminal, Zap, Code, Info, Tag, Loader2, Box, Layers, Server, AlertTriangle, RefreshCw, TerminalSquare } from 'lucide-react'
 import { safeLazy } from '../../../lib/safeLazy'
-const PodExecTerminal = lazy(() => import('../../terminal/PodExecTerminal'))
+const PodExecTerminal = safeLazy(() => import('../../terminal/PodExecTerminal'), 'default')
 const PodLabelsTab = safeLazy(() => import('./pod-drilldown/PodLabelsTab'), 'PodLabelsTab')
 const PodRelatedTab = safeLazy(() => import('./pod-drilldown/PodRelatedTab'), 'PodRelatedTab')
 const PodOutputTab = safeLazy(() => import('./pod-drilldown/PodOutputTab'), 'PodOutputTab')

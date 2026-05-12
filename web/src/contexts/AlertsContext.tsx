@@ -1,7 +1,8 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, Suspense, type ReactNode } from 'react'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
+import { safeLazy } from '../lib/safeLazy'
 import type {
   Alert,
   AlertRule,
@@ -43,7 +44,7 @@ import { alertDedupKey, deduplicateAlerts } from './alerts/deduplication'
 // Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of
 // the main chunk.  The provider renders immediately with empty data; once
 // the fetcher chunk loads, it starts pushing live data via onData callback.
-const AlertsDataFetcher = lazy(() => import('./AlertsDataFetcher'))
+const AlertsDataFetcher = safeLazy(() => import('./AlertsDataFetcher'), 'default')
 const MCP_UPDATE_BATCH_FRAME_FALLBACK_MS = 16
 
 // Generate unique ID
