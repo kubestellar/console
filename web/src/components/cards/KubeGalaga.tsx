@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
 
 import { Play, RotateCcw, Pause, Trophy, Target, Heart, Zap } from 'lucide-react'
 
