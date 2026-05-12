@@ -8,7 +8,6 @@ import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isInClusterMode } from './useBackendHealth'
 import { fetchKagentiProviderStatus } from '../lib/kagentiProviderBackend'
-import type { KagentiProviderStatus } from '../lib/kagentiProviderBackend'
 
 /** Health status of a single provider */
 export interface ProviderHealthInfo {
@@ -69,6 +68,108 @@ interface KeysStatusResponse {
   configPath: string
 }
 
+function createAIProviderHealth(
+  provider: string,
+  options: {
+    displayName?: string
+    status: ProviderHealthInfo['status']
+    detail?: string
+  },
+): ProviderHealthInfo {
+  const normalizedProvider = normalizeAIProvider(provider)
+
+  return {
+    id: normalizedProvider,
+    name: AI_PROVIDER_NAMES[provider] || AI_PROVIDER_NAMES[normalizedProvider] || options.displayName || provider,
+    category: 'ai',
+    status: options.status,
+    configured: true,
+    statusUrl: STATUS_PAGES[normalizedProvider],
+    detail: options.detail,
+  }
+}
+
+async function fetchLocalAIProviders(): Promise<ProviderHealthInfo[]> {
+  const result: ProviderHealthInfo[] = []
+
+  try {
+    const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
+      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+    if (response.ok) {
+      const data: KeysStatusResponse = await response.json()
+      const seen = new Set<string>()
+      for (const key of (data.keys || [])) {
+        // Skip unconfigured providers — they shouldn't appear in the health card.
+        // Local LLM runners (Ollama, LM Studio, etc.) are always registered in
+        // the backend but should only show up here if explicitly configured via
+        // API key or base URL env var/config (#12377).
+        if (!key.configured) {
+          continue
+        }
+
+        const normalized = normalizeAIProvider(key.provider)
+        if (seen.has(normalized)) continue
+        seen.add(normalized)
+
+        let status: ProviderHealthInfo['status'] = 'unknown'
+        let detail: string | undefined
+
+        if (key.valid === true) {
+          status = 'operational'
+          detail = 'API key configured and valid'
+        } else if (key.valid === false) {
+          status = 'down'
+          detail = key.error || 'API key invalid'
+        } else {
+          status = 'operational'
+          detail = 'API key configured'
+        }
+
+        result.push(createAIProviderHealth(key.provider, {
+          displayName: key.displayName,
+          status,
+          detail,
+        }))
+      }
+    }
+  } catch {
+    // Agent unreachable — no AI providers to show
+  }
+
+  return result
+}
+
+async function fetchInClusterAIProviders(): Promise<ProviderHealthInfo[]> {
+  const result: ProviderHealthInfo[] = []
+
+  try {
+    const status = await fetchKagentiProviderStatus({ signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+    const configuredProviders = new Set<string>()
+
+    for (const provider of (status.configured_providers || [])) {
+      configuredProviders.add(normalizeAIProvider(provider))
+    }
+
+    if (status.llm_provider && status.api_key_configured) {
+      configuredProviders.add(normalizeAIProvider(status.llm_provider))
+    }
+
+    const providerStatus: ProviderHealthInfo['status'] = status.available ? 'operational' : 'down'
+    const detail = status.available ? 'API key configured' : status.reason || 'Provider backend unavailable'
+
+    for (const provider of configuredProviders) {
+      result.push(createAIProviderHealth(provider, {
+        status: providerStatus,
+        detail,
+      }))
+    }
+  } catch {
+    // Kagenti status unavailable — no AI providers to show
+  }
+
+  return result
+}
+
 /** Demo data — shows a realistic set of providers all operational */
 const DEMO_PROVIDERS: ProviderHealthInfo[] = [
   { id: 'anthropic', name: 'Anthropic (Claude)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.anthropic, detail: 'API key configured' },
@@ -83,96 +184,10 @@ const DEMO_PROVIDERS: ProviderHealthInfo[] = [
 
 /** Fetch AI + Cloud providers and their health status */
 async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): Promise<ProviderHealthInfo[]> {
-  const result: ProviderHealthInfo[] = []
+  const result: ProviderHealthInfo[] = isInClusterMode()
+    ? await fetchInClusterAIProviders()
+    : await fetchLocalAIProviders()
 
-  // --- AI Providers from /settings/keys (local mode) or Kagenti (in-cluster mode) ---
-  if (!isInClusterMode()) {
-    try {
-      const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
-      if (response.ok) {
-        const data: KeysStatusResponse = await response.json()
-        const seen = new Set<string>()
-        for (const key of (data.keys || [])) {
-          // Skip unconfigured providers — they shouldn't appear in the health card.
-          // Local LLM runners (Ollama, LM Studio, etc.) are always registered in
-          // the backend but should only show up here if explicitly configured via
-          // API key or base URL env var/config (#12377).
-          if (!key.configured) {
-            continue
-          }
-
-          const normalized = normalizeAIProvider(key.provider)
-          if (seen.has(normalized)) continue
-          seen.add(normalized)
-
-          const name = AI_PROVIDER_NAMES[key.provider] || key.displayName || key.provider
-          let status: ProviderHealthInfo['status'] = 'unknown'
-          let detail: string | undefined
-
-          if (key.valid === true) {
-            status = 'operational'
-            detail = 'API key configured and valid'
-          } else if (key.valid === false) {
-            status = 'down'
-            detail = key.error || 'API key invalid'
-          } else {
-            status = 'operational'
-            detail = 'API key configured'
-          }
-
-          result.push({
-            id: normalized,
-            name,
-            category: 'ai',
-            status,
-            configured: true,
-            statusUrl: STATUS_PAGES[normalized],
-            detail })
-        }
-      }
-    } catch {
-      // Agent unreachable — no AI providers to show
-    }
-  } else {
-    // In-cluster mode: use Kagenti provider backend
-    try {
-      const kagentiStatus: KagentiProviderStatus = await fetchKagentiProviderStatus({
-        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
-      })
-
-      if (kagentiStatus.available) {
-        const seen = new Set<string>()
-        const providers = (kagentiStatus.configured_providers || [])
-        
-        // Fallback to single llm_provider if configured_providers is not available
-        if (providers.length === 0 && kagentiStatus.llm_provider && kagentiStatus.api_key_configured) {
-          providers.push(kagentiStatus.llm_provider)
-        }
-
-        for (const provider of (providers || [])) {
-          const normalized = normalizeAIProvider(provider)
-          if (seen.has(normalized)) continue
-          seen.add(normalized)
-
-          const name = AI_PROVIDER_NAMES[provider] || AI_PROVIDER_NAMES[normalized] || provider
-          result.push({
-            id: normalized,
-            name,
-            category: 'ai',
-            status: 'operational',
-            configured: true,
-            statusUrl: STATUS_PAGES[normalized],
-            detail: 'API key configured'
-          })
-        }
-      }
-    } catch {
-      // Kagenti unreachable — no AI providers to show
-    }
-  }
-
-  // --- Cloud Providers from cluster distributions ---
   if (clusterSnapshot.length > 0) {
     const providerCounts = new Map<CloudProvider, number>()
     for (const cluster of (clusterSnapshot || [])) {
@@ -220,7 +235,7 @@ export function useProviderHealth() {
     category: 'default',
     initialData: [],
     demoData: DEMO_PROVIDERS,
-    demoWhenEmpty: true,
+    demoWhenEmpty: !isInClusterMode(),
     fetcher: () => fetchProviders(clustersRef.current),
     refreshInterval: 60_000 })
 
