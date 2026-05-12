@@ -344,6 +344,7 @@ export function ScreenshotPreviewOverlay({ src, onClose }: ScreenshotPreviewOver
               src={src}
               alt="Screenshot preview"
               className="max-w-full max-h-[75vh] object-contain rounded-lg"
+              loading="lazy"
             />
           )}
         </div>

@@ -831,7 +831,7 @@ export function PolicyViolations({ config: _config }: CardConfig) {
   }
 
   // Clusters contributing Kyverno data (must be before early returns to satisfy hooks rules)
-  const participatingClusters = Object.values(kyvernoStatuses).filter(s => s.installed).map(s => s.cluster)
+  const participatingClusters = useMemo(() => Object.values(kyvernoStatuses).filter(s => s.installed).map(s => s.cluster), [kyvernoStatuses])
 
   const hasData = violations.length > 0 || kyvernoDemoData
   // #6219: surface kyverno fetch failures.

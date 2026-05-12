@@ -145,7 +145,7 @@ export default async (req: Request) => {
 
     if (!resp.ok) {
       return new Response(
-        JSON.stringify({ error: "Medium returned " + resp.status }),
+        JSON.stringify({ error: "upstream request failed" }),
         { status: 502, headers }
       );
     }

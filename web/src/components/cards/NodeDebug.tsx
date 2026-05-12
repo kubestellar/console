@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCachedNodes } from '../../hooks/useCachedData'
 import { useKubectl } from '../../hooks/useKubectl'
@@ -112,7 +112,7 @@ export function NodeDebug() {
   const [execImage, setExecImage] = useState(EXEC_IMAGES[0].value)
   const [customCmd, setCustomCmd] = useState('')
 
-  const clusters = Array.from(new Set(nodes.map(n => n.cluster).filter(Boolean))).sort()
+  const clusters = useMemo(() => Array.from(new Set(nodes.map(n => n.cluster).filter(Boolean))).sort(), [nodes])
   const clusterNodes = nodes.filter(n => !selectedCluster || n.cluster === selectedCluster)
 
   // Resolve the effective cluster: explicit selection first, then the selected node's cluster.

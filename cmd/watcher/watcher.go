@@ -184,7 +184,7 @@ func runWatcher(cfg WatcherConfig) error {
 			stage = "ready"
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, map[string]interface{}{
 			"status":           "watchdog",
 			"backend":          beStatus,
 			"stage":            stage,
@@ -196,10 +196,10 @@ func runWatcher(cfg WatcherConfig) error {
 		w.Header().Set("Content-Type", "application/json")
 		if atomic.LoadInt32(&backendHealthy) == 1 {
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+			writeJSON(w, map[string]string{"status": "ready"})
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(map[string]string{"status": "not_ready"})
+			writeJSON(w, map[string]string{"status": "not_ready"})
 		}
 	})
 
@@ -487,10 +487,17 @@ func serveFallback(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusServiceUnavailable)
-	json.NewEncoder(w).Encode(map[string]string{
+	writeJSON(w, map[string]string{
 		"error":  "backend_unavailable",
 		"status": "watchdog",
 	})
+}
+
+// writeJSON encodes v as JSON into w, logging on failure.
+func writeJSON(w http.ResponseWriter, v any) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		slog.Error("failed to encode JSON response", "error", err)
+	}
 }
 
 func readStartupStage() string {

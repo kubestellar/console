@@ -120,7 +120,7 @@ const GPUUtilization = memo(function GPUUtilization() {
     })
   }
 
-  const reachableClusterNames = new Set(clusters.filter(c => c.reachable !== false).map(c => c.name))
+  const reachableClusterNames = useMemo(() => new Set(clusters.filter(c => c.reachable !== false).map(c => c.name)), [clusters])
   const hasReachableClusters = filteredClusters.some(c => c.nodeCount !== undefined && c.nodeCount > 0)
 
   const historyRef = useRef<GPUPoint[]>([])

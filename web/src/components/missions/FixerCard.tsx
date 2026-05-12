@@ -134,6 +134,9 @@ export function FixerCard({ mission, onImport, onSelect, onCopyLink, compact }: 
                 src={`https://github.com/${mission.authorGithub}.png?size=32`}
                 alt={mission.authorGithub}
                 className="w-4 h-4 rounded-full"
+                loading="lazy"
+                width={16}
+                height={16}
               />
               <span className="truncate max-w-[80px]">{mission.authorGithub}</span>
             </a>

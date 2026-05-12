@@ -150,6 +150,9 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             src={user.avatar_url}
             alt={user.github_login}
             className="w-6 h-6 rounded-full"
+            loading="lazy"
+            width={24}
+            height={24}
           />
         ) : (
           <div className="w-6 h-6 rounded-full bg-purple-900 flex items-center justify-center">
@@ -173,6 +176,9 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   src={user.avatar_url}
                   alt={user.github_login}
                   className="w-12 h-12 rounded-full"
+                  loading="lazy"
+                  width={48}
+                  height={48}
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-purple-900 flex items-center justify-center">
