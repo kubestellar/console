@@ -618,7 +618,7 @@ func (s *SQLiteStore) migrate() error {
 	// legacy pending rows so the UI no longer shows a dead state.
 	if res, err := s.db.ExecContext(ctx,
 		`UPDATE gpu_reservations SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE status = 'pending'`); err != nil {
-		slog.Warn("[SQLite] failed to migrate pending reservations", "error", err)
+		return fmt.Errorf("migrate pending gpu reservations to active: %w", err)
 	} else if n, _ := res.RowsAffected(); n > 0 {
 		slog.Info("[SQLite] migrated pending reservations to active", "count", n)
 	}
