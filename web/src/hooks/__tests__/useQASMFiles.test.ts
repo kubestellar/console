@@ -9,7 +9,13 @@ const { mockUseAuth, mockIsQuantumForcedToDemo } = vi.hoisted(() => ({
 
 vi.mock('../../lib/auth', () => ({ useAuth: () => mockUseAuth() }))
 vi.mock('../../lib/demoMode', () => ({ isQuantumForcedToDemo: () => mockIsQuantumForcedToDemo() }))
-vi.mock('../../lib/constants/network', () => ({ FETCH_DEFAULT_TIMEOUT_MS: 5000 }))
+vi.mock('../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/constants/network')>()
+  return {
+    ...actual,
+    FETCH_DEFAULT_TIMEOUT_MS: 5000,
+  }
+})
 
 const MOCK_FILES = [
   { name: 'grover.qasm', size: 512 },
