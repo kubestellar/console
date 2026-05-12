@@ -515,7 +515,7 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 				"kubestellar.io/group": group.Name,
 			}); err != nil {
 				slog.Error("[Workloads] failed to label cluster", "cluster", cluster, "error", err)
-				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: operation failed", cluster))
 			}
 		}
 		if len(labelErrors) > 0 {
@@ -577,7 +577,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 			if !newSet[cluster] {
 				if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
 					slog.Error("[Workloads] failed to remove label from cluster", "cluster", cluster, "error", err)
-					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: operation failed", cluster))
 				}
 			}
 		}
@@ -587,7 +587,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 					"kubestellar.io/group": group.Name,
 				}); err != nil {
 					slog.Error("[Workloads] failed to label cluster", "cluster", cluster, "error", err)
-					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: operation failed", cluster))
 				}
 			}
 		}
@@ -636,7 +636,7 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 		for _, cluster := range group.Clusters {
 			if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
 				slog.Error("[Workloads] failed to remove label from cluster", "cluster", cluster, "error", err)
-				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: operation failed", cluster))
 			}
 		}
 		if len(labelErrors) > 0 {
@@ -1170,7 +1170,8 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 
 	client, err := h.k8sClient.GetClient(cluster)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": fmt.Sprintf("cluster %s: %v", cluster, err)})
+		slog.Error("[workloads] failed to get cluster client", "cluster", cluster, "error", err)
+		return c.Status(500).JSON(fiber.Map{"error": "cluster access failed"})
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), workloadDeployLogsTimeout)

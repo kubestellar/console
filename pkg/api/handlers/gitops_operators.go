@@ -22,7 +22,8 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	// SECURITY: Validate cluster name before passing to kubectl CLI
 	if cluster != "" {
 		if err := validateK8sName(cluster, "cluster"); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			slog.Warn("[gitops] invalid cluster parameter (operators)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
 		}
 	}
 
@@ -453,7 +454,8 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 	// SECURITY: Validate cluster name before passing to kubectl CLI
 	if cluster != "" {
 		if err := validateK8sName(cluster, "cluster"); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			slog.Warn("[gitops] invalid cluster parameter (subscriptions)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
 		}
 	}
 
