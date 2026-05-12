@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -245,7 +247,7 @@ func runWatcher(cfg WatcherConfig) error {
 
 		slog.Info("[Watcher] listening (HTTPS/H2 + HTTP redirect)", "addr", addr, "backend", backendURL.String())
 
-		go func() {
+		safego.GoWith("watcher-stream", func() {
 			for {
 				conn, acceptErr := ln.Accept()
 				if acceptErr != nil {
@@ -253,7 +255,7 @@ func runWatcher(cfg WatcherConfig) error {
 				}
 				go handleConn(conn, tlsCfg, srv, cfg.ListenPort)
 			}
-		}()
+		})
 
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -264,7 +266,7 @@ func runWatcher(cfg WatcherConfig) error {
 		ln.Close()
 		srv.Shutdown(shutdownCtx)
 	} else {
-		go func() {
+		safego.GoWith("signal-handler", func() {
 			sigCh := make(chan os.Signal, 1)
 			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 			<-sigCh
@@ -272,7 +274,7 @@ func runWatcher(cfg WatcherConfig) error {
 			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), watcherShutdownTimeout)
 			defer shutdownCancel()
 			srv.Shutdown(shutdownCtx)
-		}()
+		})
 
 		slog.Info("[Watcher] listening (HTTP/1.1)", "addr", addr, "backend", backendURL.String())
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

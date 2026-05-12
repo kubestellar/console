@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -610,7 +611,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 	wg.Add(numCRDQueries)
 
 	// Count agents
-	go func() {
+	safego.GoWith("kagent-crds/agents", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentCRDPerCallTimeout)
 		defer cancel()
@@ -623,10 +624,10 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		agentCount = len(agentList.Items)
-	}()
+	})
 
 	// Count tool servers
-	go func() {
+	safego.GoWith("kagent-crds/tool-servers", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentCRDPerCallTimeout)
 		defer cancel()
@@ -639,10 +640,10 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		toolServerCount = len(tsList.Items)
-	}()
+	})
 
 	// Count remote MCP servers
-	go func() {
+	safego.GoWith("kagent-crds/remote-mcp-servers", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentCRDPerCallTimeout)
 		defer cancel()
@@ -655,10 +656,10 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		remoteMCPServerCount = len(rmsList.Items)
-	}()
+	})
 
 	// Count model configs and collect providers
-	go func() {
+	safego.GoWith("kagent-crds/model-configs", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentCRDPerCallTimeout)
 		defer cancel()
@@ -680,10 +681,10 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 				}
 			}
 		}
-	}()
+	})
 
 	// Count model provider configs and collect providers
-	go func() {
+	safego.GoWith("kagent-crds/model-provider-configs", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentCRDPerCallTimeout)
 		defer cancel()
@@ -705,10 +706,10 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 				}
 			}
 		}
-	}()
+	})
 
 	// Count memories
-	go func() {
+	safego.GoWith("kagent-crds/memories", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentCRDPerCallTimeout)
 		defer cancel()
@@ -721,7 +722,7 @@ func (s *Server) handleKagentCRDSummary(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		memoryCount = len(memList.Items)
-	}()
+	})
 
 	wg.Wait()
 

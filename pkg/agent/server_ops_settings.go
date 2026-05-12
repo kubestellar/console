@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -583,31 +584,32 @@ func (s *Server) ValidateAllKeys() {
 			continue // Already validated
 		}
 
+		providerName := provider
 		wg.Add(1)
-		go func(p string) {
+		safego.GoWith("validate-api-key/"+providerName, func() {
 			defer wg.Done()
 			sem <- struct{}{}        // acquire semaphore slot
 			defer func() { <-sem }() // release semaphore slot
 
-			slog.Info("validating API key", "provider", p)
-			valid, err := s.validateAPIKey(p)
+			slog.Info("validating API key", "provider", providerName)
+			valid, err := s.validateAPIKey(providerName)
 
 			mu.Lock()
 			defer mu.Unlock()
 
 			if err != nil {
 				// Network or other error - don't cache, will try again later
-				slog.Error("API key validation error (will retry)", "provider", p, "error", err)
+				slog.Error("API key validation error (will retry)", "provider", providerName, "error", err)
 			} else {
 				// Cache the validity result
-				cm.SetKeyValidity(p, valid)
+				cm.SetKeyValidity(providerName, valid)
 				if valid {
-					slog.Info("API key is valid", "provider", p)
+					slog.Info("API key is valid", "provider", providerName)
 				} else {
-					slog.Warn("API key is INVALID", "provider", p)
+					slog.Warn("API key is INVALID", "provider", providerName)
 				}
 			}
-		}(provider)
+		})
 	}
 
 	wg.Wait()

@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // orbitSuffixBytes is the number of random bytes used to generate a unique
@@ -276,7 +278,7 @@ func (h *OrbitHandler) GetSchedule(c *fiber.Ctx) error {
 // is closed.
 func (h *OrbitHandler) StartScheduler(done <-chan struct{}) {
 	ticker := time.NewTicker(time.Duration(orbitScheduleCheckIntervalSec) * time.Second)
-	go func() {
+	safego.GoWith("orbit-scheduler", func() {
 		defer ticker.Stop()
 		for {
 			select {
@@ -286,7 +288,7 @@ func (h *OrbitHandler) StartScheduler(done <-chan struct{}) {
 				h.checkDueMissions()
 			}
 		}
-	}()
+	})
 }
 
 // checkDueMissions iterates all missions and auto-runs those that are

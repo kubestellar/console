@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
@@ -57,8 +58,9 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 		defer overallCancel()
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-operators/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -74,7 +76,7 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 					allOperators = append(allOperators, operators...)
 				}
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -148,8 +150,9 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 		totalClusters := len(clusters)
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-operators-stream/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -174,7 +177,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 					})
 				}
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -480,8 +483,9 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 		var clusterErrors []string
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-subscriptions/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -497,7 +501,7 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 					allSubs = append(allSubs, subs...)
 				}
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -567,8 +571,9 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 		totalClusters := len(clusters)
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-subscriptions-stream/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -593,7 +598,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 					})
 				}
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()

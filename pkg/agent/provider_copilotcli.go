@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // authRefreshCooldown prevents hammering `gh auth token` on repeated failures.
@@ -281,14 +283,14 @@ func (c *CopilotCLIProvider) doStreamChat(ctx context.Context, req *ChatRequest,
 
 	// Capture stderr in background for diagnostics
 	var stderrContent strings.Builder
-	go func() {
+	safego.GoWith("copilot-cli-stream", func() {
 		sc := bufio.NewScanner(stderrPipe)
 		for sc.Scan() {
 			line := sc.Text()
 			stderrContent.WriteString(line)
 			stderrContent.WriteString("\n")
 		}
-	}()
+	})
 
 	var fullResponse strings.Builder
 	scanner := bufio.NewScanner(stdout)

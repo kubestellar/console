@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -70,7 +71,7 @@ type MetricsHistory struct {
 	mu                 sync.RWMutex
 	diskMu             sync.Mutex // serializes saveToDisk calls (#7017)
 	stopCh             chan struct{}
-	stopOnce           sync.Once  // prevents double-close panic on stopCh (#7244)
+	stopOnce           sync.Once // prevents double-close panic on stopCh (#7244)
 	dataDir            string
 	loggedClusterError atomic.Bool // suppress repeated "no kubeconfig" errors (#7015)
 	lastPersistError   error       // last saveToDisk error, nil on success (#5553)
@@ -228,8 +229,9 @@ func (mh *MetricsHistory) captureSnapshot() error {
 		var snapMu sync.Mutex
 		var wg sync.WaitGroup
 		for _, cluster := range clusters {
+			cl := cluster
 			wg.Add(1)
-			go func(cl k8s.ClusterInfo) {
+			safego.GoWith("metrics-history/pods/"+cl.Name, func() {
 				defer wg.Done()
 				pods, podErr := mh.k8sClient.FindPodIssues(ctx, cl.Context, "")
 				if podErr != nil {
@@ -250,11 +252,12 @@ func (mh *MetricsHistory) captureSnapshot() error {
 				snapMu.Lock()
 				snapshot.PodIssues = append(snapshot.PodIssues, entries...)
 				snapMu.Unlock()
-			}(cluster)
+			})
 		}
 		for _, cluster := range clusters {
+			cl := cluster
 			wg.Add(1)
-			go func(cl k8s.ClusterInfo) {
+			safego.GoWith("metrics-history/gpu/"+cl.Name, func() {
 				defer wg.Done()
 				gpuNodes, err := mh.k8sClient.GetGPUNodes(ctx, cl.Context)
 				if err != nil {
@@ -276,7 +279,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 				snapMu.Lock()
 				snapshot.GPUNodes = append(snapshot.GPUNodes, entries...)
 				snapMu.Unlock()
-			}(cluster)
+			})
 		}
 		wg.Wait()
 	}

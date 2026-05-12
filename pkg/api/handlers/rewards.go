@@ -15,6 +15,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/rewards"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -480,7 +481,7 @@ func (h *RewardsHandler) startEviction() {
 	}
 
 	h.evictCtx, h.evictFn = context.WithCancel(context.Background())
-	go func() {
+	safego.GoWith("rewards-cache-evictor", func() {
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 
@@ -509,7 +510,7 @@ func (h *RewardsHandler) startEviction() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // StopEviction stops the background eviction goroutine. Call during graceful shutdown.

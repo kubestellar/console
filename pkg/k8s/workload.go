@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // safeInt32 converts an int64 to int32, clamping to [math.MinInt32, math.MaxInt32]
@@ -94,28 +95,29 @@ func (m *MultiClusterClient) ListWorkloads(ctx context.Context, cluster, namespa
 
 	slog.Info("[ListWorkloads] listing workloads", "clusterCount", len(clusterNames), "clusters", clusterNames)
 	for _, clusterName := range clusterNames {
+		cluster := clusterName
 		wg.Add(1)
-		go func(c string) {
+		safego.GoWith("workload-scan/"+cluster, func() {
 			defer wg.Done()
 
-			clusterWorkloads, err := m.ListWorkloadsForCluster(ctx, c, namespace, workloadType)
+			clusterWorkloads, err := m.ListWorkloadsForCluster(ctx, cluster, namespace, workloadType)
 			if err != nil {
-				slog.Error("[ListWorkloads] error listing workloads for cluster", "cluster", c, "error", err)
+				slog.Error("[ListWorkloads] error listing workloads for cluster", "cluster", cluster, "error", err)
 				mu.Lock()
 				clusterErrors = append(clusterErrors, v1alpha1.WorkloadClusterError{
-					Cluster:   c,
+					Cluster:   cluster,
 					ErrorType: classifyError(err.Error()),
 					Message:   err.Error(),
 				})
 				mu.Unlock()
 				return
 			}
-			slog.Info("[ListWorkloads] found workloads in cluster", "count", len(clusterWorkloads), "cluster", c)
+			slog.Info("[ListWorkloads] found workloads in cluster", "count", len(clusterWorkloads), "cluster", cluster)
 
 			mu.Lock()
 			workloads = append(workloads, clusterWorkloads...)
 			mu.Unlock()
-		}(clusterName)
+		})
 	}
 
 	wg.Wait()
@@ -697,8 +699,9 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 	allDepResults := make([]v1alpha1.DeployedDep, 0)
 
 	for _, target := range targetClusters {
+		targetCluster := target
 		wg.Add(1)
-		go func(targetCluster string) {
+		safego.Go(func() {
 			defer wg.Done()
 
 			targetClient, err := m.GetDynamicClient(targetCluster)
@@ -723,7 +726,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 			depResults := applyDependencies(clusterCtx, targetClient, bundle.Dependencies)
 			mu.Lock()
 			allDepResults = append(allDepResults, depResults...)
-			
+
 			// Check if any dependency failed to deploy
 			hasFailedDep := false
 			for _, dr := range depResults {
@@ -739,7 +742,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 				}
 			}
 			mu.Unlock()
-			
+
 			if hasFailedDep {
 				return // Abort workload deployment for this cluster if deps failed
 			}
@@ -786,7 +789,7 @@ func (m *MultiClusterClient) DeployWorkload(ctx context.Context, sourceCluster, 
 			mu.Lock()
 			deployed = append(deployed, targetCluster)
 			mu.Unlock()
-		}(target)
+		})
 	}
 
 	wg.Wait()
@@ -1084,8 +1087,9 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 	scaleErrs := make([]error, 0)
 
 	for _, cluster := range targetClusters {
+		clusterName := cluster
 		wg.Add(1)
-		go func(clusterName string) {
+		safego.Go(func() {
 			defer wg.Done()
 
 			client, err := m.GetDynamicClient(clusterName)
@@ -1145,7 +1149,7 @@ func (m *MultiClusterClient) ScaleWorkload(ctx context.Context, namespace, name 
 				scaleErrs = append(scaleErrs, fmt.Errorf("cluster %s: workload %s/%s not found as Deployment or StatefulSet", clusterName, namespace, name))
 			}
 			mu.Unlock()
-		}(cluster)
+		})
 	}
 
 	wg.Wait()

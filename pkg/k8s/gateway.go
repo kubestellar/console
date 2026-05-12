@@ -7,11 +7,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/safego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
 
 // isGatewayCRDNotInstalled reports whether an error indicates the Gateway API
@@ -56,8 +56,9 @@ func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.Gatewa
 	var errs []error
 
 	for _, clusterName := range clusters {
+		cluster := clusterName
 		wg.Add(1)
-		go func(cluster string) {
+		safego.GoWith("gateway/"+cluster, func() {
 			defer wg.Done()
 
 			clusterGateways, err := m.ListGatewaysForCluster(ctx, cluster, "")
@@ -71,7 +72,7 @@ func (m *MultiClusterClient) ListGateways(ctx context.Context) (*v1alpha1.Gatewa
 			mu.Lock()
 			gateways = append(gateways, clusterGateways...)
 			mu.Unlock()
-		}(clusterName)
+		})
 	}
 
 	wg.Wait()
@@ -200,8 +201,9 @@ func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTP
 	var errs []error
 
 	for _, clusterName := range clusters {
+		cluster := clusterName
 		wg.Add(1)
-		go func(cluster string) {
+		safego.GoWith("gateway/"+cluster, func() {
 			defer wg.Done()
 
 			clusterRoutes, err := m.ListHTTPRoutesForCluster(ctx, cluster, "")
@@ -215,7 +217,7 @@ func (m *MultiClusterClient) ListHTTPRoutes(ctx context.Context) (*v1alpha1.HTTP
 			mu.Lock()
 			routes = append(routes, clusterRoutes...)
 			mu.Unlock()
-		}(clusterName)
+		})
 	}
 
 	wg.Wait()

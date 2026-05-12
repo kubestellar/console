@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/safego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
 
 // isNoMatchError returns true when the error indicates that a CRD/resource type
@@ -53,8 +53,9 @@ func (m *MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha
 	apps := make([]v1alpha1.ArgoApplication, 0)
 
 	for _, clusterName := range clusters {
+		cluster := clusterName
 		wg.Add(1)
-		go func(cluster string) {
+		safego.GoWith("argocd/"+cluster, func() {
 			defer wg.Done()
 
 			clusterApps, err := m.ListArgoApplicationsForCluster(ctx, cluster, "")
@@ -66,7 +67,7 @@ func (m *MultiClusterClient) ListArgoApplications(ctx context.Context) (*v1alpha
 			mu.Lock()
 			apps = append(apps, clusterApps...)
 			mu.Unlock()
-		}(clusterName)
+		})
 	}
 
 	wg.Wait()
@@ -212,8 +213,9 @@ func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1al
 	appSets := make([]v1alpha1.ArgoApplicationSet, 0)
 
 	for _, clusterName := range clusters {
+		cluster := clusterName
 		wg.Add(1)
-		go func(cluster string) {
+		safego.GoWith("argocd/"+cluster, func() {
 			defer wg.Done()
 
 			clusterAppSets, err := m.ListArgoApplicationSetsForCluster(ctx, cluster)
@@ -225,7 +227,7 @@ func (m *MultiClusterClient) ListArgoApplicationSets(ctx context.Context) (*v1al
 			mu.Lock()
 			appSets = append(appSets, clusterAppSets...)
 			mu.Unlock()
-		}(clusterName)
+		})
 	}
 
 	wg.Wait()

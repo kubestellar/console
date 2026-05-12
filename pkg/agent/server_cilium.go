@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kubestellar/console/pkg/safego"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -123,14 +124,15 @@ func (s *Server) handleCiliumStatus(w http.ResponseWriter, r *http.Request) {
 	results := make([]ciliumClusterResult, 0)
 
 	for _, cl := range clusters {
+		contextName := cl.Context
 		wg.Add(1)
-		go func(ctxName string) {
+		safego.GoWith("cilium/"+contextName, func() {
 			defer wg.Done()
-			result := s.queryCiliumCluster(ctx, ctxName)
+			result := s.queryCiliumCluster(ctx, contextName)
 			mu.Lock()
 			results = append(results, result)
 			mu.Unlock()
-		}(cl.Context)
+		})
 	}
 	wg.Wait()
 

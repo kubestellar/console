@@ -22,6 +22,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -302,8 +303,9 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 		allReleases := make([]HelmRelease, 0)
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-helm-releases/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -316,7 +318,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 					allReleases = append(allReleases, releases...)
 					mu.Unlock()
 				}
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -583,8 +585,9 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 		defer clusterCancel()
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-kustomizations/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -597,7 +600,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 					allKustomizations = append(allKustomizations, kustomizations...)
 					mu.Unlock()
 				}
-			}(cl.Name)
+			})
 		}
 
 		waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)

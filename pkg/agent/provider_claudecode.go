@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // RequiredMissionTools lists the CLI binaries that must be available in
@@ -384,13 +386,13 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 
 	// Read stderr in background for error reporting
 	var stderrContent strings.Builder
-	go func() {
+	safego.GoWith("claude-code-stream", func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
 			stderrContent.WriteString(scanner.Text())
 			stderrContent.WriteString("\n")
 		}
-	}()
+	})
 
 	// Parse streaming JSON output
 	var finalResult string

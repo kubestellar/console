@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -27,15 +28,15 @@ const (
 type ResourceCategory string
 
 const (
-	CategoryWorkload  ResourceCategory = "workload"
-	CategoryRBAC      ResourceCategory = "rbac"
-	CategoryConfig    ResourceCategory = "config"
+	CategoryWorkload   ResourceCategory = "workload"
+	CategoryRBAC       ResourceCategory = "rbac"
+	CategoryConfig     ResourceCategory = "config"
 	CategoryNetworking ResourceCategory = "networking"
-	CategoryScaling   ResourceCategory = "scaling"
-	CategoryStorage   ResourceCategory = "storage"
-	CategoryCRD       ResourceCategory = "crd"
-	CategoryAdmission ResourceCategory = "admission"
-	CategoryOther     ResourceCategory = "other"
+	CategoryScaling    ResourceCategory = "scaling"
+	CategoryStorage    ResourceCategory = "storage"
+	CategoryCRD        ResourceCategory = "crd"
+	CategoryAdmission  ResourceCategory = "admission"
+	CategoryOther      ResourceCategory = "other"
 )
 
 // MonitoredResource is a dependency with health status information
@@ -65,14 +66,14 @@ type MonitorIssue struct {
 
 // WorkloadMonitorResult is the full response for the monitor endpoint
 type WorkloadMonitorResult struct {
-	Workload  string              `json:"workload"`
-	Kind      string              `json:"kind"`
-	Namespace string              `json:"namespace"`
-	Cluster   string              `json:"cluster"`
+	Workload  string               `json:"workload"`
+	Kind      string               `json:"kind"`
+	Namespace string               `json:"namespace"`
+	Cluster   string               `json:"cluster"`
 	Status    ResourceHealthStatus `json:"status"`
-	Resources []MonitoredResource `json:"resources"`
-	Issues    []MonitorIssue      `json:"issues"`
-	Warnings  []string            `json:"warnings"`
+	Resources []MonitoredResource  `json:"resources"`
+	Issues    []MonitorIssue       `json:"issues"`
+	Warnings  []string             `json:"warnings"`
 }
 
 // kindToCategory maps a dependency kind to its category
@@ -292,8 +293,10 @@ func (m *MultiClusterClient) MonitorWorkload(
 	sem := make(chan struct{}, maxParallelFetches) // reuse concurrency limit from dependencies.go
 
 	for i, dep := range bundle.Dependencies {
+		idx := i
+		d := dep
 		wg.Add(1)
-		go func(idx int, d Dependency) {
+		safego.Go(func() {
 			defer wg.Done()
 			sem <- struct{}{}        // acquire slot
 			defer func() { <-sem }() // release slot
@@ -324,7 +327,7 @@ func (m *MultiClusterClient) MonitorWorkload(
 			}
 
 			monitoredResources[idx] = mr
-		}(i, dep)
+		})
 	}
 	wg.Wait()
 

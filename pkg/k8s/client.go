@@ -40,6 +40,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/kubestellar/console/pkg/safego"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -1545,8 +1546,10 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 	slog.Info("[Warmup] probing clusters for reachability", "clusterCount", len(clusters))
 	var wg sync.WaitGroup
 	for _, cl := range clusters {
+		name := cl.Name
+		ctxName := cl.Context
 		wg.Add(1)
-		go func(name, ctxName string) {
+		safego.GoWith("health-check/"+name, func() {
 			defer wg.Done()
 			// #9334 — Respect context cancellation promptly. If the outer
 			// warmup deadline already fired, don't start a fresh 5s probe
@@ -1625,14 +1628,14 @@ func (m *MultiClusterClient) WarmupHealthCache() {
 				m.mu.Unlock()
 				slog.Info("[Warmup] reachable", "cluster", name)
 			}
-		}(cl.Name, cl.Context)
+		})
 	}
 
 	// Wait for all probes to finish, but give up when the overall context deadline
 	// fires. This prevents a single hung exec-plugin (e.g. oci credential helper)
 	// from blocking server startup indefinitely.
 	done := make(chan struct{})
-	go func() { wg.Wait(); close(done) }()
+	safego.Go(func() { wg.Wait(); close(done) })
 	select {
 	case <-done:
 	case <-ctx.Done():

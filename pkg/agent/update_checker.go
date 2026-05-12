@@ -15,6 +15,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -1715,7 +1717,7 @@ func (uc *UpdateChecker) runBuildCmd(
 
 	// Heartbeat goroutine — sends periodic "still building..." messages
 	done := make(chan struct{})
-	go func() {
+	safego.GoWith("update-build-heartbeat", func() {
 		ticker := time.NewTicker(buildHeartbeatInterval)
 		defer ticker.Stop()
 		start := time.Now()
@@ -1734,7 +1736,7 @@ func (uc *UpdateChecker) runBuildCmd(
 				})
 			}
 		}
-	}()
+	})
 
 	err := cmd.Wait()
 	close(done)

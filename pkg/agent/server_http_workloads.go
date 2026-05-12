@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // handleScaleHTTP scales a workload (Deployment or StatefulSet) to the given
@@ -544,8 +545,9 @@ func (s *Server) handlePodsStreamSSE(w http.ResponseWriter, r *http.Request) {
 	totalPods := 0
 
 	for _, cl := range clusters {
+		clusterName := cl.Name
 		wg.Add(1)
-		go func(clusterName string) {
+		safego.GoWith("pods-stream/"+clusterName, func() {
 			defer wg.Done()
 
 			ctx, cancel := context.WithTimeout(r.Context(), podsStreamPerClusterTimeout)
@@ -575,7 +577,7 @@ func (s *Server) handlePodsStreamSSE(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(bw, "event: cluster_data\ndata: %s\n\n", data)
 			bw.Flush()
 			flusher.Flush()
-		}(cl.Name)
+		})
 	}
 
 	wg.Wait()
@@ -663,8 +665,9 @@ func (s *Server) handleJobsStreamSSE(w http.ResponseWriter, r *http.Request) {
 	totalJobs := 0
 
 	for _, cl := range clusters {
+		clusterName := cl.Name
 		wg.Add(1)
-		go func(clusterName string) {
+		safego.GoWith("jobs-stream/"+clusterName, func() {
 			defer wg.Done()
 
 			ctx, cancel := context.WithTimeout(r.Context(), jobsStreamPerClusterTimeout)
@@ -694,7 +697,7 @@ func (s *Server) handleJobsStreamSSE(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(bw, "event: cluster_data\ndata: %s\n\n", data)
 			bw.Flush()
 			flusher.Flush()
-		}(cl.Name)
+		})
 	}
 
 	wg.Wait()

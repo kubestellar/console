@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/safego"
 
 	// Blank-import federation providers so their init() funcs register them.
 	_ "github.com/kubestellar/console/pkg/agent/federation/providers"
@@ -60,12 +61,12 @@ func main() {
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
+	safego.GoWith("signal-handler", func() {
 		<-sigChan
 		slog.Info("Shutting down — waiting for in-flight cluster operations")
 		server.GracefulShutdown()
 		os.Exit(0)
-	}()
+	})
 
 	if err := server.Start(); err != nil {
 		slog.Error("server error", "error", err)

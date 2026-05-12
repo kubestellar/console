@@ -32,6 +32,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -387,7 +388,7 @@ func NewServer(cfg Config) (*Server, error) {
 			KubestellarDeployPath: cfg.KubestellarDeployPath,
 			Kubeconfig:            cfg.Kubeconfig,
 		})
-		go func() {
+		safego.GoWith("mcp-bridge-start", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
 			defer cancel()
 			if err := bridge.Start(ctx); err != nil {
@@ -396,7 +397,7 @@ func NewServer(cfg Config) (*Server, error) {
 			} else {
 				slog.Info("MCP bridge started successfully")
 			}
-		}()
+		})
 	}
 
 	// Initialize notification service
@@ -478,12 +479,12 @@ func startLoadingServer(addr string) *http.Server {
 	})
 
 	srv := &http.Server{Addr: addr, Handler: mux}
-	go func() {
+	safego.GoWith("loading-page-server", func() {
 		slog.Info("[Server] loading page available", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("[Server] loading server error", "error", err)
 		}
-	}()
+	})
 	// Give the listener time to bind
 	time.Sleep(serverStartupDelay)
 	return srv

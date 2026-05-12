@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
@@ -276,7 +277,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		// send, preventing "send on closed channel" panics (#7179).
 		heartbeatDone := make(chan struct{}, 1)
 		var heartbeatOnce sync.Once
-		go func() {
+		safego.GoWith("ai-chat-heartbeat", func() {
 			ticker := time.NewTicker(missionHeartbeatInterval)
 			defer ticker.Stop()
 			for {
@@ -295,7 +296,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 					})
 				}
 			}
-		}()
+		})
 		// Defer close so the heartbeat goroutine is always stopped,
 		// even if StreamChatWithProgress panics (#7001).
 		// sync.Once ensures close is called exactly once (#7179).

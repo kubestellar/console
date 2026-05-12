@@ -8,9 +8,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
@@ -523,17 +524,17 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 	// others within one shared 30-second context budget. This matches
 	// handleKagentCRDSummary's pattern (#7915).
 	var (
-		mu                                                       sync.Mutex
-		agentCount, readyAgents, buildCount, activeBuilds        int
-		toolCount, cardCount                                     int
-		frameworks                                               = map[string]int{}
-		wg                                                       sync.WaitGroup
+		mu                                                sync.Mutex
+		agentCount, readyAgents, buildCount, activeBuilds int
+		toolCount, cardCount                              int
+		frameworks                                        = map[string]int{}
+		wg                                                sync.WaitGroup
 	)
 	const numKagentiCRDQueries = 4
 	wg.Add(numKagentiCRDQueries)
 
 	// Count agents + collect frameworks
-	go func() {
+	safego.GoWith("kagenti-summary/agents", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentiSummaryPerCallTimeout)
 		defer cancel()
@@ -561,10 +562,10 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	}()
+	})
 
 	// Count builds
-	go func() {
+	safego.GoWith("kagenti-summary/builds", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentiSummaryPerCallTimeout)
 		defer cancel()
@@ -585,10 +586,10 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	}()
+	})
 
 	// Count tools
-	go func() {
+	safego.GoWith("kagenti-summary/tools", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentiSummaryPerCallTimeout)
 		defer cancel()
@@ -600,10 +601,10 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
 		toolCount = len(toolList.Items)
-	}()
+	})
 
 	// Count cards
-	go func() {
+	safego.GoWith("kagenti-summary/cards", func() {
 		defer wg.Done()
 		ctx, cancel := context.WithTimeout(r.Context(), kagentiSummaryPerCallTimeout)
 		defer cancel()
@@ -615,7 +616,7 @@ func (s *Server) handleKagentiSummary(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
 		cardCount = len(cardList.Items)
-	}()
+	})
 
 	wg.Wait()
 

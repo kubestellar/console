@@ -11,6 +11,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -38,10 +39,10 @@ const mcpExtendedTimeout = 30 * time.Second
 // time.
 func waitWithDeadline(wg *sync.WaitGroup, cancel context.CancelFunc, deadline time.Duration) bool {
 	done := make(chan struct{})
-	go func() {
+	safego.Go(func() {
 		wg.Wait()
 		close(done)
-	}()
+	})
 	timer := time.NewTimer(deadline)
 	defer timer.Stop()
 	select {

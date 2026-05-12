@@ -19,6 +19,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
@@ -383,7 +384,7 @@ func (h *WorkloadHandlers) StartCacheRefresh() {
 	if h.store == nil {
 		return
 	}
-	go func() {
+	safego.GoWith("workload-cache-refresh", func() {
 		ticker := time.NewTicker(clusterGroupRefreshInterval)
 		defer ticker.Stop()
 		for {
@@ -394,7 +395,7 @@ func (h *WorkloadHandlers) StartCacheRefresh() {
 				h.LoadPersistedClusterGroups()
 			}
 		}
-	}()
+	})
 	slog.Info("[Workloads] started periodic cluster group cache refresh",
 		"interval", clusterGroupRefreshInterval)
 }

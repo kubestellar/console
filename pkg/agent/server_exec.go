@@ -61,6 +61,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/kubestellar/console/pkg/safego"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -393,7 +394,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// Ping goroutine — matches the backend handler's #6891 pattern. A
 	// failed write means the peer is gone; cancel execCtx so the SPDY
 	// executor exits.
-	go func() {
+	safego.GoWith("agent-exec-ping", func() {
 		ticker := time.NewTicker(agentExecPingInterval)
 		defer ticker.Stop()
 		for {
@@ -411,7 +412,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	}()
+	})
 
 	// Read loop — stdin and resize messages. `done` is closed when the loop
 	// exits, so the main goroutine can wait for it before closing sizeQueue
@@ -422,7 +423,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// session counts so a sustained backpressure burst does not flood the
 	// journal. Matches the backend handler's per-session throttling.
 	var sessionStdinDrops uint64
-	go func() {
+	safego.GoWith("agent-exec-read-loop", func() {
 		defer close(done)
 		defer close(stdinCh)
 		defer execCancel()
@@ -466,7 +467,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	}()
+	})
 
 	// Block on the SPDY executor until the session ends.
 	streamOpts := remotecommand.StreamOptions{

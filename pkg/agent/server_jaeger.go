@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kubestellar/console/pkg/safego"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -89,14 +90,16 @@ func (s *Server) handleJaegerStatus(w http.ResponseWriter, r *http.Request) {
 	results := make([]jaegerClusterResult, 0)
 
 	for _, cl := range clusters {
+		contextName := cl.Context
+		displayName := cl.Name
 		wg.Add(1)
-		go func(ctxName, displayName string) {
+		safego.GoWith("jaeger/"+contextName, func() {
 			defer wg.Done()
-			result := s.queryJaegerCluster(ctx, ctxName, displayName)
+			result := s.queryJaegerCluster(ctx, contextName, displayName)
 			mu.Lock()
 			results = append(results, result)
 			mu.Unlock()
-		}(cl.Context, cl.Name)
+		})
 	}
 	wg.Wait()
 

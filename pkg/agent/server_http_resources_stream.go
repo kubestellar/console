@@ -12,6 +12,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const resourceStreamPerClusterTimeout = 15 * time.Second
@@ -91,8 +92,9 @@ func handleClusterResourceStreamSSE[T any](s *Server, w http.ResponseWriter, r *
 	totalItems := 0
 
 	for _, cl := range activeClusters {
+		clusterName := cl.Name
 		wg.Add(1)
-		go func(clusterName string) {
+		safego.GoWith("resource-stream/"+clusterName, func() {
 			defer wg.Done()
 
 			if s.shouldSkipClusterResource(resourceName, clusterName) {
@@ -137,7 +139,7 @@ func handleClusterResourceStreamSSE[T any](s *Server, w http.ResponseWriter, r *
 			fmt.Fprintf(bw, "event: cluster_data\ndata: %s\n\n", data)
 			bw.Flush()
 			flusher.Flush()
-		}(cl.Name)
+		})
 	}
 
 	wg.Wait()

@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -211,7 +212,7 @@ type sseCacheEntry struct {
 // The goroutine exits when sseCacheEvictDone is closed (#6956).
 func startSSECacheEvictor() {
 	sseCacheOnce.Do(func() {
-		go func() {
+		safego.GoWith("sse-cache-evictor", func() {
 			ticker := time.NewTicker(sseCacheEvictInterval)
 			defer ticker.Stop()
 			for {
@@ -229,7 +230,7 @@ func startSSECacheEvictor() {
 					sseCacheMu.Unlock()
 				}
 			}
-		}()
+		})
 	})
 }
 
@@ -459,8 +460,10 @@ func streamClusters(
 				continue
 			}
 
+			clusterName := cl.Name
+			cKey := cacheKey
 			wg.Add(1)
-			go func(clusterName, cKey string) {
+			safego.GoWith("sse-broadcast/"+clusterName, func() {
 				defer wg.Done()
 
 				// Use shorter timeout for clusters that recently timed out
@@ -528,16 +531,16 @@ func streamClusters(
 				}
 				completedClusters++
 				mu.Unlock()
-			}(cl.Name, cacheKey)
+			})
 		}
 
 		// Wait for all healthy clusters or until the stream context is
 		// cancelled (client disconnect / overall deadline).
 		done := make(chan struct{})
-		go func() {
+		safego.Go(func() {
 			wg.Wait()
 			close(done)
-		}()
+		})
 		select {
 		case <-done:
 			// All healthy clusters finished

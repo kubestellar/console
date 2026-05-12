@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"sync"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // Bridge manages MCP client connections and provides a unified interface
@@ -119,12 +121,12 @@ func (b *Bridge) Start(ctx context.Context) error {
 			slog.Info("kubestellar-ops binary not found on PATH — MCP ops tools will be unavailable", "path", b.config.KubestellarOpsPath, "install", "brew install kubestellar/tap/kubestellar-ops")
 		} else {
 			wg.Add(1)
-			go func() {
+			safego.Go(func() {
 				defer wg.Done()
 				if err := b.startOpsClient(ctx); err != nil {
 					errCh <- fmt.Errorf("ops client: %w", err)
 				}
-			}()
+			})
 		}
 	}
 
@@ -134,12 +136,12 @@ func (b *Bridge) Start(ctx context.Context) error {
 			slog.Info("kubestellar-deploy binary not found on PATH — MCP deploy tools will be unavailable", "path", b.config.KubestellarDeployPath, "install", "brew install kubestellar/tap/kubestellar-deploy")
 		} else {
 			wg.Add(1)
-			go func() {
+			safego.Go(func() {
 				defer wg.Done()
 				if err := b.startDeployClient(ctx); err != nil {
 					errCh <- fmt.Errorf("deploy client: %w", err)
 				}
-			}()
+			})
 		}
 	}
 
@@ -149,12 +151,12 @@ func (b *Bridge) Start(ctx context.Context) error {
 			slog.Info("inspektor-gadget MCP binary not found on PATH — Gadget tools will be unavailable", "path", b.config.InspektorGadgetPath)
 		} else {
 			wg.Add(1)
-			go func() {
+			safego.Go(func() {
 				defer wg.Done()
 				if err := b.startGadgetClient(ctx); err != nil {
 					errCh <- fmt.Errorf("gadget client: %w", err)
 				}
-			}()
+			})
 		}
 	}
 

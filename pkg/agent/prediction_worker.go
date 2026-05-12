@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -528,8 +529,9 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 				slog.Info("[PredictionWorker] skipping offline cluster", "cluster", cluster.Name)
 				continue
 			}
+			cl := cluster
 			wg.Add(1)
-			go func(cl k8s.ClusterInfo) {
+			safego.GoWith("prediction-worker/"+cl.Name, func() {
 				defer wg.Done()
 
 				// Check parent context before starting work
@@ -606,7 +608,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 						mu.Unlock()
 					}
 				}
-			}(cluster)
+			})
 		}
 		wg.Wait()
 

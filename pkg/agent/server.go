@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -275,7 +276,7 @@ func NewServer(cfg Config) (*Server, error) {
 		agentToken = generated
 		slog.Warn("KC_AGENT_TOKEN is not set — auto-generated a random token for this session; set KC_AGENT_TOKEN to pin a shared secret (docs: https://github.com/kubestellar/console#kc-agent-bridge-self-hosted-console-to-your-clusters)")
 		// Print to stderr so the operator can copy-paste it into clients.
-		fmt.Fprintf(os.Stderr, "Auto-generated KC_AGENT_TOKEN for this session: %s\n", agentToken) //nolint:forbidigo // intentional stderr for operator UX
+		fmt.Fprintf(os.Stderr, "Auto-generated KC_AGENT_TOKEN for this session: %s\n", agentToken)                                                                                                             //nolint:forbidigo // intentional stderr for operator UX
 		fmt.Fprintln(os.Stderr, "Set KC_AGENT_TOKEN in your shell or .env to use a persistent shared secret. See https://github.com/kubestellar/console#kc-agent-bridge-self-hosted-console-to-your-clusters") //nolint:forbidigo // intentional stderr for operator UX
 	}
 
@@ -1012,10 +1013,10 @@ const clusterOpsShutdownTimeout = 30 * time.Second
 // avoid orphaning background cluster create/delete operations.
 func (s *Server) GracefulShutdown() {
 	done := make(chan struct{})
-	go func() {
+	safego.GoWith("server/graceful-shutdown", func() {
 		s.clusterOpsWG.Wait()
 		close(done)
-	}()
+	})
 	select {
 	case <-done:
 		slog.Info("[Server] all cluster operations completed")

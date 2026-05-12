@@ -40,6 +40,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent/federation"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // federationRequestTimeout bounds each HTTP handler. Matches
@@ -259,10 +260,11 @@ func fanOutDetect(
 	var wg sync.WaitGroup
 	wg.Add(len(jobs))
 	for _, j := range jobs {
-		go func(j job) {
+		jobItem := j
+		safego.GoWith("federation-detect/"+jobItem.hubContext+"/"+string(jobItem.provider.Name()), func() {
 			defer wg.Done()
-			out <- runOneDetect(ctx, j.provider, j.hubContext, getConfig)
-		}(j)
+			out <- runOneDetect(ctx, jobItem.provider, jobItem.hubContext, getConfig)
+		})
 	}
 	wg.Wait()
 	close(out)
@@ -361,10 +363,12 @@ func fanOutRead(
 	var wg sync.WaitGroup
 	wg.Add(len(pairs))
 	for _, pr := range pairs {
-		go func(p federation.Provider, hubContext string) {
+		provider := pr.p
+		hubContext := pr.c
+		safego.GoWith("federation-read/"+hubContext+"/"+string(provider.Name()), func() {
 			defer wg.Done()
-			out <- runOneRead(ctx, p, hubContext, getConfig, read)
-		}(pr.p, pr.c)
+			out <- runOneRead(ctx, provider, hubContext, getConfig, read)
+		})
 	}
 	wg.Wait()
 	close(out)

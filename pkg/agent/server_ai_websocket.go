@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // wsGoroutineDrainTimeout is the maximum time handleWebSocket waits for
@@ -127,7 +128,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// or the read loop exits (stopPing closed).
 	stopPing := make(chan struct{})
 	wg.Add(1)
-	go func() {
+	safego.GoWith("ai-websocket-ping", func() {
 		defer wg.Done()
 		ticker := time.NewTicker(wsPingInterval)
 		defer ticker.Stop()
@@ -158,7 +159,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	}()
+	})
 
 	for {
 		var msg protocol.Message
@@ -363,10 +364,10 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Wait for spawned goroutines to finish (with timeout to avoid hangs).
 	drainDone := make(chan struct{})
-	go func() {
+	safego.GoWith("ai-websocket-drain", func() {
 		wg.Wait()
 		close(drainDone)
-	}()
+	})
 	select {
 	case <-drainDone:
 		// All goroutines exited cleanly.

@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // GooseProvider implements the AIProvider interface for Goose CLI by Block, Inc.
@@ -135,12 +137,12 @@ func (g *GooseProvider) StreamChat(ctx context.Context, req *ChatRequest, onChun
 	// Drain stderr in background to prevent pipe-buffer deadlocks.
 	var stderrBuf strings.Builder
 	stderrDone := make(chan struct{})
-	go func() {
+	safego.GoWith("goose-stream", func() {
 		defer close(stderrDone)
 		if _, copyErr := io.Copy(&stderrBuf, stderr); copyErr != nil {
 			slog.Error("[Goose] error reading stderr", "error", copyErr)
 		}
-	}()
+	})
 
 	var fullResponse strings.Builder
 	scanner := bufio.NewScanner(stdout)

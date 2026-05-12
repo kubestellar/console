@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // Client is a generic MCP client that communicates with an MCP server via stdio
@@ -31,11 +33,11 @@ type Client struct {
 	// float64 (from interface{} fields) while outgoing IDs are stored as
 	// int64 — a type mismatch that caused every call() to block until the
 	// context deadline fired (#6622).
-	pending  map[string]chan *Response
-	tools         []Tool
-	ready         atomic.Bool // protected via atomic to avoid data races (#6942)
-	done          chan struct{}
-	stopOnce      sync.Once
+	pending        map[string]chan *Response
+	tools          []Tool
+	ready          atomic.Bool // protected via atomic to avoid data races (#6942)
+	done           chan struct{}
+	stopOnce       sync.Once
 	stdinCloseOnce sync.Once
 }
 
@@ -460,11 +462,11 @@ func (c *Client) send(req Request) error {
 	ch := make(chan writeResult, 1)
 
 	c.writeMu.Lock()
-	go func() {
+	safego.Go(func() {
 		defer c.writeMu.Unlock()
 		_, werr := c.stdin.Write(data)
 		ch <- writeResult{err: werr}
-	}()
+	})
 
 	select {
 	case res := <-ch:
