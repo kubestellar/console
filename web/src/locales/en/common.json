@@ -810,23 +810,6 @@
       "scopeMarketplaceTitle": "Marketplace Components",
       "scopeMarketplaceDesc": "Cards, themes, and integrations installed from the Marketplace are updated independently by their publishers. These items are not covered by the console version update channel above. Check the Marketplace page for available updates to installed components, or enable per-item auto-update from each item's settings."
     },
-    "terminal": {
-      "connect": "Connect",
-      "connected": "Connected",
-      "connecting": "Connecting...",
-      "connectingToPod": "Connecting to {{pod}}...",
-      "connectionError": "Connection Error",
-      "connectionStale": "Terminal connection may be stale — reconnect if output stops responding.",
-      "connectionStaleShort": "Connection uncertain",
-      "disconnect": "Disconnect",
-      "disconnected": "Disconnected",
-      "error": "Error",
-      "reconnect": "Reconnect",
-      "reconnectNow": "Reconnect Now",
-      "reconnecting": "Reconnecting...",
-      "reconnectingCountdown": "Reconnecting ({{count}}s)",
-      "tryAgain": "Try Again"
-    },
     "theme": {
       "title": "Appearance",
       "subtitle": "Choose your theme - inspired by oh-my-zsh",
@@ -837,6 +820,23 @@
       "removeThemeTitle": "Remove Theme",
       "removeThemeMessage": "This will uninstall the theme and remove it from your list. This action cannot be undone."
     }
+  },
+  "terminal": {
+    "connect": "Connect",
+    "connected": "Connected",
+    "connecting": "Connecting...",
+    "connectingToPod": "Connecting to {{pod}}...",
+    "connectionError": "Connection Error",
+    "connectionStale": "Terminal connection may be stale — reconnect if output stops responding.",
+    "connectionStaleShort": "Connection uncertain",
+    "disconnect": "Disconnect",
+    "disconnected": "Disconnected",
+    "error": "Error",
+    "reconnect": "Reconnect",
+    "reconnectNow": "Reconnect Now",
+    "reconnecting": "Reconnecting...",
+    "reconnectingCountdown": "Reconnecting ({{count}}s)",
+    "tryAgain": "Try Again"
   },
   "filters": {
     "allClusters": "All Clusters",
