@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -20,9 +21,27 @@ var pingClient = &http.Client{
 	Transport: &http.Transport{
 		TLSClientConfig:   &tls.Config{MinVersion: tls.VersionTLS12},
 		DisableKeepAlives: true,
-		DialContext: (&net.Dialer{
-			Timeout: 5 * time.Second,
-		}).DialContext,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+			if err != nil {
+				return nil, err
+			}
+			if len(ips) == 0 {
+				return nil, fmt.Errorf("no IPs resolved for host %s", host)
+			}
+			for _, ip := range ips {
+				if isBlockedIP(ip.IP) {
+					return nil, fmt.Errorf("blocked: private IP %s for host %s", ip.IP, host)
+				}
+			}
+			// Connect to the first validated IP directly — no second DNS lookup.
+			dialer := &net.Dialer{Timeout: 5 * time.Second}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+		},
 	},
 	// Do not follow redirects — we only care about reachability
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
