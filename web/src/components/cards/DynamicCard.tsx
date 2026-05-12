@@ -83,6 +83,7 @@ export function DynamicCard({ config }: CardComponentProps) {
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
   useReportCardDataState({
     isDemoData: shouldUseDemoData,
+    isRefreshing: false,
     isFailed: false,
     consecutiveFailures: 0,
     hasData: true,
@@ -157,6 +158,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const {
     data: apiData,
     isLoading: apiLoading,
+    isRefreshing: apiRefreshing,
     isFailed: apiFailed,
     isDemoFallback,
     error: apiError,
@@ -191,6 +193,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     consecutiveFailures,
     errorMessage: apiError ?? undefined,
     isLoading: isApiSource ? apiLoading : false,
+    isRefreshing: isApiSource ? apiRefreshing : false,
     hasData: isApiSource ? apiData.length > 0 : true,
     isDemoData: isDemoFallback && !apiLoading,
   })
@@ -418,6 +421,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
     consecutiveFailures: error ? 1 : 0,
     errorMessage: error ?? undefined,
     isLoading: compiling,
+    isRefreshing: false,
     hasData: !!CardComponent,
     isDemoData: false,
   })

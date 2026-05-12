@@ -303,10 +303,11 @@ export function LLMdAIInsights() {
   const { t } = useTranslation(['cards', 'common'])
   const stackContext = useOptionalStack()
   const { shouldUseDemoData, showDemoBadge, reason } = useCardDemoState({ requires: 'stack' })
+  const isRefreshing = stackContext?.isRefreshing ?? false
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   // Use showDemoBadge (true when global demo mode) rather than shouldUseDemoData (false when stack selected)
-  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
+  useReportCardDataState({ isDemoData: showDemoBadge, isRefreshing, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   const { isExpanded: isCardExpanded } = useCardExpanded()
   const [expandedId, setExpandedId] = useState<string | null>(null)

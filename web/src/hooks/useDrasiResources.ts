@@ -341,6 +341,7 @@ async function fetchViaDrasiPlatform(
 export interface UseDrasiResourcesResult {
   data: DrasiResourceData | null
   isLoading: boolean
+  isRefreshing: boolean
   error: string | null
   refetch: () => void
 }
@@ -349,8 +350,10 @@ export function useDrasiResources(): UseDrasiResourcesResult {
   const { activeConnection } = useDrasiConnections()
   const [data, setData] = useState<DrasiResourceData | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const hasDataRef = useRef(false)
 
   const fetchOnce = useCallback(async () => {
     abortRef.current?.abort()
@@ -362,10 +365,16 @@ export function useDrasiResources(): UseDrasiResourcesResult {
       // that points nowhere) — leave data null so the card stays in demo
       // mode without triggering failing fetches.
       setData(null)
+      setIsRefreshing(false)
+      hasDataRef.current = false
       return
     }
 
-    setIsLoading(true)
+    if (hasDataRef.current) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     try {
       let next: DrasiResourceData | null = null
       if (activeConnection.mode === 'server' && activeConnection.url) {
@@ -374,14 +383,17 @@ export function useDrasiResources(): UseDrasiResourcesResult {
         next = await fetchViaDrasiPlatform(activeConnection.cluster, controller.signal)
       }
       setData(next)
+      hasDataRef.current = next !== null
       setError(null)
     } catch (e: unknown) {
       if ((e as Error).name !== 'AbortError') {
         setError((e as Error).message || 'Failed to fetch Drasi resources')
         setData(null)
+        hasDataRef.current = false
       }
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [activeConnection])
 
@@ -394,5 +406,5 @@ export function useDrasiResources(): UseDrasiResourcesResult {
     }
   }, [fetchOnce])
 
-  return { data, isLoading, error, refetch: fetchOnce }
+  return { data, isLoading, isRefreshing, error, refetch: fetchOnce }
 }

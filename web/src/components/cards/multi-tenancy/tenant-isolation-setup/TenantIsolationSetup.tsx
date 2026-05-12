@@ -116,6 +116,7 @@ export function TenantIsolationSetup() {
 
   const { showSkeleton } = useCardLoadingState({
     isLoading: data.isLoading && !data.isDemoData,
+    isRefreshing: liveData.isRefreshing,
     hasAnyData: true,
     isDemoData: data.isDemoData })
 

@@ -155,6 +155,7 @@ export interface UseTopologyResult {
   clusters: TopologyClusterSummary[]
   stats: TopologyResponse['stats'] | null
   isLoading: boolean
+  isRefreshing: boolean
   isFailed: boolean
   consecutiveFailures: number
   isDemoData: boolean
@@ -219,6 +220,7 @@ export function useTopology(): UseTopologyResult {
     clusters: displayData?.clusters || [],
     stats: displayData?.stats || null,
     isLoading: result.data === null ? (shouldShowDemoFallback ? false : result.isLoading) : false,
+    isRefreshing: result.isRefreshing,
     isFailed: result.isFailed,
     consecutiveFailures: result.consecutiveFailures,
     isDemoData: displayData?.isDemoData ?? false,

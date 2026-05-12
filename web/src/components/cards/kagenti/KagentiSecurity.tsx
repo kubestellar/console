@@ -4,11 +4,12 @@ import { useCardLoadingState } from '../CardDataContext'
 
 export function KagentiSecurity({ config }: { config?: Record<string, unknown> }) {
   const cluster = config?.cluster as string | undefined
-  const { data: cards, isLoading, isDemoFallback } = useKagentiCards({ cluster })
+  const { data: cards, isLoading, isRefreshing, isDemoFallback } = useKagentiCards({ cluster })
 
   const hasData = cards.length > 0
   useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: hasData,
     isDemoData: isDemoFallback })
 

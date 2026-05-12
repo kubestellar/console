@@ -21,6 +21,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
   const {
     data: cards,
     isLoading: cardsLoading,
+    isRefreshing: cardsRefreshing,
     consecutiveFailures: cardFailures,
     isDemoFallback: cardsDemoFallback,
   } = useKagentiCards({ cluster: config?.cluster })
@@ -28,6 +29,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
   const {
     data: agents,
     isLoading: agentsLoading,
+    isRefreshing: agentsRefreshing,
     consecutiveFailures: agentFailures,
     isDemoFallback: agentsDemoFallback,
   } = useKagentiAgents({ cluster: config?.cluster })
@@ -35,6 +37,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
   const {
     data: tools,
     isLoading: toolsLoading,
+    isRefreshing: toolsRefreshing,
     consecutiveFailures: toolFailures,
     isDemoFallback: toolsDemoFallback,
   } = useKagentiTools({ cluster: config?.cluster })
@@ -54,6 +57,7 @@ export function KagentiSecurityPosture({ config }: KagentiSecurityPostureProps) 
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
+    isRefreshing: cardsRefreshing || agentsRefreshing || toolsRefreshing,
     hasAnyData,
     isFailed: maxFailures >= 3,
     consecutiveFailures: maxFailures,

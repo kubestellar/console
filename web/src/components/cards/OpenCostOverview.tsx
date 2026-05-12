@@ -46,7 +46,7 @@ function OpenCostOverviewInternal({ config: _config }: OpenCostOverviewProps) {
   const { drillToCost } = useDrillDownActions()
   // No live OpenCost integration yet — the card always renders DEMO_NAMESPACE_COSTS,
   // so flag it as demo data to get the yellow outline + Demo badge (#8012).
-  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: true })
+  useReportCardDataState({ hasData: true, isFailed: false, consecutiveFailures: 0, isDemoData: true, isRefreshing: false })
 
   const {
     items: filteredCosts,

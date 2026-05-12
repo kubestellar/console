@@ -32,5 +32,6 @@ export const DEMO_TENANT_ISOLATION_SETUP: TenantIsolationSetupData = {
   isolationScore: DEMO_ISOLATION_SCORE,
   totalIsolationLevels: DEMO_TOTAL_LEVELS,
   isLoading: false,
+  isRefreshing: false,
   isDemoData: true,
 }

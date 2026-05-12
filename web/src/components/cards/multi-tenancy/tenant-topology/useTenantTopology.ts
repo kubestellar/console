@@ -41,6 +41,7 @@ export interface TenantTopologyData {
   k3sEth1Rx: number
   k3sEth1Tx: number
   isLoading: boolean
+  isRefreshing: boolean
   isDemoData: boolean
 }
 
@@ -58,6 +59,8 @@ export function useTenantTopology(): TenantTopologyData {
 
   const isLoading =
     ovnResult.loading || kubeflexResult.loading || k3sResult.loading || kubevirtResult.loading
+  const isRefreshing =
+    ovnResult.isRefreshing || kubeflexResult.isRefreshing || k3sResult.isRefreshing || kubevirtResult.isRefreshing
 
   // Demo when ALL hooks are returning demo fallback data
   const isDemoData = ovnResult.isDemoData && kubeflexResult.isDemoData && k3sResult.isDemoData && kubevirtResult.isDemoData
@@ -85,6 +88,7 @@ export function useTenantTopology(): TenantTopologyData {
       k3sEth1Rx: netStats.k3sEth1Rx,
       k3sEth1Tx: netStats.k3sEth1Tx,
       isLoading,
+      isRefreshing,
       isDemoData,
     }),
     [
@@ -98,7 +102,7 @@ export function useTenantTopology(): TenantTopologyData {
       netStats.kvEth1Rx, netStats.kvEth1Tx,
       netStats.k3sEth0Rx, netStats.k3sEth0Tx,
       netStats.k3sEth1Rx, netStats.k3sEth1Tx,
-      isLoading, isDemoData,
+      isLoading, isRefreshing, isDemoData,
     ],
   )
 }

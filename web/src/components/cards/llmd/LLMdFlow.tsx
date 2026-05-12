@@ -578,14 +578,20 @@ export function LLMdFlow() {
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
   // Prometheus metrics for the selected stack (null when unavailable or no stack)
-  const { metrics: prometheusMetrics } = usePrometheusMetrics(
+  const { metrics: prometheusMetrics, isRefreshing: metricsRefreshing } = usePrometheusMetrics(
     selectedStack?.cluster,
     selectedStack?.namespace,
   )
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   // Use showDemoBadge (true when global demo mode) rather than isDemoMode (false when stack selected)
-  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
+  useReportCardDataState({
+    isDemoData: showDemoBadge,
+    isRefreshing: (stackContext?.isRefreshing ?? false) || metricsRefreshing,
+    isFailed: false,
+    consecutiveFailures: 0,
+    hasData: true,
+  })
 
   // Build dynamic node positions based on actual stack topology
   const { nodePositions: rawPositions, connections, nodeLabels } = useMemo(() => {

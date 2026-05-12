@@ -153,7 +153,7 @@ export function LLMdConfigurator() {
   const [selectedPresetId, setSelectedPresetId] = useState<string>(presets[0]?.id || '')
 
   // Report to CardWrapper that this static card is ready (never demo — uses local mock data)
-  useReportCardDataState({ isFailed: false, consecutiveFailures: 0, hasData: true, isDemoData: false })
+  useReportCardDataState({ isFailed: false, consecutiveFailures: 0, hasData: true, isDemoData: false, isRefreshing: false })
   const [customParams, setCustomParams] = useState<Record<string, unknown>>({})
   const [copied, setCopied] = useState(false)
 

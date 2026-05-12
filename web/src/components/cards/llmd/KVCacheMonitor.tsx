@@ -278,13 +278,13 @@ export function KVCacheMonitor() {
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
   // Prometheus metrics for the selected stack (null when unavailable or no stack)
-  const { metrics: prometheusMetrics } = usePrometheusMetrics(
+  const { metrics: prometheusMetrics, isRefreshing: metricsRefreshing } = usePrometheusMetrics(
     selectedStack?.cluster,
     selectedStack?.namespace,
   )
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
-  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
+  useReportCardDataState({ isDemoData: showDemoBadge, isRefreshing: (stackContext?.isRefreshing ?? false) || metricsRefreshing, isFailed: false, consecutiveFailures: 0, hasData: true })
 
   // Helper: get average KV cache usage from Prometheus for a set of pods
   const getPromKVCache = (podNames?: string[]) => {

@@ -22,12 +22,14 @@ function KagentAgentDiscoveryInternal({ config }: KagentAgentDiscoveryProps) {
   const {
     data: agents,
     isLoading,
+    isRefreshing,
     isDemoFallback,
     consecutiveFailures } = useKagentCRDAgents({ cluster: config?.cluster })
 
   const hasAnyData = agents.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasAnyData,
+    isRefreshing,
     hasAnyData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,

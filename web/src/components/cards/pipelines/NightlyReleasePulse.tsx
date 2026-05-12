@@ -295,14 +295,21 @@ export function NightlyReleasePulse() {
 
   const pulseData = hasUnified ? unifiedData.pulse : individualPulse.data
   const pulseLoading = hasUnified ? unifiedData.isLoading : individualPulse.isLoading
+  const pulseRefreshing = hasUnified ? unifiedData.isRefreshing : individualPulse.isRefreshing
   const pulseError = hasUnified ? unifiedData.error : individualPulse.error
   const refetch = hasUnified ? unifiedData.refetch : individualPulse.refetch
   const matrixData = hasUnified ? unifiedData.matrix : individualMatrix.data
   const matrixLoading = hasUnified ? unifiedData.isLoading : individualMatrix.isLoading
+  const matrixRefreshing = hasUnified ? unifiedData.isRefreshing : individualMatrix.isRefreshing
   const { isDemoMode } = useDemoMode()
 
   const hasData = !!pulseData?.lastRun || (matrixData?.workflows?.length ?? 0) > 0
-  useCardLoadingState({ isLoading: (pulseLoading || matrixLoading) && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({
+    isLoading: (pulseLoading || matrixLoading) && !hasData,
+    isRefreshing: pulseRefreshing || matrixRefreshing,
+    hasAnyData: hasData,
+    isDemoData: isDemoMode,
+  })
 
   const workflows = useMemo(() => {
     const wfs = matrixData?.workflows ?? []

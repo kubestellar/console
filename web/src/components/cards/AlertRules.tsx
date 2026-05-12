@@ -43,6 +43,7 @@ export function AlertRulesCard() {
   // Report state to CardWrapper (local storage rules are always available)
   useCardLoadingState({
     isLoading: false,
+    isRefreshing: false,
     hasAnyData: true,
     isDemoData: isDemoMode,
   })

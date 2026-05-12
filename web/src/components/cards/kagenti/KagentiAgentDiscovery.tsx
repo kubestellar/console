@@ -21,6 +21,7 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
   const {
     data: cards,
     isLoading,
+    isRefreshing,
     isDemoFallback,
     consecutiveFailures,
   } = useKagentiCards({ cluster: config?.cluster })
@@ -28,6 +29,7 @@ export function KagentiAgentDiscovery({ config }: KagentiAgentDiscoveryProps) {
   const hasData = cards.length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: isLoading && !hasData,
+    isRefreshing,
     hasAnyData: hasData,
     isFailed: consecutiveFailures >= 3,
     consecutiveFailures,
