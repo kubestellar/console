@@ -5,6 +5,8 @@
  * triggers the browser's print dialog (Save as PDF).
  */
 
+import DOMPurify from 'dompurify'
+
 import type { MissionControlState } from './types'
 import type { BlueprintLayout } from './types'
 import { generateDefaultPhases } from './BlueprintInfoPanels'
@@ -67,6 +69,15 @@ const REPORT_STYLES = `
   @media print { body { padding: var(--space-xl); } .no-print { display: none; } }
 `
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
 export function exportFullReport(
   state: MissionControlState,
   healthyState: MissionControlState,
@@ -80,7 +91,7 @@ export function exportFullReport(
   const toKeep = state.projects.filter(p => installedProjects.has(p.name))
 
   // Serialize SVG
-  let svgMarkup = ''
+  let sanitizedSvgMarkup = ''
   const svgEl = svgContainerRef.current?.querySelector('svg')
   if (svgEl) {
     const clone = svgEl.cloneNode(true) as SVGElement
@@ -89,17 +100,33 @@ export function exportFullReport(
     bg.setAttribute('height', '100%')
     bg.setAttribute('fill', '#0f172a')
     clone.insertBefore(bg, clone.firstChild)
-    svgMarkup = new XMLSerializer().serializeToString(clone)
+    sanitizedSvgMarkup = DOMPurify.sanitize(new XMLSerializer().serializeToString(clone), {
+      USE_PROFILES: { svg: true, svgFilters: true },
+    })
   }
+
+  const safeDocumentTitle = escapeHtml(state.title || 'Mission Control')
+  const safeHeadingTitle = escapeHtml(state.title || 'Untitled Mission')
+  const safeDescription = escapeHtml(state.description || 'No description provided')
+  const projectRows = state.projects.map((project) => {
+    const isInstalled = installedProjects.has(project.name)
+    return `<tr>
+    <td><strong>${escapeHtml(project.displayName)}</strong></td>
+    <td>${escapeHtml(project.category)}</td>
+    <td>${escapeHtml(project.priority)}</td>
+    <td><span class="${isInstalled ? 'installed' : 'deploy'}">${isInstalled ? 'Installed' : 'Needs Deploy'}</span></td>
+    <td style="font-size:11px">${escapeHtml(project.reason || '')}</td>
+  </tr>`
+  }).join('')
 
   // Cluster summary
   const clusterRows = healthyState.assignments
     .filter(a => a.projectNames.length > 0)
     .map(a => `<tr>
-      <td>${shortenClusterName(a.clusterName)}</td>
+      <td>${escapeHtml(shortenClusterName(a.clusterName))}</td>
       <td>${a.projectNames.length}</td>
       <td>${a.projectNames.map(n =>
-        `<span class="${installedProjects.has(n) ? 'installed' : 'deploy'}">${n}</span>`
+        `<span class="${installedProjects.has(n) ? 'installed' : 'deploy'}">${escapeHtml(n)}</span>`
       ).join(' ')}</td>
     </tr>`).join('')
 
@@ -107,38 +134,32 @@ export function exportFullReport(
   const phaseRows = effectivePhases.map((phase) => {
     const projs = phase.projectNames.map(n => {
       const isInst = installedProjects.has(n)
-      return `<span class="${isInst ? 'installed' : 'deploy'}">${n}${isInst ? ' ✓' : ''}</span>`
+      return `<span class="${isInst ? 'installed' : 'deploy'}">${escapeHtml(n)}${isInst ? ' ✓' : ''}</span>`
     }).join(' ')
     const est = phase.estimatedSeconds ? `${Math.ceil(phase.estimatedSeconds / 60)} min` : ''
-    return `<tr><td>${phase.phase}. ${phase.name}</td><td>${est}</td><td>${projs}</td></tr>`
+    return `<tr><td>${phase.phase}. ${escapeHtml(phase.name)}</td><td>${est}</td><td>${projs}</td></tr>`
   }).join('')
 
   // Rollback steps
   const rollbackRows = rollbackPhases.map((phase, i) => {
     const removable = phase.projectNames.filter(n => !installedProjects.has(n))
     if (removable.length === 0) return ''
-    return `<tr><td>Step ${i + 1}</td><td>Remove ${phase.name}</td><td>${removable.map(n => `<code>helm uninstall ${n}</code>`).join('<br/>')}</td></tr>`
+    return `<tr><td>Step ${i + 1}</td><td>Remove ${escapeHtml(phase.name)}</td><td>${removable.map(n => `<code>helm uninstall ${escapeHtml(n)}</code>`).join('<br/>')}</td></tr>`
   }).filter(Boolean).join('')
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Flight Plan: ${state.title || 'Mission Control'}</title>
+<html><head><meta charset="utf-8"><title>Flight Plan: ${safeDocumentTitle}</title>
 <style>${REPORT_STYLES}</style></head><body>
 
-<h1>Flight Plan: ${state.title || 'Untitled Mission'}</h1>
+<h1>Flight Plan: ${safeHeadingTitle}</h1>
 <p class="meta">Generated ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} · ${state.projects.length} projects · ${healthyState.assignments.filter(a => a.projectNames.length > 0).length} clusters</p>
 
 <div class="section">
 <h2>1. Define Mission</h2>
-<div class="description">${state.description || 'No description provided'}</div>
+<div class="description">${safeDescription}</div>
 <table>
   <thead><tr><th>Project</th><th>Category</th><th>Priority</th><th>Status</th><th>Why</th></tr></thead>
-  <tbody>${state.projects.map(p => `<tr>
-    <td><strong>${p.displayName}</strong></td>
-    <td>${p.category}</td>
-    <td>${p.priority}</td>
-    <td><span class="${installedProjects.has(p.name) ? 'installed' : 'deploy'}">${installedProjects.has(p.name) ? 'Installed' : 'Needs Deploy'}</span></td>
-    <td style="font-size:11px">${p.reason || ''}</td>
-  </tr>`).join('')}</tbody>
+  <tbody>${projectRows}</tbody>
 </table>
 </div>
 
@@ -152,7 +173,7 @@ export function exportFullReport(
 
 <div class="section">
 <h2>3. Flight Plan Blueprint</h2>
-${svgMarkup ? `<div class="svg-container">${svgMarkup}</div>` : '<p class="meta">SVG blueprint not available</p>'}
+${sanitizedSvgMarkup ? `<div class="svg-container">${sanitizedSvgMarkup}</div>` : '<p class="meta">SVG blueprint not available</p>'}
 </div>
 
 <div class="section">
@@ -166,8 +187,8 @@ ${svgMarkup ? `<div class="svg-container">${svgMarkup}</div>` : '<p class="meta"
 <div class="section">
 <h2>5. YOLO Mode</h2>
 <p>Launch all ${state.projects.length} projects simultaneously — no dependency gating.</p>
-<p>${state.projects.map(p =>
-  `<span class="${installedProjects.has(p.name) ? 'installed' : 'deploy'}">${p.displayName}${installedProjects.has(p.name) ? ' ✓' : ''}</span>`
+<p>${state.projects.map(project =>
+  `<span class="${installedProjects.has(project.name) ? 'installed' : 'deploy'}">${escapeHtml(project.displayName)}${installedProjects.has(project.name) ? ' ✓' : ''}</span>`
 ).join(' ')}</p>
 </div>
 
@@ -175,7 +196,7 @@ ${svgMarkup ? `<div class="svg-container">${svgMarkup}</div>` : '<p class="meta"
 <h2>6. Rollback Plan</h2>
 ${toKeep.length > 0 ? `
 <h3>Protected (will not be removed)</h3>
-<p>${toKeep.map(p => `<span class="protected">${p.displayName} ✓</span>`).join(' ')}</p>
+<p>${toKeep.map(project => `<span class="protected">${escapeHtml(project.displayName)} ✓</span>`).join(' ')}</p>
 ` : ''}
 ${toRemove.length > 0 ? `
 <h3>Removal Order (reverse phases)</h3>
