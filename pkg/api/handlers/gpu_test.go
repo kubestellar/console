@@ -153,7 +153,7 @@ func TestGPUCreateReservation_OverAllocationReturnsConflict(t *testing.T) {
 		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
 		clusterReserved: 3,
 	}
-	handler := NewGPUHandler(store, stubCapacity(clusterCapacity))
+	handler := NewGPUHandler(store, stubCapacity(clusterCapacity), nil)
 	env.App.Post("/api/gpu/reservations", handler.CreateReservation)
 
 	body, err := json.Marshal(map[string]any{
@@ -183,7 +183,7 @@ func TestGPUCreateReservation_SetsDefaultDurationAndUserName(t *testing.T) {
 		user:            &models.User{ID: testAdminUserID, GitHubLogin: "alice"},
 		clusterReserved: 0,
 	}
-	handler := NewGPUHandler(store, stubCapacity(clusterCapacity))
+	handler := NewGPUHandler(store, stubCapacity(clusterCapacity), nil)
 	env.App.Post("/api/gpu/reservations", handler.CreateReservation)
 
 	body, err := json.Marshal(map[string]any{
@@ -215,7 +215,7 @@ func TestGPUListReservations_MineNilReturnsEmptyArray(t *testing.T) {
 		user:     &models.User{ID: testAdminUserID, GitHubLogin: "alice", Role: models.UserRoleAdmin},
 		listMine: nil,
 	}
-	handler := NewGPUHandler(store, nil)
+	handler := NewGPUHandler(store, nil, nil)
 	env.App.Get("/api/gpu/reservations", handler.ListReservations)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/reservations?mine=true", nil)
@@ -239,7 +239,7 @@ func TestGPUUpdateReservation_RejectsZeroGPUCount(t *testing.T) {
 			resID: {ID: resID, UserID: testAdminUserID, GPUCount: 2, DurationHours: 24, Cluster: "c1"},
 		},
 	}
-	handler := NewGPUHandler(store, nil)
+	handler := NewGPUHandler(store, nil, nil)
 	env.App.Put("/api/gpu/reservations/:id", handler.UpdateReservation)
 
 	zero := 0
@@ -266,7 +266,7 @@ func TestGPUUpdateReservation_RejectsNegativeGPUCount(t *testing.T) {
 			resID: {ID: resID, UserID: testAdminUserID, GPUCount: 2, DurationHours: 24, Cluster: "c1"},
 		},
 	}
-	handler := NewGPUHandler(store, nil)
+	handler := NewGPUHandler(store, nil, nil)
 	env.App.Put("/api/gpu/reservations/:id", handler.UpdateReservation)
 
 	body, err := json.Marshal(map[string]any{"gpu_count": -1})
@@ -291,7 +291,7 @@ func TestGPUUpdateReservation_RejectsNegativeDuration(t *testing.T) {
 			resID: {ID: resID, UserID: testAdminUserID, GPUCount: 2, DurationHours: 24, Cluster: "c1"},
 		},
 	}
-	handler := NewGPUHandler(store, nil)
+	handler := NewGPUHandler(store, nil, nil)
 	env.App.Put("/api/gpu/reservations/:id", handler.UpdateReservation)
 
 	body, err := json.Marshal(map[string]any{"duration_hours": -5})
@@ -316,7 +316,7 @@ func TestGPUUpdateReservation_RejectsZeroDuration(t *testing.T) {
 			resID: {ID: resID, UserID: testAdminUserID, GPUCount: 2, DurationHours: 24, Cluster: "c1"},
 		},
 	}
-	handler := NewGPUHandler(store, nil)
+	handler := NewGPUHandler(store, nil, nil)
 	env.App.Put("/api/gpu/reservations/:id", handler.UpdateReservation)
 
 	body, err := json.Marshal(map[string]any{"duration_hours": 0})
@@ -342,7 +342,7 @@ func TestGPUBulkUtilizations_ForbiddenForNonOwner(t *testing.T) {
 			resID: {ID: resID, UserID: otherUserID, GPUCount: 1, Cluster: "c1"},
 		},
 	}
-	handler := NewGPUHandler(store, nil)
+	handler := NewGPUHandler(store, nil, nil)
 	env.App.Get("/api/gpu/utilizations", handler.GetBulkUtilizations)
 
 	req, err := http.NewRequest(http.MethodGet, "/api/gpu/utilizations?ids="+resID.String(), nil)

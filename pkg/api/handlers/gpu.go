@@ -10,9 +10,11 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/middleware"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -39,17 +41,27 @@ const minDurationHours = 1
 // Returns 0 if the cluster has no GPUs or cannot be reached.
 type ClusterCapacityProvider func(ctx context.Context, cluster string) int
 
+// provisionTimeoutSeconds is the k8s provisioning deadline for namespace + quota
+// creation during synchronous reservation flow.
+const provisionTimeoutSeconds = 30
+
+// reservationNSLabel tags namespaces created by the GPU reservation system.
+const reservationNSLabel = "kubestellar.io/gpu-reservation"
+
 // GPUHandler handles GPU reservation CRUD operations
 type GPUHandler struct {
 	store           store.Store
 	clusterCapacity ClusterCapacityProvider
+	k8sClient       *k8s.MultiClusterClient
 }
 
 // NewGPUHandler creates a new GPU handler.
 // capacityProvider supplies server-side cluster GPU capacity; if nil,
 // over-allocation checks are skipped (safe default for tests).
-func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider) *GPUHandler {
-	return &GPUHandler{store: s, clusterCapacity: capacityProvider}
+// k8sClient enables synchronous namespace+quota provisioning; if nil,
+// reservations are created with "pending" status (no cluster access).
+func NewGPUHandler(s store.Store, capacityProvider ClusterCapacityProvider, k8sClient *k8s.MultiClusterClient) *GPUHandler {
+	return &GPUHandler{store: s, clusterCapacity: capacityProvider, k8sClient: k8sClient}
 }
 
 // CreateReservation creates a new GPU reservation
@@ -135,6 +147,22 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 	// checks see the canonical shape before the store call below.
 	reservation.NormalizeGPUTypes()
 
+	// Synchronous provisioning: create namespace + ResourceQuota on the
+	// target cluster before persisting the reservation. This eliminates
+	// the "pending" state — the caller gets either "active" (provisioned)
+	// or an immediate error.
+	if h.k8sClient != nil {
+		if provErr := h.provisionOnCluster(c.Context(), reservation); provErr != nil {
+			slog.Error("[gpu] synchronous provisioning failed",
+				"cluster", reservation.Cluster,
+				"namespace", reservation.Namespace,
+				"error", provErr)
+			return fiber.NewError(fiber.StatusInternalServerError,
+				fmt.Sprintf("Failed to provision namespace/quota on cluster %q: %v", reservation.Cluster, provErr))
+		}
+		reservation.Status = models.ReservationStatusActive
+	}
+
 	if err := h.store.CreateGPUReservationWithCapacity(c.UserContext(), reservation, capacity); err != nil {
 		if errors.Is(err, store.ErrGPUQuotaExceeded) {
 			return fiber.NewError(fiber.StatusConflict,
@@ -145,7 +173,7 @@ func (h *GPUHandler) CreateReservation(c *fiber.Ctx) error {
 
 	// #9890: persist audit entry after successful mutation.
 	audit.Log(c, audit.ActionCreateGPUReservation, "gpu_reservation", reservation.ID.String(),
-		fmt.Sprintf("cluster=%s namespace=%s gpus=%d", reservation.Cluster, reservation.Namespace, reservation.GPUCount))
+		fmt.Sprintf("cluster=%s namespace=%s gpus=%d status=%s", reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.Status))
 
 	return c.Status(fiber.StatusCreated).JSON(reservation)
 }
@@ -568,5 +596,52 @@ func (h *GPUHandler) checkOverAllocationWithCapacity(ctx context.Context, cluste
 				cluster, available, reserved, capacity, gpuCount))
 	}
 
+	return nil
+}
+
+// provisionOnCluster creates the namespace (if it doesn't already exist) and a
+// ResourceQuota enforcing the GPU limit on the target cluster. This runs
+// synchronously during reservation creation so the caller gets an immediate
+// success/failure signal instead of a deferred "pending" state.
+func (h *GPUHandler) provisionOnCluster(ctx context.Context, r *models.GPUReservation) error {
+	provCtx, cancel := context.WithTimeout(ctx, provisionTimeoutSeconds*time.Second)
+	defer cancel()
+
+	nsLabels := map[string]string{
+		reservationNSLabel:             "true",
+		"app.kubernetes.io/managed-by": "kubestellar-console",
+	}
+	_, err := h.k8sClient.CreateNamespace(provCtx, r.Cluster, r.Namespace, nsLabels)
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("create namespace %q: %w", r.Namespace, err)
+	}
+
+	quotaName := r.QuotaName
+	if quotaName == "" {
+		quotaName = fmt.Sprintf("gpu-reservation-%s", r.Namespace)
+	}
+
+	quotaSpec := k8s.ResourceQuotaSpec{
+		Name:      quotaName,
+		Namespace: r.Namespace,
+		Hard: map[string]string{
+			"nvidia.com/gpu": fmt.Sprintf("%d", r.GPUCount),
+		},
+		Labels: map[string]string{
+			reservationNSLabel:             "true",
+			"app.kubernetes.io/managed-by": "kubestellar-console",
+		},
+		Annotations: map[string]string{
+			"kubestellar.io/reservation-id": r.ID.String(),
+			"kubestellar.io/reserved-by":    r.UserName,
+		},
+	}
+
+	if _, err := h.k8sClient.CreateOrUpdateResourceQuota(provCtx, r.Cluster, quotaSpec); err != nil {
+		return fmt.Errorf("create ResourceQuota %q in %q: %w", quotaName, r.Namespace, err)
+	}
+
+	r.QuotaName = quotaName
+	r.QuotaEnforced = true
 	return nil
 }

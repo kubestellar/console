@@ -1270,7 +1270,7 @@ func (s *Server) setupRoutes() {
 		}
 		return total
 	})
-	gpuHandler := handlers.NewGPUHandler(s.store, gpuCapacity)
+	gpuHandler := handlers.NewGPUHandler(s.store, gpuCapacity, s.k8sClient)
 	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
 	api.Get("/gpu/reservations", gpuHandler.ListReservations)
 	api.Get("/gpu/reservations/:id", gpuHandler.GetReservation)
