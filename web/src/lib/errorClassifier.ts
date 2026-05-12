@@ -22,6 +22,30 @@ const ERROR_PATTERNS: Array<{
   icon: ClassifiedError['icon']
 }> = [
   {
+    type: 'auth',
+    patterns: [/^\[auth\]/i],
+    suggestion: 'Re-authenticate with the cluster',
+    icon: 'Lock',
+  },
+  {
+    type: 'timeout',
+    patterns: [/^\[timeout\]/i],
+    suggestion: 'Check VPN connection or network connectivity',
+    icon: 'WifiOff',
+  },
+  {
+    type: 'network',
+    patterns: [/^\[network\]/i],
+    suggestion: 'Check network connectivity and firewall settings',
+    icon: 'XCircle',
+  },
+  {
+    type: 'certificate',
+    patterns: [/^\[certificate\]/i],
+    suggestion: 'Check certificate validity or trust settings',
+    icon: 'ShieldAlert',
+  },
+  {
     type: 'timeout',
     patterns: [
       /timeout/i,

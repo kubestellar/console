@@ -117,7 +117,18 @@ function makeRestFetcher(config: RestFetcherConfig) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       signal })
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`)
+    if (!response.ok) {
+      let errorType = ''
+      try {
+        const body = await response.json()
+        if (body?.errorType) {
+          errorType = `[${body.errorType}] `
+        }
+      } catch {
+        // Body was not JSON; fall through to the generic HTTP error.
+      }
+      throw new Error(`${errorType}API error: ${response.status}`)
+    }
     const text = await response.text()
     try {
       return JSON.parse(text) as T
