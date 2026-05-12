@@ -59,6 +59,10 @@ const orbitMaxHistoryEntries = 50
 const orbitRunMissionNoExecutorSummary = "No executor configured — mission steps were not run"
 const orbitSchedulerNoExecutorSummary = "No executor configured"
 
+// orbitMissionExecTimeout caps a single scheduled mission execution so a
+// hung executor cannot block the entire orbit scheduler goroutine.
+const orbitMissionExecTimeout = 5 * time.Minute
+
 // ─── Types ──────────────────────────────────────────────────────────
 
 // OrbitMission represents a recurring maintenance mission.
@@ -322,7 +326,9 @@ func (h *OrbitHandler) checkDueMissions() {
 	h.mu.RUnlock()
 
 	for idx, mission := range dueMissions {
-		result, summary := h.executeMission(context.Background(), mission, orbitSchedulerNoExecutorSummary)
+		execCtx, execCancel := context.WithTimeout(context.Background(), orbitMissionExecTimeout)
+		result, summary := h.executeMission(execCtx, mission, orbitSchedulerNoExecutorSummary)
+		execCancel()
 		runAt := time.Now().UTC().Format(time.RFC3339)
 		h.recordMissionRun(dueMissionIDs[idx], runAt, result, summary)
 		slog.Info("orbit auto-run triggered", "mission", mission.ID, "type", mission.OrbitType, "result", result, "summary", summary)

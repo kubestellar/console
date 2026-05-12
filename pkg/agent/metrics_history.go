@@ -76,6 +76,13 @@ type MetricsHistory struct {
 	lastPersistError   error       // last saveToDisk error, nil on success (#5553)
 }
 
+// setLastPersistError safely stores the last saveToDisk result under mu.
+func (mh *MetricsHistory) setLastPersistError(err error) {
+	mh.mu.Lock()
+	defer mh.mu.Unlock()
+	mh.lastPersistError = err
+}
+
 // NewMetricsHistory creates a new metrics history manager
 func NewMetricsHistory(k8sClient *k8s.MultiClusterClient, dataDir string) *MetricsHistory {
 	if dataDir == "" {
@@ -327,18 +334,14 @@ func (mh *MetricsHistory) saveToDisk() {
 
 	if err != nil {
 		slog.Error("[MetricsHistory] error marshaling history", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 
 	// Ensure directory exists
 	if err := os.MkdirAll(mh.dataDir, metricsDirMode); err != nil {
 		slog.Error("[MetricsHistory] error creating data dir", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 
@@ -348,9 +351,7 @@ func (mh *MetricsHistory) saveToDisk() {
 	tmpFile, err := os.CreateTemp(mh.dataDir, "metrics_history_*.tmp")
 	if err != nil {
 		slog.Error("[MetricsHistory] error creating temp file", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 	tmpPath := tmpFile.Name()
@@ -359,32 +360,24 @@ func (mh *MetricsHistory) saveToDisk() {
 		tmpFile.Close()
 		os.Remove(tmpPath)
 		slog.Error("[MetricsHistory] error writing temp file", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 	if err := tmpFile.Close(); err != nil {
 		os.Remove(tmpPath)
 		slog.Error("[MetricsHistory] error closing temp file", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 
 	if err := os.Rename(tmpPath, filePath); err != nil {
 		os.Remove(tmpPath)
 		slog.Error("[MetricsHistory] error renaming temp file to history file", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 
-	mh.mu.Lock()
-	mh.lastPersistError = nil
-	mh.mu.Unlock()
+	mh.setLastPersistError(nil)
 }
 
 // LastPersistError returns the last saveToDisk error, or nil if persistence is healthy.

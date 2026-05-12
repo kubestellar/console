@@ -30,6 +30,10 @@ const eventRetentionSweepInterval = 1 * time.Hour
 // unset or invalid.
 const defaultEventRetentionDays = 7
 
+// clusterListTimeout caps the HealthyClusters call in the background
+// collector so a hung API server cannot block the event poll loop.
+const clusterListTimeout = 15 * time.Second
+
 // eventCollectTimeout is the per-cluster fetch timeout.
 const eventCollectTimeout = 15 * time.Second
 
@@ -138,7 +142,9 @@ func (h *TimelineHandler) runCollector(done <-chan struct{}) {
 }
 
 func (h *TimelineHandler) collectAll() {
-	healthy, _, err := h.k8sClient.HealthyClusters(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), clusterListTimeout)
+	defer cancel()
+	healthy, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
 		slog.Error("[Timeline] failed to list clusters", "error", err)
 		return

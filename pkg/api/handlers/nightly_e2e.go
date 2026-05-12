@@ -132,7 +132,7 @@ type NightlyE2EHandler struct {
 	cache    *NightlyE2EResponse
 	cacheExp time.Time
 	// #7053 — singleflight group coalesces concurrent cold-cache GetRuns
-	// callers into a single fetchAll call.
+	// callers into a single fetchAllWithContext call.
 	fetchGroup singleflight.Group
 
 	logMu       sync.RWMutex
@@ -196,7 +196,7 @@ func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 
 func (h *NightlyE2EHandler) prewarm() {
 	// #7052 — Use a cancellable context so that on timeout, all goroutines
-	// spawned by fetchAll are cancelled instead of abandoned.
+	// spawned by fetchAllWithContext are cancelled instead of abandoned.
 	ctx, cancel := context.WithTimeout(context.Background(), prewarmTimeout)
 	defer cancel()
 
@@ -271,11 +271,8 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
-func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
-	return h.fetchAllWithContext(context.Background())
-}
-
-// fetchAllWithContext is the context-aware version of fetchAll (#7052).
+// fetchAllWithContext is the context-aware fetch used by both the handler and
+// prewarm paths (#7052).
 // When ctx is cancelled, HTTP requests made by sub-goroutines will be
 // interrupted instead of running to completion.
 func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2EResponse, error) {
