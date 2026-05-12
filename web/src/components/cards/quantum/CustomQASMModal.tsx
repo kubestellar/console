@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { X, Upload, FileText } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { TextArea } from '../../ui/TextArea'
@@ -89,6 +89,15 @@ export function CustomQASMModal({
     setError(null)
     onCancel()
   }
+
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') handleCancel()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, initialContent, onCancel])
 
   if (!isOpen) return null
 

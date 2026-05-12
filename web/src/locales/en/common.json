@@ -55,6 +55,8 @@
     "viewNamespaceCostAria": "View cost details for namespace {{namespace}}",
     "viewOperatorAria": "View operator {{name}}",
     "toggleGPUNodeAria": "Toggle details for GPU node {{node}}",
+    "selectCloudProviderAria": "Select {{provider}} cloud provider",
+    "openSettingsSectionAria": "Open {{section}} settings section",
     "retry": "Retry"
   },
   "buttons": {

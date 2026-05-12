@@ -473,6 +473,7 @@ export function Settings() {
                       key={item.id}
                       data-settings-nav={item.id}
                       onClick={() => handleNavClick(item.id)}
+                      aria-label={t('actions.openSettingsSectionAria', { section: t(item.labelKey) })}
                       className={cn(
                         'w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors text-left',
                         isActive

@@ -405,6 +405,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
           </div>
           <button
             onClick={handleClose}
+            aria-label={t('actions.close')}
             className="p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="w-4 h-4" />

@@ -290,6 +290,15 @@ export const QuantumControlPanel: React.FC = () => {
     }
   }, [])
 
+  useEffect(() => {
+    if (!showClearCredentialsDialog || isClearing) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowClearCredentialsDialog(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showClearCredentialsDialog, isClearing])
+
   // Initialize on mount
   useEffect(() => {
     fetchStatus(true)

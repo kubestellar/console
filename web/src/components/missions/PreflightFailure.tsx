@@ -7,6 +7,7 @@ import { COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import {
   ShieldAlert,
@@ -78,6 +79,7 @@ function ActionButton({
   action: RemediationAction
   onRetry?: () => void
 }) {
+  const { t } = useTranslation('common')
   const [copied, setCopied] = useState(false)
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -132,6 +134,7 @@ function ActionButton({
     return (
       <button
         onClick={onRetry}
+        aria-label={t('actions.retry')}
         className="flex items-center gap-2 rounded-md bg-blue-600/20 px-3 py-1.5 text-xs font-medium text-blue-300 transition-colors hover:bg-blue-600/30"
       >
         <Icon size={14} />
@@ -162,6 +165,7 @@ function ActionButton({
         {action.codeSnippet && (
           <button
             onClick={handleCopy}
+            aria-label={copied ? t('actions.copied') : t('actions.copy')}
             className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <Icon size={12} />
