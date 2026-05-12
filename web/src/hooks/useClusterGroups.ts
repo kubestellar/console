@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { usePersistence } from './usePersistence'
 import { useClusterGroups as useCRClusterGroups, ClusterGroup as CRClusterGroup } from './useConsoleCRs'
 import { STORAGE_KEY_TOKEN } from '../lib/constants'
@@ -47,6 +48,7 @@ export interface AIQueryResult {
 // ============================================================================
 
 const STORAGE_KEY = 'kubestellar-cluster-groups'
+const CLUSTER_GROUP_SYNC_LOG_PREFIX = '[ClusterGroups]'
 
 function loadGroups(): ClusterGroup[] {
   try {
@@ -118,9 +120,23 @@ function localGroupToCR(group: ClusterGroup): Omit<CRClusterGroup, 'apiVersion' 
  * Otherwise, falls back to localStorage with best-effort backend sync.
  */
 export function useClusterGroups() {
+  const { t } = useTranslation('common')
   const { isEnabled, isActive } = usePersistence()
   const shouldUseCRs = isEnabled && isActive
   const { showToast } = useToast()
+
+  const warnBackendSyncFailure = (operation: 'create' | 'update' | 'delete', error: unknown) => {
+    console.warn(`${CLUSTER_GROUP_SYNC_LOG_PREFIX} ${operation}Group backend sync failed:`, error)
+    showToast(t(`clusterGroups.syncWarning.${operation}`), 'warning')
+  }
+
+  const syncClusterGroupsRequest = async (input: string, init: RequestInit) => {
+    const response = await fetch(input, init)
+    if (!response.ok) {
+      const statusText = response.statusText ? ` ${response.statusText}` : ''
+      throw new Error(`HTTP ${response.status}${statusText}`)
+    }
+  }
 
   // CR-backed state
   const {
@@ -164,15 +180,13 @@ export function useClusterGroups() {
 
       // Best-effort sync to backend for cluster labeling
       try {
-        await fetch('/api/cluster-groups', {
+        await syncClusterGroupsRequest('/api/cluster-groups', {
           method: 'POST',
           headers: authHeaders(),
           body: JSON.stringify(group),
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       } catch (err) {
-        // Backend sync is best-effort; localStorage is primary
-        console.warn('[ClusterGroups] createGroup backend sync failed:', err)
-        showToast('Group saved locally. Backend sync failed — changes may not persist across devices.', 'warning')
+        warnBackendSyncFailure('create', err)
       }
     }
   }
@@ -195,15 +209,13 @@ export function useClusterGroups() {
       const group = localGroups.find(g => g.name === name)
       if (group) {
         try {
-          await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
+          await syncClusterGroupsRequest(`/api/cluster-groups/${encodeURIComponent(name)}`, {
             method: 'PUT',
             headers: authHeaders(),
             body: JSON.stringify({ ...group, ...updates }),
             signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
         } catch (err) {
-          // best-effort
-          console.warn('[ClusterGroups] updateGroup backend sync failed:', err)
-          showToast('Group updated locally. Backend sync failed — changes may not persist across devices.', 'warning')
+          warnBackendSyncFailure('update', err)
         }
       }
     }
@@ -216,14 +228,12 @@ export function useClusterGroups() {
       setLocalGroups(prev => prev.filter(g => g.name !== name))
 
       try {
-        await fetch(`/api/cluster-groups/${encodeURIComponent(name)}`, {
+        await syncClusterGroupsRequest(`/api/cluster-groups/${encodeURIComponent(name)}`, {
           method: 'DELETE',
           headers: authHeaders(),
           signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       } catch (err) {
-        // best-effort
-        console.warn('[ClusterGroups] deleteGroup backend sync failed:', err)
-        showToast('Group deleted locally. Backend sync failed — changes may not persist across devices.', 'warning')
+        warnBackendSyncFailure('delete', err)
       }
     }
   }

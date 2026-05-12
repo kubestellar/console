@@ -827,6 +827,13 @@
     "selectAll": "Select All",
     "noClusters": "No clusters available"
   },
+  "clusterGroups": {
+    "syncWarning": {
+      "create": "Group saved locally only. Backend sync failed, so this change may not persist across devices.",
+      "update": "Group changes saved locally only. Backend sync failed, so this change may not persist across devices.",
+      "delete": "Group deletion was saved locally only. Backend sync failed, so this change may not persist across devices."
+    }
+  },
   "profile": {
     "email": "Email:",
     "slack": "Slack:",

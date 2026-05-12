@@ -19,6 +19,35 @@ import { renderHook, act } from '@testing-library/react'
 // Mocks — declared before module import
 // ---------------------------------------------------------------------------
 
+const SYNC_WARNING_MESSAGES = {
+  create: 'Group saved locally only. Backend sync failed, so this change may not persist across devices.',
+  update: 'Group changes saved locally only. Backend sync failed, so this change may not persist across devices.',
+  delete: 'Group deletion was saved locally only. Backend sync failed, so this change may not persist across devices.',
+} as const
+
+const {
+  mockShowToast,
+  mockT,
+} = vi.hoisted(() => ({
+  mockShowToast: vi.fn(),
+  mockT: vi.fn((key: string) => {
+    const translations: Record<string, string> = {
+      'clusterGroups.syncWarning.create': 'Group saved locally only. Backend sync failed, so this change may not persist across devices.',
+      'clusterGroups.syncWarning.update': 'Group changes saved locally only. Backend sync failed, so this change may not persist across devices.',
+      'clusterGroups.syncWarning.delete': 'Group deletion was saved locally only. Backend sync failed, so this change may not persist across devices.',
+    }
+    return translations[key] ?? key
+  }),
+}))
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: mockT, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
+vi.mock('../../components/ui/Toast', () => ({
+  useToast: () => ({ showToast: mockShowToast }),
+}))
+
 const mockUsePersistence = vi.fn(() => ({
   isEnabled: false,
   isActive: false,
@@ -104,6 +133,7 @@ describe('useClusterGroups', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     vi.stubGlobal('fetch', vi.fn())
     mockCRGroups.length = 0
     mockUsePersistence.mockReturnValue({ isEnabled: false, isActive: false })
@@ -224,7 +254,7 @@ describe('useClusterGroups', () => {
     unmount()
   })
 
-  it('createGroup succeeds even when backend sync fails', async () => {
+  it('createGroup warns when backend sync request rejects', async () => {
     mockFetchReject()
     const { result, unmount } = renderHook(() => useClusterGroups())
 
@@ -236,9 +266,29 @@ describe('useClusterGroups', () => {
       })
     })
 
-    // Group should still be created locally
     expect(result.current.groups).toHaveLength(1)
     expect(result.current.groups[0].name).toBe('offline')
+    expect(console.warn).toHaveBeenCalledWith('[ClusterGroups] createGroup backend sync failed:', expect.any(Error))
+    expect(mockShowToast).toHaveBeenCalledWith(SYNC_WARNING_MESSAGES.create, 'warning')
+    unmount()
+  })
+
+  it('createGroup warns when backend sync returns a non-ok response', async () => {
+    mockFetchStatus(500)
+    const { result, unmount } = renderHook(() => useClusterGroups())
+
+    await act(async () => {
+      await result.current.createGroup({
+        name: 'status-create',
+        kind: 'static',
+        clusters: ['c1'],
+      })
+    })
+
+    expect(result.current.groups).toHaveLength(1)
+    expect(result.current.groups[0].name).toBe('status-create')
+    expect(console.warn).toHaveBeenCalledWith('[ClusterGroups] createGroup backend sync failed:', expect.any(Error))
+    expect(mockShowToast).toHaveBeenCalledWith(SYNC_WARNING_MESSAGES.create, 'warning')
     unmount()
   })
 
@@ -307,7 +357,7 @@ describe('useClusterGroups', () => {
     unmount()
   })
 
-  it('updateGroup succeeds even when backend sync fails', async () => {
+  it('updateGroup warns when backend sync request rejects', async () => {
     seedGroups([{ name: 'prod', kind: 'static', clusters: ['c1'] }])
     mockFetchReject()
     const { result, unmount } = renderHook(() => useClusterGroups())
@@ -317,6 +367,23 @@ describe('useClusterGroups', () => {
     })
 
     expect(result.current.groups[0].color).toBe('blue')
+    expect(console.warn).toHaveBeenCalledWith('[ClusterGroups] updateGroup backend sync failed:', expect.any(Error))
+    expect(mockShowToast).toHaveBeenCalledWith(SYNC_WARNING_MESSAGES.update, 'warning')
+    unmount()
+  })
+
+  it('updateGroup warns when backend sync returns a non-ok response', async () => {
+    seedGroups([{ name: 'prod', kind: 'static', clusters: ['c1'] }])
+    mockFetchStatus(503)
+    const { result, unmount } = renderHook(() => useClusterGroups())
+
+    await act(async () => {
+      await result.current.updateGroup('prod', { color: 'green' })
+    })
+
+    expect(result.current.groups[0].color).toBe('green')
+    expect(console.warn).toHaveBeenCalledWith('[ClusterGroups] updateGroup backend sync failed:', expect.any(Error))
+    expect(mockShowToast).toHaveBeenCalledWith(SYNC_WARNING_MESSAGES.update, 'warning')
     unmount()
   })
 
@@ -374,7 +441,7 @@ describe('useClusterGroups', () => {
     unmount()
   })
 
-  it('deleteGroup succeeds even when backend sync fails', async () => {
+  it('deleteGroup warns when backend sync request rejects', async () => {
     seedGroups([{ name: 'offline-del', kind: 'static', clusters: [] }])
     mockFetchReject()
     const { result, unmount } = renderHook(() => useClusterGroups())
@@ -384,6 +451,23 @@ describe('useClusterGroups', () => {
     })
 
     expect(result.current.groups).toHaveLength(0)
+    expect(console.warn).toHaveBeenCalledWith('[ClusterGroups] deleteGroup backend sync failed:', expect.any(Error))
+    expect(mockShowToast).toHaveBeenCalledWith(SYNC_WARNING_MESSAGES.delete, 'warning')
+    unmount()
+  })
+
+  it('deleteGroup warns when backend sync returns a non-ok response', async () => {
+    seedGroups([{ name: 'status-delete', kind: 'static', clusters: [] }])
+    mockFetchStatus(502)
+    const { result, unmount } = renderHook(() => useClusterGroups())
+
+    await act(async () => {
+      await result.current.deleteGroup('status-delete')
+    })
+
+    expect(result.current.groups).toHaveLength(0)
+    expect(console.warn).toHaveBeenCalledWith('[ClusterGroups] deleteGroup backend sync failed:', expect.any(Error))
+    expect(mockShowToast).toHaveBeenCalledWith(SYNC_WARNING_MESSAGES.delete, 'warning')
     unmount()
   })
 
