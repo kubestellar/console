@@ -20,6 +20,7 @@ import {
 } from '../../hooks/useFeatureRequests'
 import { useTranslation } from 'react-i18next'
 import { formatTimeAgo } from '../../lib/formatters'
+import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
 
 interface RequestCardProps {
   request: FeatureRequest
@@ -101,7 +102,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
       </div>
 
       {/* Preview & Feedback */}
-      {request.netlify_preview_url && (
+      {request.netlify_preview_url && isValidPreviewUrl(request.netlify_preview_url) && (
         <div className="mt-3 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">

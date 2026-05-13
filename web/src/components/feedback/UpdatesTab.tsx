@@ -23,25 +23,10 @@ import {
 import type { PreviewResult } from './FeatureRequestTypes'
 import { useTranslation } from 'react-i18next'
 import { getStatusDescription } from '../../hooks/useFeatureRequests'
+import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
 
 const REOPEN_COMMENT_ROWS = 3
 const REOPEN_COMMENT_MAX_LENGTH = 1000
-
-function isValidPreviewUrl(url: string | null | undefined): boolean {
-  if (!url) return false
-
-  try {
-    const parsed = new URL(url)
-    return (
-      parsed.protocol === 'https:' &&
-      (parsed.hostname.endsWith('.netlify.app') ||
-        parsed.hostname === 'console.kubestellar.io' ||
-        parsed.hostname.endsWith('.console-deploy-preview.kubestellar.io'))
-    )
-  } catch {
-    return false
-  }
-}
 
 type RequestCardState = 'awaiting_verification' | FeatureRequest['status']
 
