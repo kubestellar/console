@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/kubestellar/console/pkg/safego"
@@ -41,9 +42,14 @@ func (e *ToolDependencyError) Error() string {
 	return fmt.Sprintf("missing required tools: %s — install them before running AI missions", strings.Join(e.MissingTools, ", "))
 }
 
+// warnedOptionalTools tracks which optional tools have already produced a
+// warning so each missing tool only logs once per process lifetime.
+var warnedOptionalTools sync.Map
+
 // CheckToolDependencies verifies that every binary in RequiredMissionTools
 // is available on PATH. Optional tools are checked but only produce a log
-// warning — they do not block mission execution.
+// warning — they do not block mission execution. Each missing optional tool
+// warns at most once per process to avoid log spam on repeated invocations.
 func CheckToolDependencies() error {
 	var missing []string
 	for _, tool := range RequiredMissionTools {
@@ -57,7 +63,9 @@ func CheckToolDependencies() error {
 
 	for _, tool := range OptionalMissionTools {
 		if _, err := exec.LookPath(tool); err != nil {
-			slog.Warn("optional mission tool not found on PATH", "tool", tool)
+			if _, alreadyWarned := warnedOptionalTools.LoadOrStore(tool, true); !alreadyWarned {
+				slog.Warn("optional mission tool not found on PATH — missions requiring it will fail at execution time", "tool", tool)
+			}
 		}
 	}
 	return nil

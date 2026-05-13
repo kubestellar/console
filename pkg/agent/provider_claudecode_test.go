@@ -2,6 +2,9 @@ package agent
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClaudeCodeProvider_Basics(t *testing.T) {
@@ -104,18 +107,44 @@ func TestOptionalMissionTools_NotEmpty(t *testing.T) {
 }
 
 func TestCheckToolDependencies_OptionalToolsMissing_NoError(t *testing.T) {
+	// Use an empty temp dir as PATH so no tools are found, making this
+	// deterministic regardless of what is installed on the test machine.
+	tmpDir := t.TempDir()
+	t.Setenv("PATH", tmpDir)
+	// Reset warned map so required tools (kubectl, git) don't interfere.
+	warnedOptionalTools.Range(func(k, v any) bool { warnedOptionalTools.Delete(k); return true })
+
 	err := CheckToolDependencies()
+	// Required tools (kubectl, git) are also absent — we only care that any
+	// error is a ToolDependencyError that lists no optional tools.
 	if err != nil {
 		tde, ok := err.(*ToolDependencyError)
-		if !ok {
-			t.Fatalf("expected *ToolDependencyError, got %T", err)
-		}
+		require.True(t, ok, "expected *ToolDependencyError, got %T", err)
 		for _, tool := range tde.MissingTools {
 			for _, opt := range OptionalMissionTools {
-				if tool == opt {
-					t.Errorf("optional tool %q should not cause a hard failure", tool)
-				}
+				assert.NotEqual(t, opt, tool, "optional tool %q should not cause a hard failure", tool)
 			}
 		}
+	}
+}
+
+func TestCheckToolDependencies_OptionalToolsMissing_Warns(t *testing.T) {
+	// Override PATH to an empty temp dir so no tools are found.
+	tmpDir := t.TempDir()
+	t.Setenv("PATH", tmpDir)
+	// Reset the warned-tools map so this test gets a fresh state.
+	warnedOptionalTools.Range(func(k, v any) bool { warnedOptionalTools.Delete(k); return true })
+
+	err := CheckToolDependencies()
+	// Optional tools missing should NOT return an error (required tools are
+	// also absent here, so we accept either nil or a ToolDependencyError).
+	if err != nil {
+		_, ok := err.(*ToolDependencyError)
+		require.True(t, ok, "expected *ToolDependencyError, got %T", err)
+	}
+	// All optional tools should have been warned (each stored once).
+	for _, tool := range OptionalMissionTools {
+		_, warned := warnedOptionalTools.Load(tool)
+		assert.True(t, warned, "expected warn entry for optional tool %s", tool)
 	}
 }
