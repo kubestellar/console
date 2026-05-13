@@ -377,7 +377,7 @@ export function CustomDashboard() {
         console.error('Failed to load dashboard:', error)
       }
       if (!isRefresh && !isExpectedFailure) {
-        showToast('Failed to load dashboard', 'error')
+        showToast(t('dashboard.toast.loadFailed', 'Failed to load dashboard'), 'error')
       }
     } finally {
       // Only clear loading state if this is still the latest request
@@ -445,13 +445,13 @@ export function CustomDashboard() {
           await api.post(`/api/dashboards/${id}/cards`, card)
         } catch (error: unknown) {
           console.error('Failed to persist card:', error)
-          showToast('Failed to persist card to backend', 'error')
+          showToast(t('dashboard.toast.persistFailed', 'Failed to persist card to backend'), 'error')
         }
       }
     }
 
     closeAddCard()
-    showToast(`Added ${newCards.length} card${newCards.length > 1 ? 's' : ''}`, 'success')
+    showToast(t('dashboard.toast.cardsAdded', 'Added {{count}} card(s)', { count: newCards.length }), 'success')
   }
 
   const handleRemoveCard = async (cardId: string) => {
@@ -517,12 +517,12 @@ export function CustomDashboard() {
           await api.post(`/api/dashboards/${id}/cards`, card)
         } catch (error: unknown) {
           console.error('Failed to persist template card:', error)
-          showToast('Failed to persist template card', 'error')
+          showToast(t('dashboard.toast.persistTemplateFailed', 'Failed to persist template card'), 'error')
         }
       }
     }
 
-    showToast(`Applied template "${template.name}" with ${templateCards.length} cards`, 'success')
+    showToast(t('dashboard.toast.templateApplied', 'Applied "{{name}}" template with {{count}} cards', { name: template.name, count: templateCards.length }), 'success')
   }
 
   const handleAddRecommendedCard = (cardType: string, config?: Record<string, unknown>) => {
@@ -533,7 +533,7 @@ export function CustomDashboard() {
     snapshot(cardsRef.current)
     setCards([])
     safeRemoveItem(storageKey)
-    showToast('Dashboard reset to empty', 'info')
+    showToast(t('dashboard.toast.resetToEmpty', 'Dashboard reset to empty'), 'info')
   }
 
   const handleDeleteDashboard = () => {
@@ -548,7 +548,7 @@ export function CustomDashboard() {
     safeRemoveItem(storageKey)
 
     const displayName = sidebarItem?.name || dashboard?.name || 'this dashboard'
-    showToast(`Deleted "${displayName}"`, 'success')
+    showToast(t('dashboard.toast.deleted', 'Deleted "{{name}}"', { name: displayName }), 'success')
     navigate(ROUTES.HOME)
 
     // Try to delete from backend in the background (may fail offline)
@@ -736,17 +736,17 @@ export function CustomDashboard() {
             a.download = `${(dashboard?.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
             a.click()
             safeRevokeObjectURL(url)
-            showToast('Dashboard exported', 'success')
+            showToast(t('dashboard.toast.exported', 'Dashboard exported'), 'success')
           } catch {
-            showToast('Failed to export dashboard', 'error')
+            showToast(t('dashboard.toast.exportFailed', 'Failed to export dashboard'), 'error')
           }
         } : undefined}
         onImport={async (json) => {
           try {
             await importDashboard(json)
-            showToast('Dashboard imported', 'success')
+            showToast(t('dashboard.toast.imported', 'Dashboard imported'), 'success')
           } catch {
-            showToast('Failed to import dashboard', 'error')
+            showToast(t('dashboard.toast.importFailed', 'Failed to import dashboard'), 'error')
           }
         }}
         onUndo={undo}

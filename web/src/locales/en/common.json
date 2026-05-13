@@ -1328,6 +1328,30 @@
       "writeCodeToPreview": "Write code to see preview",
       "compiling": "Compiling...",
       "noComponentProduced": "No component produced"
+    },
+    "toast": {
+      "cardMoved": "Card moved to \"{{name}}\"",
+      "moveCardFailed": "Failed to move card",
+      "newDashboard": "New Dashboard",
+      "createDashboardFailed": "Failed to create dashboard",
+      "deploying": "Deploying {{workload}} to {{count}} cluster(s) in \"{{group}}\"",
+      "deployFailed": "Deploy failed: {{detail}}",
+      "unknownError": "Unknown error",
+      "cardRestored": "Restored \"{{name}}\" card",
+      "loadFailed": "Failed to load dashboard",
+      "persistFailed": "Failed to persist card to backend",
+      "updateWidthFailed": "Failed to update card width",
+      "updateHeightFailed": "Failed to update card height",
+      "updateConfigFailed": "Failed to update card configuration",
+      "templateApplied": "Applied \"{{name}}\" template with {{count}} cards",
+      "exported": "Dashboard exported",
+      "exportFailed": "Failed to export dashboard",
+      "imported": "Dashboard imported",
+      "importFailed": "Failed to import dashboard",
+      "cardsAdded": "Added {{count}} card(s)",
+      "persistTemplateFailed": "Failed to persist template card",
+      "resetToEmpty": "Dashboard reset to empty",
+      "deleted": "Deleted \"{{name}}\""
     }
   },
   "cardConfig": {

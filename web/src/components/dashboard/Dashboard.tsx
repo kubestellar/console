@@ -441,10 +441,10 @@ export function Dashboard() {
           snapshot(localCards)
           setLocalCards((items) => items.filter((item) => item.id !== active.id))
           // Show success toast
-          showToast(`Card moved to "${targetDashboardName}"`, 'success')
+          showToast(t('dashboard.toast.cardMoved', 'Card moved to "{{name}}"', { name: targetDashboardName }), 'success')
         } catch (error: unknown) {
           console.error('Failed to move card:', error)
-          showToast('Failed to move card', 'error')
+          showToast(t('dashboard.toast.moveCardFailed', 'Failed to move card'), 'error')
         }
       }
       return
@@ -458,11 +458,11 @@ export function Dashboard() {
           await moveCardToDashboard(active.id as string, newDash.id)
           snapshot(localCards)
           setLocalCards((items) => items.filter((item) => item.id !== active.id))
-          showToast(`Card moved to "${newDash.name || 'New Dashboard'}"`, 'success')
+          showToast(t('dashboard.toast.cardMoved', 'Card moved to "{{name}}"', { name: newDash.name || t('dashboard.toast.newDashboard', 'New Dashboard') }), 'success')
         }
       } catch (error: unknown) {
         console.error('Failed to create dashboard and move card:', error)
-        showToast('Failed to create dashboard', 'error')
+        showToast(t('dashboard.toast.createDashboardFailed', 'Failed to create dashboard'), 'error')
       }
       return
     }
@@ -507,7 +507,7 @@ export function Dashboard() {
         timestamp: Date.now() } })
 
     showToast(
-      `Deploying ${workloadName} to ${targetClusters.length} cluster${targetClusters.length !== 1 ? 's' : ''} in "${groupName}"`,
+      t('dashboard.toast.deploying', 'Deploying {{workload}} to {{count}} cluster(s) in "{{group}}"', { workload: workloadName, count: targetClusters.length, group: groupName }),
       'success'
     )
 
@@ -542,7 +542,7 @@ export function Dashboard() {
     } catch (err: unknown) {
       console.error('Deploy failed:', err)
       showToast(
-        `Deploy failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        t('dashboard.toast.deployFailed', 'Deploy failed: {{detail}}', { detail: err instanceof Error ? err.message : t('dashboard.toast.unknownError', 'Unknown error') }),
         'error'
       )
     }
@@ -608,7 +608,7 @@ export function Dashboard() {
       // Clear the pending card
       clearPendingRestoreCard()
       // Show success toast
-      showToast(`Restored "${pendingRestoreCard.cardTitle || pendingRestoreCard.cardType}" card`, 'success')
+      showToast(t('dashboard.toast.cardRestored', 'Restored "{{name}}" card', { name: pendingRestoreCard.cardTitle || pendingRestoreCard.cardType }), 'success')
     }
   }, [pendingRestoreCard, isLoading, dashboard, recordCardAdded, clearPendingRestoreCard, showToast, localCards, snapshot])
 
@@ -693,7 +693,7 @@ export function Dashboard() {
         // Only show toast for foreground loads — background refreshes should
         // fail silently to avoid confusing the user with unexpected errors.
         if (!isBackground) {
-          showToast('Failed to load dashboard', 'error')
+          showToast(t('dashboard.toast.loadFailed', 'Failed to load dashboard'), 'error')
         }
       }
       // On background refresh failures, preserve whatever the user currently has —
@@ -752,7 +752,7 @@ export function Dashboard() {
           await api.post(`/api/dashboards/${dashboard.id}/cards`, card)
         } catch (error: unknown) {
           console.error('Failed to persist card:', error)
-          showToast('Failed to persist card to backend', 'error')
+          showToast(t('dashboard.toast.persistFailed', 'Failed to persist card to backend'), 'error')
         }
       }
     }
@@ -814,7 +814,7 @@ export function Dashboard() {
         }
       } catch (error: unknown) {
         console.error('Failed to update card width:', error)
-        showToast('Failed to update card width', 'error')
+        showToast(t('dashboard.toast.updateWidthFailed', 'Failed to update card width'), 'error')
       }
     }
   }
@@ -840,7 +840,7 @@ export function Dashboard() {
         }
       } catch (error: unknown) {
         console.error('Failed to update card height:', error)
-        showToast('Failed to update card height', 'error')
+        showToast(t('dashboard.toast.updateHeightFailed', 'Failed to update card height'), 'error')
       }
     }
   }
@@ -875,7 +875,7 @@ export function Dashboard() {
         await api.put(`/api/cards/${cardId}`, { config: newConfig, title: newTitle })
       } catch (error: unknown) {
         console.error('Failed to update card configuration:', error)
-        showToast('Failed to update card configuration', 'error')
+        showToast(t('dashboard.toast.updateConfigFailed', 'Failed to update card configuration'), 'error')
       }
     }
   }
@@ -938,7 +938,7 @@ export function Dashboard() {
     // Add template cards at the top
     snapshot(localCards)
     setLocalCards((prev) => [...newCards, ...prev])
-    showToast(`Applied "${template.name}" template with ${newCards.length} cards`, 'success')
+    showToast(t('dashboard.toast.templateApplied', 'Applied "{{name}}" template with {{count}} cards', { name: template.name, count: newCards.length }), 'success')
   }
 
   // Handle single card addition from smart suggestions or discover placeholder
@@ -1207,9 +1207,9 @@ export function Dashboard() {
               a.download = `${(dashboard.name || 'dashboard').replace(/\s+/g, '-').toLowerCase()}.json`
               a.click()
               safeRevokeObjectURL(url)
-              showToast('Dashboard exported', 'success')
+              showToast(t('dashboard.toast.exported', 'Dashboard exported'), 'success')
             } catch {
-              showToast('Failed to export dashboard', 'error')
+              showToast(t('dashboard.toast.exportFailed', 'Failed to export dashboard'), 'error')
             }
           } : undefined}
           onReset={() => reset('replace')}
