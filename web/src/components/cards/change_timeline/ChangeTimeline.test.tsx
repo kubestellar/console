@@ -70,6 +70,6 @@ describe('ChangeTimeline', () => {
     
     render(<ChangeTimeline />)
 
-    expect(screen.getByTestId('skeleton')).toBeTruthy()
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
   })
 })

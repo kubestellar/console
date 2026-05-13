@@ -79,6 +79,6 @@ describe('CloudCustodianStatus', () => {
     
     render(<CloudCustodianStatus />)
 
-    expect(screen.getByTestId('skeleton')).toBeTruthy()
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0)
   })
 })
