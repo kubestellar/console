@@ -4,6 +4,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -48,9 +49,34 @@ func NewQuantumProxyHandler() *QuantumProxyHandler {
 	}
 }
 
+// allowedQuantumPaths lists valid API path prefixes for the quantum proxy.
+var allowedQuantumPaths = []string{
+	"result",
+	"circuit",
+	"job",
+	"status",
+	"health",
+}
+
+// isAllowedQuantumPath validates that the endpoint matches an allowed prefix.
+func isAllowedQuantumPath(endpoint string) bool {
+	for _, prefix := range allowedQuantumPaths {
+		if endpoint == prefix || strings.HasPrefix(endpoint, prefix+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // ProxyRequest handles GET requests to quantum endpoints
 func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	endpoint := c.Params("*")
+
+	// SECURITY: Reject path traversal and validate against allowed paths
+	if strings.Contains(endpoint, "..") || !isAllowedQuantumPath(endpoint) {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid quantum API path")
+	}
+
 	// Prepend /api/ to the endpoint path to match quantum backend API structure
 	targetURL := h.quantumServiceURL + "/api/" + endpoint
 
@@ -99,10 +125,20 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	return c.Send(body)
 }
 
+// allowedHistogramSorts lists valid sort values for the histogram endpoint.
+var allowedHistogramSorts = map[string]bool{
+	"count":       true,
+	"name":        true,
+	"probability": true,
+}
+
 // ProxyResultHistogram handles GET requests to /api/result/histogram
 func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	sort := c.Query("sort", "count")
-	targetURL := h.quantumServiceURL + "/api/result/histogram?sort=" + sort
+	if !allowedHistogramSorts[sort] {
+		sort = "count"
+	}
+	targetURL := h.quantumServiceURL + "/api/result/histogram?sort=" + url.QueryEscape(sort)
 
 	slog.Debug("[QuantumProxy] Forwarding histogram request", "from", c.Path(), "to", targetURL)
 
@@ -144,6 +180,12 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 // ProxyPostRequest handles POST requests to quantum endpoints
 func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	endpoint := c.Params("*")
+
+	// SECURITY: Reject path traversal and validate against allowed paths
+	if strings.Contains(endpoint, "..") || !isAllowedQuantumPath(endpoint) {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid quantum API path")
+	}
+
 	// Prepend /api/ to the endpoint path to match quantum backend API structure
 	targetURL := h.quantumServiceURL + "/api/" + endpoint
 
