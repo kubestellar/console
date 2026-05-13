@@ -101,7 +101,11 @@ export default defineConfig(({ mode }) => ({
             ['card-registry', ['/src/components/cards/cardRegistry.ts']],
             ['card-registry-data', ['/src/config/cards/', '/src/components/cards/cardMetadata.ts', '/src/components/cards/cardDescriptors.registry.ts']],
             ['dashboard-core', ['/src/components/dashboard/', '/src/lib/dashboards/', '/src/lib/unified/dashboard/']],
-            ['app-shell', ['/src/App.tsx', '/src/components/layout/', '/src/lib/auth/', '/src/hooks/useBranding', '/src/hooks/useTheme', '/src/hooks/usePersistedSettings']],
+            // Split app-shell into smaller chunks to reduce initial bundle size
+            ['layout-shell', ['/src/components/layout/']],
+            ['auth-core', ['/src/lib/auth']],
+            ['theme-system', ['/src/hooks/useTheme', '/src/hooks/useBranding']],
+            ['app-shell', ['/src/App.tsx', '/src/hooks/usePersistedSettings']],
             ['i18n-app', ['/src/lib/i18n.ts', '/src/locales/']],
           ] as const
           for (const [chunkName, needles] of sourceChunkRules) {
