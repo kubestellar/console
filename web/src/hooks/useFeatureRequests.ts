@@ -271,6 +271,10 @@ function __updateDemoNotifications(updater: (prev: Notification[]) => Notificati
   return demoNotificationsState
 }
 
+export function __resetDemoNotificationsForTests(): void {
+  demoNotificationsState = null
+}
+
 // Sort requests: user's issues first by date (desc), then others by date (desc)
 function sortRequests(requests: FeatureRequest[], currentGitHubLogin: string): FeatureRequest[] {
   const userRequests: FeatureRequest[] = []
@@ -512,6 +516,12 @@ export function useNotifications() {
 
     // In demo mode, just update local state
     if (isDemoUser()) {
+      const demoState = getDemoNotifications()
+      for (let i = 0; i < demoState.length; i += 1) {
+        if (demoState[i].feature_request_id === featureRequestId) {
+          demoState[i] = { ...demoState[i], read: true }
+        }
+      }
       setNotifications(prev =>
         prev.map(n => n.feature_request_id === featureRequestId ? { ...n, read: true } : n)
       )
@@ -532,12 +542,16 @@ export function useNotifications() {
   const loadNotifications = useCallback(async () => {
     // In demo mode, use mutable demo data
     if (isDemoUser()) {
-      setNotifications([...getDemoNotifications()])
+      const demoData = [...getDemoNotifications()]
+      setNotifications(demoData)
+      setUnreadCount(demoData.filter(n => !n.read).length)
       return
     }
     try {
       const { data } = await api.get<Notification[]>('/api/notifications')
-      setNotifications(Array.isArray(data) ? data : [])
+      const list = Array.isArray(data) ? data : []
+      setNotifications(list)
+      setUnreadCount(list.filter(n => !n.read).length)
     } catch {
       // Silently fail - backend may be unavailable
     }
@@ -559,9 +573,9 @@ export function useNotifications() {
 
   const loadAll = useCallback(async () => {
     setIsLoading(true)
-    await Promise.all([loadNotifications(), loadUnreadCount()])
+    await loadNotifications()
     setIsLoading(false)
-  }, [loadNotifications, loadUnreadCount])
+  }, [loadNotifications])
 
   useEffect(() => {
     loadAll()
@@ -572,7 +586,6 @@ export function useNotifications() {
     if (isDemoUser()) return
 
     pollingRef.current = window.setInterval(() => {
-      loadUnreadCount()
       loadNotifications()
     }, CACHE_TTL_MS)
 
@@ -581,34 +594,60 @@ export function useNotifications() {
         clearInterval(pollingRef.current)
       }
     }
-  }, [loadUnreadCount, loadNotifications])
+  }, [loadNotifications])
 
   const markAsRead = async (id: string) => {
-    // In demo mode, just update local state
-    if (isDemoUser()) {
-      setNotifications(prev =>
-        prev.map(n => (n.id === id ? { ...n, read: true } : n))
-      )
-      setUnreadCount(prev => Math.max(0, prev - 1))
-      return
-    }
-    await api.post(`/api/notifications/${id}/read`)
+    const notification = notifications.find(n => n.id === id)
+    if (!notification || notification.read) return
+
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, read: true } : n))
     )
     setUnreadCount(prev => Math.max(0, prev - 1))
+
+    if (isDemoUser()) {
+      const demoState = getDemoNotifications()
+      const index = demoState.findIndex(n => n.id === id)
+      if (index !== -1) {
+        demoState[index] = { ...demoState[index], read: true }
+      }
+      return
+    }
+
+    try {
+      await api.post(`/api/notifications/${id}/read`)
+    } catch {
+      setNotifications(prev =>
+        prev.map(n => (n.id === id ? { ...n, read: false } : n))
+      )
+      setUnreadCount(prev => prev + 1)
+    }
   }
 
   const markAllAsRead = async () => {
-    // In demo mode, just update local state
-    if (isDemoUser()) {
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-      setUnreadCount(0)
-      return
-    }
-    await api.post('/api/notifications/read-all')
+    const hasUnreadNotifications = notifications.some(n => !n.read)
+    if (!hasUnreadNotifications) return
+
+    const previousNotifications = notifications.map(n => ({ ...n }))
+    const previousCount = unreadCount
+
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     setUnreadCount(0)
+
+    if (isDemoUser()) {
+      const demoState = getDemoNotifications()
+      for (let i = 0; i < demoState.length; i += 1) {
+        demoState[i] = { ...demoState[i], read: true }
+      }
+      return
+    }
+
+    try {
+      await api.post('/api/notifications/read-all')
+    } catch {
+      setNotifications(previousNotifications)
+      setUnreadCount(previousCount)
+    }
   }
 
   // Refresh function with loading indicator (minimum 500ms to show animation)
