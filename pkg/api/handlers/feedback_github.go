@@ -889,7 +889,8 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 	}
 	if parentIssueNumber != nil && *parentIssueNumber > 0 {
 		if err := h.linkIssueAsSubIssue(req.Context(), repoOwner, repoName, *parentIssueNumber, result.ID, authToken); err != nil {
-			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but it could not be linked to parent issue #%d: %v", result.Number, *parentIssueNumber, err)
+			slog.Warn("[Feedback] sub-issue link failed", "issue", result.Number, "parent", *parentIssueNumber, "error", err)
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but it could not be linked to parent issue #%d", result.Number, *parentIssueNumber)
 		}
 	}
 

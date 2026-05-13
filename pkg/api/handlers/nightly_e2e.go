@@ -820,8 +820,9 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
-		return c.Status(resp.StatusCode).JSON(fiber.Map{
-			"error": fmt.Sprintf("GitHub API returned %d: %s", resp.StatusCode, string(body)),
+		slog.Error("[NightlyE2E] GitHub API error fetching run jobs", "status", resp.StatusCode, "body", string(body))
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+			"error": "upstream API error",
 		})
 	}
 
