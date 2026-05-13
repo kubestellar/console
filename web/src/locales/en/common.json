@@ -2281,7 +2281,7 @@
     },
     "yaml": {
       "copyError": "Failed to copy to clipboard",
-      "downloadError": "Failed to download YAML"
+      "downloadError": "Failed to download YAML: {{detail}}"
     },
     "ai": {
       "title": "AI Analysis",

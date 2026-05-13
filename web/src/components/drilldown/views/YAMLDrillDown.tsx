@@ -78,7 +78,7 @@ export function YAMLDrillDown({ data }: Props) {
     // of an unhandled exception that whites out the dialog.
     const result = downloadText(`${resourceName}.yaml`, yaml, 'text/yaml')
     if (!result.ok) {
-      showToast(t('drilldown.yaml.downloadError', `Failed to download YAML: ${result.error?.message || 'unknown error'}`), 'error')
+      showToast(t('drilldown.yaml.downloadError', { detail: result.error?.message || 'unknown error' }), 'error')
       return
     }
     emitDataExported('yaml_download', resourceType)
