@@ -102,11 +102,18 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
   // Card-specific status filter
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
 
-  // Step 2: Pre-filter by config and status filter (card-specific)
-  const preFiltered = (() => {
+  // Step 2a: Config-scoped base — cluster/namespace only, no status chip.
+  // Stats tiles read from here so their counts remain accurate when a filter is active.
+  const baseFiltered = (() => {
     let filtered = allApps
     if (config?.cluster) filtered = filtered.filter(a => a.cluster === config.cluster)
     if (config?.namespace) filtered = filtered.filter(a => a.namespace === config.namespace)
+    return filtered
+  })()
+
+  // Step 2b: Apply status chip on top for the list fed into useCardData.
+  const preFiltered = (() => {
+    let filtered = baseFiltered
     if (selectedFilter === 'outOfSync') filtered = filtered.filter(a => a.syncStatus === 'OutOfSync')
     else if (selectedFilter === 'unhealthy') filtered = filtered.filter(a => a.healthStatus !== 'Healthy')
     return filtered
@@ -164,12 +171,13 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
     }
   }
 
-  // Stats computed from preFiltered (reflects status counts before search/pagination)
+  // Stats always computed from baseFiltered (before selectedFilter) so tiles
+  // remain accurate navigation controls regardless of which filter is active.
   const stats = {
-    synced: preFiltered.filter(a => a.syncStatus === 'Synced').length,
-    outOfSync: preFiltered.filter(a => a.syncStatus === 'OutOfSync').length,
-    healthy: preFiltered.filter(a => a.healthStatus === 'Healthy').length,
-    unhealthy: preFiltered.filter(a => a.healthStatus !== 'Healthy').length }
+    synced: baseFiltered.filter(a => a.syncStatus === 'Synced').length,
+    outOfSync: baseFiltered.filter(a => a.syncStatus === 'OutOfSync').length,
+    healthy: baseFiltered.filter(a => a.healthStatus === 'Healthy').length,
+    unhealthy: baseFiltered.filter(a => a.healthStatus !== 'Healthy').length }
 
   if (showSkeleton) {
     return (
