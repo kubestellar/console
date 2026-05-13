@@ -588,6 +588,46 @@ describe('preflight check', () => {
     expect(MockWebSocket.lastInstance).not.toBeNull()
   })
 
+  it('blocks AI-assisted missions when the prompt requires missing optional tools', async () => {
+    const { runPreflightCheck, runToolPreflightCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runPreflightCheck).mockClear()
+    vi.mocked(runToolPreflightCheck).mockResolvedValueOnce({
+      ok: false,
+      error: {
+        code: 'MISSING_TOOLS',
+        message: 'Required tools not found: gh, helm',
+        details: { missingTools: ['gh', 'helm'] },
+      },
+      tools: [],
+    })
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => {
+      result.current.startMission({
+        ...defaultParams,
+        type: 'deploy',
+        initialPrompt: 'Use gh to open the pull request and helm to install the release.',
+        context: {
+          allowMissingLocalTools: true,
+          skipClusterPreflight: true,
+        },
+      })
+    })
+    await act(async () => { await Promise.resolve() })
+    await act(async () => { await Promise.resolve() })
+
+    const mission = result.current.missions[0]
+    expect(runToolPreflightCheck).toHaveBeenCalledWith(
+      'http://localhost:8585',
+      expect.arrayContaining(['gh', 'helm']),
+      expect.any(Function),
+    )
+    expect(mission.status).toBe('blocked')
+    expect(mission.preflightError?.message).toContain('installed locally before it can run')
+    expect(runPreflightCheck).not.toHaveBeenCalled()
+    expect(MockWebSocket.lastInstance).toBeNull()
+  })
+
   it('retryPreflight transitions blocked mission back to pending', async () => {
     // First, create a blocked mission
     const { runPreflightCheck } = await import('../lib/missions/preflightCheck')

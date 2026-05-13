@@ -4195,6 +4195,14 @@
         "agentUnreachable": "Agent is not reachable. Is kc-agent running on port 8585?",
         "requestFailedHttp": "Tool check request failed (HTTP {{status}}).",
         "requestFailedGeneric": "Failed to check required tools: {{message}}"
+      },
+      "toolWarning": {
+        "heading": "Tool availability warning",
+        "summary": "Missing local tools: {{tools}}.",
+        "suffix": "The AI-assisted flow can still continue, but local execution steps may still need these tools later."
+      },
+      "optionalToolUnavailable": {
+        "message": "This mission needs {{tools}} installed locally before it can run. Install {{tools}} and retry the mission."
       }
     },
     "detail": {

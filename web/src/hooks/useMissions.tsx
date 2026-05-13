@@ -73,6 +73,7 @@ import {
   KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
   buildKagentiDiscoveryErrorMessage,
 } from './useMissions.helpers'
+import i18n from '../lib/i18n'
 
 interface MissionContextValue {
   missions: Mission[]
@@ -153,8 +154,13 @@ function generateRequestId(prefix = 'claude'): string {
   return `${prefix}-${Date.now()}-${requestIdCounter}-${crypto.randomUUID().replace(/-/g, '').slice(0, 6)}`
 }
 
-const MISSING_TOOL_WARNING_HEADING = '**Tool availability warning**'
-const MISSING_TOOL_WARNING_SUFFIX = 'The AI-assisted flow can still continue, but local execution steps may still need these tools later.'
+const OPTIONAL_MISSION_TOOL_PATTERNS = {
+  gh: /\bgh\b|\bgithub\s+cli\b/i,
+  helm: /\bhelm\b/i,
+} as const
+const MISSION_CONTEXT_TOOL_KEYS = ['requiredLocalTools', 'requiredTools', 'requiredMissionTools'] as const
+const MISSING_TOOL_WARNING_HEADING = `**${i18n.t('missions.preflight.toolWarning.heading')}**`
+const MISSING_TOOL_WARNING_SUFFIX = i18n.t('missions.preflight.toolWarning.suffix')
 
 function shouldAllowMissingToolWarning(context?: Record<string, unknown>): boolean {
   return context?.allowMissingLocalTools === true
@@ -164,15 +170,66 @@ function shouldSkipClusterPreflight(context?: Record<string, unknown>): boolean 
   return context?.skipClusterPreflight === true
 }
 
+function getMissingTools(error: PreflightError, fallbackTools: string[]): string[] {
+  const missingTools = error.details?.missingTools
+  return Array.isArray(missingTools) && missingTools.every(tool => typeof tool === 'string')
+    ? missingTools
+    : fallbackTools
+}
+
+function getMissionContextTools(context?: Record<string, unknown>): string[] {
+  return MISSION_CONTEXT_TOOL_KEYS.flatMap((key) => {
+    const value = context?.[key]
+    return Array.isArray(value)
+      ? value.filter((tool): tool is string => typeof tool === 'string')
+      : []
+  })
+}
+
+function resolveMissionToolRequirements({
+  title,
+  description,
+  prompt,
+  type,
+  context,
+}: {
+  title?: string
+  description?: string
+  prompt: string
+  type?: string
+  context?: Record<string, unknown>
+}): { requiredTools: string[]; missionSpecificOptionalTools: string[] } {
+  const searchableText = `${title || ''}\n${description || ''}\n${prompt}`
+  const missionSpecificOptionalTools = Object.entries(OPTIONAL_MISSION_TOOL_PATTERNS)
+    .filter(([, pattern]) => pattern.test(searchableText))
+    .map(([tool]) => tool)
+  const requiredTools = [...new Set([
+    ...resolveRequiredTools(type),
+    ...getMissionContextTools(context),
+    ...missionSpecificOptionalTools,
+  ])]
+
+  return { requiredTools, missionSpecificOptionalTools }
+}
+
 function buildMissingToolWarning(error: PreflightError): string {
-  const missingTools = Array.isArray(error.details?.missingTools)
-    ? (error.details.missingTools as string[])
-    : []
+  const missingTools = getMissingTools(error, [])
   const toolSummary = missingTools.length > 0
-    ? `Missing local tools: ${missingTools.join(', ')}.`
+    ? i18n.t('missions.preflight.toolWarning.summary', { tools: missingTools.join(', ') })
     : error.message
 
   return `${MISSING_TOOL_WARNING_HEADING}\n\n${toolSummary}\n\n${MISSING_TOOL_WARNING_SUFFIX}`
+}
+
+function buildMissionToolUnavailableError(error: PreflightError, missingTools: string[]): PreflightError {
+  return {
+    ...error,
+    message: i18n.t('missions.preflight.optionalToolUnavailable.message', { tools: missingTools.join(', ') }),
+    details: {
+      ...(error.details || {}),
+      missingTools,
+    },
+  }
 }
 
 export function MissionProvider({ children }: { children: ReactNode }) {
@@ -1887,6 +1944,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           errorContent = `**Mission Timed Out**\n\n${payload.message}\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
         }
 
+
         // Detect authentication / token expiry errors (HTTP 401/403)
         const isAuthError =
           combinedErrorText.includes('401') ||
@@ -1951,19 +2009,33 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
   const preflightAndExecute = (
     missionId: string,
     enhancedPrompt: string,
-    params: { cluster?: string; context?: Record<string, unknown>; type?: string },
+    params: { title?: string; description?: string; initialPrompt?: string; cluster?: string; context?: Record<string, unknown>; type?: string },
   ) => {
     // --- Phase 1: Tool availability check (#11077) ---
-    const requiredTools = resolveRequiredTools(params.type)
+    const { requiredTools, missionSpecificOptionalTools } = resolveMissionToolRequirements({
+      title: params.title,
+      description: params.description,
+      prompt: params.initialPrompt || enhancedPrompt,
+      type: params.type,
+      context: params.context,
+    })
     const toolCheckPromise = runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
 
     toolCheckPromise.then(toolResult => {
+      const missingTools = toolResult.error
+        ? getMissingTools(toolResult.error, requiredTools)
+        : []
+      const missingMissionSpecificOptionalTools = missingTools.filter(tool => missionSpecificOptionalTools.includes(tool))
+      const preflightToolError = missingMissionSpecificOptionalTools.length > 0 && toolResult.error
+        ? buildMissionToolUnavailableError(toolResult.error, missingMissionSpecificOptionalTools)
+        : toolResult.error
       const allowMissingToolWarning =
         !toolResult.ok &&
-        toolResult.error?.code === 'MISSING_TOOLS' &&
-        shouldAllowMissingToolWarning(params.context)
+        preflightToolError?.code === 'MISSING_TOOLS' &&
+        shouldAllowMissingToolWarning(params.context) &&
+        missingMissionSpecificOptionalTools.length === 0
 
-      if (!toolResult.ok && toolResult.error && !allowMissingToolWarning) {
+      if (!toolResult.ok && preflightToolError && !allowMissingToolWarning) {
         // Block the mission — the PreflightFailure component renders the
         // structured error card; no duplicate system message needed (#13464).
         setMissions(prev => prev.map(m =>
@@ -1971,13 +2043,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             ...m,
             status: 'blocked' as MissionStatus,
             currentStep: 'Missing required tools',
-            preflightError: toolResult.error,
+            preflightError: preflightToolError,
           } : m
         ))
         return
       }
 
-      if (allowMissingToolWarning && toolResult.error) {
+      if (allowMissingToolWarning && preflightToolError) {
         setMissions(prev => prev.map(m =>
           m.id === missionId ? {
             ...m,
@@ -1987,7 +2059,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
               {
                 id: generateMessageId('tool-preflight-warning'),
                 role: 'system' as const,
-                content: buildMissingToolWarning(toolResult.error!),
+                content: buildMissingToolWarning(preflightToolError),
                 timestamp: new Date(),
               },
             ],
@@ -2447,27 +2519,42 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     void (async () => {
       try {
         // --- Phase 1: Tool availability check (matches preflightAndExecute) ---
-        const requiredTools = resolveRequiredTools(mission.type)
+        const lastUserMsg = getMissionMessages(mission.messages).find(m => m.role === 'user')
+        const { requiredTools, missionSpecificOptionalTools } = resolveMissionToolRequirements({
+          title: mission.title,
+          description: mission.description,
+          prompt: lastUserMsg?.content || mission.description,
+          type: mission.type,
+          context: mission.context,
+        })
         const toolResult = await runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
+        const missingTools = toolResult.error
+          ? getMissingTools(toolResult.error, requiredTools)
+          : []
+        const missingMissionSpecificOptionalTools = missingTools.filter(tool => missionSpecificOptionalTools.includes(tool))
+        const preflightToolError = missingMissionSpecificOptionalTools.length > 0 && toolResult.error
+          ? buildMissionToolUnavailableError(toolResult.error, missingMissionSpecificOptionalTools)
+          : toolResult.error
         const allowMissingToolWarning =
           !toolResult.ok &&
-          toolResult.error?.code === 'MISSING_TOOLS' &&
-          shouldAllowMissingToolWarning(mission.context)
+          preflightToolError?.code === 'MISSING_TOOLS' &&
+          shouldAllowMissingToolWarning(mission.context) &&
+          missingMissionSpecificOptionalTools.length === 0
 
-        if (!toolResult.ok && toolResult.error && !allowMissingToolWarning) {
+        if (!toolResult.ok && preflightToolError && !allowMissingToolWarning) {
           // Re-block — PreflightFailure component handles display (#13464)
           setMissions(prev => prev.map(m =>
             m.id === missionId ? {
               ...m,
               status: 'blocked' as MissionStatus,
               currentStep: 'Missing required tools',
-              preflightError: toolResult.error,
+              preflightError: preflightToolError,
             } : m
           ))
           return
         }
 
-        if (allowMissingToolWarning && toolResult.error) {
+        if (allowMissingToolWarning && preflightToolError) {
           setMissions(prev => prev.map(m =>
             m.id === missionId ? {
               ...m,
@@ -2477,7 +2564,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
                 {
                   id: generateMessageId('tool-preflight-warning-retry'),
                   role: 'system' as const,
-                  content: buildMissingToolWarning(toolResult.error!),
+                  content: buildMissingToolWarning(preflightToolError),
                   timestamp: new Date(),
                 },
               ],
@@ -2535,7 +2622,6 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         // only prepended cluster context, losing dry-run instructions,
         // resolution context, and non-interactive handling from the original
         // enriched prompt.
-        const lastUserMsg = getMissionMessages(mission.messages).find(m => m.role === 'user')
         const retryParams: StartMissionParams = {
           title: mission.title,
           description: mission.description,
