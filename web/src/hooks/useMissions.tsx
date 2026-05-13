@@ -8,7 +8,7 @@ import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { useLocalAgent } from './useLocalAgent'
 import { agentFetch } from './mcp/agentFetch'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
-import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionToolMissing, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory'
 import { SECONDS_PER_DAY } from '../lib/constants/time'
@@ -1858,20 +1858,58 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         streamSplitCounter.current.delete(missionId)
         toolsInFlight.current.delete(missionId)
         lastStreamTimestamp.current.delete(missionId)
-        emitMissionError(m.type, payload.code || 'unknown', payload.message)
+
+        // Pattern-match common error types for classification
+        const combinedErrorText = `${payload.code || ''} ${payload.message || ''}`.toLowerCase()
+
+        // Detect tool-missing errors (helm or gh not installed)
+        // Patterns: "helm: not found", "gh: command not found", "executable file not found", etc.
+        const isToolMissingError =
+          (combinedErrorText.includes('helm') && 
+            (combinedErrorText.includes('not found') || 
+             combinedErrorText.includes('command not found') ||
+             combinedErrorText.includes('executable file not found') ||
+             combinedErrorText.includes('no such file'))) ||
+          (combinedErrorText.includes('gh') && 
+            (combinedErrorText.includes('not found') || 
+             combinedErrorText.includes('command not found') ||
+             combinedErrorText.includes('executable file not found') ||
+             combinedErrorText.includes('no such file')))
+
+        // Extract which tool is missing
+        let missingTool = 'unknown'
+        if (isToolMissingError) {
+          if (combinedErrorText.includes('helm')) {
+            missingTool = 'helm'
+          } else if (combinedErrorText.includes('gh')) {
+            missingTool = 'gh'
+          }
+        }
+
+        // Emit specific event for tool-missing errors, generic event otherwise
+        if (isToolMissingError) {
+          emitMissionToolMissing(m.type, missingTool, payload.message)
+        } else {
+          emitMissionError(m.type, payload.code || 'unknown', payload.message)
+        }
 
         // Create helpful error message based on error code
         let errorContent = payload.message || 'Unknown error'
-        if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
+        if (isToolMissingError) {
+          const toolName = missingTool === 'helm' ? 'Helm' : missingTool === 'gh' ? 'GitHub CLI (gh)' : missingTool
+          const installInstructions = missingTool === 'helm' 
+            ? 'Visit https://helm.sh/docs/intro/install/ for installation instructions.'
+            : missingTool === 'gh'
+            ? 'Visit https://cli.github.com/ for installation instructions.'
+            : 'Check the tool documentation for installation instructions.'
+          errorContent = `**Mission requires ${toolName} which is not installed**\n\nThis mission attempted to use \`${missingTool}\` but it was not found on your system.\n\n**To fix:**\n1. Install ${toolName} on your machine\n2. ${installInstructions}\n3. Verify installation with \`${missingTool} version\`\n4. Retry the mission\n\n**Note:** ${toolName} is an optional tool for missions. Most missions work without it.`
+        } else if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
           errorContent = `**Mission interrupted — agent not available**\n\nThe AI agent was disconnected or is not reachable. This often happens after a page refresh.\n\n**To fix:**\n1. Make sure your agent (e.g., Claude Code, bob) is running\n2. Select the agent from the top navbar\n3. Click **Retry Mission** below to rerun your request`
         } else if (payload.code === 'authentication_error') {
           errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Restart kc-agent to refresh authentication, or run `gh auth status` in your terminal to verify your credentials. You can also update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
         } else if (payload.code === 'mission_timeout') {
           errorContent = `**Mission Timed Out**\n\n${payload.message}\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
         }
-
-        // Pattern-match common API provider errors for user-friendly messages
-        const combinedErrorText = `${payload.code || ''} ${payload.message || ''}`.toLowerCase()
 
         // Detect authentication / token expiry errors (HTTP 401/403)
         const isAuthError =
