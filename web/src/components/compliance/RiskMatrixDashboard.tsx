@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo, useCallback } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskMatrixDashboardConfig } from '../../config/dashboards/risk-matrix'
 import {
@@ -78,6 +78,7 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
   const [error, setError] = useState<string | null>(null)
   const [selectedCell, setSelectedCell] = useState<{ l: number; i: number } | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -89,17 +90,24 @@ export const RiskMatrixDashboardContent = memo(function RiskMatrixDashboardConte
         authFetch('/api/v1/compliance/erm/risk-matrix/summary'),
       ])
       if (!rRes.ok || !hRes.ok || !sRes.ok) throw new Error('Failed to fetch risk matrix data')
+      if (cancelledRef.current) return
       setRisks(await rRes.json())
       setHeatmap(await hRes.json())
       setSummary(await sRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   useEffect(() => {
     onStateChange?.({ loading, error })

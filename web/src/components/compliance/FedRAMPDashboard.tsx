@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo, useCallback } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { fedrampDashboardConfig } from '../../config/dashboards/fedramp'
 import {
@@ -100,6 +100,7 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
   const [activeTab, setActiveTab] = useState<'controls' | 'poams' | 'readiness'>('controls')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -111,17 +112,24 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
         authFetch('/api/compliance/fedramp/score'),
       ])
       if (!cRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch FedRAMP data')
+      if (cancelledRef.current) return
       setControls(await cRes.json())
       setPOAMs(await pRes.json())
       setScore(await sRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   const filteredControls = useMemo(() => {
     if (statusFilter === 'all') return controls

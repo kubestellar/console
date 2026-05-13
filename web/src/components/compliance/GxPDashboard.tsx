@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { gxpDashboardConfig } from '../../config/dashboards/gxp'
@@ -54,6 +54,7 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'audit' | 'signatures'>('overview')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -68,6 +69,7 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
       if (!smRes.ok || !recRes.ok || !sigRes.ok || !chainRes.ok) throw new Error('Failed to load GxP data')
       const smData = await smRes.json()
       // Guard against non-object responses (e.g. catch-all mock returning [])
+      if (cancelledRef.current) return
       setSummary(smData && typeof smData === 'object' && !Array.isArray(smData) && 'config' in smData ? smData : null)
       const recData = await recRes.json()
       setRecords(Array.isArray(recData) ? recData : [])
@@ -76,13 +78,19 @@ export const GxPDashboardContent = memo(function GxPDashboardContent() {
       const chainData = await chainRes.json()
       setChainStatus(chainData && typeof chainData === 'object' && !Array.isArray(chainData) ? chainData : null)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load GxP data')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [])
 
   const sigByRecord = useMemo(() => {
     const map = new Map<string, Signature[]>()

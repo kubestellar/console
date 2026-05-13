@@ -4,7 +4,7 @@
  * Build provenance level indicators (L1–L4), attestation verification,
  * source integrity checks, and build reproducibility.
  */
-import { useState, useEffect, memo, useCallback } from 'react'
+import { useState, useEffect, memo, useCallback, useRef } from 'react'
 import {
   GitCommitHorizontal, CheckCircle2, Loader2, AlertTriangle,
   XCircle, Shield, Lock
@@ -190,6 +190,7 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'attestations' | 'provenance'>('attestations')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -203,6 +204,7 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
 
       const workloadsData = await workloadsResponse.json()
       const workloads = Array.isArray(workloadsData) ? workloadsData as SLSAWorkload[] : []
+      if (cancelledRef.current) return
       setAttestations(buildAttestations(workloads))
       setProvenance(buildProvenance(workloads))
 
@@ -211,13 +213,19 @@ export const SLSADashboardContent = memo(function SLSADashboardContent() {
         ? buildSummary(summaryData as SLSABackendSummary)
         : null)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

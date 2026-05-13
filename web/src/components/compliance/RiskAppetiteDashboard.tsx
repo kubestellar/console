@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useCallback } from 'react'
+import { useState, useEffect, memo, useCallback, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskAppetiteDashboardConfig } from '../../config/dashboards/risk-appetite'
 import {
@@ -124,6 +124,7 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'appetite' | 'kris' | 'trends'>('appetite')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -135,17 +136,24 @@ export const RiskAppetiteDashboardContent = memo(function RiskAppetiteDashboardC
         authFetch('/api/v1/compliance/erm/risk-appetite/summary'),
       ])
       if (!tRes.ok || !kRes.ok || !sRes.ok) throw new Error('Failed to fetch risk appetite data')
+      if (cancelledRef.current) return
       setThresholds(await tRes.json())
       setKRIs(await kRes.json())
       setSummary(await sRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   useEffect(() => {
     onStateChange?.({ loading, error })

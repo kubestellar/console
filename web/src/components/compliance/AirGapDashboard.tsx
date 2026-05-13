@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, memo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { airgapDashboardConfig } from '../../config/dashboards/airgap'
 import {
@@ -75,6 +75,7 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
   const [activeTab, setActiveTab] = useState<'requirements' | 'clusters' | 'summary'>('requirements')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -86,17 +87,24 @@ export const AirGapDashboardContent = memo(function AirGapDashboardContent() {
         authFetch('/api/compliance/airgap/summary'),
       ])
       if (!rRes.ok || !cRes.ok || !sRes.ok) throw new Error('Failed to fetch air-gap data')
+      if (cancelledRef.current) return
       setRequirements(await rRes.json())
       setClusters(await cRes.json())
       setSummary(await sRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   const filteredRequirements = useMemo(() => {
     if (categoryFilter === 'all') return requirements

@@ -1,5 +1,4 @@
-import React, { memo } from 'react'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { memo, useState, useEffect, useCallback, useRef } from 'react'
 import {
   CheckCircle2, Loader2, Clock,
   XCircle, ArrowRight, Play, Shield

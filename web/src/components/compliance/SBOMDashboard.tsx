@@ -4,7 +4,7 @@
  * Package inventory, vulnerability scanning, license compliance,
  * and dependency tree visualization.
  */
-import { useState, useEffect, memo, useCallback } from 'react'
+import { useState, useEffect, memo, useCallback, useRef } from 'react'
 import {
   Package, CheckCircle2, Loader2, AlertTriangle,
   XCircle, Shield, FileText
@@ -200,6 +200,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'packages' | 'vulnerabilities'>('packages')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -214,6 +215,7 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
       const documentsData = await documentsResponse.json()
       const documents = Array.isArray(documentsData) ? documentsData as SBOMDocument[] : []
       const nextPackages = buildPackages(documents)
+      if (cancelledRef.current) return
       setPackages(nextPackages)
       setVulnerabilities(buildVulnerabilities(nextPackages))
 
@@ -222,13 +224,19 @@ export const SBOMDashboardContent = memo(function SBOMDashboardContent() {
         ? buildSummary(summaryData as SBOMBackendSummary, nextPackages)
         : null)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

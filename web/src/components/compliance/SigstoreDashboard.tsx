@@ -4,7 +4,7 @@
  * Cosign verification results, transparency log entries,
  * and trust chain visualization.
  */
-import { useState, useEffect, memo, useCallback } from 'react'
+import { useState, useEffect, memo, useCallback, useRef } from 'react'
 import {
   BadgeCheck, CheckCircle2, Loader2, AlertTriangle,
   XCircle, ShieldCheck, FileKey
@@ -173,6 +173,7 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'signatures' | 'verifications'>('signatures')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -189,6 +190,7 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
       const policiesData = await policiesResponse.json()
       const images = Array.isArray(imagesData) ? imagesData as SigningImage[] : []
       const policies = Array.isArray(policiesData) ? policiesData as SigningPolicy[] : []
+      if (cancelledRef.current) return
       setSignatures(buildSignatures(images))
       setVerifications(buildVerifications(policies))
 
@@ -197,13 +199,19 @@ export const SigstoreDashboardContent = memo(function SigstoreDashboardContent()
         ? buildSummary(summaryData as SigningSummary, policies)
         : null)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

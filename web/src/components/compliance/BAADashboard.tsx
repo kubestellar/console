@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { baaDashboardConfig } from '../../config/dashboards/baa'
@@ -46,6 +46,7 @@ export const BAADashboardContent = memo(function BAADashboardContent() {
   const [activeTab, setActiveTab] = useState<'agreements' | 'alerts'>('agreements')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -57,17 +58,24 @@ export const BAADashboardContent = memo(function BAADashboardContent() {
         authFetch('/api/compliance/baa/summary'),
       ])
       if (!agRes.ok || !alRes.ok || !smRes.ok) throw new Error('Failed to load BAA data')
+      if (cancelledRef.current) return
       setAgreements(await agRes.json())
       setAlerts(await alRes.json())
       setSummary(await smRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load BAA data')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [])
 
   const filtered = useMemo(() =>
     statusFilter === 'all' ? agreements : agreements.filter(a => a.status === statusFilter),

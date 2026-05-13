@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo, useCallback } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { stigDashboardConfig } from '../../config/dashboards/stig'
 import {
@@ -79,6 +79,7 @@ export const STIGDashboardContent = memo(function STIGDashboardContent() {
   const [activeTab, setActiveTab] = useState<'findings' | 'benchmarks' | 'summary'>('findings')
   const [severityFilter, setSeverityFilter] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -90,17 +91,24 @@ export const STIGDashboardContent = memo(function STIGDashboardContent() {
         authFetch('/api/compliance/stig/summary'),
       ])
       if (!bRes.ok || !fRes.ok || !sRes.ok) throw new Error('Failed to fetch STIG data')
+      if (cancelledRef.current) return
       setBenchmarks(await bRes.json())
       setFindings(await fRes.json())
       setSummary(await sRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   const filteredFindings = useMemo(() => {
     if (severityFilter === 'all') return findings

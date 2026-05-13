@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react'
+import { useState, useEffect, memo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { sessionManagementDashboardConfig } from '../../config/dashboards/session-management'
@@ -44,6 +44,7 @@ export const SessionDashboardContent = memo(function SessionDashboardContent() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'sessions' | 'policies'>('sessions')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -55,17 +56,24 @@ export const SessionDashboardContent = memo(function SessionDashboardContent() {
         authFetch('/api/identity/sessions/policies'),
       ])
       if (!smRes.ok || !sRes.ok || !pRes.ok) throw new Error('Failed to load session data')
+      if (cancelledRef.current) return
       setSummary(await smRes.json())
       setSessions(await sRes.json())
       setPolicies(await pRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load session data')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
