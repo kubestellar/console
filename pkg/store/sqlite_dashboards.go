@@ -42,7 +42,7 @@ func (s *SQLiteStore) GetUserDashboards(ctx context.Context, userID uuid.UUID, l
 	}
 	defer rows.Close()
 
-	var dashboards []models.Dashboard
+	dashboards := make([]models.Dashboard, 0)
 	for rows.Next() {
 		d, err := s.scanDashboardRow(ctx, rows)
 		if err != nil {
@@ -431,7 +431,7 @@ func (s *SQLiteStore) GetUserCardHistory(ctx context.Context, userID uuid.UUID, 
 	}
 	defer rows.Close()
 
-	var history []models.CardHistory
+	history := make([]models.CardHistory, 0)
 	for rows.Next() {
 		var h models.CardHistory
 		var idStr, userIDStr string
@@ -642,7 +642,7 @@ func (s *SQLiteStore) GetRecentEvents(ctx context.Context, userID uuid.UUID, sin
 	}
 	defer rows.Close()
 
-	var events []models.UserEvent
+	events := make([]models.UserEvent, 0)
 	for rows.Next() {
 		var e models.UserEvent
 		var idStr, userIDStr string

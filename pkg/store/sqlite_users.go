@@ -233,7 +233,7 @@ func (s *SQLiteStore) GetOnboardingResponses(ctx context.Context, userID uuid.UU
 	}
 	defer rows.Close()
 
-	var responses []models.OnboardingResponse
+	responses := make([]models.OnboardingResponse, 0)
 	for rows.Next() {
 		var r models.OnboardingResponse
 		var idStr, userIDStr string
