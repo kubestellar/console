@@ -5,7 +5,7 @@
  * flags deny-listed licenses (GPL, AGPL, SSPL, etc.) and warn-listed ones
  * (LGPL, MPL), and provides a fleet-wide license inventory.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
@@ -70,6 +70,7 @@ export default function LicenseComplianceDashboard() {
   const [activeTab, setActiveTab] = useState<'violations' | 'inventory' | 'categories'>('violations')
   const [filterRisk, setFilterRisk] = useState<LicenseRisk | null>('denied')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const mountedRef = useRef(true)
 
   const fetchData = async () => {
     setLoading(true)
@@ -81,20 +82,27 @@ export default function LicenseComplianceDashboard() {
         authFetch('/api/supply-chain/licenses/summary'),
       ])
       if (!pkgRes.ok || !catRes.ok || !sumRes.ok) throw new Error('Failed to load license data')
+      if (!mountedRef.current) return
       setPackages(await pkgRes.json())
       setCategories(await catRes.json())
       setSummary(await sumRes.json())
     } catch (e: unknown) {
+      if (!mountedRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load license data')
     } finally {
+      if (!mountedRef.current) return
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    mountedRef.current = true
     fetchData()
     const id = setInterval(fetchData, LICENSE_REFRESH_MS)
-    return () => clearInterval(id)
+    return () => {
+      mountedRef.current = false
+      clearInterval(id)
+    }
   }, [])
 
   if (loading) return (

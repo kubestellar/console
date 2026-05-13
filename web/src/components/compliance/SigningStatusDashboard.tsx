@@ -5,7 +5,7 @@
  * Surfaces unsigned images, failed verifications, and policy violations so
  * operators can enforce supply chain integrity controls.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   BadgeCheck, XCircle, AlertTriangle, Loader2,
@@ -68,6 +68,7 @@ export default function SigningStatusDashboard() {
   const [activeTab, setActiveTab] = useState<'images' | 'policies'>('images')
   const [filterUnsigned, setFilterUnsigned] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const mountedRef = useRef(true)
 
   const fetchData = async () => {
     setLoading(true)
@@ -79,20 +80,27 @@ export default function SigningStatusDashboard() {
         authFetch('/api/supply-chain/signing/summary'),
       ])
       if (!imgRes.ok || !polRes.ok || !sumRes.ok) throw new Error('Failed to load signing data')
+      if (!mountedRef.current) return
       setImages(await imgRes.json())
       setPolicies(await polRes.json())
       setSummary(await sumRes.json())
     } catch (e: unknown) {
+      if (!mountedRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load signing data')
     } finally {
+      if (!mountedRef.current) return
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    mountedRef.current = true
     fetchData()
     const id = setInterval(fetchData, REFRESH_INTERVAL_MS)
-    return () => clearInterval(id)
+    return () => {
+      mountedRef.current = false
+      clearInterval(id)
+    }
   }, [])
 
   if (loading) return (
