@@ -391,8 +391,9 @@ func TestRunMissionMarksFailureWhenExecutorErrors(t *testing.T) {
 	if got.Result != "failed" {
 		t.Fatalf("result = %q, want failed", got.Result)
 	}
-	if got.Summary != executorErr.Error() {
-		t.Fatalf("summary = %q, want %q", got.Summary, executorErr.Error())
+	const wantSummary = "mission execution failed"
+	if got.Summary != wantSummary {
+		t.Fatalf("summary = %q, want %q", got.Summary, wantSummary)
 	}
 	if len(h.missions["orbit-failure"].History) != 1 || h.missions["orbit-failure"].History[0].Result != "failed" {
 		t.Fatalf("history = %+v, want failed result", h.missions["orbit-failure"].History)
