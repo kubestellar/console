@@ -233,6 +233,7 @@ export function useCertManager() {
 
   const refetch = useCallback(async (silent = false) => {
     if (clusters.length === 0) {
+      setIsDemoData(false)
       setIsLoading(false)
       return
     }
@@ -240,6 +241,7 @@ export function useCertManager() {
     // Skip if a fetch is already in progress to prevent queue flooding
     if (fetchInProgress.current) return
     fetchInProgress.current = true
+    setIsDemoData(false)
 
     if (!silent) {
       setIsRefreshing(true)
@@ -398,7 +400,8 @@ export function useCertManager() {
       return
     }
 
-    // Live mode: reset and fetch from clusters
+    // Live mode: clear any stale demo badge state and fetch from clusters
+    setIsDemoData(false)
     if (clusters.length > 0) {
       refetch()
     } else {
