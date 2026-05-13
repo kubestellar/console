@@ -996,8 +996,8 @@ export function PolicyViolations({ config: _config }: CardConfig) {
 
 export function ComplianceScore({ config: _config }: CardConfig) {
   const { t } = useTranslation(['common', 'cards'])
-  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isDemoData: ksDemoData, installed: ksInstalled, hasErrors: ksHasErrors, clustersChecked: ksChecked, totalClusters: ksTotal, unavailableReason: ksUnavailable } = useKubescape()
-  const { statuses: kyvernoStatuses, isLoading: kyLoading, isDemoData: kyDemoData, installed: kyInstalled, hasErrors: kyHasErrors, clustersChecked: kyChecked, totalClusters: kyTotal, unavailableReason: kyUnavailable } = useKyverno()
+  const { statuses: kubescapeStatuses, aggregated: kubescapeAgg, isLoading: ksLoading, isRefreshing: ksRefreshing, isDemoData: ksDemoData, installed: ksInstalled, hasErrors: ksHasErrors, clustersChecked: ksChecked, totalClusters: ksTotal, unavailableReason: ksUnavailable } = useKubescape()
+  const { statuses: kyvernoStatuses, isLoading: kyLoading, isRefreshing: kyRefreshing, isDemoData: kyDemoData, installed: kyInstalled, hasErrors: kyHasErrors, clustersChecked: kyChecked, totalClusters: kyTotal, unavailableReason: kyUnavailable } = useKyverno()
   const { selectedClusters } = useGlobalFilters()
   const { startMission } = useMissions()
   const [showBreakdown, setShowBreakdown] = useState(false)
@@ -1049,7 +1049,7 @@ export function ComplianceScore({ config: _config }: CardConfig) {
   // #6219: card is failed when both Kubescape and Kyverno had errors
   // (single-tool failure still produces a meaningful partial score).
   const scoreFailed = ksHasErrors && kyHasErrors
-  useCardLoadingState({ isLoading: isLoading && !scoreHasData, hasAnyData: scoreHasData, isDemoData, isFailed: scoreFailed })
+  useCardLoadingState({ isLoading: isLoading && !scoreHasData, isRefreshing: ksRefreshing || kyRefreshing, hasAnyData: scoreHasData, isDemoData, isFailed: scoreFailed })
 
   // (#11747) In-cluster mode: show informative unavailable state
   if (ksUnavailable && kyUnavailable) {
