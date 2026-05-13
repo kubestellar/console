@@ -519,8 +519,9 @@ export default async function handler(request: Request): Promise<Response> {
           await addSubIssue(installCred, repoSlug, issueRequest.parentIssueNumber, data.id);
         }
       } catch (err) {
-        console.error("[feedback-app] Sub-issue linking failed:", err instanceof Error ? err.message : err);
-        warning = `Issue #${data.number} was created, but it could not be linked to parent issue #${issueRequest.parentIssueNumber}.`;
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[feedback-app] Sub-issue linking failed:", msg);
+        warning = `Issue #${data.number} was created, but it could not be linked to parent issue #${issueRequest.parentIssueNumber}: ${msg}`;
       }
     }
     return jsonResponse(request, 200, {

@@ -779,7 +779,7 @@ func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, iss
 				"issue", issueNumber, "remaining", len(screenshots)-i, "reason", ctx.Err())
 			break
 		}
-		
+
 		// Upload the screenshot to GitHub and get the permanent URL
 		downloadURL, uploadErr := h.uploadScreenshotToGitHub(repoOwner, repoName, requestID, i, dataURI)
 		if uploadErr != nil {
@@ -788,7 +788,7 @@ func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, iss
 			failed++
 			continue
 		}
-		
+
 		// Post as a proper markdown image instead of base64 code block
 		commentBody := fmt.Sprintf("![Screenshot %d](%s)", i+1, downloadURL)
 		if commentErr := h.addIssueComment(ctx, issueNumber, commentBody, repoName); commentErr != nil {
@@ -888,9 +888,19 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 		HTMLURL: result.HTMLURL,
 	}
 	if parentIssueNumber != nil && *parentIssueNumber > 0 {
+		canLinkParent, err := h.canLinkParentIssue(req.Context(), repoOwner, repoName, clientAuth)
+		if err != nil {
+			slog.Warn("[Feedback] parent issue capability check failed", "issue", result.Number, "parent", *parentIssueNumber, "error", err)
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but the reporter's repository permissions could not be verified for parent issue #%d: %v", result.Number, *parentIssueNumber, err)
+			return createdIssue, nil
+		}
+		if !canLinkParent {
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but parent issue linking requires push access to %s/%s.", result.Number, repoOwner, repoName)
+			return createdIssue, nil
+		}
 		if err := h.linkIssueAsSubIssue(req.Context(), repoOwner, repoName, *parentIssueNumber, result.ID, authToken); err != nil {
 			slog.Warn("[Feedback] sub-issue link failed", "issue", result.Number, "parent", *parentIssueNumber, "error", err)
-			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but it could not be linked to parent issue #%d", result.Number, *parentIssueNumber)
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but it could not be linked to parent issue #%d: %v", result.Number, *parentIssueNumber, err)
 		}
 	}
 

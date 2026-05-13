@@ -138,6 +138,38 @@ func TestHandleDeploymentStatus_Success(t *testing.T) {
 	mockStore.AssertExpectations(t)
 }
 
+func TestPostGitHubIssue_RequiresPushAccessForSubIssueLinking(t *testing.T) {
+	t.Setenv("GITHUB_URL", "https://ghe.example.com")
+
+	handler := NewFeedbackHandler(new(test.MockStore), FeedbackConfig{GitHubToken: "token"})
+	handler.appTokenProvider = nil
+	handler.httpClient = &http.Client{Transport: RoundTripFunc(func(req *http.Request) *http.Response {
+		switch req.URL.String() {
+		case "https://ghe.example.com/api/v3/repos/kubestellar/console/issues":
+			return &http.Response{
+				StatusCode: http.StatusCreated,
+				Body:       io.NopCloser(strings.NewReader(`{"id":42,"number":7,"html_url":"https://github.com/kubestellar/console/issues/7"}`)),
+				Header:     make(http.Header),
+			}
+		case "https://ghe.example.com/api/v3/repos/kubestellar/console":
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"permissions":{"push":false}}`)),
+				Header:     make(http.Header),
+			}
+		default:
+			t.Fatalf("unexpected request: %s", req.URL.String())
+			return nil
+		}
+	})}
+
+	parentIssueNumber := 123
+	createdIssue, err := handler.postGitHubIssue(context.Background(), "kubestellar", "console", "Bug title", "Bug body", nil, &parentIssueNumber, "user-client-token")
+	assert.NoError(t, err)
+	assert.Equal(t, 7, createdIssue.Number)
+	assert.Contains(t, createdIssue.Warning, "requires push access")
+}
+
 func TestPostGitHubIssue_SubIssueLinkFailureReturnsWarning(t *testing.T) {
 	t.Setenv("GITHUB_URL", "https://ghe.example.com")
 
@@ -149,6 +181,12 @@ func TestPostGitHubIssue_SubIssueLinkFailureReturnsWarning(t *testing.T) {
 			return &http.Response{
 				StatusCode: http.StatusCreated,
 				Body:       io.NopCloser(strings.NewReader(`{"id":42,"number":7,"html_url":"https://github.com/kubestellar/console/issues/7"}`)),
+				Header:     make(http.Header),
+			}
+		case "https://ghe.example.com/api/v3/repos/kubestellar/console":
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"permissions":{"push":true}}`)),
 				Header:     make(http.Header),
 			}
 		case "https://ghe.example.com/api/v3/repos/kubestellar/console/issues/123/sub_issues":
@@ -167,7 +205,7 @@ func TestPostGitHubIssue_SubIssueLinkFailureReturnsWarning(t *testing.T) {
 	})}
 
 	parentIssueNumber := 123
-	createdIssue, err := handler.postGitHubIssue(context.Background(), "kubestellar", "console", "Bug title", "Bug body", nil, &parentIssueNumber, "")
+	createdIssue, err := handler.postGitHubIssue(context.Background(), "kubestellar", "console", "Bug title", "Bug body", nil, &parentIssueNumber, "user-client-token")
 	assert.NoError(t, err)
 	assert.Equal(t, 7, createdIssue.Number)
 	assert.Contains(t, createdIssue.Warning, "could not be linked to parent issue #123")
