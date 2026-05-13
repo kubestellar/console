@@ -69,12 +69,28 @@ const VALUE_COLORS: Record<string, string> = {
   privileged: 'text-red-400',
   root: 'text-orange-400' }
 
+/** Default denominator for percentage/progress visualizations. */
+const DEFAULT_PROGRESS_MAX = 100
+
 /** Stat block IDs that represent percentage-type values (0-100) */
 const PERCENTAGE_STAT_IDS = new Set([
   'score', 'cis_score', 'nsa_score', 'pci_score', 'kubescape_score',
   'encryption_score', 'cpu_util', 'memory_util',
   'gdpr_score', 'hipaa_score', 'soc2_score',
 ])
+
+/** Display modes that require a real denominator to scale correctly. */
+const PROGRESS_DISPLAY_MODES = new Set<StatDisplayMode>([
+  'gauge',
+  'ring-3',
+  'mini-bar',
+  'stacked-bar',
+  'horseshoe',
+])
+
+function supportsProgressScale(blockId: string, data: StatBlockValue): boolean {
+  return data.max !== undefined || PERCENTAGE_STAT_IDS.has(blockId) || String(data.value).includes('%')
+}
 
 /** Determine which display modes are appropriate for a given stat block */
 function getAvailableModes(blockId: string, data: StatBlockValue): StatDisplayMode[] {
@@ -84,16 +100,13 @@ function getAvailableModes(blockId: string, data: StatBlockValue): StatDisplayMo
   const numericValue = typeof data.value === 'number'
     ? data.value
     : parseFloat(String(data.value))
+  const canScaleProgress = supportsProgressScale(blockId, data)
 
   if (!isNaN(numericValue)) {
-    modes.push('sparkline', 'mini-bar', 'trend', 'heatmap')
-    if (data.max !== undefined || PERCENTAGE_STAT_IDS.has(blockId) || String(data.value).includes('%')) {
-      modes.push('gauge', 'horseshoe', 'ring-3')
+    modes.push('sparkline', 'trend', 'heatmap')
+    if (canScaleProgress) {
+      modes.push('mini-bar', 'stacked-bar', 'gauge', 'horseshoe', 'ring-3')
     }
-  }
-  // Stacked bar available for all numeric stats (renders as single segment if no breakdown)
-  if (!isNaN(numericValue)) {
-    modes.push('stacked-bar')
   }
   return modes
 }
@@ -222,11 +235,16 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const numericValue = typeof rawValue === 'number'
     ? rawValue
     : parseFloat(String(rawValue))
-  const maxValue = data.max ?? 100
+  const maxValue = data.max ?? DEFAULT_PROGRESS_MAX
+  const canScaleProgress = supportsProgressScale(block.id, data)
 
-  // Sparkline: fall back to numeric if not enough data yet
+  // Sparkline: fall back to numeric if not enough data yet.
+  // Progress-style modes also fall back when the stat has no real denominator,
+  // which prevents misleading static bars for raw counts.
   const hasEnoughHistory = (history?.length ?? 0) >= MIN_SPARKLINE_POINTS
-  const effectiveMode = mode === 'sparkline' && !hasEnoughHistory ? 'numeric' : mode
+  const effectiveMode = mode === 'sparkline' && !hasEnoughHistory
+    ? 'numeric'
+    : (PROGRESS_DISPLAY_MODES.has(mode) && !canScaleProgress ? 'numeric' : mode)
 
   return (
     <div

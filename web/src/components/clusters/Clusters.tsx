@@ -42,6 +42,7 @@ import { ClusterGroupsSection } from './ClusterGroupsSection'
 
 // Storage key for cluster page cards
 const CLUSTERS_CARDS_KEY = 'kubestellar-clusters-cards'
+const MIN_CLUSTER_PROGRESS_TOTAL = 1
 const AI_CLUSTER_CREATION_CONTEXT = {
   allowMissingLocalTools: true,
   skipClusterPreflight: true,
@@ -284,18 +285,21 @@ export function Clusters() {
         return {
           value: stats.healthy,
           sublabel: 'healthy',
+          max: clusterStatusProgressMax,
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('healthy'); setShowClusterGrid(true) },
           isClickable: stats.healthy > 0 }
       case 'unhealthy':
         return {
           value: stats.unhealthy,
           sublabel: 'unhealthy',
+          max: clusterStatusProgressMax,
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('unhealthy'); setShowClusterGrid(true) },
           isClickable: stats.unhealthy > 0 }
       case 'unreachable':
         return {
           value: stats.unreachable,
           sublabel: 'offline',
+          max: clusterStatusProgressMax,
           onClick: () => { emitClusterStatsDrillDown('cluster_health_status'); setFilter('unreachable'); setShowClusterGrid(true) },
           isClickable: stats.unreachable > 0 }
       case 'nodes':
@@ -340,6 +344,7 @@ export function Clusters() {
   }
 
   const getStatValue = getDashboardStatValue
+  const clusterStatusProgressMax = Math.max(stats.total, MIN_CLUSTER_PROGRESS_TOTAL)
 
   // ── beforeCards: Stale banner + Cluster Info Cards + Cluster Groups ──
 
