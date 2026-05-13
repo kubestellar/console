@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { rbacAuditDashboardConfig } from '../../config/dashboards/rbac-audit'
@@ -55,6 +55,7 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
   const [activeTab, setActiveTab] = useState<'findings' | 'bindings'>('findings')
   const [severityFilter, setSeverityFilter] = useState('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -66,17 +67,27 @@ export const RBACAuditDashboardContent = memo(function RBACAuditDashboardContent
         authFetch('/api/identity/rbac/findings'),
       ])
       if (!smRes.ok || !bRes.ok || !fRes.ok) throw new Error('Failed to load RBAC data')
-      setSummary(await smRes.json())
-      setBindings(await bRes.json())
-      setFindings(await fRes.json())
+      const smData = await smRes.json()
+      const bData = await bRes.json()
+      const fData = await fRes.json()
+      if (cancelledRef.current) return
+      setSummary(smData)
+      setBindings(bData)
+      setFindings(fData)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load RBAC data')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [])
 
   const filteredFindings = useMemo(() => {
     if (severityFilter === 'all') return findings
