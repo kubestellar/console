@@ -370,7 +370,7 @@ export default async function handler(request: Request): Promise<Response> {
 
   const repoSlug = `${repoOwner}/${repoName}`;
   if (!ALLOWED_REPOS.has(repoSlug)) {
-    return jsonResponse(request, 403, { error: `Repo ${repoSlug} not allowed` });
+    return jsonResponse(request, 403, { error: "Repository not allowed" });
   }
 
   let user: { login: string; id: number };
