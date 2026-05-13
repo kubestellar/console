@@ -1,5 +1,5 @@
 import React, { memo } from 'react'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   CheckCircle2, Loader2, Clock,
   XCircle, ArrowRight, Play, Shield
@@ -83,6 +83,7 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'incidents' | 'playbooks' | 'metrics'>('incidents')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -94,17 +95,27 @@ const IncidentResponseDashboard = memo(function IncidentResponseDashboard() {
         authFetch('/api/v1/compliance/incidents/playbooks'),
       ])
       if (!iRes.ok || !mRes.ok || !pRes.ok) throw new Error('Failed to fetch incident data')
-      setIncidents(await iRes.json())
-      setMetrics(await mRes.json())
-      setPlaybooks(await pRes.json())
+      const iData = await iRes.json()
+      const mData = await mRes.json()
+      const pData = await pRes.json()
+      if (cancelledRef.current) return
+      setIncidents(iData)
+      setMetrics(mData)
+      setPlaybooks(pData)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
