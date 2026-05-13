@@ -8,6 +8,10 @@ import (
 
 const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API calls
 
+// aiProviderHTTPClient is reused across AI provider API calls to enable
+// connection pooling and reduce per-request allocation overhead.
+var aiProviderHTTPClient = &http.Client{Timeout: aiProviderHTTPTimeout}
+
 // estimatedCharsPerToken is the industry-standard rule-of-thumb used by
 // OpenAI, Anthropic, and Google to convert character counts to approximate
 // token counts when an exact tokenizer is unavailable. For English text and
@@ -61,10 +65,10 @@ func estimateChatTokenUsage(req *ChatRequest, responseContent string) *ProviderT
 	}
 }
 
-// newAIProviderHTTPClient creates an HTTP client configured with the standard
-// timeout for AI provider API calls.
+// newAIProviderHTTPClient returns the shared HTTP client configured with the
+// standard timeout for AI provider API calls.
 func newAIProviderHTTPClient() *http.Client {
-	return &http.Client{Timeout: aiProviderHTTPTimeout}
+	return aiProviderHTTPClient
 }
 
 // buildPromptWithHistoryGeneric creates a prompt string from a ChatRequest
