@@ -521,7 +521,7 @@ export default async function handler(request: Request): Promise<Response> {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("[feedback-app] Sub-issue linking failed:", msg);
-        warning = `Issue #${data.number} was created, but it could not be linked to parent issue #${issueRequest.parentIssueNumber}: ${msg}`;
+        warning = `Issue #${data.number} was created, but it could not be linked to parent issue #${issueRequest.parentIssueNumber}.`;
       }
     }
     return jsonResponse(request, 200, {

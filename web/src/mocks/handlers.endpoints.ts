@@ -1725,6 +1725,15 @@ export function createHandlers() {
   http.all('/api/ksc', () => passthrough()),
   http.all('/api/m', () => passthrough()),
   http.all('/api/send', () => passthrough()),
+  http.all('/api/identity/oidc/summary', () => passthrough()),
+  http.all('/api/identity/oidc/providers', () => passthrough()),
+  http.all('/api/identity/oidc/sessions', () => passthrough()),
+  http.all('/api/identity/rbac/summary', () => passthrough()),
+  http.all('/api/identity/rbac/bindings', () => passthrough()),
+  http.all('/api/identity/rbac/findings', () => passthrough()),
+  http.all('/api/identity/sessions/summary', () => passthrough()),
+  http.all('/api/identity/sessions/active', () => passthrough()),
+  http.all('/api/identity/sessions/policies', () => passthrough()),
 
   // ── Kubara Platform Catalog (demo fixtures — #8486) ─────────────
   // Realistic fixture snapshots matching the GitHub Contents API shape
