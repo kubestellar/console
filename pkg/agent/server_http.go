@@ -19,6 +19,10 @@ import (
 	"github.com/kubestellar/console/pkg/settings"
 )
 
+// healthCheckHTTPClient is reused across all backend health checks to enable
+// connection pooling and reduce per-request allocation overhead.
+var healthCheckHTTPClient = &http.Client{Timeout: healthCheckTimeout}
+
 // mapK8sErrorToHTTP translates a Kubernetes API error into the appropriate
 // HTTP status + sanitized user-facing message. Opaque 500s leak apiserver
 // internals; instead we map the well-known StatusError kinds so callers can
@@ -418,8 +422,7 @@ func (s *Server) startBackendProcess() error {
 // which in watchdog deployments is the reverse proxy and NOT the real
 // backend, yielding false-positive health results after a restart (#7945).
 func (s *Server) checkBackendHealth() bool {
-	client := &http.Client{Timeout: healthCheckTimeout}
-	resp, err := client.Get(backendHealthURL())
+	resp, err := healthCheckHTTPClient.Get(backendHealthURL())
 	if err != nil {
 		return false
 	}

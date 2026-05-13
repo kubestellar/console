@@ -40,7 +40,14 @@ const (
 
 	// Max lines of build output to include in error messages sent to the frontend
 	buildOutputTailLines = 20
+
+	// githubAPITimeout bounds GitHub API HTTP requests (releases, main ref).
+	githubAPITimeout = 10 * time.Second
 )
+
+// githubHTTPClient is reused across all GitHub API calls to enable connection
+// pooling and reduce per-request allocation overhead.
+var githubHTTPClient = &http.Client{Timeout: githubAPITimeout}
 
 // githubRepo returns the GitHub owner/repo slug, preferring the GITHUB_REPO
 // environment variable so forks and GHE instances work out-of-the-box.
@@ -1330,9 +1337,7 @@ func gitFetchLatestSHA(repoPath string) (string, error) {
 
 // fetchLatestMainSHAFromGitHub calls the GitHub API to get the latest main SHA.
 func fetchLatestMainSHAFromGitHub() (string, error) {
-	const githubAPITimeout = 10 * time.Second
-	client := &http.Client{Timeout: githubAPITimeout}
-	resp, err := client.Get(githubMainRefURL())
+	resp, err := githubHTTPClient.Get(githubMainRefURL())
 	if err != nil {
 		return "", err
 	}
@@ -1350,8 +1355,7 @@ func fetchLatestMainSHAFromGitHub() (string, error) {
 }
 
 func fetchGitHubReleases() ([]githubReleaseInfo, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(githubReleasesURL())
+	resp, err := githubHTTPClient.Get(githubReleasesURL())
 	if err != nil {
 		return nil, err
 	}
@@ -1592,12 +1596,11 @@ func rollbackGit(repoPath, sha string) {
 }
 
 func waitForBackendHealth() bool {
-	client := &http.Client{Timeout: healthCheckTimeout}
 	// URL is resolved once per poll so that a BACKEND_PORT env var change
 	// mid-run (e.g. an operator re-running startup-oauth.sh) is picked up.
 	healthURL := backendHealthURL()
 	for i := 0; i < healthCheckRetries; i++ {
-		resp, err := client.Get(healthURL)
+		resp, err := healthCheckHTTPClient.Get(healthURL)
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {

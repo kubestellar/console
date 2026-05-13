@@ -31,6 +31,18 @@ const argocdCLITimeoutSeconds = "30"
 // kc-agent process when ARGOCD_TLS_INSECURE=true is set.
 var argocdInsecureWarning sync.Once
 
+// argocdHTTPClient is the default ArgoCD REST API client with TLS verification enabled.
+var argocdHTTPClient = &http.Client{Timeout: argocdSyncTimeout}
+
+// argocdInsecureHTTPClient is used when ARGOCD_TLS_INSECURE=true for self-signed
+// certificates in dev/test environments.
+var argocdInsecureHTTPClient = &http.Client{
+	Timeout: argocdSyncTimeout,
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- intentionally env-var-gated (ARGOCD_TLS_INSECURE) for self-signed certs in dev/test
+	},
+}
+
 // agentArgoSyncRequest mirrors pkg/api/handlers/gitops.go TriggerArgoSync
 // inline request struct.
 type agentArgoSyncRequest struct {
@@ -227,17 +239,15 @@ func tryArgoRESTSync(ctx context.Context, argoServerURL, argoToken, appName stri
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	skipVerify := os.Getenv("ARGOCD_TLS_INSECURE") == "true"
+	var client *http.Client
 	if skipVerify {
 		argocdInsecureWarning.Do(func() {
 			slog.Warn("WARNING: ARGOCD_TLS_INSECURE=true — TLS certificate verification disabled for ArgoCD API calls. " +
 				"This should only be used in development/test environments with self-signed certificates.")
 		})
-	}
-	client := &http.Client{
-		Timeout: argocdSyncTimeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify}, // #nosec G402 -- intentionally env-var-gated (ARGOCD_TLS_INSECURE) for self-signed certs in dev/test
-		},
+		client = argocdInsecureHTTPClient
+	} else {
+		client = argocdHTTPClient
 	}
 	resp, err := client.Do(httpReq)
 	if err != nil {
