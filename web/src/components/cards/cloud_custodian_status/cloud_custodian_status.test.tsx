@@ -53,8 +53,30 @@ describe('CloudCustodianStatus', () => {
   })
 
   it('renders skeleton when loading', () => {
-    setup({ isLoading: true })
+    mockUseCachedCloudCustodian.mockReturnValue({
+      data: {
+        health: 'healthy',
+        version: '0.0.0',
+        summary: {
+          totalPolicies: 0,
+          successfulPolicies: 0,
+          failedPolicies: 0,
+          dryRunPolicies: 0,
+        },
+        policies: [],
+        topResources: [],
+        violationsBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
+      },
+      isLoading: true,
+      isRefreshing: false,
+      isDemoFallback: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false })
+    
     render(<CloudCustodianStatus />)
 
     expect(screen.getByTestId('skeleton')).toBeTruthy()

@@ -55,8 +55,19 @@ describe('ChangeTimeline', () => {
   })
 
   it('renders skeleton when loading', () => {
-    setup({ isLoading: true })
+    mockUseCachedTimeline.mockReturnValue({
+      data: [],
+      isLoading: true,
+      isRefreshing: false,
+      isDemoData: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      lastRefresh: null,
+      refetch: vi.fn(),
+    })
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: true, showEmptyState: false })
+    mockUseDrillDownActions.mockReturnValue({ openDrillDown: vi.fn() })
+    
     render(<ChangeTimeline />)
 
     expect(screen.getByTestId('skeleton')).toBeTruthy()
