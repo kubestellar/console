@@ -320,7 +320,7 @@ After I approve, help me execute the repairs step by step.`,
             <div className="flex flex-col">
               <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
               {aliasList.length > 0 && (
-                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: aliasList.join(', ') })}>
+                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: (aliasList || []).join(', ') })}>
                   {t('clusterDetail.akaLabel')} {headerAliasSummary}
                 </div>
               )}
