@@ -200,7 +200,7 @@ export async function fetchMissionContent(
     return { mission: merged, raw: text }
   } catch (err) {
     // Network error, timeout, or unexpected failure — fall back gracefully (#11033)
-    console.warn('[MissionBrowser] fetchMissionContent failed:', err)
+    console.error('[MissionBrowser] fetchMissionContent failed:', err)
     return { mission: indexMission, raw: JSON.stringify(indexMission, null, 2) }
   }
 }
@@ -268,7 +268,7 @@ async function fetchAllFromIndex() {
     missionCache.fetchError = null
     persistCacheToStorage()
   } catch (err: unknown) {
-    console.warn('[MissionBrowser] Failed to fetch index:', err)
+    console.error('[MissionBrowser] Failed to fetch index:', err)
     missionCache.fetchError = err instanceof Error ? err.message : 'Failed to load missions. Please try again.'
   } finally {
     missionCache.installersDone = true

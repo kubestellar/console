@@ -388,7 +388,7 @@ function sendViaProxy(
     navigator.sendBeacon(url)
   } else {
     fetch(url, { method: 'POST', keepalive: true, signal: AbortSignal.timeout(5_000) }).catch((err) => {
-      if (import.meta.env.DEV) console.warn('[analytics] beacon delivery failed:', err)
+      if (import.meta.env.DEV) console.error('[analytics] beacon delivery failed:', err)
     })
   }
 }

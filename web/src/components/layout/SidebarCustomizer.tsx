@@ -376,7 +376,7 @@ export function SidebarCustomizer({ isOpen, onClose, embedded = false }: Sidebar
     // Try to persist to backend in the background (optional, may fail offline)
     createDashboard(name).catch((err) => {
       // Dashboard works purely from localStorage — backend persistence is optional
-      console.warn('[SidebarCustomizer] backend create failed (non-critical):', err)
+      console.error('[SidebarCustomizer] backend create failed (non-critical):', err)
     })
 
     // Ask AI agent for a better icon in the background

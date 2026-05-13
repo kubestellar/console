@@ -205,7 +205,7 @@ export function DeploymentDrillDown({ data }: Props) {
             output = msg.payload.output
           }
         } catch (err) {
-          console.warn('[DeploymentDrillDown] Non-JSON WebSocket message:', event.data)
+          console.error('[DeploymentDrillDown] Non-JSON WebSocket message:', event.data)
         }
         clearTimeout(timeout)
         ws.close()

@@ -658,7 +658,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cacheUser(null)
         try {
           localStorage.removeItem(AUTH_USER_CACHE_VALIDATED_KEY)
-        } catch (e: unknown) { console.warn('[auth] failed to clear cached user validation key:', e) }
+        } catch (e: unknown) { console.error('[auth] failed to clear cached user validation key:', e) }
         document.getElementById('session-expiry-warning')?.remove()
         // Only redirect if we're not already on the login page to avoid a loop
         if (!window.location.pathname.startsWith('/login')) {

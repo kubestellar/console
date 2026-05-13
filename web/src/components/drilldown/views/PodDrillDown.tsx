@@ -206,7 +206,7 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
     try {
       return JSON.parse(event.data)
     } catch (err) {
-      console.warn(`[PodDrillDown] Failed to parse ${context} WebSocket message:`, err)
+      console.error(`[PodDrillDown] Failed to parse ${context} WebSocket message:`, err)
       return null
     }
   }, [])

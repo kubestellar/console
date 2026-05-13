@@ -169,7 +169,7 @@ export function DashboardCustomizer({
                 const localId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
                 const href = `/custom-dashboard/${localId}`
                 addItem({ name, icon: suggestIconSync(name), href, type: 'link' }, 'primary')
-                await _createDashboard(name).catch((err) => { console.warn('[DashboardCustomizer] backend create failed (non-critical):', err) })
+                await _createDashboard(name).catch((err) => { console.error('[DashboardCustomizer] backend create failed (non-critical):', err) })
                 onClose()
                 navigate(href)
               }}
