@@ -82,10 +82,13 @@ export default function LicenseComplianceDashboard() {
         authFetch('/api/supply-chain/licenses/summary'),
       ])
       if (!pkgRes.ok || !catRes.ok || !sumRes.ok) throw new Error('Failed to load license data')
+      const packages = await pkgRes.json()
+      const categories = await catRes.json()
+      const summaryData = await sumRes.json()
       if (!mountedRef.current) return
-      setPackages(await pkgRes.json())
-      setCategories(await catRes.json())
-      setSummary(await sumRes.json())
+      setPackages(packages)
+      setCategories(categories)
+      setSummary(summaryData)
     } catch (e: unknown) {
       if (!mountedRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load license data')

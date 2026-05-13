@@ -80,10 +80,13 @@ export default function SigningStatusDashboard() {
         authFetch('/api/supply-chain/signing/summary'),
       ])
       if (!imgRes.ok || !polRes.ok || !sumRes.ok) throw new Error('Failed to load signing data')
+      const images = await imgRes.json()
+      const policies = await polRes.json()
+      const summaryData = await sumRes.json()
       if (!mountedRef.current) return
-      setImages(await imgRes.json())
-      setPolicies(await polRes.json())
-      setSummary(await sumRes.json())
+      setImages(images)
+      setPolicies(policies)
+      setSummary(summaryData)
     } catch (e: unknown) {
       if (!mountedRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load signing data')
