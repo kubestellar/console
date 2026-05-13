@@ -72,7 +72,6 @@ import {
   KAGENTI_PROVIDER_UNAVAILABLE_EVENT,
   KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
   buildKagentiDiscoveryErrorMessage,
-  type KagentiDiscoveryFailure,
 } from './useMissions.helpers'
 
 interface MissionContextValue {

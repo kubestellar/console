@@ -31,7 +31,6 @@ import {
   CANCEL_ACK_MESSAGE_TYPE,
   CANCEL_CONFIRMED_MESSAGE_TYPE,
   WAITING_INPUT_TIMEOUT_MS,
-  AGENT_DISCONNECT_ERROR_PATTERNS,
   WS_SEND_MAX_RETRIES,
   WS_SEND_RETRY_DELAY_MS,
   STREAM_GAP_THRESHOLD_MS,
@@ -59,7 +58,6 @@ import {
   KAGENTI_PROVIDER_UNAVAILABLE_EVENT,
   KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
   buildKagentiDiscoveryErrorMessage,
-  type KagentiDiscoveryFailure,
 } from './useMissions.helpers'
 
 export function MissionProvider({ children }: { children: ReactNode }) {
