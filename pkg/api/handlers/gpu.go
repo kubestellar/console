@@ -536,7 +536,7 @@ func (h *GPUHandler) GetBulkUtilizations(c *fiber.Ctx) error {
 		trimmed := strings.TrimSpace(id)
 		parsedID, err := uuid.Parse(trimmed)
 		if err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Invalid reservation ID: %s", id))
+			return fiber.NewError(fiber.StatusBadRequest, "Invalid reservation ID format")
 		}
 		parsedIDs = append(parsedIDs, parsedID)
 		trimmedIDs = append(trimmedIDs, trimmed)

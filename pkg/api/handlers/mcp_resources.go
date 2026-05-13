@@ -581,7 +581,7 @@ func validateToolName(name string, allowedTools map[string]bool) error {
 	allowed, exists := allowedTools[name]
 	if !exists || !allowed {
 		slog.Warn("[MCP] SECURITY: blocked unauthorized tool call", "tool", name)
-		return fiber.NewError(fiber.StatusForbidden, "tool not allowed: "+name)
+		return fiber.NewError(fiber.StatusForbidden, "tool not allowed")
 	}
 
 	return nil
