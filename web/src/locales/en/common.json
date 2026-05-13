@@ -2274,6 +2274,15 @@
       "manifest": "Manifest",
       "issues": "Issues"
     },
+    "buildpack": {
+      "fetchImageError": "Failed to fetch image info",
+      "fetchBuildsError": "Failed to fetch builds",
+      "fetchLogsError": "Failed to fetch logs"
+    },
+    "yaml": {
+      "copyError": "Failed to copy to clipboard",
+      "downloadError": "Failed to download YAML: {{error}}"
+    },
     "ai": {
       "title": "AI Analysis",
       "notConnected": "AI agent not connected",

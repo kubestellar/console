@@ -200,7 +200,7 @@ export function BuildpackDrillDown({ data }: Props) {
       }
     } catch (error: unknown) {
       console.error('Failed to fetch image info:', error)
-      showToast('Failed to fetch image info', 'error')
+      showToast(t('drilldown.buildpack.fetchImageError', 'Failed to fetch image info'), 'error')
     }
     setLoading(false)
   }
@@ -245,7 +245,7 @@ export function BuildpackDrillDown({ data }: Props) {
       }
     } catch (error: unknown) {
       console.error('Failed to fetch builds:', error)
-      showToast('Failed to fetch builds', 'error')
+      showToast(t('drilldown.buildpack.fetchBuildsError', 'Failed to fetch builds'), 'error')
       setBuilds([])
     }
     setBuildsLoading(false)
@@ -300,7 +300,7 @@ export function BuildpackDrillDown({ data }: Props) {
       }
     } catch (error: unknown) {
       console.error('Failed to fetch logs:', error)
-      showToast('Failed to fetch logs', 'error')
+      showToast(t('drilldown.buildpack.fetchLogsError', 'Failed to fetch logs'), 'error')
       setLogs('Error fetching logs')
     }
 
