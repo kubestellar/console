@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -111,7 +112,8 @@ func PingHandler(c *fiber.Ctx) error {
 	start := time.Now()
 	req, err := http.NewRequestWithContext(c.UserContext(), "HEAD", rawURL, nil)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid request: %v", err)})
+		slog.Error("[PingHandler] invalid request", "url", rawURL, "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 	req.Header.Set("User-Agent", "KubeStellar-Console-Ping/1.0")
 

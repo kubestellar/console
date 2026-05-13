@@ -1227,10 +1227,12 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// SECURITY: Validate path and branch to prevent traversal/injection
 	if _, err := sanitizePath(req.FilePath); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid filePath: %v", err)})
+		slog.Error("[MissionsHandler] invalid filePath", "filePath", req.FilePath, "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid filePath"})
 	}
 	if _, err := sanitizeRef(req.Branch); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid branch: %v", err)})
+		slog.Error("[MissionsHandler] invalid branch", "branch", req.Branch, "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid branch"})
 	}
 
 	// Step 1: Fork the repo
