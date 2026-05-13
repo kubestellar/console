@@ -163,7 +163,7 @@ func (s *SQLiteStore) GetDashboardCards(ctx context.Context, dashboardID uuid.UU
 	}
 	defer rows.Close()
 
-	var cards []models.Card
+	cards := make([]models.Card, 0)
 	for rows.Next() {
 		c, err := s.scanCardRow(ctx, rows)
 		if err != nil {
@@ -510,7 +510,7 @@ func (s *SQLiteStore) GetDueSwaps(ctx context.Context, limit, offset int) ([]mod
 	}
 	defer rows.Close()
 
-	var swaps []models.PendingSwap
+	swaps := make([]models.PendingSwap, 0)
 	for rows.Next() {
 		swap, err := s.scanPendingSwapRow(ctx, rows)
 		if err != nil {
