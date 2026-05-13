@@ -124,7 +124,7 @@ func (a *AntigravityProvider) Handshake(ctx context.Context) *HandshakeResult {
 		return &HandshakeResult{
 			Ready:   false,
 			State:   "failed",
-			Message: fmt.Sprintf("Antigravity CLI found at %s but failed to respond: %v", a.cliPath, err),
+			Message: "Antigravity CLI found but failed to respond",
 			CliPath: a.cliPath,
 			Prerequisites: []string{
 				"Verify that the Antigravity CLI works by running: antigravity --version",

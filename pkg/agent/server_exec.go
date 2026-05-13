@@ -52,7 +52,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -326,12 +325,14 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// applies to the backend handler does NOT apply here.
 	clientset, err := s.k8sClient.GetClient(init.Cluster)
 	if err != nil {
-		agentExecWriteError(conn, fmt.Sprintf("Failed to get client for cluster %s: %v", init.Cluster, err))
+		slog.Error("[Exec] failed to get client", "cluster", init.Cluster, "error", err)
+		agentExecWriteError(conn, "Failed to get cluster client")
 		return
 	}
 	restConfig, err := s.k8sClient.GetRestConfig(init.Cluster)
 	if err != nil {
-		agentExecWriteError(conn, fmt.Sprintf("Failed to get REST config for cluster %s: %v", init.Cluster, err))
+		slog.Error("[Exec] failed to get REST config", "cluster", init.Cluster, "error", err)
+		agentExecWriteError(conn, "Failed to get cluster configuration")
 		return
 	}
 
@@ -353,7 +354,8 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 
 	executor, err := remotecommand.NewSPDYExecutor(restConfig, "POST", execReq.URL())
 	if err != nil {
-		agentExecWriteError(conn, fmt.Sprintf("Failed to create executor: %v", err))
+		slog.Error("[Exec] failed to create executor", "error", err)
+		agentExecWriteError(conn, "Failed to create command executor")
 		return
 	}
 

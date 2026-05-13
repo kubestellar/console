@@ -49,7 +49,7 @@ func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, 
 		slog.Info("[MixedMode] thinking agent not found, trying default", "requested", thinkingAgent)
 		thinkingProvider, err = s.registry.GetDefault()
 		if err != nil {
-			safeWrite(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Thinking agent %s not found and no default agent available", thinkingAgent)))
+			safeWrite(s.errorResponse(msg.ID, "agent_error", "Thinking agent not found and no default agent available"))
 			return
 		}
 		thinkingAgent = thinkingProvider.Name()
@@ -57,7 +57,8 @@ func (s *Server) handleMixedModeChat(ctx context.Context, conn *websocket.Conn, 
 	}
 	execProvider, err := s.registry.Get(executionAgent)
 	if err != nil {
-		safeWrite(s.errorResponse(msg.ID, "agent_error", fmt.Sprintf("Execution agent %s not found", executionAgent)))
+		slog.Error("[MixedMode] execution agent not found", "agent", executionAgent)
+		safeWrite(s.errorResponse(msg.ID, "agent_error", "Execution agent not found"))
 		return
 	}
 
@@ -117,7 +118,7 @@ User request: %s`, req.Prompt)
 			return
 		}
 		slog.Error("[MixedMode] thinking agent error", "error", err)
-		safeWrite(s.errorResponse(msg.ID, "mixed_mode_error", fmt.Sprintf("Thinking agent error: %v", err)))
+		safeWrite(s.errorResponse(msg.ID, "mixed_mode_error", "Thinking agent error"))
 		return
 	}
 	if thinkingResp == nil {
@@ -189,13 +190,13 @@ User request: %s`, req.Prompt)
 			return
 		}
 		slog.Error("[MixedMode] execution agent error", "error", err)
-		execContent = fmt.Sprintf("Execution Error: %v", err)
+		execContent = "Execution error"
 		safeWrite(protocol.Message{
 			ID:   msg.ID,
 			Type: protocol.TypeStreamChunk,
 			Payload: map[string]interface{}{
-				"content": fmt.Sprintf("\n**🔧 %s Execution Error:** %v\n", execProvider.DisplayName(), err),
-				"agent":   executionAgent,
+				"content": fmt.Sprintf("\n**🔧 %s Execution Error**\n", execProvider.DisplayName()),
+				"agent":   "execution-agent",
 				"phase":   "executing",
 			},
 		})

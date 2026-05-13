@@ -179,7 +179,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	}
 
 	if !provider.IsAvailable() {
-		safeWrite(ctx, s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available", agentName)))
+		safeWrite(ctx, s.errorResponse(msg.ID, "agent_unavailable", "AI agent is not available"))
 		return
 	}
 
@@ -638,7 +638,7 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 	}
 
 	if !provider.IsAvailable() {
-		return s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available - API key may be missing", agentName))
+		return s.errorResponse(msg.ID, "agent_unavailable", "AI agent is not available - API key may be missing")
 	}
 
 	// Convert protocol history to provider history
@@ -689,9 +689,9 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		slog.Error("[Chat] execution error", "agent", agentName, "error", err, "timeout", handleChatMessageTimeout)
 		if ctx.Err() == context.DeadlineExceeded {
 			return s.errorResponse(msg.ID, "timeout",
-				fmt.Sprintf("%s did not respond within %s", agentName, handleChatMessageTimeout))
+				fmt.Sprintf("AI agent did not respond within %s", handleChatMessageTimeout))
 		}
-		return s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName))
+		return s.errorResponse(msg.ID, "execution_error", "Failed to execute AI agent")
 	}
 
 	if resp == nil {
@@ -823,7 +823,7 @@ func classifyProviderError(err error) (code, message string) {
 		strings.Contains(errText, "invalid x-api-key") ||
 		strings.Contains(errText, "invalid_api_key") ||
 		strings.Contains(errText, "unauthorized") {
-		return "authentication_error", "Failed to authenticate. API Error: " + err.Error()
+		return "authentication_error", "Failed to authenticate with AI provider - check your API key"
 	}
 
 	// Rate limit (HTTP 429)
@@ -832,10 +832,10 @@ func classifyProviderError(err error) (code, message string) {
 		strings.Contains(errText, "rate limit") ||
 		strings.Contains(errText, "too many requests") ||
 		strings.Contains(errText, "resource_exhausted") {
-		return "rate_limit", "Rate limit exceeded. " + err.Error()
+		return "rate_limit", "Rate limit exceeded - please wait and try again"
 	}
 
-	return "execution_error", "Failed to get response from AI provider. " + err.Error()
+	return "execution_error", "Failed to get response from AI provider"
 }
 
 // handleMixedModeChat orchestrates a dual-agent chat:

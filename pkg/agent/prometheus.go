@@ -80,11 +80,13 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	// SECURITY: Validate cluster and namespace against safe character sets to
 	// prevent SSRF and path-traversal via crafted query parameters (#7175).
 	if err := validateKubeContext(cluster); err != nil {
-		writePrometheusError(w, http.StatusBadRequest, fmt.Sprintf("invalid cluster parameter: %v", err))
+		slog.Error("[Prometheus] invalid cluster parameter", "error", err)
+		writePrometheusError(w, http.StatusBadRequest, "invalid cluster parameter")
 		return
 	}
 	if err := validateDNS1123Label("namespace", namespace); err != nil {
-		writePrometheusError(w, http.StatusBadRequest, fmt.Sprintf("invalid namespace parameter: %v", err))
+		slog.Error("[Prometheus] invalid namespace parameter", "error", err)
+		writePrometheusError(w, http.StatusBadRequest, "invalid namespace parameter")
 		return
 	}
 
@@ -105,14 +107,15 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	}
 	// SECURITY: Validate service name to prevent path traversal (#7175).
 	if err := validateDNS1123Label("service", serviceName); err != nil {
-		writePrometheusError(w, http.StatusBadRequest, fmt.Sprintf("invalid service parameter: %v", err))
+		slog.Error("[Prometheus] invalid service parameter", "error", err)
+		writePrometheusError(w, http.StatusBadRequest, "invalid service parameter")
 		return
 	}
 
 	config, err := s.k8sClient.GetRestConfig(cluster)
 	if err != nil {
-		writePrometheusError(w, http.StatusBadGateway,
-			fmt.Sprintf("failed to get cluster config: %v", err))
+		slog.Error("[Prometheus] failed to get cluster config", "cluster", cluster, "error", err)
+		writePrometheusError(w, http.StatusBadGateway, "failed to get cluster configuration")
 		return
 	}
 
@@ -135,15 +138,15 @@ func (s *Server) handlePrometheusQuery(w http.ResponseWriter, r *http.Request) {
 	// TLS transport (and leaking connections) on every query (#7024).
 	client, err := getOrCreatePromClient(config)
 	if err != nil {
-		writePrometheusError(w, http.StatusInternalServerError,
-			fmt.Sprintf("failed to create transport: %v", err))
+		slog.Error("[Prometheus] failed to create HTTP client", "error", err)
+		writePrometheusError(w, http.StatusInternalServerError, "failed to create transport")
 		return
 	}
 
 	resp, err := client.Get(fullURL)
 	if err != nil {
-		writePrometheusError(w, http.StatusBadGateway,
-			fmt.Sprintf("prometheus query failed: %v", err))
+		slog.Error("[Prometheus] query failed", "error", err)
+		writePrometheusError(w, http.StatusBadGateway, "prometheus query failed")
 		return
 	}
 	defer resp.Body.Close()
