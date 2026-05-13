@@ -30,6 +30,9 @@ import {
   CANCEL_CONFIRMED_MESSAGE_TYPE,
   WAITING_INPUT_TIMEOUT_MS,
   AGENT_DISCONNECT_ERROR_PATTERNS,
+  WS_SEND_MAX_RETRIES,
+  WS_SEND_RETRY_DELAY_MS,
+  STREAM_GAP_THRESHOLD_MS,
 } from './useMissions.constants'
 import {
   runPreflightCheck,
@@ -351,12 +354,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
    * of the onopen handler from dispatching duplicate chat_request payloads.
    */
   const wsOpenEpoch = useRef(0)
-  const STREAM_GAP_THRESHOLD_MS = 8000 // If >8s gap between stream chunks, create new message bubble (tool-use gap)
-
-  // Maximum number of WebSocket send retries before giving up
-  const WS_SEND_MAX_RETRIES = 3
-  // Delay between WebSocket send retries in milliseconds
-  const WS_SEND_RETRY_DELAY_MS = 1000
 
   // #6629 — Track in-flight wsSend retry timers so they can be cleared on
   // unmount. Without this, a provider unmount while a retry was still

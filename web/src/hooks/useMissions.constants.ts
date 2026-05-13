@@ -113,3 +113,18 @@ export const AGENT_DISCONNECT_ERROR_PATTERNS = [
   'agent not available',
   'agent not responding',
 ] as const
+
+// ─── WebSocket Send Retries ──────────────────────────────────────────────────
+
+/** Maximum number of WebSocket send retries before giving up */
+export const WS_SEND_MAX_RETRIES = 3
+/** Delay between WebSocket send retries in milliseconds */
+export const WS_SEND_RETRY_DELAY_MS = 1000
+
+// ─── Stream Chunking ─────────────────────────────────────────────────────────
+
+/**
+ * If more than this many milliseconds pass between consecutive stream chunks,
+ * the UI creates a new message bubble (tool-use gap). (#6378)
+ */
+export const STREAM_GAP_THRESHOLD_MS = 8000
