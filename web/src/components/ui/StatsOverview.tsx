@@ -88,8 +88,16 @@ const PROGRESS_DISPLAY_MODES = new Set<StatDisplayMode>([
   'horseshoe',
 ])
 
+function hasExplicitProgressMax(data: StatBlockValue): data is StatBlockValue & { max: number } {
+  return typeof data.max === 'number' && Number.isFinite(data.max) && data.max > 0
+}
+
+function isPercentageLikeStat(blockId: string, value: string | number): boolean {
+  return PERCENTAGE_STAT_IDS.has(blockId) || String(value).includes('%')
+}
+
 function supportsProgressScale(blockId: string, data: StatBlockValue): boolean {
-  return data.max !== undefined || PERCENTAGE_STAT_IDS.has(blockId) || String(data.value).includes('%')
+  return hasExplicitProgressMax(data) || isPercentageLikeStat(blockId, data.value)
 }
 
 /** Determine which display modes are appropriate for a given stat block */
@@ -235,8 +243,20 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const numericValue = typeof rawValue === 'number'
     ? rawValue
     : parseFloat(String(rawValue))
-  const maxValue = data.max ?? DEFAULT_PROGRESS_MAX
+  const hasExplicitMax = hasExplicitProgressMax(data)
+  const isPercentageStat = isPercentageLikeStat(block.id, rawValue)
+  const maxValue = hasExplicitMax ? data.max : DEFAULT_PROGRESS_MAX
   const canScaleProgress = supportsProgressScale(block.id, data)
+  const progressPercent = !isNaN(numericValue) && maxValue > 0
+    ? Math.min((numericValue / maxValue) * DEFAULT_PROGRESS_MAX, DEFAULT_PROGRESS_MAX)
+    : 0
+  const progressPercentLabel = hasExplicitMax ? `${Math.round(progressPercent)}%` : null
+  const progressDisplayValue = isPercentageStat && !String(displayValue).includes('%')
+    ? `${displayValue}%`
+    : displayValue
+  const progressMaxLabel = hasExplicitMax && !isPercentageStat
+    ? (data.format ? data.format(data.max) : data.max)
+    : null
 
   // Sparkline: fall back to numeric if not enough data yet.
   // Progress-style modes also fall back when the stat has no real denominator,
@@ -329,17 +349,25 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
       ) : effectiveMode === 'mini-bar' && !isNaN(numericValue) ? (
         <>
           <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
-            {displayValue}
+            {progressDisplayValue}
           </div>
-          <div className="mt-1.5 w-full bg-secondary rounded-full overflow-hidden" style={{ height: MINI_BAR_HEIGHT_PX }}>
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.min((numericValue / maxValue) * 100, 100)}%`,
-                backgroundColor: hexColor }}
-            />
+          <div className="mt-1.5 flex items-center gap-2">
+            <div data-testid={`stat-block-${block.id}-progress`} className="flex-1 bg-secondary rounded-full overflow-hidden" style={{ height: MINI_BAR_HEIGHT_PX }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${progressPercent}%`,
+                  backgroundColor: hexColor }}
+              />
+            </div>
+            {progressPercentLabel && <span data-testid={`stat-block-${block.id}-scale`} className="text-2xs text-muted-foreground shrink-0">{progressPercentLabel}</span>}
           </div>
-          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
+          {data.sublabel && (
+            <div className="text-xs text-muted-foreground mt-1">
+              {wrapAbbreviations(data.sublabel)}
+              {progressMaxLabel && <span className="text-muted-foreground/60"> of {progressMaxLabel}</span>}
+            </div>
+          )}
         </>
       ) : effectiveMode === 'horseshoe' && !isNaN(numericValue) ? (
         <>
@@ -384,17 +412,25 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
       ) : effectiveMode === 'stacked-bar' && !isNaN(numericValue) ? (
         <>
           <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
-            {displayValue}
+            {progressDisplayValue}
           </div>
-          <div className="mt-1.5 w-full bg-secondary rounded-full overflow-hidden flex" style={{ height: MINI_BAR_HEIGHT_PX }}>
-            <div
-              className="h-full transition-all duration-500"
-              style={{
-                width: `${Math.min((numericValue / maxValue) * 100, 100)}%`,
-                backgroundColor: hexColor }}
-            />
+          <div className="mt-1.5 flex items-center gap-2">
+            <div data-testid={`stat-block-${block.id}-progress`} className="flex-1 bg-secondary rounded-full overflow-hidden flex" style={{ height: MINI_BAR_HEIGHT_PX }}>
+              <div
+                className="h-full transition-all duration-500"
+                style={{
+                  width: `${progressPercent}%`,
+                  backgroundColor: hexColor }}
+              />
+            </div>
+            {progressPercentLabel && <span data-testid={`stat-block-${block.id}-scale`} className="text-2xs text-muted-foreground shrink-0">{progressPercentLabel}</span>}
           </div>
-          {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
+          {data.sublabel && (
+            <div className="text-xs text-muted-foreground mt-1">
+              {wrapAbbreviations(data.sublabel)}
+              {progressMaxLabel && <span className="text-muted-foreground/60"> of {progressMaxLabel}</span>}
+            </div>
+          )}
         </>
       ) : effectiveMode === 'heatmap' && !isNaN(numericValue) ? (
         <>
