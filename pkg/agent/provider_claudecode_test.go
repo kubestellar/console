@@ -96,3 +96,26 @@ func TestRequiredMissionTools_NotEmpty(t *testing.T) {
 		t.Error("RequiredMissionTools must not be empty")
 	}
 }
+
+func TestOptionalMissionTools_NotEmpty(t *testing.T) {
+	if len(OptionalMissionTools) == 0 {
+		t.Error("OptionalMissionTools must not be empty")
+	}
+}
+
+func TestCheckToolDependencies_OptionalToolsMissing_NoError(t *testing.T) {
+	err := CheckToolDependencies()
+	if err != nil {
+		tde, ok := err.(*ToolDependencyError)
+		if !ok {
+			t.Fatalf("expected *ToolDependencyError, got %T", err)
+		}
+		for _, tool := range tde.MissingTools {
+			for _, opt := range OptionalMissionTools {
+				if tool == opt {
+					t.Errorf("optional tool %q should not cause a hard failure", tool)
+				}
+			}
+		}
+	}
+}

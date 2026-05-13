@@ -14,16 +14,20 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
-// RequiredMissionTools lists the CLI binaries that must be available in
-// PATH for AI missions to execute cluster operations. Each entry is a
-// binary name passed to exec.LookPath during the pre-launch readiness
-// check. Keep this list in sync with the tools referenced in
-// ClaudeCodeSystemPrompt and the --allowedTools flag below.
+// RequiredMissionTools lists CLI binaries that MUST be on PATH for any
+// mission to run. Missing any of these is a hard failure.
 var RequiredMissionTools = []string{
 	"kubectl", // Kubernetes CLI — cluster inspection & management
-	"helm",    // Helm — chart-based deployments
 	"git",     // Git — version control operations
-	"gh",      // GitHub CLI — PR creation, issue triage
+}
+
+// OptionalMissionTools lists CLI binaries that enhance missions but are
+// not strictly required. Missing tools are logged as warnings; missions
+// that need them will fail at execution time with a clear error from
+// the agent rather than a blanket preflight block.
+var OptionalMissionTools = []string{
+	"helm", // Helm — chart-based deployments
+	"gh",   // GitHub CLI — PR creation, issue triage
 }
 
 // ToolDependencyError is returned when one or more required CLI tools
@@ -38,8 +42,8 @@ func (e *ToolDependencyError) Error() string {
 }
 
 // CheckToolDependencies verifies that every binary in RequiredMissionTools
-// is available on PATH via exec.LookPath. Returns nil when all tools are
-// present, or a *ToolDependencyError listing the missing ones.
+// is available on PATH. Optional tools are checked but only produce a log
+// warning — they do not block mission execution.
 func CheckToolDependencies() error {
 	var missing []string
 	for _, tool := range RequiredMissionTools {
@@ -49,6 +53,12 @@ func CheckToolDependencies() error {
 	}
 	if len(missing) > 0 {
 		return &ToolDependencyError{MissingTools: missing}
+	}
+
+	for _, tool := range OptionalMissionTools {
+		if _, err := exec.LookPath(tool); err != nil {
+			slog.Warn("optional mission tool not found on PATH", "tool", tool)
+		}
 	}
 	return nil
 }
