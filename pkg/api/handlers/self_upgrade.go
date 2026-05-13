@@ -188,14 +188,16 @@ func (h *SelfUpgradeHandler) GetStatus(c *fiber.Ctx) error {
 
 	client, err := h.getInClusterClient()
 	if err != nil {
-		resp.Reason = err.Error()
+		slog.Error("[self-upgrade] failed to get in-cluster client", "error", err)
+		resp.Reason = "cluster client unavailable"
 		return c.JSON(resp)
 	}
 
 	// Discover the Deployment
 	dep, err := h.findDeployment(ctx, client, namespace)
 	if err != nil {
-		resp.Reason = err.Error()
+		slog.Error("[self-upgrade] failed to find deployment", "namespace", namespace, "error", err)
+		resp.Reason = "deployment not found"
 		return c.JSON(resp)
 	}
 	resp.DeploymentName = dep.Name
@@ -305,16 +307,18 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 
 	client, err := h.getInClusterClient()
 	if err != nil {
+		slog.Error("[self-upgrade] failed to get in-cluster client", "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(SelfUpgradeTriggerResponse{
-			Error: err.Error(),
+			Error: "cluster client unavailable",
 		})
 	}
 
 	// Discover the Deployment
 	dep, err := h.findDeployment(ctx, client, namespace)
 	if err != nil {
+		slog.Error("[self-upgrade] failed to find deployment", "namespace", namespace, "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(SelfUpgradeTriggerResponse{
-			Error: err.Error(),
+			Error: "deployment not found",
 		})
 	}
 
@@ -410,11 +414,10 @@ func (h *SelfUpgradeHandler) TriggerUpgrade(c *fiber.Ctx) error {
 			Data: map[string]any{
 				"status":  "failed",
 				"message": "Failed to patch deployment",
-				"error":   err.Error(),
 			},
 		})
 		return c.Status(fiber.StatusInternalServerError).JSON(SelfUpgradeTriggerResponse{
-			Error: fmt.Sprintf("failed to patch deployment: %v", err),
+			Error: "failed to patch deployment",
 		})
 	}
 
