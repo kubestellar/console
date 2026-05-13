@@ -27,6 +27,22 @@ import { getStatusDescription } from '../../hooks/useFeatureRequests'
 const REOPEN_COMMENT_ROWS = 3
 const REOPEN_COMMENT_MAX_LENGTH = 1000
 
+function isValidPreviewUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+
+  try {
+    const parsed = new URL(url)
+    return (
+      parsed.protocol === 'https:' &&
+      (parsed.hostname.endsWith('.netlify.app') ||
+        parsed.hostname === 'console.kubestellar.io' ||
+        parsed.hostname.endsWith('.console-deploy-preview.kubestellar.io'))
+    )
+  } catch {
+    return false
+  }
+}
+
 type RequestCardState = 'awaiting_verification' | FeatureRequest['status']
 
 interface UpdatesTabProps {
@@ -743,13 +759,14 @@ function PreviewSection({
 }) {
   const checkedPreview = request.pr_number ? previewResults[request.pr_number] : null
   const previewUrl = request.netlify_preview_url || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
+  const safePreviewUrl = isValidPreviewUrl(previewUrl) ? previewUrl : null
   const isCheckingThis = previewChecking === request.pr_number
 
   const readyAt = checkedPreview?.ready_at ? new Date(checkedPreview.ready_at) : null
   const secondsSinceReady = readyAt ? (Date.now() - readyAt.getTime()) / MS_PER_SECOND : Infinity
   const isWarmingUp = secondsSinceReady < PREVIEW_WARMUP_SECONDS
 
-  if (previewUrl && request.status === 'fix_ready') {
+  if (safePreviewUrl && request.status === 'fix_ready') {
     if (isWarmingUp) {
       const secondsLeft = Math.ceil(PREVIEW_WARMUP_SECONDS - secondsSinceReady)
       return (
@@ -771,7 +788,9 @@ function PreviewSection({
           <button
             onClick={(e) => {
               e.stopPropagation()
-              window.open(previewUrl, '_blank', 'noopener,noreferrer')
+              if (isValidPreviewUrl(safePreviewUrl)) {
+                window.open(safePreviewUrl, '_blank', 'noopener,noreferrer')
+              }
             }}
             className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1">
             <ExternalLink className="w-3 h-3" />
@@ -781,12 +800,14 @@ function PreviewSection({
       </div>
     )
   }
-  if (previewUrl) {
+  if (safePreviewUrl) {
     return (
       <button
         onClick={(e) => {
           e.stopPropagation()
-          window.open(previewUrl, '_blank', 'noopener,noreferrer')
+          if (isValidPreviewUrl(safePreviewUrl)) {
+            window.open(safePreviewUrl, '_blank', 'noopener,noreferrer')
+          }
         }}
         className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1 bg-transparent border-0 p-0 cursor-pointer">
         <Eye className="w-3 h-3" />
