@@ -7,7 +7,7 @@ import { useClusters, usePodIssues } from './useMCP'
 import { summarizeClusterHealth } from '../components/clusters/utils'
 import { getDemoMode } from '../lib/demoMode'
 
-export type DashboardHealthStatus = 'healthy' | 'warning' | 'critical'
+export type DashboardHealthStatus = 'healthy' | 'warning' | 'critical' | 'empty'
 
 export interface DashboardHealthInfo {
   status: DashboardHealthStatus
@@ -89,7 +89,15 @@ export function useDashboardHealth(): DashboardHealthInfo {
     let message = 'All systems healthy'
     let navigateTo: string | undefined
 
-    if (criticalCount > 0) {
+    // Empty environment: agent is online but no clusters are registered
+    const isEmptyEnvironment = !clustersLoading && !isDemoActive
+      && deduplicatedClusters.length === 0
+      && criticalCount === 0 && warningCount === 0
+
+    if (isEmptyEnvironment) {
+      status = 'empty'
+      message = 'No clusters connected'
+    } else if (criticalCount > 0) {
       status = 'critical'
       message = `${criticalCount} critical issue${criticalCount > 1 ? 's' : ''}`
       navigateTo = ROUTES.ALERTS

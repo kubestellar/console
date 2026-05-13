@@ -204,4 +204,26 @@ describe('useDashboardHealth', () => {
     expect(result.current.criticalCount).toBe(0)
     expect(result.current.warningCount).toBe(0)
   })
+
+  it('returns empty when no clusters are connected and not in demo mode', () => {
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
+    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
+    mockGetDemoMode.mockReturnValue(false)
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('empty')
+    expect(result.current.message).toBe('No clusters connected')
+  })
+
+  it('returns healthy (not empty) when in demo mode with zero clusters', () => {
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
+    mockUsePodIssues.mockReturnValue({ issues: [], isLoading: false })
+    mockGetDemoMode.mockReturnValue(true)
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('healthy')
+    expect(result.current.message).toBe('All systems healthy')
+  })
 })
