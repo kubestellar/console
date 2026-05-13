@@ -2022,21 +2022,14 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         shouldAllowMissingToolWarning(params.context)
 
       if (!toolResult.ok && toolResult.error && !allowMissingToolWarning) {
+        // Block the mission — the PreflightFailure component renders the
+        // structured error card; no duplicate system message needed (#13464).
         setMissions(prev => prev.map(m =>
           m.id === missionId ? {
             ...m,
             status: 'blocked' as MissionStatus,
             currentStep: 'Missing required tools',
             preflightError: toolResult.error,
-            messages: [
-              ...getMissionMessages(m.messages),
-              {
-                id: generateMessageId('tool-preflight'),
-                role: 'system' as const,
-                content: `**Pre-flight Tool Check Failed**\n\n${toolResult.error?.message || 'Required tools are missing.'}\n\nInstall the missing tools and retry the mission.`,
-                timestamp: new Date(),
-              },
-            ],
           } : m
         ))
         return
@@ -2080,21 +2073,15 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
 
     preflightPromise.then(preflight => {
       if (!preflight.ok && 'error' in preflight && preflight.error) {
-        // Preflight failed — block the mission with a structured error
+        // Preflight failed — block the mission with a structured error.
+        // The PreflightFailure component renders the error card; no duplicate
+        // system message needed (#13464).
         setMissions(prev => prev.map(m =>
           m.id === missionId ? {
             ...m,
             status: 'blocked' as MissionStatus,
             currentStep: 'Preflight check failed',
             preflightError: preflight.error,
-            messages: [
-              ...getMissionMessages(m.messages),
-              {
-                id: generateMessageId('preflight'),
-                role: 'system' as const,
-                content: `**Preflight Check Failed**\n\nThe mission cannot proceed because cluster access verification failed. See the details below for how to fix this.\n\nError: ${preflight.error?.message || 'Unknown error'}`,
-                timestamp: new Date() }
-            ]
           } : m
         ))
         emitMissionError(
@@ -2121,7 +2108,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       executeMission(missionId, enhancedPrompt, params)
     }).catch((err) => {
       // Preflight itself threw unexpectedly — block the mission instead of
-      // fail-open to prevent executing without validation (#5846)
+      // fail-open to prevent executing without validation (#5846).
+      // The PreflightFailure component renders the error; no duplicate
+      // system message needed (#13464).
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
           ...m,
@@ -2132,20 +2121,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             message: err instanceof Error ? err.message : 'Unknown error',
             details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
           },
-          messages: [
-            ...getMissionMessages(m.messages),
-            {
-              id: generateMessageId('preflight-error'),
-              role: 'system' as const,
-              content: `**Preflight Check Error**\n\nThe preflight check encountered an unexpected error. The mission has been blocked to prevent unvalidated execution.\n\nError: ${err instanceof Error ? err.message : 'Unknown error'}`,
-              timestamp: new Date() }
-          ]
         } : m
       ))
     })
     }) // end toolCheckPromise.then
     .catch((err) => {
-      // Tool check itself threw — block with a generic error
+      // Tool check itself threw — block with a generic error.
+      // PreflightFailure component handles display (#13464).
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
           ...m,
@@ -2156,15 +2138,6 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             message: err instanceof Error ? err.message : 'Unknown error',
             details: { hint: 'The tool pre-flight check threw an unexpected error. Verify the local agent is running.' },
           },
-          messages: [
-            ...getMissionMessages(m.messages),
-            {
-              id: generateMessageId('tool-check-error'),
-              role: 'system' as const,
-              content: `**Tool Check Error**\n\nFailed to verify required tools: ${err instanceof Error ? err.message : 'Unknown error'}`,
-              timestamp: new Date(),
-            },
-          ],
         } : m
       ))
     })
@@ -2540,21 +2513,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
           shouldAllowMissingToolWarning(mission.context)
 
         if (!toolResult.ok && toolResult.error && !allowMissingToolWarning) {
+          // Re-block — PreflightFailure component handles display (#13464)
           setMissions(prev => prev.map(m =>
             m.id === missionId ? {
               ...m,
               status: 'blocked' as MissionStatus,
               currentStep: 'Missing required tools',
               preflightError: toolResult.error,
-              messages: [
-                ...getMissionMessages(m.messages),
-                {
-                  id: generateMessageId('tool-preflight-retry'),
-                  role: 'system' as const,
-                  content: `**Pre-flight Tool Check Still Failing**\n\n${toolResult.error?.message || 'Required tools are missing.'}\n\nInstall the missing tools and retry the mission.`,
-                  timestamp: new Date(),
-                },
-              ],
             } : m
           ))
           return
@@ -2607,21 +2572,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         const failing = results.find(r => !r.result.ok && 'error' in r.result && r.result.error)
         const preflight = failing ? failing.result : (results[0]?.result || { ok: true })
         if (!preflight.ok && 'error' in preflight && preflight.error) {
-          // Still failing — re-block
+          // Still failing — re-block. PreflightFailure component handles display (#13464)
           setMissions(prev => prev.map(m =>
             m.id === missionId ? {
               ...m,
               status: 'blocked' as MissionStatus,
               currentStep: 'Preflight check failed',
               preflightError: preflight.error,
-              messages: [
-                ...getMissionMessages(m.messages),
-                {
-                  id: generateMessageId('preflight-retry'),
-                  role: 'system' as const,
-                  content: `**Preflight Check Still Failing**\n\nError: ${preflight.error?.message || 'Unknown error'}`,
-                  timestamp: new Date() }
-              ]
             } : m
           ))
           if (preflight.error?.message) {

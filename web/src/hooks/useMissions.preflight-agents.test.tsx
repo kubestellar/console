@@ -532,7 +532,7 @@ describe('preflight check', () => {
     const mission = result.current.missions[0]
     expect(mission.status).toBe('blocked')
     expect(mission.preflightError?.code).toBe('MISSING_CREDENTIALS')
-    expect(mission.messages.some(m => m.content.includes('Preflight Check Failed'))).toBe(true)
+    // PreflightFailure component renders the error; no duplicate system message (#13464)
     expect(emitMissionError).toHaveBeenCalledWith('deploy', 'MISSING_CREDENTIALS', expect.anything())
   })
 
@@ -649,9 +649,8 @@ describe('preflight check', () => {
     await act(async () => { await Promise.resolve() })
 
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('blocked')
-    expect(result.current.missions.find(m => m.id === missionId)?.messages.some(
-      m => m.content.includes('Still Failing'),
-    )).toBe(true)
+    // PreflightFailure component renders the error; no duplicate system message (#13464)
+    expect(result.current.missions.find(m => m.id === missionId)?.preflightError?.code).toBe('RBAC_DENIED')
   })
 
   it('retryPreflight is a no-op for non-blocked missions', () => {
