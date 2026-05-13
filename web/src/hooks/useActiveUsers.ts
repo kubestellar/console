@@ -306,7 +306,7 @@ function startPresenceConnection() {
 
       // Check if we've exceeded max reconnect attempts
       if (presenceReconnectAttempts >= MAX_WS_RECONNECT_ATTEMPTS) {
-        console.warn('[ActiveUsers] Max reconnect attempts exceeded, giving up')
+        console.error('[ActiveUsers] Max reconnect attempts exceeded, giving up')
         return
       }
 
