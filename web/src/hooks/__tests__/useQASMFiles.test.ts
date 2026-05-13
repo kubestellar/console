@@ -31,7 +31,10 @@ beforeEach(() => {
   vi.resetAllMocks()
   mockIsAuthenticated.mockReturnValue(true)
   mockIsQuantumForcedToDemo.mockReturnValue(false)
-  globalThis.fetch = vi.fn()
+  globalThis.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => [],
+  })
 })
 
 afterEach(() => {
@@ -182,14 +185,14 @@ describe('useQASMFiles — demo mode guard', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
   })
 
-  it('returns empty files in demo mode', async () => {
-    mockIsQuantumForcedToDemo.mockReturnValue(true)
-    const { result } = renderHook(() => useQASMFiles())
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-    expect(result.current.files).toEqual([])
-  })
+  it('returns demo files in demo mode', async () => {
+  mockIsQuantumForcedToDemo.mockReturnValue(true)
+  const { result } = renderHook(() => useQASMFiles())
+  await waitFor(() => expect(result.current.isLoading).toBe(false))
+  expect(globalThis.fetch).not.toHaveBeenCalled()
+  expect(result.current.files).toEqual([{ name: 'bell.qasm' }])
 })
-
+})
 // ── enabled flag ──
 
 describe('useQASMFiles — enabled flag', () => {
