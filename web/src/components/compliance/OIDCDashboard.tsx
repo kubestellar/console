@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useCallback, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { oidcDashboardConfig } from '../../config/dashboards/oidc'
@@ -6,7 +6,8 @@ import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   Users, ShieldCheck, Fingerprint, Clock,
 } from 'lucide-react'
-import { authFetch } from '../../lib/api'
+import { authFetch, safeJson } from '../../lib/api'
+import { useCache } from '../../lib/cache'
 import { DashboardHeader } from '../shared/DashboardHeader'
 import { RotatingTip } from '../ui/RotatingTip'
 
@@ -35,37 +36,66 @@ const STATUS_STYLES: Record<string, string> = {
   error: 'bg-red-500/20 text-red-300 border-red-500/30',
 }
 
+const OIDC_SUMMARY_CACHE_KEY = 'identity-oidc-summary'
+const OIDC_PROVIDERS_CACHE_KEY = 'identity-oidc-providers'
+const OIDC_SESSIONS_CACHE_KEY = 'identity-oidc-sessions'
+
+async function fetchOIDCJson<T>(endpoint: string): Promise<T> {
+  const response = await authFetch(endpoint)
+  if (!response.ok) throw new Error('Failed to load OIDC data')
+  return safeJson<T>(response)
+}
+
 export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
   const { t } = useTranslation()
-  const [providers, setProviders] = useState<OIDCProvider[]>([])
-  const [sessions, setSessions] = useState<OIDCSession[]>([])
-  const [summary, setSummary] = useState<OIDCSummary | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'providers' | 'sessions'>('providers')
   const [autoRefresh, setAutoRefresh] = useState(false)
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [smRes, pRes, sRes] = await Promise.all([
-        authFetch('/api/identity/oidc/summary'),
-        authFetch('/api/identity/oidc/providers'),
-        authFetch('/api/identity/oidc/sessions'),
-      ])
-      if (!smRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to load OIDC data')
-      setSummary(await smRes.json())
-      setProviders(await pRes.json())
-      setSessions(await sRes.json())
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load OIDC data')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const {
+    data: summary,
+    error: summaryError,
+    isLoading: summaryLoading,
+    isRefreshing: summaryRefreshing,
+    refetch: refetchSummary,
+  } = useCache<OIDCSummary | null>({
+    key: OIDC_SUMMARY_CACHE_KEY,
+    category: 'rbac',
+    initialData: null,
+    fetcher: () => fetchOIDCJson<OIDCSummary>('/api/identity/oidc/summary'),
+  })
+  const {
+    data: providers,
+    error: providersError,
+    isLoading: providersLoading,
+    isRefreshing: providersRefreshing,
+    refetch: refetchProviders,
+  } = useCache<OIDCProvider[]>({
+    key: OIDC_PROVIDERS_CACHE_KEY,
+    category: 'rbac',
+    initialData: [],
+    fetcher: () => fetchOIDCJson<OIDCProvider[]>('/api/identity/oidc/providers'),
+  })
+  const {
+    data: sessions,
+    error: sessionsError,
+    isLoading: sessionsLoading,
+    isRefreshing: sessionsRefreshing,
+    refetch: refetchSessions,
+  } = useCache<OIDCSession[]>({
+    key: OIDC_SESSIONS_CACHE_KEY,
+    category: 'rbac',
+    initialData: [],
+    fetcher: () => fetchOIDCJson<OIDCSession[]>('/api/identity/oidc/sessions'),
+  })
 
-  useEffect(() => { fetchData() }, [fetchData])
+  const hasCachedData = summary !== null || providers.length > 0 || sessions.length > 0
+  const loading = (summaryLoading || providersLoading || sessionsLoading) && !hasCachedData
+  const isFetching = loading || summaryRefreshing || providersRefreshing || sessionsRefreshing
+  const error = hasCachedData ? null : summaryError ?? providersError ?? sessionsError
+
+  const fetchData = useCallback(async () => {
+    await Promise.all([refetchSummary(), refetchProviders(), refetchSessions()])
+  }, [refetchProviders, refetchSessions, refetchSummary])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -87,7 +117,7 @@ export const OIDCDashboardContent = memo(function OIDCDashboardContent() {
       <DashboardHeader
         title="OIDC Federation"
         subtitle="Identity provider federation and session management"
-        isFetching={loading}
+        isFetching={isFetching}
         onRefresh={fetchData}
         autoRefresh={autoRefresh}
         onAutoRefreshChange={setAutoRefresh}

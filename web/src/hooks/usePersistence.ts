@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useLocalAgent } from './useLocalAgent'
 import { useAuth } from '../lib/auth'
+import { authFetch } from '../lib/api'
 import { FETCH_DEFAULT_TIMEOUT_MS, POLL_INTERVAL_MS } from '../lib/constants/network'
 
 // =============================================================================
@@ -76,8 +77,7 @@ export function usePersistence() {
     }
 
     try {
-      const response = await fetch('/api/persistence/config', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await authFetch('/api/persistence/config', {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
@@ -97,8 +97,7 @@ export function usePersistence() {
     if (!isBackendAvailable || !hasRealToken) return
 
     try {
-      const response = await fetch('/api/persistence/status', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await authFetch('/api/persistence/status', {
         signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
       if (response.ok) {
         const data = await response.json()
@@ -119,7 +118,7 @@ export function usePersistence() {
 
     try {
       const updatedConfig = { ...config, ...newConfig }
-      const response = await fetch('/api/persistence/config', {
+      const response = await authFetch('/api/persistence/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedConfig),
@@ -170,7 +169,7 @@ export function usePersistence() {
     }
 
     try {
-      const response = await fetch('/api/persistence/test', {
+      const response = await authFetch('/api/persistence/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ cluster }),
@@ -192,7 +191,12 @@ export function usePersistence() {
 
     setSyncing(true)
     try {
-      const response = await fetch('/api/persistence/sync', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'include', signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      const response = await authFetch('/api/persistence/sync', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'include',
+        signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+      })
       if (response.ok) {
         await fetchStatus()
         return true

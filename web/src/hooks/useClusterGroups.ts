@@ -131,7 +131,10 @@ export function useClusterGroups() {
   }
 
   const syncClusterGroupsRequest = async (input: string, init: RequestInit) => {
-    const response = await fetch(input, init)
+    const response = await fetch(input, {
+      ...init,
+      signal: init.signal ?? AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
+    })
     if (!response.ok) {
       const statusText = response.statusText ? ` ${response.statusText}` : ''
       throw new Error(`HTTP ${response.status}${statusText}`)
