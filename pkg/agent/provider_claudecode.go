@@ -50,15 +50,14 @@ var warnedOptionalTools sync.Map
 // is available on PATH. Optional tools are checked but only produce a log
 // warning — they do not block mission execution. Each missing optional tool
 // warns at most once per process to avoid log spam on repeated invocations.
+// Optional tools are always checked, even when required tools are missing,
+// so the caller receives the full picture in one pass.
 func CheckToolDependencies() error {
 	var missing []string
 	for _, tool := range RequiredMissionTools {
 		if _, err := exec.LookPath(tool); err != nil {
 			missing = append(missing, tool)
 		}
-	}
-	if len(missing) > 0 {
-		return &ToolDependencyError{MissingTools: missing}
 	}
 
 	for _, tool := range OptionalMissionTools {
@@ -67,6 +66,10 @@ func CheckToolDependencies() error {
 				slog.Warn("optional mission tool not found on PATH — missions requiring it will fail at execution time", "tool", tool)
 			}
 		}
+	}
+
+	if len(missing) > 0 {
+		return &ToolDependencyError{MissingTools: missing}
 	}
 	return nil
 }
