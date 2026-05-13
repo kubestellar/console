@@ -56,7 +56,7 @@ func (h *ComplianceReportsHandler) GenerateReport(c *fiber.Ctx) error {
 	}
 	if format != reports.FormatPDF && format != reports.FormatJSON {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf("unsupported format %q, use \"pdf\" or \"json\"", format),
+			"error": "unsupported format, use \"pdf\" or \"json\"",
 		})
 	}
 
