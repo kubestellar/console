@@ -353,8 +353,9 @@ var kubectlErrorPatterns = []string{
 // detectKubectlErrors scans text for known kubectl/K8s error patterns
 // and returns the matching error lines. Returns nil when no errors are found.
 func detectKubectlErrors(text string) []string {
-	errs := make([]string, 0)
-	for _, line := range strings.Split(text, "\n") {
+	lines := strings.Split(text, "\n")
+	errs := make([]string, 0, len(lines)/4)
+	for _, line := range lines {
 		lineLower := strings.ToLower(line)
 		for _, pattern := range kubectlErrorPatterns {
 			if strings.Contains(lineLower, pattern) {
@@ -595,7 +596,7 @@ func cleanupTempDir(dir string) {
 }
 
 func parseDiffOutput(output, namespace string) []DriftedResource {
-	resources := make([]DriftedResource, 0)
+	resources := make([]DriftedResource, 0, 8)
 	resourceMap := make(map[string]*DriftedResource) // key: kind/name
 
 	lines := strings.Split(output, "\n")
@@ -680,8 +681,8 @@ func truncateValue(s string) string {
 }
 
 func parseApplyOutput(output string) []string {
-	applied := make([]string, 0)
 	lines := strings.Split(output, "\n")
+	applied := make([]string, 0, len(lines))
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line != "" && (strings.Contains(line, "created") ||

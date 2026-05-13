@@ -81,7 +81,7 @@ func (h *TopologyHandlers) GetTopology(c *fiber.Ctx) error {
 	defer cancel()
 
 	// Collect data from all sources, tracking partial failures (#4774)
-	partialErrors := make([]string, 0)
+	partialErrors := make([]string, 0, 4)
 
 	exports, err := h.k8sClient.ListServiceExports(ctx)
 	if err != nil {
@@ -147,8 +147,19 @@ func (h *TopologyHandlers) buildTopologyGraph(
 	gateways *v1alpha1.GatewayList,
 	httpRoutes *v1alpha1.HTTPRouteList,
 ) TopologyGraph {
-	nodes := make([]TopologyNode, 0)
-	edges := make([]TopologyEdge, 0)
+	// Pre-allocate with estimated capacity based on input sizes.
+	estimatedNodes := 0
+	if exports != nil {
+		estimatedNodes += len(exports.Items)
+	}
+	if imports != nil {
+		estimatedNodes += len(imports.Items)
+	}
+	if gateways != nil {
+		estimatedNodes += len(gateways.Items)
+	}
+	nodes := make([]TopologyNode, 0, estimatedNodes+16)
+	edges := make([]TopologyEdge, 0, estimatedNodes+16)
 	clusterSet := make(map[string]bool)
 	nodeIndex := make(map[string]bool)
 

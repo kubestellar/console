@@ -975,7 +975,7 @@ func (h *MissionsHandler) GetKBScores(c *fiber.Ctx) error {
 	}
 
 	// Filter just the scoring related fields
-	results := make([]fiber.Map, 0)
+	results := make([]fiber.Map, 0, len(index.Missions))
 	for _, m := range index.Missions {
 		if m.QualityScore != nil {
 			project := "unknown"

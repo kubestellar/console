@@ -790,7 +790,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 		_ = g.Wait() // errors are non-fatal (logged above)
 	}
 
-	matching := make([]string, 0)
+	matching := make([]string, 0, len(healthData))
 	for _, health := range healthData {
 		if clusterMatchesQuery(health, nodesByCluster[health.Cluster], &query) {
 			matching = append(matching, health.Cluster)
@@ -1207,7 +1207,7 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 	// Collect k8s events for the deployment and its pods
 	// Use a limit to bound memory usage (#3721)
 	const maxEventsPerQuery = 50
-	allEvents := make([]corev1.Event, 0)
+	allEvents := make([]corev1.Event, 0, maxEventsPerQuery*(1+len(pods.Items)))
 
 	// Events for the deployment itself
 	deployEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{

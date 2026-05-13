@@ -83,8 +83,8 @@ func (h *ServiceExportHandlers) ListServiceExports(c *fiber.Ctx) error {
 		}
 	}
 
-	allExports := make([]ServiceExportSummary, 0)
-	clusterErrors := make([]ClusterError, 0)
+	allExports := make([]ServiceExportSummary, 0, len(clusters)*4)
+	clusterErrors := make([]ClusterError, 0, len(clusters))
 	// successCount tracks how many clusters were queried successfully (even if
 	// they returned zero exports). We use this instead of len(allExports) > 0
 	// because a cluster can legitimately have no ServiceExports and still

@@ -851,7 +851,7 @@ func (h *MCPHandlers) GetPodNetworkStats(c *fiber.Ctx) error {
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	allStats := make([]PodNetworkStats, 0)
+	allStats := make([]PodNetworkStats, 0, len(clusters)*8)
 	var errTracker clusterErrorTracker
 
 	clusterCtx, clusterCancel := context.WithCancel(c.Context())

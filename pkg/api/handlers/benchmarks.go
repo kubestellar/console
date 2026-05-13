@@ -676,7 +676,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		}
 
 		// Filter to folders only, skip folders older than cutoff
-		experiments := make([]driveFile, 0)
+		experiments := make([]driveFile, 0, len(topLevel))
 		for _, item := range topLevel {
 			if item.MimeType != driveFolderMIME {
 				continue
@@ -836,7 +836,7 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 	}
 
 	// Filter experiments up-front so we know the work set.
-	experiments := make([]driveFile, 0)
+	experiments := make([]driveFile, 0, len(topLevel))
 	for _, item := range topLevel {
 		if item.MimeType != driveFolderMIME {
 			continue
@@ -915,8 +915,8 @@ func (h *BenchmarkHandlers) fetchRunFolder(ctx context.Context, folderID, experi
 	}
 
 	// First: look for benchmark YAML files directly in this folder
-	reports := make([]BenchmarkReport, 0)
-	subfolders := make([]driveFile, 0)
+	reports := make([]BenchmarkReport, 0, len(items))
+	subfolders := make([]driveFile, 0, len(items)/2)
 	parseFailures := 0
 	for _, f := range items {
 		if f.MimeType == driveFolderMIME {
@@ -968,7 +968,7 @@ func (h *BenchmarkHandlers) collectBenchmarkFiles(ctx context.Context, folderID,
 	if err != nil {
 		return nil, 0, err
 	}
-	reports := make([]BenchmarkReport, 0)
+	reports := make([]BenchmarkReport, 0, len(files))
 	parseFailures := 0
 	for _, f := range files {
 		if f.MimeType == driveFolderMIME {
@@ -1152,7 +1152,7 @@ func adaptV1ToV2(raw rawV1Report, experimentName, runName, fileCreatedTime strin
 }
 
 func buildStackComponents(raw rawV1Report) []BenchmarkStackComponent {
-	components := make([]BenchmarkStackComponent, 0)
+	components := make([]BenchmarkStackComponent, 0, len(raw.Scenario.Host.Accelerator))
 
 	// Build one component per accelerator entry
 	for i, accel := range raw.Scenario.Host.Accelerator {

@@ -228,8 +228,9 @@ func fetchPlaylistViaYTDLP() ([]PlaylistVideo, error) {
 		return nil, fmt.Errorf("yt-dlp failed: %w", err)
 	}
 
-	videos := make([]PlaylistVideo, 0)
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	videos := make([]PlaylistVideo, 0, len(lines))
+	for _, line := range lines {
 		if line == "" {
 			continue
 		}

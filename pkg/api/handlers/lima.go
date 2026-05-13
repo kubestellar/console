@@ -99,7 +99,7 @@ func (h *LimaHandlers) ListLima(c *fiber.Ctx) error {
 		})
 	}
 
-	instances := make([]LimaInstanceSummary, 0)
+	instances := make([]LimaInstanceSummary, 0, len(clusters))
 	successfulClusterQueries := 0
 
 	for _, cl := range clusters {
