@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useMemo, ReactNode } from 'react'
-import i18n from '../lib/i18n'
 import type { AgentInfo, AgentsListPayload, AgentSelectedPayload, ChatStreamPayload } from '../types/agent'
 import { AgentCapabilityToolExec } from '../types/agent'
 import type { Mission, MissionMessage, MissionStatus, MissionFeedback, StartMissionParams, PendingReviewEntry, SaveMissionParams, SavedMissionUpdates } from './useMissionTypes'
@@ -42,7 +41,6 @@ import { kubectlProxy } from '../lib/kubectlProxy'
 import {
   kagentiProviderChat,
   discoverKagentiProviderAgent,
-  type KagentiProviderAgentDiscoveryResult,
 } from '../lib/kagentiProviderBackend'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
 import {
@@ -55,32 +53,14 @@ import {
   generateMessageId, buildEnhancedPrompt, buildSystemMessages,
   stripInteractiveArtifacts, buildSavedMissionPrompt,
 } from './useMissionPromptBuilder'
-
-function getMissionMessages(messages?: MissionMessage[]): MissionMessage[] {
-  return messages || []
-}
-
-const KAGENTI_PROVIDER_UNAVAILABLE_EVENT = 'kagenti_provider_unavailable'
-const KAGENTI_NO_AGENTS_DISCOVERED_EVENT = 'kagenti_no_agents_discovered'
-
-type KagentiDiscoveryFailure = Extract<KagentiProviderAgentDiscoveryResult, { ok: false }>
-
-function buildKagentiDiscoveryErrorMessage(result: KagentiDiscoveryFailure): string {
-  if (result.reason === 'provider_unreachable') {
-    const reasonSuffix = result.detail ? ` (${result.detail})` : ''
-    return `**${i18n.t('missions.kagenti.providerUnavailableTitle')}**\n\n${i18n.t('missions.kagenti.providerUnavailableDescription', { reasonSuffix })}`
-  }
-
-  return `**${i18n.t('missions.kagenti.noAgentsTitle')}**\n\n${i18n.t('missions.kagenti.noAgentsDescription')}`
-}
-
-/** Returns true when a MissionMessage is a stale agent-disconnect error. */
-function isStaleAgentErrorMessage(msg: MissionMessage): boolean {
-  return (
-    msg.role === 'system' &&
-    AGENT_DISCONNECT_ERROR_PATTERNS.some(pattern => msg.content.includes(pattern))
-  )
-}
+import {
+  getMissionMessages,
+  isStaleAgentErrorMessage,
+  KAGENTI_PROVIDER_UNAVAILABLE_EVENT,
+  KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
+  buildKagentiDiscoveryErrorMessage,
+  type KagentiDiscoveryFailure,
+} from './useMissions.helpers'
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
