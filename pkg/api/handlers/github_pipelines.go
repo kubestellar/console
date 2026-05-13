@@ -450,7 +450,7 @@ func (h *GitHubPipelinesHandler) Serve(c *fiber.Ctx) error {
 	case "log":
 		return h.handleLog(c)
 	default:
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unknown view: " + view})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid view parameter"})
 	}
 }
 
