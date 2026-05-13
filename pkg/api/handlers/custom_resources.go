@@ -96,8 +96,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 			// bugs.
 			if apierrors.IsForbidden(err) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-					"error":   "forbidden",
-					"cluster": cluster,
+					"error": "forbidden: insufficient permissions for the requested cluster",
 				})
 			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list resources"})
