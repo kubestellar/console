@@ -891,7 +891,7 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 		canLinkParent, err := h.canLinkParentIssue(req.Context(), repoOwner, repoName, clientAuth)
 		if err != nil {
 			slog.Warn("[Feedback] parent issue capability check failed", "issue", result.Number, "parent", *parentIssueNumber, "error", err)
-			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but the reporter's repository permissions could not be verified for parent issue #%d: %v", result.Number, *parentIssueNumber, err)
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but the reporter's repository permissions could not be verified for parent issue #%d.", result.Number, *parentIssueNumber)
 			return createdIssue, nil
 		}
 		if !canLinkParent {
@@ -900,7 +900,7 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 		}
 		if err := h.linkIssueAsSubIssue(req.Context(), repoOwner, repoName, *parentIssueNumber, result.ID, authToken); err != nil {
 			slog.Warn("[Feedback] sub-issue link failed", "issue", result.Number, "parent", *parentIssueNumber, "error", err)
-			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but it could not be linked to parent issue #%d: %v", result.Number, *parentIssueNumber, err)
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but it could not be linked to parent issue #%d.", result.Number, *parentIssueNumber)
 		}
 	}
 
