@@ -526,9 +526,10 @@ func (h *FeedbackHandler) ListAllFeatureRequests(c *fiber.Ctx) error {
 			if stored.ClosedByUser {
 				closedByUser = true
 				status = string(models.RequestStatusClosed)
-			} else if status == string(models.RequestStatusFixComplete) && stored.Status != "" && stored.Status != models.RequestStatusFixComplete {
-				status = string(stored.Status)
 			}
+			// GitHub is the source of truth for resolved queue states. Stored DB status
+			// can lag behind a merged fix or closed issue, so never regress those
+			// statuses back to an earlier triage state.
 		}
 
 		// PR #6518 item G / #6573 item E — count_only responses carry only
