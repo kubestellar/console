@@ -60,7 +60,7 @@ func (s *SQLiteStore) GetUserFeatureRequests(ctx context.Context, userID uuid.UU
 	}
 	defer rows.Close()
 
-	var requests []models.FeatureRequest
+	requests := make([]models.FeatureRequest, 0)
 	for rows.Next() {
 		r, err := s.scanFeatureRequestRow(ctx, rows)
 		if err != nil {
@@ -100,7 +100,7 @@ func (s *SQLiteStore) GetAllFeatureRequests(ctx context.Context, limit, offset i
 	}
 	defer rows.Close()
 
-	var requests []models.FeatureRequest
+	requests := make([]models.FeatureRequest, 0)
 	for rows.Next() {
 		r, err := s.scanFeatureRequestRow(ctx, rows)
 		if err != nil {
@@ -292,7 +292,7 @@ func (s *SQLiteStore) GetPRFeedback(ctx context.Context, featureRequestID uuid.U
 	}
 	defer rows.Close()
 
-	var feedbacks []models.PRFeedback
+	feedbacks := make([]models.PRFeedback, 0)
 	for rows.Next() {
 		var f models.PRFeedback
 		var idStr, requestIDStr, userIDStr string
@@ -348,7 +348,7 @@ func (s *SQLiteStore) GetUserNotifications(ctx context.Context, userID uuid.UUID
 	}
 	defer rows.Close()
 
-	var notifications []models.Notification
+	notifications := make([]models.Notification, 0)
 	for rows.Next() {
 		var n models.Notification
 		var idStr, userIDStr string

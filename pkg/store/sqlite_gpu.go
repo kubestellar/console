@@ -160,7 +160,7 @@ func (s *SQLiteStore) ListGPUReservations(ctx context.Context) ([]models.GPURese
 	}
 	defer rows.Close()
 
-	var reservations []models.GPUReservation
+	reservations := make([]models.GPUReservation, 0)
 	for rows.Next() {
 		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {
@@ -179,7 +179,7 @@ func (s *SQLiteStore) ListUserGPUReservations(ctx context.Context, userID uuid.U
 	}
 	defer rows.Close()
 
-	var reservations []models.GPUReservation
+	reservations := make([]models.GPUReservation, 0)
 	for rows.Next() {
 		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {
@@ -425,7 +425,7 @@ func (s *SQLiteStore) GetUtilizationSnapshots(ctx context.Context, reservationID
 	}
 	defer rows.Close()
 
-	var snapshots []models.GPUUtilizationSnapshot
+	snapshots := make([]models.GPUUtilizationSnapshot, 0)
 	for rows.Next() {
 		var snap models.GPUUtilizationSnapshot
 		if err := rows.Scan(&snap.ID, &snap.ReservationID, &snap.Timestamp,
@@ -540,7 +540,7 @@ func (s *SQLiteStore) ListActiveGPUReservations(ctx context.Context) ([]models.G
 	}
 	defer rows.Close()
 
-	var reservations []models.GPUReservation
+	reservations := make([]models.GPUReservation, 0)
 	for rows.Next() {
 		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {
