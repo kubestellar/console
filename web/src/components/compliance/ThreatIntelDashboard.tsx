@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React, { memo, useRef } from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import {
   CheckCircle2, Loader2,
@@ -106,6 +106,7 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'feeds' | 'iocs'>('overview')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -117,17 +118,27 @@ const ThreatIntelDashboard = memo(function ThreatIntelDashboard() {
         authFetch('/api/v1/compliance/threat-intel/summary'),
       ])
       if (!fRes.ok || !iRes.ok || !sRes.ok) throw new Error('Failed to fetch threat intel data')
-      setFeeds(await fRes.json())
-      setIOCs(await iRes.json())
-      setSummary(await sRes.json())
+      const fData = await fRes.json()
+      const iData = await iRes.json()
+      const sData = await sRes.json()
+      if (cancelledRef.current) return
+      setFeeds(fData)
+      setIOCs(iData)
+      setSummary(sData)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
