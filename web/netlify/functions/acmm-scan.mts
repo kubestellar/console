@@ -23,7 +23,7 @@
  *     { repo, scannedAt, detectedIds, weeklyActivity, demoFallback: true, error }
  *
  *   400 invalid repo slug:   { error: "Invalid repo — must be owner/name" }
- *   404 repo not found:      { error: "Repo not found", detail: repo }
+ *   404 repo not found:      { error: "Repo not found" }
  *   405 non-GET method:      { error: "Method not allowed" }
  *   204 OPTIONS preflight:   (no body — CORS only)
  *
@@ -69,8 +69,9 @@ const CACHE_TTL_MS = 60 * 60 * 1000;
 const API_TIMEOUT_MS = 15_000;
 /** How many weeks of contribution history to return */
 const WEEKS_OF_HISTORY = 16;
-/** Valid repo slug: owner/name with word chars, dots, dashes */
-const REPO_RE = /^[\w.-]+\/[\w.-]+$/;
+/** Valid repo slug: owner/name with ASCII letters, digits, underscores, dots, dashes */
+const REPO_RE = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+const UNKNOWN_REPO = "unknown/repo";
 /** Allowed CORS origins (exact match) */
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
@@ -434,12 +435,13 @@ async function searchAllPages(
 
 function demoScan(repo: string): ScanResult {
   const weeks = lastNWeeks(WEEKS_OF_HISTORY);
+  const safeRepo = REPO_RE.test(repo) ? repo : UNKNOWN_REPO;
   // Issue #8978: match the current CRITERIA IDs so the demo fallback
   // doesn't compute down to L1 for repos that are clearly at a higher
   // maturity level (e.g. kubestellar/console is L5 in reality). The IDs
   // here must track CRITERIA[].id above; sync both when IDs change.
   return {
-    repo,
+    repo: safeRepo,
     scannedAt: new Date().toISOString(),
     detectedIds: [
       "acmm:prereq-test-suite",
@@ -577,7 +579,7 @@ export default async (req: Request) => {
     const msg = err instanceof Error ? err.message : "Unknown error";
     if (msg === "Repo not found") {
       return new Response(
-        JSON.stringify({ error: "Repo not found", detail: repo }),
+        JSON.stringify({ error: "Repo not found" }),
         {
           status: 404,
           headers: { ...headers, "Content-Type": "application/json" },
