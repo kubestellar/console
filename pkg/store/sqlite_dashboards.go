@@ -482,7 +482,7 @@ func (s *SQLiteStore) GetUserPendingSwaps(ctx context.Context, userID uuid.UUID,
 	}
 	defer rows.Close()
 
-	var swaps []models.PendingSwap
+	swaps := make([]models.PendingSwap, 0)
 	for rows.Next() {
 		swap, err := s.scanPendingSwapRow(ctx, rows)
 		if err != nil {
