@@ -214,7 +214,7 @@ export function useUpdateProgress() {
 
           // Check if we've exceeded max reconnect attempts
           if (reconnectAttemptsRef.current >= MAX_WS_RECONNECT_ATTEMPTS) {
-            console.warn('[UpdateProgress] Max reconnect attempts exceeded, giving up')
+            console.error('[UpdateProgress] Max reconnect attempts exceeded, giving up')
             return
           }
 
@@ -234,7 +234,7 @@ export function useUpdateProgress() {
       } catch {
         // Agent not available, retry later with exponential backoff
         if (reconnectAttemptsRef.current >= MAX_WS_RECONNECT_ATTEMPTS) {
-          console.warn('[UpdateProgress] Max reconnect attempts exceeded, giving up')
+          console.error('[UpdateProgress] Max reconnect attempts exceeded, giving up')
           return
         }
 
