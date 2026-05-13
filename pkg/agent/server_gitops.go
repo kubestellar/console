@@ -366,16 +366,18 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 	// Validate K8s name params before passing to kubectl CLI.
 	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
+			slog.Error("invalid GitOps detect-drift input", "field", field, "value", val, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
-			writeJSON(w, map[string]string{"error": fmt.Sprintf("invalid %s: %v", field, err)})
+			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
 		}
 	}
 
 	// Validate path parameter to prevent path traversal attacks.
 	if err := validateGitopsPath(req.Path); err != nil {
+		slog.Error("invalid GitOps detect-drift path", "path", req.Path, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]string{"error": fmt.Sprintf("invalid path: %v", err)})
+		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return
 	}
 
@@ -386,7 +388,7 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Warn("[agent] detect-drift: clone failed", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]string{"error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]string{"error": sanitizeAgentError("clone repository", err), "source": "agent"})
 		return
 	}
 	defer gitopsCleanupTempDir(tempDir)
@@ -438,13 +440,13 @@ func (s *Server) handleDetectDrift(w http.ResponseWriter, r *http.Request) {
 			} else {
 				slog.Warn("[agent] detect-drift: kubectl diff failed", "stderr", stderr.String())
 				w.WriteHeader(http.StatusInternalServerError)
-				writeJSON(w, map[string]string{"error": stderr.String(), "source": "agent"})
+				writeJSON(w, map[string]string{"error": sanitizeAgentError("detect drift", runErr), "source": "agent"})
 				return
 			}
 		} else {
 			slog.Warn("[agent] detect-drift: kubectl diff failed", "error", runErr)
 			w.WriteHeader(http.StatusInternalServerError)
-			writeJSON(w, map[string]string{"error": runErr.Error(), "source": "agent"})
+			writeJSON(w, map[string]string{"error": sanitizeAgentError("detect drift", runErr), "source": "agent"})
 			return
 		}
 	}
@@ -487,16 +489,18 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 	}
 	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
+			slog.Error("invalid GitOps sync input", "field", field, "value", val, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
-			writeJSON(w, map[string]string{"error": fmt.Sprintf("invalid %s: %v", field, err)})
+			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
 		}
 	}
 
 	// Validate path parameter to prevent path traversal attacks.
 	if err := validateGitopsPath(req.Path); err != nil {
+		slog.Error("invalid GitOps sync path", "path", req.Path, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]string{"error": fmt.Sprintf("invalid path: %v", err)})
+		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return
 	}
 
@@ -507,7 +511,7 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Warn("[agent] sync: clone failed", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]string{"error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]string{"error": sanitizeAgentError("clone repository", err), "source": "agent"})
 		return
 	}
 	defer gitopsCleanupTempDir(tempDir)
@@ -543,14 +547,16 @@ func (s *Server) handleGitopsSync(w http.ResponseWriter, r *http.Request) {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		slog.Warn("[agent] sync: kubectl apply failed", "error", err, "stderr", stderr.String())
+		msg := sanitizeAgentError("sync manifests", err)
 		// Backend returns 200 with Success=false and the stderr in Errors. Do
 		// the same here so frontend behavior is identical after the Phase 4
 		// URL swap.
 		writeJSON(w, agentSyncResponse{
 			Success: false,
-			Message: stderr.String(),
+			Message: msg,
 			Source:  "kubectl",
-			Errors:  []string{stderr.String()},
+			Errors:  []string{msg},
 		})
 		return
 	}

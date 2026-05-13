@@ -118,19 +118,22 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := validateDNS1123Label("namespace", namespace); err != nil {
+		slog.Error("invalid namespace for scale request", "namespace", namespace, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := validateDNS1123Label("workloadName", name); err != nil {
+		slog.Error("invalid workload name for scale request", "workloadName", name, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range targetClusters {
 		if err := validateKubeContext(tc); err != nil {
+			slog.Error("invalid target cluster for scale request", "targetCluster", tc, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
-			writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("targetCluster: %v", err)})
+			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 			return
 		}
 	}
@@ -154,7 +157,7 @@ func (s *Server) handleScaleHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
 			"success": false,
-			"error":   err.Error(),
+			"error":   sanitizeAgentError("scale workload", err),
 			"source":  "agent",
 		})
 		return
@@ -254,24 +257,28 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := validateDNS1123Label("workloadName", req.WorkloadName); err != nil {
+		slog.Error("invalid workload name for deploy request", "workloadName", req.WorkloadName, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		slog.Error("invalid namespace for deploy request", "namespace", req.Namespace, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := validateKubeContext(req.SourceCluster); err != nil {
+		slog.Error("invalid source cluster for deploy request", "sourceCluster", req.SourceCluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("sourceCluster: %v", err)})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	for _, tc := range req.TargetClusters {
 		if err := validateKubeContext(tc); err != nil {
+			slog.Error("invalid target cluster for deploy request", "targetCluster", tc, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
-			writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("targetCluster: %v", err)})
+			writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 			return
 		}
 	}
@@ -302,7 +309,7 @@ func (s *Server) handleDeployWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
 			"success": false,
-			"error":   err.Error(),
+			"error":   sanitizeAgentError("deploy workload", err),
 			"source":  "agent",
 		})
 		return
@@ -381,18 +388,21 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := validateKubeContext(req.Cluster); err != nil {
+		slog.Error("invalid cluster for delete workload request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": fmt.Sprintf("cluster: %v", err)})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
+		slog.Error("invalid namespace for delete workload request", "namespace", req.Namespace, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := validateDNS1123Label("name", req.Name); err != nil {
+		slog.Error("invalid workload name for delete request", "name", req.Name, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 
@@ -413,7 +423,7 @@ func (s *Server) handleDeleteWorkloadHTTP(w http.ResponseWriter, r *http.Request
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
 			"success": false,
-			"error":   err.Error(),
+			"error":   sanitizeAgentError("delete workload", err),
 			"source":  "agent",
 		})
 		return
@@ -559,7 +569,7 @@ func (s *Server) handlePodsStreamSSE(w http.ResponseWriter, r *http.Request) {
 
 			if err != nil {
 				slog.Warn("[SSE] cluster pod fetch failed", "cluster", clusterName, "error", err)
-				payload := map[string]string{"cluster": clusterName, "error": err.Error()}
+				payload := map[string]string{"cluster": clusterName, "error": sanitizeAgentError("list pods", err)}
 				data, _ := json.Marshal(payload)
 				fmt.Fprintf(bw, "event: cluster_error\ndata: %s\n\n", data)
 				bw.Flush()
@@ -679,7 +689,7 @@ func (s *Server) handleJobsStreamSSE(w http.ResponseWriter, r *http.Request) {
 
 			if err != nil {
 				slog.Warn("[SSE] cluster job fetch failed", "cluster", clusterName, "error", err)
-				payload := map[string]string{"cluster": clusterName, "error": err.Error()}
+				payload := map[string]string{"cluster": clusterName, "error": sanitizeAgentError("list jobs", err)}
 				data, _ := json.Marshal(payload)
 				fmt.Fprintf(bw, "event: cluster_error\ndata: %s\n\n", data)
 				bw.Flush()

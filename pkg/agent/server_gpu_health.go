@@ -123,7 +123,7 @@ func (s *Server) gpuHealthCronJobInstall(w http.ResponseWriter, r *http.Request)
 	if err := s.k8sClient.InstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace, body.Schedule, body.Tier); err != nil {
 		slog.Warn("[agent] GPU health cronjob install failed", "cluster", body.Cluster, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("install GPU health CronJob", err), "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{
@@ -157,7 +157,7 @@ func (s *Server) gpuHealthCronJobUninstall(w http.ResponseWriter, r *http.Reques
 	if err := s.k8sClient.UninstallGPUHealthCronJob(ctx, body.Cluster, body.Namespace); err != nil {
 		slog.Warn("[agent] GPU health cronjob uninstall failed", "cluster", body.Cluster, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("remove GPU health CronJob", err), "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{

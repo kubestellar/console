@@ -421,13 +421,15 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	// render a specific error and so we don't lean on the apiserver for
 	// validation.
 	if err := validateKubeContext(req.Cluster); err != nil {
+		slog.Error("invalid cluster for create namespace request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := validateDNS1123Label("name", req.Name); err != nil {
+		slog.Error("invalid namespace name for create request", "name", req.Name, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 
@@ -900,7 +902,7 @@ func (s *Server) createServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		slog.Warn("error creating service account", "cluster", req.Cluster, "namespace", req.Namespace, "name", req.Name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("create service account", err), "source": "agent"})
 		return
 	}
 	writeJSON(w, sa)
@@ -925,7 +927,7 @@ func (s *Server) deleteServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 	if err := s.k8sClient.DeleteServiceAccount(ctx, cluster, namespace, name); err != nil {
 		slog.Warn("error deleting service account", "cluster", cluster, "namespace", namespace, "name", name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("delete service account", err), "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "namespace": namespace, "name": name, "source": "agent"})
@@ -992,7 +994,7 @@ func (s *Server) createServiceExportHTTP(w http.ResponseWriter, r *http.Request)
 	if err := s.k8sClient.CreateServiceExport(ctx, req.Cluster, req.Namespace, req.ServiceName); err != nil {
 		slog.Warn("error creating service export", "cluster", req.Cluster, "namespace", req.Namespace, "serviceName", req.ServiceName, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("create service export", err), "source": "agent"})
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -1024,7 +1026,7 @@ func (s *Server) deleteServiceExportHTTP(w http.ResponseWriter, r *http.Request)
 	if err := s.k8sClient.DeleteServiceExport(ctx, cluster, namespace, name); err != nil {
 		slog.Warn("error deleting service export", "cluster", cluster, "namespace", namespace, "name", name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("delete service export", err), "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{
@@ -1295,8 +1297,9 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 	// so we return a specific 400 instead of passing empty/malformed values
 	// down to the apiserver and getting back an opaque 500.
 	if err := validateKubeContext(req.Cluster); err != nil {
+		slog.Error("invalid cluster for role binding request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if req.SubjectKind == "" || req.SubjectName == "" {
@@ -1502,7 +1505,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 			"namespace":    namespace,
 			"cluster":      cluster,
 			"dependencies": []interface{}{},
-			"warnings":     []string{err.Error()},
+			"warnings":     []string{sanitizeAgentError("resolve workload dependencies", err)},
 			"source":       "agent",
 		})
 		return

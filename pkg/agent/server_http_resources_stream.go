@@ -120,7 +120,7 @@ func handleClusterResourceStreamSSE[T any](s *Server, w http.ResponseWriter, r *
 			if err != nil {
 				retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
 				slog.Warn("[SSE] cluster resource fetch failed", "cluster", clusterName, "resource", resourceName, "error", err, "retryIn", retryIn)
-				payload := map[string]string{"cluster": clusterName, "error": err.Error()}
+				payload := map[string]string{"cluster": clusterName, "error": sanitizeAgentError("list resources", err)}
 				data, _ := json.Marshal(payload)
 				fmt.Fprintf(bw, "event: cluster_error\ndata: %s\n\n", data)
 				bw.Flush()

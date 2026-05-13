@@ -22,6 +22,7 @@ package agent
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -77,7 +78,8 @@ func (s *Server) handleCanIHTTP(w http.ResponseWriter, r *http.Request) {
 
 	result, err := s.k8sClient.CheckCanI(ctx, req.Cluster, req)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		slog.Error("failed to check permissions", "cluster", req.Cluster, "verb", req.Verb, "resource", req.Resource, "error", err)
+		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("check permissions", err))
 		return
 	}
 	writeJSON(w, models.CanIResponse{
@@ -116,7 +118,8 @@ func (s *Server) handleClusterPermissionsHTTP(w http.ResponseWriter, r *http.Req
 	if cluster != "" {
 		perms, err := s.k8sClient.GetClusterPermissions(ctx, cluster)
 		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			slog.Error("failed to get cluster permissions", "cluster", cluster, "error", err)
+			writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("get cluster permissions", err))
 			return
 		}
 		writeJSON(w, perms)
@@ -124,7 +127,8 @@ func (s *Server) handleClusterPermissionsHTTP(w http.ResponseWriter, r *http.Req
 	}
 	perms, err := s.k8sClient.GetAllClusterPermissions(ctx)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		slog.Error("failed to list cluster permissions", "error", err)
+		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("list cluster permissions", err))
 		return
 	}
 	writeJSON(w, perms)
@@ -158,7 +162,8 @@ func (s *Server) handlePermissionsSummaryHTTP(w http.ResponseWriter, r *http.Req
 
 	summaries, err := s.k8sClient.GetAllPermissionsSummaries(ctx)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		slog.Error("failed to summarize permissions", "error", err)
+		writeJSONError(w, http.StatusInternalServerError, sanitizeAgentError("summarize permissions", err))
 		return
 	}
 

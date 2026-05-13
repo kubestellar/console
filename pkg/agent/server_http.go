@@ -29,23 +29,23 @@ import (
 func mapK8sErrorToHTTP(err error) (int, string) {
 	switch {
 	case k8serrors.IsAlreadyExists(err):
-		return http.StatusConflict, err.Error()
+		return http.StatusConflict, sanitizeAgentError("", err)
 	case k8serrors.IsForbidden(err):
-		return http.StatusForbidden, err.Error()
+		return http.StatusForbidden, sanitizeAgentError("", err)
 	case k8serrors.IsInvalid(err):
-		return http.StatusBadRequest, err.Error()
+		return http.StatusBadRequest, sanitizeAgentError("", err)
 	case k8serrors.IsNotFound(err):
-		return http.StatusNotFound, err.Error()
+		return http.StatusNotFound, sanitizeAgentError("", err)
 	case k8serrors.IsUnauthorized(err):
-		return http.StatusUnauthorized, err.Error()
+		return http.StatusUnauthorized, sanitizeAgentError("", err)
 	case k8serrors.IsConflict(err):
-		return http.StatusConflict, err.Error()
+		return http.StatusConflict, sanitizeAgentError("", err)
 	case k8serrors.IsTimeout(err), k8serrors.IsServerTimeout(err):
-		return http.StatusGatewayTimeout, err.Error()
+		return http.StatusGatewayTimeout, sanitizeAgentError("", err)
 	case k8serrors.IsServiceUnavailable(err):
-		return http.StatusServiceUnavailable, err.Error()
+		return http.StatusServiceUnavailable, sanitizeAgentError("", err)
 	default:
-		return http.StatusInternalServerError, "internal server error"
+		return http.StatusInternalServerError, sanitizeAgentError("", err)
 	}
 }
 
