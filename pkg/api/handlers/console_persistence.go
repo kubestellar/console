@@ -139,7 +139,7 @@ func (h *ConsolePersistenceHandlers) StartWatcher(ctx context.Context) error {
 	}
 
 	if h.k8sClient == nil {
-		return fmt.Errorf("no kubernetes client available")
+		return fmt.Errorf("%s", noClusterAccessMsg)
 	}
 
 	activeCluster, err := h.persistenceStore.GetActiveCluster(ctx)
