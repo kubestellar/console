@@ -34,7 +34,8 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 		operators, fetchErr := h.getOperatorsForClusterWithError(ctx, cluster)
 		resp := fiber.Map{"operators": operators}
 		if fetchErr != nil {
-			resp["clusterErrors"] = []string{fmt.Sprintf("%s: %v", cluster, fetchErr)}
+			slog.Warn("[GitOps] operator fetch failed for cluster", "cluster", cluster, "error", fetchErr)
+			resp["clusterErrors"] = []string{fmt.Sprintf("%s: failed to fetch operators", cluster)}
 		}
 		return c.JSON(resp)
 	}
@@ -71,7 +72,8 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 				operators, fetchErr := h.getOperatorsForClusterWithError(ctx, clusterName)
 				mu.Lock()
 				if fetchErr != nil {
-					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: %v", clusterName, fetchErr))
+					slog.Warn("[GitOps] operator fetch failed for cluster", "cluster", clusterName, "error", fetchErr)
+					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: failed to fetch operators", clusterName))
 				}
 				if len(operators) > 0 {
 					allOperators = append(allOperators, operators...)
@@ -466,7 +468,8 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 		subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, cluster)
 		resp := fiber.Map{"subscriptions": subs}
 		if fetchErr != nil {
-			resp["clusterErrors"] = []string{fmt.Sprintf("%s: %v", cluster, fetchErr)}
+			slog.Warn("[GitOps] subscription fetch failed for cluster", "cluster", cluster, "error", fetchErr)
+			resp["clusterErrors"] = []string{fmt.Sprintf("%s: failed to fetch subscriptions", cluster)}
 		}
 		return c.JSON(resp)
 	}
@@ -498,7 +501,8 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 				subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, clusterName)
 				mu.Lock()
 				if fetchErr != nil {
-					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: %v", clusterName, fetchErr))
+					slog.Warn("[GitOps] subscription fetch failed for cluster", "cluster", clusterName, "error", fetchErr)
+					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: failed to fetch subscriptions", clusterName))
 				}
 				if len(subs) > 0 {
 					allSubs = append(allSubs, subs...)
