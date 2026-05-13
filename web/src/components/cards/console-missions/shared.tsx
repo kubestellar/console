@@ -51,7 +51,7 @@ export function useApiKeyCheck() {
       return true
     }
     // Fallback: check for local API key
-    const key = localStorage.getItem(ANTHROPIC_KEY_STORAGE)
+    const key = sessionStorage.getItem(ANTHROPIC_KEY_STORAGE)
     return !!key && key.trim().length > 0
   }
 
@@ -60,7 +60,7 @@ export function useApiKeyCheck() {
       return { available: true }
     }
 
-    const key = localStorage.getItem(ANTHROPIC_KEY_STORAGE)
+    const key = sessionStorage.getItem(ANTHROPIC_KEY_STORAGE)
     if (key && key.trim().length > 0) {
       return { available: true }
     }

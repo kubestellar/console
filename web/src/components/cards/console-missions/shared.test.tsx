@@ -34,7 +34,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 beforeEach(() => {
   vi.clearAllMocks()
-  localStorage.clear()
+  sessionStorage.clear()
   mockAgentFetch.mockRejectedValue(new Error('offline'))
   // Default: no WS-reported agents, no stored key.
   mockUseMissions.mockReturnValue({
@@ -69,8 +69,8 @@ describe('useApiKeyCheck.hasAvailableAgent', () => {
     expect(result.current.hasAvailableAgent()).toBe(true)
   })
 
-  it('returns true when an Anthropic API key is in localStorage', () => {
-    localStorage.setItem(ANTHROPIC_KEY_STORAGE, 'sk-ant-test-key')
+  it('returns true when an Anthropic API key is in sessionStorage', () => {
+    sessionStorage.setItem(ANTHROPIC_KEY_STORAGE, 'sk-ant-test-key')
 
     const { result } = renderHook(() => useApiKeyCheck(), { wrapper })
 
@@ -84,7 +84,7 @@ describe('useApiKeyCheck.hasAvailableAgent', () => {
   })
 
   it('returns false when only an empty/whitespace API key is present', () => {
-    localStorage.setItem(ANTHROPIC_KEY_STORAGE, '   ')
+    sessionStorage.setItem(ANTHROPIC_KEY_STORAGE, '   ')
 
     const { result } = renderHook(() => useApiKeyCheck(), { wrapper })
 
