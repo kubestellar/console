@@ -837,12 +837,12 @@ func (k *KubectlProxy) TestClusterConnection(req TestConnectionRequest) (*TestCo
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return &TestConnectionResult{Reachable: false, Error: err.Error()}, nil
+		return &TestConnectionResult{Reachable: false, Error: sanitizeAgentError("create client", err)}, nil
 	}
 
 	version, err := client.Discovery().ServerVersion()
 	if err != nil {
-		return &TestConnectionResult{Reachable: false, Error: err.Error()}, nil
+		return &TestConnectionResult{Reachable: false, Error: sanitizeAgentError("test connection", err)}, nil
 	}
 
 	return &TestConnectionResult{

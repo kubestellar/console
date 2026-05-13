@@ -395,7 +395,7 @@ func (s *Server) handleSetKey(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, err := registry.Get(req.Provider); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, protocol.ErrorPayload{Code: "unknown_provider", Message: fmt.Sprintf("Provider %q is not registered", req.Provider)})
+		writeJSON(w, protocol.ErrorPayload{Code: "unknown_provider", Message: "Provider is not registered"})
 		return
 	}
 
