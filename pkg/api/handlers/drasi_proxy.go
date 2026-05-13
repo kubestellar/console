@@ -212,8 +212,8 @@ func (h *MCPHandlers) proxyDrasiServer(c *fiber.Ctx, upstreamPath string, upstre
 
 	req, err := buildUpstreamRequest(c, full.String())
 	if err != nil {
-		slog.Error("[drasi] failed to build upstream request", "error", err)
-		return fiber.NewError(fiber.StatusBadRequest, "invalid upstream request")
+		slog.Warn("drasi proxy: request error", "error", err)
+		return fiber.NewError(fiber.StatusBadRequest, "invalid request")
 	}
 	return streamUpstream(c, drasiProxyClient, req)
 }
@@ -232,8 +232,8 @@ func (h *MCPHandlers) proxyDrasiPlatform(c *fiber.Ctx, upstreamPath string, upst
 
 	cfg, err := h.k8sClient.GetRestConfig(cluster)
 	if err != nil {
-		slog.Error("[drasi] cluster config lookup failed", "cluster", cluster, "error", err)
-		return fiber.NewError(fiber.StatusBadRequest, "unknown or unreachable cluster")
+		slog.Warn("drasi proxy: cluster lookup failed", "cluster", cluster, "error", err)
+		return fiber.NewError(fiber.StatusBadRequest, "cluster not found")
 	}
 
 	// Build the Kubernetes Service proxy URL and use the cluster's
@@ -241,8 +241,8 @@ func (h *MCPHandlers) proxyDrasiPlatform(c *fiber.Ctx, upstreamPath string, upst
 	//   /api/v1/namespaces/{ns}/services/{name}:{port}/proxy/{path}
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		slog.Error("[drasi] kubeclient init failed", "cluster", cluster, "error", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "failed to initialize cluster client")
+		slog.Warn("drasi proxy: kubeclient init failed", "cluster", cluster, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "internal server error")
 	}
 
 	rawQuery := ""
