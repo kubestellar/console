@@ -11,6 +11,7 @@ import { MS_PER_MINUTE } from '../../lib/constants/time'
 import { useCardData, commonComparators } from '../../lib/cards/cardHooks'
 import { CardSearchInput, CardControlsRow, CardPaginationFooter, CardAIActions } from '../../lib/cards/CardComponents'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Button } from '../ui/Button'
 import { useCardLoadingState } from './CardDataContext'
 import { LOCAL_AGENT_WS_URL } from '../../lib/constants'
 import { appendWsAuthToken } from '../../lib/utils/wsAuth'
@@ -772,17 +773,19 @@ Please proceed step by step and ask for confirmation before making any changes.`
               </div>
             </div>
             {cluster.status === 'available' && (
-              <button
+              <Button
+                variant="accent"
+                size="sm"
+                fullWidth
+                icon={<Rocket className="w-3 h-3" />}
                 onClick={(e) => {
                   e.stopPropagation()
                   handleStartUpgrade(cluster.name, cluster.currentVersion, cluster.targetVersion)
                 }}
-                className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 text-xs font-medium transition-colors w-full justify-center"
                 aria-label={`Start upgrade of ${cluster.name} to ${cluster.targetVersion}`}
               >
-                <Rocket className="w-3 h-3" />
                 Start Upgrade to {cluster.targetVersion}
-              </button>
+              </Button>
             )}
             {(cluster.status === 'unreachable' || cluster.status === 'available') && (
               <CardAIActions

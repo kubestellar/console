@@ -7,6 +7,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+import { Button } from '../ui/Button'
 
 /** localStorage key for Kube Galaga high score persistence */
 const HIGH_SCORE_KEY = 'kubeGalagaHighScore'
@@ -601,13 +602,14 @@ export function KubeGalaga() {
         {/* Controls */}
         {gameState === 'playing' && (
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Pause className="w-4 h-4" />}
               onClick={togglePause}
-              className="flex items-center gap-1 px-3 py-1 bg-secondary hover:bg-secondary/80 rounded text-sm"
             >
-              <Pause className="w-4 h-4" />
               Pause
-            </button>
+            </Button>
           </div>
         )}
       </div>
