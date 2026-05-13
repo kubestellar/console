@@ -81,7 +81,7 @@ func (h *ComplianceReportsHandler) GenerateReport(c *fiber.Ctx) error {
 			slog.Error("[ComplianceReports] evaluation failed",
 				"framework", id, "cluster", req.Cluster, "error", evalErr)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "evaluation failed: " + evalErr.Error(),
+				"error": "evaluation failed",
 			})
 		}
 

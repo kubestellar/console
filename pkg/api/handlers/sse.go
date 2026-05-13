@@ -490,7 +490,6 @@ func streamClusters(
 				elapsed := time.Since(start)
 
 				if fetchErr != nil {
-					slog.Error("[SSE] cluster fetch failed", "cluster", clusterName, "elapsed", elapsed, "error", fetchErr)
 					if elapsed > 5*time.Second {
 						h.k8sClient.MarkSlow(clusterName)
 					}
@@ -501,9 +500,10 @@ func streamClusters(
 					// intentionally left unchanged — this is an additive
 					// event type.
 					mu.Lock()
+					slog.Error("[SSE] cluster fetch failed", "cluster", clusterName, "elapsed", elapsed, "error", fetchErr)
 					if !emitEvent(sseEventClusterError, fiber.Map{
 						"cluster": clusterName,
-						"error":   fetchErr.Error(),
+						"error":   "cluster query failed",
 					}) {
 						mu.Unlock()
 						return

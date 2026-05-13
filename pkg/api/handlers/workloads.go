@@ -733,7 +733,6 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 			return c.Status(400).JSON(fiber.Map{
 				"error":         "invalid label selector",
 				"labelSelector": query.LabelSelector,
-				"detail":        selErr.Error(),
 			})
 		}
 	}
