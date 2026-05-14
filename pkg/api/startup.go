@@ -379,10 +379,9 @@ func persistSecret(path, secret string) {
 func generateRandomSecret() string {
 	b := make([]byte, devSecretBytes)
 	if _, err := rand.Read(b); err != nil {
-		// crypto/rand.Read should never fail on supported platforms;
-		// if it does, fall back to a logged warning and a best-effort value.
-		slog.Error("[Server] crypto/rand.Read failed, using fallback", "error", err)
-		return fmt.Sprintf("dev-fallback-%d", b)
+		// A predictable JWT secret allows token forgery — refuse to start.
+		slog.Error("[Server] FATAL: crypto/rand.Read failed — cannot generate JWT secret", "error", err)
+		os.Exit(1)
 	}
 	return hex.EncodeToString(b)
 }
