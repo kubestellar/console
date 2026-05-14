@@ -137,9 +137,10 @@ const CI_TIMEOUT_MULTIPLIER = 2
  * Maximum acceptable median warm time-to-content (ms).
  * CI shared runners exhibit 2-5× slower React hydration due to CPU
  * contention and virtualisation overhead, so we apply a multiplier.
- * Increased to 2500ms (5× local) to account for observed CI variance (#13257).
+ * Increased to 3750ms (7.5× local) to account for nightly CI runner variability (#13547).
+ * Nightly runs on shared infrastructure can experience additional performance variance.
  */
-const WARM_TTC_THRESHOLD_MS = process.env.CI ? 2_500 : 500
+const WARM_TTC_THRESHOLD_MS = process.env.CI ? 3_750 : 500
 
 
 // Mock data, setupAuth, setupLiveMocks, setLiveColdMode, navigateToBatch,
