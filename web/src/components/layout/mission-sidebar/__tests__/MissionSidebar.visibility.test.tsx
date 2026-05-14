@@ -158,6 +158,18 @@ describe('MissionSidebar visibility', () => {
     expect(screen.getByTestId('mission-sidebar')).toBeInTheDocument()
   })
 
+  it('keeps the sidebar scrollable when content exceeds the viewport', () => {
+    mockMissionState.isSidebarOpen = true
+
+    render(
+      <MemoryRouter>
+        <MissionSidebar />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByTestId('mission-sidebar').className).toContain('overflow-y-auto')
+  })
+
   it('renders the Mission Control CTA with clipped custom button styling', () => {
     mockMissionState.isSidebarOpen = true
 
