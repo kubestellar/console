@@ -8,6 +8,7 @@ import { safeGetItem, safeSetItem } from '../../lib/utils/localStorage'
 import { useToast } from '../ui/Toast'
 
 const DISMISSED_KEY = 'kc-welcome-dismissed'
+const DEFAULT_CONSOLE_ORIGIN = 'http://localhost:5174'
 
 /** The canonical quick-start install command */
 const INSTALL_COMMAND = 'curl -sL https://raw.githubusercontent.com/kubestellar/console/main/start.sh | bash'
@@ -20,6 +21,7 @@ export function WelcomeCard() {
   const [dismissed, setDismissed] = useState(() => safeGetItem(DISMISSED_KEY) === 'true')
   const [copied, setCopied] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const consoleOrigin = typeof window !== 'undefined' ? window.location.origin : DEFAULT_CONSOLE_ORIGIN
 
   // Clean up pending copy-feedback timer on unmount (#4662)
   useEffect(() => {
@@ -96,7 +98,7 @@ export function WelcomeCard() {
           number={2}
           icon={Globe}
           title={t('dashboard.welcome.step2Title')}
-          description={t('dashboard.welcome.step2Desc')}
+          description={t('dashboard.welcome.step2Desc', { origin: consoleOrigin })}
         />
       </div>
 

@@ -704,7 +704,7 @@
       "step1Title": "Download and run the install script",
       "step1Desc": "One command — downloads binaries, starts the console and kc-agent, and opens your browser. No Go, Node.js, or build tools required.",
       "step2Title": "Open the console",
-      "step2Desc": "Once the script finishes, open http://localhost:8080 in your browser. Your clusters are auto-detected from ~/.kube/config.",
+      "step2Desc": "Once the script finishes, open {{origin}} in your browser. Your clusters are auto-detected from ~/.kube/config.",
       "documentation": "Documentation"
     },
     "missions": {
