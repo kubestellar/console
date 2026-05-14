@@ -445,8 +445,7 @@ func getEnvKeyForProvider(provider string) string {
 
 // getBaseURLEnvKeyForProvider maps a provider key to the environment
 // variable that overrides its base URL. Empty return means "no env var is
-// honored for this provider" — used by providers that do not support a base
-// URL override (Claude/OpenAI/Gemini vendor HTTP APIs).
+// honored for this provider" (e.g. OpenAI, Gemini vendor HTTP APIs).
 func getBaseURLEnvKeyForProvider(provider string) string {
 	switch provider {
 	// Claude API via LiteLLM proxy or other gateways

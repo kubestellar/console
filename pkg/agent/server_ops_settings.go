@@ -619,10 +619,12 @@ func (s *Server) ValidateAllKeys() {
 func validateClaudeKey(ctx context.Context, apiKey string) (bool, error) {
 	baseURL := GetConfigManager().GetBaseURL("claude")
 	if baseURL == "" {
-		baseURL = "https://api.anthropic.com"
+		baseURL = "https://api.anthropic.com/v1"
 	}
 	apiURL := baseURL + "/messages"
-	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(`{"model":"claude-3-haiku-20240307","max_tokens":1,"messages":[{"role":"user","content":"hi"}]}`))
+	model := GetConfigManager().GetModel("claude", "claude-3-haiku-20240307")
+	body := fmt.Sprintf(`{"model":%q,"max_tokens":1,"messages":[{"role":"user","content":"hi"}]}`, model)
+	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, strings.NewReader(body))
 	if err != nil {
 		return false, err
 	}
