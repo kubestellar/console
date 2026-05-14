@@ -168,7 +168,7 @@ export async function fetchInClusterCollection<T>(
     const collection = data[collectionKey]
     return Array.isArray(collection) ? collection as T[] : []
   } catch (err: unknown) {
-    console.warn(`[${resource}] Backend fetch failed:`, err)
+    console.error(`[${resource}] Backend fetch failed:`, err)
     return null
   }
 }
