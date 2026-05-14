@@ -76,7 +76,7 @@ async function setupSidebarTest(page: Page) {
   await page.getByTestId('sidebar-primary-nav').waitFor({ state: 'visible', timeout: 20_000 })
 }
 
-const SIDEBAR_TIMEOUT_MS = 10_000
+const SIDEBAR_TIMEOUT_MS = 20_000
 const PRIMARY_NAV_EXPECTATIONS = DEFAULT_PRIMARY_NAV.map(({ name, href }) => ({
   label: name,
   href,

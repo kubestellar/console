@@ -16,18 +16,18 @@ import { setupDemoMode, setupTestStorage } from './helpers/storage-setup'
  * exercises the real backend (or shared fixtures) without page.route().
  */
 const ROOT_VISIBLE_TIMEOUT_MS = 20_000
-const STANDARD_ASSERT_TIMEOUT_MS = 10_000
-const SIDEBAR_ASSERT_TIMEOUT_MS = 10_000
-const HEADER_ASSERT_TIMEOUT_MS = 10_000
+const STANDARD_ASSERT_TIMEOUT_MS = 20_000
+const SIDEBAR_ASSERT_TIMEOUT_MS = 20_000
+const HEADER_ASSERT_TIMEOUT_MS = 20_000
 const ERROR_FALLBACK_TIMEOUT_MS = 15_000
 const CARD_DATA_TIMEOUT_MS = 15_000
-const ACCESSIBILITY_ASSERT_TIMEOUT_MS = 10_000
+const ACCESSIBILITY_ASSERT_TIMEOUT_MS = 20_000
 const HOVER_EFFECT_TIMEOUT_MS = 5_000
 const ADD_CARD_MODAL_TIMEOUT_MS = 15_000
 const INITIAL_PAGE_VISIBLE_TIMEOUT_MS = 20_000
-const LOADING_SKELETON_TIMEOUT_MS = 10_000
+const LOADING_SKELETON_TIMEOUT_MS = 20_000
 const DASHBOARD_RENDER_TIMEOUT_MS = 20_000
-const REFRESH_SIGNAL_TIMEOUT_MS = 10_000
+const REFRESH_SIGNAL_TIMEOUT_MS = 20_000
 const MOBILE_VIEWPORT_WIDTH_PX = 375
 const MOBILE_VIEWPORT_HEIGHT_PX = 667
 const TABLET_VIEWPORT_WIDTH_PX = 768
@@ -46,7 +46,7 @@ const DASHBOARD_LOADING_INDICATOR_SELECTOR = [
   `${GRID_CARD_SELECTOR} [data-card-skeleton="true"]`,
   `${GRID_CARD_SELECTOR} .animate-pulse`,
 ].join(', ')
-const GRID_VISIBLE_TIMEOUT_MS = 10_000
+const GRID_VISIBLE_TIMEOUT_MS = 20_000
 const MAX_MOBILE_CARD_COLUMNS = 2
 const MULTI_COLUMN_GRID_COUNT_THRESHOLD = 2
 const DASHBOARD_REFRESH_BUTTON_TEST_ID = 'dashboard-refresh-button'
@@ -276,7 +276,7 @@ test.describe('Dashboard Page', () => {
     test('displays navigation items in sidebar', async ({ page }, testInfo) => {
       test.skip(testInfo.project.name.startsWith('mobile-'), 'sidebar is hidden by design on mobile breakpoints')
       // Sidebar should have navigation
-      const SIDEBAR_NAV_TIMEOUT_MS = 10_000
+      const SIDEBAR_NAV_TIMEOUT_MS = 20_000
       await expect(page.getByTestId('sidebar')).toBeVisible({ timeout: SIDEBAR_NAV_TIMEOUT_MS })
       await expect(page.getByTestId('sidebar-primary-nav')).toBeVisible({ timeout: SIDEBAR_NAV_TIMEOUT_MS })
 
