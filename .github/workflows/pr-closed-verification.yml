@@ -186,11 +186,14 @@ jobs:
         run: |
           CHANGED_FILES=$(cat /tmp/changed-files.txt)
 
-          gh issue create \
-            --repo "${{ github.repository }}" \
-            --title "$(printf '\xF0\x9F\x90\x9B') Build broken after merging PR #${PR_NUMBER}" \
-            --label "kind/bug,priority/critical" \
-            --body "$(cat <<EOF
+          # Write body to temp file to prevent shell injection via PR_TITLE.
+          # The heredoc uses a quoted delimiter ('BODYEOF') so that ${PR_TITLE}
+          # and other variables are NOT expanded inside it — they are written
+          # literally into /tmp/issue-body.txt.  We then read the file with
+          # envsubst (which only substitutes exported env vars, not backticks
+          # or $(...) constructs) to produce the final body for the issue.
+          export PR_NUMBER PR_TITLE PR_URL PR_AUTHOR MERGE_SHA
+          cat >/tmp/issue-body.txt <<'BODYEOF'
           ## Build Broken After Merge
 
           The post-merge build verification detected a **build failure** after merging PR #${PR_NUMBER}.
@@ -225,8 +228,13 @@ jobs:
 
           ---
           *This issue was automatically created by the post-merge build verification workflow.*
-          EOF
-          )"
+          BODYEOF
+          envsubst < /tmp/issue-body.txt > /tmp/issue-body-final.txt
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$(printf '\xF0\x9F\x90\x9B') Build broken after merging PR #${PR_NUMBER}" \
+            --label "kind/bug,priority/critical" \
+            --body-file /tmp/issue-body-final.txt
 
       - name: Comment on PR — verification passed
         if: >-
