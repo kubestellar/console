@@ -77,7 +77,7 @@ export function AgenticDetectionRuns({ config: _config }: AgenticDetectionRunsPr
   const { t } = useTranslation(['cards', 'common'])
   const {
     data,
-    isLoading: isLoading && !hasData,
+    isLoading,
     isRefreshing,
     isDemoFallback,
     isFailed,
