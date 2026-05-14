@@ -138,8 +138,9 @@ const RATE_LIMIT_MESSAGE =
  * Request AI to generate a resolution summary from the mission conversation
  */
 async function generateAISummary(mission: Mission): Promise<AISummary> {
-  return new Promise(async (resolve, reject) => {
-    const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+  const wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(wsUrl)
 
     let responseContent = ''
     // #9162 — Track whether the connection ever opened. If the agent closes

@@ -174,15 +174,15 @@ export function DeploymentDrillDown({ data }: Props) {
   const [liveMessage, setLiveMessage] = useState<string | undefined>(data.message as string | undefined)
 
   // Helper to run kubectl commands
-  const runKubectl = (args: string[]): Promise<string> => {
-    return new Promise(async (resolve) => {
-      let ws: WebSocket
-      try {
-        ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
-      } catch {
-        resolve('')
-        return
-      }
+  const runKubectl = async (args: string[]): Promise<string> => {
+    let wsUrl: string
+    try {
+      wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
+    } catch {
+      return ''
+    }
+    return new Promise((resolve) => {
+      const ws = new WebSocket(wsUrl)
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 

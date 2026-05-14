@@ -67,9 +67,15 @@ export function RBACDrillDown({ data }: Props) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const runKubectl = useCallback((args: string[]): Promise<string> => {
-    return new Promise(async (resolve) => {
-      const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+  const runKubectl = useCallback(async (args: string[]): Promise<string> => {
+    let wsUrl: string
+    try {
+      wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
+    } catch {
+      return ''
+    }
+    return new Promise((resolve) => {
+      const ws = new WebSocket(wsUrl)
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
