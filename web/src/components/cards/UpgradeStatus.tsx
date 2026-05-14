@@ -116,7 +116,7 @@ function createVersionWsHandle(): VersionWsHandle {
     rejectAllPending()
   }
 
-  function ensureWs(): Promise<WebSocket> {
+  async function ensureWs(): Promise<WebSocket> {
     if (destroyed) return Promise.reject(new Error('Handle destroyed'))
 
     if (ws?.readyState === WebSocket.OPEN) {
@@ -153,31 +153,33 @@ function createVersionWsHandle(): VersionWsHandle {
     }
 
     return new Promise((resolve, reject) => {
-      let ws: WebSocket
+      let localWs: WebSocket
       try {
-        ws = new WebSocket(wsUrl)
+        localWs = new WebSocket(wsUrl)
       } catch {
         connecting = false
         reject(new Error('Failed to create WebSocket'))
         return
       }
 
+      ws = localWs
+
       const connectionTimeout = setTimeout(() => {
         connecting = false
-        if (ws?.readyState !== WebSocket.OPEN) {
+        if (localWs?.readyState !== WebSocket.OPEN) {
           closeWs()
           reject(new Error('WebSocket connection timeout'))
         }
       }, VERSION_REQUEST_TIMEOUT_MS)
 
-      ws.onopen = () => {
+      localWs.onopen = () => {
         clearTimeout(connectionTimeout)
         connecting = false
         if (destroyed) { closeWs(); reject(new Error('Handle destroyed')); return }
-        resolve(ws!)
+        resolve(localWs!)
       }
 
-      ws.onmessage = (event) => {
+      localWs.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data)
           const resolver = pendingRequests.get(msg.id)
@@ -199,14 +201,14 @@ function createVersionWsHandle(): VersionWsHandle {
         }
       }
 
-      ws.onerror = () => {
+      localWs.onerror = () => {
         clearTimeout(connectionTimeout)
         connecting = false
         rejectAllPending()
         reject(new Error('WebSocket error'))
       }
 
-      ws.onclose = () => {
+      localWs.onclose = () => {
         clearTimeout(connectionTimeout)
         connecting = false
         ws = null
