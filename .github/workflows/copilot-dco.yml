@@ -6,4 +6,4 @@ on:
 
 jobs:
   copilot-dco:
-    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@main
+    uses: kubestellar/infra/.github/workflows/reusable-copilot-dco.yml@5c7fdcdde035388fa2df43d860d2372c2dd3e3ed  # main
