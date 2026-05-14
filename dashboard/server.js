@@ -807,8 +807,11 @@ app.get('/api/timeline', (_req, res) => {
 // SSE stream
 // Tmux pane preview — last N lines of an agent's tmux session
 const TMUX_PREVIEW_LINES = 30;
-app.get('/api/pane/:agent', (req, res) => {
+app.get('/api/pane/:agent', requireAuth, (req, res) => {
   const agent = req.params.agent;
+  if (!ENABLED_AGENTS.includes(agent)) {
+    return res.status(400).json({ error: `unknown agent: ${agent}` });
+  }
   const session = getTmuxSession(agent);
   if (!session) return res.status(400).json({ error: `unknown agent: ${agent}` });
   execFile('tmux', ['capture-pane', '-t', session, '-p', '-S', `-${TMUX_PREVIEW_LINES}`],
@@ -1376,14 +1379,16 @@ function parseEnvFile(filePath) {
 
 function writeEnvVar(filePath, key, value) {
   if (!VALID_ENV_KEY.test(key)) throw new Error(`invalid env key: ${key}`);
+  const strValue = String(value);
+  if (/[\r\n\0]/.test(strValue)) throw new Error(`env value for ${key} contains illegal characters`);
   const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
   const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`^${escapedKey}=.*$`, 'm');
   let updated;
   if (regex.test(content)) {
-    updated = content.replace(regex, `${key}=${value}`);
+    updated = content.replace(regex, `${key}=${strValue}`);
   } else {
-    updated = content.trimEnd() + `\n${key}=${value}\n`;
+    updated = content.trimEnd() + `\n${key}=${strValue}\n`;
   }
   const tmp = `/tmp/hive-env-${process.pid}-${Date.now()}`;
   fs.writeFileSync(tmp, updated, { mode: 0o644 });
@@ -2436,9 +2441,12 @@ app.post('/api/nous/approve', (_req, res) => {
       `NOUS_FAST_FAIL_QUEUE_MAX=${(pending.fast_fail && pending.fast_fail.queue_max) || 30}`,
       `NOUS_FAST_FAIL_MTTR_MAX=${(pending.fast_fail && pending.fast_fail.mttr_max) || 180}`,
     ];
+    const NOUS_PARAM_ALLOWLIST = /^NOUS_[A-Z0-9_]{1,60}$/;
     if (pending.params) {
       for (const [k, v] of Object.entries(pending.params)) {
-        overlayLines.push(`${k}=${v}`);
+        if (!NOUS_PARAM_ALLOWLIST.test(k)) continue;
+        const sv = String(v).replace(/[\r\n\0]/g, '');
+        overlayLines.push(`${k}=${sv}`);
       }
     }
     fs.writeFileSync(NOUS_OVERLAY_PATH, overlayLines.join('\n') + '\n');
