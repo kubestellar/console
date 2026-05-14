@@ -30,7 +30,6 @@ function extractErrorMessage(err: unknown): string {
 
 export const __testables = { normalizeFileList, extractErrorMessage }
 
-export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
 export function useQASMFiles(enabled?: boolean, forceDemo?: boolean): UseQASMFilesResult {
   const { isAuthenticated } = useAuth()
   const [files, setFiles] = useState<QASMFile[]>([])
