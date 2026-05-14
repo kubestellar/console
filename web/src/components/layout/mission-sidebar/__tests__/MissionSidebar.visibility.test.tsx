@@ -157,4 +157,22 @@ describe('MissionSidebar visibility', () => {
 
     expect(screen.getByTestId('mission-sidebar')).toBeInTheDocument()
   })
+
+  it('renders the Mission Control CTA with clipped custom button styling', () => {
+    mockMissionState.isSidebarOpen = true
+
+    render(
+      <MemoryRouter>
+        <MissionSidebar />
+      </MemoryRouter>
+    )
+
+    const missionControlButton = screen.getByRole('button', {
+      name: 'layout.missionSidebar.missionControl',
+    })
+
+    expect(missionControlButton.className).toContain('appearance-none')
+    expect(missionControlButton.className).toContain('overflow-hidden')
+    expect(missionControlButton.className).toContain('border-transparent')
+  })
 })

@@ -74,6 +74,7 @@ const MISSION_CONTROL_QUERY_KEY = 'mission-control'
 const MISSION_PLAN_QUERY_KEY = 'plan'
 const MISSION_BROWSER_HISTORY_STATE_KEY = 'kscMissionBrowserOpen'
 const FULLSCREEN_KNOWLEDGE_PANEL_WIDTH_CLASS = 'w-80 xl:w-96'
+const MISSION_CONTROL_BUTTON_CLASSES = 'appearance-none isolate overflow-hidden border border-transparent bg-linear-to-r from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/25 hover:from-purple-500 hover:to-indigo-500'
 
 function getMissionAttentionCount(missions: Mission[]): number {
   return missions.filter(mission => ATTENTION_MISSION_STATUSES.has(mission.status)).length
@@ -1176,7 +1177,10 @@ export function MissionSidebar() {
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
-              className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-colors shadow-lg shadow-purple-500/25"
+              className={cn(
+                'flex items-center gap-2.5 rounded-lg px-4 py-3 text-sm font-medium transition-colors',
+                MISSION_CONTROL_BUTTON_CLASSES
+              )}
             >
               <Rocket className="w-5 h-5 shrink-0" />
               <span className="text-left leading-snug">{t('layout.missionSidebar.missionControl')}</span>
@@ -1391,7 +1395,10 @@ export function MissionSidebar() {
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
-              className="flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg bg-linear-to-r from-purple-600 to-indigo-600 px-3 py-3 text-sm font-medium text-white shadow-lg shadow-purple-500/25 transition-colors hover:from-purple-500 hover:to-indigo-500"
+              className={cn(
+                'flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
+                MISSION_CONTROL_BUTTON_CLASSES
+              )}
             >
               <Rocket className="h-6 w-6 shrink-0" />
               <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('layout.missionSidebar.missionControl')}</span>
