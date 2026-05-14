@@ -72,6 +72,10 @@ const SCORE_MAX = 4;
 const PROMOTER_MIN = 4;
 /** Threshold at/above which a response is a passive (else detractor) */
 const PASSIVE_MIN = 2;
+/** Rate limit: one NPS submission per IP per 24 hours */
+const RATE_LIMIT_MS = 24 * 60 * 60 * 1000;
+/** Key prefix for per-IP rate limiting */
+const RATE_KEY_PREFIX = "nps-rate-";
 
 const ALLOWED_ORIGINS = [
   "https://console.kubestellar.io",
@@ -224,6 +228,20 @@ export default async (req: Request) => {
   // ── POST: submit a response ──
   if (req.method === "POST") {
     try {
+      // Per-IP rate limiting — 1 submission per 24h
+      const clientIp =
+        req.headers.get("x-nf-client-connection-ip") ??
+        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+        "unknown";
+      const rateKey = `${RATE_KEY_PREFIX}${clientIp}`;
+      const lastSubmit = await store.get(rateKey);
+      if (lastSubmit && Date.now() - parseInt(lastSubmit, 10) < RATE_LIMIT_MS) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded — one submission per 24 hours" }),
+          { status: 429, headers }
+        );
+      }
+
       const body = await req.json();
       const score = parseInt(body.score, 10);
 
@@ -257,6 +275,9 @@ export default async (req: Request) => {
 
       // Save
       await store.set(DATA_KEY, JSON.stringify(data));
+
+      // Record rate-limit timestamp for this IP
+      await store.set(rateKey, String(Date.now()));
 
       return new Response(
         JSON.stringify({ ok: true, category: response.category }),
