@@ -51,11 +51,16 @@ func NewQuantumProxyHandler() *QuantumProxyHandler {
 
 // allowedQuantumPaths lists valid API path prefixes for the quantum proxy.
 var allowedQuantumPaths = []string{
-	"result",
+	"auth",
 	"circuit",
-	"job",
-	"status",
+	"execute",
 	"health",
+	"job",
+	"loop",
+	"qasm",
+	"qubits",
+	"result",
+	"status",
 }
 
 // isAllowedQuantumPath validates that the endpoint matches an allowed prefix.
