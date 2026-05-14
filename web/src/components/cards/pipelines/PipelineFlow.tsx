@@ -346,6 +346,7 @@ function colorForStatus(status: Status, conclusion: Conclusion): string {
 
 export function PipelineFlow() {
   const { t } = useTranslation()
+  const { t: tCards } = useTranslation('cards')
   const shared = usePipelineFilter()
   const [localRepoFilter, setLocalRepoFilter] = useState<string | null>(null)
   const repoFilter = shared?.repoFilter ?? localRepoFilter
@@ -389,7 +390,7 @@ export function PipelineFlow() {
   if (error && !hasData) {
     return (
       <div className="p-4 h-full flex items-center justify-center text-sm text-red-400">
-        {t('cards:pipelines.failedToLoadPipelineFlow')} {error}
+        {tCards('pipelines.failedToLoadPipelineFlow')} {error}
       </div>
     )
   }

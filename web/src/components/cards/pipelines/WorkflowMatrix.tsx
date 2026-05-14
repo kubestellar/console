@@ -55,6 +55,7 @@ function cellClass(c: Conclusion): string {
 
 export function WorkflowMatrix() {
   const { t } = useTranslation()
+  const { t: tCards } = useTranslation('cards')
   const [days, setDays] = useState<number>(RANGE_OPTIONS[0])
   // Shared dashboard filter (if inside PipelineFilterProvider on /ci-cd).
   // Falls back to per-card local state when on a different dashboard.
@@ -86,7 +87,7 @@ export function WorkflowMatrix() {
   if (error && !hasData) {
     return (
       <div className="p-4 h-full flex items-center justify-center text-sm text-red-400">
-        {t('cards:pipelines.failedToLoadMatrix')} {error}
+        {tCards('pipelines.failedToLoadMatrix')} {error}
       </div>
     )
   }
