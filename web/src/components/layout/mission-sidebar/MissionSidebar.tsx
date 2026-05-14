@@ -46,6 +46,7 @@ import { ClusterSelectionDialog } from '../../missions/ClusterSelectionDialog'
 import { ResolutionKnowledgePanel } from '../../missions/ResolutionKnowledgePanel'
 import { ResolutionHistoryPanel } from '../../missions/ResolutionHistoryPanel'
 import { SaveResolutionDialog } from '../../missions/SaveResolutionDialog'
+import { ResolutionErrorBoundary } from '../../missions/ResolutionErrorBoundary'
 import { useResolutions, detectIssueSignature } from '../../../hooks/useResolutions'
 import { useTranslation } from 'react-i18next'
 import { SAVED_TOAST_MS, FOCUS_DELAY_MS } from '../../../lib/constants/network'
@@ -1309,17 +1310,19 @@ export function MissionSidebar() {
                   </div>
                   {/* Panel content */}
                   <div className="min-w-0 p-1.5">
-                    {resolutionPanelView === 'related' ? (
-                      <ResolutionKnowledgePanel
-                        relatedResolutions={relatedResolutions}
-                        onApplyResolution={handleApplyResolution}
-                        onSaveNewResolution={() => setShowSaveResolutionDialog(true)}
-                      />
-                    ) : (
-                      <ResolutionHistoryPanel
-                        onApplyResolution={handleApplyResolution}
-                      />
-                    )}
+                    <ResolutionErrorBoundary>
+                      {resolutionPanelView === 'related' ? (
+                        <ResolutionKnowledgePanel
+                          relatedResolutions={relatedResolutions}
+                          onApplyResolution={handleApplyResolution}
+                          onSaveNewResolution={() => setShowSaveResolutionDialog(true)}
+                        />
+                      ) : (
+                        <ResolutionHistoryPanel
+                          onApplyResolution={handleApplyResolution}
+                        />
+                      )}
+                    </ResolutionErrorBoundary>
                   </div>
                 </div>
               </div>
