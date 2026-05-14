@@ -8,7 +8,7 @@ import { deduplicateClustersByServer } from './dedup'
 import { subscribePolling } from './pollingManager'
 import { settledWithConcurrency } from '../../lib/utils/concurrency'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
-import { isInClusterMode } from '../useBackendHealth'
+import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import type { PVC, PV, ResourceQuota, LimitRange, ResourceQuotaSpec } from './types'
 
 // ---------------------------------------------------------------------------
@@ -271,7 +271,7 @@ export function usePVCs(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/pvcs?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
@@ -454,7 +454,7 @@ export function usePVs(cluster?: string) {
         try {
           const params = new URLSearchParams()
           params.append('cluster', c.context || c.name)
-          if (isInClusterMode()) {
+          if (isClusterModeBackend()) {
             try {
               const response = await fetch(`/api/mcp/pvs?${params}`, {
                 signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
@@ -570,7 +570,7 @@ export function useResourceQuotas(cluster?: string, namespace?: string, forceLiv
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/resourcequotas?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
@@ -655,7 +655,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/limitranges?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
@@ -716,7 +716,7 @@ export function useLimitRanges(cluster?: string, namespace?: string) {
 
 // Create or update a ResourceQuota
 export async function createOrUpdateResourceQuota(spec: ResourceQuotaSpec): Promise<ResourceQuota> {
-  if (isInClusterMode()) {
+  if (isClusterModeBackend()) {
     const response = await fetch('/api/mcp/resourcequotas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -742,7 +742,7 @@ export async function createOrUpdateResourceQuota(spec: ResourceQuotaSpec): Prom
 export async function deleteResourceQuota(cluster: string, namespace: string, name: string): Promise<void> {
   const params = new URLSearchParams({ cluster, namespace, name })
 
-  if (isInClusterMode()) {
+  if (isClusterModeBackend()) {
     const response = await fetch(`/api/mcp/resourcequotas?${params.toString()}`, {
       method: 'DELETE',
       signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),

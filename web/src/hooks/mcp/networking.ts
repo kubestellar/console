@@ -8,7 +8,7 @@ import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, getLocalAgentURL, agentFetch, clusterCacheRef } from './shared'
 import { subscribePolling } from './pollingManager'
 import { MCP_HOOK_TIMEOUT_MS, DEPLOY_ABORT_TIMEOUT_MS, SERVICES_CACHE_TTL_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
-import { isInClusterMode } from '../useBackendHealth'
+import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import type { Service, Ingress, NetworkPolicy } from './types'
 import { getDemoIngresses } from '../useCachedData/demoData'
 
@@ -248,7 +248,7 @@ export function useServices(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/services?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
@@ -470,7 +470,7 @@ export function useIngresses(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/ingresses?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
@@ -590,7 +590,7 @@ export function useNetworkPolicies(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/networkpolicies?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),

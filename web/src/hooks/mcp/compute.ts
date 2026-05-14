@@ -7,9 +7,10 @@ import { registerCacheReset, registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { GPU_POLL_INTERVAL_MS, getEffectiveInterval, getLocalAgentURL, agentFetch } from './shared'
 import { subscribePolling } from './pollingManager'
-import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
+import { MCP_EXTENDED_TIMEOUT_MS, MCP_HOOK_TIMEOUT_MS } from '../../lib/constants/network'
 import { classifyError, type ClusterErrorType } from '../../lib/errorClassifier'
 import { isInClusterMode } from '../useBackendHealth'
+import { getClusterModeBaseUrl, isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import type { GPUNode, NodeInfo, NVIDIAOperatorStatus } from './types'
 
 /**
@@ -167,7 +168,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
     // Try local agent first (works without backend running).
     // Skip when agent URL is suppressed (in-cluster deployments set it to '').
     const agentURL = getLocalAgentURL()
-    if (agentURL && !isAgentUnavailable() && !isInClusterMode()) {
+    if (agentURL && !isAgentUnavailable() && !isClusterModeBackend()) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_EXTENDED_TIMEOUT_MS)
@@ -196,7 +197,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       try {
         // Try SSE streaming first for progressive rendering
         const sseResult = await fetchSSE<GPUNode>({
-          url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/gpu-nodes/stream`,
+          url: `${getClusterModeBaseUrl()}/gpu-nodes/stream`,
           params: Object.fromEntries(params.entries()),
           itemsKey: 'nodes',
           onClusterData: (_cluster, items) => {
@@ -215,7 +216,7 @@ async function fetchGPUNodes(cluster?: string, _source?: string) {
       } catch {
         // SSE failed, try REST fallback
         try {
-          const resp = await agentFetch(`${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/gpu-nodes?${params}`)
+          const resp = await agentFetch(`${getClusterModeBaseUrl()}/gpu-nodes?${params}`)
           if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
           const data = await resp.json()
           newNodes = data.nodes || []
@@ -494,7 +495,7 @@ export function useNodes(cluster?: string) {
 
     // Try local agent HTTP endpoint first (works without backend)
     const nodeAgentURL = getLocalAgentURL()
-    if (cluster && nodeAgentURL && !isAgentUnavailable() && !isInClusterMode()) {
+    if (cluster && nodeAgentURL && !isAgentUnavailable() && !isClusterModeBackend()) {
       try {
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), MCP_HOOK_TIMEOUT_MS)
@@ -546,7 +547,7 @@ export function useNodes(cluster?: string) {
       if (cluster) sseParams.cluster = cluster
 
       const allNodes = await fetchSSE<NodeInfo>({
-        url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/nodes/stream`,
+        url: `${getClusterModeBaseUrl()}/nodes/stream`,
         params: sseParams,
         itemsKey: 'nodes',
         onClusterData: (_clusterName, items) => {
@@ -625,7 +626,7 @@ export function useNVIDIAOperators(cluster?: string) {
       const params: Record<string, string> = {}
       if (cluster) params.cluster = cluster
 
-      const agentBaseUrl = isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL
+      const agentBaseUrl = getClusterModeBaseUrl()
       if (!agentBaseUrl) {
         setOperators([])
         setError(null)

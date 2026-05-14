@@ -4,7 +4,7 @@ import { kubectlProxy } from '../../../lib/kubectlProxy'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import { fetchSSE } from '../../../lib/sseClient'
 import { registerRefetch } from '../../../lib/modeTransition'
-import { isInClusterMode } from '../../useBackendHealth'
+import { getClusterModeBaseUrl, isClusterModeBackend } from '../../../lib/cache/fetcherUtils'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../../useLocalAgent'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, clusterCacheRef, fetchWithRetry } from '../shared'
 import { subscribePolling } from '../pollingManager'
@@ -342,7 +342,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
     }
 
     // Try local agent HTTP endpoint first (works without backend)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -378,7 +378,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
       }
     }
 
-    if (cluster && isInClusterMode()) {
+    if (cluster && isClusterModeBackend()) {
       const params = new URLSearchParams()
       params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
@@ -403,7 +403,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
     }
 
     // Try kubectl proxy as fallback
-    if (cluster && !isAgentUnavailable() && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && !isClusterModeBackend()) {
       try {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster
@@ -439,7 +439,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
 
     // Fall back to REST API
     try {
-      if (!LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
+      if (!LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
         setDeployments([])
         const now = new Date()
         setLastUpdated(now)
@@ -452,7 +452,7 @@ export function useDeployments(cluster?: string, namespace?: string): UseDeploym
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      const url = `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/deployments?${params}`
+      const url = `${getClusterModeBaseUrl()}/deployments?${params}`
 
       const response = await fetchWithRetry(url, {
         method: 'GET',

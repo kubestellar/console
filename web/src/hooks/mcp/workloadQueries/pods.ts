@@ -3,10 +3,9 @@ import { isBackendUnavailable } from '../../../lib/api'
 import { isDemoMode } from '../../../lib/demoMode'
 import { classifyError } from '../../../lib/errorClassifier'
 import { kubectlProxy } from '../../../lib/kubectlProxy'
-import { LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import { fetchSSE } from '../../../lib/sseClient'
 import { registerRefetch } from '../../../lib/modeTransition'
-import { isInClusterMode } from '../../useBackendHealth'
+import { getClusterModeBaseUrl, isClusterModeBackend } from '../../../lib/cache/fetcherUtils'
 import { isAgentUnavailable } from '../../useLocalAgent'
 import { REFRESH_INTERVAL_MS, MIN_REFRESH_INDICATOR_MS, getEffectiveInterval, clusterCacheRef } from '../shared'
 import { subscribePolling } from '../pollingManager'
@@ -209,7 +208,7 @@ export function usePods(cluster?: string, namespace?: string, sortBy: 'restarts'
       if (namespace) sseParams.namespace = namespace
 
       const allPods = await fetchSSE<PodInfo>({
-        url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/pods/stream`,
+        url: `${getClusterModeBaseUrl()}/pods/stream`,
         params: sseParams,
         itemsKey: 'pods',
         signal: abortController.signal,
@@ -385,7 +384,7 @@ export function useAllPods(cluster?: string, namespace?: string, forceLive = fal
       if (namespace) sseParams.namespace = namespace
 
       const allPods = await fetchSSE<PodInfo>({
-        url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/pods/stream`,
+        url: `${getClusterModeBaseUrl()}/pods/stream`,
         params: sseParams,
         itemsKey: 'pods',
         signal: abortController.signal,
@@ -582,7 +581,7 @@ export function usePodIssues(cluster?: string, namespace?: string): UsePodIssues
     }
 
     // Try kubectl proxy first when cluster is specified (for cluster-specific issues)
-    if (cluster && !isAgentUnavailable() && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && !isClusterModeBackend()) {
       try {
         const clusterInfo = clusterCacheRef.clusters.find(c => c.name === cluster)
         const kubectlContext = clusterInfo?.context || cluster

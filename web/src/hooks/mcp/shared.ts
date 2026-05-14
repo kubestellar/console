@@ -2,7 +2,7 @@ import { startTransition } from 'react'
 import { api, isBackendUnavailable } from '../../lib/api'
 import { reportAgentDataError, reportAgentDataSuccess, isAgentUnavailable, getAgentClusterCount } from '../useLocalAgent'
 import { isDemoMode, isNetlifyDeployment, isDemoToken, subscribeDemoMode } from '../../lib/demoMode'
-import { isInClusterMode } from '../useBackendHealth'
+import { isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import { kubectlProxy } from '../../lib/kubectlProxy'
 import { registerCacheReset, triggerAllRefetches } from '../../lib/modeTransition'
 import { resetFailuresForCluster, resetAllCacheFailures } from '../../lib/cache'
@@ -789,18 +789,6 @@ if (import.meta.hot) {
   })
 }
 
-/** Storage key used by useKagentBackend to persist the preferred backend. */
-const BACKEND_PREF_KEY = 'kc_agent_backend_preference'
-
-/** Read the preferred agent backend from localStorage (non-React). */
-function getPreferredBackend(): string {
-  try {
-    return localStorage.getItem(BACKEND_PREF_KEY) || 'kc-agent'
-  } catch {
-    return 'kc-agent'
-  }
-}
-
 /**
  * Fetch cluster list from the backend API (/api/mcp/clusters).
  * This endpoint works independently of kc-agent — it uses the MCP bridge or
@@ -827,17 +815,9 @@ async function fetchClusterListFromAgent(): Promise<ClusterInfo[] | null> {
   // AgentManager has not detected it yet.
   if (isNetlifyDeployment) return null
 
-  // In-cluster Helm deployments have no local kc-agent. Go directly to the
-  // backend API which authenticates via the pod's ServiceAccount.
-  if (isInClusterMode()) {
-    return fetchClusterListFromBackendAPI()
-  }
-
-  // When kagenti or kagent is the preferred backend, fetch clusters from the
-  // backend API (/api/mcp/clusters) which works independently of kc-agent.
-  // kc-agent's /clusters endpoint is only available when kc-agent is running. (#9535)
-  const preferred = getPreferredBackend()
-  if (preferred === 'kagenti' || preferred === 'kagent') {
+  // Route cluster discovery through the backend whenever cluster-mode
+  // routing is active (kagenti/kagent preference or true in-cluster mode).
+  if (isClusterModeBackend()) {
     return fetchClusterListFromBackendAPI()
   }
 
@@ -927,7 +907,7 @@ export function clearClusterFailure(clusterName: string): void {
 export async function fetchSingleClusterHealth(clusterName: string, kubectlContext?: string): Promise<ClusterHealth | null> {
   // Try local agent's HTTP endpoint first (same pattern as GPU nodes)
   // This is more reliable than WebSocket for simple data fetching
-  if (!isNetlifyDeployment && !isAgentUnavailable()) {
+  if (!isNetlifyDeployment && !isAgentUnavailable() && !isClusterModeBackend()) {
     try {
       const context = kubectlContext || clusterName
       const controller = new AbortController()
@@ -956,8 +936,8 @@ export async function fetchSingleClusterHealth(clusterName: string, kubectlConte
     return null
   }
 
-  // In-cluster mode: route to backend API instead of local agent endpoints (#11684)
-  if (isInClusterMode()) {
+  // Cluster-mode routing: use the backend API instead of local agent endpoints (#11684)
+  if (isClusterModeBackend()) {
     try {
       const { data } = await api.get<ClusterHealth>(
         `/api/mcp/clusters/${encodeURIComponent(clusterName)}/health`
@@ -1006,8 +986,8 @@ const MAX_DISTRIBUTION_FAILURES = 2
 // Detect cluster distribution by checking for system namespaces
 // Uses kubectl via WebSocket when available, falls back to backend API
 async function detectClusterDistribution(clusterName: string, kubectlContext?: string): Promise<{ distribution?: string; namespaces?: string[] }> {
-  // In-cluster mode: use backend API for namespace list (#11685)
-  if (isInClusterMode()) {
+  // Cluster-mode routing: use backend API for namespace list (#11685)
+  if (isClusterModeBackend()) {
     try {
       const { data } = await api.get<{ namespaces: string[] }>(
         `/api/mcp/namespaces?cluster=${encodeURIComponent(clusterName)}`
@@ -1022,7 +1002,7 @@ async function detectClusterDistribution(clusterName: string, kubectlContext?: s
 
   // Try kubectl via WebSocket first (if agent available)
   // Use the kubectl context (full path) if provided, otherwise fall back to name
-  if (!isAgentUnavailable()) {
+  if (!isAgentUnavailable() && !isClusterModeBackend()) {
     try {
       const response = await kubectlProxy.exec(
         ['get', 'namespaces', '-o', 'jsonpath={.items[*].metadata.name}'],

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../../lib/constants/network'
 import { fetchSSE } from '../../../lib/sseClient'
-import { isInClusterMode } from '../../useBackendHealth'
+import { getClusterModeBaseUrl, isClusterModeBackend } from '../../../lib/cache/fetcherUtils'
 import { reportAgentDataSuccess, isAgentUnavailable } from '../../useLocalAgent'
 import { agentFetch, fetchWithRetry } from '../shared'
 import type { CronJob, DaemonSet, HPA, Job, ReplicaSet, StatefulSet } from '../types'
@@ -29,7 +29,7 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -64,7 +64,7 @@ export function useJobs(cluster?: string, namespace?: string): UseJobsResult {
       if (cluster) sseParams.cluster = cluster
       if (namespace) sseParams.namespace = namespace
       const result = await fetchSSE<Job>({
-        url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/jobs/stream`,
+        url: `${getClusterModeBaseUrl()}/jobs/stream`,
         params: sseParams,
         itemsKey: 'jobs',
         signal: abortController.signal,
@@ -111,7 +111,7 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -134,7 +134,7 @@ export function useHPAs(cluster?: string, namespace?: string): UseHPAsResult {
         console.debug('[useHPAs] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (isInClusterMode()) {
+    if (isClusterModeBackend()) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
@@ -195,7 +195,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
   const refetch = useCallback(async () => {
     setIsLoading(true)
     // Try local agent first
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -218,7 +218,7 @@ export function useReplicaSets(cluster?: string, namespace?: string): UseReplica
         console.debug('[useReplicaSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (isInClusterMode()) {
+    if (isClusterModeBackend()) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
@@ -277,7 +277,7 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -300,7 +300,7 @@ export function useStatefulSets(cluster?: string, namespace?: string): UseStatef
         console.debug('[useStatefulSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (isInClusterMode()) {
+    if (isClusterModeBackend()) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
@@ -359,7 +359,7 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -382,7 +382,7 @@ export function useDaemonSets(cluster?: string, namespace?: string): UseDaemonSe
         console.debug('[useDaemonSets] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (isInClusterMode()) {
+    if (isClusterModeBackend()) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
@@ -441,7 +441,7 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
 
   const refetch = useCallback(async () => {
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isInClusterMode()) {
+    if (cluster && !isAgentUnavailable() && LOCAL_AGENT_HTTP_URL && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -464,7 +464,7 @@ export function useCronJobs(cluster?: string, namespace?: string): UseCronJobsRe
         console.debug('[useCronJobs] Agent fetch failed, falling back to REST API:', agentErr)
       }
     }
-    if (isInClusterMode()) {
+    if (isClusterModeBackend()) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)

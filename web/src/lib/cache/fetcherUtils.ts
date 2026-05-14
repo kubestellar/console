@@ -46,6 +46,10 @@ export function isClusterModeBackend(): boolean {
   }
 }
 
+export function getClusterModeBaseUrl(): string {
+  return isClusterModeBackend() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL
+}
+
 // ============================================================================
 // Token helper
 // ============================================================================
@@ -182,11 +186,11 @@ function getReachableClusters(): string[] {
 
 // Fetch list of available clusters from backend (fallback)
 export async function fetchClusters(): Promise<string[]> {
-  // In-cluster mode: always fetch from the backend directly.
-  // The local kc-agent cluster cache (clusterCacheRef) is not populated
-  // in-cluster (no kc-agent WebSocket), and may hold stale demo cluster
-  // names from a previous session, causing incorrect fan-out.
-  if (!isInClusterMode()) {
+  // Cluster-mode routing: always fetch from the backend directly.
+  // The local kc-agent cluster cache (clusterCacheRef) is not populated for
+  // backend-routed modes and may hold stale demo cluster names from a
+  // previous session, causing incorrect fan-out.
+  if (!isClusterModeBackend()) {
     const localClusters = getReachableClusters()
     if (localClusters.length > 0) {
       return localClusters

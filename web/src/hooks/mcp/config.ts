@@ -7,7 +7,7 @@ import { registerRefetch } from '../../lib/modeTransition'
 import { STORAGE_KEY_TOKEN } from '../../lib/constants'
 import { getLocalAgentURL, agentFetch } from './shared'
 import { MCP_HOOK_TIMEOUT_MS, LOCAL_AGENT_HTTP_URL } from '../../lib/constants/network'
-import { isInClusterMode } from '../useBackendHealth'
+import { getClusterModeBaseUrl, isClusterModeBackend } from '../../lib/cache/fetcherUtils'
 import type { ConfigMap, Secret, ServiceAccount } from './types'
 
 export function useConfigMaps(cluster?: string, namespace?: string) {
@@ -26,7 +26,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       return
     }
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -59,7 +59,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
         if (namespace) sseParams.namespace = namespace
         const accumulated: ConfigMap[] = []
         const result = await fetchSSE<ConfigMap>({
-          url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/configmaps/stream`,
+          url: `${getClusterModeBaseUrl()}/configmaps/stream`,
           params: sseParams,
           itemsKey: 'configmaps',
           onClusterData: (_clusterName, items) => {
@@ -80,7 +80,7 @@ export function useConfigMaps(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/configmaps?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
@@ -149,7 +149,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
       return
     }
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -182,7 +182,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
         if (namespace) sseParams.namespace = namespace
         const accumulated: Secret[] = []
         const result = await fetchSSE<Secret>({
-          url: `${isInClusterMode() ? '/api/mcp' : LOCAL_AGENT_HTTP_URL}/secrets/stream`,
+          url: `${getClusterModeBaseUrl()}/secrets/stream`,
           params: sseParams,
           itemsKey: 'secrets',
           onClusterData: (_clusterName, items) => {
@@ -203,7 +203,7 @@ export function useSecrets(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/secrets?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
@@ -272,7 +272,7 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
       return
     }
     setIsLoading(true)
-    if (cluster && !isAgentUnavailable()) {
+    if (cluster && !isAgentUnavailable() && !isClusterModeBackend()) {
       try {
         const params = new URLSearchParams()
         params.append('cluster', cluster)
@@ -300,7 +300,7 @@ export function useServiceAccounts(cluster?: string, namespace?: string) {
       const params = new URLSearchParams()
       if (cluster) params.append('cluster', cluster)
       if (namespace) params.append('namespace', namespace)
-      if (isInClusterMode()) {
+      if (isClusterModeBackend()) {
         try {
           const response = await fetch(`/api/mcp/serviceaccounts?${params}`, {
             signal: AbortSignal.timeout(MCP_HOOK_TIMEOUT_MS),
