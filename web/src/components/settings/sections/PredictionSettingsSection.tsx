@@ -5,6 +5,7 @@ import type { PredictionSettings } from '../../../types/predictions'
 import { usePredictionFeedback } from '../../../hooks/usePredictionFeedback'
 import { CollapsibleSection } from '../../ui/CollapsibleSection'
 import { Button } from '../../ui/Button'
+import { RangeSlider } from '../../ui/RangeSlider'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { emitAIPredictionsToggled, emitConfidenceThresholdChanged, emitConsensusModeToggled } from '../../../lib/analytics'
 
@@ -137,21 +138,15 @@ export function PredictionSettingsSection({
                   </div>
                 </div>
               </div>
-              <input
+              <RangeSlider
                 id="predictions-analysis-interval"
-                type="range"
-                min="15"
-                max="120"
-                step="15"
+                min={15}
+                max={120}
+                step={15}
                 value={settings.interval}
                 onChange={(e) => handleIntervalChange(parseInt(e.target.value))}
-                className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer
-                  [&::-webkit-slider-thumb]:appearance-none
-                  [&::-webkit-slider-thumb]:w-4
-                  [&::-webkit-slider-thumb]:h-4
-                  [&::-webkit-slider-thumb]:bg-blue-500
-                  [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:cursor-pointer"
+                fillColor="bg-blue-500"
+                className="text-blue-500"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>{t('settings.predictions.intervalMin')}</span>
@@ -173,20 +168,14 @@ export function PredictionSettingsSection({
                   </div>
                 </div>
               </div>
-              <input
+              <RangeSlider
                 id="predictions-min-confidence"
-                type="range"
-                min="50"
-                max="90"
+                min={50}
+                max={90}
                 value={settings.minConfidence}
                 onChange={(e) => handleConfidenceChange(parseInt(e.target.value))}
-                className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer
-                  [&::-webkit-slider-thumb]:appearance-none
-                  [&::-webkit-slider-thumb]:w-4
-                  [&::-webkit-slider-thumb]:h-4
-                  [&::-webkit-slider-thumb]:bg-blue-500
-                  [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:cursor-pointer"
+                fillColor="bg-blue-500"
+                className="text-blue-500"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>{t('settings.predictions.confidenceMin')}</span>
