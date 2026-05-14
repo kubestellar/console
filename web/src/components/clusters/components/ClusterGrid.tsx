@@ -541,7 +541,7 @@ const FullClusterCard = memo(function FullClusterCard({
               </span>
             )}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (
-              <StatusBadge color="yellow" title="You have limited permissions on this cluster" icon={<ShieldAlert className="w-3.5 h-3.5" />} />
+              <StatusBadge color="blue" title={t('common.limitedPermissions')} icon={<ShieldAlert className="w-3.5 h-3.5" />} />
             )}
           </div>
         </div>
@@ -800,8 +800,8 @@ const ListClusterCard = memo(function ListClusterCard({
               <RemoveClusterButton onRemove={onRemoveCluster} />
             )}
             {!permissionsLoading && !isClusterAdmin && !unreachable && (
-              <span title="Limited permissions">
-                <ShieldAlert className="w-3.5 h-3.5 text-yellow-400" />
+              <span title={t('common.limitedPermissions')}>
+                <ShieldAlert className="w-3.5 h-3.5 text-blue-400" />
               </span>
             )}
             <ChevronRight className="w-4 h-4 text-primary" />

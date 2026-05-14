@@ -2231,7 +2231,7 @@
     "refreshClusterData": "Refresh cluster data",
     "clusterOffline": "Cluster offline",
     "currentContext": "Current kubectl context",
-    "limitedPermissions": "You have limited permissions on this cluster",
+    "limitedPermissions": "This cluster has limited permissions",
     "tokenExpired": "Token Expired",
     "renameContext": "Rename context",
     "openConsole": "Open console",
