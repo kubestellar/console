@@ -796,7 +796,7 @@ Please:
                               {status.violationCount} {status.violationCount === 1 ? 'violation' : 'violations'}
                             </span>
                           )}
-                          {(status.modes && status.modes.length > 1 ? status.modes : [status.mode]).map((mode, idx) => (
+                          {(status.modes?.length > 1 ? status.modes : status.mode ? [status.mode] : []).map((mode, idx) => (
                             <span key={idx} className={`px-1.5 py-0.5 rounded text-2xs ${
                               mode === 'enforce' ? 'bg-red-500/20 text-red-400' :
                               mode === 'warn' ? 'bg-yellow-500/20 text-yellow-400' :
