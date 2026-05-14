@@ -166,7 +166,7 @@ export function VirtualizedMissionGrid<T>({
                 </div>
               ) : (
                 <div style={{ paddingBottom: `${CARD_GAP_PX / 2}px` }}>
-                  {renderItem(rowItems[0], virtualRow.index)}
+                  {rowItems.length > 0 && renderItem(rowItems[0], virtualRow.index)}
                 </div>
               )}
             </div>
