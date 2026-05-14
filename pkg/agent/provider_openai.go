@@ -12,9 +12,18 @@ import (
 )
 
 var (
-	openAIAPIURL       = "https://api.openai.com/v1/chat/completions"
-	defaultOpenAIModel = "gpt-4-turbo"
+	defaultOpenAIBaseURL = "https://api.openai.com/v1"
+	defaultOpenAIModel   = "gpt-4-turbo"
 )
+
+// openAIEndpoint returns the chat completions URL, respecting OPENAI_BASE_URL.
+func openAIEndpoint() string {
+	baseURL := GetConfigManager().GetBaseURL("openai")
+	if baseURL == "" {
+		baseURL = defaultOpenAIBaseURL
+	}
+	return baseURL + "/chat/completions"
+}
 
 // OpenAIProvider implements AIProvider for OpenAI GPT models
 type OpenAIProvider struct {
@@ -68,7 +77,7 @@ func (o *OpenAIProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatRespo
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", openAIAPIURL, bytes.NewBuffer(jsonBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", openAIEndpoint(), bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -133,7 +142,7 @@ func (o *OpenAIProvider) StreamChat(ctx context.Context, req *ChatRequest, onChu
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", openAIAPIURL, bytes.NewBuffer(jsonBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", openAIEndpoint(), bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}

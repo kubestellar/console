@@ -445,7 +445,7 @@ func getEnvKeyForProvider(provider string) string {
 
 // getBaseURLEnvKeyForProvider maps a provider key to the environment
 // variable that overrides its base URL. Empty return means "no env var is
-// honored for this provider" (e.g. OpenAI, Gemini vendor HTTP APIs).
+// honored for this provider" (e.g. Gemini vendor HTTP API).
 func getBaseURLEnvKeyForProvider(provider string) string {
 	switch provider {
 	// Claude API via LiteLLM proxy or other gateways
@@ -466,6 +466,9 @@ func getBaseURLEnvKeyForProvider(provider string) string {
 		return "RHAIIS_URL"
 	case "ramalama":
 		return "RAMALAMA_URL"
+	// OpenAI direct API (for proxies / Azure / compatible endpoints)
+	case "openai":
+		return "OPENAI_BASE_URL"
 	// OpenAI-compatible gateways
 	case "groq":
 		return "GROQ_BASE_URL"

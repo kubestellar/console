@@ -655,7 +655,11 @@ func validateClaudeKey(ctx context.Context, apiKey string) (bool, error) {
 
 // validateOpenAIKey tests an OpenAI API key
 func validateOpenAIKey(ctx context.Context, apiKey string) (bool, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.openai.com/v1/models", nil)
+	baseURL := GetConfigManager().GetBaseURL("openai")
+	if baseURL == "" {
+		baseURL = "https://api.openai.com/v1"
+	}
+	req, err := http.NewRequestWithContext(ctx, "GET", baseURL+"/models", nil)
 	if err != nil {
 		return false, err
 	}
