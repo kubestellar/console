@@ -1,7 +1,7 @@
 /**
  * Pure helper functions for the Mission system.
  *
- * Extracted from useMissions.provider.tsx (#13493) — these are stateless
+ * Extracted from useMissions.tsx (#13493) — these are stateless
  * utilities used by the provider and testable in isolation.
  */
 

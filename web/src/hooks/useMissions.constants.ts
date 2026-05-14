@@ -1,7 +1,7 @@
 /**
  * Constants for the Mission system — timeouts, thresholds, and patterns.
  *
- * Extracted from useMissions.provider.tsx (#13493) to keep the provider
+ * Extracted from useMissions.tsx (#13493) to keep the provider
  * focused on state management and reduce file size.
  */
 
