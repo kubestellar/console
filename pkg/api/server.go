@@ -213,6 +213,8 @@ func NewServer(cfg Config) (*Server, error) {
 		})
 	}
 
+	agent.SetClusterContextProviders(bridge, k8sClient)
+
 	// Initialize notification service
 	notificationService := notifications.NewService()
 	slog.Info("Notification service initialized")

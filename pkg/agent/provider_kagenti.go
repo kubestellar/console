@@ -194,7 +194,15 @@ func (p *KagentiProvider) StreamChatWithProgress(ctx context.Context, req *ChatR
 		})
 	}
 
-	stream, err := p.client.Invoke(ctx, p.namespace, p.agentName, req.Prompt, req.SessionID, history)
+	prompt := req.Prompt
+	if liveClusterContext := buildLiveClusterContext(ctx, req); liveClusterContext != "" {
+		prompt = liveClusterContext + "\n\nUser request:\n" + prompt
+	}
+	if systemPrompt := strings.TrimSpace(req.SystemPrompt); systemPrompt != "" {
+		prompt = "System instructions:\n" + systemPrompt + "\n\n" + prompt
+	}
+
+	stream, err := p.client.Invoke(ctx, p.namespace, p.agentName, prompt, req.SessionID, history)
 	if err != nil {
 		return nil, err
 	}

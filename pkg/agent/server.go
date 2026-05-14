@@ -224,6 +224,8 @@ func NewServer(cfg Config) (*Server, error) {
 		// Don't fail - kubectl functionality still works
 	}
 
+	SetClusterContextProviders(nil, k8sClient)
+
 	// Initialize AI providers
 	if err := InitializeProviders(); err != nil {
 		slog.Warn("provider initialization issue", "error", err)
