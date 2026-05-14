@@ -143,6 +143,10 @@ spec:
             {{- end }}
             - name: DATABASE_PATH
               value: {{ .Values.database.sqlitePath | quote }}
+            - name: KUBESTELLAR_OPS_PATH
+              value: {{ .Values.kubestellar.opsPath | quote }}
+            - name: KUBESTELLAR_DEPLOY_PATH
+              value: {{ .Values.kubestellar.deployPath | quote }}
             {{- if and .Values.route.enabled .Values.route.host }}
             - name: FRONTEND_URL
               value: "https://{{ .Values.route.host }}"

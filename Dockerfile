@@ -18,6 +18,37 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X github.com/kubestellar/console/pkg/api.Version=${APP_VERSION}" -o console ./cmd/console
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-s -w -X main.version=${APP_VERSION}" -o kc-watcher ./cmd/watcher
 
+# Build stage - MCP binaries
+FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS mcp-binaries
+
+ARG KUBESTELLAR_MCP_VERSION=0.8.18-nightly.20260509
+ARG TARGETARCH
+
+RUN apk add --no-cache curl tar && \
+    case "${TARGETARCH}" in \
+      amd64) \
+        ops_sha="ee199aed870a074d056045e18ea0efb89af0dd817b502e8b1e2157608bd0efd2"; \
+        deploy_sha="f49e94bce3157bd7ed450fabcc6bff8a72bc41f19735740f6b89717a3f0dc225" \
+        ;; \
+      arm64) \
+        ops_sha="264678618b30a178eed02488b3c74afd49b4a85f68b474d9ae9aae2b19ba0b23"; \
+        deploy_sha="65d4ca235e494a1a29345d28b65c8e46c66bd65c5101f1ca0a4c1bf8b83880a8" \
+        ;; \
+      *) \
+        echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; \
+        exit 1 \
+        ;; \
+    esac && \
+    release_url="https://github.com/kubestellar/kubestellar-mcp/releases/download/v${KUBESTELLAR_MCP_VERSION}" && \
+    curl -fsSL "${release_url}/kubestellar-ops_${KUBESTELLAR_MCP_VERSION}_linux_${TARGETARCH}.tar.gz" -o kubestellar-ops.tar.gz && \
+    echo "${ops_sha}  kubestellar-ops.tar.gz" | sha256sum -c - && \
+    tar -xzf kubestellar-ops.tar.gz kubestellar-ops && \
+    chmod +x kubestellar-ops && \
+    curl -fsSL "${release_url}/kubestellar-deploy_${KUBESTELLAR_MCP_VERSION}_linux_${TARGETARCH}.tar.gz" -o kubestellar-deploy.tar.gz && \
+    echo "${deploy_sha}  kubestellar-deploy.tar.gz" | sha256sum -c - && \
+    tar -xzf kubestellar-deploy.tar.gz kubestellar-deploy && \
+    chmod +x kubestellar-deploy
+
 # Build stage - Frontend
 FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS frontend-builder
 
@@ -61,6 +92,10 @@ RUN apk add --no-cache ca-certificates tzdata
 # Copy backend and watcher binaries
 COPY --from=backend-builder /app/console .
 COPY --from=backend-builder /app/kc-watcher .
+
+# Copy MCP server binaries
+COPY --from=mcp-binaries /kubestellar-ops /usr/local/bin/kubestellar-ops
+COPY --from=mcp-binaries /kubestellar-deploy /usr/local/bin/kubestellar-deploy
 
 # Copy frontend build
 COPY --from=frontend-builder /app/dist ./web/dist
