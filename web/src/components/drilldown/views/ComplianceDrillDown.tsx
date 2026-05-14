@@ -31,6 +31,29 @@ const PAGE_SIZE = 25
 const SEVERITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
 const STATUS_ORDER: Record<string, number> = { fail: 0, other: 1, 'not-applicable': 2, pass: 3 }
 
+function normalizeComplianceStatus(status?: string): string {
+  switch (status) {
+    case 'passing':
+      return 'pass'
+    case 'failing':
+      return 'fail'
+    case 'warning':
+    case 'skipped':
+      return 'other'
+    default:
+      return status || ''
+  }
+}
+
+function parseCount(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
 function severityColor(s?: string): string {
   switch (s) {
     case 'critical': return 'text-red-400 bg-red-500/15 border-red-500/30'
@@ -67,9 +90,29 @@ interface ControlRow extends OscalControlResult {
 
 export function ComplianceDrillDown({ data }: Props) {
   const { t } = useTranslation()
-  const filterStatus = (data.filterStatus as string) || ''
+  const filterStatus = normalizeComplianceStatus(data.filterStatus as string | undefined)
   const { statuses } = useTrestle()
   const { selectedClusters } = useGlobalFilters()
+
+  const summaryCounts = useMemo(() => {
+    const passing = parseCount(data.passing)
+    const failing = parseCount(data.failing)
+    const providedOther = parseCount(data.warning)
+    const totalChecks = parseCount(data.totalChecks)
+    const hasProvidedSummary = passing !== null || failing !== null || providedOther !== null || totalChecks !== null
+    const other = providedOther ?? (totalChecks !== null
+      ? Math.max(0, totalChecks - (passing ?? 0) - (failing ?? 0))
+      : null)
+    const total = totalChecks ?? ((passing ?? 0) + (failing ?? 0) + (other ?? 0))
+
+    return {
+      hasProvidedSummary,
+      passing: passing ?? 0,
+      failing: failing ?? 0,
+      other: other ?? 0,
+      total,
+    }
+  }, [data.failing, data.passing, data.totalChecks, data.warning])
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>(filterStatus)
@@ -174,10 +217,16 @@ export function ComplianceDrillDown({ data }: Props) {
       : <ChevronDown className="w-3 h-3" />
   }
 
-  // Summary stats — always computed from allRows so they are unaffected by filters
-  const passCount = allRows.filter(r => r.status === 'pass').length
-  const failCount = allRows.filter(r => r.status === 'fail').length
-  const otherCount = allRows.filter(r => r.status === 'other' || r.status === 'not-applicable').length
+  // Summary stats — prefer aggregate values passed by the stats overview so the
+  // drill-down matches the clicked stat block even when no OSCAL rows exist.
+  const rowPassCount = allRows.filter(r => r.status === 'pass').length
+  const rowFailCount = allRows.filter(r => r.status === 'fail').length
+  const rowOtherCount = allRows.filter(r => r.status === 'other' || r.status === 'not-applicable').length
+  const passCount = summaryCounts.hasProvidedSummary ? summaryCounts.passing : rowPassCount
+  const failCount = summaryCounts.hasProvidedSummary ? summaryCounts.failing : rowFailCount
+  const otherCount = summaryCounts.hasProvidedSummary ? summaryCounts.other : rowOtherCount
+  const totalCount = summaryCounts.hasProvidedSummary ? summaryCounts.total : allRows.length
+  const isAggregateSummaryOnly = summaryCounts.hasProvidedSummary && allRows.length === 0
   const activeFilters = [statusFilter, severityFilter, clusterFilter, profileFilter, searchQuery].filter(Boolean).length
 
   return (
@@ -187,9 +236,13 @@ export function ComplianceDrillDown({ data }: Props) {
         <div className="flex items-center gap-3 mb-4">
           <Shield className="w-6 h-6 text-teal-400" />
           <div>
-            <h2 className="text-lg font-semibold text-foreground">OSCAL Compliance Controls</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              {isAggregateSummaryOnly ? 'Compliance Overview' : 'OSCAL Compliance Controls'}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              Individual check results from Compliance Trestle assessments
+              {isAggregateSummaryOnly
+                ? 'Summary totals from the Security Compliance dashboard stats overview'
+                : 'Individual check results from Compliance Trestle assessments'}
             </p>
           </div>
         </div>
@@ -203,7 +256,7 @@ export function ComplianceDrillDown({ data }: Props) {
               !statusFilter ? 'border-teal-500/40 bg-teal-500/10' : 'border-border bg-card/50 hover:border-border/80'
             )}
           >
-            <div className="text-xl font-bold text-foreground">{allRows.length}</div>
+            <div className="text-xl font-bold text-foreground">{totalCount}</div>
             <div className="text-xs text-muted-foreground">Total Controls</div>
           </button>
           <button
@@ -346,8 +399,14 @@ export function ComplianceDrillDown({ data }: Props) {
         {pagedRows.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <Shield className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No controls match filters</p>
-            <p className="text-xs mt-1">Try adjusting your search or filter criteria</p>
+            <p className="font-medium">
+              {isAggregateSummaryOnly ? 'Detailed controls are unavailable for this view' : 'No controls match filters'}
+            </p>
+            <p className="text-xs mt-1">
+              {isAggregateSummaryOnly
+                ? 'The summary totals above match the values from the selected stat block.'
+                : 'Try adjusting your search or filter criteria'}
+            </p>
           </div>
         ) : (
           <div className="rounded-lg border border-border overflow-hidden">

@@ -1,5 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
+
+const { mockUseTrestle, mockUseGlobalFilters } = vi.hoisted(() => ({
+  mockUseTrestle: vi.fn(),
+  mockUseGlobalFilters: vi.fn(),
+}))
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -28,22 +33,56 @@ vi.mock('../../../../hooks/useTokenUsage', () => ({
 }))
 
 vi.mock('../../../../hooks/useTrestle', () => ({
-  useTrestle: () => ({ statuses: [] }),
+  useTrestle: () => mockUseTrestle(),
 }))
 
 vi.mock('../../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [] }),
+  useGlobalFilters: () => mockUseGlobalFilters(),
 }))
 
 vi.mock('../../../../lib/cn', () => ({
-  cn: vi.fn(),
+  cn: (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(' '),
 }))
 
 import ComplianceDrillDown from '../ComplianceDrillDown'
 
 describe('ComplianceDrillDown', () => {
+  beforeEach(() => {
+    mockUseTrestle.mockReturnValue({ statuses: {} })
+    mockUseGlobalFilters.mockReturnValue({ selectedClusters: [] })
+  })
+
   it('renders without crashing', () => {
     const { container } = render(<ComplianceDrillDown data={{ filterStatus: '' }} />)
     expect(container).toBeTruthy()
+  })
+
+  it('shows the same aggregate totals passed from the stats overview', () => {
+    render(<ComplianceDrillDown data={{ passing: 165, failing: 42, warning: 8, totalChecks: 215 }} />)
+
+    expect(screen.getByText('Compliance Overview')).toBeTruthy()
+    expect(screen.getByText('215')).toBeTruthy()
+    expect(screen.getByText('165')).toBeTruthy()
+    expect(screen.getByText('42')).toBeTruthy()
+    expect(screen.getByText('8')).toBeTruthy()
+  })
+
+  it('normalizes dashboard status aliases to trestle status filters', () => {
+    mockUseTrestle.mockReturnValue({
+      statuses: {
+        'cluster-a': {
+          installed: true,
+          controlResults: [
+            { controlId: 'AC-1', title: 'Passing control', status: 'pass', severity: 'low' },
+            { controlId: 'AC-2', title: 'Failing control', status: 'fail', severity: 'high' },
+          ],
+        },
+      },
+    })
+
+    render(<ComplianceDrillDown data={{ filterStatus: 'passing' }} />)
+
+    expect(screen.getByText('Passing control')).toBeTruthy()
+    expect(screen.queryByText('Failing control')).toBeNull()
   })
 })

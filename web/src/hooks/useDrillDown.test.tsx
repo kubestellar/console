@@ -1255,13 +1255,13 @@ describe('untested Phase 2 actions', () => {
     expect(result.current.drillDown.state.currentView?.title).toBe('OSCAL Compliance Controls')
   })
 
-  it('drillToCompliance with filter capitalizes status in title', () => {
+  it('drillToCompliance normalizes dashboard status aliases', () => {
     const result = renderBothHooks()
 
     act(() => { result.current.actions.drillToCompliance('failing', { category: 'access' }) })
 
     expect(result.current.drillDown.state.currentView?.title).toBe('Failing Controls')
-    expect(result.current.drillDown.state.currentView?.data.filterStatus).toBe('failing')
+    expect(result.current.drillDown.state.currentView?.data.filterStatus).toBe('fail')
     expect(result.current.drillDown.state.currentView?.data.category).toBe('access')
   })
 

@@ -438,6 +438,20 @@ function getViewKey(view: DrillDownView): string {
 const _noop = () => {}
 const _noopState: DrillDownState = { isOpen: false, stack: [], currentView: null }
 
+function normalizeComplianceFilterStatus(filterStatus?: string): string | undefined {
+  switch (filterStatus) {
+    case 'passing':
+      return 'pass'
+    case 'failing':
+      return 'fail'
+    case 'warning':
+    case 'skipped':
+      return 'other'
+    default:
+      return filterStatus
+  }
+}
+
 // Helper hook to create drill-down actions
 export function useDrillDownActions() {
   const context = useContext(DrillDownContext)
@@ -670,14 +684,22 @@ export function useDrillDownActions() {
   }
 
   const drillToCompliance = (filterStatus?: string, complianceData?: Record<string, unknown>) => {
-    const title = filterStatus
-      ? `${filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)} Controls`
+    const normalizedFilterStatus = normalizeComplianceFilterStatus(filterStatus)
+    const filterTitle = normalizedFilterStatus === 'pass'
+      ? 'Passing'
+      : normalizedFilterStatus === 'fail'
+        ? 'Failing'
+        : normalizedFilterStatus === 'other'
+          ? 'Other'
+          : normalizedFilterStatus
+    const title = filterTitle
+      ? `${filterTitle} Controls`
       : 'OSCAL Compliance Controls'
     openOrPush({
       type: 'compliance',
       title,
       subtitle: 'Compliance Trestle Assessment',
-      data: { filterStatus, ...complianceData } })
+      data: { filterStatus: normalizedFilterStatus, ...complianceData } })
   }
 
   const drillToCRD = (cluster: string, crd: string, crdData?: Record<string, unknown>) => {
