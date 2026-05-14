@@ -250,6 +250,7 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   const [revealNonce, setRevealNonce] = useState(0)
   const treeNodesRef = useRef<TreeNode[]>([])
   const expandedNodesRef = useRef<Set<string>>(new Set())
+  const selectGenerationRef = useRef(0)
 
   // Content state
   const [directoryEntries, setDirectoryEntries] = useState<BrowseEntry[]>([])
@@ -892,6 +893,10 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
   }, [])
 
   const selectNode = async (node: TreeNode) => {
+    // Increment generation to invalidate any in-flight requests
+    selectGenerationRef.current += 1
+    const currentGeneration = selectGenerationRef.current
+
     setSelectedPath(node.id)
     setSelectedMission(null)
     setRawContent(null)
@@ -901,11 +906,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
       emitFixerBrowsed(node.path)
       setLoading(true)
       try {
-        setDirectoryEntries(await fetchDirectoryEntries(node))
+        const entries = await fetchDirectoryEntries(node)
+        // Only apply if this is still the most recent selection
+        if (selectGenerationRef.current === currentGeneration) {
+          setDirectoryEntries(entries)
+        }
       } catch {
-        setDirectoryEntries([])
+        if (selectGenerationRef.current === currentGeneration) {
+          setDirectoryEntries([])
+        }
       } finally {
-        setLoading(false)
+        if (selectGenerationRef.current === currentGeneration) {
+          setLoading(false)
+        }
       }
     } else {
       // File selected → fetch and preview
@@ -914,12 +927,19 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
         const content = node.source === 'local' ? (node.content ?? null) : await fetchNodeFileContent(node)
         if (content === null) return
 
-        applySelectedFileContent(node, content)
+        // Only apply if this is still the most recent selection
+        if (selectGenerationRef.current === currentGeneration) {
+          applySelectedFileContent(node, content)
+        }
       } catch {
-        setRawContent(null)
-        setSelectedMission(null)
+        if (selectGenerationRef.current === currentGeneration) {
+          setRawContent(null)
+          setSelectedMission(null)
+        }
       } finally {
-        setLoading(false)
+        if (selectGenerationRef.current === currentGeneration) {
+          setLoading(false)
+        }
       }
     }
   }
