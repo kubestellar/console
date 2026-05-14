@@ -204,7 +204,7 @@ export function EventsDrillDown({ data }: Props) {
     <div className="space-y-4">
       {/* Contextual Navigation */}
       <div className="flex items-center gap-6 text-sm">
-        <button onClick={() => state.stack.length > 1 ? pop() : close()} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+        <button onClick={() => state.stack.length > 1 ? pop() : close()} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors min-h-11 min-w-11 px-2 py-2">
           <ChevronLeft className="w-4 h-4" />
           {t('drilldown.goBack', 'Back')}
         </button>
