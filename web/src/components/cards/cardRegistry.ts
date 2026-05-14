@@ -1333,6 +1333,7 @@ export const LIVE_DATA_CARDS = new Set([
   // Real-time status cards
   'cluster_metrics',
   'events_timeline',
+  'event_stream',
   'event_summary',
   'warning_events',
   'recent_events',
