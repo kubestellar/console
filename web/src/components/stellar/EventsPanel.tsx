@@ -1,13 +1,43 @@
-import { useMemo, useRef } from 'react'
-import type { StellarAction, StellarNotification } from '../../types/stellar'
-import { EventCard } from './EventCard'
+import { useMemo, useRef, useState } from 'react'
+import type { StellarAction, StellarNotification, StellarSolve, StellarSolveProgress } from '../../types/stellar'
+import { EventCard, type PendingAction } from './EventCard'
 import { ApprovalCard } from './ApprovalCard'
+import { EventModal } from './EventModal'
+import { DigestCard } from './DigestCard'
+import { SolveProgressCard, SolveEscalatedCard } from './SolveCards'
+import { getSolveStatus } from './lib/derive'
 
-const severityOrder: Record<string, number> = {
-  critical: 0,
-  warning: 1,
-  info: 2,
+interface GroupConfig {
+  key: 'critical' | 'warning' | 'info'
+  label: string
+  subtitle: string
+  color: string
+  background: string
 }
+
+const GROUP_CONFIGS: GroupConfig[] = [
+  {
+    key: 'critical',
+    label: 'Critical alerts',
+    subtitle: 'Auto-investigation in progress',
+    color: 'var(--s-critical)',
+    background: 'rgba(229,73,73,0.06)',
+  },
+  {
+    key: 'warning',
+    label: 'High priority',
+    subtitle: 'Investigation complete, awaiting input',
+    color: 'var(--s-warning)',
+    background: 'rgba(227,179,65,0.05)',
+  },
+  {
+    key: 'info',
+    label: 'Info',
+    subtitle: 'On-demand investigation',
+    color: 'var(--s-info)',
+    background: 'transparent',
+  },
+]
 
 interface EventsPanelProps {
   notifications: StellarNotification[]
@@ -16,8 +46,12 @@ interface EventsPanelProps {
   dismissAllNotifications: () => Promise<void>
   approveAction: (id: string, confirmToken?: string) => Promise<void>
   rejectAction: (id: string, reason: string) => Promise<void>
+  // Stellar v2: solve loop + digest.
+  solves?: StellarSolve[]
+  solveProgress?: Record<string, StellarSolveProgress>
+  startSolve?: (eventID: string) => Promise<unknown>
   onRollback?: (prompt: string) => void
-  onAction?: (prompt: string) => void
+  onAction?: (prompt: string, action?: PendingAction) => void
 }
 
 export function EventsPanel({
@@ -27,16 +61,72 @@ export function EventsPanel({
   dismissAllNotifications,
   approveAction,
   rejectAction,
+  solves = [],
+  solveProgress = {},
+  startSolve,
   onRollback,
   onAction,
 }: EventsPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const [detailNotification, setDetailNotification] = useState<StellarNotification | null>(null)
 
-  const { unread, sorted } = useMemo(() => {
+  // Pull the latest digest notification (if any) so we can pin it at the top.
+  const digest = useMemo(() => {
+    return (notifications || []).find(n => n.type === 'digest' && !n.read) || null
+  }, [notifications])
+
+  // Stellar v2: derive escalated/exhausted solves that don't have a live
+  // progress entry — these are completed terminal states the operator needs
+  // to acknowledge.
+  const terminalSolves = useMemo(() => {
+    return (solves || []).filter(s => s.status === 'escalated' || s.status === 'exhausted')
+      .slice(0, 5)
+  }, [solves])
+
+  const activeProgress = useMemo(() => Object.values(solveProgress || {}), [solveProgress])
+
+  const { unread, groups, stellarResolved, hasAny } = useMemo(() => {
     const unreadItems = notifications.filter(n => !n.read)
     const readItems = notifications.filter(n => n.read)
-    const sortedUnread = unreadItems.slice().sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3))
-    return { unread: unreadItems, sorted: [...sortedUnread, ...readItems] }
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    // Pull out "Stellar acted on its own" notifications — both unread and read —
+    // into a dedicated band so the user can see at a glance what Stellar did.
+    const isStellarResolution = (n: StellarNotification) =>
+      n.type === 'action' && (
+        n.title.startsWith('Stellar auto-fixed') ||
+        n.title.startsWith('Stellar auto-fix failed') ||
+        n.title.startsWith('Action completed')
+      )
+
+    const stellarActed: StellarNotification[] = []
+    const remainingUnread: StellarNotification[] = []
+    for (const n of unreadItems) {
+      if (isStellarResolution(n)) stellarActed.push(n)
+      else remainingUnread.push(n)
+    }
+    const remainingResolved: StellarNotification[] = []
+    for (const n of readItems) {
+      if (isStellarResolution(n)) stellarActed.push(n)
+      else remainingResolved.push(n)
+    }
+    stellarActed.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    const byKey: Record<string, StellarNotification[]> = { critical: [], warning: [], info: [] }
+    for (const n of remainingUnread) {
+      const key = byKey[n.severity] ? n.severity : 'info'
+      byKey[key].push(n)
+    }
+    for (const key of Object.keys(byKey)) {
+      byKey[key].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    }
+    void remainingResolved // user dismissed — gone from view; see note below
+    return {
+      unread: unreadItems,
+      groups: byKey as Record<'critical' | 'warning' | 'info', StellarNotification[]>,
+      stellarResolved: stellarActed,
+      hasAny: notifications.length > 0,
+    }
   }, [notifications])
 
   return (
@@ -128,26 +218,141 @@ export function EventsPanel({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '8px 8px',
+          padding: '8px 4px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 4,
           minHeight: 0,
         }}
       >
-        {sorted.length === 0 ? (
-          <EmptyState icon="✦" text="No events — all clear" />
-        ) : (
-          sorted.map(notification => (
-            <EventCard
-              key={notification.id}
-              notification={notification}
-              onDismiss={() => { void acknowledgeNotification(notification.id) }}
-              onRollback={onRollback}
-              onAction={onAction}
-            />
-          ))
+        {digest && (
+          <DigestCard
+            notification={digest}
+            solves={solves}
+            onDismiss={() => { void acknowledgeNotification(digest.id) }}
+          />
         )}
+
+        {activeProgress.length > 0 && (
+          <div style={{ margin: '4px 4px 8px' }}>
+            {activeProgress.map(p => (
+              <SolveProgressCard key={p.solveId + p.eventId} progress={p} />
+            ))}
+          </div>
+        )}
+
+        {terminalSolves.length > 0 && (
+          <div style={{ margin: '0 4px 8px' }}>
+            {terminalSolves.map(s => (
+              <SolveEscalatedCard key={s.id} solve={s} />
+            ))}
+          </div>
+        )}
+
+        {!hasAny && activeProgress.length === 0 && terminalSolves.length === 0 && !digest && <EmptyState icon="✦" text="No events — all clear" />}
+
+        {GROUP_CONFIGS.map(group => {
+          const items = groups[group.key]
+          if (items.length === 0) return null
+          return (
+            <Group key={group.key} config={group} count={items.length}>
+              {items.map(notification => (
+                <EventCard
+                  key={notification.id}
+                  notification={notification}
+                  allNotifications={notifications}
+                  solveStatus={getSolveStatus(notification.id, solves, solveProgress)}
+                  onSolve={startSolve}
+                  onDismiss={() => { void acknowledgeNotification(notification.id) }}
+                  onRollback={onRollback}
+                  onAction={onAction}
+                  onOpenDetail={setDetailNotification}
+                />
+              ))}
+            </Group>
+          )
+        })}
+
+        {stellarResolved.length > 0 && (
+          <div style={{ marginTop: 8, padding: '0 4px' }}>
+            <div style={{
+              display: 'flex', alignItems: 'baseline', gap: 8,
+              padding: '4px 6px', marginBottom: 4,
+              background: 'rgba(63,185,80,0.06)',
+              borderLeft: '3px solid var(--s-success)',
+              borderRadius: 'var(--s-rs)',
+            }}>
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--s-success)',
+              }}>✦ Resolved by Stellar</span>
+              <span style={{
+                fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
+                color: 'var(--s-success)', opacity: 0.7,
+              }}>{stellarResolved.length}</span>
+              <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>
+                Fixed without waiting for approval
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {stellarResolved.map(notification => (
+                <EventCard
+                  key={notification.id}
+                  notification={notification}
+                  allNotifications={notifications}
+                  onDismiss={() => { void acknowledgeNotification(notification.id) }}
+                  onRollback={onRollback}
+                  onAction={onAction}
+                  onOpenDetail={setDetailNotification}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Generic resolved tray removed intentionally: clicking Dismiss should
+            make a card disappear from view, full stop. Stellar's own resolutions
+            still surface in the "✦ Resolved by Stellar" band above. Anything
+            else dismissed by the user is gone — accessible later via the audit
+            log if needed. */}
+      </div>
+
+      {detailNotification && (
+        <EventModal
+          notification={detailNotification}
+          allNotifications={notifications}
+          pendingActions={pendingActions}
+          onClose={() => setDetailNotification(null)}
+          onAction={onAction}
+        />
+      )}
+    </div>
+  )
+}
+
+function Group({
+  config, count, children,
+}: { config: GroupConfig; count: number; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 10, padding: '0 4px' }}>
+      <div style={{
+        display: 'flex', alignItems: 'baseline', gap: 8,
+        padding: '4px 6px', marginBottom: 4,
+        background: config.background,
+        borderLeft: `3px solid ${config.color}`,
+        borderRadius: 'var(--s-rs)',
+      }}>
+        <span style={{
+          fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.08em', textTransform: 'uppercase', color: config.color,
+        }}>{config.label}</span>
+        <span style={{
+          fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
+          color: config.color, opacity: 0.7,
+        }}>{count}</span>
+        <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>{config.subtitle}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {children}
       </div>
     </div>
   )

@@ -876,6 +876,60 @@ func (s *SQLiteStore) migrate() error {
 		"ALTER TABLE stellar_observations ADD COLUMN reasoning TEXT NOT NULL DEFAULT ''",
 
 		// Sprint 5: snooze support — last_checked already exists on stellar_watches
+
+		// Stellar v2: solve sessions (headless solve loop). Each row tracks one
+		// end-to-end attempt by Stellar to resolve an event without user input.
+		`CREATE TABLE IF NOT EXISTS stellar_solves (
+			id            TEXT PRIMARY KEY,
+			event_id      TEXT NOT NULL,
+			user_id       TEXT NOT NULL,
+			cluster       TEXT NOT NULL DEFAULT '',
+			namespace     TEXT NOT NULL DEFAULT '',
+			workload      TEXT NOT NULL DEFAULT '',
+			status        TEXT NOT NULL DEFAULT 'running',
+			actions_taken INTEGER NOT NULL DEFAULT 0,
+			limit_hit     TEXT NOT NULL DEFAULT '',
+			summary       TEXT NOT NULL DEFAULT '',
+			error         TEXT NOT NULL DEFAULT '',
+			started_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			ended_at      DATETIME
+		)`,
+		"CREATE INDEX IF NOT EXISTS idx_stellar_solves_event ON stellar_solves(event_id, started_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_solves_user_status ON stellar_solves(user_id, status, started_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_solves_dedupe ON stellar_solves(cluster, namespace, workload, started_at DESC)",
+
+		// Solve attempt → execution linkage + per-workload dedupe key for
+		// attempt history surfacing on watch cards.
+		"ALTER TABLE stellar_executions ADD COLUMN solve_id TEXT NOT NULL DEFAULT ''",
+		"ALTER TABLE stellar_executions ADD COLUMN dedupe_key TEXT NOT NULL DEFAULT ''",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_executions_solve ON stellar_executions(solve_id)",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_executions_dedupe ON stellar_executions(dedupe_key, started_at DESC)",
+
+		// Stale approval re-evaluation: bumping a pending approval to the top
+		// when its event has been re-triggered.
+		"ALTER TABLE stellar_actions ADD COLUMN bumped_at DATETIME",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_actions_bumped ON stellar_actions(status, bumped_at DESC)",
+
+		// Stellar activity log: Stellar's first-person record of what it did and
+		// why. Distinct from stellar_audit_log (operator-facing legal trail) and
+		// stellar_notifications (the inbox). This is the "junior engineer's
+		// commit log" the operator scans to verify Stellar is being reasonable.
+		`CREATE TABLE IF NOT EXISTS stellar_activity (
+			id          TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			user_id     TEXT NOT NULL DEFAULT 'system',
+			ts          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			kind        TEXT NOT NULL,
+			event_id    TEXT NOT NULL DEFAULT '',
+			solve_id    TEXT NOT NULL DEFAULT '',
+			cluster     TEXT NOT NULL DEFAULT '',
+			namespace   TEXT NOT NULL DEFAULT '',
+			workload    TEXT NOT NULL DEFAULT '',
+			title       TEXT NOT NULL,
+			detail      TEXT NOT NULL DEFAULT '',
+			severity    TEXT NOT NULL DEFAULT 'info'
+		)`,
+		"CREATE INDEX IF NOT EXISTS idx_stellar_activity_ts ON stellar_activity(ts DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_stellar_activity_user_ts ON stellar_activity(user_id, ts DESC)",
 	}
 	for i, migration := range migrations {
 		if _, err := s.db.ExecContext(ctx, migration); err != nil {

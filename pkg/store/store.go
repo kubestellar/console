@@ -234,6 +234,43 @@ type StellarProviderConfig struct {
 	UpdatedAt   time.Time  `json:"updatedAt"`
 }
 
+// StellarActivity is one entry in Stellar's first-person activity log.
+// Kinds: "evaluated", "decided_solve", "decided_skip", "auto_fixed",
+// "auto_fix_failed", "solve_started", "solve_progress", "solve_resolved",
+// "solve_escalated", "solve_exhausted", "approval_superseded", "approval_bumped".
+type StellarActivity struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"userId"`
+	Ts        time.Time `json:"ts"`
+	Kind      string    `json:"kind"`
+	EventID   string    `json:"eventId,omitempty"`
+	SolveID   string    `json:"solveId,omitempty"`
+	Cluster   string    `json:"cluster,omitempty"`
+	Namespace string    `json:"namespace,omitempty"`
+	Workload  string    `json:"workload,omitempty"`
+	Title     string    `json:"title"`
+	Detail    string    `json:"detail,omitempty"`
+	Severity  string    `json:"severity"`
+}
+
+// StellarSolve tracks one end-to-end Solve attempt initiated by Stellar.
+// Status transitions: running → resolved | escalated | exhausted.
+type StellarSolve struct {
+	ID           string     `json:"id"`
+	EventID      string     `json:"eventId"`
+	UserID       string     `json:"userId"`
+	Cluster      string     `json:"cluster"`
+	Namespace    string     `json:"namespace"`
+	Workload     string     `json:"workload"`
+	Status       string     `json:"status"`
+	ActionsTaken int        `json:"actionsTaken"`
+	LimitHit     string     `json:"limitHit,omitempty"`
+	Summary      string     `json:"summary"`
+	Error        string     `json:"error,omitempty"`
+	StartedAt    time.Time  `json:"startedAt"`
+	EndedAt      *time.Time `json:"endedAt,omitempty"`
+}
+
 type StellarAuditEntry struct {
 	ID         string    `json:"id"`
 	Ts         time.Time `json:"ts"`

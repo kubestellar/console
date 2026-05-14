@@ -55,16 +55,31 @@ const demoTimelineSpanHours = 24
 // TimelineHandler
 // ---------------------------------------------------------------------------
 
+// StellarEventSink is the minimal interface TimelineHandler uses to forward
+// every collected cluster event to Stellar. Decouples timeline from the
+// concrete StellarHandler type and keeps the dependency one-way.
+type StellarEventSink interface {
+	ProcessEvent(ctx context.Context, event IncomingEvent)
+}
+
 // TimelineHandler serves the GET /api/timeline endpoint and owns the
 // background event journal collector goroutine.
 type TimelineHandler struct {
-	store     store.Store
-	k8sClient *k8s.MultiClusterClient
+	store        store.Store
+	k8sClient    *k8s.MultiClusterClient
+	stellarSink  StellarEventSink
 }
 
 // NewTimelineHandler creates a TimelineHandler.
 func NewTimelineHandler(s store.Store, k8sClient *k8s.MultiClusterClient) *TimelineHandler {
 	return &TimelineHandler{store: s, k8sClient: k8sClient}
+}
+
+// SetStellarEventSink wires Stellar's ProcessEvent into the collector loop.
+// Optional — when unset (e.g. self-hosted without Stellar), event collection
+// still works, it just doesn't fan out to Stellar's notification pipeline.
+func (h *TimelineHandler) SetStellarEventSink(sink StellarEventSink) {
+	h.stellarSink = sink
 }
 
 // GetTimeline handles GET /api/timeline.
@@ -205,6 +220,22 @@ func (h *TimelineHandler) collectCluster(ci k8s.ClusterInfo) {
 			continue
 		}
 		inserted++
+
+		// Fan out to Stellar so the assistant sees the same events the
+		// console event-stream card surfaces. Without this hop, Stellar
+		// was blind to anything except the test ingest endpoint.
+		if h.stellarSink != nil {
+			h.stellarSink.ProcessEvent(ctx, IncomingEvent{
+				Cluster:   ci.Name,
+				Namespace: ev.Namespace,
+				Name:      name,
+				Kind:      kind,
+				Reason:    ev.Reason,
+				Message:   ev.Message,
+				Type:      ev.Type,
+				Count:     ev.Count,
+			})
+		}
 	}
 	if inserted > 0 {
 		slog.Debug("[Timeline] collected events",

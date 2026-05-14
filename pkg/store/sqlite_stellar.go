@@ -747,6 +747,28 @@ func (s *SQLiteStore) CreateTask(ctx context.Context, task *StellarTask) (string
 	return task.ID, nil
 }
 
+// GetOverdueOpenTasks returns all tasks where due_at has passed and the task
+// is still open (not done/dismissed). Used by the due-task reminder ticker.
+func (s *SQLiteStore) GetOverdueOpenTasks(ctx context.Context, asOf time.Time) ([]StellarTask, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, user_id, cluster, title, description, status, priority, source, parent_id, due_at, completed_at, context_json, created_at, updated_at
+		FROM stellar_tasks
+		WHERE due_at IS NOT NULL AND due_at <= ? AND status NOT IN ('done','dismissed')
+		ORDER BY due_at ASC`, asOf.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]StellarTask, 0)
+	for rows.Next() {
+		item, scanErr := scanStellarTaskRow(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, *item)
+	}
+	return out, rows.Err()
+}
+
 func (s *SQLiteStore) GetOpenTasks(ctx context.Context, userID string) ([]StellarTask, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id, session_id, user_id, cluster, title, description, status, priority, source, parent_id, due_at, completed_at, context_json, created_at, updated_at
 		FROM stellar_tasks

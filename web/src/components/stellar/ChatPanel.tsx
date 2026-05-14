@@ -8,6 +8,7 @@ import { localAgentChat } from '../../lib/localAgentChat'
 import { ProactiveNudge } from './ProactiveNudge'
 import { CatchUpBanner } from './CatchUpBanner'
 import type { CatchUpState } from '../../hooks/useStellar'
+import type { PendingAction } from './EventCard'
 
 interface Msg {
   id: string
@@ -37,6 +38,8 @@ export function ChatPanel({
   onDismissCatchUp,
   initialInput,
   onInputConsumed,
+  pendingAction,
+  onActionConsumed,
   createTask,
 }: {
   providerSession: ProviderSession | null
@@ -47,11 +50,14 @@ export function ChatPanel({
   onDismissCatchUp: () => void
   initialInput?: string
   onInputConsumed?: () => void
+  pendingAction?: PendingAction | null
+  onActionConsumed?: () => void
   createTask: (title: string, description?: string, source?: string) => Promise<unknown>
 }) {
   const [msgs, setMsgs] = useState<Msg[]>([WELCOME])
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
+  const [localPendingAction, setLocalPendingAction] = useState<PendingAction | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLTextAreaElement | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -66,6 +72,15 @@ export function ChatPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialInput])
 
+  // Consume pendingAction — store locally until user sends or clears
+  useEffect(() => {
+    if (pendingAction) {
+      setLocalPendingAction(pendingAction)
+      onActionConsumed?.()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAction])
+
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort()
@@ -79,13 +94,38 @@ export function ChatPanel({
   const send = useCallback(async () => {
     const prompt = input.trim()
     if (!prompt || busy) return
+    const actionToExecute = localPendingAction
     setInput('')
     setBusy(true)
+    setLocalPendingAction(null)
     const userMsg: Msg = { id: crypto.randomUUID(), role: 'user', content: prompt, ts: new Date() }
     const loadMsg: Msg = { id: crypto.randomUUID(), role: 'stellar', content: '', ts: new Date(), loading: true }
     setMsgs(prev => [...prev, userMsg, loadMsg])
     try {
-      if (providerSession?.isCli) {
+      if (actionToExecute) {
+        const startTime = Date.now()
+        const result = await stellarApi.executeAction({
+          actionType: actionToExecute.actionType,
+          cluster: actionToExecute.cluster,
+          namespace: actionToExecute.namespace,
+          name: actionToExecute.name,
+          description: prompt,
+          prompt,
+        })
+        const durationMs = Date.now() - startTime
+        const prefix = result.status === 'failed' ? '⚠ ' : '✓ '
+        setMsgs(prev => prev.map(message => (message.loading ? {
+          ...message,
+          content: prefix + result.outcome,
+          loading: false,
+          meta: {
+            model: result.model || 'action-executor',
+            tokens: 0,
+            provider: result.provider || 'native',
+            durationMs: result.duration || durationMs,
+          },
+        } : message)))
+      } else if (providerSession?.isCli) {
         abortControllerRef.current = new AbortController()
         let accumulated = ''
         const start = Date.now()
@@ -151,7 +191,7 @@ export function ChatPanel({
       abortControllerRef.current = null
       textRef.current?.focus()
     }
-  }, [busy, input, providerSession?.model, providerSession?.provider, providerSession?.isCli])
+  }, [busy, input, localPendingAction, msgs, providerSession?.model, providerSession?.provider, providerSession?.isCli])
 
   const handleKey = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -239,6 +279,29 @@ export function ChatPanel({
       </div>
 
       <div style={{ padding: '8px 10px', flexShrink: 0, borderTop: '1px solid var(--s-border)' }}>
+        {localPendingAction && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            marginBottom: 6,
+            padding: '3px 8px',
+            background: 'rgba(227,179,65,0.1)',
+            border: '1px solid rgba(227,179,65,0.3)',
+            borderRadius: 'var(--s-rs)',
+            fontSize: 11,
+            color: 'var(--s-warning)',
+          }}>
+            <span>⚡ Will execute: {localPendingAction.actionType} on {localPendingAction.namespace}/{localPendingAction.name} ({localPendingAction.cluster})</span>
+            <button
+              onClick={() => setLocalPendingAction(null)}
+              style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--s-text-dim)' }}
+              title="Cancel — send as chat instead"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div style={{
           display: 'flex',
           gap: 6,

@@ -74,6 +74,11 @@ import { ROUTES } from '../../config/routes'
 const MissionSidebar = safeLazy(() => import('./mission-sidebar'), 'MissionSidebar')
 const MissionSidebarToggle = safeLazy(() => import('./mission-sidebar'), 'MissionSidebarToggle')
 const StellarSidebar = safeLazy(() => import('../stellar'), 'StellarSidebar')
+// StellarToastBridge is loaded EAGERLY (not lazy) so it mounts before SSE
+// starts delivering notifications. A lazy bridge had a startup race where
+// every initial event was marked "already seen" and no toast fired.
+import { StellarToastBridge } from '../stellar/StellarToastBridge'
+import { StellarMissionBridge } from '../stellar/StellarMissionBridge'
 
 // Module-level constant — computed once, never changes on re-render.
 // Prevents star field from flickering when Layout re-renders due to hooks.
@@ -856,6 +861,8 @@ export function Layout({ children: _children }: LayoutProps) {
         <Suspense fallback={null}>
           <StellarSidebar />
         </Suspense>
+        <StellarToastBridge />
+        <StellarMissionBridge />
       </div>
 
           {/* AI Mission sidebar — lazy loaded to keep react-markdown out of initial bundle */}

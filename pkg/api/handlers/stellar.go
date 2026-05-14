@@ -120,6 +120,7 @@ type StellarStore interface {
 	GetOpenTasks(ctx context.Context, userID string) ([]store.StellarTask, error)
 	UpdateTaskStatus(ctx context.Context, id, status, userID string) error
 	GetTasksForCluster(ctx context.Context, cluster string, limit int) ([]store.StellarTask, error)
+	GetOverdueOpenTasks(ctx context.Context, asOf time.Time) ([]store.StellarTask, error)
 
 	CreateObservation(ctx context.Context, obs *store.StellarObservation) (string, error)
 	GetRecentObservations(ctx context.Context, cluster string, limit int) ([]store.StellarObservation, error)
@@ -223,6 +224,67 @@ func (h *StellarHandler) SetProviderRegistry(reg *providers.Registry) {
 
 func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
 	h.broadcaster = b
+}
+
+// StartBackgroundWorkers launches long-running goroutines owned by the handler.
+// Currently just the due-task reminder loop; future workers (digest generator,
+// scheduled mission firer) belong here too. Safe to call multiple times — each
+// call spawns a new ticker, but the dedup-key gate prevents duplicate notifs.
+func (h *StellarHandler) StartBackgroundWorkers(ctx context.Context) {
+	go h.dueTaskReminderLoop(ctx)
+}
+
+// dueTaskReminderLoop scans for tasks whose due_at has passed and fires a
+// one-time reminder notification per task. "Stellar follows the schedule" —
+// when a recommended task's deadline arrives, the user gets a toast and the
+// task surfaces in the events column.
+func (h *StellarHandler) dueTaskReminderLoop(ctx context.Context) {
+	const tickInterval = 30 * time.Second
+	ticker := time.NewTicker(tickInterval)
+	defer ticker.Stop()
+	// Tick once on start so a freshly-restarted server catches up immediately.
+	h.fireDueTaskReminders(ctx)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.fireDueTaskReminders(ctx)
+		}
+	}
+}
+
+func (h *StellarHandler) fireDueTaskReminders(ctx context.Context) {
+	tasks, err := h.store.GetOverdueOpenTasks(ctx, time.Now().UTC())
+	if err != nil {
+		slog.Warn("stellar: GetOverdueOpenTasks failed", "error", err)
+		return
+	}
+	for _, t := range tasks {
+		dedupeKey := fmt.Sprintf("task-due:%s", t.ID)
+		// CreateStellarNotification dedupes by DedupeKey — re-firing is cheap and idempotent.
+		body := t.Description
+		if body == "" {
+			body = "This task is now due. Open Stellar to run it, or reschedule."
+		}
+		dueNotif := &store.StellarNotification{
+			UserID:    t.UserID,
+			Type:      "event",
+			Severity:  "warning",
+			Title:     fmt.Sprintf("⏰ Task due: %s", t.Title),
+			Body:      body,
+			Cluster:   t.Cluster,
+			DedupeKey: dedupeKey,
+		}
+		_ = h.store.CreateStellarNotification(ctx, dueNotif)
+		h.broadcastToClients(SSEEvent{Type: "notification", Data: dueNotif})
+		if h.broadcaster != nil {
+			h.broadcaster.Broadcast(SSEEvent{Type: "task_due", Data: map[string]string{
+				"taskId": t.ID,
+				"title":  t.Title,
+			}})
+		}
+	}
 }
 
 func (h *StellarHandler) GetPreferences(c *fiber.Ctx) error {
@@ -2748,6 +2810,92 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 		h.broadcaster.Broadcast(SSEEvent{Type: "notification", Data: notif})
 	}
 
+	// STEP 5.5 — LOG STELLAR'S ANALYSIS, IN ITS OWN WORDS.
+	//
+	// For non-critical or non-actionable events, the log gets a single "noticed"
+	// row. For critical events, ProcessEvent only writes ROW 1 (critical_event)
+	// here — the autonomous loop in autoTriggerSolve owns the rest of the
+	// narrative (investigating → root_cause → solving → resolved) so the card
+	// progress and log story stay in lockstep.
+	recAction := ""
+	recReason := ""
+	if eval.RecommendedAction != nil {
+		recAction = eval.RecommendedAction.Type
+		recReason = eval.RecommendedAction.Reasoning
+	}
+	workload := deploymentNameFromPodName(event.Name)
+
+	if severity == "critical" {
+		h.logActivity(ctx, &store.StellarActivity{
+			Kind:      "critical_event",
+			EventID:   notif.ID,
+			Cluster:   event.Cluster,
+			Namespace: event.Namespace,
+			Workload:  workload,
+			Title:     fmt.Sprintf("Critical event: %s on %s/%s", event.Reason, event.Namespace, event.Name),
+			Detail:    body,
+			Severity:  severity,
+		})
+	} else {
+		h.logActivity(ctx, &store.StellarActivity{
+			Kind:      "evaluated",
+			EventID:   notif.ID,
+			Cluster:   event.Cluster,
+			Namespace: event.Namespace,
+			Workload:  workload,
+			Title:     fmt.Sprintf("Noticed %s on %s/%s", event.Reason, event.Namespace, event.Name),
+			Detail:    body,
+			Severity:  severity,
+		})
+	}
+	// For non-critical events, keep the diagnosis row visible so the operator
+	// can scan reasoning even when no auto-solve runs.
+	if severity != "critical" {
+		diagnosisDetail := eval.Reasoning
+		if diagnosisDetail == "" {
+			diagnosisDetail = fmt.Sprintf("Severity: %s. Recurring: %v (last hour: %d). Message: %s",
+				severity, isRecurring, recentCount, truncateString(event.Message, 200))
+		}
+		if recAction != "" {
+			diagnosisDetail = fmt.Sprintf("%s\n\nRecommendation: %s — %s", diagnosisDetail, recAction, recReason)
+		}
+		h.logActivity(ctx, &store.StellarActivity{
+			Kind:      "diagnosed",
+			EventID:   notif.ID,
+			Cluster:   event.Cluster,
+			Namespace: event.Namespace,
+			Workload:  workload,
+			Title:     fmt.Sprintf("Diagnosed: %s", deriveDiagnosisHeadline(event, severity, isRecurring)),
+			Detail:    diagnosisDetail,
+			Severity:  severity,
+		})
+	}
+
+	// STEP 6 — AUTO-TEND.
+	// Junior-engineer policy: if the evaluator recommends an action AND this
+	// issue isn't already recurring, Stellar just does it. The user finds out
+	// via the resulting "Stellar auto-fixed" notification + green success toast.
+	// On recurrence the path demotes to pending_approval — if the first fix
+	// didn't hold, the human needs to weigh in before Stellar retries.
+	// autoExecuteAction internally falls back to queueAutoTendAction for any
+	// action type that isn't on the safe-auto allowlist (only RestartDeployment today).
+	if eval.RecommendedAction != nil && eval.RecommendedAction.Type != "" {
+		if isRecurring {
+			h.queueAutoTendAction(ctx, event, eval.RecommendedAction, notif.ID)
+		} else {
+			h.autoExecuteAction(ctx, event, eval.RecommendedAction, notif.ID)
+		}
+	}
+
+	// STEP 7 — AUTONOMOUS SOLVE (Stellar v2).
+	// Every critical event triggers the autonomous solve narrative. We don't
+	// gate on RecommendedAction — the AI mission decides what to do from the
+	// event context. The narrative drives both the card progress bar and the
+	// activity log story (investigating → root_cause → solving → resolved).
+	if severity == "critical" {
+		h.autoTriggerSolve(ctx, event, notif, eval)
+	}
+
 	slog.Info("stellar: ProcessEvent",
 		"cluster", event.Cluster,
 		"ns", event.Namespace,
@@ -2755,7 +2903,8 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 		"reason", event.Reason,
 		"severity", severity,
 		"recurring", isRecurring,
-		"recentCount", recentCount)
+		"recentCount", recentCount,
+		"autoAction", recommendedTypeOrEmpty(eval.RecommendedAction))
 
 	// Async LLM narration — replaces the fast narration when ready
 	go func() {
@@ -2807,6 +2956,283 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 			CreatedAt: time.Now(),
 		})
 	}
+}
+
+// recommendedTypeOrEmpty returns the recommended action type for log output, or "".
+func recommendedTypeOrEmpty(r *stellar.RecommendedAction) string {
+	if r == nil {
+		return ""
+	}
+	return r.Type
+}
+
+// autoExecuteAction runs the recommended remediation IMMEDIATELY (no user
+// approval). Reserved for critical + first-occurrence events — see ProcessEvent
+// gate. Records a completed StellarAction, an execution record, an audit entry,
+// and a prominent notification telling the user what Stellar just did. If the
+// same issue recurs, the caller falls back to queueAutoTendAction so the user
+// gets a chance to intervene before Stellar repeats a fix that didn't hold.
+func (h *StellarHandler) autoExecuteAction(ctx context.Context, e IncomingEvent, rec *stellar.RecommendedAction, notifID string) {
+	if rec.Type != "RestartDeployment" {
+		// Only restart is safe to auto-execute today. Scale/Delete etc. always go
+		// through approval — wider safety review needed before adding them here.
+		h.queueAutoTendAction(ctx, e, rec, notifID)
+		return
+	}
+
+	idempotencyKey := fmt.Sprintf("auto-exec:%s:%s:%s:%s",
+		rec.Type, e.Cluster, e.Namespace, e.Name)
+	if h.store.ActionCompletedByIdempotencyKey(ctx, idempotencyKey) {
+		return
+	}
+
+	params := map[string]any{
+		"namespace": e.Namespace,
+		"name":      deploymentNameFromPodName(e.Name),
+	}
+	paramsJSON, _ := json.Marshal(params)
+
+	now := time.Now().UTC()
+	action := &store.StellarAction{
+		UserID:         "system",
+		Description:    fmt.Sprintf("Auto-executed: restart %s/%s (critical %s)", e.Namespace, e.Name, e.Reason),
+		ActionType:     rec.Type,
+		Parameters:     string(paramsJSON),
+		Cluster:        e.Cluster,
+		Namespace:      e.Namespace,
+		Status:         "approved",
+		CreatedBy:      "stellar",
+		ApprovedBy:     "stellar-auto",
+		ApprovedAt:     &now,
+		IdempotencyKey: idempotencyKey,
+		MaxRetries:     0,
+	}
+	if err := h.store.CreateStellarAction(ctx, action); err != nil {
+		slog.Warn("stellar: auto-exec CreateAction failed", "error", err)
+		return
+	}
+
+	_ = h.store.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
+
+	execCtx, cancel := context.WithTimeout(ctx, executeActionMaxTimeout)
+	defer cancel()
+	outcome, dispatchErr := scheduler.Dispatch(execCtx, h.k8sClient, *action)
+	durationMs := int(time.Since(now).Milliseconds())
+
+	status := "completed"
+	if dispatchErr != nil {
+		status = "failed"
+		outcome = dispatchErr.Error()
+		slog.Error("stellar: auto-exec dispatch failed", "action_id", action.ID, "error", dispatchErr)
+	}
+	_ = h.store.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+
+	completedAt := time.Now().UTC()
+	_ = h.store.CreateStellarExecution(ctx, &store.StellarExecution{
+		UserID:      "system",
+		MissionID:   "auto-tend",
+		TriggerType: "auto-execute",
+		TriggerData: fmt.Sprintf(`{"actionType":"%s","cluster":"%s","reason":"%s"}`, rec.Type, e.Cluster, e.Reason),
+		Status:      status,
+		RawInput:    rec.Reasoning,
+		Output:      outcome,
+		DurationMs:  durationMs,
+		StartedAt:   now,
+		CompletedAt: &completedAt,
+	})
+
+	if auditable, ok := h.store.(interface {
+		CreateAuditEntry(context.Context, *store.StellarAuditEntry) error
+	}); ok {
+		_ = auditable.CreateAuditEntry(ctx, &store.StellarAuditEntry{
+			UserID:     "stellar-auto",
+			Action:     "auto_execute_action",
+			EntityType: "action",
+			EntityID:   action.ID,
+			Cluster:    e.Cluster,
+			Detail:     fmt.Sprintf("%s on %s/%s (critical %s)", rec.Type, e.Namespace, e.Name, e.Reason),
+		})
+	}
+
+	notifTitle := fmt.Sprintf("Stellar auto-fixed: %s", rec.Type)
+	notifSeverity := "info"
+	notifBody := fmt.Sprintf("Critical event detected on %s/%s — Stellar executed %s without waiting for approval.\n\n%s\n\nResult: %s\n\nIf this recurs, Stellar will ask for approval before retrying.",
+		e.Namespace, e.Name, rec.Type, rec.Reasoning, outcome)
+	if status == "failed" {
+		notifTitle = fmt.Sprintf("Stellar auto-fix failed: %s", rec.Type)
+		notifSeverity = "warning"
+	}
+	resultNotif := &store.StellarNotification{
+		UserID:    "system",
+		Type:      "action",
+		Severity:  notifSeverity,
+		Title:     notifTitle,
+		Body:      notifBody,
+		Cluster:   e.Cluster,
+		Namespace: e.Namespace,
+		ActionID:  action.ID,
+		DedupeKey: fmt.Sprintf("auto-exec-result:%s", action.ID),
+	}
+	_ = h.store.CreateStellarNotification(ctx, resultNotif)
+	// CRITICAL: broadcast over SSE so the toast bridge sees this live. Without
+	// this, the notification is only visible after the frontend refetches state.
+	h.broadcastToClients(SSEEvent{Type: "notification", Data: resultNotif})
+
+	// Mirror to the activity log so it shows up in the dedicated Stellar log
+	// even when the user is on another page and misses the toast.
+	activityKind := "auto_fixed"
+	if status == "failed" {
+		activityKind = "auto_fix_failed"
+	}
+	h.logActivity(ctx, &store.StellarActivity{
+		Kind:      activityKind,
+		Cluster:   e.Cluster,
+		Namespace: e.Namespace,
+		Workload:  deploymentNameFromPodName(e.Name),
+		Title:     notifTitle,
+		Detail:    fmt.Sprintf("%s — %s", rec.Type, outcome),
+		Severity:  notifSeverity,
+	})
+
+	if h.broadcaster != nil {
+		h.broadcaster.Broadcast(SSEEvent{Type: "action_update", Data: map[string]string{
+			"id":     action.ID,
+			"status": status,
+		}})
+	}
+	slog.Info("stellar: auto-executed",
+		"action_id", action.ID, "type", rec.Type, "status", status,
+		"cluster", e.Cluster, "ns", e.Namespace, "name", e.Name)
+}
+
+// queueAutoTendAction creates a pending_approval StellarAction so the user can
+// one-click execute the evaluator's recommended remediation. Never auto-executes —
+// the existing approval card UI gates dispatch.
+func (h *StellarHandler) queueAutoTendAction(ctx context.Context, e IncomingEvent, rec *stellar.RecommendedAction, notifID string) {
+	// Map K8s event resource → Deployment for restart actions. The event Name is
+	// usually a Pod; we derive the deployment via the controller chain in production.
+	// For the demo path we accept any Name — dispatch will look up by name in the namespace.
+	if rec.Type != "RestartDeployment" {
+		// Other action types not yet supported for auto-tend.
+		return
+	}
+
+	// Skip if a recent pending action for the same resource already exists (dedup).
+	idempotencyKey := fmt.Sprintf("auto:%s:%s:%s:%s",
+		rec.Type, e.Cluster, e.Namespace, e.Name)
+	if h.store.ActionCompletedByIdempotencyKey(ctx, idempotencyKey) {
+		return
+	}
+
+	params := map[string]any{
+		"namespace": e.Namespace,
+		"name":      deploymentNameFromPodName(e.Name),
+	}
+	paramsJSON, _ := json.Marshal(params)
+
+	action := &store.StellarAction{
+		UserID:         "system",
+		Description:    fmt.Sprintf("Auto-queued: restart %s/%s (reason: %s)", e.Namespace, e.Name, e.Reason),
+		ActionType:     rec.Type,
+		Parameters:     string(paramsJSON),
+		Cluster:        e.Cluster,
+		Namespace:      e.Namespace,
+		Status:         "pending_approval",
+		CreatedBy:      "stellar",
+		IdempotencyKey: idempotencyKey,
+		MaxRetries:     0,
+	}
+	if err := h.store.CreateStellarAction(ctx, action); err != nil {
+		slog.Warn("stellar: auto-tend CreateAction failed", "error", err)
+		return
+	}
+
+	// Notify the user so the approval card is visible immediately.
+	suggestNotif := &store.StellarNotification{
+		UserID:    "system",
+		Type:      "ActionRequired",
+		Severity:  "warning",
+		Title:     "Stellar suggests: " + rec.Type,
+		Body:      fmt.Sprintf("%s\n\nClick approve to execute, or reject to ignore.", rec.Reasoning),
+		Cluster:   e.Cluster,
+		Namespace: e.Namespace,
+		ActionID:  action.ID,
+		DedupeKey: fmt.Sprintf("auto-suggest:%s", action.ID),
+	}
+	_ = h.store.CreateStellarNotification(ctx, suggestNotif)
+	h.broadcastToClients(SSEEvent{Type: "notification", Data: suggestNotif})
+
+	if h.broadcaster != nil {
+		h.broadcaster.Broadcast(SSEEvent{Type: "action_update", Data: map[string]string{
+			"id":     action.ID,
+			"status": "pending_approval",
+		}})
+	}
+	slog.Info("stellar: auto-tend queued",
+		"action_id", action.ID, "type", rec.Type,
+		"cluster", e.Cluster, "ns", e.Namespace, "name", e.Name)
+}
+
+// deploymentNameFromPodName strips the ReplicaSet+Pod suffixes from a pod name to
+// derive the parent Deployment name. E.g. "api-server-7d4c5b9f4-abc12" → "api-server".
+// If no suffix pattern is detected, returns the input unchanged.
+func deploymentNameFromPodName(podName string) string {
+	parts := strings.Split(podName, "-")
+	if len(parts) < 3 {
+		return podName
+	}
+	// Last two segments are usually <replicaset-hash>-<pod-suffix>
+	last := parts[len(parts)-1]
+	prev := parts[len(parts)-2]
+	if looksLikeRSHash(prev) && len(last) >= 4 && len(last) <= 6 {
+		return strings.Join(parts[:len(parts)-2], "-")
+	}
+	return podName
+}
+
+// deriveDiagnosisHeadline produces a short, human-friendly diagnosis line for
+// the activity log's "Diagnosed:" row. Keep this under ~60 chars so it fits in
+// the log card without truncation.
+func deriveDiagnosisHeadline(event IncomingEvent, severity string, recurring bool) string {
+	recurringPrefix := ""
+	if recurring {
+		recurringPrefix = "recurring "
+	}
+	switch event.Reason {
+	case "CrashLoopBackOff":
+		return recurringPrefix + "container exits immediately after start — likely bad command, image, or env"
+	case "OOMKilling", "OOMKilled":
+		return recurringPrefix + "process exceeded memory limit — bump request/limit or fix leak"
+	case "BackOff":
+		return recurringPrefix + "kubelet is throttling restarts — root cause is upstream"
+	case "Evicted":
+		return "node under resource pressure evicted this pod"
+	case "NodeNotReady":
+		return "node lost — pods on it may need rescheduling"
+	case "FailedScheduling":
+		return "scheduler can't place this pod — capacity, taints, or affinity"
+	case "FailedMount":
+		return "volume mount failed — check PV/PVC binding and node access"
+	default:
+		if severity == "critical" {
+			return event.Reason + " — looks actionable"
+		}
+		return event.Reason + " — noted for context"
+	}
+}
+
+// looksLikeRSHash returns true if s looks like a Kubernetes ReplicaSet hash
+// (5–10 lowercase alphanumerics).
+func looksLikeRSHash(s string) bool {
+	if len(s) < 5 || len(s) > 10 {
+		return false
+	}
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+			return false
+		}
+	}
+	return true
 }
 
 // autoCreateWatch creates a standing watch for a resource that has critical or

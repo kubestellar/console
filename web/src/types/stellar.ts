@@ -131,6 +131,67 @@ export interface StellarWatch {
   updatedAt: string
 }
 
+export interface StellarActivity {
+  id: string
+  userId: string
+  ts: string
+  kind:
+    | 'evaluated'
+    | 'decided_solve'
+    | 'decided_skip'
+    | 'auto_fixed'
+    | 'auto_fix_failed'
+    | 'solve_started'
+    | 'solve_resolved'
+    | 'solve_escalated'
+    | 'solve_exhausted'
+    | 'approval_superseded'
+    | 'approval_bumped'
+    | string
+  eventId?: string
+  solveId?: string
+  cluster?: string
+  namespace?: string
+  workload?: string
+  title: string
+  detail?: string
+  severity: 'info' | 'warning' | 'critical' | string
+}
+
+export interface StellarSolve {
+  id: string
+  eventId: string
+  userId: string
+  cluster: string
+  namespace: string
+  workload: string
+  status: 'running' | 'resolved' | 'escalated' | 'exhausted' | string
+  actionsTaken: number
+  limitHit?: string
+  summary: string
+  error?: string
+  startedAt: string
+  endedAt?: string
+}
+
+export interface StellarSolveProgress {
+  solveId: string
+  eventId: string
+  step: 'reading' | 'planning' | 'acting' | 'observing' | 'verifying' | string
+  message: string
+  actionsTaken: number
+  status: string
+}
+
+export interface StellarDigestPayload {
+  userId: string
+  autoFixed: number
+  escalated: number
+  paused: number
+  summary: string
+  eventIds: string[]
+}
+
 export interface StellarAuditEntry {
   id: string
   ts: string

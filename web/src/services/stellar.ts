@@ -157,6 +157,23 @@ export const stellarApi = {
     return data
   },
 
+  async executeAction(payload: {
+    actionType: string
+    cluster: string
+    namespace?: string
+    name?: string
+    description?: string
+    prompt?: string
+    parameters?: Record<string, unknown>
+  }): Promise<{ id: string; status: string; outcome: string; model?: string; provider?: string; duration: number }> {
+    const { data } = await api.post<{ id: string; status: string; outcome: string; model?: string; provider?: string; duration: number }>(
+      '/api/stellar/actions/execute',
+      payload,
+      { timeout: STELLAR_CHAT_TIMEOUT_MS },
+    )
+    return data
+  },
+
   async getDigest(): Promise<{ digest: string; model: string; provider: string }> {
     try {
       const { data } = await api.get<{ digest: string; model: string; provider: string }>('/api/stellar/digest')
@@ -223,6 +240,28 @@ export const stellarApi = {
       return data.items || []
     } catch (err) {
       console.warn('stellar: getAuditLog failed:', err)
+      return []
+    }
+  },
+  async startSolve(eventID: string): Promise<{ solveId: string; status: string; existing?: boolean }> {
+    const { data } = await api.post<{ solveId: string; status: string; existing?: boolean }>(`/api/stellar/solve/${eventID}`)
+    return data
+  },
+  async listSolves(limit = 100): Promise<import('../types/stellar').StellarSolve[]> {
+    try {
+      const { data } = await api.get<{ items: import('../types/stellar').StellarSolve[] }>(`/api/stellar/solves?limit=${limit}`)
+      return data.items || []
+    } catch (err) {
+      console.warn('stellar: listSolves failed:', err)
+      return []
+    }
+  },
+  async listActivity(limit = 100): Promise<import('../types/stellar').StellarActivity[]> {
+    try {
+      const { data } = await api.get<{ items: import('../types/stellar').StellarActivity[] }>(`/api/stellar/activity?limit=${limit}`)
+      return data.items || []
+    } catch (err) {
+      console.warn('stellar: listActivity failed:', err)
       return []
     }
   },

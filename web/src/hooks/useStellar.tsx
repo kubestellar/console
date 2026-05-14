@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { stellarApi } from '../services/stellar'
-import type { ProviderSession, StellarAction, StellarNotification, StellarObservation, StellarOperationalState, StellarTask, StellarWatch } from '../types/stellar'
+import type { ProviderSession, StellarAction, StellarActivity, StellarNotification, StellarObservation, StellarOperationalState, StellarSolve, StellarSolveProgress, StellarTask, StellarWatch } from '../types/stellar'
+
+const STELLAR_ACTIVITY_LIMIT = 200
 
 const STELLAR_DEFAULT_FETCH_LIMIT = 50
 const STELLAR_RECONNECT_BASE_MS = 1000
@@ -15,7 +17,7 @@ export interface CatchUpState {
   kind: string
 }
 
-export function useStellar() {
+function useStellarSource() {
   const [isConnected, setIsConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
   const [state, setState] = useState<StellarOperationalState | null>(null)
@@ -26,6 +28,9 @@ export function useStellar() {
   const [nudge, setNudge] = useState<StellarObservation | null>(null)
   const [catchUp, setCatchUp] = useState<CatchUpState | null>(null)
   const [providerSession, setProviderSession] = useState<ProviderSession | null>(null)
+  const [solves, setSolves] = useState<StellarSolve[]>([])
+  const [solveProgress, setSolveProgress] = useState<Record<string, StellarSolveProgress>>({})
+  const [activity, setActivity] = useState<StellarActivity[]>([])
   const esRef = useRef<EventSource | null>(null)
   const reconnectRef = useRef<() => void>(() => {})
   const reconnectDelay = useRef(STELLAR_RECONNECT_BASE_MS)
@@ -37,6 +42,8 @@ export function useStellar() {
       stellarApi.getActions('pending_approval', STELLAR_DEFAULT_FETCH_LIMIT),
       stellarApi.getTasks(),
       stellarApi.getWatches(),
+      stellarApi.listSolves(),
+      stellarApi.listActivity(STELLAR_ACTIVITY_LIMIT),
     ])
 
     // Apply results only if they succeeded — partial failure must not crash the hook
@@ -45,10 +52,12 @@ export function useStellar() {
     if (results[2].status === 'fulfilled') setPendingActions(results[2].value || [])
     if (results[3].status === 'fulfilled') setTasks((results[3].value || []).slice().sort((a, b) => a.priority - b.priority))
     if (results[4].status === 'fulfilled') setWatches(results[4].value || [])
+    if (results[5].status === 'fulfilled') setSolves(results[5].value || [])
+    if (results[6].status === 'fulfilled') setActivity(results[6].value || [])
 
     const failures = results.filter(r => r.status === 'rejected')
     if (failures.length > 0) {
-      console.warn('stellar: refreshState partial failure —', failures.length, 'of 5 calls failed')
+      console.warn('stellar: refreshState partial failure —', failures.length, 'of 7 calls failed')
     }
   }, [])
 
@@ -142,6 +151,63 @@ export function useStellar() {
           n.dedupeKey === payload.dedupKey ? { ...n, body: payload.body } : n
         ))
       } catch { /* ignore */ }
+    })
+    es.addEventListener('solve_started', (e) => {
+      try {
+        const payload = JSON.parse((e as MessageEvent).data) as { solveId: string; eventId: string }
+        setSolveProgress(prev => ({
+          ...prev,
+          [payload.eventId]: {
+            solveId: payload.solveId, eventId: payload.eventId,
+            step: 'reading', message: 'Solve started — Stellar is on it.', actionsTaken: 0, status: 'running',
+          },
+        }))
+        stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
+      } catch { /* ignore */ }
+    })
+    es.addEventListener('solve_progress', (e) => {
+      try {
+        const payload = JSON.parse((e as MessageEvent).data) as StellarSolveProgress
+        setSolveProgress(prev => ({ ...prev, [payload.eventId]: payload }))
+      } catch { /* ignore */ }
+    })
+    es.addEventListener('solve_complete', (e) => {
+      try {
+        const payload = JSON.parse((e as MessageEvent).data) as { solveId: string; eventId: string; status: string; summary: string }
+        setSolveProgress(prev => {
+          const copy = { ...prev }
+          delete copy[payload.eventId]
+          return copy
+        })
+        // Refetch solves so the terminal state lands.
+        stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
+      } catch { /* ignore */ }
+    })
+    es.addEventListener('action_bumped', (e) => {
+      try {
+        const payload = JSON.parse((e as MessageEvent).data) as { id: string }
+        // Refresh pending actions order — they may have been re-bumped.
+        setPendingActions(prev => {
+          const idx = prev.findIndex(a => a.id === payload.id)
+          if (idx < 0) return prev
+          const next = prev.slice()
+          const [bumped] = next.splice(idx, 1)
+          return [bumped, ...next]
+        })
+      } catch { /* ignore */ }
+    })
+    es.addEventListener('activity', (e) => {
+      try {
+        const entry = JSON.parse((e as MessageEvent).data) as StellarActivity
+        setActivity(prev => {
+          if (prev.some(a => a.id === entry.id)) return prev
+          return [entry, ...prev].slice(0, STELLAR_ACTIVITY_LIMIT)
+        })
+      } catch { /* ignore */ }
+    })
+    es.addEventListener('digest_fired', () => {
+      // Refetch solves so the digest's underlying numbers are visible.
+      stellarApi.listSolves().then(setSolves).catch(() => { /* ignore */ })
     })
     es.addEventListener('catchup', (e) => {
       const d = JSON.parse((e as MessageEvent).data) as { summary: string; kind: string }
@@ -274,12 +340,18 @@ export function useStellar() {
     }
   }, [tasks])
 
-  const createTask = useCallback(async (title: string, description = '', source = 'user') => {
+  const createTask = useCallback(async (
+    title: string,
+    description = '',
+    source = 'user',
+    options?: { dueAt?: string; priority?: number },
+  ) => {
     const created = await stellarApi.createTask({
       title: title.trim(),
       description,
       source,
-      priority: 5,
+      priority: options?.priority ?? 5,
+      dueAt: options?.dueAt,
     })
     setTasks(prev => ([created, ...prev]).sort((a, b) => a.priority - b.priority))
     return created
@@ -317,6 +389,29 @@ export function useStellar() {
 
   const dismissCatchUp = useCallback(() => setCatchUp(null), [])
 
+  const startSolve = useCallback(async (eventID: string) => {
+    // Optimistically flip the event into "solving" mode before the server
+    // confirms — feels instant, the SSE solve_started will replace this.
+    setSolveProgress(prev => ({
+      ...prev,
+      [eventID]: {
+        solveId: 'pending', eventId: eventID,
+        step: 'reading', message: 'Starting…', actionsTaken: 0, status: 'running',
+      },
+    }))
+    try {
+      const result = await stellarApi.startSolve(eventID)
+      return result
+    } catch (err) {
+      setSolveProgress(prev => {
+        const copy = { ...prev }
+        delete copy[eventID]
+        return copy
+      })
+      throw err
+    }
+  }, [])
+
   return {
     isConnected,
     connectionError,
@@ -342,5 +437,77 @@ export function useStellar() {
     snoozeWatch,
     dismissCatchUp,
     refreshState,
+    solves,
+    solveProgress,
+    startSolve,
+    activity,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Provider + context-consuming useStellar.
+//
+// Previously each component that called useStellar() opened its own SSE
+// connection and held its own state. That broke toast delivery on pages that
+// didn't mount the Stellar page itself — events arrived at one instance, the
+// toast bridge held a different empty state. Hoisting to a Provider in App.tsx
+// gives the whole app one connection, one state, and matches the
+// MissionProvider / AlertsProvider pattern.
+// ---------------------------------------------------------------------------
+
+type StellarContextValue = ReturnType<typeof useStellarSource>
+
+const StellarContext = createContext<StellarContextValue | null>(null)
+
+export function StellarProvider({ children }: { children: ReactNode }) {
+  const value = useStellarSource()
+  return <StellarContext.Provider value={value}>{children}</StellarContext.Provider>
+}
+
+// useStellar consumes the provider value. Called outside a StellarProvider it
+// returns a no-op fallback so a stray component doesn't crash the page; in
+// practice every page renders under <StellarProvider /> mounted in App.tsx.
+export function useStellar(): StellarContextValue {
+  const ctx = useContext(StellarContext)
+  if (ctx) return ctx
+  // Fallback so the app stays renderable if a component is mounted outside the
+  // provider (e.g., in a Storybook isolation test). Returning useStellarSource()
+  // here would open a stray SSE; instead return zeroed state.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useStellarFallback()
+}
+
+function useStellarFallback(): StellarContextValue {
+  // Stable empty value. Wrapped in a hook so it shows up in the React DevTools
+  // hook list and can be traced when something forgets the provider.
+  return useMemo(() => ({
+    isConnected: false,
+    connectionError: null,
+    state: null,
+    notifications: [],
+    unreadCount: 0,
+    pendingActions: [],
+    tasks: [],
+    watches: [],
+    nudge: null,
+    catchUp: null,
+    providerSession: null,
+    setProviderSession: () => {},
+    acknowledgeNotification: async () => {},
+    dismissAllNotifications: async () => {},
+    approveAction: async () => {},
+    rejectAction: async () => {},
+    updateTaskStatus: async () => {},
+    createTask: async () => ({} as never),
+    dismissNudge: () => {},
+    resolveWatch: async () => {},
+    dismissWatch: async () => {},
+    snoozeWatch: async () => {},
+    dismissCatchUp: () => {},
+    refreshState: async () => {},
+    solves: [],
+    solveProgress: {},
+    startSolve: async () => ({}) as never,
+    activity: [],
+  }), [])
 }

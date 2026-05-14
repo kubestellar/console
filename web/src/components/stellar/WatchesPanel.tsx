@@ -1,16 +1,22 @@
 import { useState } from 'react'
-import type { StellarWatch } from '../../types/stellar'
+import type { StellarNotification, StellarSolve, StellarWatch } from '../../types/stellar'
 import { WatchCard } from './WatchCard'
+import type { PendingAction } from './EventCard'
+import { WatchDetailModal } from './WatchDetailModal'
 
 interface Props {
   watches: StellarWatch[]
   onResolve: (id: string) => void
   onDismiss: (id: string) => void
   onSnooze: (id: string, minutes: number) => void
+  onAction?: (prompt: string, action?: PendingAction) => void
+  allNotifications?: StellarNotification[]
+  solves?: StellarSolve[]
 }
 
-export function WatchesPanel({ watches, onResolve, onDismiss, onSnooze }: Props) {
+export function WatchesPanel({ watches, onResolve, onDismiss, onSnooze, onAction, allNotifications, solves }: Props) {
   const [collapsed, setCollapsed] = useState(false)
+  const [detailWatch, setDetailWatch] = useState<StellarWatch | null>(null)
   const active = (watches || []).filter(w => w.status === 'active')
 
   if (active.length === 0) return null // hide panel entirely when nothing watched
@@ -65,12 +71,29 @@ export function WatchesPanel({ watches, onResolve, onDismiss, onSnooze }: Props)
             <WatchCard
               key={w.id}
               watch={w}
+              allNotifications={allNotifications}
+              solves={solves}
               onResolve={onResolve}
               onDismiss={onDismiss}
               onSnooze={onSnooze}
+              onAction={onAction}
+              onOpenDetail={setDetailWatch}
             />
           ))}
         </div>
+      )}
+
+      {detailWatch && (
+        <WatchDetailModal
+          watch={detailWatch}
+          allNotifications={allNotifications || []}
+          solves={solves || []}
+          onClose={() => setDetailWatch(null)}
+          onResolve={onResolve}
+          onDismiss={onDismiss}
+          onSnooze={onSnooze}
+          onAction={onAction}
+        />
       )}
     </div>
   )
