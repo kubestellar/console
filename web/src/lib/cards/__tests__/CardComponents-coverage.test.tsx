@@ -152,10 +152,16 @@ describe('CardSearchInput', () => {
     expect(mockEmitCardSearchUsed).toHaveBeenCalledWith(3, 'test-card')
   })
 
-  it('applies custom className', () => {
+  it('applies custom className and keeps the icon positioned inside the input', () => {
     const onChange = vi.fn()
     const { container } = render(<CardSearchInput value="" onChange={onChange} className="my-custom" />)
+    const wrapper = container.firstChild as HTMLDivElement | null
+    const icon = container.querySelector('svg')
+
     expect(container.querySelector('.my-custom')).toBeTruthy()
+    expect(wrapper?.className).toContain('relative')
+    expect(icon?.getAttribute('class')).toContain('absolute')
+    expect(icon?.getAttribute('class')).toContain('top-1/2')
   })
 
   it('clears debounce timer on unmount', () => {

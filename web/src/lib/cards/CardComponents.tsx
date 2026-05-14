@@ -243,16 +243,17 @@ export function CardSearchInput({
 
   return (
     <div className={cn('relative mb-4 flex-1 min-w-[10rem] max-w-full', className)}>
-      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
-        <Search className="h-3.5 w-3.5 text-muted-foreground" />
-      </div>
+      <Search
+        aria-hidden="true"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+      />
       <input
         type="text"
         value={debounceMs ? localValue : value}
         onChange={(e) => handleChange(e.target.value)}
         onBlur={handleBlur}
         placeholder={placeholder}
-        className="w-full min-w-0 pl-8 pr-3 py-1.5 text-xs bg-secondary rounded-md text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
+        className="w-full min-w-0 rounded-md bg-secondary py-1.5 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
       />
     </div>
   )
