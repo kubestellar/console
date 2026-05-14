@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"bytes"
 	"errors"
 	"fmt"
@@ -253,7 +254,7 @@ func NewFeedbackHandler(s store.Store, cfg FeedbackConfig) *FeedbackHandler {
 		webhookSecret:       cfg.WebhookSecret,
 		repoOwner:           cfg.RepoOwner,
 		repoName:            cfg.RepoName,
-		httpClient:          &http.Client{Timeout: githubAPITimeout},
+		httpClient:          client.GitHubClient,
 		appTokenProvider:    NewGitHubAppTokenProvider(),
 		attributionProxyURL: strings.TrimRight(os.Getenv("FEEDBACK_PROXY_URL"), "/"),
 	}

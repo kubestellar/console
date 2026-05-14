@@ -27,6 +27,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -123,7 +124,7 @@ func NewGitHubAppTokenProvider() *GitHubAppTokenProvider {
 		appID:          appID,
 		installationID: installationID,
 		privateKeyPEM:  []byte(privateKey),
-		httpClient:     &http.Client{Timeout: tokenMintTimeout},
+		httpClient:     client.GitHubClient,
 	}
 }
 

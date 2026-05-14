@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -406,7 +407,7 @@ func NewBenchmarkHandlers(apiKey, folderID string) *BenchmarkHandlers {
 		cache: &benchmarkCache{
 			ttl: defaultCacheTTL,
 		},
-		client: &http.Client{Timeout: 30 * time.Second},
+		client: client.LongRunningClient,
 	}
 }
 

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"encoding/xml"
@@ -29,16 +30,14 @@ const (
 	playlistCacheTTL = 5 * time.Minute
 
 	// playlistFetchTimeout is the HTTP timeout for fetching the RSS feed.
-	playlistFetchTimeout = 10 * time.Second
 
 	// maxYouTubeResponseBytes caps external YouTube/RSS response reads to
 	// prevent memory exhaustion from unexpectedly large responses. #7064.
 	maxYouTubeResponseBytes = 5 * 1024 * 1024 // 5 MB
 )
 
-// youtubeHTTPClient is a package-level shared HTTP client for YouTube
+// client.ExternalClient is a package-level shared HTTP client for YouTube
 // fetches so TCP connections are reused across requests. #7065.
-var youtubeHTTPClient = &http.Client{Timeout: playlistFetchTimeout}
 
 // PlaylistVideo is the JSON shape returned to the frontend.
 type PlaylistVideo struct {
@@ -126,7 +125,7 @@ func fetchPlaylistViaInvidious() ([]PlaylistVideo, error) {
 	var lastErr error
 	for _, instance := range invidiousInstances {
 		apiURL := fmt.Sprintf("%s/api/v1/playlists/%s", instance, playlistID)
-		resp, err := youtubeHTTPClient.Get(apiURL)
+		resp, err := client.ExternalClient.Get(apiURL)
 		if err != nil {
 			lastErr = fmt.Errorf("invidious %s: %w", instance, err)
 			continue
@@ -174,7 +173,7 @@ func fetchPlaylistViaInvidious() ([]PlaylistVideo, error) {
 func fetchPlaylistViaRSS() ([]PlaylistVideo, error) {
 	url := fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?playlist_id=%s", playlistID)
 
-	resp, err := youtubeHTTPClient.Get(url)
+	resp, err := client.ExternalClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch playlist feed: %w", err)
 	}
@@ -343,7 +342,7 @@ func YouTubeThumbnailProxy(c *fiber.Ctx) error {
 	thumbURL := fmt.Sprintf("https://img.youtube.com/vi/%s/mqdefault.jpg", videoID)
 
 	// #7065: reuse shared HTTP client for connection pooling.
-	resp, err := youtubeHTTPClient.Get(thumbURL)
+	resp, err := client.ExternalClient.Get(thumbURL)
 	if err != nil {
 		return c.Status(fiber.StatusBadGateway).SendString("failed to fetch thumbnail")
 	}

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"errors"
@@ -203,7 +204,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 		skipOnboarding:   cfg.SkipOnboarding,
 		cleanupCtx:       cleanupCtx,
 		cleanupCancel:    cleanupCancel,
-		githubHTTPClient: &http.Client{Timeout: githubHTTPTimeout},
+		githubHTTPClient: client.GitHubClient,
 	}
 
 	// Periodically purge expired OAuth states from the persistent store so the

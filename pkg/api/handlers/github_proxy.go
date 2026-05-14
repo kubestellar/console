@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"io"
 	"log/slog"
@@ -22,7 +23,6 @@ import (
 
 const (
 	// githubProxyTimeout is the timeout for proxied GitHub API requests.
-	githubProxyTimeout = 15 * time.Second
 	// githubProxyAPIBaseDefault is the default base URL for GitHub API requests.
 	githubProxyAPIBaseDefault = "https://api.github.com"
 	// maxGitHubProxyPathLen is the maximum allowed path length to prevent abuse.
@@ -51,7 +51,6 @@ const (
 // Configurable via GITHUB_API_BASE_URL env var to support GitHub Enterprise Server.
 var githubProxyAPIBase = getEnvOrDefault("GITHUB_API_BASE_URL", githubProxyAPIBaseDefault)
 
-var githubProxyClient = &http.Client{Timeout: githubProxyTimeout}
 
 // githubProxyLimiterEntry wraps a rate.Limiter with usage tracking for idle eviction.
 type githubProxyLimiterEntry struct {
@@ -309,7 +308,7 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 	}
 
 	// Execute request
-	resp, err := githubProxyClient.Do(req)
+	resp, err := client.GitHubClient.Do(req)
 	if err != nil {
 		slog.Error("[GitHubProxy] request failed", "path", apiPath, "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{

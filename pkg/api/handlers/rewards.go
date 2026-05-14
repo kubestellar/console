@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -103,7 +104,7 @@ func NewRewardsHandler(cfg RewardsConfig) *RewardsHandler {
 	return &RewardsHandler{
 		githubToken: cfg.GitHubToken,
 		repos:       parseRepos(cfg.Orgs),
-		httpClient:  &http.Client{Timeout: rewardsAPITimeout},
+		httpClient:  client.LongRunningClient,
 		cache:       make(map[string]*rewardsCacheEntry),
 	}
 }

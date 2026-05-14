@@ -9,6 +9,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -388,7 +389,7 @@ func NewGitHubPipelinesHandler(githubToken string) *GitHubPipelinesHandler {
 	return &GitHubPipelinesHandler{
 		token:         githubToken,
 		mutationToken: os.Getenv("GITHUB_MUTATIONS_TOKEN"),
-		httpClient:    &http.Client{Timeout: ghpHTTPTimeout},
+		httpClient:    client.GitHubClient,
 		history:       newGHPHistory(),
 		cache:         make(map[string]ghpCacheEntry),
 	}

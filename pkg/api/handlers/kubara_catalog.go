@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"github.com/kubestellar/console/pkg/client"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -72,7 +73,7 @@ func NewKubaraCatalogHandler(githubToken, catalogRepo, catalogPath string) *Kuba
 		githubToken: githubToken,
 		catalogRepo: catalogRepo,
 		catalogPath: catalogPath,
-		httpClient:  &http.Client{Timeout: kubaraCatalogTimeout},
+		httpClient:  client.GitHubClient,
 	}
 }
 
