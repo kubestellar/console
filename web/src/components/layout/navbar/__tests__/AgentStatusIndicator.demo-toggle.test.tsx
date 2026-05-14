@@ -2,36 +2,37 @@ import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
-const mockToggleDemoMode = vi.fn()
-const mockHasApprovedAgents = vi.fn()
-const mockAgentFetch = vi.fn()
-const mockUseLocalAgent = vi.fn()
-const mockUseBackendHealth = vi.fn()
-const mockUseMissions = vi.fn()
-
-let mockIsDemoMode = true
-let mockIsDemoModeForced = false
+const demoModeTestState = vi.hoisted(() => ({
+  toggleDemoMode: vi.fn(),
+  hasApprovedAgents: vi.fn(),
+  agentFetch: vi.fn(),
+  useLocalAgent: vi.fn(),
+  useBackendHealth: vi.fn(),
+  useMissions: vi.fn(),
+  isDemoMode: true,
+  isDemoModeForced: false,
+}))
 
 vi.mock('../../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({
-    isDemoMode: mockIsDemoMode,
-    toggleDemoMode: mockToggleDemoMode,
+    isDemoMode: demoModeTestState.isDemoMode,
+    toggleDemoMode: demoModeTestState.toggleDemoMode,
     setDemoMode: vi.fn(),
   }),
-  getDemoMode: () => mockIsDemoMode,
-  isDemoModeForced: mockIsDemoModeForced,
+  getDemoMode: () => demoModeTestState.isDemoMode,
+  isDemoModeForced: demoModeTestState.isDemoModeForced,
 }))
 
 vi.mock('../../../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => mockUseLocalAgent(),
+  useLocalAgent: () => demoModeTestState.useLocalAgent(),
 }))
 
 vi.mock('../../../../hooks/useMissions', () => ({
-  useMissions: () => mockUseMissions(),
+  useMissions: () => demoModeTestState.useMissions(),
 }))
 
 vi.mock('../../../../hooks/useBackendHealth', () => ({
-  useBackendHealth: () => mockUseBackendHealth(),
+  useBackendHealth: () => demoModeTestState.useBackendHealth(),
 }))
 
 vi.mock('../../../../lib/cn', () => ({
@@ -39,7 +40,7 @@ vi.mock('../../../../lib/cn', () => ({
 }))
 
 vi.mock('../../../agent/AgentApprovalDialog', () => ({
-  hasApprovedAgents: () => mockHasApprovedAgents(),
+  hasApprovedAgents: () => demoModeTestState.hasApprovedAgents(),
   AgentApprovalDialog: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>approval-dialog</div> : null,
 }))
 
@@ -48,7 +49,7 @@ vi.mock('../../../setup/SetupInstructionsDialog', () => ({
 }))
 
 vi.mock('@/hooks/mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
+  agentFetch: (...args: unknown[]) => demoModeTestState.agentFetch(...args),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -60,13 +61,13 @@ import { AgentStatusIndicator } from '../AgentStatusIndicator'
 
 describe('AgentStatusIndicator demo mode transition', () => {
   beforeEach(() => {
-    mockIsDemoMode = true
-    mockIsDemoModeForced = false
+    demoModeTestState.isDemoMode = true
+    demoModeTestState.isDemoModeForced = false
     vi.clearAllMocks()
 
-    mockHasApprovedAgents.mockReturnValue(false)
-    mockAgentFetch.mockResolvedValue(new Response(JSON.stringify({ availableProviders: [] }), { status: 200 }))
-    mockUseLocalAgent.mockReturnValue({
+    demoModeTestState.hasApprovedAgents.mockReturnValue(false)
+    demoModeTestState.agentFetch.mockResolvedValue(new Response(JSON.stringify({ availableProviders: [] }), { status: 200 }))
+    demoModeTestState.useLocalAgent.mockReturnValue({
       status: 'disconnected',
       health: null,
       connectionEvents: [],
@@ -76,12 +77,12 @@ describe('AgentStatusIndicator demo mode transition', () => {
       dataErrorCount: 0,
       lastDataError: null,
     })
-    mockUseBackendHealth.mockReturnValue({
+    demoModeTestState.useBackendHealth.mockReturnValue({
       status: 'disconnected',
       isConnected: false,
       isInClusterMode: false,
     })
-    mockUseMissions.mockReturnValue({ selectedAgent: 'none', agents: [] })
+    demoModeTestState.useMissions.mockReturnValue({ selectedAgent: 'none', agents: [] })
   })
 
   it('allows disabling demo mode without opening the CLI agent approval dialog', () => {
@@ -90,14 +91,14 @@ describe('AgentStatusIndicator demo mode transition', () => {
     fireEvent.click(screen.getByTestId('navbar-agent-status-btn'))
     fireEvent.click(screen.getByTestId('demo-mode-toggle'))
 
-    expect(mockToggleDemoMode).toHaveBeenCalledTimes(1)
-    expect(mockAgentFetch).not.toHaveBeenCalled()
+    expect(demoModeTestState.toggleDemoMode).toHaveBeenCalledTimes(1)
+    expect(demoModeTestState.agentFetch).not.toHaveBeenCalled()
     expect(screen.queryByText('approval-dialog')).toBeNull()
   })
 
   it('offers CLI agent authorization from the auth warning state instead', async () => {
-    mockIsDemoMode = false
-    mockUseLocalAgent.mockReturnValue({
+    demoModeTestState.isDemoMode = false
+    demoModeTestState.useLocalAgent.mockReturnValue({
       status: 'auth_error',
       health: { version: '1.2.3' },
       connectionEvents: [],
@@ -113,8 +114,8 @@ describe('AgentStatusIndicator demo mode transition', () => {
     fireEvent.click(screen.getByTestId('navbar-agent-status-btn'))
     fireEvent.click(screen.getByTestId('agent-approval-cta'))
 
-    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(demoModeTestState.agentFetch).toHaveBeenCalledTimes(1))
     expect(screen.getByText('approval-dialog')).toBeTruthy()
-    expect(mockToggleDemoMode).not.toHaveBeenCalled()
+    expect(demoModeTestState.toggleDemoMode).not.toHaveBeenCalled()
   })
 })

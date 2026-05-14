@@ -33,13 +33,11 @@ describe('WelcomeCard Component', () => {
   })
 
   it('renders the current window origin in step 2 instructions', () => {
-    window.history.replaceState({}, '', 'http://localhost:5174/')
-
     render(<WelcomeCard />)
 
     expect(
       screen.getByText(
-        'Once the script finishes, open http://localhost:5174 in your browser. Your clusters are auto-detected from ~/.kube/config.'
+        `Once the script finishes, open ${window.location.origin} in your browser. Your clusters are auto-detected from ~/.kube/config.`
       )
     ).toBeInTheDocument()
   })
