@@ -215,7 +215,7 @@ function resolveMissionToolRequirements({
 function buildMissingToolWarning(error: PreflightError): string {
   const missingTools = getMissingTools(error, [])
   const toolSummary = missingTools.length > 0
-    ? i18n.t('missions.preflight.toolWarning.summary', { tools: missingTools.join(', ') })
+    ? i18n.t('missions.preflight.toolWarning.summary', { tools: (missingTools || []).join(', ') })
     : error.message
 
   return `${MISSING_TOOL_WARNING_HEADING}\n\n${toolSummary}\n\n${MISSING_TOOL_WARNING_SUFFIX}`
@@ -224,7 +224,7 @@ function buildMissingToolWarning(error: PreflightError): string {
 function buildMissionToolUnavailableError(error: PreflightError, missingTools: string[]): PreflightError {
   return {
     ...error,
-    message: i18n.t('missions.preflight.optionalToolUnavailable.message', { tools: missingTools.join(', ') }),
+    message: i18n.t('missions.preflight.optionalToolUnavailable.message', { tools: (missingTools || []).join(', ') }),
     details: {
       ...(error.details || {}),
       missingTools,
