@@ -646,11 +646,11 @@ func validateClaudeKey(ctx context.Context, apiKey string) (bool, error) {
 	if resp.StatusCode == http.StatusUnauthorized {
 		return false, nil // Invalid key - no error so it gets cached
 	}
-	body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseBytes))
+	respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, maxLLMResponseBytes))
 	if readErr != nil {
-		body = []byte("(failed to read response body)")
+		respBody = []byte("(failed to read response body)")
 	}
-	return false, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+	return false, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(respBody))
 }
 
 // validateOpenAIKey tests an OpenAI API key
