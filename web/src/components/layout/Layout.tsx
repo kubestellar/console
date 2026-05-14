@@ -642,9 +642,15 @@ export function Layout({ children: _children }: LayoutProps) {
     isMobile && activeBanners.length > MOBILE_BANNER_COLLAPSE_THRESHOLD
 
   useEffect(() => {
-    if (!showMobileBannerSummary) {
-      setMobileBannerStackExpanded(false)
+    if (showMobileBannerSummary) {
+      return undefined
     }
+
+    const resetExpandedState = window.setTimeout(() => {
+      setMobileBannerStackExpanded(false)
+    }, 0)
+
+    return () => window.clearTimeout(resetExpandedState)
   }, [showMobileBannerSummary])
 
   const visibleBanners: LayoutBanner[] = showMobileBannerSummary

@@ -6,6 +6,7 @@ import { useGlobalFilters, SEVERITY_LEVELS, SEVERITY_CONFIG, STATUS_LEVELS, STAT
 import { useModalState } from '../../../lib/modals'
 import { cn } from '../../../lib/cn'
 import { Tooltip } from '../../ui/Tooltip'
+import { Input } from '../../ui/Input'
 
 /** Color palette for saved filter sets */
 const FILTER_SET_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899']
@@ -317,13 +318,13 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
                 <span className="text-sm font-medium text-foreground">{t('common:filters.customFilter', 'Custom Filter')}</span>
               </div>
               <div className="flex gap-2">
-                <input
+                <Input
                   id={CUSTOM_FILTER_INPUT_ID}
                   type="text"
                   value={customFilter}
                   onChange={(e) => setCustomFilter(e.target.value)}
                   placeholder={t('common:filters.customFilterPlaceholder', 'Filter by name, namespace...')}
-                  className="flex-1 px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
+                  className="flex-1 bg-secondary/50"
                 />
                 {hasCustomFilter && (
                   <button
@@ -495,13 +496,13 @@ export function ClusterFilterPanel({ showLabel = false }: ClusterFilterPanelProp
             <div className="p-3">
               {showSaveForm ? (
                 <div className="space-y-2 p-2 bg-secondary/20 rounded">
-                  <input
+                  <Input
                     id={SAVE_FILTER_NAME_INPUT_ID}
                     type="text"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder={t('common:filters.filterSetName', 'Filter set name...')}
-                    className="w-full px-2 py-1.5 text-sm bg-secondary/50 border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500"
+                    className="bg-secondary/50"
                     autoFocus
                     onKeyDown={(e) => { if (e.key === 'Enter') handleSave() }}
                   />
