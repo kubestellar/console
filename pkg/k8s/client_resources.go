@@ -452,14 +452,20 @@ func (m *MultiClusterClient) GetNodes(ctx context.Context, contextName string) (
 			}
 		}
 
-		// Get capacity
+		// Report schedulable resources. CPU, memory, and pod density come from
+		// capacity, but ephemeral storage must prefer allocatable because
+		// containerized clusters (Docker Desktop, kind, etc.) can expose the host
+		// filesystem size in capacity while allocatable reflects the storage the
+		// kubelet actually makes available to pods.
 		if cpu, ok := node.Status.Capacity["cpu"]; ok {
 			info.CPUCapacity = cpu.String()
 		}
 		if mem, ok := node.Status.Capacity["memory"]; ok {
 			info.MemoryCapacity = mem.String()
 		}
-		if storage, ok := node.Status.Capacity["ephemeral-storage"]; ok {
+		if storage, ok := node.Status.Allocatable["ephemeral-storage"]; ok {
+			info.StorageCapacity = storage.String()
+		} else if storage, ok := node.Status.Capacity["ephemeral-storage"]; ok {
 			info.StorageCapacity = storage.String()
 		}
 		if pods, ok := node.Status.Capacity["pods"]; ok {

@@ -757,7 +757,10 @@ class KubectlProxy {
 
       const readyNodes = nodes.filter((n) => n.ready).length
 
-      // Aggregate resource metrics from all nodes (capacity)
+      // Aggregate resource metrics from all nodes. getNodes() already prefers
+      // allocatable ephemeral storage because containerized clusters can report
+      // the host filesystem size in capacity instead of the storage available
+      // to pods.
       const totalCpuCores = nodes.reduce((sum, n) => sum + (n.cpuCores || 0), 0)
       const totalMemoryBytes = nodes.reduce(
         (sum, n) => sum + (n.memoryBytes || 0),

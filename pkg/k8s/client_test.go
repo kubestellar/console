@@ -224,7 +224,11 @@ func TestGetNodes(t *testing.T) {
 				{Type: corev1.NodeInternalIP, Address: "10.0.0.1"},
 			},
 			Capacity: corev1.ResourceList{
-				corev1.ResourceCPU: resource.MustParse("4"),
+				corev1.ResourceCPU:              resource.MustParse("4"),
+				corev1.ResourceEphemeralStorage: resource.MustParse("1007Gi"),
+			},
+			Allocatable: corev1.ResourceList{
+				corev1.ResourceEphemeralStorage: resource.MustParse("80Gi"),
 			},
 		},
 	}
@@ -249,6 +253,9 @@ func TestGetNodes(t *testing.T) {
 	}
 	if len(nodes[0].Roles) != 1 || nodes[0].Roles[0] != "control-plane" {
 		t.Errorf("Expected control-plane role, got %v", nodes[0].Roles)
+	}
+	if nodes[0].StorageCapacity != "80Gi" {
+		t.Errorf("Expected allocatable storage 80Gi, got %s", nodes[0].StorageCapacity)
 	}
 }
 
