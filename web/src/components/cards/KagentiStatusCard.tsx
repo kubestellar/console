@@ -179,7 +179,7 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
                 <div className="flex-1 h-1.5 rounded-full bg-muted/30 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-purple-500/60"
-                    style={{ width: `${(count / agents.length) * 100}%` }}
+                    style={{ width: `${agents.length > 0 ? (count / agents.length) * 100 : 0}%` }}
                   />
                 </div>
                 <div className="text-sm text-muted-foreground w-6 text-right">{count}</div>
