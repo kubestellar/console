@@ -226,9 +226,9 @@ function buildComponentsFromDeployments(
 
     if (isEpp && !epp) {
       epp = { name: dep.metadata.name, namespace, cluster, type: 'epp', status: ready > 0 ? 'running' : 'pending', replicas, readyReplicas: ready }
-    } else if (role === 'prefill' || depName.includes('prefill')) {
+    } else if (role === 'prefill' || (!role && depName.includes('prefill'))) {
       prefill.push({ name: dep.metadata.name, namespace, cluster, type: 'prefill', status: depStatus, replicas, readyReplicas: ready, model: depModel })
-    } else if (role === 'decode' || depName.includes('decode')) {
+    } else if (role === 'decode' || (!role && depName.includes('decode'))) {
       decode.push({ name: dep.metadata.name, namespace, cluster, type: 'decode', status: depStatus, replicas, readyReplicas: ready, model: depModel })
     } else {
       both.push({ name: dep.metadata.name, namespace, cluster, type: 'both', status: depStatus, replicas, readyReplicas: ready, model: depModel })

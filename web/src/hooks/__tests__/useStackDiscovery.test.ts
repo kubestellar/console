@@ -665,6 +665,29 @@ describe('useStackDiscovery', () => {
     unmount()
   })
 
+  it('role label takes precedence over deployment name (fix #13716)', async () => {
+    // Deployment named 'prefill-server' but explicitly labelled role=decode.
+    // Before the fix this landed in prefill because depName.includes('prefill')
+    // fired before role === 'decode' was checked.
+    setupMockExec({
+      pods: [],
+      namespaces: ['llm-d-pd'],
+      deploymentsByNs: {
+        'llm-d-pd': [
+          makeDeployment('prefill-server', 'llm-d-pd', 2, 2, { 'llm-d.ai/role': 'decode' }),
+        ],
+      },
+    })
+
+    const { result, unmount } = renderHook(() => useStackDiscovery(['c1']))
+    await flush()
+
+    const stack = result.current.stacks[0]
+    expect(stack.components.decode.length).toBe(1)
+    expect(stack.components.prefill.length).toBe(0)
+    unmount()
+  })
+
   // ── 11. Stack status computation ───────────────────────────────────────────
 
   it('computes status=healthy when all components are running', async () => {
