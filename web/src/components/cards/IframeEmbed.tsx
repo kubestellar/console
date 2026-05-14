@@ -151,7 +151,7 @@ export function IframeEmbed({ config }: { config?: IframeEmbedConfig }) {
 
    const handleError = () => {
     setIsLoading(false)
-    setLoadError(t('cards.iframeEmbed.failedToLoadContent'))
+    setLoadError(t('cards:iframeEmbed.failedToLoadContent'))
   }
 
   const handleSaveConfig = () => {

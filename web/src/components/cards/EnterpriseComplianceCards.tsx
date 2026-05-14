@@ -38,7 +38,7 @@ function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
 
   return {
     data,
-    error: error ? t('cards.failedToLoad') : null,
+    error: error ? t('failedToLoad') : null,
   }
 }
 

@@ -86,7 +86,7 @@ export function WorkflowMatrix() {
   if (error && !hasData) {
     return (
       <div className="p-4 h-full flex items-center justify-center text-sm text-red-400">
-        {t('pipelines.failedToLoadMatrix')} {error}
+        {t('cards:pipelines.failedToLoadMatrix')} {error}
       </div>
     )
   }

@@ -398,7 +398,7 @@ function RSSFeedInternal({ config }: RSSFeedProps) {
       setFetchSuccess(`Fetched ${feedItems.length} items${sourceCount}`)
       cacheFeed(cacheKey, feedItems)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : t('cards.rssFeed.failedToLoadFeed')
+      const message = err instanceof Error ? err.message : t('rssFeed.failedToLoadFeed')
 
       const cached = getCachedFeed(cacheKey)
       if (cached && cached.items.length > 0) {
