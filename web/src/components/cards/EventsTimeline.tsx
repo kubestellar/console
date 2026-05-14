@@ -20,6 +20,7 @@ import {
   CHART_TICK_COLOR,
   CHART_AXIS_FONT_SIZE,
   CHART_BODY_FONT_SIZE } from '../../lib/constants'
+import { AMBER_500, GREEN_500_BRIGHT, hexToRgba } from '../../lib/theme/chartColors'
 
 interface TimePoint {
   time: string
@@ -53,8 +54,14 @@ const TIME_RANGE_BUCKETS: Record<TimeRange, { bucketMinutes: number; numBuckets:
   '24h': { bucketMinutes: 60, numBuckets: 24 },
 }
 
-const WARNING_AREA_GRADIENT_END = 'color-mix(in srgb, var(--chart-warning) 0%, transparent)'
-const SUCCESS_AREA_GRADIENT_END = 'color-mix(in srgb, var(--chart-success) 0%, transparent)'
+const EVENTS_TIMELINE_WARNING_COLOR = AMBER_500
+const EVENTS_TIMELINE_SUCCESS_COLOR = GREEN_500_BRIGHT
+const EVENTS_TIMELINE_AREA_GRADIENT_START_ALPHA = 0.3
+const EVENTS_TIMELINE_AREA_GRADIENT_END_ALPHA = 0
+const WARNING_AREA_GRADIENT_START = hexToRgba(EVENTS_TIMELINE_WARNING_COLOR, EVENTS_TIMELINE_AREA_GRADIENT_START_ALPHA)
+const WARNING_AREA_GRADIENT_END = hexToRgba(EVENTS_TIMELINE_WARNING_COLOR, EVENTS_TIMELINE_AREA_GRADIENT_END_ALPHA)
+const SUCCESS_AREA_GRADIENT_START = hexToRgba(EVENTS_TIMELINE_SUCCESS_COLOR, EVENTS_TIMELINE_AREA_GRADIENT_START_ALPHA)
+const SUCCESS_AREA_GRADIENT_END = hexToRgba(EVENTS_TIMELINE_SUCCESS_COLOR, EVENTS_TIMELINE_AREA_GRADIENT_END_ALPHA)
 
 function getEventCount(count?: number | string): number {
   const numericCount = Number(count)
@@ -254,13 +261,13 @@ function EventsTimelineInternal() {
         stack: 'total',
         step: 'end' as const,
         data: warningSeriesData || [],
-        lineStyle: { color: 'var(--chart-warning)', width: 2 },
-        itemStyle: { color: 'var(--chart-warning)' },
+        lineStyle: { color: EVENTS_TIMELINE_WARNING_COLOR, width: 2 },
+        itemStyle: { color: EVENTS_TIMELINE_WARNING_COLOR },
         areaStyle: {
           color: {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: 'var(--chart-warning-opaque)' },
+              { offset: 0, color: WARNING_AREA_GRADIENT_START },
               { offset: 1, color: WARNING_AREA_GRADIENT_END },
             ],
           },
@@ -273,13 +280,13 @@ function EventsTimelineInternal() {
         stack: 'total',
         step: 'end' as const,
         data: normalSeriesData || [],
-        lineStyle: { color: 'var(--chart-success)', width: 2 },
-        itemStyle: { color: 'var(--chart-success)' },
+        lineStyle: { color: EVENTS_TIMELINE_SUCCESS_COLOR, width: 2 },
+        itemStyle: { color: EVENTS_TIMELINE_SUCCESS_COLOR },
         areaStyle: {
           color: {
             type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
             colorStops: [
-              { offset: 0, color: 'var(--chart-success-opaque)' },
+              { offset: 0, color: SUCCESS_AREA_GRADIENT_START },
               { offset: 1, color: SUCCESS_AREA_GRADIENT_END },
             ],
           },

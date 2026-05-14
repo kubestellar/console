@@ -68,13 +68,12 @@ function EventStreamInternal({ config }: { config?: EventStreamConfig }) {
 
   // Apply the warningsOnly user-config filter (#6070 follow-up — same modal
   // section, also previously dropped because EventStream ignored its config).
-  const filteredRawEvents = useMemo(
-    () =>
-      config?.warningsOnly
-        ? rawEvents.filter(e => e.type === 'Warning' || e.type === 'Error')
-        : rawEvents,
-    [rawEvents, config?.warningsOnly],
-  )
+  const filteredRawEvents = useMemo(() => {
+    const safeRawEvents = rawEvents || []
+    return config?.warningsOnly
+      ? safeRawEvents.filter(e => e.type === 'Warning' || e.type === 'Error')
+      : safeRawEvents
+  }, [rawEvents, config?.warningsOnly])
 
   // Report state to CardWrapper for refresh animation
   const hasData = filteredRawEvents.length > 0
