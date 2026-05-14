@@ -100,3 +100,27 @@ func TestEstimateChatTokenUsage_EmptyResponse(t *testing.T) {
 		t.Errorf("InputTokens = %d, want > 0 (prompt is non-empty)", got.InputTokens)
 	}
 }
+
+func TestBuildPromptWithHistoryGeneric_IncludesExplicitNegativeConstraints(t *testing.T) {
+	req := &ChatRequest{
+		Prompt: "Do not open the desktop app. Stay in the terminal and run kind create cluster --name demo.",
+	}
+
+	prompt := buildPromptWithHistoryGeneric(req)
+	if !strings.Contains(prompt, "CRITICAL USER CONSTRAINTS") {
+		t.Fatal("expected explicit negative constraints block in prompt")
+	}
+	if !strings.Contains(strings.ToLower(prompt), "do not open the desktop app") {
+		t.Fatal("expected desktop-app prohibition to be preserved in prompt")
+	}
+	if !strings.Contains(strings.ToLower(prompt), "stay in the terminal") {
+		t.Fatal("expected terminal-only constraint to be preserved in prompt")
+	}
+}
+
+func TestRequestForbidsDesktopCompanion(t *testing.T) {
+	req := &ChatRequest{Prompt: "Don't open the desktop app. Terminal only."}
+	if !requestForbidsDesktopCompanion(req) {
+		t.Fatal("expected desktop companion restriction to be detected")
+	}
+}

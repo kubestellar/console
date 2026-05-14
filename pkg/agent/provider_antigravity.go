@@ -161,6 +161,9 @@ func (a *AntigravityProvider) Chat(ctx context.Context, req *ChatRequest) (*Chat
 }
 
 func (a *AntigravityProvider) StreamChat(ctx context.Context, req *ChatRequest, onChunk func(chunk string)) (*ChatResponse, error) {
+	if requestForbidsDesktopCompanion(req) {
+		return nil, fmt.Errorf("antigravity cannot satisfy this terminal-only request because it may launch a desktop companion; switch to a terminal-capable agent instead")
+	}
 	if a.cliPath == "" {
 		return nil, fmt.Errorf("antigravity CLI not found")
 	}

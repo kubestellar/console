@@ -213,6 +213,10 @@ func buildCopilotCLIPrompt(req *ChatRequest) string {
 		sb.WriteString(warning)
 		sb.WriteString("\n\n")
 	}
+	if constraintBlock := buildExplicitNegativeConstraintBlock(req); constraintBlock != "" {
+		sb.WriteString(constraintBlock)
+		sb.WriteString("\n\n")
+	}
 
 	if len(req.History) > 0 {
 		sb.WriteString("Conversation so far:\n")

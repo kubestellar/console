@@ -2,6 +2,7 @@ package agent
 
 import (
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -11,6 +12,15 @@ const aiProviderHTTPTimeout = 120 * time.Second // timeout for AI provider API c
 // aiProviderHTTPClient is reused across AI provider API calls to enable
 // connection pooling and reduce per-request allocation overhead.
 var aiProviderHTTPClient = &http.Client{Timeout: aiProviderHTTPTimeout}
+
+var explicitNegativeConstraintPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)\bdo not [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
+	regexp.MustCompile(`(?i)\bdon't [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
+	regexp.MustCompile(`(?i)\bwithout opening [^.!?\n]*(?:desktop app|desktop|gui|window|ide|editor)\b[^.!?\n]*`),
+	regexp.MustCompile(`(?i)\b(?:stay|keep(?: it)?) in the terminal\b[^.!?\n]*`),
+	regexp.MustCompile(`(?i)\bdo not leave the terminal\b[^.!?\n]*`),
+	regexp.MustCompile(`(?i)\bterminal only\b[^.!?\n]*`),
+}
 
 // estimatedCharsPerToken is the industry-standard rule-of-thumb used by
 // OpenAI, Anthropic, and Google to convert character counts to approximate
@@ -71,6 +81,62 @@ func newAIProviderHTTPClient() *http.Client {
 	return aiProviderHTTPClient
 }
 
+func collectExplicitNegativeConstraints(req *ChatRequest) []string {
+	if req == nil {
+		return nil
+	}
+
+	sources := []string{req.Prompt}
+	for _, msg := range req.History {
+		if msg.Role == "user" {
+			sources = append(sources, msg.Content)
+		}
+	}
+
+	constraints := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, source := range sources {
+		for _, pattern := range explicitNegativeConstraintPatterns {
+			matches := pattern.FindAllString(source, -1)
+			for _, match := range matches {
+				normalized := strings.TrimSpace(strings.Join(strings.Fields(match), " "))
+				if normalized == "" {
+					continue
+				}
+				key := strings.ToLower(normalized)
+				if _, exists := seen[key]; exists {
+					continue
+				}
+				seen[key] = struct{}{}
+				constraints = append(constraints, normalized)
+			}
+		}
+	}
+
+	return constraints
+}
+
+func buildExplicitNegativeConstraintBlock(req *ChatRequest) string {
+	constraints := collectExplicitNegativeConstraints(req)
+	if len(constraints) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("CRITICAL USER CONSTRAINTS:\n")
+	for _, constraint := range constraints {
+		sb.WriteString("- ")
+		sb.WriteString(constraint)
+		sb.WriteString("\n")
+	}
+	sb.WriteString("These are hard requirements. Do not ignore them. If you cannot comply, say so and do not perform the forbidden action.")
+	return sb.String()
+}
+
+func requestForbidsDesktopCompanion(req *ChatRequest) bool {
+	return len(collectExplicitNegativeConstraints(req)) > 0
+}
+
 // buildPromptWithHistoryGeneric creates a prompt string from a ChatRequest
 // including system prompt and conversation history.
 // Used by CLI-based providers that take a single prompt string.
@@ -85,6 +151,10 @@ func buildPromptWithHistoryGeneric(req *ChatRequest) string {
 	sb.WriteString("System: ")
 	sb.WriteString(systemPrompt)
 	sb.WriteString("\n\n")
+	if constraintBlock := buildExplicitNegativeConstraintBlock(req); constraintBlock != "" {
+		sb.WriteString(constraintBlock)
+		sb.WriteString("\n\n")
+	}
 
 	for _, msg := range req.History {
 		switch msg.Role {

@@ -352,6 +352,10 @@ func (c *ClaudeCodeProvider) buildPromptWithHistory(req *ChatRequest) string {
 		sb.WriteString("\n\n")
 		sb.WriteString(warning)
 	}
+	if constraintBlock := buildExplicitNegativeConstraintBlock(req); constraintBlock != "" {
+		sb.WriteString("\n\n")
+		sb.WriteString(constraintBlock)
+	}
 
 	sb.WriteString("\n\n---\n\n")
 

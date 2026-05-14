@@ -243,3 +243,14 @@ func TestBuildCopilotCLIPrompt_IncludesToolAvailabilityWarning(t *testing.T) {
 		t.Error("prompt should include missing tool names")
 	}
 }
+
+func TestBuildCopilotCLIPrompt_IncludesExplicitNegativeConstraints(t *testing.T) {
+	req := &ChatRequest{Prompt: "Do not open the desktop app. Stay in the terminal and run kind create cluster --name demo."}
+	prompt := buildCopilotCLIPrompt(req)
+	if !strings.Contains(prompt, "CRITICAL USER CONSTRAINTS") {
+		t.Fatal("prompt should include explicit negative constraints")
+	}
+	if !strings.Contains(strings.ToLower(prompt), "stay in the terminal") {
+		t.Fatal("prompt should preserve terminal-only constraint")
+	}
+}

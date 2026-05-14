@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 )
@@ -79,5 +80,18 @@ func TestAntigravityProvider_HandshakeResult_Fields(t *testing.T) {
 	}
 	if r.Version != "1.0.0" {
 		t.Errorf("Expected Version='1.0.0', got '%s'", r.Version)
+	}
+}
+
+func TestAntigravityProvider_StreamChat_RejectsDesktopForbiddenRequests(t *testing.T) {
+	p := &AntigravityProvider{cliPath: "/usr/bin/antigravity"}
+	req := &ChatRequest{Prompt: "Do not open the desktop app. Stay in the terminal and run kind create cluster --name demo."}
+
+	_, err := p.StreamChat(context.Background(), req, nil)
+	if err == nil {
+		t.Fatal("expected explicit desktop prohibition to stop antigravity execution")
+	}
+	if !strings.Contains(err.Error(), "terminal-capable agent") {
+		t.Fatalf("expected helpful routing error, got %q", err.Error())
 	}
 }
