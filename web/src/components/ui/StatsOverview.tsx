@@ -148,6 +148,17 @@ const HEATMAP_THRESHOLDS = [
   { max: Infinity, opacity: 1.0 },
 ]
 
+/** Minimum heatmap opacity where text should switch to high-contrast classes */
+const HEATMAP_CONTRAST_OPACITY_THRESHOLD = 0.5
+
+/** Foreground classes used on high-intensity heatmap cards for readability */
+const HEATMAP_HIGH_CONTRAST_TEXT_CLASSES = {
+  icon: 'text-white/90 drop-shadow-xs',
+  label: 'text-white/90 drop-shadow-xs',
+  value: 'text-white drop-shadow-xs',
+  sublabel: 'text-white/80 drop-shadow-xs',
+} as const
+
 /**
  * Value and metadata for a single stat block
  */
@@ -265,6 +276,13 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const effectiveMode = mode === 'sparkline' && !hasEnoughHistory
     ? 'numeric'
     : (PROGRESS_DISPLAY_MODES.has(mode) && !canScaleProgress ? 'numeric' : mode)
+  const isHeatmapMode = effectiveMode === 'heatmap' && !isNaN(numericValue)
+  const heatmapOpacity = isHeatmapMode ? getHeatmapOpacity(numericValue) : 0
+  const useHeatmapHighContrastText = isHeatmapMode && heatmapOpacity >= HEATMAP_CONTRAST_OPACITY_THRESHOLD
+  const iconClass = isLoading
+    ? 'text-muted-foreground/30'
+    : (useHeatmapHighContrastText ? HEATMAP_HIGH_CONTRAST_TEXT_CLASSES.icon : colorClass)
+  const labelClass = useHeatmapHighContrastText ? HEATMAP_HIGH_CONTRAST_TEXT_CLASSES.label : 'text-muted-foreground'
 
   return (
     <div
@@ -302,8 +320,8 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           ("Clusters", "Healthy") never break mid-word at narrow card widths
           (#11456). The full name is available via title tooltip. */}
       <div className="flex items-start gap-2 mb-2 min-w-0">
-        <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${isLoading ? 'text-muted-foreground/30' : colorClass}`} />
-        <span className="text-sm text-muted-foreground truncate leading-tight min-w-0" title={block.name}>{wrapAbbreviations(block.name)}</span>
+        <IconComponent className={`w-5 h-5 shrink-0 mt-0.5 ${iconClass}`} />
+        <span className={`text-sm truncate leading-tight min-w-0 ${labelClass}`} title={block.name}>{wrapAbbreviations(block.name)}</span>
       </div>
 
       {/* Mode-specific content */}
@@ -436,11 +454,11 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
         <>
           <div
             className="absolute inset-0 rounded-lg transition-colors duration-500"
-            style={{ backgroundColor: hexColor, opacity: getHeatmapOpacity(numericValue) }}
+            style={{ backgroundColor: hexColor, opacity: heatmapOpacity }}
           />
           <div className="relative">
-            <div data-testid={`stat-block-${block.id}-count`} className={`text-3xl font-bold ${numericValue > 0 ? 'text-white drop-shadow-xs' : valueColor}`}>{displayValue}</div>
-            {data.sublabel && <div className={`text-xs ${numericValue > 0 ? 'text-white/70' : 'text-muted-foreground'}`}>{wrapAbbreviations(data.sublabel)}</div>}
+            <div data-testid={`stat-block-${block.id}-count`} className={`text-3xl font-bold ${useHeatmapHighContrastText ? HEATMAP_HIGH_CONTRAST_TEXT_CLASSES.value : valueColor}`}>{displayValue}</div>
+            {data.sublabel && <div className={`text-xs ${useHeatmapHighContrastText ? HEATMAP_HIGH_CONTRAST_TEXT_CLASSES.sublabel : 'text-muted-foreground'}`}>{wrapAbbreviations(data.sublabel)}</div>}
           </div>
         </>
       ) : (
@@ -649,5 +667,4 @@ export function StatsOverview({
     </div>
   )
 }
-
 
