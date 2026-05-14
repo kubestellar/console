@@ -63,7 +63,15 @@ func (m *MockStore) DeleteUser(ctx context.Context, id uuid.UUID) error { return
 func (m *MockStore) UpdateUserRole(ctx context.Context, userID uuid.UUID, role string) error {
 	return nil
 }
-func (m *MockStore) CountUsersByRole(ctx context.Context) (int, int, int, error) { return 0, 0, 0, nil }
+func (m *MockStore) CountUsersByRole(ctx context.Context) (int, int, int, error) {
+	for _, call := range m.ExpectedCalls {
+		if call.Method == "CountUsersByRole" {
+			args := m.Called()
+			return args.Int(0), args.Int(1), args.Int(2), args.Error(3)
+		}
+	}
+	return 1, 0, 0, nil
+}
 
 func (m *MockStore) SaveOnboardingResponse(ctx context.Context, response *models.OnboardingResponse) error {
 	return nil

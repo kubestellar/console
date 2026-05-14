@@ -5,8 +5,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/audit"
-	"github.com/kubestellar/console/pkg/api/middleware"
-	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/settings"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -28,18 +26,7 @@ func NewSettingsHandler(manager *settings.SettingsManager, s store.Store) *Setti
 // invariant, an attacker can trigger side effects (decryption, disk I/O,
 // manager lookups) before being told they are forbidden.
 func (h *SettingsHandler) requireAdmin(c *fiber.Ctx) error {
-	if h.store == nil {
-		// No user store configured (dev/demo mode). In this mode settings
-		// are not persisted to a real backing store either, so we allow the
-		// request through rather than locking the developer out.
-		return nil
-	}
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != models.UserRoleAdmin {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
-	}
-	return nil
+	return requireAdmin(c, h.store)
 }
 
 // GetSettings returns all settings with sensitive fields decrypted

@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/test"
 	"github.com/stretchr/testify/assert"
@@ -60,6 +60,27 @@ func TestAuthHelpers(t *testing.T) {
 				assert.Equal(t, tt.wantStatus, resp.StatusCode)
 			})
 		}
+	})
+
+	t.Run("requireAdmin bootstraps first admin", func(t *testing.T) {
+		app := fiber.New()
+		mockStore := new(test.MockStore)
+		userID := uuid.New()
+		viewer := &models.User{ID: userID, Role: models.UserRoleViewer}
+
+		mockStore.On("GetUser", userID).Return(viewer, nil).Once()
+		mockStore.On("CountUsersByRole").Return(0, 0, 1, nil).Once()
+		mockStore.On("UpdateUser", viewer).Return(nil).Once()
+
+		app.Get("/test", func(c *fiber.Ctx) error {
+			c.Locals("userID", userID)
+			return requireAdmin(c, mockStore)
+		})
+
+		req := httptest.NewRequest("GET", "/test", nil)
+		resp, _ := app.Test(req)
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Equal(t, models.UserRoleAdmin, viewer.Role)
 	})
 
 	t.Run("requireViewerOrAbove", func(t *testing.T) {

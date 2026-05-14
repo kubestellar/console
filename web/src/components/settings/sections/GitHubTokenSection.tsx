@@ -31,6 +31,50 @@ const GITHUB_TOKEN_FOCUS_TARGET = 'github-token'
 const GITHUB_TOKEN_INPUT_ID = 'github-token'
 const GITHUB_TOKEN_SECTION_ID = 'github-token-settings'
 
+interface GitHubTokenErrorBody {
+  error?: string
+  message?: string
+}
+
+function normalizeErrorDetail(detail: string | null | undefined): string | null {
+  if (!detail) return null
+  const trimmed = detail.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+async function readErrorDetail(response: Response): Promise<string | null> {
+  try {
+    const body = await response.json() as GitHubTokenErrorBody
+    return normalizeErrorDetail(body.error ?? body.message)
+  } catch {
+    return null
+  }
+}
+
+export function buildGitHubTokenValidationError(status: number, detail?: string | null): string {
+  const normalizedDetail = normalizeErrorDetail(detail)
+  if (status === 401) {
+    return normalizedDetail ?? 'Invalid token - authentication failed. Confirm the token is active and copied correctly.'
+  }
+  if (status === 403) {
+    const lowerDetail = (normalizedDetail ?? '').toLowerCase()
+    if (lowerDetail.includes('rate limit') || lowerDetail.includes('abuse')) {
+      return normalizedDetail ?? 'GitHub rate limit exceeded. Try again later.'
+    }
+    const baseMessage = normalizedDetail ?? 'GitHub rejected the token with 403 Forbidden.'
+    return `${baseMessage} Troubleshooting: Classic PATs need the 'repo' scope. Fine-grained PATs must include repository access plus 'Issues' and 'Contents' read/write permissions.`
+  }
+  return normalizedDetail ?? `GitHub API error: ${status}`
+}
+
+export function buildGitHubTokenSaveError(status: number, detail?: string | null): string {
+  const normalizedDetail = normalizeErrorDetail(detail)
+  if (status === 403 && normalizedDetail === 'Console admin access required') {
+    return 'Console admin access required. Ask a console admin to grant your account the admin role before saving shared GitHub settings.'
+  }
+  return normalizedDetail ?? `Failed to save token: ${status}`
+}
+
 /** Build JWT auth headers for backend proxy requests */
 function authHeaders(): Record<string, string> {
   const token = safeGetItem(STORAGE_KEY_TOKEN)
@@ -138,10 +182,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       })
 
       if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Invalid token - authentication failed')
-        }
-        throw new Error(`GitHub API error: ${response.status}`)
+        const detail = await readErrorDetail(response)
+        throw new Error(buildGitHubTokenValidationError(response.status, detail))
       }
 
       const data = await response.json()
@@ -179,7 +221,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
       })
 
       if (!saveResponse.ok) {
-        throw new Error(`Failed to save token: ${saveResponse.status}`)
+        const detail = await readErrorDetail(saveResponse)
+        throw new Error(buildGitHubTokenSaveError(saveResponse.status, detail))
       }
 
       // Validate via proxy (backend injects the saved token)

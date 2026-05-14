@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/safego"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/safego"
 
 	"golang.org/x/oauth2"
 
@@ -189,14 +189,14 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 			Scopes:       []string{"user:email"},
 			Endpoint:     oauthEndpoint,
 		},
-		githubAPIBase:  apiBase,
-		jwtSecret:      cfg.JWTSecret,
-		frontendURL:    cfg.FrontendURL,
-		devUserLogin:   cfg.DevUserLogin,
-		devUserEmail:   cfg.DevUserEmail,
-		devUserAvatar:  cfg.DevUserAvatar,
-		githubToken:    cfg.GitHubToken,
-		devMode:        cfg.DevMode,
+		githubAPIBase:    apiBase,
+		jwtSecret:        cfg.JWTSecret,
+		frontendURL:      cfg.FrontendURL,
+		devUserLogin:     cfg.DevUserLogin,
+		devUserEmail:     cfg.DevUserEmail,
+		devUserAvatar:    cfg.DevUserAvatar,
+		githubToken:      cfg.GitHubToken,
+		devMode:          cfg.DevMode,
 		skipOnboarding:   cfg.SkipOnboarding,
 		cleanupCtx:       cleanupCtx,
 		cleanupCancel:    cleanupCancel,
@@ -593,14 +593,24 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		slog.Error("[Auth] database error getting user", "error", err)
 		return h.oauthErrorRedirect(c, "db_error", "")
 	}
+	bootstrapAdmin, err := shouldBootstrapAdmin(c.UserContext(), h.store)
+	if err != nil {
+		slog.Error("[Auth] failed to count admin users", "error", err)
+		return h.oauthErrorRedirect(c, "db_error", "")
+	}
 
 	if user == nil {
+		role := models.UserRoleViewer
+		if bootstrapAdmin {
+			role = models.UserRoleAdmin
+		}
 		// Create new user
 		user = &models.User{
 			GitHubID:    fmt.Sprintf("%d", ghUser.ID),
 			GitHubLogin: ghUser.Login,
 			Email:       ghUser.Email,
 			AvatarURL:   ghUser.AvatarURL,
+			Role:        role,
 			Onboarded:   h.skipOnboarding, // Skip questionnaire if SKIP_ONBOARDING=true
 		}
 		if err := h.store.CreateUser(c.UserContext(), user); err != nil {
@@ -612,6 +622,9 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		user.GitHubLogin = ghUser.Login
 		user.Email = ghUser.Email
 		user.AvatarURL = ghUser.AvatarURL
+		if bootstrapAdmin {
+			user.Role = models.UserRoleAdmin
+		}
 		if err := h.store.UpdateUser(c.UserContext(), user); err != nil {
 			slog.Warn("[Auth] failed to update user", "user", ghUser.Login, "error", err)
 			return h.oauthErrorRedirect(c, "db_error", "")

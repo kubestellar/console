@@ -34,7 +34,7 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-import { GitHubTokenSection } from '../GitHubTokenSection'
+import { GitHubTokenSection, buildGitHubTokenSaveError, buildGitHubTokenValidationError } from '../GitHubTokenSection'
 
 function renderGitHubTokenSection() {
   return render(
@@ -53,6 +53,15 @@ function mockJsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('GitHubTokenSection', () => {
+  it('adds troubleshooting guidance for GitHub 403 token validation failures', () => {
+    expect(buildGitHubTokenValidationError(403, 'Resource not accessible by personal access token')).toContain("Classic PATs need the 'repo' scope")
+    expect(buildGitHubTokenValidationError(403, 'Resource not accessible by personal access token')).toContain("'Issues' and 'Contents' read/write permissions")
+  })
+
+  it('shows a descriptive admin message for save-token 403 failures', () => {
+    expect(buildGitHubTokenSaveError(403, 'Console admin access required')).toContain('grant your account the admin role')
+  })
+
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())
     localStorage.clear()

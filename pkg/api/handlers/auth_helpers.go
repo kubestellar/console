@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -27,6 +29,53 @@ import (
 // The helpers take a store.Store parameter rather than a handler receiver so
 // they can be called from any handler without forcing every handler struct to
 // embed a common base.
+
+// shouldBootstrapAdmin reports whether the current deployment has no admin
+// users yet. Self-hosted consoles bootstrap the first authenticated user to
+// admin so the instance is manageable immediately after install (#13608).
+func shouldBootstrapAdmin(ctx context.Context, s store.Store) (bool, error) {
+	if s == nil {
+		return true, nil
+	}
+	admins, _, _, err := s.CountUsersByRole(ctx)
+	if err != nil {
+		return false, err
+	}
+	return admins == 0, nil
+}
+
+// requireAdmin verifies the current request's user has the admin role. If the
+// console has no admins yet, the current user is promoted so fresh self-hosted
+// installs are not locked out of admin-only settings flows (#13608).
+func requireAdmin(c *fiber.Ctx, s store.Store) error {
+	if s == nil {
+		return nil
+	}
+	userID := middleware.GetUserID(c)
+	user, err := s.GetUser(c.UserContext(), userID)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
+	}
+	if user == nil {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+	if user.Role != models.UserRoleAdmin {
+		bootstrapAdmin, err := shouldBootstrapAdmin(c.UserContext(), s)
+		if err != nil {
+			return fiber.NewError(fiber.StatusInternalServerError, "Failed to verify admin role")
+		}
+		if bootstrapAdmin {
+			user.Role = models.UserRoleAdmin
+			if err := s.UpdateUser(c.UserContext(), user); err != nil {
+				return fiber.NewError(fiber.StatusInternalServerError, "Failed to bootstrap admin role")
+			}
+		}
+	}
+	if user.Role != models.UserRoleAdmin {
+		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	}
+	return nil
+}
 
 // requireEditorOrAdmin verifies the current request's user has at least the
 // editor role. Viewer-role users and anonymous requests are rejected with 403.

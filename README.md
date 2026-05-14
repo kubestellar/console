@@ -143,7 +143,7 @@ There are two equivalent ways to supply this PAT — pick one. Both write to the
    FEEDBACK_GITHUB_TOKEN=ghp_…
    ```
 
-2. **Settings UI** (self-hosted only, **admin role required**) — visit Settings → GitHub Token → paste. The UI POSTs to `/api/github/token` which is gated on the console `admin` role and returns `403 Console admin access required` for non-admin users (verified in `pkg/api/handlers/github_proxy.go:214`). Persisted to `~/.kc/settings.json` by the backend.
+2. **Settings UI** (self-hosted only, **admin role required**) — visit Settings → GitHub Token → paste. The UI POSTs to `/api/github/token`, which is gated on the console `admin` role and persisted to `~/.kc/settings.json` by the backend. On a fresh self-hosted install, the first authenticated user is auto-bootstrapped to admin so local instances are not locked out of settings.
 
 The hosted Netlify demo cannot persist a PAT — it has no writable local backend — so Settings UI saves don't work there. Use the env-var path for self-hosting.
 

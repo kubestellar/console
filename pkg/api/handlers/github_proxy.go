@@ -117,6 +117,7 @@ func getGitHubProxyLimiter(userID string) *rate.Limiter {
 // startGitHubProxyLimiterEvictor periodically removes idle rate limiters
 // (no requests for >10 minutes) to prevent unbounded map growth.
 // Exits when ctx is cancelled.
+//
 //nolint:nilaway // ctx is always non-nil (created by context.WithCancel)
 func startGitHubProxyLimiterEvictor(ctx context.Context) {
 	if ctx == nil {
@@ -351,10 +352,8 @@ func (h *GitHubProxyHandler) Proxy(c *fiber.Ctx) error {
 // localStorage after this migration.
 func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
 	}
 
 	var body struct {
@@ -397,10 +396,8 @@ func (h *GitHubProxyHandler) SaveToken(c *fiber.Ctx) error {
 // GitHub PAT from server-side settings.
 func (h *GitHubProxyHandler) DeleteToken(c *fiber.Ctx) error {
 	// Global token management requires console admin role
-	currentUserID := middleware.GetUserID(c)
-	currentUser, err := h.store.GetUser(c.UserContext(), currentUserID)
-	if err != nil || currentUser == nil || currentUser.Role != "admin" {
-		return fiber.NewError(fiber.StatusForbidden, "Console admin access required")
+	if err := requireAdmin(c, h.store); err != nil {
+		return err
 	}
 
 	sm := settings.GetSettingsManager()
