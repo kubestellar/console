@@ -792,7 +792,6 @@ export function ConfigureCardModal({ isOpen, card, onClose, onSave, onCreateCard
         title={t('dashboard.configure.title')}
         description={t('dashboard.configure.description', { name: card.title || card.card_type })}
         icon={Settings}
-        onClose={onClose}
         showBack={false}
       />
 

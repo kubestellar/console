@@ -34,7 +34,6 @@ export function CardConfigModal({
       <BaseModal.Header
         title={`Configure ${formatCardTitle(card.card_type)}`}
         icon={Settings}
-        onClose={onClose}
         showBack={false}
       />
 
