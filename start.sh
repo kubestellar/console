@@ -21,6 +21,7 @@
 # To enable GitHub OAuth login, create a .env file:
 #   GITHUB_CLIENT_ID=your-client-id
 #   GITHUB_CLIENT_SECRET=your-client-secret
+#   FEEDBACK_GITHUB_TOKEN=your-feedback-token  # optional, enables issue submission
 #   FRONTEND_URL=http://localhost:8080
 
 set -e
@@ -81,6 +82,129 @@ case "$CHANNEL" in
     stable|unstable) ;;
     *) echo "Error: Invalid channel '$CHANNEL'. Allowed values: stable unstable"; exit 1 ;;
 esac
+
+INSTALL_ENV_FILE=""
+
+load_env_file() {
+    local env_file="$1"
+    [ -f "$env_file" ] || return 1
+
+    echo "Loading .env file from $env_file..."
+    while IFS='=' read -r key value; do
+        [[ $key =~ ^#.*$ ]] && continue
+        [[ -z "$key" ]] && continue
+        value="${value%\"}"
+        value="${value#\"}"
+        value="${value%\'}"
+        value="${value#\'}"
+        export "$key=$value"
+    done < "$env_file"
+}
+
+persist_env_var() {
+    local key="$1"
+    local value="$2"
+
+    [ -n "$INSTALL_ENV_FILE" ] || return 1
+    mkdir -p "$(dirname "$INSTALL_ENV_FILE")"
+
+    local tmp_file="${INSTALL_ENV_FILE}.tmp.$$"
+    if [ -f "$INSTALL_ENV_FILE" ]; then
+        grep -v "^${key}=" "$INSTALL_ENV_FILE" > "$tmp_file" || true
+    else
+        : > "$tmp_file"
+    fi
+
+    local escaped_value
+    escaped_value=$(printf '%s' "$value" | sed "s/'/'\\''/g")
+    printf "%s='%s'\n" "$key" "$escaped_value" >> "$tmp_file"
+    mv "$tmp_file" "$INSTALL_ENV_FILE"
+    chmod 600 "$INSTALL_ENV_FILE" 2>/dev/null || true
+}
+
+resolve_database_path() {
+    if [ -n "$DATABASE_PATH" ]; then
+        echo "$DATABASE_PATH"
+    else
+        echo "$INSTALL_DIR/data/console.db"
+    fi
+}
+
+load_oauth_from_existing_config() {
+    [ -n "$GITHUB_CLIENT_ID" ] && [ -n "$GITHUB_CLIENT_SECRET" ] && return 0
+
+    local db_path
+    db_path=$(resolve_database_path)
+    [ -f "$db_path" ] || return 1
+
+    local credential_lines=""
+    if command -v sqlite3 >/dev/null 2>&1; then
+        credential_lines=$(sqlite3 -noheader "$db_path" "SELECT client_id || char(10) || client_secret FROM oauth_credentials WHERE id = 1;" 2>/dev/null || true)
+    elif command -v python3 >/dev/null 2>&1; then
+        credential_lines=$(python3 - "$db_path" <<'PY'
+import sqlite3
+import sys
+
+try:
+    conn = sqlite3.connect(sys.argv[1])
+    row = conn.execute("SELECT client_id, client_secret FROM oauth_credentials WHERE id = 1").fetchone()
+    if row and row[0] and row[1]:
+        print(row[0])
+        print(row[1])
+except Exception:
+    pass
+PY
+)
+    fi
+
+    local stored_client_id stored_client_secret
+    stored_client_id=$(printf '%s\n' "$credential_lines" | sed -n '1p')
+    stored_client_secret=$(printf '%s\n' "$credential_lines" | sed -n '2p')
+    if [ -z "$stored_client_id" ] || [ -z "$stored_client_secret" ]; then
+        return 1
+    fi
+
+    export GITHUB_CLIENT_ID="$stored_client_id"
+    export GITHUB_CLIENT_SECRET="$stored_client_secret"
+    persist_env_var "GITHUB_CLIENT_ID" "$GITHUB_CLIENT_ID"
+    persist_env_var "GITHUB_CLIENT_SECRET" "$GITHUB_CLIENT_SECRET"
+    echo "Reusing saved GitHub OAuth credentials from existing local config."
+    return 0
+}
+
+prompt_for_feedback_token() {
+    if [ -n "$FEEDBACK_GITHUB_TOKEN" ]; then
+        persist_env_var "FEEDBACK_GITHUB_TOKEN" "$FEEDBACK_GITHUB_TOKEN"
+        return 0
+    fi
+
+    if [ -n "$GITHUB_TOKEN" ]; then
+        export FEEDBACK_GITHUB_TOKEN="$GITHUB_TOKEN"
+        persist_env_var "FEEDBACK_GITHUB_TOKEN" "$FEEDBACK_GITHUB_TOKEN"
+        return 0
+    fi
+
+    if [ ! -t 0 ]; then
+        echo ""
+        echo "Note: FEEDBACK_GITHUB_TOKEN is not configured."
+        echo "  Add FEEDBACK_GITHUB_TOKEN=<your-token> to $INSTALL_ENV_FILE to enable"
+        echo "  the Contribute / Bug Report dialog."
+        echo ""
+        return 0
+    fi
+
+    local feedback_token=""
+    printf "Enter FEEDBACK_GITHUB_TOKEN for issue submission (optional, press Enter to skip): "
+    read -r -s feedback_token
+    echo ""
+
+    if [ -n "$feedback_token" ]; then
+        export FEEDBACK_GITHUB_TOKEN="$feedback_token"
+        persist_env_var "FEEDBACK_GITHUB_TOKEN" "$FEEDBACK_GITHUB_TOKEN"
+        echo "Saved FEEDBACK_GITHUB_TOKEN to $INSTALL_ENV_FILE."
+        echo ""
+    fi
+}
 
 # --- Detect platform ---
 detect_platform() {
@@ -303,39 +427,32 @@ if [ -n "$REMAINING_PID" ]; then
 fi
 # Note: kc-agent on port 8585 is managed via PID file — not force-killed here
 
+INSTALL_ENV_FILE="$INSTALL_DIR/.env"
+CURRENT_ENV_FILE="$(pwd)/.env"
+
 # Load .env file if it exists
-if [ -f "$INSTALL_DIR/.env" ]; then
-    echo "Loading .env file..."
-    while IFS='=' read -r key value; do
-        [[ $key =~ ^#.*$ ]] && continue
-        [[ -z "$key" ]] && continue
-        value="${value%\"}"
-        value="${value#\"}"
-        value="${value%\'}"
-        value="${value#\'}"
-        export "$key=$value"
-    done < "$INSTALL_DIR/.env"
-elif [ -f ".env" ]; then
-    echo "Loading .env file..."
-    while IFS='=' read -r key value; do
-        [[ $key =~ ^#.*$ ]] && continue
-        [[ -z "$key" ]] && continue
-        value="${value%\"}"
-        value="${value#\"}"
-        value="${value%\'}"
-        value="${value#\'}"
-        export "$key=$value"
-    done < ".env"
+load_env_file "$INSTALL_ENV_FILE" || true
+if [ "$CURRENT_ENV_FILE" != "$INSTALL_ENV_FILE" ]; then
+    load_env_file "$CURRENT_ENV_FILE" || true
+fi
+
+if [ -n "$GITHUB_CLIENT_ID" ] && [ -n "$GITHUB_CLIENT_SECRET" ]; then
+    persist_env_var "GITHUB_CLIENT_ID" "$GITHUB_CLIENT_ID"
+    persist_env_var "GITHUB_CLIENT_SECRET" "$GITHUB_CLIENT_SECRET"
+else
+    load_oauth_from_existing_config || true
 fi
 
 # Warn when GitHub OAuth credentials are not configured
 if [ -z "$GITHUB_CLIENT_ID" ] || [ -z "$GITHUB_CLIENT_SECRET" ]; then
     echo ""
-    echo "Note: No GitHub OAuth credentials found in .env."
+    echo "Note: No GitHub OAuth credentials found in .env or existing local config."
     echo "  You can set up GitHub sign-in from the login page (one-click setup)"
-    echo "  or add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to .env manually."
+    echo "  or add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to $INSTALL_ENV_FILE manually."
     echo ""
 fi
+
+prompt_for_feedback_token
 
 # Cleanup on exit — console stops, kc-agent keeps running as a background service
 CONSOLE_PID=""
