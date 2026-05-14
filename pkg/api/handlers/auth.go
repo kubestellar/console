@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/safego"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/kubestellar/console/pkg/safego"
 
 	"golang.org/x/oauth2"
 
@@ -47,6 +47,9 @@ const (
 	githubHTTPTimeout = 10 * time.Second
 	// defaultOAuthCallbackURL is the fallback OAuth callback when no backend URL is configured.
 	defaultOAuthCallbackURL = "http://localhost:8080/auth/github/callback"
+	// localBootstrapAdminUserCount is the maximum number of known users allowed
+	// when auto-promoting the first localhost user to admin.
+	localBootstrapAdminUserCount = 1
 )
 
 // storeOAuthState persists an OAuth CSRF state token in the backing store.
@@ -189,14 +192,14 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 			Scopes:       []string{"user:email"},
 			Endpoint:     oauthEndpoint,
 		},
-		githubAPIBase:  apiBase,
-		jwtSecret:      cfg.JWTSecret,
-		frontendURL:    cfg.FrontendURL,
-		devUserLogin:   cfg.DevUserLogin,
-		devUserEmail:   cfg.DevUserEmail,
-		devUserAvatar:  cfg.DevUserAvatar,
-		githubToken:    cfg.GitHubToken,
-		devMode:        cfg.DevMode,
+		githubAPIBase:    apiBase,
+		jwtSecret:        cfg.JWTSecret,
+		frontendURL:      cfg.FrontendURL,
+		devUserLogin:     cfg.DevUserLogin,
+		devUserEmail:     cfg.DevUserEmail,
+		devUserAvatar:    cfg.DevUserAvatar,
+		githubToken:      cfg.GitHubToken,
+		devMode:          cfg.DevMode,
 		skipOnboarding:   cfg.SkipOnboarding,
 		cleanupCtx:       cleanupCtx,
 		cleanupCancel:    cleanupCancel,
@@ -228,6 +231,36 @@ func (h *AuthHandler) Stop() {
 	if h.cleanupCancel != nil {
 		h.cleanupCancel()
 	}
+}
+
+// maybePromoteLocalBootstrapAdmin grants admin to the first localhost OAuth
+// user so fresh self-hosted installs have an operator who can manage settings.
+func (h *AuthHandler) maybePromoteLocalBootstrapAdmin(ctx context.Context, user *models.User) {
+	if h.store == nil || user == nil || !isLocalhostURL(h.frontendURL) {
+		return
+	}
+	if user.Role == models.UserRoleAdmin {
+		return
+	}
+
+	admins, editors, viewers, err := h.store.CountUsersByRole(ctx)
+	if err != nil {
+		slog.Warn("[Auth] failed to count users for localhost admin bootstrap", "user", user.GitHubLogin, "error", err)
+		return
+	}
+	if admins > 0 {
+		return
+	}
+	if admins+editors+viewers != localBootstrapAdminUserCount {
+		return
+	}
+	if err := h.store.UpdateUserRole(ctx, user.ID, string(models.UserRoleAdmin)); err != nil {
+		slog.Warn("[Auth] failed to promote localhost bootstrap admin", "user", user.GitHubLogin, "error", err)
+		return
+	}
+
+	user.Role = models.UserRoleAdmin
+	slog.Info("[Auth] promoted localhost bootstrap user to admin", "user", user.GitHubLogin)
 }
 
 // runOAuthStateCleanup ticks every oauthStateCleanupInterval and removes
@@ -617,6 +650,8 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 			return h.oauthErrorRedirect(c, "db_error", "")
 		}
 	}
+
+	h.maybePromoteLocalBootstrapAdmin(c.UserContext(), user)
 
 	// Update last login. Failures here are non-fatal — login should succeed
 	// even if the last-login timestamp can't be persisted.

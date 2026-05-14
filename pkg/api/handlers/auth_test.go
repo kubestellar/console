@@ -570,6 +570,10 @@ func TestGitHubCallback_RecoversFromValidCookieOnStateFailure(t *testing.T) {
 // instead of the mock lets us verify the end-to-end OAuth state round-trip
 // without wiring up testify expectations for every internal call.
 func newRealStoreAuthHandler(t *testing.T) (*AuthHandler, store.Store) {
+	return newRealStoreAuthHandlerWithFrontendURL(t, "http://frontend")
+}
+
+func newRealStoreAuthHandlerWithFrontendURL(t *testing.T, frontendURL string) (*AuthHandler, store.Store) {
 	t.Helper()
 	dbPath := filepath.Join(t.TempDir(), "auth-test.db")
 	s, err := store.NewSQLiteStore(dbPath)
@@ -580,10 +584,12 @@ func newRealStoreAuthHandler(t *testing.T) (*AuthHandler, store.Store) {
 		GitHubClientID: "client-id",
 		GitHubSecret:   "secret",
 		JWTSecret:      "test-secret",
-		FrontendURL:    "http://frontend",
+		FrontendURL:    frontendURL,
 		BackendURL:     "http://backend",
 	}
-	return NewAuthHandler(s, cfg), s
+	h := NewAuthHandler(s, cfg)
+	t.Cleanup(h.Stop)
+	return h, s
 }
 
 // TestOAuthStatePersistence_RoundTrip verifies that a state stored via the
@@ -645,6 +651,64 @@ func TestOAuthStatePersistence_SurvivesRestart(t *testing.T) {
 func TestOAuthStatePersistence_InvalidStateRejected(t *testing.T) {
 	h, _ := newRealStoreAuthHandler(t)
 	assert.False(t, h.validateAndConsumeOAuthState(context.Background(), "never-issued"))
+}
+
+func TestMaybePromoteLocalBootstrapAdmin_PromotesFirstLocalhostUser(t *testing.T) {
+	h, s := newRealStoreAuthHandlerWithFrontendURL(t, "http://localhost:8080")
+	user := &models.User{
+		GitHubID:    "123",
+		GitHubLogin: "alice",
+		Role:        models.UserRoleViewer,
+	}
+	require.NoError(t, s.CreateUser(context.Background(), user))
+
+	h.maybePromoteLocalBootstrapAdmin(context.Background(), user)
+
+	got, err := s.GetUser(context.Background(), user.ID)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, models.UserRoleAdmin, got.Role)
+	assert.Equal(t, models.UserRoleAdmin, user.Role)
+}
+
+func TestMaybePromoteLocalBootstrapAdmin_SkipsRemoteInstall(t *testing.T) {
+	h, s := newRealStoreAuthHandlerWithFrontendURL(t, "https://console.example.com")
+	user := &models.User{
+		GitHubID:    "123",
+		GitHubLogin: "alice",
+		Role:        models.UserRoleViewer,
+	}
+	require.NoError(t, s.CreateUser(context.Background(), user))
+
+	h.maybePromoteLocalBootstrapAdmin(context.Background(), user)
+
+	got, err := s.GetUser(context.Background(), user.ID)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, models.UserRoleViewer, got.Role)
+}
+
+func TestMaybePromoteLocalBootstrapAdmin_SkipsWhenMultipleUsersExist(t *testing.T) {
+	h, s := newRealStoreAuthHandlerWithFrontendURL(t, "http://localhost:8080")
+	firstUser := &models.User{
+		GitHubID:    "123",
+		GitHubLogin: "alice",
+		Role:        models.UserRoleViewer,
+	}
+	secondUser := &models.User{
+		GitHubID:    "456",
+		GitHubLogin: "bob",
+		Role:        models.UserRoleViewer,
+	}
+	require.NoError(t, s.CreateUser(context.Background(), firstUser))
+	require.NoError(t, s.CreateUser(context.Background(), secondUser))
+
+	h.maybePromoteLocalBootstrapAdmin(context.Background(), secondUser)
+
+	got, err := s.GetUser(context.Background(), secondUser.ID)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, models.UserRoleViewer, got.Role)
 }
 
 // TestSanitizeOAuthErrorDescription covers #6583: externally-supplied OAuth
