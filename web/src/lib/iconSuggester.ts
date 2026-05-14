@@ -88,19 +88,26 @@ const KEYWORD_MAP: Record<string, string> = {
  * Returns a Promise that resolves to a Lucide icon name.
  * Times out after 5 seconds.
  */
-function askAgentForIcon(name: string): Promise<string | null> {
+async function askAgentForIcon(name: string): Promise<string | null> {
   // In demo mode, skip WebSocket connection to avoid console errors
   if (getDemoMode()) {
     return Promise.resolve(null)
   }
 
-  return new Promise(async (resolve) => {
+  let wsUrl: string
+  try {
+    wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
+  } catch {
+    return null
+  }
+
+  return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       resolve(null)
     }, ICON_SUGGESTION_TIMEOUT_MS)
 
     try {
-      const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
+      const ws = new WebSocket(wsUrl)
       let response = ''
       const requestId = `icon-suggest-${Date.now()}`
 
