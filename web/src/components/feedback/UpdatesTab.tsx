@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   X, Bug, Loader2, ExternalLink, Bell, Check, Clock,
   GitPullRequest, GitMerge, Eye, RefreshCw, MessageSquare,
@@ -27,8 +27,45 @@ import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
 
 const REOPEN_COMMENT_ROWS = 3
 const REOPEN_COMMENT_MAX_LENGTH = 1000
+const VERIFIED_FIX_STORAGE_KEY_PREFIX = 'ks-console:verified-fix'
 
 type RequestCardState = 'awaiting_verification' | FeatureRequest['status']
+
+function getVerifiedFixStorageKey(request: FeatureRequest): string {
+  const issueId = request.github_issue_number ?? request.id
+  const fixId = request.pr_number ?? 'no-pr'
+
+  return `${VERIFIED_FIX_STORAGE_KEY_PREFIX}:${issueId}:${fixId}`
+}
+
+function readVerifiedFixState(storageKey: string): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  try {
+    return window.localStorage.getItem(storageKey) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function writeVerifiedFixState(storageKey: string, isVerified: boolean): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    if (isVerified) {
+      window.localStorage.setItem(storageKey, 'true')
+      return
+    }
+
+    window.localStorage.removeItem(storageKey)
+  } catch {
+    // Ignore storage failures so the verification flow still works.
+  }
+}
 
 interface UpdatesTabProps {
   requests: FeatureRequest[]
@@ -108,18 +145,20 @@ export function UpdatesTab({
     }
   }
 
-  const handleCloseRequest = async (requestId: string, input?: CloseRequestInput) => {
+  const handleCloseRequest = async (requestId: string, input?: CloseRequestInput): Promise<boolean> => {
     try {
       setActionLoading(requestId)
       setActionError(null)
       await onCloseRequest(requestId, input)
       setConfirmClose(null)
+      return true
     } catch {
       const errorMsg = input?.user_verified
         ? t('feedback.verifyFixFailed')
         : t('feedback.closeRequestFailed')
       setActionError(errorMsg)
       showToast(errorMsg, 'error')
+      return false
     } finally {
       setActionLoading(null)
     }
@@ -286,7 +325,7 @@ interface RequestItemProps {
   getUnreadCountForRequest: (id: string) => number
   markRequestNotificationsAsRead: (id: string) => void
   onRequestUpdate: (id: string) => Promise<void>
-  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<void>
+  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<boolean>
   onReopenRequest: (id: string, input: ReopenRequestInput) => Promise<void>
   onSetConfirmClose: (id: string | null) => void
   onCheckPreview: (prNumber: number) => Promise<void>
@@ -315,16 +354,33 @@ function RequestItem({
   const [reopenComment, setReopenComment] = useState('')
   const isLoading = actionLoading === request.id
   const showConfirm = confirmClose === request.id
+  const verificationStorageKey = getVerifiedFixStorageKey(request)
+  const [isLocallyVerified, setIsLocallyVerified] = useState(() => readVerifiedFixState(verificationStorageKey))
   const isOwnedByUser = request.github_login
     ? request.github_login === currentGitHubLogin
     : request.user_id === currentGitHubLogin
-  const displayState: RequestCardState = request.status === 'fix_complete' && isOwnedByUser && !request.closed_by_user
+  const isVerified = Boolean(request.closed_by_user || isLocallyVerified)
+  const displayState: RequestCardState = request.status === 'fix_complete' && isOwnedByUser && !isVerified
     ? 'awaiting_verification'
     : request.status
   const statusInfo = getStatusInfo(request.status, request.closed_by_user)
   const shouldBlur = !isTriaged(request.status) && !isOwnedByUser
   const requestUnreadCount = getUnreadCountForRequest(request.id)
   const isAwaitingVerification = displayState === 'awaiting_verification'
+
+  useEffect(() => {
+    setIsLocallyVerified(readVerifiedFixState(verificationStorageKey))
+  }, [verificationStorageKey])
+
+  const handleVerify = async () => {
+    const didVerify = await onCloseRequest(request.id, { user_verified: true })
+    if (!didVerify) {
+      return
+    }
+
+    writeVerifiedFixState(verificationStorageKey, true)
+    setIsLocallyVerified(true)
+  }
 
   const handleReopenSubmit = async () => {
     const trimmedComment = reopenComment.trim()
@@ -333,6 +389,8 @@ function RequestItem({
     }
     try {
       await onReopenRequest(request.id, { comment: trimmedComment })
+      writeVerifiedFixState(verificationStorageKey, false)
+      setIsLocallyVerified(false)
       setIsReopenFormVisible(false)
       setReopenComment('')
     } catch {
@@ -414,7 +472,11 @@ function RequestItem({
 
           {/* Merged celebration for fix_complete */}
           {request.status === 'fix_complete' && (
-            <FixCompleteBanner request={request} isAwaitingVerification={isAwaitingVerification} />
+            <FixCompleteBanner
+              request={request}
+              isAwaitingVerification={isAwaitingVerification}
+              isVerified={isVerified}
+            />
           )}
           {isAwaitingVerification && (
             <FixVerificationPrompt
@@ -423,7 +485,7 @@ function RequestItem({
               isLoading={isLoading}
               isReopenFormVisible={isReopenFormVisible}
               reopenComment={reopenComment}
-              onVerify={() => void onCloseRequest(request.id, { user_verified: true })}
+              onVerify={() => void handleVerify()}
               onToggleReopenForm={() => setIsReopenFormVisible(prev => !prev)}
               onReopenCommentChange={setReopenComment}
               onReopenSubmit={() => void handleReopenSubmit()}
@@ -593,9 +655,11 @@ function TriagedRequestContent({
 function FixCompleteBanner({
   request,
   isAwaitingVerification,
+  isVerified,
 }: {
   request: FeatureRequest
   isAwaitingVerification: boolean
+  isVerified: boolean
 }) {
   const { t } = useTranslation()
 
@@ -606,7 +670,7 @@ function FixCompleteBanner({
           <Check className="w-4 h-4 text-green-400" />
           <span className="text-xs font-semibold text-green-400">{t('feedback.fixMerged')}</span>
         </div>
-        {request.closed_by_user && (
+        {isVerified && (
           <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-green-500/20 text-green-300">
             {t('feedback.verifiedByYou')}
           </span>
@@ -618,7 +682,7 @@ function FixCompleteBanner({
         )}
       </div>
       <p className="text-xs text-green-300/80 mb-2">
-        {request.closed_by_user
+        {isVerified
           ? t('feedback.verificationRecorded')
           : t('feedback.fixMergedDescription', {
             requestType: request.request_type === 'bug'
@@ -843,7 +907,7 @@ function RequestActions({
   isLoading: boolean
   showConfirm: boolean
   onRequestUpdate: (id: string) => Promise<void>
-  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<void>
+  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<boolean>
   onSetConfirmClose: (id: string | null) => void
   onShowLoginPrompt: () => void
 }) {

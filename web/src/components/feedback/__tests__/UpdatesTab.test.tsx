@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 import type { ComponentProps } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { UpdatesTab } from '../UpdatesTab'
@@ -39,7 +39,7 @@ function renderUpdatesTab(overrides?: Partial<ComponentProps<typeof UpdatesTab>>
   const onCloseRequest = vi.fn(() => Promise.resolve({}))
   const onReopenRequest = vi.fn(() => Promise.resolve({}))
 
-  render(
+  const rendered = render(
     <UpdatesTab
       requests={[baseRequest]}
       requestsLoading={false}
@@ -65,10 +65,15 @@ function renderUpdatesTab(overrides?: Partial<ComponentProps<typeof UpdatesTab>>
     />
   )
 
-  return { onCloseRequest, onReopenRequest }
+  return { onCloseRequest, onReopenRequest, ...rendered }
 }
 
 describe('UpdatesTab verification flow', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
   it('renders the awaiting verification prompt for owned fix_complete requests', async () => {
     const { onCloseRequest } = renderUpdatesTab()
 
@@ -96,6 +101,26 @@ describe('UpdatesTab verification flow', () => {
     })
   })
 
+  it('restores the verified state from localStorage after remounting', async () => {
+    const firstRender = renderUpdatesTab()
+
+    fireEvent.click(screen.getByText('feedback.verifyFix'))
+
+    await waitFor(() => {
+      expect(firstRender.onCloseRequest).toHaveBeenCalledWith('request-1', { user_verified: true })
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('awaiting-verification-request-1')).toBeNull()
+    })
+
+    firstRender.unmount()
+    renderUpdatesTab()
+
+    expect(screen.queryByTestId('awaiting-verification-request-1')).toBeNull()
+    expect(screen.getByText('feedback.verifiedByYou')).toBeTruthy()
+  })
+
   it('hides verification controls when the user already verified the fix', () => {
     renderUpdatesTab({
       requests: [{ ...baseRequest, closed_by_user: true }],
@@ -103,5 +128,28 @@ describe('UpdatesTab verification flow', () => {
 
     expect(screen.queryByTestId('awaiting-verification-request-1')).toBeNull()
     expect(screen.getByText('feedback.verifiedByYou')).toBeTruthy()
+  })
+
+  it('degrades gracefully when localStorage is unavailable', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+
+    const { onCloseRequest } = renderUpdatesTab()
+
+    expect(screen.getByTestId('awaiting-verification-request-1')).toBeTruthy()
+
+    fireEvent.click(screen.getByText('feedback.verifyFix'))
+
+    await waitFor(() => {
+      expect(onCloseRequest).toHaveBeenCalledWith('request-1', { user_verified: true })
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('awaiting-verification-request-1')).toBeNull()
+    })
   })
 })
