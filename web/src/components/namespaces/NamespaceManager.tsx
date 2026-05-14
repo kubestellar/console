@@ -233,8 +233,10 @@ export function NamespaceManager() {
           agentFailed = true
           if (err instanceof DOMException && err.name === 'AbortError') {
             console.warn(`[NamespaceManager] ${t('namespaces.errors.requestTimedOut')}`, cluster)
+            showToast(t('namespaces.errors.requestTimedOut'), 'error')
           } else if (err instanceof TypeError) {
             console.warn(`[NamespaceManager] ${t('namespaces.errors.agentNotReachable')}`, cluster)
+            showToast(t('namespaces.errors.agentNotReachable'), 'error')
           }
         }
 
@@ -360,7 +362,7 @@ export function NamespaceManager() {
     setLoading(false)
     setLoadingClusters(new Set())
     setLastUpdated(new Date())
-  }, [allClusterNames, clusters, t])
+  }, [allClusterNames, clusters, showToast, t])
 
   const handleRefreshNamespaces = () => fetchNamespaces(true)
   const { showIndicator, triggerRefresh } = useRefreshIndicator(handleRefreshNamespaces)
