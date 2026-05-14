@@ -95,6 +95,15 @@ func TestRequiredMissionTools_NotEmpty(t *testing.T) {
 	}
 }
 
+func TestSystemPrompts_ContainMissionSafetyConstraints(t *testing.T) {
+	assert.Contains(t, DefaultSystemPrompt, "NEVER LAUNCH DESKTOP OR GUI APPLICATIONS:")
+	assert.Contains(t, DefaultSystemPrompt, "NON-INTERACTIVE DOES NOT MEAN SKIP THE TASK:")
+	assert.Contains(t, DefaultSystemPrompt, "USER CONSTRAINTS ARE MANDATORY:")
+
+	assert.Contains(t, ClaudeCodeSystemPrompt, "NEVER LAUNCH DESKTOP OR GUI APPLICATIONS:")
+	assert.Contains(t, ClaudeCodeSystemPrompt, "TASK COMPLETION INTEGRITY:")
+}
+
 func TestOptionalMissionTools_NotEmpty(t *testing.T) {
 	if len(OptionalMissionTools) == 0 {
 		t.Error("OptionalMissionTools must not be empty")
