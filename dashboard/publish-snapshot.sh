@@ -22,19 +22,28 @@ DOCS_REPO_SLUG="kubestellar/docs"
 GH_APP_TOKEN_FILE="/var/run/hive-metrics/gh-app-token.cache"
 if [ -f "$GH_APP_TOKEN_FILE" ]; then
   GH_APP_TOKEN=$(cat "$GH_APP_TOKEN_FILE")
-  DOCS_REMOTE="https://x-access-token:${GH_APP_TOKEN}@github.com/${DOCS_REPO_SLUG}.git"
   export GH_TOKEN="$GH_APP_TOKEN"
 else
   echo "ERROR: no GitHub App token at $GH_APP_TOKEN_FILE"
   exit 1
 fi
 
+DOCS_REMOTE="https://github.com/${DOCS_REPO_SLUG}.git"
+
+# Configure git credential helper to supply token without embedding in URL
+_setup_git_auth() {
+  git -C "$1" config credential.helper \
+    '!f() { echo "username=x-access-token"; echo "password='"$GH_APP_TOKEN"'"; }; f'
+}
+
 # Ensure docs repo clone exists
 if [ ! -d "$DOCS_REPO/.git" ]; then
-  git clone --depth 1 --single-branch -b main "$DOCS_REMOTE" "$DOCS_REPO"
+  git -c "credential.helper=!f() { echo username=x-access-token; echo password=${GH_APP_TOKEN}; }; f" \
+    clone --depth 1 --single-branch -b main "$DOCS_REMOTE" "$DOCS_REPO"
 fi
 
 cd "$DOCS_REPO"
+_setup_git_auth "$DOCS_REPO"
 git remote set-url origin "$DOCS_REMOTE"
 git fetch origin main
 git checkout main 2>/dev/null || git checkout -b main origin/main

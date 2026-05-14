@@ -57,10 +57,14 @@ log() { hive_log "$*"; }
 
 # ─── Write launcher script (avoids quoting hell with eval) ─────────────────
 
-LAUNCHER="/tmp/.supervisor-launch-${SESSION}.sh"
+# Use private temp directory to prevent symlink/TOCTOU attacks
+SUPERVISOR_TMPDIR=$(mktemp -d -t "supervisor-${SESSION}-XXXXXX")
+chmod 700 "$SUPERVISOR_TMPDIR"
+trap 'rm -rf "$SUPERVISOR_TMPDIR"' EXIT
+LAUNCHER="${SUPERVISOR_TMPDIR}/launch.sh"
 
 write_launcher() {
-  local prompt_file="/tmp/.supervisor-prompt-${SESSION}.txt"
+  local prompt_file="${SUPERVISOR_TMPDIR}/prompt.txt"
   printf '%s' "$AGENT_LOOP_PROMPT" > "$prompt_file"
 
   case "$CLI" in
