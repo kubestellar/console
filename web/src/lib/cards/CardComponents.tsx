@@ -299,12 +299,21 @@ export function CardClusterFilter({
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
       setDropdownPos({
-        top: rect.bottom + 4,
-        left: Math.max(8, rect.right - 192) })
+        top: rect.bottom + DROPDOWN_GAP,
+        left: Math.max(DROPDOWN_GAP * 2, rect.right - DROPDOWN_WIDTH) })
     } else {
       setDropdownPos(null)
     }
   }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleScroll = () => setIsOpen(false)
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true })
+
+    return () => window.removeEventListener('scroll', handleScroll, true)
+  }, [isOpen, setIsOpen])
 
   if (availableClusters.length < minClusters) return null
 

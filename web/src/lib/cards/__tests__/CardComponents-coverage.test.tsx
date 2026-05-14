@@ -264,6 +264,15 @@ describe('CardClusterFilter', () => {
     const btn = screen.getByTitle('Filter by cluster')
     expect(btn.className).toContain('bg-purple-500/20')
   })
+
+  it('closes the dropdown when the page scrolls', () => {
+    const setIsOpen = vi.fn()
+    render(<CardClusterFilter {...defaultProps} isOpen={true} setIsOpen={setIsOpen} />)
+
+    fireEvent.scroll(window)
+
+    expect(setIsOpen).toHaveBeenCalledWith(false)
+  })
 })
 
 // ---------------------------------------------------------------------------
