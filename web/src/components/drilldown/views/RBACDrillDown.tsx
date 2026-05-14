@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
-import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
+import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Loader2, Copy, Check, Server, Shield, ShieldCheck, User, RefreshCw } from 'lucide-react'
@@ -55,6 +54,7 @@ export function RBACDrillDown({ data }: Props) {
   const subjectType = ((data.type as string) || 'User') as DrillDownKind
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToCluster, drillToNamespace } = useDrillDownActions()
+  const { runKubectl } = useDrillDownWebSocket(cluster)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [clusterBindings, setClusterBindings] = useState<RoleBinding[]>([])
@@ -67,46 +67,6 @@ export function RBACDrillDown({ data }: Props) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const runKubectl = useCallback(async (args: string[]): Promise<string> => {
-    let wsUrl: string
-    try {
-      wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
-    } catch {
-      return ''
-    }
-    return new Promise((resolve) => {
-      const ws = new WebSocket(wsUrl)
-      const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
-      let output = ''
-
-      const timeout = setTimeout(() => {
-        ws.close()
-        resolve(output || '')
-      }, KUBECTL_REQUEST_TIMEOUT_MS)
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args }
-        }))
-      }
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          output = msg.payload.output
-        }
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output)
-      }
-      ws.onerror = () => {
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output || '')
-      }
-    })
-  }, [cluster])
 
   /**
    * Returns true if the given binding matches the drilled-into target.

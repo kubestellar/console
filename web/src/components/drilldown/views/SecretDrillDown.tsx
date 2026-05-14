@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
-import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
+import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, ChevronDown, ChevronUp, Loader2, Copy, Check, Layers, Server, Eye, EyeOff, Lock } from 'lucide-react'
@@ -36,6 +35,7 @@ export function SecretDrillDown({ data }: Props) {
   const secretName = data.secret as string
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster } = useDrillDownActions()
+  const { runKubectl } = useDrillDownWebSocket(cluster)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [secretData, setSecretData] = useState<Record<string, string> | null>(null)
@@ -54,47 +54,6 @@ export function SecretDrillDown({ data }: Props) {
   // user action required to see secrets.
   const [yamlRevealed, setYamlRevealed] = useState(false)
 
-  // Helper to run kubectl commands
-  const runKubectl = async (args: string[]): Promise<string> => {
-    let wsUrl: string
-    try {
-      wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
-    } catch {
-      return ''
-    }
-    return new Promise((resolve) => {
-      const ws = new WebSocket(wsUrl)
-      const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
-      let output = ''
-
-      const timeout = setTimeout(() => {
-        ws.close()
-        resolve(output || '')
-      }, 10000)
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args }
-        }))
-      }
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          output = msg.payload.output
-        }
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output)
-      }
-      ws.onerror = () => {
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output || '')
-      }
-    })
-  }
 
   // Fetch Secret data
   const fetchData = async () => {

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
-import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
+import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { FileText, Code, Info, Tag, Zap, Loader2, Copy, Check, Layers, Server, Box } from 'lucide-react'
@@ -26,6 +25,7 @@ export function ReplicaSetDrillDown({ data }: Props) {
   const replicasetName = data.replicaset as string
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod, drillToDeployment } = useDrillDownActions()
+  const { runKubectl } = useDrillDownWebSocket(cluster)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [replicas, setReplicas] = useState<number>(0)
@@ -41,47 +41,6 @@ export function ReplicaSetDrillDown({ data }: Props) {
   const [yamlLoading, setYamlLoading] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
 
-  // Helper to run kubectl commands
-  const runKubectl = async (args: string[]): Promise<string> => {
-    let wsUrl = LOCAL_AGENT_WS_URL
-    try {
-      wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
-    } catch (error) {
-      console.error('Failed to get WS auth token:', error)
-    }
-    return new Promise((resolve) => {
-      const ws = new WebSocket(wsUrl)
-      const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
-      let output = ''
-
-      const timeout = setTimeout(() => {
-        ws.close()
-        resolve(output || '')
-      }, 10000)
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args }
-        }))
-      }
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          output = msg.payload.output
-        }
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output)
-      }
-      ws.onerror = () => {
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output || '')
-      }
-    })
-  }
 
   // Fetch ReplicaSet data
   const fetchData = async () => {

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
-import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
-import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
+import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
 import { ClusterBadge } from '../../ui/ClusterBadge'
 import { Globe, Server, Info, Tag, Loader2, Copy, Check, ExternalLink, Activity } from 'lucide-react'
@@ -31,6 +30,7 @@ export default function ServiceDrillDown({ data }: Props) {
   const serviceName = data.service as string
   const { isConnected: agentConnected } = useLocalAgent()
   const { drillToNamespace, drillToCluster, drillToPod } = useDrillDownActions()
+  const { runKubectl } = useDrillDownWebSocket(cluster)
 
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [serviceType, setServiceType] = useState<string>((data.type as string) || 'ClusterIP')
@@ -50,45 +50,6 @@ export default function ServiceDrillDown({ data }: Props) {
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Helper to run kubectl commands
-  const runKubectl = async (args: string[]): Promise<string> => {
-    let wsUrl = LOCAL_AGENT_WS_URL
-    try {
-      wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
-    } catch (error) {
-      console.error('Failed to get WS auth token:', error)
-    }
-    return new Promise((resolve) => {
-      const ws = new WebSocket(wsUrl)
-      const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
-      let output = ''
-      const timeout = setTimeout(() => {
-        ws.close()
-        resolve(output || 'Command timed out')
-      }, KUBECTL_TIMEOUT_MS)
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, namespace, args },
-        }))
-      }
-      ws.onmessage = (evt) => {
-        try {
-          const msg = JSON.parse(evt.data)
-          if (msg.id === requestId) {
-            clearTimeout(timeout)
-            output = msg.payload?.output || msg.payload?.error || ''
-            ws.close()
-            resolve(output)
-          }
-        } catch { /* ignore */ }
-      }
-      ws.onerror = () => { clearTimeout(timeout); resolve('Agent connection error') }
-      ws.onclose = () => { clearTimeout(timeout); resolve(output || 'Connection closed') }
-    })
-  }
 
   // Fetch service details on mount
   const fetchedRef = useRef(false)

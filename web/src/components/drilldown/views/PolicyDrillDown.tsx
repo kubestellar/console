@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useDrillDownWebSocket } from '../../../hooks/useDrillDownWebSocket'
 import { useDrillDownActions, useDrillDown } from '../../../hooks/useDrillDown'
 import { useMissions } from '../../../hooks/useMissions'
 import { ClusterBadge } from '../../ui/ClusterBadge'
@@ -11,8 +12,6 @@ import {
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { StatusBadge } from '../../ui/StatusBadge'
-import { LOCAL_AGENT_WS_URL } from '../../../lib/constants'
-import { appendWsAuthToken } from '../../../lib/utils/wsAuth'
 import { ConsoleAIIcon } from '../../ui/ConsoleAIIcon'
 import {
   AIActionBar,
@@ -123,48 +122,8 @@ export function PolicyDrillDown({ data }: Props) {
       violationCount,
     },
   })
+  const { runKubectl } = useDrillDownWebSocket(cluster)
 
-  // Helper to run kubectl commands
-  const runKubectl = async (args: string[]): Promise<string> => {
-    let wsUrl: string
-    try {
-      wsUrl = await appendWsAuthToken(LOCAL_AGENT_WS_URL)
-    } catch {
-      return ''
-    }
-    return new Promise((resolve) => {
-      const ws = new WebSocket(wsUrl)
-      const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
-      let output = ''
-
-      const timeout = setTimeout(() => {
-        ws.close()
-        resolve(output || '')
-      }, 15000)
-
-      ws.onopen = () => {
-        ws.send(JSON.stringify({
-          id: requestId,
-          type: 'kubectl',
-          payload: { context: cluster, args }
-        }))
-      }
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data)
-        if (msg.id === requestId && msg.payload?.output) {
-          output = msg.payload.output
-        }
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output)
-      }
-      ws.onerror = () => {
-        clearTimeout(timeout)
-        ws.close()
-        resolve(output || '')
-      }
-    })
-  }
 
   // Fetch violations
   const fetchViolations = async () => {
