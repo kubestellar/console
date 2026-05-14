@@ -1384,8 +1384,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
             {/* ================================================================ */}
             {!selectedMission && unstructuredContent && (() => {
               // Derive Kubara chart name from selectedPath (e.g. "kubara/cert-manager/Chart.yaml" → "cert-manager")
-              const kubaraChartName = selectedPath?.startsWith('kubara/')
-                ? selectedPath.split('/')[1]
+              const parts = selectedPath?.split('/') ?? []
+              const kubaraChartName = selectedPath?.startsWith('kubara/') && parts[1]
+                ? parts[1]
                 : undefined
               return (
                 <UnstructuredFilePreview
