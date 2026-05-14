@@ -156,9 +156,6 @@ func getString(m map[string]interface{}, key string) string {
 	return ""
 }
 
-// gitOpsTempDirPrefix is the required prefix for all GitOps temp directories
-const gitOpsTempDirPrefix = "/tmp/gitops-"
-
 // maxK8sNameLen is the maximum allowed length for Kubernetes resource names (RFC 1123)
 const maxK8sNameLen = 253
 
@@ -313,107 +310,6 @@ func validatePath(path string) error {
 		return fmt.Errorf("path traversal (..) is not allowed")
 	}
 	return nil
-}
-
-
-
-func parseDiffOutput(output, namespace string) []DriftedResource {
-	resources := make([]DriftedResource, 0, 8)
-	resourceMap := make(map[string]*DriftedResource) // key: kind/name
-
-	lines := strings.Split(output, "\n")
-	var currentKind, currentName string
-
-	for _, line := range lines {
-		// Strip diff prefix (+/-) for parsing YAML content
-		cleanLine := line
-		if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
-			cleanLine = strings.TrimPrefix(line, "+")
-		} else if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
-			cleanLine = strings.TrimPrefix(line, "-")
-		}
-		cleanLine = strings.TrimSpace(cleanLine)
-
-		// Parse kind from YAML
-		if strings.HasPrefix(cleanLine, "kind:") {
-			parts := strings.SplitN(cleanLine, ":", 2)
-			if len(parts) >= 2 {
-				currentKind = strings.TrimSpace(parts[1])
-			}
-		}
-
-		// Parse name from YAML metadata
-		if strings.HasPrefix(cleanLine, "name:") && currentKind != "" {
-			parts := strings.SplitN(cleanLine, ":", 2)
-			if len(parts) >= 2 {
-				currentName = strings.TrimSpace(parts[1])
-				// Create or get resource entry
-				key := currentKind + "/" + currentName
-				if _, exists := resourceMap[key]; !exists {
-					resourceMap[key] = &DriftedResource{
-						Kind:      currentKind,
-						Name:      currentName,
-						Namespace: namespace,
-					}
-				}
-			}
-		}
-
-		// Capture meaningful changes
-		if currentKind != "" && currentName != "" {
-			key := currentKind + "/" + currentName
-			if r, exists := resourceMap[key]; exists {
-				if strings.HasPrefix(line, "-") && !strings.HasPrefix(line, "---") {
-					lastChange := strings.TrimSpace(strings.TrimPrefix(line, "-"))
-					if r.ClusterValue == "" && lastChange != "" {
-						r.ClusterValue = truncateValue(lastChange)
-					}
-				}
-				if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
-					change := strings.TrimSpace(strings.TrimPrefix(line, "+"))
-					if r.GitValue == "" && change != "" {
-						r.GitValue = truncateValue(change)
-					}
-				}
-			}
-		}
-
-		// Reset on new diff file
-		if strings.HasPrefix(line, "diff ") {
-			currentKind = ""
-			currentName = ""
-		}
-	}
-
-	// Convert map to slice
-	for _, r := range resourceMap {
-		if r.Name != "" {
-			resources = append(resources, *r)
-		}
-	}
-
-	return resources
-}
-
-func truncateValue(s string) string {
-	if len(s) > 60 {
-		return s[:57] + "..."
-	}
-	return s
-}
-
-func parseApplyOutput(output string) []string {
-	lines := strings.Split(output, "\n")
-	applied := make([]string, 0, len(lines))
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" && (strings.Contains(line, "created") ||
-			strings.Contains(line, "configured") ||
-			strings.Contains(line, "unchanged")) {
-			applied = append(applied, line)
-		}
-	}
-	return applied
 }
 
 // getDemoDrifts returns demo drift data for testing
