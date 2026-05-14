@@ -12,6 +12,7 @@ import { ensureCardInDashboard } from '../../lib/dashboards/migrateStorageKey'
 import { RotatingTip } from '../ui/RotatingTip'
 import { ROUTES } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
+import { isClusterHealthy } from '../clusters/utils'
 
 const COMPUTE_CARDS_KEY = 'kubestellar-compute-cards'
 
@@ -77,6 +78,7 @@ export function Compute() {
   const currentStats = {
     totalCPUs: reachableClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
     totalMemoryGB: reachableClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
+    healthyNodes: reachableClusters.reduce((sum, c) => sum + (isClusterHealthy(c) ? (c.nodeCount || 0) : 0), 0),
     totalNodes: reachableClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
     totalPods: reachableClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
     totalGPUs: gpuNodes
@@ -147,7 +149,14 @@ export function Compute() {
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'nodes':
-        return { value: formatStatValue(stats?.totalNodes || 0, hasDataToShow), sublabel: 'total nodes', onClick: drillToResources, isClickable: hasDataToShow }
+        return {
+          value: formatStatValue(stats?.totalNodes || 0, hasDataToShow),
+          progressValue: stats?.healthyNodes || 0,
+          max: stats?.totalNodes || 0,
+          sublabel: 'total nodes',
+          onClick: drillToResources,
+          isClickable: hasDataToShow,
+        }
       case 'cpus':
         return { value: formatStatValue(stats?.totalCPUs || 0, hasDataToShow), sublabel: 'cores allocatable', onClick: drillToResources, isClickable: hasDataToShow }
       case 'memory':

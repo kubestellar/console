@@ -17,7 +17,7 @@ import { useCachedPVCs } from './useCachedData'
 import { useAlerts, useAlertRules } from './useAlerts'
 import { StatBlockValue } from '../components/ui/StatsOverview'
 import { useDrillDownActions } from './useDrillDown'
-import { isClusterUnreachable, summarizeClusterHealth } from '../components/clusters/utils'
+import { isClusterHealthy, isClusterUnreachable, summarizeClusterHealth } from '../components/clusters/utils'
 import { MS_PER_HOUR } from '../lib/constants/time'
 
 // Cost estimation constants (per-month, rough cloud averages)
@@ -70,7 +70,7 @@ export function useUniversalStats() {
   const safeClusters = deduplicatedClusters || []
   const {
     totalClusters, healthyClusters, unhealthyClusters, unreachableClusters,
-    totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
+    healthyNodes, totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
   } = useMemo(() => {
     const summary = summarizeClusterHealth(safeClusters)
 
@@ -79,6 +79,7 @@ export function useUniversalStats() {
       healthyClusters: summary.healthy,
       unhealthyClusters: summary.unhealthy,
       unreachableClusters: summary.unreachable,
+      healthyNodes: safeClusters.reduce((sum, c) => sum + (!isClusterUnreachable(c) && isClusterHealthy(c) ? (c.nodeCount || 0) : 0), 0),
       totalNodes: safeClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
       totalPods: safeClusters.reduce((sum, c) => sum + (c.podCount || 0), 0),
       totalCPUs: safeClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
@@ -200,7 +201,7 @@ export function useUniversalStats() {
       case 'unreachable':
         return { value: unreachableClusters, sublabel: 'offline', isClickable: false }
       case 'nodes':
-        return { value: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+        return { value: totalNodes, progressValue: healthyNodes, max: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
       case 'cpus':
         return { value: totalCPUs, sublabel: 'total CPUs', isClickable: false }
       case 'memory':
@@ -462,7 +463,7 @@ export function useUniversalStats() {
     }
   }, [
     totalClusters, healthyClusters, unhealthyClusters, unreachableClusters,
-    totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
+    healthyNodes, totalNodes, totalPods, totalCPUs, totalMemoryGB, totalStorageGB, uniqueNamespaces,
     podIssuesList, pendingPods, highRestartPods,
     allDeployments, allDeploymentIssues,
     allPVCs, boundPVCs, storageClassCount,

@@ -55,7 +55,7 @@ vi.mock('./StatsConfig', () => ({
 
 import { StatsOverview } from './StatsOverview'
 
-function renderStatsOverview(block: StatBlockConfig, statValue: { value: string | number; sublabel?: string; max?: number }) {
+function renderStatsOverview(block: StatBlockConfig, statValue: { value: string | number; sublabel?: string; progressValue?: number; max?: number }) {
   mockBlocks = [block]
   return render(
     <StatsOverview
@@ -117,5 +117,16 @@ describe('StatsOverview', () => {
     expect(screen.queryByTestId('stat-block-nodes-progress')).toBeNull()
     expect(screen.queryByTestId('stat-block-nodes-scale')).toBeNull()
     expect(screen.getByTestId('stat-block-nodes-count').textContent).toBe('12')
+  })
+
+  it('uses progressValue for node availability while keeping the total node count visible', () => {
+    renderStatsOverview(
+      { id: 'nodes', name: 'Nodes', icon: 'Box', visible: true, color: 'cyan', displayMode: 'mini-bar' },
+      { value: 3, progressValue: 1, max: 3, sublabel: 'total nodes' },
+    )
+
+    expect(screen.getByTestId('stat-block-nodes-count').textContent).toBe('3')
+    expect(screen.getByTestId('stat-block-nodes-scale').textContent).toBe('33%')
+    expect(screen.getByText('of 3')).toBeTruthy()
   })
 })

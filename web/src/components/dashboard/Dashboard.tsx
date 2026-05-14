@@ -77,6 +77,7 @@ import { useModalState } from '../../lib/modals'
 import { setAutoRefreshPaused } from '../../lib/cache'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { STORAGE_KEY_MAIN_DASHBOARD_CARDS } from '../../lib/constants/storage'
+import { isClusterHealthy } from '../clusters/utils'
 
 // Lazy-load modal components — only shown on explicit user action,
 // so deferring their chunk until first use reduces the initial dashboard bundle.
@@ -220,14 +221,16 @@ export function Dashboard() {
     clusterCount,
     healthyClusters,
     unhealthyClusters,
+    healthyNodes,
     totalPods,
     totalNamespaces,
     totalNodes,
   } = useMemo(() => {
     return filteredClusters.reduce((stats, cluster) => {
       stats.clusterCount += 1
-      if (cluster.healthy) {
+      if (isClusterHealthy(cluster)) {
         stats.healthyClusters += 1
+        stats.healthyNodes += cluster.nodeCount || 0
       } else {
         stats.unhealthyClusters += 1
       }
@@ -239,6 +242,7 @@ export function Dashboard() {
       clusterCount: 0,
       healthyClusters: 0,
       unhealthyClusters: 0,
+      healthyNodes: 0,
       totalPods: 0,
       totalNamespaces: 0,
       totalNodes: 0,
@@ -259,13 +263,13 @@ export function Dashboard() {
       case 'namespaces':
         return { value: totalNamespaces, sublabel: 'namespaces', onClick: () => navigate(ROUTES.NAMESPACES), isClickable: totalNamespaces > 0 }
       case 'nodes':
-        return { value: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+        return { value: totalNodes, progressValue: healthyNodes, max: totalNodes, sublabel: 'total nodes', onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
       case 'pods':
         return { value: totalPods, sublabel: 'pods', onClick: () => drillToAllPods(), isClickable: totalPods > 0 }
       default:
         return { value: '-' }
     }
-  }, [clusterCount, drillToAllClusters, drillToAllNodes, drillToAllPods, healthyClusters, navigate, totalNamespaces, totalNodes, totalPods, unhealthyClusters])
+  }, [clusterCount, drillToAllClusters, drillToAllNodes, drillToAllPods, healthyClusters, healthyNodes, navigate, totalNamespaces, totalNodes, totalPods, unhealthyClusters])
 
   // Merged getter: dashboard-specific values first, then universal fallback
   const getStatValue = getDashboardStatValue

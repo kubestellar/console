@@ -11,6 +11,7 @@ import { RotatingTip } from '../ui/RotatingTip'
 import { useTranslation } from 'react-i18next'
 import { useModal } from '../../hooks/useModal'
 import { useGPUTaintFilter, GPUTaintFilterControl } from '../cards/GPUTaintFilter'
+import { isClusterHealthy } from '../clusters/utils'
 
 const NODES_CARDS_KEY = 'kubestellar-nodes-cards'
 
@@ -38,6 +39,7 @@ export function Nodes() {
 
   // Calculate stats
   const totalNodes = reachableClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0)
+  const healthyNodes = reachableClusters.reduce((sum, c) => sum + (isClusterHealthy(c) ? (c.nodeCount || 0) : 0), 0)
   const totalCPU = reachableClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0)
   const totalMemoryGB = reachableClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0)
   const totalPods = reachableClusters.reduce((sum, c) => sum + (c.podCount || 0), 0)
@@ -88,7 +90,14 @@ export function Nodes() {
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
       case 'nodes':
-        return { value: totalNodes, sublabel: t('common:nodes.totalNodes'), onClick: () => drillToAllNodes(), isClickable: totalNodes > 0 }
+        return {
+          value: totalNodes,
+          progressValue: healthyNodes,
+          max: totalNodes,
+          sublabel: t('common:nodes.totalNodes'),
+          onClick: () => drillToAllNodes(),
+          isClickable: totalNodes > 0,
+        }
       case 'cpus':
         return { value: totalCPU, sublabel: t('common:nodes.cpuCores'), onClick: () => drillToAllNodes(), isClickable: totalCPU > 0 }
       case 'memory':

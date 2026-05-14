@@ -89,7 +89,7 @@ const PROGRESS_DISPLAY_MODES = new Set<StatDisplayMode>([
 ])
 
 function hasExplicitProgressMax(data: StatBlockValue): data is StatBlockValue & { max: number } {
-  return typeof data.max === 'number' && Number.isFinite(data.max) && data.max > 0
+  return typeof data.max === 'number' && Number.isFinite(data.max) && data.max >= 0
 }
 
 function isPercentageLikeStat(blockId: string, value: string | number): boolean {
@@ -169,6 +169,8 @@ export interface StatBlockValue {
   isClickable?: boolean
   /** Whether this stat uses demo/mock data (shows yellow border + badge) */
   isDemo?: boolean
+  /** Raw numerator used by progress-style visualizations when the displayed value should stay different. */
+  progressValue?: number
   /** For gauge/ring modes: the max value (default 100) */
   max?: number
   /** For gauge mode: threshold config */
@@ -247,6 +249,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const availableModes = getAvailableModes(block.id, data)
 
   const rawValue = data.value
+  const rawProgressValue = typeof data.progressValue === 'number' ? data.progressValue : rawValue
   // Show actual value if it's a number (including 0), only show '-' if truly no data (undefined/null/'-')
   const displayValue = isLoading || rawValue === undefined || rawValue === null || rawValue === '-'
     ? '-'
@@ -254,12 +257,15 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
   const numericValue = typeof rawValue === 'number'
     ? rawValue
     : parseFloat(String(rawValue))
+  const progressNumericValue = typeof rawProgressValue === 'number'
+    ? rawProgressValue
+    : parseFloat(String(rawProgressValue))
   const hasExplicitMax = hasExplicitProgressMax(data)
   const isPercentageStat = isPercentageLikeStat(block.id, rawValue)
   const maxValue = hasExplicitMax ? data.max : DEFAULT_PROGRESS_MAX
   const canScaleProgress = supportsProgressScale(block.id, data)
-  const progressPercent = !isNaN(numericValue) && maxValue > 0
-    ? Math.min((numericValue / maxValue) * DEFAULT_PROGRESS_MAX, DEFAULT_PROGRESS_MAX)
+  const progressPercent = !isNaN(progressNumericValue) && maxValue > 0
+    ? Math.min((progressNumericValue / maxValue) * DEFAULT_PROGRESS_MAX, DEFAULT_PROGRESS_MAX)
     : 0
   const progressPercentLabel = hasExplicitMax ? `${Math.round(progressPercent)}%` : null
   const progressDisplayValue = isPercentageStat && !String(displayValue).includes('%')
@@ -337,11 +343,11 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
-      ) : effectiveMode === 'gauge' && !isNaN(numericValue) ? (
+      ) : effectiveMode === 'gauge' && !isNaN(progressNumericValue) ? (
         <>
           <div className="flex justify-center">
             <Gauge
-              value={numericValue}
+              value={progressNumericValue}
               max={maxValue}
               size="xs"
               thresholds={data.thresholds}
@@ -350,11 +356,11 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
-      ) : effectiveMode === 'ring-3' && !isNaN(numericValue) ? (
+      ) : effectiveMode === 'ring-3' && !isNaN(progressNumericValue) ? (
         <>
           <div className="flex justify-center">
             <CircularProgress
-              value={numericValue}
+              value={progressNumericValue}
               max={maxValue}
               size={RING_SIZE_PX}
               strokeWidth={RING_STROKE_PX}
@@ -364,7 +370,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
           </div>
           {data.sublabel && <div className="text-xs text-muted-foreground text-center mt-1">{wrapAbbreviations(data.sublabel)}</div>}
         </>
-      ) : effectiveMode === 'mini-bar' && !isNaN(numericValue) ? (
+      ) : effectiveMode === 'mini-bar' && !isNaN(progressNumericValue) ? (
         <>
           <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
             {progressDisplayValue}
@@ -387,11 +393,11 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
             </div>
           )}
         </>
-      ) : effectiveMode === 'horseshoe' && !isNaN(numericValue) ? (
+      ) : effectiveMode === 'horseshoe' && !isNaN(progressNumericValue) ? (
         <>
           <div className="flex justify-center">
             <HorseshoeGauge
-              value={numericValue}
+              value={progressNumericValue}
               max={maxValue}
               size={HORSESHOE_SIZE_PX}
               strokeWidth={HORSESHOE_STROKE_PX}
@@ -427,7 +433,7 @@ const StatBlock = memo(function StatBlock({ block, data, hasData, isLoading, his
             </>
           )
         })()
-      ) : effectiveMode === 'stacked-bar' && !isNaN(numericValue) ? (
+      ) : effectiveMode === 'stacked-bar' && !isNaN(progressNumericValue) ? (
         <>
           <div data-testid={`stat-block-${block.id}-count`} className={`text-2xl font-bold ${isLoading ? 'text-muted-foreground/30' : valueColor}`}>
             {progressDisplayValue}

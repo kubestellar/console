@@ -305,6 +305,8 @@ export function Clusters() {
       case 'nodes':
         return {
           value: hasData ? stats.totalNodes : '-',
+          progressValue: stats.healthyNodes,
+          max: stats.totalNodes,
           sublabel: 'total nodes',
           onClick: () => { emitClusterStatsDrillDown('nodes'); navigate(ROUTES.COMPUTE) },
           isClickable: hasData }

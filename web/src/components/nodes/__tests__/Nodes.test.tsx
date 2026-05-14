@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { useGPUNodes } from '../../../hooks/useMCP'
+import { useClusters, useGPUNodes } from '../../../hooks/useMCP'
 
 // Mock modules with top-level localStorage side-effects
 vi.mock('../../../lib/demoMode', () => ({
@@ -22,21 +22,23 @@ vi.mock('../../../hooks/useTokenUsage', () => ({
 }))
 
 vi.mock('../../../lib/dashboards/DashboardPage', () => ({
-  DashboardPage: ({ title, subtitle, children, getStatValue }: { title: string; subtitle?: string; children?: React.ReactNode; getStatValue?: (id: string) => { value: any } }) => (
+  DashboardPage: ({ title, subtitle, children, getStatValue }: { title: string; subtitle?: string; children?: React.ReactNode; getStatValue?: (id: string) => { value: any; progressValue?: number; max?: number } }) => (
     <div data-testid="dashboard-page" data-title={title} data-subtitle={subtitle}>
       <h1>{title}</h1>
       {subtitle && <p>{subtitle}</p>}
       <div data-testid="stat-gpus">{getStatValue?.('gpus')?.value}</div>
+      <div data-testid="stat-nodes-progress">{getStatValue?.('nodes')?.progressValue ?? ''}</div>
+      <div data-testid="stat-nodes-max">{getStatValue?.('nodes')?.max ?? ''}</div>
       {children}
     </div>
   ),
 }))
 
 vi.mock('../../../hooks/useMCP', () => ({
-  useClusters: () => ({
+  useClusters: vi.fn(() => ({
     deduplicatedClusters: [], clusters: [], isLoading: false, isRefreshing: false,
     lastUpdated: null, refetch: vi.fn(), error: null,
-  }),
+  })),
   useGPUNodes: vi.fn(() => ({ nodes: [] })),
 }))
 
@@ -104,5 +106,23 @@ describe('Nodes Component', () => {
     renderNodes()
     // By default, only untainted GPUs should be counted (4)
     expect(screen.getByTestId('stat-gpus').textContent).toBe('4')
+  })
+
+  it('uses healthy-to-total node ratio for node progress', () => {
+    vi.mocked(useClusters).mockReturnValue({
+      deduplicatedClusters: [
+        { name: 'healthy', reachable: true, healthy: true, nodeCount: 1, cpuCores: 4, memoryGB: 16, podCount: 8 },
+      ],
+      clusters: [],
+      isLoading: false,
+      isRefreshing: false,
+      lastUpdated: null,
+      refetch: vi.fn(),
+      error: null,
+    } as any)
+
+    renderNodes()
+    expect(screen.getByTestId('stat-nodes-progress').textContent).toBe('1')
+    expect(screen.getByTestId('stat-nodes-max').textContent).toBe('1')
   })
 })

@@ -13,6 +13,7 @@ export interface ClusterStats {
   unhealthy: number
   unreachable: number
   staleContexts: number
+  healthyNodes: number
   totalNodes: number
   totalCPUs: number
   totalMemoryGB: number
@@ -81,6 +82,10 @@ export function useClusterStats({
       unhealthy,
       unreachable,
       staleContexts,
+      healthyNodes: globalFilteredClusters.reduce(
+        (sum, c) => sum + (!isClusterUnreachable(c) && isClusterHealthy(c) ? (c.nodeCount || 0) : 0),
+        0,
+      ),
       totalNodes: globalFilteredClusters.reduce((sum, c) => sum + (c.nodeCount || 0), 0),
       totalCPUs: globalFilteredClusters.reduce((sum, c) => sum + (c.cpuCores || 0), 0),
       totalMemoryGB: globalFilteredClusters.reduce((sum, c) => sum + (c.memoryGB || 0), 0),
