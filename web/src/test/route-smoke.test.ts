@@ -12,7 +12,7 @@
  *   - Broken route → component mappings
  *   - Missing named exports (typos in safeLazy calls)
  *   - Modal components missing open/close prop patterns
- *   - Route config drift (routes added to config but not wired in App.tsx)
+ *   - Route config drift (routes added to config but not wired in AppRoutes.tsx)
  *
  * For render-level smoke tests, use Playwright e2e tests.
  *
@@ -28,6 +28,9 @@ import { fileURLToPath } from 'node:url'
 // ── Named constants ────────────────────────────────────────────────────────
 const SRC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const APP_FILE = join(SRC_DIR, 'App.tsx')
+// App.tsx was decomposed — routes and lazy imports now live in these files:
+const APP_ROUTES_FILE = join(SRC_DIR, 'routes', 'AppRoutes.tsx')
+const LAZY_ROUTES_FILE = join(SRC_DIR, 'routes', 'lazyRoutes.ts')
 const ROUTES_FILE = join(SRC_DIR, 'config', 'routes.ts')
 /** Minimum number of routes expected — guards against accidental deletion */
 const MIN_EXPECTED_ROUTES = 30
@@ -118,7 +121,8 @@ function findModalFiles(): string[] {
 
 describe('Route configuration integrity', () => {
   const routesContent = readFile(ROUTES_FILE)
-  const appContent = readFile(APP_FILE)
+  // Routes are wired in AppRoutes.tsx (decomposed from App.tsx)
+  const appContent = readFile(APP_ROUTES_FILE)
   const routeKeys = extractRouteKeys(routesContent)
   const appRouteRefs = extractAppRouteRefs(appContent)
 
@@ -142,7 +146,7 @@ describe('Route configuration integrity', () => {
 
   it('every ROUTES.X reference in App.tsx exists in routes.ts', () => {
     const missing = appRouteRefs.filter(ref => !routeKeys.has(ref))
-    expect(missing, `App.tsx references undefined routes: ${missing.join(', ')}`).toHaveLength(0)
+    expect(missing, `AppRoutes.tsx references undefined routes: ${missing.join(', ')}`).toHaveLength(0)
   })
 
   it('core routes are defined', () => {
@@ -157,7 +161,7 @@ describe('Route configuration integrity', () => {
     }
   })
 
-  it('core routes are wired in App.tsx', () => {
+  it('core routes are wired in AppRoutes.tsx', () => {
     const required = [
       'CLUSTERS', 'NODES', 'PODS', 'DEPLOYMENTS', 'SERVICES',
       'WORKLOADS', 'EVENTS', 'ALERTS', 'SETTINGS', 'COMPUTE',
@@ -166,21 +170,23 @@ describe('Route configuration integrity', () => {
     for (const key of required) {
       expect(
         appRouteRefs.includes(key),
-        `ROUTES.${key} is defined but not wired in App.tsx`,
+        `ROUTES.${key} is defined but not wired in AppRoutes.tsx`,
       ).toBe(true)
     }
   })
 })
 
 describe('Lazy import integrity', () => {
-  const appContent = readFile(APP_FILE)
+  // Lazy imports now live in routes/lazyRoutes.ts (decomposed from App.tsx)
+  const appContent = readFile(LAZY_ROUTES_FILE)
   const lazyImports = extractLazyImports(appContent)
 
   it('all safeLazy imports reference existing module files', () => {
     const missing: string[] = []
     for (const [name, modulePath] of lazyImports) {
-      // Resolve the module path relative to App.tsx (src/)
-      const resolved = resolve(SRC_DIR, modulePath)
+      // Resolve the module path relative to where lazyRoutes.ts lives (src/routes/)
+      const lazyRoutesDir = dirname(LAZY_ROUTES_FILE)
+      const resolved = resolve(lazyRoutesDir, modulePath)
       // Check .tsx, .ts, and /index.tsx
       const candidates = [
         `${resolved}.tsx`,
@@ -204,7 +210,7 @@ describe('Lazy import integrity', () => {
     while ((match = re.exec(appContent)) !== null) {
       const modulePath = match[1]
       const exportName = match[2]
-      const resolved = resolve(SRC_DIR, modulePath)
+      const resolved = resolve(dirname(LAZY_ROUTES_FILE), modulePath)
       const candidates = [
         `${resolved}.tsx`,
         `${resolved}.ts`,
@@ -312,7 +318,8 @@ describe('Modal/Dialog component integrity', () => {
 
 describe('Route config completeness', () => {
   const routesContent = readFile(ROUTES_FILE)
-  const appContent = readFile(APP_FILE)
+  // Routes are wired in AppRoutes.tsx (decomposed from App.tsx)
+  const appContent = readFile(APP_ROUTES_FILE)
   const routeKeys = extractRouteKeys(routesContent)
   const appRouteRefs = new Set(extractAppRouteRefs(appContent))
 
@@ -336,7 +343,7 @@ describe('Route config completeness', () => {
     'ENTERPRISE_RISK_APPETITE',
   ])
 
-  it('every route in config is either wired in App.tsx or intentionally unwired', () => {
+  it('every route in config is either wired in AppRoutes.tsx or intentionally unwired', () => {
     const unwired: string[] = []
     for (const key of routeKeys.keys()) {
       if (!appRouteRefs.has(key) && !INTENTIONALLY_UNWIRED.has(key)) {
