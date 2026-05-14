@@ -98,10 +98,6 @@ export const NAVBAR_HEIGHT_PX = 64
 export const BANNER_HEIGHT_PX = 44
 /** Collapse mobile banner stacks into a summary row once this many alerts are active. */
 export const MOBILE_BANNER_COLLAPSE_THRESHOLD = 2
-/** Root CSS variable used to push dashboard content below the open filter panel */
-export const NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR = '--navbar-filter-panel-offset'
-/** Gap between the navbar and the expanded filter panel (mt-2 = 8px) */
-export const NAVBAR_FILTER_PANEL_GAP_PX = 8
 /**
  * Horizontal offset (in pixels) from the sidebar's right edge at which the
  * floating collapse + pin control container is anchored (see Sidebar.tsx).

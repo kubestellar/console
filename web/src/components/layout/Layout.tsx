@@ -52,7 +52,6 @@ import {
   NAVBAR_HEIGHT_PX,
   BANNER_HEIGHT_PX,
   MOBILE_BANNER_COLLAPSE_THRESHOLD,
-  NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR,
   SIDEBAR_CONTROLS_OFFSET_PX,
 } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
@@ -823,13 +822,6 @@ export function Layout({ children: _children }: LayoutProps) {
           className="relative flex-1 p-4 pb-8 pb-[calc(2rem+env(safe-area-inset-bottom))] md:p-6 md:pb-8 md:pb-[calc(2rem+env(safe-area-inset-bottom))] overflow-y-auto overflow-x-hidden scroll-enhanced min-w-0"
           data-transition-margin="true"
         >
-          {/* Spacer pushes scrollable content below the open navbar filter
-              panel.  It lives INSIDE <main> (the scroll container) so the
-              offset actually moves content in the viewport. (issue 12767) */}
-          <div
-            aria-hidden
-            style={{ height: `var(${NAVBAR_FILTER_PANEL_OFFSET_CSS_VAR}, 0px)` }}
-          />
           <NavigationProgress />
           {/*
             Key the Outlet by location.pathname so route changes are a clean
