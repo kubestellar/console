@@ -86,6 +86,7 @@ export function NamespaceManager() {
   const { isOpen: showGrantAccessModal, open: openGrantAccessModal, close: closeGrantAccessModal } = useModalState()
   const [namespaceToDelete, setNamespaceToDelete] = useState<NamespaceDetails | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const lastFetchErrorToastRef = useRef<string | null>(null)
   // Group by cluster by default for better organization
   const [groupBy, setGroupBy] = useState<GroupByMode>('cluster')
   const [collapsedClusters, setCollapsedClusters] = useState<Set<string>>(new Set())
@@ -332,31 +333,36 @@ export function NamespaceManager() {
 
     // Only show error if ALL clusters failed (no namespaces at all)
     const totalFailed = failedClusters.length + authFailedClusters.length
+    let fetchError: string | null = null
     if (totalFailed > 0 && totalCachedNamespaces === 0) {
       if (authFailedClusters.length > 0 && failedClusters.length === 0) {
         // All failures were auth-related - agent is running but access is denied
-        setError(t('namespaces.errors.authorizationFailed', 'Authorization failed for namespace access. Your credentials may lack permission to list namespaces on the connected clusters.'))
+        fetchError = t('namespaces.errors.authorizationFailed', 'Authorization failed for namespace access. Your credentials may lack permission to list namespaces on the connected clusters.')
       } else {
-        setError(t('namespaces.errors.unableToConnect', 'Unable to connect to clusters. Check that the KC agent is running.'))
+        fetchError = t('namespaces.errors.unableToConnect', 'Unable to connect to clusters. Check that the KC agent is running.')
       }
       // Allow retry on next trigger since all clusters failed
       hasFetchedRef.current = false
     } else if (totalFailed > 0) {
       // Some clusters failed but we have partial data - show partial error
       if (authFailedClusters.length > 0 && failedClusters.length === 0) {
-        setError(t('namespaces.errors.someClusterAuthFailed', {
+        fetchError = t('namespaces.errors.someClusterAuthFailed', {
           count: authFailedClusters.length,
           defaultValue: '{{count}} cluster(s) denied access. You may lack permissions to list namespaces on those clusters.'
-        }))
+        })
       } else {
-        setError(t('namespaces.errors.someClustersUnavailable', {
+        fetchError = t('namespaces.errors.someClustersUnavailable', {
           count: totalFailed,
           defaultValue: '{{count}} cluster(s) could not be reached. Showing cached data for available clusters.'
-        }))
+        })
       }
-    } else {
-      // Clear any previous error since we have data
-      setError(null)
+    }
+    setError(fetchError)
+    if (fetchError && lastFetchErrorToastRef.current !== fetchError) {
+      showToast(fetchError, 'error')
+      lastFetchErrorToastRef.current = fetchError
+    } else if (!fetchError) {
+      lastFetchErrorToastRef.current = null
     }
 
     setLoading(false)

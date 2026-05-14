@@ -43,6 +43,7 @@ const PERSISTED_SCHEMA_VERSION = 1
  * and display it once.
  */
 const QUOTA_BANNER_KEY = 'kc_mission_control_quota_error'
+let quotaBannerFallbackTitle: string | null = null
 
 // ---------------------------------------------------------------------------
 // #6379 — Project-name sanitization (prompt injection defence)
@@ -285,8 +286,9 @@ function persistState(state: MissionControlState) {
       )
       try {
         sessionStorage.setItem(QUOTA_BANNER_KEY, title)
+        quotaBannerFallbackTitle = null
       } catch {
-        // sessionStorage may also be full or unavailable — nothing we can do.
+        quotaBannerFallbackTitle = title
       }
     } else {
       console.error('[MissionControl] Failed to persist state:', e)
@@ -305,7 +307,9 @@ export function consumePersistQuotaBanner(): string | null {
     if (v !== null) sessionStorage.removeItem(QUOTA_BANNER_KEY)
     return v
   } catch {
-    return null
+    const fallback = quotaBannerFallbackTitle
+    quotaBannerFallbackTitle = null
+    return fallback
   }
 }
 

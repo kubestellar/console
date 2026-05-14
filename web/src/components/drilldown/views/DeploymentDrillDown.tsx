@@ -12,6 +12,7 @@ import { StatusIndicator } from '../../charts/StatusIndicator'
 import { Gauge } from '../../charts/Gauge'
 import { useTranslation } from 'react-i18next'
 import { copyToClipboard } from '../../../lib/clipboard'
+import { useToast } from '../../ui/Toast'
 
 /** Maximum replicas allowed via the UI scale widget. Kubernetes itself supports
  *  up to 2^31-1 but most real deployments won't exceed a few hundred. */
@@ -129,6 +130,7 @@ function buildLabelSelector(
 
 export function DeploymentDrillDown({ data }: Props) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const cluster = (data.cluster as string) || ''
   const namespace = (data.namespace as string) || ''
   const deploymentName = (data.deployment as string) || ''
@@ -206,6 +208,7 @@ export function DeploymentDrillDown({ data }: Props) {
           }
         } catch (err) {
           console.error('[DeploymentDrillDown] Non-JSON WebSocket message:', event.data)
+          showToast(t('drilldown.errors.invalidDeploymentResponse', 'Failed to load deployment details due to an invalid agent response.'), 'error')
         }
         clearTimeout(timeout)
         ws.close()

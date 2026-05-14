@@ -207,9 +207,10 @@ export function PodDrillDown({ data }: { data: Record<string, unknown> }) {
       return JSON.parse(event.data)
     } catch (err) {
       console.error(`[PodDrillDown] Failed to parse ${context} WebSocket message:`, err)
+      showToast(t('drilldown.errors.invalidPodResponse', 'Failed to load pod details due to an invalid agent response.'), 'error')
       return null
     }
-  }, [])
+  }, [showToast, t])
 
   // Close all tracked WebSocket connections on unmount
   useEffect(() => {
