@@ -16,7 +16,15 @@ const (
 	kagentiProviderHandshakeTimeout    = 2 * time.Second
 	kagentiProviderAvailabilityTimeout = 1200 * time.Millisecond
 	kagentiDefaultAgentNamespace       = "default"
+	kagentiK8sContextKey               = "kagentiK8sContext"
 )
+
+const kagentiReadOnlyContextInstruction = `
+READ-ONLY KUBERNETES CONTEXT:
+Use the live cluster health, pod issue, and warning event data supplied by the
+console backend for any cluster-specific claims. If the provided data is
+missing or incomplete, say so instead of guessing.
+`
 
 // KagentiProvider implements AIProvider and StreamingProvider for Kagenti agents REST API.
 type KagentiProvider struct {
@@ -169,6 +177,36 @@ func (p *KagentiProvider) StreamChat(ctx context.Context, req *ChatRequest, onCh
 	return p.StreamChatWithProgress(ctx, req, onChunk, nil)
 }
 
+func (p *KagentiProvider) buildPrompt(req *ChatRequest) string {
+	var sb strings.Builder
+
+	if req.SystemPrompt != "" {
+		sb.WriteString(req.SystemPrompt)
+	} else {
+		sb.WriteString(DefaultSystemPrompt)
+	}
+
+	if clusterCtx := req.Context["clusterContext"]; clusterCtx != "" {
+		sb.WriteString(fmt.Sprintf(clusterContextInstruction, clusterCtx, clusterCtx))
+	}
+	if warning := req.Context[toolAvailabilityWarningContextKey]; warning != "" {
+		sb.WriteString("\n\n")
+		sb.WriteString(warning)
+	}
+	if k8sContext := req.Context[kagentiK8sContextKey]; k8sContext != "" {
+		sb.WriteString("\n\n")
+		sb.WriteString(kagentiReadOnlyContextInstruction)
+		sb.WriteString("\n")
+		sb.WriteString(UntrustedDataSystemPrompt)
+		sb.WriteString(WrapUntrustedData("k8s-readonly-context", k8sContext))
+	}
+
+	sb.WriteString("\n\nUser request:\n")
+	sb.WriteString(req.Prompt)
+
+	return sb.String()
+}
+
 func (p *KagentiProvider) StreamChatWithProgress(ctx context.Context, req *ChatRequest, onChunk func(chunk string), onProgress func(event StreamEvent)) (*ChatResponse, error) {
 	if p.client == nil {
 		return nil, fmt.Errorf("no kagenti endpoint is configured")
@@ -194,13 +232,7 @@ func (p *KagentiProvider) StreamChatWithProgress(ctx context.Context, req *ChatR
 		})
 	}
 
-	prompt := req.Prompt
-	if liveClusterContext := buildLiveClusterContext(ctx, req); liveClusterContext != "" {
-		prompt = liveClusterContext + "\n\nUser request:\n" + prompt
-	}
-	if systemPrompt := strings.TrimSpace(req.SystemPrompt); systemPrompt != "" {
-		prompt = "System instructions:\n" + systemPrompt + "\n\n" + prompt
-	}
+	prompt := p.buildPrompt(req)
 
 	stream, err := p.client.Invoke(ctx, p.namespace, p.agentName, prompt, req.SessionID, history)
 	if err != nil {

@@ -102,6 +102,7 @@ User request: %s`, req.Prompt)
 		History:   history,
 		Context:   chatCtx,
 	}
+	s.enrichKagentiChatRequest(ctx, thinkingProvider, &thinkingReq)
 
 	// #9618 — Check if WebSocket is still alive before expensive provider call.
 	// Without this, orphaned goroutines continue running AI requests for up to
@@ -175,6 +176,7 @@ User request: %s`, req.Prompt)
 		SessionID: sessionID,
 		Context:   chatCtx,
 	}
+	s.enrichKagentiChatRequest(ctx, execProvider, &execReq)
 
 	var execContent string
 
@@ -237,7 +239,9 @@ Command output:
 		Prompt:    analysisPrompt,
 		SessionID: sessionID,
 		History:   append(history, ChatMessage{Role: "assistant", Content: thinkingResp.Content}),
+		Context:   chatCtx,
 	}
+	s.enrichKagentiChatRequest(ctx, thinkingProvider, &analysisReq)
 
 	if closed.Load() {
 		slog.Info("[MixedMode] connection closed before analysis call", "sessionID", sessionID)

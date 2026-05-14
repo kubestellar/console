@@ -151,3 +151,31 @@ func TestKagentiProvider_Handshake_HealthzFallback(t *testing.T) {
 		t.Fatalf("expected handshake ready=true with /healthz fallback, got: %+v", result)
 	}
 }
+
+func TestKagentiProvider_BuildPromptIncludesK8sContext(t *testing.T) {
+	p := &KagentiProvider{}
+	prompt := p.buildPrompt(&ChatRequest{
+		Prompt:       "which pods are failing?",
+		SystemPrompt: "custom system prompt",
+		Context: map[string]string{
+			"clusterContext":     "kind-dev",
+			kagentiK8sContextKey: `{ "clusters": [{"context":"kind-dev","podIssues":[{"name":"pod-a"}]}] }`,
+		},
+	})
+
+	if !strings.Contains(prompt, "custom system prompt") {
+		t.Fatalf("expected custom system prompt, got %q", prompt)
+	}
+	if !strings.Contains(prompt, "kind-dev") {
+		t.Fatalf("expected cluster context in prompt, got %q", prompt)
+	}
+	if !strings.Contains(prompt, "k8s-readonly-context") {
+		t.Fatalf("expected wrapped kubernetes context, got %q", prompt)
+	}
+	if !strings.Contains(prompt, "pod-a") {
+		t.Fatalf("expected pod issue data in prompt, got %q", prompt)
+	}
+	if !strings.Contains(prompt, "which pods are failing?") {
+		t.Fatalf("expected user prompt in final request, got %q", prompt)
+	}
+}

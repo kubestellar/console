@@ -14,8 +14,169 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/safego"
 )
+
+const (
+	kagentiContextFetchTimeout        = 8 * time.Second
+	kagentiMaxPodIssuesPerCluster     = 10
+	kagentiMaxWarningEventsPerCluster = 5
+)
+
+type kagentiClusterSnapshot struct {
+	Name          string             `json:"name"`
+	Context       string             `json:"context"`
+	Health        *k8s.ClusterHealth `json:"health,omitempty"`
+	PodIssues     []k8s.PodIssue     `json:"podIssues,omitempty"`
+	WarningEvents []k8s.Event        `json:"warningEvents,omitempty"`
+	Errors        []string           `json:"errors,omitempty"`
+}
+
+type kagentiK8sContextSnapshot struct {
+	Scope       string                   `json:"scope"`
+	GeneratedAt string                   `json:"generatedAt"`
+	Clusters    []kagentiClusterSnapshot `json:"clusters"`
+}
+
+func (s *Server) enrichKagentiChatRequest(ctx context.Context, provider AIProvider, chatReq *ChatRequest) {
+	if provider == nil || provider.Name() != "kagenti" || s.k8sClient == nil {
+		return
+	}
+
+	clusterContext := ""
+	if chatReq.Context != nil {
+		clusterContext = chatReq.Context["clusterContext"]
+	}
+
+	k8sContext, err := s.buildKagentiK8sContext(ctx, clusterContext)
+	if err != nil {
+		slog.Warn("[Chat] failed to build kagenti cluster context", "error", err, "clusterContext", clusterContext)
+		return
+	}
+	if k8sContext == "" {
+		return
+	}
+
+	if chatReq.Context == nil {
+		chatReq.Context = map[string]string{}
+	}
+	chatReq.Context[kagentiK8sContextKey] = k8sContext
+}
+
+func (s *Server) buildKagentiK8sContext(ctx context.Context, clusterContext string) (string, error) {
+	fetchCtx, cancel := context.WithTimeout(ctx, kagentiContextFetchTimeout)
+	defer cancel()
+
+	clusters, err := s.resolveKagentiClusterScope(fetchCtx, clusterContext)
+	if err != nil {
+		return "", err
+	}
+	if len(clusters) == 0 {
+		return "", nil
+	}
+
+	snapshots := make([]kagentiClusterSnapshot, len(clusters))
+	var wg sync.WaitGroup
+	for i, cluster := range clusters {
+		i, cluster := i, cluster
+		wg.Add(1)
+		safego.Go(func() {
+			defer wg.Done()
+			snapshots[i] = s.collectKagentiClusterSnapshot(fetchCtx, cluster)
+		})
+	}
+	wg.Wait()
+
+	payload := kagentiK8sContextSnapshot{
+		Scope:       clusterContext,
+		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+		Clusters:    snapshots,
+	}
+	if payload.Scope == "" {
+		payload.Scope = "all-visible-clusters"
+	}
+
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal kagenti context: %w", err)
+	}
+	return string(data), nil
+}
+
+func (s *Server) resolveKagentiClusterScope(ctx context.Context, clusterContext string) ([]k8s.ClusterInfo, error) {
+	if clusterContext != "" {
+		return []k8s.ClusterInfo{{Name: clusterContext, Context: clusterContext}}, nil
+	}
+
+	clusters, err := s.k8sClient.ListClusters(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]struct{}, len(clusters))
+	result := make([]k8s.ClusterInfo, 0, len(clusters))
+	for _, cluster := range clusters {
+		contextName := cluster.Context
+		if contextName == "" {
+			contextName = cluster.Name
+		}
+		if contextName == "" {
+			continue
+		}
+		if _, ok := seen[contextName]; ok {
+			continue
+		}
+		seen[contextName] = struct{}{}
+		cluster.Context = contextName
+		if cluster.Name == "" {
+			cluster.Name = contextName
+		}
+		result = append(result, cluster)
+	}
+	return result, nil
+}
+
+func (s *Server) collectKagentiClusterSnapshot(ctx context.Context, cluster k8s.ClusterInfo) kagentiClusterSnapshot {
+	contextName := cluster.Context
+	if contextName == "" {
+		contextName = cluster.Name
+	}
+
+	snapshot := kagentiClusterSnapshot{
+		Name:    cluster.Name,
+		Context: contextName,
+	}
+	if snapshot.Name == "" {
+		snapshot.Name = contextName
+	}
+
+	health, err := s.k8sClient.GetClusterHealth(ctx, contextName)
+	if err != nil {
+		snapshot.Errors = append(snapshot.Errors, fmt.Sprintf("health: %v", err))
+	} else {
+		snapshot.Health = health
+	}
+
+	podIssues, err := s.k8sClient.FindPodIssues(ctx, contextName, "")
+	if err != nil {
+		snapshot.Errors = append(snapshot.Errors, fmt.Sprintf("podIssues: %v", err))
+	} else {
+		if len(podIssues) > kagentiMaxPodIssuesPerCluster {
+			podIssues = podIssues[:kagentiMaxPodIssuesPerCluster]
+		}
+		snapshot.PodIssues = podIssues
+	}
+
+	warningEvents, err := s.k8sClient.GetWarningEvents(ctx, contextName, "", kagentiMaxWarningEventsPerCluster)
+	if err != nil {
+		snapshot.Errors = append(snapshot.Errors, fmt.Sprintf("warningEvents: %v", err))
+	} else {
+		snapshot.WarningEvents = warningEvents
+	}
+
+	return snapshot
+}
 
 func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
 	safeWrite := func(ctx context.Context, outMsg protocol.Message) {
@@ -211,6 +372,8 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 			"clusterContext": req.ClusterContext,
 		}
 	}
+
+	s.enrichKagentiChatRequest(connCtx, provider, chatReq)
 
 	// Send initial progress message so user sees feedback immediately
 	safeWrite(ctx, protocol.Message{
@@ -670,6 +833,13 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		}
 	}
 
+	parent := context.Background()
+	if len(parentCtx) > 0 && parentCtx[0] != nil {
+		parent = parentCtx[0]
+	}
+
+	s.enrichKagentiChatRequest(parent, provider, chatReq)
+
 	// #6678 — Previously this used context.Background() with no deadline,
 	// which meant a hung AI provider would block the WebSocket goroutine
 	// forever (the caller was a synchronous path from the read loop).
@@ -678,10 +848,6 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 	// used by InsightEnrichmentTimeout for similar short-form AI calls.
 	// #9997 — Derive from a parent context (if provided) so client
 	// disconnect cancels in-flight non-streaming AI calls.
-	parent := context.Background()
-	if len(parentCtx) > 0 && parentCtx[0] != nil {
-		parent = parentCtx[0]
-	}
 	ctx, cancel := context.WithTimeout(parent, handleChatMessageTimeout)
 	defer cancel()
 	resp, err := provider.Chat(ctx, chatReq)
