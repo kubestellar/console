@@ -203,6 +203,9 @@
       "light": "Light",
       "system": "System"
     },
+    "theme": {
+      "removeFailed": "Failed to remove theme. Your browser storage may be unavailable."
+    },
     "accessibility": {
       "title": "Accessibility",
       "subtitle": "Customize accessibility features",

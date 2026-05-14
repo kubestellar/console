@@ -55,7 +55,7 @@ export function ThemeSection({ themeId, setTheme, themes, currentTheme }: ThemeS
         setTheme('kubestellar')
       }
     } catch {
-      showToast('Failed to remove theme. Your browser storage may be unavailable.', 'error')
+      showToast(t('settings.theme.removeFailed', 'Failed to remove theme. Your browser storage may be unavailable.'), 'error')
     }
     setConfirmRemoveId(null)
   }
