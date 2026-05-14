@@ -119,9 +119,9 @@ describe('useDashboardHealth', () => {
     mockUseClusters.mockReturnValue({ deduplicatedClusters: [], isLoading: false })
     mockUsePodIssues.mockReturnValue({
       issues: [
-        { reason: 'CrashLoopBackOff' },
-        { reason: 'Error' },
-        { reason: 'Pending' },
+        { reason: 'CrashLoopBackOff', namespace: 'default', issues: [] },
+        { reason: 'Error', namespace: 'default', issues: [] },
+        { reason: 'Pending', namespace: 'default', issues: [] },
       ],
       isLoading: false,
     })
@@ -129,6 +129,33 @@ describe('useDashboardHealth', () => {
     const { result } = renderHook(() => useDashboardHealth())
     expect(result.current.warningCount).toBe(2)
     expect(result.current.details).toContain('2 pods failing')
+  })
+
+  it('treats kube-system pod failures as critical', () => {
+    mockUseAlerts.mockReturnValue({ activeAlerts: [] })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: [{ healthy: true, reachable: true }], isLoading: false })
+    mockUsePodIssues.mockReturnValue({
+      issues: [
+        { reason: 'Running', status: 'Running', namespace: 'kube-system', issues: ['Not ready'], restarts: 0 },
+      ],
+      isLoading: false,
+    })
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('critical')
+    expect(result.current.criticalCount).toBe(1)
+    expect(result.current.details).toContain('1 pod failing')
+  })
+
+  it('handles missing arrays safely', () => {
+    mockUseAlerts.mockReturnValue({ activeAlerts: undefined })
+    mockUseClusters.mockReturnValue({ deduplicatedClusters: undefined, isLoading: true })
+    mockUsePodIssues.mockReturnValue({ issues: undefined, isLoading: true })
+
+    const { result } = renderHook(() => useDashboardHealth())
+    expect(result.current.status).toBe('healthy')
+    expect(result.current.criticalCount).toBe(0)
+    expect(result.current.warningCount).toBe(0)
   })
 
   it('flags disconnected backend as critical (issue #8162)', () => {

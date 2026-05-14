@@ -7,6 +7,16 @@ import { useClusters, usePodIssues } from './useMCP'
 import { summarizeClusterHealth } from '../components/clusters/utils'
 import { getDemoMode } from '../lib/demoMode'
 
+const CRITICAL_POD_ISSUE_NAMESPACES = new Set([
+  'kube-system',
+  'openshift-kube-apiserver',
+  'openshift-kube-controller-manager',
+  'openshift-kube-scheduler',
+  'openshift-etcd',
+])
+
+const NON_ACTIONABLE_POD_ISSUE_STATUSES = new Set(['Pending'])
+
 export type DashboardHealthStatus = 'healthy' | 'warning' | 'critical' | 'empty'
 
 export interface DashboardHealthInfo {
@@ -36,6 +46,9 @@ export function useDashboardHealth(): DashboardHealthInfo {
     let warningCount = 0
     let hasAgentDegradation = false
 
+    const safeAlerts = activeAlerts || []
+    const safeClusters = deduplicatedClusters || []
+    const safePodIssues = podIssues || []
     const isDemoActive = getDemoMode()
     const agentWasConnected = wasAgentEverConnected()
 
@@ -50,8 +63,8 @@ export function useDashboardHealth(): DashboardHealthInfo {
       details.push(`Local agent degraded (${dataErrorCount} error${dataErrorCount === 1 ? '' : 's'})`)
     }
 
-    const criticalAlerts = activeAlerts.filter(a => a.severity === 'critical').length
-    const warningAlerts = activeAlerts.filter(a => a.severity === 'warning').length
+    const criticalAlerts = safeAlerts.filter(a => a.severity === 'critical').length
+    const warningAlerts = safeAlerts.filter(a => a.severity === 'warning').length
 
     if (criticalAlerts > 0) {
       criticalCount += criticalAlerts
@@ -62,8 +75,8 @@ export function useDashboardHealth(): DashboardHealthInfo {
       details.push(`${warningAlerts} warning alert${warningAlerts > 1 ? 's' : ''}`)
     }
 
-    if (!clustersLoading && deduplicatedClusters.length > 0) {
-      const clusterSummary = summarizeClusterHealth(deduplicatedClusters)
+    if (!clustersLoading && safeClusters.length > 0) {
+      const clusterSummary = summarizeClusterHealth(safeClusters)
 
       if (clusterSummary.unreachable > 0) {
         criticalCount += clusterSummary.unreachable
@@ -74,14 +87,24 @@ export function useDashboardHealth(): DashboardHealthInfo {
       }
     }
 
-    if (!podsLoading && podIssues.length > 0) {
-      const crashingPods = podIssues.filter(
-        p => p.reason === 'CrashLoopBackOff' || p.reason === 'Error'
+    if (!podsLoading && safePodIssues.length > 0) {
+      const actionablePodIssues = safePodIssues.filter(podIssue => {
+        const podStatus = podIssue.reason || podIssue.status || ''
+        return !NON_ACTIONABLE_POD_ISSUE_STATUSES.has(podStatus) || (podIssue.issues || []).length > 0
+      })
+      const criticalPodIssues = actionablePodIssues.filter(podIssue =>
+        CRITICAL_POD_ISSUE_NAMESPACES.has(podIssue.namespace || '')
       ).length
+      const warningPodIssues = actionablePodIssues.length - criticalPodIssues
 
-      if (crashingPods > 0) {
-        warningCount += crashingPods
-        details.push(`${crashingPods} pod${crashingPods > 1 ? 's' : ''} failing`)
+      if (criticalPodIssues > 0) {
+        criticalCount += criticalPodIssues
+      }
+      if (warningPodIssues > 0) {
+        warningCount += warningPodIssues
+      }
+      if (actionablePodIssues.length > 0) {
+        details.push(`${actionablePodIssues.length} pod${actionablePodIssues.length > 1 ? 's' : ''} failing`)
       }
     }
 
@@ -91,7 +114,7 @@ export function useDashboardHealth(): DashboardHealthInfo {
 
     // Empty environment: agent is online but no clusters are registered
     const isEmptyEnvironment = !clustersLoading && !isDemoActive
-      && deduplicatedClusters.length === 0
+      && safeClusters.length === 0
       && criticalCount === 0 && warningCount === 0
 
     if (isEmptyEnvironment) {
