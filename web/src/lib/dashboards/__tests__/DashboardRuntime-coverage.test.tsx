@@ -132,15 +132,16 @@ vi.mock('../../../components/dashboard/TemplatesModal', () => ({
 }))
 
 vi.mock('../../../components/dashboard/ConfigureCardModal', () => ({
-  ConfigureCardModal: ({ isOpen, onSave, onClose }: {
+  ConfigureCardModal: ({ isOpen, onSave, onClose, ...rest }: {
     isOpen: boolean
-    onSave?: (id: string, config: Record<string, unknown>) => void
+    onSave?: (id: string, config: Record<string, unknown>) => void | Promise<void>
     onClose?: () => void
+    [key: string]: unknown
   }) => (
     isOpen ? (
       <div data-testid="configure-modal">
-        <button data-testid="save-config" onClick={() => onSave?.('r1', { updated: true })}>Save</button>
-        <button data-testid="close-config" onClick={onClose}>Close</button>
+        <button data-testid="save-config" onClick={() => onSave?.('r1', { updated: true })} disabled={(rest as any).disabled} data-loading={(rest as any).loading}>Save</button>
+        <button data-testid="close-config" onClick={onClose} disabled={(rest as any).disabled}>Close</button>
       </div>
     ) : null
   ),

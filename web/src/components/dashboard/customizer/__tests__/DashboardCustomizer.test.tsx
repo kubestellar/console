@@ -49,13 +49,13 @@ vi.mock('../../../../lib/iconSuggester', () => ({
 }))
 
 vi.mock('../DashboardCustomizerSidebar', () => ({
-  DashboardCustomizerSidebar: ({ activeSection, onSectionChange }: { activeSection: string; onSectionChange?: (s: string) => void }) =>
-    <div data-testid="sidebar" data-section={activeSection}>
-      <button data-testid="sidebar-go-widgets" onClick={() => onSectionChange?.('widgets')}>widgets</button>
-      <button data-testid="sidebar-go-collections" onClick={() => onSectionChange?.('collections')}>collections</button>
-      <button data-testid="sidebar-go-card-factory" onClick={() => onSectionChange?.('card-factory')}>card-factory</button>
-      <button data-testid="sidebar-go-stat-factory" onClick={() => onSectionChange?.('stat-factory')}>stat-factory</button>
-      <button data-testid="sidebar-go-create-dashboard" onClick={() => onSectionChange?.('create-dashboard')}>create-dashboard</button>
+  DashboardCustomizerSidebar: ({ activeSection, onSectionChange, ...rest }: { activeSection: string; onSectionChange?: (s: string) => void; [key: string]: unknown }) =>
+    <div data-testid="sidebar" data-section={activeSection} data-disabled={(rest as any).disabled} data-loading={(rest as any).loading}>
+      <button data-testid="sidebar-go-widgets" onClick={() => onSectionChange?.('widgets')} disabled={(rest as any).disabled}>widgets</button>
+      <button data-testid="sidebar-go-collections" onClick={() => onSectionChange?.('collections')} disabled={(rest as any).disabled}>collections</button>
+      <button data-testid="sidebar-go-card-factory" onClick={() => onSectionChange?.('card-factory')} disabled={(rest as any).disabled}>card-factory</button>
+      <button data-testid="sidebar-go-stat-factory" onClick={() => onSectionChange?.('stat-factory')} disabled={(rest as any).disabled}>stat-factory</button>
+      <button data-testid="sidebar-go-create-dashboard" onClick={() => onSectionChange?.('create-dashboard')} disabled={(rest as any).disabled}>create-dashboard</button>
     </div>,
 }))
 
