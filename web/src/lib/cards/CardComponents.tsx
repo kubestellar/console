@@ -243,7 +243,9 @@ export function CardSearchInput({
 
   return (
     <div className={cn('relative mb-4 flex-1 min-w-[10rem] max-w-full', className)}>
-      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2.5">
+        <Search className="h-3.5 w-3.5 text-muted-foreground" />
+      </div>
       <input
         type="text"
         value={debounceMs ? localValue : value}
