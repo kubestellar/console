@@ -15,6 +15,21 @@ interface UseQASMFilesResult {
   refetch: () => Promise<void>
 }
 
+function normalizeFileList(data: unknown): QASMFile[] {
+  if (Array.isArray(data)) return data as QASMFile[]
+  if (data && typeof data === 'object' && 'files' in data) {
+    const files = (data as { files?: unknown }).files
+    return Array.isArray(files) ? (files as QASMFile[]) : []
+  }
+  return []
+}
+
+function extractErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : 'Failed to fetch QASM files'
+}
+
+export const __testables = { normalizeFileList, extractErrorMessage }
+
 export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
   const { isAuthenticated } = useAuth()
   const [files, setFiles] = useState<QASMFile[]>([])
@@ -38,11 +53,10 @@ export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
       }
 
       const data = await response.json()
-      const fileList: QASMFile[] = Array.isArray(data) ? data : data.files || []
-      setFiles(fileList)
+      setFiles(normalizeFileList(data))
     } catch (err) {
       console.error('Error fetching QASM files:', err)
-      setError(err instanceof Error ? err.message : 'Failed to fetch QASM files')
+      setError(extractErrorMessage(err))
       setFiles([])
     } finally {
       setIsLoading(false)

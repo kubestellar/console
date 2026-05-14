@@ -1,5 +1,17 @@
 import { useCallback } from 'react'
 
+/** Next focusable index when pressing ArrowDown. Clamps at the last item. */
+export function nextFocusIndex(currentIdx: number, total: number): number {
+  return Math.min(currentIdx + 1, total - 1)
+}
+
+/** Previous focusable index when pressing ArrowUp. Clamps at zero. */
+export function prevFocusIndex(currentIdx: number): number {
+  return Math.max(currentIdx - 1, 0)
+}
+
+export const __testables = { nextFocusIndex, prevFocusIndex }
+
 /**
  * Returns an onKeyDown handler for dropdown menus that enables
  * ArrowUp/ArrowDown navigation and Escape to close.
@@ -11,10 +23,10 @@ export function useDropdownKeyNav(onClose?: () => void) {
 
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      items[Math.min(idx + 1, items.length - 1)]?.focus()
+      items[nextFocusIndex(idx, items.length)]?.focus()
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      items[Math.max(idx - 1, 0)]?.focus()
+      items[prevFocusIndex(idx)]?.focus()
     } else if (e.key === 'Escape' && onClose) {
       e.preventDefault()
       onClose()
