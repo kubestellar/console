@@ -115,7 +115,7 @@ function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
       role="status"
       aria-live="polite"
       aria-atomic="false"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-toast flex flex-col items-center space-y-2"
+      className="fixed top-6 right-6 z-toast flex flex-col items-end space-y-2"
     >
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={() => onRemove(toast.id)} />

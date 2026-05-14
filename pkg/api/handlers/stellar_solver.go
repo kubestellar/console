@@ -12,10 +12,21 @@ import (
 	"github.com/gofiber/fiber/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"encoding/json"
+
 	"github.com/kubestellar/console/pkg/stellar"
+	"github.com/kubestellar/console/pkg/stellar/scheduler"
 	"github.com/kubestellar/console/pkg/stellar/solver"
 	"github.com/kubestellar/console/pkg/store"
 )
+
+// safeAutoActions are the action types autoTriggerSolve may dispatch on its
+// own (Phase 3a, before falling through to the AI mission). The list matches
+// the legacy autoExecuteAction allowlist — RestartDeployment is the only
+// non-destructive action that's almost always safe to attempt.
+var safeAutoActions = map[string]bool{
+	"RestartDeployment": true,
+}
 
 // broadcastSolveProgress emits a structured phase update over SSE. The event
 // card uses it to render the live progress bar; the activity log uses the
@@ -88,10 +99,10 @@ type solveFullStore interface {
 }
 
 // AutoSolveCooldown is the minimum window between back-to-back Solve attempts
-// for the same workload. JARVIS doesn't smash the same button over and over —
-// once Stellar tries something it waits long enough for the cluster to react
-// before deciding the issue isn't going away.
-const AutoSolveCooldown = 10 * time.Minute
+// for the same workload. Only blocks when a solve is still RUNNING — terminal
+// solves (resolved/escalated/exhausted) never block a fresh attempt. Cut to
+// 5 min so demos don't feel stuck behind stale escalations.
+const AutoSolveCooldown = 5 * time.Minute
 
 // logActivity is the single write-and-broadcast helper for Stellar's activity
 // log. UI subscribes via the SSE `activity` channel and renders the entries in
@@ -148,7 +159,18 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 	workload := deploymentNameFromPodName(event.Name)
 
 	cooldownSince := time.Now().Add(-AutoSolveCooldown)
-	if recent, _ := full.GetRecentSolveForWorkload(ctx, event.Cluster, event.Namespace, workload, cooldownSince); recent != nil {
+	if recent, _ := full.GetRecentSolveForWorkload(ctx, event.Cluster, event.Namespace, workload, cooldownSince); recent != nil && recent.Status == "running" {
+		// A solve for this workload is RUNNING. Link this new event card to
+		// it so the operator sees the same progress bar — duplicating mission
+		// work would be wasteful. Terminal solves (escalated/resolved/
+		// exhausted) intentionally fall through so Stellar gets another shot;
+		// the operator deserves a fresh attempt, not an inherited verdict.
+		h.broadcastToClients(SSEEvent{Type: "solve_started", Data: map[string]interface{}{
+			"solveId": recent.ID, "eventId": notif.ID,
+		}})
+		h.broadcastSolveProgress(recent.ID, notif.ID, "solving",
+			fmt.Sprintf("Linked to active solve started %s ago.",
+				time.Since(recent.StartedAt).Round(time.Second)), 60)
 		h.logActivity(ctx, &store.StellarActivity{
 			Kind:      "decided_skip",
 			EventID:   notif.ID,
@@ -156,10 +178,9 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 			Cluster:   event.Cluster,
 			Namespace: event.Namespace,
 			Workload:  workload,
-			Title:     fmt.Sprintf("Cooldown — waiting on prior solve for %s/%s", event.Namespace, workload),
-			Detail: fmt.Sprintf("Last solve was %s ago, status=%s. Stellar waits %s between attempts on the same workload.",
-				time.Since(recent.StartedAt).Round(time.Second), recent.Status, AutoSolveCooldown),
-			Severity: "info",
+			Title:     fmt.Sprintf("Linked to active solve for %s/%s", event.Namespace, workload),
+			Detail:    fmt.Sprintf("Solve %s started %s ago is still running. Linking this event card so progress is shared.", recent.ID[:8], time.Since(recent.StartedAt).Round(time.Second)),
+			Severity:  "info",
 		})
 		return
 	}
@@ -237,7 +258,103 @@ func (h *StellarHandler) autoTriggerSolve(ctx context.Context, event IncomingEve
 		Severity:  "info",
 	})
 
-	// PHASE 3 — SOLVING.
+	// PHASE 3a — TRY THE SAFE DETERMINISTIC FIX FIRST.
+	// If the evaluator recommended a safe action (RestartDeployment today),
+	// Stellar attempts it directly. This is the same path the legacy
+	// autoExecuteAction took, but folded into the solve narrative so the card
+	// and the activity log stay in lockstep. Success here marks the solve
+	// resolved (green ✓) and skips the AI mission entirely — JARVIS doesn't
+	// summon a heavy diagnostic when a rollout-restart already worked.
+	//
+	// On failure (or when the action isn't on the safe allowlist), we fall
+	// through to PHASE 3b (mission trigger) so the operator's connected AI
+	// agent can take a deeper look.
+	if eval != nil && eval.RecommendedAction != nil && safeAutoActions[eval.RecommendedAction.Type] && h.k8sClient != nil {
+		h.broadcastSolveProgress(solve.ID, notif.ID, "solving",
+			fmt.Sprintf("Trying %s — Stellar's first-line fix.", eval.RecommendedAction.Type), 75)
+		h.logActivity(ctx, &store.StellarActivity{
+			Kind:      "solving",
+			EventID:   notif.ID,
+			SolveID:   solve.ID,
+			Cluster:   event.Cluster,
+			Namespace: event.Namespace,
+			Workload:  workload,
+			Title:     fmt.Sprintf("Trying %s on %s/%s", eval.RecommendedAction.Type, event.Namespace, workload),
+			Detail:    eval.RecommendedAction.Reasoning,
+			Severity:  "info",
+		})
+
+		params := map[string]any{
+			"namespace": event.Namespace,
+			"name":      workload,
+		}
+		paramsJSON, _ := json.Marshal(params)
+		now := time.Now().UTC()
+		action := &store.StellarAction{
+			UserID:      notif.UserID,
+			Description: fmt.Sprintf("Solve %s: %s on %s/%s", solve.ID[:8], eval.RecommendedAction.Type, event.Namespace, workload),
+			ActionType:  eval.RecommendedAction.Type,
+			Parameters:  string(paramsJSON),
+			Cluster:     event.Cluster,
+			Namespace:   event.Namespace,
+			Status:      "approved",
+			CreatedBy:   "stellar-solver",
+			ApprovedBy:  "stellar-solver",
+			ApprovedAt:  &now,
+		}
+		_ = h.store.CreateStellarAction(ctx, action)
+		_ = h.store.UpdateStellarActionStatus(ctx, action.ID, "running", "", "")
+		outcome, dispatchErr := scheduler.Dispatch(ctx, h.k8sClient, *action)
+		status := "completed"
+		if dispatchErr != nil {
+			status = "failed"
+			outcome = dispatchErr.Error()
+		}
+		_ = h.store.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
+
+		if dispatchErr == nil {
+			// Restart succeeded. Mark the solve resolved and broadcast green ✓
+			// so every card for this workload reflects the fix.
+			summary := fmt.Sprintf("Tried %s and it worked. %s", eval.RecommendedAction.Type, outcome)
+			_ = full.UpdateSolveStatus(ctx, solve.ID, "resolved", summary, "", "")
+			h.logActivity(ctx, &store.StellarActivity{
+				Kind:      "solve_resolved",
+				EventID:   notif.ID,
+				SolveID:   solve.ID,
+				Cluster:   event.Cluster,
+				Namespace: event.Namespace,
+				Workload:  workload,
+				Title:     fmt.Sprintf("Resolved: %s succeeded on %s/%s", eval.RecommendedAction.Type, event.Namespace, workload),
+				Detail:    summary,
+				Severity:  "info",
+			})
+			h.broadcastSolveProgress(solve.ID, notif.ID, "resolved", summary, 100)
+			h.broadcastToClients(SSEEvent{Type: "solve_complete", Data: map[string]interface{}{
+				"solveId": solve.ID,
+				"eventId": notif.ID,
+				"status":  "resolved",
+				"summary": summary,
+			}})
+			// Mission not triggered — first-line fix was sufficient.
+			return
+		}
+		// Restart attempt failed — fall through to the AI mission for a
+		// deeper diagnose+act loop. Log the failed attempt so the operator
+		// sees the journey.
+		h.logActivity(ctx, &store.StellarActivity{
+			Kind:      "auto_fix_failed",
+			EventID:   notif.ID,
+			SolveID:   solve.ID,
+			Cluster:   event.Cluster,
+			Namespace: event.Namespace,
+			Workload:  workload,
+			Title:     fmt.Sprintf("First-line fix failed for %s/%s", event.Namespace, workload),
+			Detail:    fmt.Sprintf("%s — escalating to AI mission. Error: %s", eval.RecommendedAction.Type, dispatchErr.Error()),
+			Severity:  "warning",
+		})
+	}
+
+	// PHASE 3b — AI MISSION.
 	// Broadcast the mission trigger. The frontend bridge consumes this and
 	// drives MissionContext.startMission with the user's connected agent +
 	// LLM — same machinery as the ConsoleIssuesCard "Repair" button.

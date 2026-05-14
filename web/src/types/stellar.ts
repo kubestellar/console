@@ -177,10 +177,27 @@ export interface StellarSolve {
 export interface StellarSolveProgress {
   solveId: string
   eventId: string
-  step: 'reading' | 'planning' | 'acting' | 'observing' | 'verifying' | string
+  // Stellar v2 autonomous phases: investigating → root_cause → solving →
+  // resolved | escalated | exhausted. Older deterministic-loop phases are
+  // still accepted so cached SSE messages don't break parsing.
+  step:
+    | 'investigating'
+    | 'root_cause'
+    | 'solving'
+    | 'resolved'
+    | 'escalated'
+    | 'exhausted'
+    | 'reading'
+    | 'planning'
+    | 'acting'
+    | 'observing'
+    | 'verifying'
+    | string
   message: string
   actionsTaken: number
   status: string
+  /** 0-100 progress percentage emitted by the backend. */
+  percent?: number
 }
 
 export interface StellarDigestPayload {

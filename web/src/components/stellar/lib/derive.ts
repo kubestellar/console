@@ -8,34 +8,217 @@ export interface SolveStatus {
   label: string
   color: string
   isActive: boolean
+  /** 0-100 progress percentage. 100 means terminal (resolved/escalated). */
+  percent: number
+  /** Short phase string the card uses to color the progress bar. */
+  phase: 'investigating' | 'root_cause' | 'solving' | 'resolved' | 'escalated' | 'exhausted' | 'unknown'
+}
+
+/** Map a backend phase string to a (label, color, percent) tuple. The
+ *  defaults here only kick in when the backend hasn't sent a percent yet —
+ *  prefer the wire value when present. */
+function describePhase(step: string, message: string): {
+  label: string
+  color: string
+  percent: number
+  phase: SolveStatus['phase']
+} {
+  switch (step) {
+    case 'investigating':
+    case 'reading':
+      return { label: `🔍 ${message || 'Investigating'}`, color: 'var(--s-info)', percent: 20, phase: 'investigating' }
+    case 'root_cause':
+    case 'planning':
+      return { label: `🧠 ${message || 'Root cause found'}`, color: 'var(--s-info)', percent: 50, phase: 'root_cause' }
+    case 'solving':
+    case 'acting':
+    case 'observing':
+    case 'verifying':
+      return { label: `🔧 ${message || 'Solving'}`, color: 'var(--s-info)', percent: 75, phase: 'solving' }
+    case 'resolved':
+      return { label: '✓ Resolved by Stellar', color: 'var(--s-success)', percent: 100, phase: 'resolved' }
+    case 'escalated':
+      return { label: '⚠ Escalated to you', color: 'var(--s-warning)', percent: 100, phase: 'escalated' }
+    case 'exhausted':
+      return { label: '⏸ Paused at budget', color: 'var(--s-warning)', percent: 100, phase: 'exhausted' }
+    default:
+      return { label: message || 'Working…', color: 'var(--s-info)', percent: 10, phase: 'unknown' }
+  }
+}
+
+/** Parse pod-name → deployment-name. Same heuristic the backend uses
+ *  (strip ReplicaSet hash + pod suffix). */
+function workloadFromPodName(podName: string): string {
+  const parts = podName.split('-')
+  if (parts.length < 3) return podName
+  const last = parts[parts.length - 1]
+  const prev = parts[parts.length - 2]
+  const looksLikeRS = /^[a-z0-9]{5,10}$/.test(prev)
+  const looksLikePodSuffix = last.length >= 4 && last.length <= 6 && /^[a-z0-9]+$/.test(last)
+  if (looksLikeRS && looksLikePodSuffix) return parts.slice(0, -2).join('-')
+  return podName
+}
+
+/** Best-effort extraction of (cluster, namespace, workload) from a
+ *  notification. Used to match solves across events that share a workload —
+ *  every BackOff/CrashLoopBackOff card for payments/api-server should reflect
+ *  the same Stellar status because they're the same underlying issue. */
+function workloadKeyForNotification(n: StellarNotification): {
+  cluster: string
+  namespace: string
+  workload: string
+} | null {
+  const cluster = n.cluster || ''
+  const namespace = n.namespace || ''
+  let podOrWorkload = ''
+  if (n.dedupeKey) {
+    const parts = n.dedupeKey.split(':')
+    const offset = parts[0] === 'ev' ? 1 : 0
+    if (parts.length >= offset + 3) {
+      podOrWorkload = parts[offset + 2]
+    }
+  }
+  if (!podOrWorkload && n.title) {
+    // Title format: "Reason — namespace/pod-name"
+    const slash = n.title.lastIndexOf('/')
+    if (slash >= 0 && slash < n.title.length - 1) {
+      podOrWorkload = n.title.slice(slash + 1).trim()
+    }
+  }
+  if (!cluster || !namespace || !podOrWorkload) return null
+  return { cluster, namespace, workload: workloadFromPodName(podOrWorkload) }
+}
+
+/** How long a terminal solve (escalated/exhausted/resolved) stays sticky
+ *  on the same workload. Beyond this window, a new event for that workload
+ *  shows fresh (no badge) — the operator gets a fresh slate instead of
+ *  inheriting a verdict from an hour ago. */
+const TERMINAL_SOLVE_STALENESS_MS = 10 * 60_000
+
+/** Find the most relevant solve for the given workload key. Prefers running
+ *  solves first; then recent terminal solves within the staleness window;
+ *  ignores older terminal solves entirely so new events don't inherit stale
+ *  escalations. */
+function findSolveByWorkload(
+  key: { cluster: string; namespace: string; workload: string } | null,
+  solves: StellarSolve[],
+): StellarSolve | null {
+  if (!key) return null
+  let running: StellarSolve | null = null
+  let recentTerminal: StellarSolve | null = null
+  const cutoff = Date.now() - TERMINAL_SOLVE_STALENESS_MS
+  for (const s of solves) {
+    if (s.cluster !== key.cluster) continue
+    if (s.namespace !== key.namespace) continue
+    if (s.workload !== key.workload) continue
+    const startedMs = new Date(s.startedAt).getTime()
+    if (s.status === 'running') {
+      if (!running || s.startedAt.localeCompare(running.startedAt) > 0) running = s
+    } else if (startedMs >= cutoff) {
+      if (!recentTerminal || s.startedAt.localeCompare(recentTerminal.startedAt) > 0) {
+        recentTerminal = s
+      }
+    }
+  }
+  return running ?? recentTerminal
+}
+
+/** Count how many times Stellar has attempted to solve this workload.
+ *  Used by EventCard to show a "Tried N×" badge so the operator sees the
+ *  track record without opening the modal. */
+export function countSolveAttempts(
+  notification: { cluster?: string; namespace?: string; title?: string; dedupeKey?: string },
+  solves: StellarSolve[],
+): number {
+  const key = workloadKeyForNotification(notification as StellarNotification)
+  if (!key) return 0
+  let n = 0
+  for (const s of solves) {
+    if (s.cluster === key.cluster && s.namespace === key.namespace && s.workload === key.workload) {
+      n++
+    }
+  }
+  return n
 }
 
 /** Compute the visible status for an event given the solves list + live
- *  progress map from useStellar. Returns null if no solve has ever been
- *  attempted on this event. */
+ *  progress map from useStellar. Returns null only if Stellar has never
+ *  touched this workload. Workload-aware: a second BackOff card for the
+ *  same pod inherits the original solve's status, so the operator never
+ *  sees a passive critical card while Stellar is already on it. */
 export function getSolveStatus(
-  notificationId: string,
+  notification: { id: string; cluster?: string; namespace?: string; title?: string; dedupeKey?: string } | string,
   solves: StellarSolve[],
   liveProgress: Record<string, StellarSolveProgress>,
 ): SolveStatus | null {
-  const live = liveProgress[notificationId]
+  // Back-compat: callers that still pass a raw string see id-only matching.
+  const notif: StellarNotification | null = typeof notification === 'string'
+    ? null
+    : ({
+        id: notification.id,
+        cluster: notification.cluster,
+        namespace: notification.namespace,
+        title: notification.title,
+        dedupeKey: notification.dedupeKey,
+      } as StellarNotification)
+  const notifId = typeof notification === 'string' ? notification : notification.id
+
+  // 1. Live progress for this exact event id wins — backend phase messages
+  //    are the authoritative source while a solve is running.
+  const live = liveProgress[notifId]
   if (live) {
-    return { label: `Stellar: ${live.message}`, color: 'var(--s-info)', isActive: true }
+    const d = describePhase(live.step, live.message)
+    const percent = typeof live.percent === 'number' ? live.percent : d.percent
+    const isTerminal = d.phase === 'resolved' || d.phase === 'escalated' || d.phase === 'exhausted'
+    return { label: d.label, color: d.color, isActive: !isTerminal, percent, phase: d.phase }
   }
-  const past = solves
-    .filter(s => s.eventId === notificationId)
-    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-  if (past.length === 0) return null
-  const latest = past[0]
+
+  // 2. A solve linked directly to this event id (the canonical case after
+  //    the autonomous loop fires for this notification).
+  const direct = solves
+    .filter(s => s.eventId === notifId)
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))[0] ?? null
+
+  // 3. Workload-level fallback: ANY solve for the same cluster/namespace/
+  //    workload, regardless of which event id triggered it. This makes
+  //    secondary BackOff cards for the same pod show the same status as
+  //    the first one, instead of looking unattended. Also picks up live
+  //    progress that was broadcast under a different event id (e.g. the
+  //    cooldown-link path).
+  const workloadKey = notif ? workloadKeyForNotification(notif) : null
+  const byWorkload = findSolveByWorkload(workloadKey, solves)
+
+  // Prefer the more recent of (direct, byWorkload). If they're the same
+  // solve, doesn't matter which we pick.
+  let latest: StellarSolve | null = direct
+  if (byWorkload && (!latest || byWorkload.startedAt.localeCompare(latest.startedAt) > 0)) {
+    latest = byWorkload
+  }
+  if (!latest) return null
+
+  // If this workload has an active solve we haven't yet matched via live
+  // progress (e.g. the live SSE was for a different event id), check the
+  // liveProgress map by solveId too.
+  if (latest.status === 'running') {
+    for (const p of Object.values(liveProgress)) {
+      if (p.solveId === latest.id) {
+        const d = describePhase(p.step, p.message)
+        const percent = typeof p.percent === 'number' ? p.percent : d.percent
+        const isTerminal = d.phase === 'resolved' || d.phase === 'escalated' || d.phase === 'exhausted'
+        return { label: d.label, color: d.color, isActive: !isTerminal, percent, phase: d.phase }
+      }
+    }
+  }
+
   switch (latest.status) {
     case 'running':
-      return { label: 'Stellar solving…', color: 'var(--s-info)', isActive: true }
+      return { label: '🔧 Stellar solving…', color: 'var(--s-info)', isActive: true, percent: 60, phase: 'solving' }
     case 'resolved':
-      return { label: '✓ Resolved by Stellar', color: 'var(--s-success)', isActive: false }
+      return { label: '✓ Resolved by Stellar', color: 'var(--s-success)', isActive: false, percent: 100, phase: 'resolved' }
     case 'escalated':
-      return { label: '⚠ Escalated to you', color: 'var(--s-warning)', isActive: false }
+      return { label: '⚠ Escalated to you', color: 'var(--s-warning)', isActive: false, percent: 100, phase: 'escalated' }
     case 'exhausted':
-      return { label: '⏸ Paused at budget', color: 'var(--s-warning)', isActive: false }
+      return { label: '⏸ Paused at budget', color: 'var(--s-warning)', isActive: false, percent: 100, phase: 'exhausted' }
     default:
       return null
   }

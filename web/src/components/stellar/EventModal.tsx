@@ -19,6 +19,10 @@ interface EventModalProps {
   notification: StellarNotification
   allNotifications: StellarNotification[]
   pendingActions: StellarAction[]
+  /** Live solve status for the modal narration. Optional so older call sites
+   *  that don't yet pass it still compile; modal degrades to attempt-history
+   *  narration in that case. */
+  solveStatus?: import('./lib/derive').SolveStatus | null
   onClose: () => void
   onAction?: (prompt: string, action?: PendingAction) => void
 }
@@ -67,6 +71,7 @@ function deriveNarration(
   pending: StellarAction[],
   completed: StellarNotification | null,
   attempts: StellarAttempt[],
+  solveStatus: import('./lib/derive').SolveStatus | null,
 ): DerivedNarration {
   const title = n.title.toLowerCase()
 
@@ -93,10 +98,22 @@ function deriveNarration(
   }
 
   let whatWereDoing: string
+  // First-priority signal: the live solve outcome. If Stellar resolved or
+  // escalated this workload, the modal narrates exactly that — beats any
+  // older attempt-history phrasing or the static "Standing by" fallback.
+  if (solveStatus && !solveStatus.isActive && solveStatus.phase === 'resolved') {
+    whatWereDoing = 'Stellar tried a first-line fix and it worked — issue resolved. Dismiss this card when you\'re ready.'
+  } else if (solveStatus && !solveStatus.isActive && solveStatus.phase === 'escalated') {
+    whatWereDoing = 'Stellar tried a first-line fix and it didn\'t hold. Hand this to an AI mission — click "Try AI mission" on the card (or open the mission sidebar) to run a deeper diagnose-and-act loop on your connected agent. The mission can read logs, propose a different fix, and apply it autonomously.'
+  } else if (solveStatus && !solveStatus.isActive && solveStatus.phase === 'exhausted') {
+    whatWereDoing = 'Stellar tried multiple actions and hit the budget limit. Paused for your call — click "Try AI mission" to escalate to a deeper mission on your connected agent, or review what was attempted in the Stellar log and decide whether to retry.'
+  } else if (solveStatus && solveStatus.isActive) {
+    whatWereDoing = `Stellar is on it right now — ${solveStatus.label.replace(/^[^\sA-Za-z]+\s*/, '')}. Watch the progress bar; the activity log has step-by-step.`
+  }
   // Prefer the most recent attempt — that's the freshest signal of what Stellar
   // has been doing. The pitch vision: report attempts like a junior engineer.
   // "Tried once, failed. Awaiting your call." beats "Standing by."
-  if (attempts.length > 0) {
+  else if (attempts.length > 0) {
     const latest = attempts[0]
     const succeededCount = attempts.filter(a => !a.failed).length
     const failedCount = attempts.length - succeededCount
@@ -169,7 +186,7 @@ function formatRelative(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-export function EventModal({ notification, allNotifications, pendingActions, onClose, onAction }: EventModalProps) {
+export function EventModal({ notification, allNotifications, pendingActions, solveStatus, onClose, onAction }: EventModalProps) {
   // Find related events: same dedupeKey, excluding self
   const related = useMemo(() => {
     if (!notification.dedupeKey) return []
@@ -227,7 +244,7 @@ export function EventModal({ notification, allNotifications, pendingActions, onC
   }, [allNotifications, notification.dedupeKey])
 
   const tags = deriveTags(notification, related)
-  const narration = deriveNarration(notification, related, matchedPending, completedAction, stellarAttempts)
+  const narration = deriveNarration(notification, related, matchedPending, completedAction, stellarAttempts, solveStatus ?? null)
   const recommendations = deriveRecommendations(notification)
   const color = severityColor(notification.severity)
   const resourceName = extractResourceName(notification)

@@ -5,7 +5,7 @@ import { ApprovalCard } from './ApprovalCard'
 import { EventModal } from './EventModal'
 import { DigestCard } from './DigestCard'
 import { SolveProgressCard, SolveEscalatedCard } from './SolveCards'
-import { getSolveStatus } from './lib/derive'
+import { countSolveAttempts, getSolveStatus } from './lib/derive'
 
 interface GroupConfig {
   key: 'critical' | 'warning' | 'info'
@@ -253,14 +253,40 @@ export function EventsPanel({
         {GROUP_CONFIGS.map(group => {
           const items = groups[group.key]
           if (items.length === 0) return null
+          // Compute the per-group subtitle live so it stops lying. For critical
+          // events, the subtitle reflects how many auto-solves are actually
+          // running, paused, or already resolved — never the static "Auto-
+          // investigation in progress" we used to show even when nothing was
+          // happening.
+          let subtitle = group.subtitle
+          if (group.key === 'critical') {
+            let active = 0, resolved = 0, escalated = 0
+            for (const n of items) {
+              const status = getSolveStatus(n, solves, solveProgress)
+              if (!status) continue
+              if (status.isActive) active++
+              else if (status.phase === 'resolved') resolved++
+              else if (status.phase === 'escalated' || status.phase === 'exhausted') escalated++
+            }
+            const parts: string[] = []
+            if (active > 0) parts.push(`${active} solving`)
+            if (resolved > 0) parts.push(`${resolved} resolved`)
+            if (escalated > 0) parts.push(`${escalated} needs you`)
+            subtitle = parts.length > 0
+              ? parts.join(' · ')
+              : 'Awaiting Stellar pickup'
+          } else if (group.key === 'warning') {
+            subtitle = 'Click investigate or dismiss'
+          }
           return (
-            <Group key={group.key} config={group} count={items.length}>
+            <Group key={group.key} config={group} count={items.length} subtitle={subtitle}>
               {items.map(notification => (
                 <EventCard
                   key={notification.id}
                   notification={notification}
                   allNotifications={notifications}
-                  solveStatus={getSolveStatus(notification.id, solves, solveProgress)}
+                  solveStatus={getSolveStatus(notification, solves, solveProgress)}
+                  attemptCount={countSolveAttempts(notification, solves)}
                   onSolve={startSolve}
                   onDismiss={() => { void acknowledgeNotification(notification.id) }}
                   onRollback={onRollback}
@@ -321,6 +347,7 @@ export function EventsPanel({
           notification={detailNotification}
           allNotifications={notifications}
           pendingActions={pendingActions}
+          solveStatus={getSolveStatus(detailNotification, solves, solveProgress)}
           onClose={() => setDetailNotification(null)}
           onAction={onAction}
         />
@@ -330,8 +357,8 @@ export function EventsPanel({
 }
 
 function Group({
-  config, count, children,
-}: { config: GroupConfig; count: number; children: React.ReactNode }) {
+  config, count, subtitle, children,
+}: { config: GroupConfig; count: number; subtitle?: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 10, padding: '0 4px' }}>
       <div style={{
@@ -349,7 +376,7 @@ function Group({
           fontFamily: 'var(--s-mono)', fontSize: 10, fontWeight: 600,
           color: config.color, opacity: 0.7,
         }}>{count}</span>
-        <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>{config.subtitle}</span>
+        <span style={{ fontSize: 10, color: 'var(--s-text-dim)', fontStyle: 'italic' }}>{subtitle ?? config.subtitle}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {children}

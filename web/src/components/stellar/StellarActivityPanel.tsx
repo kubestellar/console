@@ -18,6 +18,12 @@ interface Props {
 }
 
 const KIND_LABEL: Record<string, { label: string; icon: string; color: string }> = {
+  // Autonomous-solve narrative beats (Stellar v2):
+  critical_event:      { label: 'Critical event',   icon: '🚨', color: 'var(--s-critical)' },
+  investigating:       { label: 'Investigating',    icon: '🔍', color: 'var(--s-info)' },
+  root_cause:          { label: 'Root cause',       icon: '🧠', color: 'var(--s-info)' },
+  solving:             { label: 'Solving',          icon: '🔧', color: 'var(--s-info)' },
+  // Legacy / non-autonomous beats:
   evaluated:           { label: 'Noticed',          icon: '👁',  color: 'var(--s-text-muted)' },
   diagnosed:           { label: 'Diagnosed',        icon: '🧠', color: 'var(--s-info)' },
   decided_solve:       { label: 'Decided to solve', icon: '✦',  color: 'var(--s-info)' },
@@ -26,7 +32,7 @@ const KIND_LABEL: Record<string, { label: string; icon: string; color: string }>
   auto_fixed:          { label: 'Auto-fixed',       icon: '✓',  color: 'var(--s-success)' },
   auto_fix_failed:     { label: 'Auto-fix failed',  icon: '✕',  color: 'var(--s-critical)' },
   solve_started:       { label: 'Solving started',  icon: '▶',  color: 'var(--s-info)' },
-  solve_resolved:      { label: 'Solved',           icon: '✓',  color: 'var(--s-success)' },
+  solve_resolved:      { label: 'Resolved',         icon: '✓',  color: 'var(--s-success)' },
   solve_escalated:     { label: 'Escalated to you', icon: '⚠',  color: 'var(--s-warning)' },
   solve_exhausted:     { label: 'Paused at budget', icon: '⏸',  color: 'var(--s-warning)' },
   approval_superseded: { label: 'Superseded',       icon: '↻',  color: 'var(--s-success)' },

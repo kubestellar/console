@@ -45,12 +45,33 @@ func NewRegistry() *Registry {
 		r.global["together"] = NewOpenAICompat("https://api.together.xyz/v1", k, "together")
 	}
 
+	// Default-provider selection — preference order:
+	//   1. STELLAR_DEFAULT_PROVIDER env override (explicit operator intent)
+	//   2. First cloud provider with an API key actually configured. This is
+	//      the "matches the navbar AI selector" path — if the operator has
+	//      ANTHROPIC_API_KEY set, Stellar's background loops (observer,
+	//      evaluator) use Anthropic too, instead of silently failing against
+	//      a local Ollama that isn't running.
+	//   3. Ollama, as the original local-first fallback.
 	r.defaultName = os.Getenv("STELLAR_DEFAULT_PROVIDER")
+	if r.defaultName == "" {
+		// Cloud-cred priority. Anthropic first because that's what the demo
+		// path uses and what the navbar selector defaults to.
+		for _, name := range []string{"anthropic", "openai", "groq", "openrouter", "together"} {
+			if _, ok := r.global[name]; ok {
+				r.defaultName = name
+				break
+			}
+		}
+	}
 	if r.defaultName == "" {
 		r.defaultName = "ollama"
 	}
 	r.defaultModel = os.Getenv("STELLAR_DEFAULT_MODEL")
 	if r.defaultModel == "" {
+		// Match the chosen default's natural model. ProviderDefaults below
+		// holds these; we read after Resolve-time so callers get the right
+		// per-provider model. The "llama3" only applies if defaultName=ollama.
 		r.defaultModel = "llama3"
 	}
 	return r
@@ -82,7 +103,16 @@ func (r *Registry) Resolve(requestProvider, requestModel string, userCfg *Resolv
 	if p, ok := r.global[r.defaultName]; ok {
 		return ResolvedProvider{Provider: p, Model: resolveModel(r.defaultName, ""), Source: "env-default"}
 	}
-	return ResolvedProvider{Provider: r.global["ollama"], Model: r.defaultModel, Source: "fallback"}
+	// Last resort: any configured provider, preferring cloud over local-Ollama.
+	// We used to hard-pin to Ollama here, which made every background loop fail
+	// with connection-refused when Ollama wasn't running — even though the
+	// operator had a cloud key set.
+	for _, name := range []string{"anthropic", "openai", "groq", "openrouter", "together", "ollama"} {
+		if p, ok := r.global[name]; ok {
+			return ResolvedProvider{Provider: p, Model: resolveModel(name, ""), Source: "fallback"}
+		}
+	}
+	return ResolvedProvider{Provider: nil, Model: r.defaultModel, Source: "fallback"}
 }
 
 func (r *Registry) GetGlobal(name string) (Provider, bool) {

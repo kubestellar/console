@@ -109,6 +109,7 @@ export function EventCard({
   notification,
   allNotifications,
   solveStatus,
+  attemptCount,
   onSolve,
   onDismiss,
   onRollback,
@@ -118,6 +119,9 @@ export function EventCard({
   notification: StellarNotification
   allNotifications?: StellarNotification[]
   solveStatus?: SolveStatus | null
+  /** Number of Stellar solve attempts on this workload, used to render the
+   *  "Tried N×" body badge. 0 means no badge. */
+  attemptCount?: number
   onSolve?: (eventID: string) => Promise<unknown>
   onDismiss: () => void
   onRollback?: (prompt: string) => void
@@ -185,19 +189,60 @@ export function EventCard({
         </div>
       )}
       {solveStatus && (
-        <div style={{
-          marginTop: 4, padding: '2px 6px',
-          background: solveStatus.isActive ? 'rgba(99,150,237,0.1)' : 'transparent',
-          border: `1px solid ${solveStatus.color}`,
-          borderRadius: 'var(--s-rs)',
-          fontSize: 10, fontFamily: 'var(--s-mono)', color: solveStatus.color,
-          display: 'inline-block',
-        }}>
-          {solveStatus.label}
+        <div style={{ marginTop: 6 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3,
+          }}>
+            <span style={{
+              fontSize: 11, fontFamily: 'var(--s-mono)', fontWeight: 600,
+              color: solveStatus.color, flex: 1, minWidth: 0,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {solveStatus.label}
+            </span>
+            <span style={{
+              fontSize: 10, fontFamily: 'var(--s-mono)',
+              color: solveStatus.color, flexShrink: 0,
+            }}>
+              {solveStatus.percent}%
+            </span>
+          </div>
+          <div style={{
+            height: 3, background: 'var(--s-border-muted)',
+            borderRadius: 2, overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.min(100, Math.max(0, solveStatus.percent))}%`,
+              background: solveStatus.color,
+              transition: 'width 0.35s ease',
+            }} />
+          </div>
         </div>
       )}
+      {attemptCount && attemptCount > 0 ? (
+        <div style={{
+          marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 4,
+          fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-muted)',
+          padding: '1px 6px', borderRadius: 10,
+          background: 'var(--s-surface)', border: '1px solid var(--s-border-muted)',
+        }}>
+          <span>✦ Stellar tried {attemptCount}× — see details</span>
+        </div>
+      ) : null}
       <div style={{ fontSize: 12, color: 'var(--s-text-muted)', lineHeight: 1.55, marginTop: 4 }}>{notification.body}</div>
-      {!notification.read && (
+      {!notification.read && (() => {
+        // When Stellar is autonomously solving (or already finished resolving
+        // successfully), hide manual action buttons — the user shouldn't have to
+        // click anything in those cases. EXCEPTION: when Stellar escalated or
+        // exhausted, the operator needs an obvious next step. We surface a
+        // single "Try AI mission" button there so they can hand it off without
+        // hunting through the mission sidebar.
+        const isAutoActive = solveStatus?.isActive ?? false
+        const isResolved = solveStatus?.phase === 'resolved'
+        const isEscalated = solveStatus?.phase === 'escalated' || solveStatus?.phase === 'exhausted'
+        const hideManualActions = isAutoActive || isResolved
+        return (
         <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
           <button onClick={onDismiss} style={{ background: 'none', border: '1px solid var(--s-border-muted)', borderRadius: 'var(--s-rs)', padding: '2px 8px', fontSize: 11, color: 'var(--s-text-muted)', cursor: 'pointer' }}>Dismiss</button>
           {showRollback && onRollback && (
@@ -208,7 +253,24 @@ export function EventCard({
               ↩ Undo this
             </button>
           )}
-          {hints.map(hint => {
+          {isEscalated && onSolve && (
+            <button
+              onClick={() => { void onSolve(notification.id) }}
+              title="Escalate to an AI mission on your connected agent"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: 'rgba(227,179,65,0.1)',
+                border: '1px solid var(--s-warning)',
+                borderRadius: 'var(--s-rs)',
+                padding: '2px 10px',
+                fontSize: 11, color: 'var(--s-warning)', cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              <span>✦</span><span>Try AI mission</span>
+            </button>
+          )}
+          {!hideManualActions && !isEscalated && hints.map(hint => {
             const cfg = ACTION_CONFIG[hint] ?? { label: hint.charAt(0).toUpperCase() + hint.slice(1), icon: '→', color: 'var(--s-text-muted)' }
             const isSolveActive = hint === 'solve' && solveStatus?.isActive
             return (
@@ -253,8 +315,17 @@ export function EventCard({
               </button>
             )
           })}
+          {hideManualActions && isAutoActive && (
+            <span style={{
+              fontSize: 10, fontFamily: 'var(--s-mono)', color: 'var(--s-text-dim)',
+              fontStyle: 'italic', alignSelf: 'center',
+            }}>
+              Stellar is handling this — no input needed.
+            </span>
+          )}
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

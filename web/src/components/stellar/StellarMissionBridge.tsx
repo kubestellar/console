@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useMissions } from '../../hooks/useMissions'
+import { INACTIVE_MISSION_STATUSES } from '../../hooks/useMissionTypes'
 import { useStellar } from '../../hooks/useStellar'
 
 const STELLAR_SSE_URL = '/api/stellar/stream'
@@ -17,44 +18,51 @@ interface MissionTriggerPayload {
 }
 
 /**
- * StellarMissionBridge listens to the Stellar SSE stream for `mission_trigger`
- * events and converts them into actual AI mission invocations via the existing
- * MissionContext.startMission API — the same path the "Repair" button on
- * ConsoleIssuesCard uses.
+ * StellarMissionBridge converts Stellar's `mission_trigger` SSE events into
+ * real AI mission invocations via MissionContext.startMission — same machinery
+ * the "Repair" button on ConsoleIssuesCard uses. Mounted in Layout so
+ * autonomous decisions reach the mission system regardless of which page the
+ * operator is on.
  *
- * Mounted eagerly in Layout so autonomous solve decisions reach the mission
- * system regardless of which page the operator is on. Once the mission
- * starts, MissionProvider drives the agent over WebSocket, the user sees the
- * mission sidebar light up, and the AI does the actual fix end-to-end.
- *
- * We open a dedicated lightweight EventSource here rather than reuse the one
- * inside useStellarSource because that one is buffered through React state
- * and may miss the very first event on a cold mount. The bridge is the only
- * subscriber that needs the message inline, so a direct stream is simpler.
+ * The bridge also watches the mission's lifecycle. When its status reaches a
+ * terminal state (completed / failed / cancelled), it POSTs the matching
+ * outcome back to /api/stellar/solve/:solveID/complete so the event card flips
+ * from progress bar → resolved/escalated badge. Without this round-trip, the
+ * card would stay at 75% forever and the activity log would never record the
+ * terminal beat.
  */
 export function StellarMissionBridge() {
-  const { startMission } = useMissions()
+  const { startMission, missions } = useMissions()
   // Pull useStellar to ensure the provider is also mounted alongside us —
   // we don't actually consume any of its state here, but the bridge depends
   // on Stellar being initialized so cookies/auth are in place.
   useStellar()
 
-  const handledRef = useRef<Set<string>>(new Set())
+  // Map missionId → { solveId, eventId } for missions Stellar spawned. We
+  // need this so the lifecycle-watch effect knows which solves to close out
+  // when each mission terminates. A ref (not state) avoids re-renders.
+  const tracked = useRef<Map<string, { solveId: string; eventId: string }>>(new Map())
+  // Solves whose /complete call has already been fired, so we don't POST
+  // twice if the mission updates after termination.
+  const completed = useRef<Set<string>>(new Set())
+  // Solve IDs we already turned into missions, so duplicate SSE replays
+  // (e.g. on reconnect with the same in-flight event) don't double-spawn.
+  const handled = useRef<Set<string>>(new Set())
 
+  // ── 1. Listen for backend "please trigger a mission" SSE events. ──
   useEffect(() => {
     const es = new EventSource(STELLAR_SSE_URL, { withCredentials: true })
 
     const onTrigger = (e: MessageEvent) => {
       try {
         const payload: MissionTriggerPayload = JSON.parse(e.data)
-        if (!payload.solveId || handledRef.current.has(payload.solveId)) return
-        handledRef.current.add(payload.solveId)
+        if (!payload.solveId || handled.current.has(payload.solveId)) return
+        handled.current.add(payload.solveId)
 
-        // Fire the mission. We use type: 'repair' so it shows in the mission
-        // sidebar alongside other repair missions, and skipReview: true so
-        // the AI starts immediately — autonomous means autonomous, no
-        // confirmation dialog. The "Stellar" prefix in the title makes the
-        // origin obvious in the mission list.
+        // skipReview: true is the JARVIS part. No confirmation dialog —
+        // Stellar already decided this event was critical, you don't need
+        // to vouch for it. The mission sidebar will show actions as they
+        // happen, which is the operator's verification path.
         const missionId = startMission({
           title: payload.title,
           description: `Stellar autonomous fix · ${payload.namespace}/${payload.workload}`,
@@ -73,13 +81,11 @@ export function StellarMissionBridge() {
           },
         })
 
-        // Best-effort: tell the backend the mission landed so the activity
-        // log shows the linkage. Failure is non-fatal.
         if (missionId) {
-          // We don't wait for mission completion here — when the mission
-          // finishes the user can mark it resolved from the mission sidebar
-          // or the Stellar page. Future: hook into MissionContext to detect
-          // status transitions and call /complete automatically.
+          tracked.current.set(missionId, {
+            solveId: payload.solveId,
+            eventId: payload.eventId,
+          })
         }
       } catch {
         // Bad payload — ignore.
@@ -92,6 +98,49 @@ export function StellarMissionBridge() {
       es.close()
     }
   }, [startMission])
+
+  // ── 2. Watch tracked missions and close the loop when they terminate. ──
+  useEffect(() => {
+    for (const [missionId, link] of tracked.current.entries()) {
+      if (completed.current.has(link.solveId)) continue
+      const m = missions.find(mn => mn.id === missionId)
+      if (!m) continue
+      if (!INACTIVE_MISSION_STATUSES.has(m.status)) continue
+      // Terminal — derive Stellar's outcome status from the mission's.
+      let stellarStatus: 'resolved' | 'escalated' | 'exhausted' = 'resolved'
+      let summary = m.currentStep || 'AI mission completed.'
+      if (m.status === 'failed') {
+        stellarStatus = 'escalated'
+        summary = `AI mission failed: ${m.currentStep || 'see mission sidebar for details'}.`
+      } else if (m.status === 'cancelled') {
+        stellarStatus = 'exhausted'
+        summary = 'AI mission cancelled — needs your call on next steps.'
+      } else if (m.status === 'completed') {
+        const lastAssistant = [...m.messages].reverse().find(msg => msg.role === 'assistant')
+        if (lastAssistant) {
+          summary = lastAssistant.content.slice(0, 400)
+        }
+      }
+      completed.current.add(link.solveId)
+      fetch(`/api/stellar/solve/${encodeURIComponent(link.solveId)}/complete`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({
+          solveId: link.solveId,
+          eventId: link.eventId,
+          status: stellarStatus,
+          summary,
+        }),
+      }).catch(() => {
+        // Non-fatal: card stays at "Solving" and the user can dismiss
+        // manually. We don't want a stuck retry loop.
+      })
+    }
+  }, [missions])
 
   return null
 }

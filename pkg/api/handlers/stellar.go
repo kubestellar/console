@@ -2882,7 +2882,11 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 	if eval.RecommendedAction != nil && eval.RecommendedAction.Type != "" {
 		if isRecurring {
 			h.queueAutoTendAction(ctx, event, eval.RecommendedAction, notif.ID)
-		} else {
+		} else if severity != "critical" {
+			// Critical events go through autoTriggerSolve below, which owns the
+			// full narrative (investigating → restart try → mission if needed).
+			// Letting autoExecuteAction run in parallel would split the activity
+			// log and double-act on the same workload.
 			h.autoExecuteAction(ctx, event, eval.RecommendedAction, notif.ID)
 		}
 	}

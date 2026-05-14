@@ -42,6 +42,41 @@ type ObserverStore interface {
 	NotificationExistsByDedup(ctx context.Context, userID, dedupeKey string) (bool, error)
 }
 
+// resolveProviderForUser returns a Resolve result that prefers the user's
+// per-user default provider (saved by the Stellar settings UI in
+// stellar_provider_configs) over the global registry default. Falls through to
+// the registry's default when the store doesn't implement the lookup or the
+// user has no saved provider.
+func (o *Observer) resolveProviderForUser(ctx context.Context, userID string) providers.ResolvedProvider {
+	if userID == "" {
+		return o.registry.Resolve("", "", nil)
+	}
+	type providerLookup interface {
+		GetUserDefaultProvider(ctx context.Context, userID string) (*store.StellarProviderConfig, error)
+	}
+	lookup, ok := o.store.(providerLookup)
+	if !ok {
+		return o.registry.Resolve("", "", nil)
+	}
+	cfg, err := lookup.GetUserDefaultProvider(ctx, userID)
+	if err != nil || cfg == nil {
+		return o.registry.Resolve("", "", nil)
+	}
+	// We have a stored config — translate to a transient Provider instance via
+	// the registry's known global providers if the name matches. We don't
+	// decrypt the api_key here; the registry's global providers are what carry
+	// the working creds (loaded from env at startup).
+	p, gok := o.registry.GetGlobal(cfg.Provider)
+	if !gok {
+		// User picked a provider not in the global registry (e.g., their api
+		// key is per-user only). Without a usable Provider instance, fall back.
+		return o.registry.Resolve("", "", nil)
+	}
+	model := strings.TrimSpace(cfg.Model)
+	userCfg := &providers.ResolvedUserProvider{Provider: p, Model: model, ConfigID: cfg.ID}
+	return o.registry.Resolve("", "", userCfg)
+}
+
 type K8sClient interface {
 	ListClusters(ctx context.Context) ([]k8s.ClusterInfo, error)
 	GetWarningEvents(ctx context.Context, cluster, namespace string, limit int) ([]k8s.Event, error)
