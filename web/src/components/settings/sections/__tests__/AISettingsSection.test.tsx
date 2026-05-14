@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -38,5 +38,14 @@ describe('AISettingsSection', () => {
   it('renders without crashing', () => {
     const { container } = render(<AISettingsSection mode="low" setMode={vi.fn()} description="test" />)
     expect(container).toBeTruthy()
+  })
+
+  it('renders a filled slider track for the selected mode', () => {
+    render(<AISettingsSection mode="high" setMode={vi.fn()} description="test" />)
+
+    const slider = screen.getByRole('slider', { name: 'AI usage mode' })
+    const fill = slider.parentElement?.querySelector('[data-slider-fill="true"]')
+
+    expect(fill).toHaveStyle({ width: '100%' })
   })
 })

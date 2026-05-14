@@ -1,5 +1,5 @@
 import { type InputHTMLAttributes, type ReactNode, useId } from 'react'
-import { cn } from '../../lib/cn'
+import { RangeSliderInput } from './RangeSliderInput'
 
 interface SliderProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   /** Label text displayed above the slider */
@@ -47,22 +47,15 @@ export function Slider({
           </span>
         </div>
       )}
-      <input
+      <RangeSliderInput
         id={id}
-        type="range"
         min={min}
         max={max}
         step={step}
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={cn(
-          'w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary',
-          'disabled:opacity-50 disabled:cursor-not-allowed',
-          '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md',
-          '[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-md [&::-moz-range-thumb]:border-0',
-          className,
-        )}
+        className={className}
         {...props}
       />
     </div>

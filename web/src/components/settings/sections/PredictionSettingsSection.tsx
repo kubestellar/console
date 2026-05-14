@@ -5,6 +5,7 @@ import type { PredictionSettings } from '../../../types/predictions'
 import { usePredictionFeedback } from '../../../hooks/usePredictionFeedback'
 import { CollapsibleSection } from '../../ui/CollapsibleSection'
 import { Button } from '../../ui/Button'
+import { RangeSliderInput } from '../../ui/RangeSliderInput'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../../lib/constants/network'
 import { emitAIPredictionsToggled, emitConfidenceThresholdChanged, emitConsensusModeToggled } from '../../../lib/analytics'
 
@@ -13,6 +14,12 @@ interface PredictionSettingsSectionProps {
   updateSettings: (updates: Partial<PredictionSettings>) => void
   resetSettings: () => void
 }
+
+const ANALYSIS_INTERVAL_MINUTES = 15
+const ANALYSIS_INTERVAL_MAX_MINUTES = 120
+const ANALYSIS_INTERVAL_STEP_MINUTES = 15
+const MIN_CONFIDENCE_PERCENT = 50
+const MAX_CONFIDENCE_PERCENT = 90
 
 export function PredictionSettingsSection({
   settings,
@@ -50,11 +57,13 @@ export function PredictionSettingsSection({
   }
 
   const handleIntervalChange = (value: number) => {
-    updateSettings({ interval: Math.min(Math.max(value, 15), 120) })
+    updateSettings({
+      interval: Math.min(Math.max(value, ANALYSIS_INTERVAL_MINUTES), ANALYSIS_INTERVAL_MAX_MINUTES),
+    })
   }
 
   const handleConfidenceChange = (value: number) => {
-    const clamped = Math.min(Math.max(value, 50), 90)
+    const clamped = Math.min(Math.max(value, MIN_CONFIDENCE_PERCENT), MAX_CONFIDENCE_PERCENT)
     updateSettings({ minConfidence: clamped })
     emitConfidenceThresholdChanged(clamped)
   }
@@ -137,21 +146,15 @@ export function PredictionSettingsSection({
                   </div>
                 </div>
               </div>
-              <input
+              <RangeSliderInput
                 id="predictions-analysis-interval"
-                type="range"
-                min="15"
-                max="120"
-                step="15"
+                min={ANALYSIS_INTERVAL_MINUTES}
+                max={ANALYSIS_INTERVAL_MAX_MINUTES}
+                step={ANALYSIS_INTERVAL_STEP_MINUTES}
                 value={settings.interval}
-                onChange={(e) => handleIntervalChange(parseInt(e.target.value))}
-                className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer
-                  [&::-webkit-slider-thumb]:appearance-none
-                  [&::-webkit-slider-thumb]:w-4
-                  [&::-webkit-slider-thumb]:h-4
-                  [&::-webkit-slider-thumb]:bg-blue-500
-                  [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:cursor-pointer"
+                onChange={(event) => handleIntervalChange(Number(event.target.value))}
+                className="[&::-webkit-slider-thumb]:bg-blue-500 [&::-moz-range-thumb]:bg-blue-500"
+                fillClassName="bg-blue-500"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>{t('settings.predictions.intervalMin')}</span>
@@ -173,20 +176,14 @@ export function PredictionSettingsSection({
                   </div>
                 </div>
               </div>
-              <input
+              <RangeSliderInput
                 id="predictions-min-confidence"
-                type="range"
-                min="50"
-                max="90"
+                min={MIN_CONFIDENCE_PERCENT}
+                max={MAX_CONFIDENCE_PERCENT}
                 value={settings.minConfidence}
-                onChange={(e) => handleConfidenceChange(parseInt(e.target.value))}
-                className="w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer
-                  [&::-webkit-slider-thumb]:appearance-none
-                  [&::-webkit-slider-thumb]:w-4
-                  [&::-webkit-slider-thumb]:h-4
-                  [&::-webkit-slider-thumb]:bg-blue-500
-                  [&::-webkit-slider-thumb]:rounded-full
-                  [&::-webkit-slider-thumb]:cursor-pointer"
+                onChange={(event) => handleConfidenceChange(Number(event.target.value))}
+                className="[&::-webkit-slider-thumb]:bg-blue-500 [&::-moz-range-thumb]:bg-blue-500"
+                fillClassName="bg-blue-500"
               />
               <div className="flex justify-between text-xs text-muted-foreground mt-1">
                 <span>{t('settings.predictions.confidenceMin')}</span>
