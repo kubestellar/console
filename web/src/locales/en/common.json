@@ -2068,7 +2068,14 @@
     "themeToggle": "Theme: {{theme}} (click to toggle)",
     "moreOptions": "More options",
     "viewDocs": "View documentation",
-    "clusterFilter": "Cluster Filter"
+    "clusterFilter": "Cluster Filter",
+    "taglines": [
+      "Multi-cluster Kubernetes management simplified",
+      "Orchestrate workloads across distributed clusters",
+      "Unified control plane for edge and cloud",
+      "Deploy anywhere, manage everywhere",
+      "Kubernetes fleet management at scale"
+    ]
   },
   "missionSidebar": {
     "expandSidebar": "Expand sidebar",

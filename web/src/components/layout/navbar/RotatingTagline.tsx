@@ -1,18 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const ROTATION_INTERVAL_MS = 30_000
 const TRANSITION_DURATION_MS = 600
-
-const TAGLINES: readonly string[] = [
-  'multi-cluster first, saving time and tokens',
-  'not a dashboard — THIS is AI Ops',
-  'make this thing do anything',
-  'deploy and manage the magical stuff, in your cluster, with what you already have',
-  'your clusters, your rules, your AI',
-  'one console to rule them all',
-  'Kubernetes operations, supercharged',
-  'AI-driven multi-cluster management',
-] as const
 
 type TransitionStyle = 'fade' | 'slideUp' | 'slideDown' | 'slideLeft' | 'blur-sm' | 'scaleDown'
 
@@ -21,6 +11,10 @@ const TRANSITIONS: readonly TransitionStyle[] = [
 ] as const
 
 function randomIndex(length: number): number {
+  if (length <= 0) {
+    return 0
+  }
+
   return Math.floor(Math.random() * length)
 }
 
@@ -75,39 +69,61 @@ function getTransitionCSS(transition: TransitionStyle, visible: boolean): React.
 const TAGLINE_MAX_WIDTH_REM = '16rem'
 
 export function RotatingTagline({ aiTagline }: { aiTagline?: string }) {
-  const allTaglines = useMemo(
-    () => (aiTagline ? [...TAGLINES, aiTagline] : TAGLINES),
-    [aiTagline],
-  )
+  const { t } = useTranslation()
+  const localizedTaglines = useMemo(() => {
+    const translatedTaglines = t('navbar.taglines', { returnObjects: true })
 
-  const [index, setIndex] = useState(() => randomIndex(allTaglines.length))
+    return Array.isArray(translatedTaglines)
+      ? translatedTaglines.filter((tagline): tagline is string => typeof tagline === 'string')
+      : []
+  }, [t])
+  const allTaglines = useMemo(
+    () => (aiTagline ? [...localizedTaglines, aiTagline] : localizedTaglines),
+    [aiTagline, localizedTaglines],
+  )
+  const taglineCount = allTaglines.length
+
+  const [index, setIndex] = useState(() => randomIndex(taglineCount))
   const [visible, setVisible] = useState(true)
   const [transition, setTransition] = useState<TransitionStyle>('fade')
 
   const advance = useCallback(() => {
+    if (taglineCount === 0) {
+      return undefined
+    }
+
     setTransition(pickTransition())
     setVisible(false)
     const tid = setTimeout(() => {
-      setIndex(prev => (prev + 1) % allTaglines.length)
+      setIndex(prev => (prev + 1) % taglineCount)
       setVisible(true)
     }, TRANSITION_DURATION_MS)
     return () => clearTimeout(tid)
-  }, [allTaglines.length])
+  }, [taglineCount])
 
   useEffect(() => {
+    if (taglineCount <= 1) {
+      return undefined
+    }
+
     const id = setInterval(advance, ROTATION_INTERVAL_MS)
     return () => clearInterval(id)
-  }, [advance])
+  }, [advance, taglineCount])
 
-  const safeIndex = index < allTaglines.length ? index : 0
+  const safeIndex = taglineCount > 0 && index < taglineCount ? index : 0
+  const currentTagline = allTaglines[safeIndex] ?? ''
+
+  if (!currentTagline) {
+    return null
+  }
 
   return (
     <span
       className="text-[10px] text-muted-foreground tracking-wide inline-block overflow-hidden text-ellipsis whitespace-nowrap"
       style={{ ...getTransitionCSS(transition, visible), maxWidth: TAGLINE_MAX_WIDTH_REM }}
-      title={allTaglines[safeIndex]}
+      title={currentTagline}
     >
-      {allTaglines[safeIndex]}
+      {currentTagline}
     </span>
   )
 }
