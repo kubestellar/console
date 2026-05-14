@@ -43,19 +43,21 @@ jobs:
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
         run: |
           LABEL="workflow-failure"
           SEARCH_TITLE="Workflow failure: ${WORKFLOW_NAME}"
+          export SEARCH_TITLE
 
           # Search for an existing open issue with matching title and label
           EXISTING=$(gh issue list \
-            --repo "${{ github.repository }}" \
+            --repo "$REPOSITORY" \
             --state open \
             --label "$LABEL" \
             --search "in:title \"${SEARCH_TITLE}\"" \
             --json number,title \
-            --jq ".[] | select(.title == \"${SEARCH_TITLE}\") | .number" \
+            --jq '.[] | select(.title == env.SEARCH_TITLE) | .number' \
           )
 
           if [ -n "$EXISTING" ]; then
@@ -71,10 +73,11 @@ jobs:
         id: comment-details
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
           RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           FAILED_JOBS=$(gh run view "$RUN_ID" \
-            --repo "${{ github.repository }}" \
+            --repo "$REPOSITORY" \
             --json jobs \
             --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")' 2>/dev/null || echo "")
           echo "failed_jobs=${FAILED_JOBS}" >> "$GITHUB_OUTPUT"
@@ -83,33 +86,37 @@ jobs:
         if: steps.check.outputs.exists == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ steps.check.outputs.issue_number }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           FAILED_JOBS: ${{ steps.comment-details.outputs.failed_jobs }}
         run: |
-          JOBS_LINE=""
-          if [ -n "$FAILED_JOBS" ]; then
-            JOBS_LINE="- **Failed jobs:** \`${FAILED_JOBS}\`"
-          fi
-          gh issue comment "${{ steps.check.outputs.issue_number }}" \
-            --repo "${{ github.repository }}" \
-            --body "$(cat <<EOF
-          **Still failing** — \`${WORKFLOW_NAME}\` failed again.
+          BODY_FILE="$GITHUB_WORKSPACE/workflow-failure-comment.md"
+          {
+            printf '**Still failing** — `%s` failed again.\n\n' "$WORKFLOW_NAME"
+            printf -- '- **Run:** [#%s](%s)\n' "$RUN_ID" "$RUN_URL"
+            printf -- '- **Time:** %s\n' "$(date -u '+%Y-%m-%d %H:%M UTC')"
+            if [ -n "$FAILED_JOBS" ]; then
+              printf -- '- **Failed jobs:** `%s`\n' "$FAILED_JOBS"
+            fi
+          } > "$BODY_FILE"
 
-          - **Run:** [#${RUN_ID}](${RUN_URL})
-          - **Time:** $(date -u '+%Y-%m-%d %H:%M UTC')
-          ${JOBS_LINE}
-          EOF
-          )"
+          gh issue comment "$ISSUE_NUMBER" \
+            --repo "$REPOSITORY" \
+            --body-file "$BODY_FILE"
+
+          rm -f "$BODY_FILE"
 
       - name: Ensure label exists
         if: steps.check.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           gh label create "workflow-failure" \
-            --repo "${{ github.repository }}" \
+            --repo "$REPOSITORY" \
             --description "Automated: scheduled workflow failed" \
             --color "d93f0b" \
             2>/dev/null || true
@@ -119,10 +126,11 @@ jobs:
         id: details
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
           RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           FAILED_JOBS=$(gh run view "$RUN_ID" \
-            --repo "${{ github.repository }}" \
+            --repo "$REPOSITORY" \
             --json jobs \
             --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")' 2>/dev/null || echo "")
           echo "failed_jobs=${FAILED_JOBS}" >> "$GITHUB_OUTPUT"
@@ -131,40 +139,40 @@ jobs:
         if: steps.check.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           WORKFLOW_FILE: ${{ github.event.workflow_run.path }}
           FAILED_JOBS: ${{ steps.details.outputs.failed_jobs }}
         run: |
-          FAILED_LINE=""
-          if [ -n "$FAILED_JOBS" ]; then
-            FAILED_LINE="| **Failed jobs** | \`${FAILED_JOBS}\` |"
-          fi
+          BODY_FILE="$GITHUB_WORKSPACE/workflow-failure-issue.md"
+          TITLE="Workflow failure: ${WORKFLOW_NAME}"
+
+          {
+            printf '## Workflow Failure\n\n'
+            printf 'The **%s** workflow failed.\n\n' "$WORKFLOW_NAME"
+            printf '| Detail | Value |\n'
+            printf '|--------|-------|\n'
+            printf '| **Workflow** | `%s` |\n' "$WORKFLOW_NAME"
+            printf '| **Run** | [#%s](%s) |\n' "$RUN_ID" "$RUN_URL"
+            printf '| **File** | `%s` |\n' "$WORKFLOW_FILE"
+            printf '| **Time** | %s |\n' "$(date -u '+%Y-%m-%d %H:%M UTC')"
+            if [ -n "$FAILED_JOBS" ]; then
+              printf '| **Failed jobs** | `%s` |\n' "$FAILED_JOBS"
+            fi
+            printf '\n### Next Steps\n'
+            printf '1. Check the [failed run](%s) for error details\n' "$RUN_URL"
+            printf '2. Fix the underlying issue\n'
+            printf '3. **Do not close** this issue until the workflow passes on `main`\n\n'
+            printf -- '---\n'
+            printf '*This issue was automatically created by the workflow failure monitor.*\n'
+          } > "$BODY_FILE"
 
           gh issue create \
-            --repo "${{ github.repository }}" \
-            --title "Workflow failure: ${WORKFLOW_NAME}" \
+            --repo "$REPOSITORY" \
+            --title "$TITLE" \
             --label "workflow-failure,bug" \
-            --body "$(cat <<EOF
-          ## Workflow Failure
+            --body-file "$BODY_FILE"
 
-          The **${WORKFLOW_NAME}** workflow failed.
-
-          | Detail | Value |
-          |--------|-------|
-          | **Workflow** | \`${WORKFLOW_NAME}\` |
-          | **Run** | [#${RUN_ID}](${RUN_URL}) |
-          | **File** | \`${WORKFLOW_FILE}\` |
-          | **Time** | $(date -u '+%Y-%m-%d %H:%M UTC') |
-          ${FAILED_LINE}
-
-          ### Next Steps
-          1. Check the [failed run](${RUN_URL}) for error details
-          2. Fix the underlying issue
-          3. **Do not close** this issue until the workflow passes on \`main\`
-
-          ---
-          *This issue was automatically created by the workflow failure monitor.*
-          EOF
-          )"
+          rm -f "$BODY_FILE"
