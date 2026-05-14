@@ -8,8 +8,9 @@ interface RangeSliderProps extends Omit<InputHTMLAttributes<HTMLInputElement>, '
 
 /**
  * A range input with a visible fill track from the left edge to the thumb.
- * Wraps a native <input type="range"> with a background gradient that
- * dynamically reflects the current value as a percentage of the range.
+ * Wraps a native <input type="range"> with an absolutely positioned fill
+ * overlay whose width dynamically reflects the current value as a percentage
+ * of the range.
  */
 export function RangeSlider({
   fillColor = 'bg-blue-500',
