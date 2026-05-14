@@ -34,15 +34,15 @@ vi.mock('../../../../hooks/useDemoMode', () => ({
 }))
 
 vi.mock('../../../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => demoModeTestState.useLocalAgent(),
+  useLocalAgent: () => mockUseLocalAgent(),
 }))
 
 vi.mock('../../../../hooks/useMissions', () => ({
-  useMissions: () => demoModeTestState.useMissions(),
+  useMissions: () => mockUseMissions(),
 }))
 
 vi.mock('../../../../hooks/useBackendHealth', () => ({
-  useBackendHealth: () => demoModeTestState.useBackendHealth(),
+  useBackendHealth: () => mockUseBackendHealth(),
 }))
 
 vi.mock('../../../../lib/cn', () => ({
@@ -50,7 +50,7 @@ vi.mock('../../../../lib/cn', () => ({
 }))
 
 vi.mock('../../../agent/AgentApprovalDialog', () => ({
-  hasApprovedAgents: () => demoModeTestState.hasApprovedAgents(),
+  hasApprovedAgents: () => mockHasApprovedAgents(),
   AgentApprovalDialog: ({ isOpen }: { isOpen: boolean }) => isOpen ? <div>approval-dialog</div> : null,
 }))
 
@@ -59,7 +59,7 @@ vi.mock('../../../setup/SetupInstructionsDialog', () => ({
 }))
 
 vi.mock('@/hooks/mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => demoModeTestState.agentFetch(...args),
+  agentFetch: (...args: unknown[]) => mockAgentFetch(...args),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -75,9 +75,9 @@ describe('AgentStatusIndicator demo mode transition', () => {
     demoModeState.isDemoModeForced = false
     vi.clearAllMocks()
 
-    demoModeTestState.hasApprovedAgents.mockReturnValue(false)
-    demoModeTestState.agentFetch.mockResolvedValue(new Response(JSON.stringify({ availableProviders: [] }), { status: 200 }))
-    demoModeTestState.useLocalAgent.mockReturnValue({
+    mockHasApprovedAgents.mockReturnValue(false)
+    mockAgentFetch.mockResolvedValue(new Response(JSON.stringify({ availableProviders: [] }), { status: 200 }))
+    mockUseLocalAgent.mockReturnValue({
       status: 'disconnected',
       health: null,
       connectionEvents: [],
@@ -87,12 +87,12 @@ describe('AgentStatusIndicator demo mode transition', () => {
       dataErrorCount: 0,
       lastDataError: null,
     })
-    demoModeTestState.useBackendHealth.mockReturnValue({
+    mockUseBackendHealth.mockReturnValue({
       status: 'disconnected',
       isConnected: false,
       isInClusterMode: false,
     })
-    demoModeTestState.useMissions.mockReturnValue({ selectedAgent: 'none', agents: [] })
+    mockUseMissions.mockReturnValue({ selectedAgent: 'none', agents: [] })
   })
 
   it('allows disabling demo mode without opening the CLI agent approval dialog', () => {
@@ -101,8 +101,8 @@ describe('AgentStatusIndicator demo mode transition', () => {
     fireEvent.click(screen.getByTestId('navbar-agent-status-btn'))
     fireEvent.click(screen.getByTestId('demo-mode-toggle'))
 
-    expect(demoModeTestState.toggleDemoMode).toHaveBeenCalledTimes(1)
-    expect(demoModeTestState.agentFetch).not.toHaveBeenCalled()
+    expect(mockToggleDemoMode).toHaveBeenCalledTimes(1)
+    expect(mockAgentFetch).not.toHaveBeenCalled()
     expect(screen.queryByText('approval-dialog')).toBeNull()
   })
 
@@ -124,8 +124,8 @@ describe('AgentStatusIndicator demo mode transition', () => {
     fireEvent.click(screen.getByTestId('navbar-agent-status-btn'))
     fireEvent.click(screen.getByTestId('agent-approval-cta'))
 
-    await waitFor(() => expect(demoModeTestState.agentFetch).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(mockAgentFetch).toHaveBeenCalledTimes(1))
     expect(screen.getByText('approval-dialog')).toBeTruthy()
-    expect(demoModeTestState.toggleDemoMode).not.toHaveBeenCalled()
+    expect(mockToggleDemoMode).not.toHaveBeenCalled()
   })
 })

@@ -274,7 +274,7 @@ describe('useNVIDIAOperators', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(mockFetchSSE).not.toHaveBeenCalled()
-    expect(globalThis.fetch).toHaveBeenCalledWith('http://127.0.0.1:8585/nvidia-operators?', undefined)
+    expect(globalThis.fetch).toHaveBeenCalledWith('http://127.0.0.1:8585/nvidia-operators?')
     expect(result.current.operators).toEqual([])
     expect(result.current.error).toBeNull()
   })

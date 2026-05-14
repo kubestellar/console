@@ -126,13 +126,14 @@ vi.mock('../../../hooks/useMCS', () => ({
   useServiceImports: (...args: unknown[]) => mockUseServiceImports(...args),
 }))
 
-/** Speed up demo data timer for tests */
 const FAST_DELAY_MS = 10
+
+/** Speed up demo data timer for tests */
 vi.mock('../../constants/network', async (importOriginal) => {
   const actual = await importOriginal() as Record<string, unknown>
   return {
     ...actual,
-    SHORT_DELAY_MS: FAST_DELAY_MS,
+    SHORT_DELAY_MS: 10,
   }
 })
 
