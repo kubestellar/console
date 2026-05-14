@@ -80,6 +80,7 @@ func TestFeedback_ReopenRequest_PostsCommentAndReopensIssue(t *testing.T) {
 	handler.repoOwner = "kubestellar"
 	handler.repoName = "console"
 
+	labelCallMade := false
 	githubServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/api/v3/repos/kubestellar/console/issues/12996/comments":
@@ -87,6 +88,7 @@ func TestFeedback_ReopenRequest_PostsCommentAndReopensIssue(t *testing.T) {
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&payload))
 			assert.Contains(t, payload["body"], "still broken")
 			assert.Contains(t, payload["body"], "Fails in my environment")
+			assert.Contains(t, payload["body"], "*This comment was posted from the KubeStellar Console.*")
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusCreated)
 			_, _ = w.Write([]byte(`{"html_url":"https://github.com/kubestellar/console/issues/12996#issuecomment-1"}`))
@@ -96,6 +98,17 @@ func TestFeedback_ReopenRequest_PostsCommentAndReopensIssue(t *testing.T) {
 			assert.Equal(t, "open", payload["state"])
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"html_url":"https://github.com/kubestellar/console/issues/12996","state":"open"}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/api/v3/repos/kubestellar/console/issues/12996/labels":
+			var payload map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&payload))
+			labels, ok := payload["labels"].([]interface{})
+			require.True(t, ok)
+			require.Len(t, labels, 2)
+			assert.Contains(t, labels, "ai-fix-requested")
+			assert.Contains(t, labels, "needs-triage")
+			labelCallMade = true
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`[{"name":"ai-fix-requested"},{"name":"needs-triage"}]`))
 		default:
 			t.Fatalf("unexpected GitHub request: %s %s", r.Method, r.URL.Path)
 		}
@@ -132,6 +145,7 @@ func TestFeedback_ReopenRequest_PostsCommentAndReopensIssue(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 	assert.Equal(t, models.RequestStatusTriageAccepted, body.Status)
 	assert.Equal(t, "Fails in my environment", body.LatestComment)
+	assert.True(t, labelCallMade, "Expected label API call to be made")
 	store.AssertExpectations(t)
 }
 

@@ -60,10 +60,13 @@ func parseGitHubRequestID(idParam string) (models.TargetRepo, int, bool) {
 
 func verificationCommentBody(comment string) string {
 	trimmedComment := strings.TrimSpace(comment)
+	body := ""
 	if trimmedComment == "" {
-		return "The reporter tested the merged fix and it is still broken."
+		body = "The reporter tested the merged fix and it is still broken."
+	} else {
+		body = fmt.Sprintf("The reporter tested the merged fix and it is still broken.\n\nStill failing:\n%s", trimmedComment)
 	}
-	return fmt.Sprintf("The reporter tested the merged fix and it is still broken.\n\nStill failing:\n%s", trimmedComment)
+	return body + "\n\n*This comment was posted from the KubeStellar Console.*"
 }
 
 func (h *FeedbackHandler) findStoredFeatureRequestByIssue(ctx context.Context, userID uuid.UUID, targetRepo models.TargetRepo, issueNumber int) (*models.FeatureRequest, error) {
@@ -1158,6 +1161,8 @@ func (h *FeedbackHandler) ReopenRequest(c *fiber.Ctx) error {
 			if err := h.updateGitHubIssueStateForUser(c.UserContext(), issueNum, repoName, "open", clientAuth); err != nil {
 				return fiber.NewError(fiber.StatusBadGateway, "Failed to reopen issue on GitHub")
 			}
+			// Add triage labels after reopening (same labels as initial creation)
+			h.addIssueLabels(c.UserContext(), issueNum, repoName, []string{"ai-fix-requested", "needs-triage"})
 		}
 		storedRequest, err := h.findStoredFeatureRequestByIssue(c.UserContext(), userID, targetRepo, issueNum)
 		if err != nil {
@@ -1204,6 +1209,8 @@ func (h *FeedbackHandler) ReopenRequest(c *fiber.Ctx) error {
 		if err := h.updateGitHubIssueStateForUser(c.UserContext(), *request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo), "open", clientAuth); err != nil {
 			return fiber.NewError(fiber.StatusBadGateway, "Failed to reopen issue on GitHub")
 		}
+		// Add triage labels after reopening (same labels as initial creation)
+		h.addIssueLabels(c.UserContext(), *request.GitHubIssueNumber, h.resolveRepoName(request.TargetRepo), []string{"ai-fix-requested", "needs-triage"})
 	}
 	if err := h.store.UpdateFeatureRequestLatestComment(c.UserContext(), requestID, input.Comment); err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to save verification comment")
@@ -1424,6 +1431,54 @@ func (h *FeedbackHandler) closeGitHubIssue(ctx context.Context, issueNumber int,
 
 func (h *FeedbackHandler) closeGitHubIssueForUser(ctx context.Context, issueNumber int, repoName, clientAuth string) error {
 	return h.updateGitHubIssueStateForUser(ctx, issueNumber, repoName, "closed", clientAuth)
+}
+
+// addIssueLabels adds labels to a GitHub issue in the specified repo.
+// Logs failures but does not return errors so label failures don't block the request.
+func (h *FeedbackHandler) addIssueLabels(ctx context.Context, issueNumber int, repoName string, labels []string) {
+	if len(labels) == 0 {
+		return
+	}
+
+	payload := map[string]interface{}{
+		"labels": labels,
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		slog.Warn("[Feedback] failed to marshal labels payload", "issue", issueNumber, "error", err)
+		return
+	}
+
+	url := fmt.Sprintf("%s/repos/%s/%s/issues/%d/labels",
+		resolveGitHubAPIBase(), h.repoOwner, repoName, issueNumber)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		slog.Warn("[Feedback] failed to create add labels request", "issue", issueNumber, "error", err)
+		return
+	}
+
+	req.Header.Set("Authorization", "Bearer "+h.getEffectiveToken())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		slog.Warn("[Feedback] failed to add labels to issue", "issue", issueNumber, "error", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		if readErr != nil {
+			body = []byte("(failed to read response body)")
+		}
+		slog.Warn("[Feedback] GitHub API returned error adding labels", "issue", issueNumber, "status", resp.StatusCode, "body", string(body))
+		return
+	}
+
+	slog.Info("[Feedback] labels added to issue", "issue", issueNumber, "labels", labels)
 }
 
 // addIssueComment adds a comment to a GitHub issue in the specified repo.
