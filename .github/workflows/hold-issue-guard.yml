@@ -6,6 +6,10 @@ on:
   issues:
     types: [labeled, unlabeled]
 
+permissions:
+  issues: read
+  pull-requests: read
+
 jobs:
   check-hold-issues:
     runs-on: ubuntu-latest
@@ -15,7 +19,7 @@ jobs:
       (github.event_name == 'issues' && github.event.label.name == 'hold')
     steps:
       - name: Check for hold-labeled referenced issues
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           script: |
             // Matches: Fixes #123, Closes: #123, Resolves #123, fix #45, close: #9, etc.
