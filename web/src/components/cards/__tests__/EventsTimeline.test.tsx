@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
+interface ChartOptionShape {
+  xAxis: { data: unknown[] }
+  series: Array<{ data: unknown[] }>
+}
+
 // Standard mocks
 vi.mock('../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -54,8 +59,17 @@ vi.mock('../../../hooks/useMCP', () => ({
   useClusters: () => mockUseClusters(),
 }))
 
+const mockUseGlobalFilters = vi.fn()
 vi.mock('../../../hooks/useGlobalFilters', () => ({
-  useGlobalFilters: () => ({ selectedClusters: [], isAllClustersSelected: true, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' }),
+  useGlobalFilters: () => mockUseGlobalFilters(),
+}))
+
+const mockLazyEChart = vi.fn()
+vi.mock('../../charts/LazyEChart', () => ({
+  LazyEChart: (props: { option: ChartOptionShape }) => {
+    mockLazyEChart(props)
+    return <div data-testid="events-timeline-chart" />
+  },
 }))
 
 import { EventsTimeline } from '../EventsTimeline'
@@ -67,6 +81,7 @@ describe('EventsTimeline', () => {
     mockUseCardLoadingState.mockReturnValue({ showSkeleton: false, showEmptyState: false, hasData: true, isRefreshing: false })
     mockEvents.mockReturnValue({ events: [], isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: Date.now() })
     mockUseClusters.mockReturnValue({ clusters: [], deduplicatedClusters: [], isLoading: false, isRefreshing: false, error: null, lastRefresh: Date.now() })
+    mockUseGlobalFilters.mockReturnValue({ selectedClusters: [], isAllClustersSelected: true, clusterInfoMap: {}, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' })
   })
 
   it('renders without crashing', () => {
@@ -165,8 +180,43 @@ describe('EventsTimeline', () => {
   it('handles undefined hook data without crashing', () => {
     mockEvents.mockReturnValue({ events: undefined, isLoading: false, isRefreshing: false, isDemoFallback: false, isFailed: false, consecutiveFailures: 0, error: null, lastRefresh: null })
     mockUseClusters.mockReturnValue({ clusters: undefined, deduplicatedClusters: undefined, isLoading: false, isRefreshing: false, error: null, lastRefresh: null })
+    mockUseGlobalFilters.mockReturnValue({ selectedClusters: undefined, isAllClustersSelected: true, clusterInfoMap: undefined, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' })
     const { container } = render(<EventsTimeline />)
     expect(container).toBeTruthy()
+  })
+
+  it('passes array-backed chart data to ECharts', () => {
+    mockEvents.mockReturnValue({
+      events: [
+        { type: 'Warning', reason: 'BackOff', message: 'Pod is backing off', object: 'Pod/app-1', namespace: 'default', cluster: 'prod-cluster', count: '32', lastSeen: new Date().toISOString() },
+      ],
+      isLoading: false,
+      isRefreshing: false,
+      isDemoFallback: false,
+      isFailed: false,
+      consecutiveFailures: 0,
+      error: null,
+      lastRefresh: Date.now(),
+    })
+    mockUseClusters.mockReturnValue({
+      clusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
+      deduplicatedClusters: [{ name: 'prod-cluster', healthy: true, reachable: true, nodeCount: 3, podCount: 10, cpuCores: 8, memoryGB: 16, cpuRequestsCores: 4, memoryRequestsGB: 8 }],
+      isLoading: false,
+      isRefreshing: false,
+      error: null,
+      lastRefresh: Date.now(),
+    })
+    mockUseGlobalFilters.mockReturnValue({ selectedClusters: undefined, isAllClustersSelected: true, clusterInfoMap: undefined, selectedSeverities: [], isAllSeveritiesSelected: true, customFilter: '' })
+
+    render(<EventsTimeline />)
+
+    expect(screen.getByTestId('events-timeline-chart')).toBeTruthy()
+    const chartProps = mockLazyEChart.mock.calls[0]?.[0] as { option: ChartOptionShape }
+    expect(Array.isArray(chartProps.option.xAxis.data)).toBe(true)
+    expect(Array.isArray(chartProps.option.series)).toBe(true)
+    expect(Array.isArray(chartProps.option.series[0]?.data)).toBe(true)
+    expect(Array.isArray(chartProps.option.series[1]?.data)).toBe(true)
+    expect(chartProps.option.series[0]?.data).toContain(32)
   })
 
 })

@@ -31,6 +31,11 @@ interface TimePoint {
 
 type TimeRange = '15m' | '1h' | '6h' | '24h'
 type TimeRangeTranslationKey = 'cards:eventsTimeline.range15m' | 'cards:eventsTimeline.range1h' | 'cards:eventsTimeline.range6h' | 'cards:eventsTimeline.range24h'
+type EventTimelineDatum = { type: string; lastSeen?: string; firstSeen?: string; count?: number | string }
+
+const DEFAULT_TIME_RANGE: TimeRange = '1h'
+const CHART_Y_AXIS_MIN_INTERVAL = 1
+const CLUSTER_FILTER_MIN_CLUSTERS = 1
 
 const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: TimeRangeTranslationKey; bucketMinutes: number; numBuckets: number }[] = [
   { value: '15m', labelKey: 'cards:eventsTimeline.range15m', bucketMinutes: 1, numBuckets: 15 },
@@ -51,8 +56,13 @@ const TIME_RANGE_BUCKETS: Record<TimeRange, { bucketMinutes: number; numBuckets:
 const WARNING_AREA_GRADIENT_END = 'color-mix(in srgb, var(--chart-warning) 0%, transparent)'
 const SUCCESS_AREA_GRADIENT_END = 'color-mix(in srgb, var(--chart-success) 0%, transparent)'
 
+function getEventCount(count?: number | string): number {
+  const numericCount = Number(count)
+  return Number.isFinite(numericCount) && numericCount > 0 ? numericCount : 1
+}
+
 // Group events by time buckets
-function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firstSeen?: string; count: number }>, bucketMinutes = 5, numBuckets = 12): TimePoint[] {
+function groupEventsByTime(events: EventTimelineDatum[], bucketMinutes = 5, numBuckets = 12): TimePoint[] {
   const now = Date.now()
   const bucketMs = bucketMinutes * MS_PER_MINUTE
 
@@ -70,9 +80,10 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
   }
 
   // Place events in buckets
-  events.forEach(event => {
+  ;(events || []).forEach(event => {
     const eventTime = event.lastSeen ? new Date(event.lastSeen).getTime() :
                       event.firstSeen ? new Date(event.firstSeen).getTime() : now
+    const eventCount = getEventCount(event.count)
 
     // Find the bucket this event belongs to
     for (let i = 0; i < buckets.length; i++) {
@@ -81,11 +92,11 @@ function groupEventsByTime(events: Array<{ type: string; lastSeen?: string; firs
 
       if (eventTime >= bucketStart && eventTime < bucketEnd) {
         if (event.type === 'Warning') {
-          buckets[i].warnings += event.count || 1
+          buckets[i].warnings += eventCount
         } else {
-          buckets[i].normal += event.count || 1
+          buckets[i].normal += eventCount
         }
-        buckets[i].total += event.count || 1
+        buckets[i].total += eventCount
         break
       }
     }
@@ -106,13 +117,13 @@ function EventsTimelineInternal() {
     lastRefresh,
     isFailed,
     consecutiveFailures } = useCachedEvents(undefined, undefined, { limit: 100, category: 'realtime' })
-  const events = useMemo(() => rawEvents || [], [rawEvents])
+  const events = useMemo(() => Array.isArray(rawEvents) ? rawEvents : [], [rawEvents])
 
   const { deduplicatedClusters: rawClusters } = useClusters()
-  const clusters = rawClusters || []
+  const clusters = Array.isArray(rawClusters) ? rawClusters : []
 
   // Report state to CardWrapper for refresh animation
-  const hasData = events.length > 0
+  const hasData = (events || []).length > 0
   const { showSkeleton, showEmptyState } = useCardLoadingState({
     isLoading: hookLoading && !hasData,
     isDemoData: isDemoMode || isDemoFallback,
@@ -121,11 +132,13 @@ function EventsTimelineInternal() {
     consecutiveFailures,
     isRefreshing })
   const {
-    selectedClusters = [],
+    selectedClusters: rawSelectedClusters = [],
     isAllClustersSelected = true,
-    clusterInfoMap = {},
+    clusterInfoMap: rawClusterInfoMap = {},
   } = useGlobalFilters()
-  const [timeRange, setTimeRange] = useState<TimeRange>('1h')
+  const selectedClusters = Array.isArray(rawSelectedClusters) ? rawSelectedClusters : []
+  const clusterInfoMap = rawClusterInfoMap || {}
+  const [timeRange, setTimeRange] = useState<TimeRange>(DEFAULT_TIME_RANGE)
   const [localClusterFilter, setLocalClusterFilter] = useState<string[]>([])
   const [showClusterFilter, setShowClusterFilter] = useState(false)
   const clusterFilterRef = useRef<HTMLDivElement>(null)
@@ -142,7 +155,7 @@ function EventsTimelineInternal() {
   }, [])
 
   // Get reachable clusters
-  const reachableClusters = clusters.filter(c => c.reachable !== false)
+  const reachableClusters = (clusters || []).filter(c => c.reachable !== false)
 
   // Get available clusters for local filter (respects global filter)
   const availableClustersForFilter = useMemo(() => {
@@ -190,34 +203,39 @@ function EventsTimelineInternal() {
 
   // Group events into time buckets
   const timeSeriesData = useMemo(() => {
-    const { bucketMinutes, numBuckets } = TIME_RANGE_BUCKETS[timeRange]
+    const { bucketMinutes, numBuckets } = TIME_RANGE_BUCKETS[timeRange] || TIME_RANGE_BUCKETS[DEFAULT_TIME_RANGE]
     return groupEventsByTime(filteredEvents, bucketMinutes, numBuckets)
   }, [filteredEvents, timeRange])
+  const chartTimePoints = timeSeriesData || []
+  const chartXAxisData = useMemo(() => (chartTimePoints || []).map(point => point.time), [chartTimePoints])
+  const warningSeriesData = useMemo(() => (chartTimePoints || []).map(point => point.warnings), [chartTimePoints])
+  const normalSeriesData = useMemo(() => (chartTimePoints || []).map(point => point.normal), [chartTimePoints])
+  const totalSeriesData = useMemo(() => (chartTimePoints || []).map(point => point.total), [chartTimePoints])
 
   // Calculate totals from all filtered events (not just those in time buckets)
   const totalWarnings = useMemo(() => 
-    filteredEvents.reduce((sum, e) => sum + (e.type === 'Warning' ? (e.count || 1) : 0), 0),
+    (filteredEvents || []).reduce((sum, e) => sum + (e.type === 'Warning' ? getEventCount(e.count) : 0), 0),
     [filteredEvents]
   )
   const totalNormal = useMemo(() =>
-    filteredEvents.reduce((sum, e) => sum + (e.type !== 'Warning' ? (e.count || 1) : 0), 0),
+    (filteredEvents || []).reduce((sum, e) => sum + (e.type !== 'Warning' ? getEventCount(e.count) : 0), 0),
     [filteredEvents]
   )
-  const peakEvents = Math.max(0, ...timeSeriesData.map(d => d.total))
+  const peakEvents = Math.max(0, ...(totalSeriesData || []))
 
   const chartOption = useMemo(() => ({
     backgroundColor: 'transparent',
     grid: { left: 40, right: 5, top: 5, bottom: 25 },
     xAxis: {
       type: 'category' as const,
-      data: timeSeriesData.map(d => d.time),
+      data: chartXAxisData || [],
       axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { lineStyle: { color: CHART_AXIS_STROKE } },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value' as const,
-      minInterval: 1,
+      minInterval: CHART_Y_AXIS_MIN_INTERVAL,
       axisLabel: { color: CHART_TICK_COLOR, fontSize: CHART_AXIS_FONT_SIZE },
       axisLine: { show: false },
       axisTick: { show: false },
@@ -235,7 +253,7 @@ function EventsTimelineInternal() {
         type: 'line',
         stack: 'total',
         step: 'end' as const,
-        data: timeSeriesData.map(d => d.warnings),
+        data: warningSeriesData || [],
         lineStyle: { color: 'var(--chart-warning)', width: 2 },
         itemStyle: { color: 'var(--chart-warning)' },
         areaStyle: {
@@ -254,7 +272,7 @@ function EventsTimelineInternal() {
         type: 'line',
         stack: 'total',
         step: 'end' as const,
-        data: timeSeriesData.map(d => d.normal),
+        data: normalSeriesData || [],
         lineStyle: { color: 'var(--chart-success)', width: 2 },
         itemStyle: { color: 'var(--chart-success)' },
         areaStyle: {
@@ -269,7 +287,7 @@ function EventsTimelineInternal() {
         showSymbol: false,
       },
     ],
-  }), [timeSeriesData, t])
+  }), [chartXAxisData, normalSeriesData, t, warningSeriesData])
 
   if (showSkeleton) {
     return (
@@ -338,7 +356,7 @@ function EventsTimelineInternal() {
             isOpen={showClusterFilter}
             setIsOpen={setShowClusterFilter}
             containerRef={clusterFilterRef}
-            minClusters={1}
+            minClusters={CLUSTER_FILTER_MIN_CLUSTERS}
           />
 
         </div>
