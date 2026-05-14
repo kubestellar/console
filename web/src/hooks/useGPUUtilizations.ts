@@ -58,7 +58,7 @@ export function useGPUUtilizations(reservationIds: string[]) {
       setData(result || {})
     } catch (err) {
       const message = err instanceof Error ? err.message : 'GPU utilization fetch failed'
-      console.warn('[useGPUUtilizations] Fetch failed:', message)
+      console.error('[useGPUUtilizations] Fetch failed:', message)
       setError(message)
       setIsFailed(true)
       setData({})
