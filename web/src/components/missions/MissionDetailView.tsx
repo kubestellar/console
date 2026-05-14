@@ -325,7 +325,7 @@ export function MissionDetailView({
               title="Copy shareable link"
             >
               {linkCopied ? <Check className="w-3.5 h-3.5" /> : <Link className="w-3.5 h-3.5" />}
-              {linkCopied ? 'Copied!' : 'Share'}
+              {linkCopied ? t('missions.detail.actions.copied') : t('missions.detail.actions.share')}
             </button>
           )}
           <button
@@ -338,7 +338,7 @@ export function MissionDetailView({
             )}
           >
             {showRaw ? <Eye className="w-3.5 h-3.5" /> : <Code className="w-3.5 h-3.5" />}
-            {showRaw ? 'Preview' : 'View Raw'}
+            {showRaw ? t('missions.detail.actions.preview') : t('missions.detail.actions.viewRaw')}
           </button>
           {onImprove && (
             <button
@@ -347,7 +347,7 @@ export function MissionDetailView({
               title="Suggest improvements to this AI mission"
             >
               <MessageSquarePlus className="w-3.5 h-3.5" />
-              Improve
+              {t('missions.detail.actions.improve')}
             </button>
           )}
           <button

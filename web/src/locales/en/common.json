@@ -204,7 +204,14 @@
       "system": "System"
     },
     "theme": {
-      "removeFailed": "Failed to remove theme. Your browser storage may be unavailable."
+      "title": "Appearance",
+      "subtitle": "Choose your theme - inspired by oh-my-zsh",
+      "byAuthor": "by {{author}}",
+      "selectTheme": "Select Theme",
+      "quickSelect": "Quick Select",
+      "marketplaceThemes": "Marketplace Themes",
+      "removeThemeTitle": "Remove Theme",
+      "removeThemeMessage": "This will uninstall the theme and remove it from your list. This action cannot be undone."
     },
     "accessibility": {
       "title": "Accessibility",
@@ -814,16 +821,6 @@
       "scopeCardDataDesc": "Dashboard cards fetch live data (cluster health, pod status, metrics) on their own schedules, independent of console version updates. Card refresh intervals are not controlled by these settings.",
       "scopeMarketplaceTitle": "Marketplace Components",
       "scopeMarketplaceDesc": "Cards, themes, and integrations installed from the Marketplace are updated independently by their publishers. These items are not covered by the console version update channel above. Check the Marketplace page for available updates to installed components, or enable per-item auto-update from each item's settings."
-    },
-    "theme": {
-      "title": "Appearance",
-      "subtitle": "Choose your theme - inspired by oh-my-zsh",
-      "byAuthor": "by {{author}}",
-      "selectTheme": "Select Theme",
-      "quickSelect": "Quick Select",
-      "marketplaceThemes": "Marketplace Themes",
-      "removeThemeTitle": "Remove Theme",
-      "removeThemeMessage": "This will uninstall the theme and remove it from your list. This action cannot be undone."
     }
   },
   "terminal": {
@@ -2352,9 +2349,15 @@
       "issues": "Issues"
     },
     "buildpack": {
-      "fetchImageError": "Failed to fetch image info",
-      "fetchBuildsError": "Failed to fetch builds",
-      "fetchLogsError": "Failed to fetch logs"
+      "noBuilds": "No builds found",
+      "availableAIActions": "Available AI Actions",
+      "buildHealthAnalysis": "Build health and status analysis",
+      "builderConfigReview": "Builder configuration review",
+      "buildFailureDiagnosis": "Build failure diagnosis",
+      "connectAgentBuilds": "Connect the agent to fetch build history",
+      "optimizationRecommendations": "Optimization recommendations",
+      "clickAnalyze": "Click \"Analyze Buildpack\" to get AI-powered insights",
+      "analyzeHint": "AI will analyze the buildpack and suggest improvements"
     },
     "yaml": {
       "copyError": "Failed to copy to clipboard",
@@ -2761,17 +2764,6 @@
       "clickDiagnose": "Click \"Diagnose Alert\" to get AI-powered analysis",
       "connectAgentRule": "Connect the agent to fetch PrometheusRule definitions",
       "analyzeHint": "AI will analyze the alert and suggest remediation steps"
-    },
-    "buildpack": {
-      "noBuilds": "No builds found",
-      "availableAIActions": "Available AI Actions",
-      "buildHealthAnalysis": "Build health and status analysis",
-      "builderConfigReview": "Builder configuration review",
-      "buildFailureDiagnosis": "Build failure diagnosis",
-      "connectAgentBuilds": "Connect the agent to fetch build history",
-      "optimizationRecommendations": "Optimization recommendations",
-      "clickAnalyze": "Click \"Analyze Buildpack\" to get AI-powered insights",
-      "analyzeHint": "AI will analyze the buildpack and suggest improvements"
     },
     "namespace": {
       "deploymentIssues": "Deployment Issues",
@@ -4220,6 +4212,13 @@
         "troubleshootingEmpty": "Troubleshooting steps not yet available for this mission.",
         "security": "Security",
         "securityEmpty": "Security notes not yet available for this mission."
+      },
+      "actions": {
+        "share": "Share",
+        "copied": "Copied!",
+        "preview": "Preview",
+        "viewRaw": "View Raw",
+        "improve": "Improve"
       }
     }
   },
