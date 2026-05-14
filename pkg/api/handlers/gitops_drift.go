@@ -1,15 +1,10 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
-	"os"
-	"os/exec"
 	"strings"
-	"time"
 )
 
 func extractYAMLParseError(err error) string {
@@ -106,226 +101,13 @@ func (h *GitOpsHandlers) detectDriftViaMCP(ctx context.Context, req DetectDriftR
 	return response, nil
 }
 
-// detectDriftViaKubectl uses kubectl diff to detect drift
-func (h *GitOpsHandlers) detectDriftViaKubectl(ctx context.Context, req DetectDriftRequest) (*DetectDriftResponse, error) {
-	// SECURITY: Validate K8s name params before passing to kubectl CLI
-	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
-		if err := validateK8sName(val, field); err != nil {
-			return nil, fmt.Errorf("invalid %s: %w", field, err)
-		}
-	}
 
-	// Validate path parameter to prevent path traversal attacks
-	if err := validatePath(req.Path); err != nil {
-		return nil, fmt.Errorf("invalid path: %w", err)
-	}
-
-	// Clone the repo to a temp directory
-	tempDir, err := cloneRepo(ctx, req.RepoURL, req.Branch)
-	if err != nil {
-		return nil, fmt.Errorf("failed to clone repo: %w", err)
-	}
-	defer cleanupTempDir(tempDir)
-
-	// Build the manifest path
-	manifestPath := tempDir
-	if req.Path != "" {
-		manifestPath = fmt.Sprintf("%s/%s", tempDir, strings.TrimPrefix(req.Path, "/"))
-	}
-
-	// Check if this is a kustomize directory - use -k instead of -f
-	fileFlag := "-f"
-	if isKustomizeDir(manifestPath) {
-		fileFlag = "-k"
-	}
-
-	// Build kubectl diff command
-	args := []string{"diff", fileFlag, manifestPath}
-	if req.Namespace != "" {
-		args = append(args, "-n", req.Namespace)
-	}
-	if req.Cluster != "" {
-		args = append(args, "--context", req.Cluster)
-	}
-
-	cmd := exec.CommandContext(ctx, "kubectl", args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	// kubectl diff returns exit code 1 if there are differences
-	err = cmd.Run()
-	diffOutput := stdout.String()
-
-	response := &DetectDriftResponse{
-		Source:     "kubectl",
-		RawDiff:    diffOutput,
-		TokensUsed: 0, // No AI tokens used for kubectl
-	}
-
-	// Exit code 0 = no diff, 1 = diff exists, other = error
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if exitErr.ExitCode() == 1 {
-				// Diff exists - parse it
-				response.Drifted = true
-				response.Resources = parseDiffOutput(diffOutput, req.Namespace)
-			} else {
-				return nil, fmt.Errorf("kubectl diff failed: %s", stderr.String())
-			}
-		} else {
-			return nil, fmt.Errorf("kubectl diff failed: %w", err)
-		}
-	}
-
-	return response, nil
-}
 
 // Sync was removed in #7993 Phase 4 — this user-initiated operation now runs
 // through kc-agent at POST /gitops/sync under the user's kubeconfig. See
 // pkg/agent/server_gitops.go#handleGitopsSync.
 
 // syncViaMCP uses kubestellar-deploy for sync
-func (h *GitOpsHandlers) syncViaMCP(ctx context.Context, req SyncRequest) (*SyncResponse, error) {
-	args := map[string]interface{}{
-		"repo_url": req.RepoURL,
-		"path":     req.Path,
-	}
-	if req.Branch != "" {
-		args["branch"] = req.Branch
-	}
-	if req.Cluster != "" {
-		args["cluster"] = req.Cluster
-	}
-	if req.Namespace != "" {
-		args["namespace"] = req.Namespace
-	}
-	if req.DryRun {
-		args["dry_run"] = true
-	}
-
-	result, err := h.bridge.CallDeployTool(ctx, "apply_manifests", args)
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SyncResponse{
-		Source:     "mcp",
-		TokensUsed: 200,
-	}
-
-	if result.IsError {
-		response.Success = false
-		if len(result.Content) > 0 {
-			response.Message = result.Content[0].Text
-			response.Errors = []string{result.Content[0].Text}
-		}
-		return response, nil
-	}
-
-	// Parse content
-	if len(result.Content) > 0 {
-		text := result.Content[0].Text
-		response.Message = text
-
-		// Try to parse as JSON
-		var parsed map[string]interface{}
-		if err := json.Unmarshal([]byte(text), &parsed); err == nil {
-			if success, ok := parsed["success"].(bool); ok {
-				response.Success = success
-			}
-			if message, ok := parsed["message"].(string); ok {
-				response.Message = message
-			}
-		}
-
-		// Detect kubectl errors in plain-text MCP responses.
-		// MCP servers often return kubectl failures as text without
-		// setting IsError, so we scan for known error patterns.
-		if errs := detectKubectlErrors(text); len(errs) > 0 {
-			response.Success = false
-			response.Errors = errs
-		} else if !response.Success {
-			// Keep Success=false if JSON parsing already set it
-		} else {
-			response.Success = true
-		}
-	}
-
-	return response, nil
-}
-
-// syncViaKubectl uses kubectl apply
-func (h *GitOpsHandlers) syncViaKubectl(ctx context.Context, req SyncRequest) (*SyncResponse, error) {
-	// SECURITY: Validate K8s name params before passing to kubectl CLI
-	for field, val := range map[string]string{"cluster": req.Cluster, "namespace": req.Namespace} {
-		if err := validateK8sName(val, field); err != nil {
-			return nil, fmt.Errorf("invalid %s: %w", field, err)
-		}
-	}
-
-	// Validate path parameter to prevent path traversal attacks
-	if err := validatePath(req.Path); err != nil {
-		return nil, fmt.Errorf("invalid path: %w", err)
-	}
-
-	// Clone the repo
-	tempDir, err := cloneRepo(ctx, req.RepoURL, req.Branch)
-	if err != nil {
-		return nil, fmt.Errorf("failed to clone repo: %w", err)
-	}
-	defer cleanupTempDir(tempDir)
-
-	// Build manifest path
-	manifestPath := tempDir
-	if req.Path != "" {
-		manifestPath = fmt.Sprintf("%s/%s", tempDir, strings.TrimPrefix(req.Path, "/"))
-	}
-
-	// Check if this is a kustomize directory - use -k instead of -f
-	fileFlag := "-f"
-	if isKustomizeDir(manifestPath) {
-		fileFlag = "-k"
-	}
-
-	// Build kubectl apply command
-	args := []string{"apply", fileFlag, manifestPath}
-	if req.Namespace != "" {
-		args = append(args, "-n", req.Namespace)
-	}
-	if req.Cluster != "" {
-		args = append(args, "--context", req.Cluster)
-	}
-	if req.DryRun {
-		args = append(args, "--dry-run=client")
-	}
-
-	cmd := exec.CommandContext(ctx, "kubectl", args...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err = cmd.Run()
-	if err != nil {
-		return &SyncResponse{
-			Success: false,
-			Message: stderr.String(),
-			Source:  "kubectl",
-			Errors:  []string{stderr.String()},
-		}, nil
-	}
-
-	// Parse applied resources from output
-	applied := parseApplyOutput(stdout.String())
-
-	return &SyncResponse{
-		Success:    true,
-		Message:    "Successfully applied manifests",
-		Applied:    applied,
-		Source:     "kubectl",
-		TokensUsed: 0,
-	}, nil
-}
 
 // Helper functions
 
@@ -533,67 +315,7 @@ func validatePath(path string) error {
 	return nil
 }
 
-func cloneRepo(ctx context.Context, repoURL, branch string) (string, error) {
-	// SECURITY: Validate inputs before executing
-	if err := validateRepoURL(repoURL); err != nil {
-		return "", fmt.Errorf("invalid repository URL: %w", err)
-	}
-	if err := validateBranchName(branch); err != nil {
-		return "", fmt.Errorf("invalid branch name: %w", err)
-	}
 
-	tempDir := fmt.Sprintf("%s%d", gitOpsTempDirPrefix, time.Now().UnixNano())
-
-	args := []string{"clone", "--depth", "1"}
-	if branch != "" {
-		args = append(args, "-b", branch)
-	}
-	args = append(args, repoURL, tempDir)
-
-	cmd := exec.CommandContext(ctx, "git", args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("git clone failed: %s", stderr.String())
-	}
-
-	return tempDir, nil
-}
-
-// isKustomizeDir checks if a directory contains kustomization.yaml or kustomization.yml
-func isKustomizeDir(path string) bool {
-	const kustomizeCheckTimeout = 5 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), kustomizeCheckTimeout)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "test", "-f", path+"/kustomization.yaml")
-	if cmd.Run() == nil {
-		return true
-	}
-	cmd = exec.CommandContext(ctx, "test", "-f", path+"/kustomization.yml")
-	return cmd.Run() == nil
-}
-
-// cleanupTempDir safely removes a temporary directory
-// SECURITY: Validates the path is within expected temp directory to prevent path traversal
-func cleanupTempDir(dir string) {
-	// Only remove directories that match our expected pattern
-	if !strings.HasPrefix(dir, gitOpsTempDirPrefix) {
-		slog.Warn("[GitOps] SECURITY: refused to delete directory outside gitops temp prefix", "dir", dir)
-		return
-	}
-
-	// Additional validation: ensure no path traversal
-	if strings.Contains(dir, "..") {
-		slog.Warn("[GitOps] SECURITY: refused to delete directory with path traversal", "dir", dir)
-		return
-	}
-
-	// Use os.RemoveAll instead of shell command for safety
-	if err := os.RemoveAll(dir); err != nil {
-		slog.Warn("[GitOps] failed to cleanup temp directory", "dir", dir, "error", err)
-	}
-}
 
 func parseDiffOutput(output, namespace string) []DriftedResource {
 	resources := make([]DriftedResource, 0, 8)
