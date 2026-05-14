@@ -1,12 +1,12 @@
 import { useCallback } from 'react'
 
 /** Next focusable index when pressing ArrowDown. Clamps at the last item. */
-export function nextFocusIndex(currentIdx: number, total: number): number {
+function nextFocusIndex(currentIdx: number, total: number): number {
   return Math.min(currentIdx + 1, total - 1)
 }
 
 /** Previous focusable index when pressing ArrowUp. Clamps at zero. */
-export function prevFocusIndex(currentIdx: number): number {
+function prevFocusIndex(currentIdx: number): number {
   return Math.max(currentIdx - 1, 0)
 }
 

@@ -33,7 +33,7 @@ CHANGED=$(git diff --name-only --diff-filter=AR "${BASE_REF}...HEAD" 2>/dev/null
   || true)
 
 # ── Helper: true when at least one test file exists for <base> in <dir> ──────
-# Uses `find` rather than shell globs so this works in bash, zsh, and dash.
+# Uses `find` rather than shell globs so this works correctly as a bash script.
 
 has_test() {
   local dir="$1"
