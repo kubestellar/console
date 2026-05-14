@@ -183,6 +183,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.claude.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.claude.existingSecretKey | default "claude-api-key" }}
+                  optional: true
             {{- end }}
             {{- if or .Values.feedbackGithubToken.existingSecret .Values.feedbackGithubToken.token }}
             - name: FEEDBACK_GITHUB_TOKEN
@@ -190,6 +191,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.feedbackGithubToken.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.feedbackGithubToken.existingSecretKey | default "feedback-github-token" }}
+                  optional: true
             {{- end }}
             {{- if or .Values.googleDrive.existingSecret .Values.googleDrive.apiKey }}
             - name: GOOGLE_DRIVE_API_KEY
@@ -197,6 +199,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.googleDrive.existingSecret | default (include "kubestellar-console.fullname" .) }}
                   key: {{ .Values.googleDrive.existingSecretKey | default "google-drive-api-key" }}
+                  optional: true
             - name: BENCHMARK_FOLDER_ID
               value: {{ .Values.googleDrive.folderId | quote }}
             {{- end }}
