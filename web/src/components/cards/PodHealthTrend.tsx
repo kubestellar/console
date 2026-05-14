@@ -49,6 +49,8 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; points: number }[] 
   { value: '6h', label: '6 hours', points: TIME_RANGE_MAX_POINTS['6h'] },
   { value: '24h', label: '24 hours', points: TIME_RANGE_MAX_POINTS['24h'] },
 ]
+const CHART_CONTAINER_STYLE = { width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD } as const
+const CHART_STYLE = { height: CHART_HEIGHT_STANDARD, width: '100%' } as const
 
 const PodHealthTrend = memo(function PodHealthTrend() {
   const { t } = useTranslation(['common', 'cards'])
@@ -429,10 +431,10 @@ const PodHealthTrend = memo(function PodHealthTrend() {
             No pod data available
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }}>
+          <div style={CHART_CONTAINER_STYLE}>
             <LazyEChart
               option={chartOption}
-              style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
+              style={CHART_STYLE}
               notMerge={true}
               opts={{ renderer: 'svg' }}
             />

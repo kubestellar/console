@@ -38,6 +38,8 @@ const TIME_RANGE_OPTIONS_KEYS: { value: TimeRange; labelKey: TimeRangeTranslatio
   { value: '6h', labelKey: 'cards:eventsTimeline.range6h', bucketMinutes: 30, numBuckets: 12 },
   { value: '24h', labelKey: 'cards:eventsTimeline.range24h', bucketMinutes: 60, numBuckets: 24 },
 ]
+const CHART_CONTAINER_STYLE = { width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD } as const
+const CHART_STYLE = { height: CHART_HEIGHT_STANDARD, width: '100%' } as const
 
 const TIME_RANGE_BUCKETS: Record<TimeRange, { bucketMinutes: number; numBuckets: number }> = {
   '15m': { bucketMinutes: 1, numBuckets: 15 },
@@ -374,10 +376,10 @@ function EventsTimelineInternal() {
             {t('eventsTimeline.noEventsInRange')}
           </div>
         ) : (
-          <div style={{ width: '100%', minHeight: CHART_HEIGHT_STANDARD, height: CHART_HEIGHT_STANDARD }} role="img" aria-label={`Events timeline chart showing ${totalWarnings} warnings and ${totalNormal} normal events, peak ${peakEvents} events`}>
+          <div style={CHART_CONTAINER_STYLE} role="img" aria-label={`Events timeline chart showing ${totalWarnings} warnings and ${totalNormal} normal events, peak ${peakEvents} events`}>
             <LazyEChart
               option={chartOption}
-              style={{ height: CHART_HEIGHT_STANDARD, width: '100%' }}
+              style={CHART_STYLE}
               notMerge={true}
               opts={{ renderer: 'svg' }}
             />
