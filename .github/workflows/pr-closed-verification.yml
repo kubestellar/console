@@ -186,47 +186,39 @@ jobs:
         run: |
           CHANGED_FILES=$(cat /tmp/changed-files.txt)
 
+          # Build issue body safely using printf + --body-file to prevent
+          # shell injection via user-controlled variables (PR_TITLE, PR_URL, etc.)
+          BODY_FILE=$(mktemp)
+          {
+            printf '## Build Broken After Merge\n\n'
+            printf 'The post-merge build verification detected a **build failure** after merging PR #%s.\n\n' "$PR_NUMBER"
+            printf '| Detail | Value |\n'
+            printf '|--------|-------|\n'
+            printf '| **PR** | [#%s — %s](%s) |\n' "$PR_NUMBER" "$PR_TITLE" "$PR_URL"
+            printf '| **Author** | @%s |\n' "$PR_AUTHOR"
+            printf '| **Merge commit** | `%s` |\n' "$MERGE_SHA"
+            printf '| **Detected at** | %s |\n\n' "$(date -u '+%Y-%m-%d %H:%M UTC')"
+            printf '## Build Errors\n\n'
+            printf '%s\n\n' "${{ steps.errors.outputs.error_summary }}"
+            printf '## Files Changed in PR\n\n'
+            printf '<details>\n<summary>Click to expand file list</summary>\n\n'
+            printf '```\n%s\n```\n\n' "$CHANGED_FILES"
+            printf '</details>\n\n'
+            printf '## Next Steps\n\n'
+            printf '1. Check the [workflow run](%s/%s/actions/runs/%s) for full logs\n' "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}"
+            printf '2. Identify the breaking change from the files listed above\n'
+            printf '3. Submit a fix PR or revert the merge commit\n\n'
+            printf -- '---\n'
+            printf '*This issue was automatically created by the post-merge build verification workflow.*\n'
+          } > "$BODY_FILE"
+
           gh issue create \
             --repo "${{ github.repository }}" \
             --title "$(printf '\xF0\x9F\x90\x9B') Build broken after merging PR #${PR_NUMBER}" \
             --label "kind/bug,priority/critical" \
-            --body "$(cat <<EOF
-          ## Build Broken After Merge
+            --body-file "$BODY_FILE"
 
-          The post-merge build verification detected a **build failure** after merging PR #${PR_NUMBER}.
-
-          | Detail | Value |
-          |--------|-------|
-          | **PR** | [#${PR_NUMBER} — ${PR_TITLE}](${PR_URL}) |
-          | **Author** | @${PR_AUTHOR} |
-          | **Merge commit** | \`${MERGE_SHA}\` |
-          | **Detected at** | $(date -u '+%Y-%m-%d %H:%M UTC') |
-
-          ## Build Errors
-
-          ${{ steps.errors.outputs.error_summary }}
-
-          ## Files Changed in PR
-
-          <details>
-          <summary>Click to expand file list</summary>
-
-          \`\`\`
-          ${CHANGED_FILES}
-          \`\`\`
-
-          </details>
-
-          ## Next Steps
-
-          1. Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for full logs
-          2. Identify the breaking change from the files listed above
-          3. Submit a fix PR or revert the merge commit
-
-          ---
-          *This issue was automatically created by the post-merge build verification workflow.*
-          EOF
-          )"
+          rm -f "$BODY_FILE"
 
       - name: Comment on PR — verification passed
         if: >-
