@@ -209,6 +209,10 @@ func buildCopilotCLIPrompt(req *ChatRequest) string {
 	// with copilot CLI's internal system prompt.
 	sb.WriteString("You are helping manage Kubernetes clusters via the KubeStellar Console. ")
 	sb.WriteString("Execute commands when asked. Use kubectl, helm, kind, or other CLI tools as needed.\n\n")
+	if warning := req.Context[toolAvailabilityWarningContextKey]; warning != "" {
+		sb.WriteString(warning)
+		sb.WriteString("\n\n")
+	}
 
 	if len(req.History) > 0 {
 		sb.WriteString("Conversation so far:\n")
@@ -238,7 +242,9 @@ func (c *CopilotCLIProvider) doStreamChat(ctx context.Context, req *ChatRequest,
 		return nil, fmt.Errorf("copilot CLI not found")
 	}
 
-	prompt := buildCopilotCLIPrompt(req)
+	toolStatus := CheckToolDependencies()
+	toolAwareReq := withToolAvailabilityContext(req, toolStatus)
+	prompt := buildCopilotCLIPrompt(toolAwareReq)
 	slog.Info("[CopilotCLI] starting", "promptLength", len(prompt))
 
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
@@ -323,20 +329,25 @@ func (c *CopilotCLIProvider) doStreamChat(ctx context.Context, req *ChatRequest,
 
 	content := fullResponse.String()
 
-	// If stdout was empty but stderr has content, the CLI may have failed
-	if content == "" && waitErr != nil {
-		errMsg := strings.TrimSpace(stderrContent.String())
-		if errMsg != "" {
-			// Detect authentication/login prompts that require interactive input
-			lower := strings.ToLower(errMsg)
-			if strings.Contains(lower, "login") || strings.Contains(lower, "auth") ||
-				strings.Contains(lower, "sign in") || strings.Contains(lower, "token") ||
-				strings.Contains(lower, "authenticate") {
-				return nil, fmt.Errorf("copilot CLI requires authentication. Please run 'gh auth login' in your own terminal first, then retry this mission. Error: %s", errMsg)
+	if strings.TrimSpace(content) == "" {
+		if fallback := toolStatus.FallbackResponse(); fallback != "" {
+			content = fallback
+		} else if waitErr != nil {
+			errMsg := strings.TrimSpace(stderrContent.String())
+			if errMsg != "" {
+				// Detect authentication/login prompts that require interactive input
+				lower := strings.ToLower(errMsg)
+				if strings.Contains(lower, "login") || strings.Contains(lower, "auth") ||
+					strings.Contains(lower, "sign in") || strings.Contains(lower, "token") ||
+					strings.Contains(lower, "authenticate") {
+					return nil, fmt.Errorf("copilot CLI requires authentication. Please run 'gh auth login' in your own terminal first, then retry this mission. Error: %s", errMsg)
+				}
+				return nil, fmt.Errorf("copilot CLI failed: %s", errMsg)
 			}
-			return nil, fmt.Errorf("copilot CLI failed: %s", errMsg)
+			return nil, fmt.Errorf("copilot CLI returned empty response (exit: %w)", waitErr)
+		} else {
+			return nil, fmt.Errorf("copilot CLI returned empty response")
 		}
-		return nil, fmt.Errorf("copilot CLI returned empty response (exit: %w)", waitErr)
 	}
 
 	if onProgress != nil {

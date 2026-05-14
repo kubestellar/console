@@ -69,28 +69,23 @@ func TestCleanEnvForCLI(t *testing.T) {
 }
 
 func TestCheckToolDependencies_AllPresent(t *testing.T) {
-	// On any CI or dev machine, at least git and kubectl are likely present.
-	// This test verifies the function returns without error when tools exist.
-	// If a tool is missing in the test environment, the error type is checked.
-	err := CheckToolDependencies()
-	if err != nil {
-		tde, ok := err.(*ToolDependencyError)
-		if !ok {
-			t.Fatalf("expected *ToolDependencyError, got %T", err)
-		}
-		// Verify the error message lists the missing tools
-		if len(tde.MissingTools) == 0 {
-			t.Error("ToolDependencyError should list at least one missing tool")
-		}
-		t.Logf("missing tools (expected in some environments): %v", tde.MissingTools)
+	status := CheckToolDependencies()
+	if status.HasMissingTools() {
+		t.Logf("missing tools (expected in some environments): required=%v optional=%v", status.MissingRequired, status.MissingOptional)
 	}
 }
 
-func TestCheckToolDependencies_ErrorMessage(t *testing.T) {
-	err := &ToolDependencyError{MissingTools: []string{"kubectl", "helm"}}
-	msg := err.Error()
+func TestToolAvailabilityStatus_PromptWarning(t *testing.T) {
+	status := ToolAvailabilityStatus{
+		MissingRequired: []string{"kubectl"},
+		MissingOptional: []string{"helm"},
+	}
+	msg := status.PromptWarning()
 	if !containsSubstring(msg, "kubectl") || !containsSubstring(msg, "helm") {
-		t.Errorf("error message should list missing tools, got %q", msg)
+		t.Errorf("warning should list missing tools, got %q", msg)
+	}
+	if !containsSubstring(msg, "never claim the task is complete") {
+		t.Errorf("warning should tell the agent not to report false completion, got %q", msg)
 	}
 }
 
@@ -106,45 +101,30 @@ func TestOptionalMissionTools_NotEmpty(t *testing.T) {
 	}
 }
 
-func TestCheckToolDependencies_OptionalToolsMissing_NoError(t *testing.T) {
-	// Use an empty temp dir as PATH so no tools are found, making this
-	// deterministic regardless of what is installed on the test machine.
-	tmpDir := t.TempDir()
-	t.Setenv("PATH", tmpDir)
-	// Reset warned map so required tools (kubectl, git) don't interfere.
-	warnedOptionalTools.Range(func(k, v any) bool { warnedOptionalTools.Delete(k); return true })
+func TestCheckToolDependencies_OptionalToolsMissing_NoHardFailure(t *testing.T) {
+	oldLookPath := missionToolLookPath
+	defer func() { missionToolLookPath = oldLookPath }()
+	missionToolLookPath = func(string) (string, error) { return "", assert.AnError }
+	warnedMissionTools.Range(func(k, v any) bool { warnedMissionTools.Delete(k); return true })
 
-	err := CheckToolDependencies()
-	// Required tools (kubectl, git) are also absent — we only care that any
-	// error is a ToolDependencyError that lists no optional tools.
-	if err != nil {
-		tde, ok := err.(*ToolDependencyError)
-		require.True(t, ok, "expected *ToolDependencyError, got %T", err)
-		for _, tool := range tde.MissingTools {
-			for _, opt := range OptionalMissionTools {
-				assert.NotEqual(t, opt, tool, "optional tool %q should not cause a hard failure", tool)
-			}
+	status := CheckToolDependencies()
+	for _, tool := range status.MissingRequired {
+		for _, opt := range OptionalMissionTools {
+			assert.NotEqual(t, opt, tool, "optional tool %q should not appear in missing required tools", tool)
 		}
 	}
+	require.True(t, status.HasMissingTools(), "expected missing tools to be reported")
 }
 
 func TestCheckToolDependencies_OptionalToolsMissing_Warns(t *testing.T) {
-	// Override PATH to an empty temp dir so no tools are found.
-	tmpDir := t.TempDir()
-	t.Setenv("PATH", tmpDir)
-	// Reset the warned-tools map so this test gets a fresh state.
-	warnedOptionalTools.Range(func(k, v any) bool { warnedOptionalTools.Delete(k); return true })
+	oldLookPath := missionToolLookPath
+	defer func() { missionToolLookPath = oldLookPath }()
+	missionToolLookPath = func(string) (string, error) { return "", assert.AnError }
+	warnedMissionTools.Range(func(k, v any) bool { warnedMissionTools.Delete(k); return true })
 
-	err := CheckToolDependencies()
-	// Optional tools missing should NOT return an error (required tools are
-	// also absent here, so we accept either nil or a ToolDependencyError).
-	if err != nil {
-		_, ok := err.(*ToolDependencyError)
-		require.True(t, ok, "expected *ToolDependencyError, got %T", err)
-	}
-	// All optional tools should have been warned (each stored once).
+	_ = CheckToolDependencies()
 	for _, tool := range OptionalMissionTools {
-		_, warned := warnedOptionalTools.Load(tool)
+		_, warned := warnedMissionTools.Load("optional:" + tool)
 		assert.True(t, warned, "expected warn entry for optional tool %s", tool)
 	}
 }

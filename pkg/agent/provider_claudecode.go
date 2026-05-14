@@ -15,63 +15,119 @@ import (
 	"github.com/kubestellar/console/pkg/safego"
 )
 
-// RequiredMissionTools lists CLI binaries that MUST be on PATH for any
-// mission to run. Missing any of these is a hard failure.
+// RequiredMissionTools lists the baseline CLI binaries missions usually rely
+// on. Missing tools are surfaced to the model as advisory context instead of
+// aborting the mission before the agent can ask clarifying questions.
 var RequiredMissionTools = []string{
 	"kubectl", // Kubernetes CLI — cluster inspection & management
 	"git",     // Git — version control operations
 }
 
-// OptionalMissionTools lists CLI binaries that enhance missions but are
-// not strictly required. Missing tools are logged as warnings; missions
-// that need them will fail at execution time with a clear error from
-// the agent rather than a blanket preflight block.
+// OptionalMissionTools lists CLI binaries that enhance missions but are not
+// universally required. Missing tools are also surfaced as advisory context so
+// the agent can offer installation/helpful alternatives.
 var OptionalMissionTools = []string{
 	"helm", // Helm — chart-based deployments
 	"gh",   // GitHub CLI — PR creation, issue triage
 }
 
-// ToolDependencyError is returned when one or more required CLI tools
-// are missing from PATH. The MissingTools field lists the binary names
-// that were not found so callers can surface actionable guidance.
-type ToolDependencyError struct {
-	MissingTools []string
+const toolAvailabilityWarningContextKey = "toolAvailabilityWarning"
+
+// missionToolLookPath is overridden in tests so tool-detection behavior stays
+// deterministic without depending on the host PATH.
+var missionToolLookPath = exec.LookPath
+
+// warnedMissionTools tracks which missing tools have already produced a log
+// warning so each one only logs once per process lifetime.
+var warnedMissionTools sync.Map
+
+// ToolAvailabilityStatus captures missing mission tools. Missing tools are an
+// advisory signal for the LLM, not a reason to short-circuit the mission.
+type ToolAvailabilityStatus struct {
+	MissingRequired []string
+	MissingOptional []string
 }
 
-func (e *ToolDependencyError) Error() string {
-	return fmt.Sprintf("missing required tools: %s — install them before running AI missions", strings.Join(e.MissingTools, ", "))
+func (s ToolAvailabilityStatus) HasMissingTools() bool {
+	return len(s.MissingRequired) > 0 || len(s.MissingOptional) > 0
 }
 
-// warnedOptionalTools tracks which optional tools have already produced a
-// warning so each missing tool only logs once per process lifetime.
-var warnedOptionalTools sync.Map
+func (s ToolAvailabilityStatus) missingTools() []string {
+	tools := make([]string, 0, len(s.MissingRequired)+len(s.MissingOptional))
+	tools = append(tools, s.MissingRequired...)
+	tools = append(tools, s.MissingOptional...)
+	return tools
+}
 
-// CheckToolDependencies verifies that every binary in RequiredMissionTools
-// is available on PATH. Optional tools are checked but only produce a log
-// warning — they do not block mission execution. Each missing optional tool
-// warns at most once per process to avoid log spam on repeated invocations.
-// Optional tools are always checked, even when required tools are missing,
-// so the caller receives the full picture in one pass.
-func CheckToolDependencies() error {
-	var missing []string
+func (s ToolAvailabilityStatus) PromptWarning() string {
+	if !s.HasMissingTools() {
+		return ""
+	}
+	parts := make([]string, 0, 2)
+	if len(s.MissingRequired) > 0 {
+		parts = append(parts, fmt.Sprintf("Required tools currently missing: %s.", strings.Join(s.MissingRequired, ", ")))
+	}
+	if len(s.MissingOptional) > 0 {
+		parts = append(parts, fmt.Sprintf("Optional tools currently missing: %s.", strings.Join(s.MissingOptional, ", ")))
+	}
+	return "TOOL AVAILABILITY WARNING:\n" +
+		strings.Join(parts, "\n") + "\n" +
+		"Treat this as advisory context only. Continue the mission by asking for missing details, offering installation steps or workarounds when a tool is unavailable, and never claim the task is complete unless you actually completed meaningful work."
+}
+
+func (s ToolAvailabilityStatus) FallbackResponse() string {
+	if !s.HasMissingTools() {
+		return ""
+	}
+	return fmt.Sprintf("I couldn't complete any meaningful mission steps yet because these local tools are unavailable: %s. I have not completed the task. I can help you install the missing tools, suggest an alternative workflow, or continue gathering the details needed for the mission.", strings.Join(s.missingTools(), ", "))
+}
+
+func warnMissingMissionTool(tool string, required bool) {
+	kind := "optional"
+	if required {
+		kind = "required"
+	}
+	key := kind + ":" + tool
+	if _, alreadyWarned := warnedMissionTools.LoadOrStore(key, true); alreadyWarned {
+		return
+	}
+	slog.Warn("mission tool not found on PATH — continuing with advisory warning", "tool", tool, "required", required)
+}
+
+// CheckToolDependencies inspects mission tools and returns advisory status for
+// any missing binaries. The caller is expected to pass that context into the
+// LLM prompt instead of terminating the mission flow.
+func CheckToolDependencies() ToolAvailabilityStatus {
+	status := ToolAvailabilityStatus{}
 	for _, tool := range RequiredMissionTools {
-		if _, err := exec.LookPath(tool); err != nil {
-			missing = append(missing, tool)
+		if _, err := missionToolLookPath(tool); err != nil {
+			status.MissingRequired = append(status.MissingRequired, tool)
+			warnMissingMissionTool(tool, true)
 		}
 	}
 
 	for _, tool := range OptionalMissionTools {
-		if _, err := exec.LookPath(tool); err != nil {
-			if _, alreadyWarned := warnedOptionalTools.LoadOrStore(tool, true); !alreadyWarned {
-				slog.Warn("optional mission tool not found on PATH — missions requiring it will fail at execution time", "tool", tool)
-			}
+		if _, err := missionToolLookPath(tool); err != nil {
+			status.MissingOptional = append(status.MissingOptional, tool)
+			warnMissingMissionTool(tool, false)
 		}
 	}
 
-	if len(missing) > 0 {
-		return &ToolDependencyError{MissingTools: missing}
+	return status
+}
+
+func withToolAvailabilityContext(req *ChatRequest, status ToolAvailabilityStatus) *ChatRequest {
+	warning := status.PromptWarning()
+	if warning == "" {
+		return req
 	}
-	return nil
+	cloned := *req
+	cloned.Context = make(map[string]string, len(req.Context)+1)
+	for key, value := range req.Context {
+		cloned.Context[key] = value
+	}
+	cloned.Context[toolAvailabilityWarningContextKey] = warning
+	return &cloned
 }
 
 // claudeCodeStreamEvent represents events in Claude Code CLI stream-json output
@@ -292,6 +348,10 @@ func (c *ClaudeCodeProvider) buildPromptWithHistory(req *ChatRequest) string {
 	if clusterCtx := req.Context["clusterContext"]; clusterCtx != "" {
 		sb.WriteString(fmt.Sprintf(clusterContextInstruction, clusterCtx, clusterCtx))
 	}
+	if warning := req.Context[toolAvailabilityWarningContextKey]; warning != "" {
+		sb.WriteString("\n\n")
+		sb.WriteString(warning)
+	}
 
 	sb.WriteString("\n\n---\n\n")
 
@@ -353,16 +413,11 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 		return nil, fmt.Errorf("claude CLI not found")
 	}
 
-	// Pre-flight: verify that required mission tools (kubectl, helm, git,
-	// gh) are on PATH before spawning the CLI subprocess. Failing fast
-	// here gives operators an actionable error instead of a cryptic
-	// mid-mission "command not found" from the agent (#9487).
-	if err := CheckToolDependencies(); err != nil {
-		return nil, fmt.Errorf("tool dependency check failed: %w", err)
-	}
+	toolStatus := CheckToolDependencies()
+	toolAwareReq := withToolAvailabilityContext(req, toolStatus)
 
 	// Build prompt with history for context
-	fullPrompt := c.buildPromptWithHistory(req)
+	fullPrompt := c.buildPromptWithHistory(toolAwareReq)
 
 	// Build command with streaming JSON output
 	// -p (print mode) is required for stream-json
@@ -621,6 +676,14 @@ Provide a clear, concise analysis of what this output shows.`, lastToolOutput)
 			if onChunk != nil {
 				onChunk(responseContent)
 			}
+		}
+	}
+
+	if strings.TrimSpace(responseContent) == "" {
+		if fallback := toolStatus.FallbackResponse(); fallback != "" {
+			responseContent = fallback
+		} else {
+			return nil, fmt.Errorf("claude CLI returned empty response")
 		}
 	}
 
