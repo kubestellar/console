@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { safeLazy } from '../../../lib/safeLazy'
-import { isAnyModalOpen } from '../../../lib/modals'
+import { ConfirmDialog, isAnyModalOpen } from '../../../lib/modals'
 import {
   X,
   ChevronRight,
@@ -226,6 +226,7 @@ export function MissionSidebar() {
   const [toastCountdown, setToastCountdown] = useState(0)
   const [viewingMission, setViewingMission] = useState<MissionExport | null>(null)
   const [viewingMissionRaw, setViewingMissionRaw] = useState(false)
+  const [pendingDismissMissionId, setPendingDismissMissionId] = useState<string | null>(null)
   const newMissionInputRef = useRef<HTMLTextAreaElement>(null)
   /** Ref to track the first-import toast countdown interval so it can be cleared on unmount or re-import */
   const toastIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -1248,7 +1249,7 @@ export function MissionSidebar() {
                               <Play className="w-2.5 h-2.5" /> Run
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); dismissMission(m.id) }}
+                              onClick={(e) => { e.stopPropagation(); setPendingDismissMissionId(m.id) }}
                               className="flex items-center gap-1 px-2 py-0.5 text-2xs text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
                             >
                               <Trash2 className="w-2.5 h-2.5" /> Remove
@@ -1509,7 +1510,7 @@ export function MissionSidebar() {
                         <Play className="w-3 h-3" /> {t('layout.missionSidebar.run')}
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); dismissMission(m.id) }}
+                        onClick={(e) => { e.stopPropagation(); setPendingDismissMissionId(m.id) }}
                         className="p-1.5 text-muted-foreground hover:text-red-400 rounded hover:bg-red-500/10 transition-colors"
                         title={t('layout.missionSidebar.removeFromLibrary')}
                       >
@@ -1704,6 +1705,18 @@ export function MissionSidebar() {
           onSaved={() => setResolutionPanelView('history')}
         />
       )}
+      <ConfirmDialog
+        isOpen={pendingDismissMissionId !== null}
+        onClose={() => setPendingDismissMissionId(null)}
+        onConfirm={() => {
+          if (pendingDismissMissionId) dismissMission(pendingDismissMissionId)
+          setPendingDismissMissionId(null)
+        }}
+        title={t('layout.missionSidebar.deleteMission')}
+        message={t('layout.missionSidebar.deleteMissionConfirm')}
+        confirmLabel={t('common.delete')}
+        variant="danger"
+      />
     </>
   )
 }
