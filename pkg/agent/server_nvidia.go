@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/kubestellar/console/pkg/safego"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -17,19 +18,19 @@ const (
 	nvidiaGPUOperatorNamespaceAlt  = "nvidia-gpu-operator"
 	nvidiaNetworkOperatorNamespace = "nvidia-network-operator"
 
-	nvidiaDevicePluginDaemonSet = "nvidia-device-plugin-daemonset"
+	nvidiaDevicePluginDaemonSet  = "nvidia-device-plugin-daemonset"
 	gpuFeatureDiscoveryDaemonSet = "gpu-feature-discovery"
 
-	clusterPolicyCRDName        = "clusterpolicies.nvidia.com"
-	nicClusterPolicyCRDName     = "nicclusterpolicies.mellanox.com"
+	clusterPolicyCRDName    = "clusterpolicies.nvidia.com"
+	nicClusterPolicyCRDName = "nicclusterpolicies.mellanox.com"
 
-	nvidiaOperatorLabelKey      = "app.kubernetes.io/managed-by"
-	nvidiaOperatorLabelValue    = "gpu-operator"
+	nvidiaOperatorLabelKey   = "app.kubernetes.io/managed-by"
+	nvidiaOperatorLabelValue = "gpu-operator"
 )
 
 // nvidiaOperatorStatus is the per-cluster NVIDIA operator status returned to the frontend.
 type nvidiaOperatorStatus struct {
-	Cluster         string            `json:"cluster"`
+	Cluster         string               `json:"cluster"`
 	GPUOperator     *gpuOperatorInfo     `json:"gpuOperator,omitempty"`
 	NetworkOperator *networkOperatorInfo `json:"networkOperator,omitempty"`
 }
@@ -107,26 +108,21 @@ func (s *Server) handleNvidiaOperatorsHTTP(w http.ResponseWriter, r *http.Reques
 		var mu sync.Mutex
 		for _, cl := range clusters {
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("nvidia-operator-detect", func() {
 				defer wg.Done()
-				defer func() {
-					if r := recover(); r != nil {
-						slog.Error("[NvidiaOperators] recovered from panic", "cluster", clusterName, "panic", r)
-					}
-				}()
 				clusterCtx, clusterCancel := context.WithTimeout(r.Context(), agentDefaultTimeout)
 				defer clusterCancel()
 
-				client, err := s.k8sClient.GetClient(clusterName)
+				client, err := s.k8sClient.GetClient(cl.Name)
 				if err != nil {
-					slog.Warn("[NvidiaOperators] failed to get client", "cluster", clusterName, "error", err)
+					slog.Warn("[NvidiaOperators] failed to get client", "cluster", cl.Name, "error", err)
 					return
 				}
-				status := detectNvidiaOperators(clusterCtx, clusterName, client)
+				status := detectNvidiaOperators(clusterCtx, cl.Name, client)
 				mu.Lock()
 				results = append(results, status)
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 		wg.Wait()
 	}

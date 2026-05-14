@@ -73,14 +73,14 @@ If you need to audit what leaves the machine, distinguish the two paths: for **d
 
 ### Authentication and transport
 
-- **kc-agent → browser**: loopback HTTP/WS. An optional shared secret can be required by setting `KC_AGENT_TOKEN`; when unset, the agent logs a warning at startup (`pkg/agent/server.go:214`).
+- **kc-agent → browser**: loopback HTTP/WS. An optional shared secret can be required by setting `KC_AGENT_TOKEN`; when unset, the agent auto-generates a per-session token, logs a warning with a docs pointer, and prints the generated value so local clients can authenticate (`pkg/agent/server.go`).
 - **Browser → Go backend**: HTTP/WS on port 8080 (or through an ingress). GitHub OAuth is optional — if `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` are unset, the console runs with a mock `dev-user` identity (see `start-dev.sh`).
 - **CORS / allowed origins**: the backend and kc-agent maintain an allow-list; additional origins can be added via `KC_ALLOWED_ORIGINS` (comma-separated) to `kc-agent` (`pkg/agent/server.go:191`).
 - **CSP**: the backend's Content-Security-Policy explicitly includes `http://127.0.0.1:8585` and `http://localhost:8585` in `connect-src` so the browser can reach a local kc-agent (`pkg/api/server.go:429-432`).
 
 ![Mermaid diagram 2](diagrams/diagram-2.svg)
 
-The loopback bind is the primary defense against network-level access. The CORS allow-list, DNS-rebinding guard, and optional token are layered defenses against local attackers — rogue browser tabs or other local processes that could reach `127.0.0.1:8585` if loopback alone were the only gate. Setting `KC_AGENT_TOKEN` adds the fourth layer, which is recommended when the user cannot assume that all local processes are trusted.
+The loopback bind is the primary defense against network-level access. The CORS allow-list, DNS-rebinding guard, and optional token are layered defenses against local attackers — rogue browser tabs or other local processes that could reach `127.0.0.1:8585` if loopback alone were the only gate. Setting `KC_AGENT_TOKEN` adds the fourth layer, which is recommended when the user cannot assume that all local processes are trusted. Generate one with `openssl rand -hex 32`, then export it before starting `kc-agent` (or place it in `.env` when using `start-dev.sh` / `startup-oauth.sh`).
 
 ### What actually leaves the cluster (when self-hosted in-cluster)
 
@@ -238,6 +238,12 @@ See `install-lm-studio` for the workstation setup walkthrough.
 If you already run a corporate LLM gateway that speaks the OpenAI API (Groq LPU for throughput, OpenRouter as a multi-model gateway, Open WebUI as a self-hosted frontend), point the corresponding base URL at it:
 
 ```bash
+# Claude via LiteLLM proxy or other gateway
+export ANTHROPIC_API_KEY=<your api key>
+export ANTHROPIC_BASE_URL=https://your-litellm-proxy.example.com/v1
+export CLAUDE_MODEL=aws/claude-opus-4-7
+./bin/kc-agent
+
 # Groq LPU gateway or an internal OpenAI-compatible gateway
 export GROQ_API_KEY=<your key>
 export GROQ_BASE_URL=https://llm-gateway.internal.example.com/v1
@@ -264,7 +270,7 @@ kc-agent reads API keys from two places, in this order of precedence:
 1. **Environment variables** (see `pkg/agent/config.go:130-135` — "Environment variable takes precedence").
 2. **`~/.kc/config.yaml`** — written by the Settings → API Keys modal in the UI. File permissions are forced to `0600` on save (`pkg/agent/config.go:16`).
 
-Base URLs (`GROQ_BASE_URL` etc.) are **environment-only** in the current build — there is no UI field for them. That is intentional for the moment: overriding a provider's base URL is an advanced, air-gap-flavored use case, and keeping it in env vars avoids a second place to audit.
+Base URLs (`ANTHROPIC_BASE_URL`, `OPENAI_BASE_URL`, `GROQ_BASE_URL`, etc.) are **environment-only** in the current build — there is no UI field for them. That is intentional for the moment: overriding a provider's base URL is an advanced, air-gap-flavored use case, and keeping it in env vars avoids a second place to audit.
 
 ### What never leaves the machine
 
@@ -286,7 +292,9 @@ The provider request body is the system prompt, message history, and current pro
 | Variable | Consumer | Purpose |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | kc-agent | Claude API key |
+| `ANTHROPIC_BASE_URL` | kc-agent | Override for Claude endpoint (use for LiteLLM proxy or other gateways) |
 | `OPENAI_API_KEY` | kc-agent | OpenAI API key |
+| `OPENAI_BASE_URL` | kc-agent | Override for OpenAI endpoint |
 | `GOOGLE_API_KEY` | kc-agent | Gemini API key (note: not `GEMINI_API_KEY`) |
 | `GROQ_API_KEY` | kc-agent | Groq API key |
 | `GROQ_BASE_URL` | kc-agent | Override for Groq endpoint (use for local OpenAI-compatible servers) |

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -95,8 +96,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 			// bugs.
 			if apierrors.IsForbidden(err) {
 				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-					"error":   "forbidden",
-					"cluster": cluster,
+					"error": "forbidden: insufficient permissions for the requested cluster",
 				})
 			}
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to list resources"})
@@ -124,8 +124,9 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 	sem := make(chan struct{}, crFetchConcurrency)
 
 	for _, cl := range clusters {
+		clusterName := cl.Name
 		wg.Add(1)
-		go func(clusterName string) {
+		safego.GoWith("custom-resources/"+clusterName, func() {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
@@ -159,7 +160,7 @@ func (h *MCPHandlers) GetCustomResources(c *fiber.Ctx) error {
 				allItems = append(allItems, items...)
 				mu.Unlock()
 			}
-		}(cl.Name)
+		})
 	}
 
 	waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)

@@ -31,9 +31,11 @@ const KUBEVIRT_MISSION_ROUTE = '/missions/install-kubevirt'
 function ClusterProgressBanner({
   progress,
   onDismiss,
+  isStale,
 }: {
   progress: ClusterProgress | null
   onDismiss: () => void
+  isStale: boolean
 }) {
   const { t } = useTranslation()
   const [visible, setVisible] = useState(false)
@@ -78,7 +80,11 @@ function ClusterProgressBanner({
       {isFailed && <AlertTriangle className="w-4 h-4 shrink-0" />}
 
       <span className="flex-1">
-        {isFailed ? friendlyErrorMessage(progress.message) : progress.message}
+        {isFailed && isStale
+          ? t('settings.localClusters.connectionStale')
+          : isFailed
+            ? friendlyErrorMessage(progress.message)
+            : progress.message}
       </span>
 
       {isActive && (
@@ -200,6 +206,7 @@ export function LocalClustersSection() {
     isConnected,
     isDemoMode,
     clusterProgress,
+    clusterProgressIsStale,
     dismissProgress,
     createCluster,
     deleteCluster,
@@ -557,6 +564,7 @@ After installation, ask:
               <ClusterProgressBanner
                 progress={clusterProgress}
                 onDismiss={dismissProgress}
+                isStale={clusterProgressIsStale}
               />
             </div>
           </div>

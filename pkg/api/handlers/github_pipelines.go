@@ -33,27 +33,27 @@ import (
 // ---------------------------------------------------------------------------
 
 const (
-	ghpCacheTTL              = 5 * time.Minute
-	ghpCacheStaleTTL         = 1 * time.Hour // Serve stale data for 1h after expiration when GitHub rate-limits
-	ghpMatrixDefaultDays     = 14
-	ghpMatrixMaxDays         = 90
-	ghpHistoryRetentionDays  = 90
-	ghpFailuresLimit         = 10
-	ghpFailuresOverfetch     = 30
-	ghpLogTailLines          = 500
-	ghpMatrixRunsPerRepo     = 200
-	ghpFlowMaxRunsPerRepo    = 8
-	ghpPulseWindowDays       = 14
-	ghpGitHubAPIBase         = "https://api.github.com"
-	ghpNightlyReleaseRepo    = "kubestellar/console"
-	ghpNightlyReleaseWFFile  = "release.yml"
-	ghpNightlyReleaseCron    = "0 5 * * *"
-	ghpHTTPTimeout           = 15 * time.Second
-	ghpMutationHTTPTimeout   = 15 * time.Second
-	ghpMaxErrorBodyBytes     = 10_000
-	ghpMaxLogBytes           = 10 * 1024 * 1024 // 10 MB cap on job log downloads
-	ghpMatrixSparseMinCells  = 1
-	ghpReleaseOverfetch      = 10 // fetch recent releases so we can sort by published_at
+	ghpCacheTTL             = 5 * time.Minute
+	ghpCacheStaleTTL        = 1 * time.Hour // Serve stale data for 1h after expiration when GitHub rate-limits
+	ghpMatrixDefaultDays    = 14
+	ghpMatrixMaxDays        = 90
+	ghpHistoryRetentionDays = 90
+	ghpFailuresLimit        = 10
+	ghpFailuresOverfetch    = 30
+	ghpLogTailLines         = 500
+	ghpMatrixRunsPerRepo    = 200
+	ghpFlowMaxRunsPerRepo   = 8
+	ghpPulseWindowDays      = 14
+	ghpGitHubAPIBase        = "https://api.github.com"
+	ghpNightlyReleaseRepo   = "kubestellar/console"
+	ghpNightlyReleaseWFFile = "release.yml"
+	ghpNightlyReleaseCron   = "0 5 * * *"
+	ghpHTTPTimeout          = 15 * time.Second
+	ghpMutationHTTPTimeout  = 15 * time.Second
+	ghpMaxErrorBodyBytes    = 10_000
+	ghpMaxLogBytes          = 10 * 1024 * 1024 // 10 MB cap on job log downloads
+	ghpMatrixSparseMinCells = 1
+	ghpReleaseOverfetch     = 10 // fetch recent releases so we can sort by published_at
 
 	// ghpMaxAllocItems is the upper bound for slice sizes derived from API
 	// responses. Prevents allocation-size-overflow if GitHub returns a
@@ -450,7 +450,7 @@ func (h *GitHubPipelinesHandler) Serve(c *fiber.Ctx) error {
 	case "log":
 		return h.handleLog(c)
 	default:
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Unknown view: " + view})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid view parameter"})
 	}
 }
 
@@ -506,11 +506,13 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 		// Distinguish client-validation errors (unknown repo, bad params) from
 		// upstream GitHub failures so callers get the correct HTTP status.
 		status := fiber.StatusBadGateway
-		msg := err.Error()
-		if msg == "unknown repo" {
+		genericMsg := "failed to fetch pipeline data"
+		if err.Error() == "unknown repo" {
 			status = fiber.StatusBadRequest
+			genericMsg = "unknown repo"
 		}
-		return c.Status(status).JSON(fiber.Map{"error": msg})
+		slog.Error("[GitHubPipelines] fetch failed", "error", err)
+		return c.Status(status).JSON(fiber.Map{"error": genericMsg})
 	}
 	// Wrap payload with the repo list so the client reads it from the
 	// response instead of hardcoding. Uses a two-step marshal: first the
@@ -524,7 +526,7 @@ func (h *GitHubPipelinesHandler) serveCached(c *fiber.Ctx, key string, build fun
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "repos marshal failed"})
 	}
-	var body []byte
+	body := make([]byte, 0)
 	if len(inner) > 2 && inner[0] == '{' {
 		// Merge repos into existing object.
 		// Guard against integer overflow before computing the allocation size
@@ -1011,8 +1013,8 @@ func (h *GitHubPipelinesHandler) buildPulse(c *fiber.Ctx) (any, error) {
 				// candidates. Sort by published_at (preferred) or created_at
 				// (fallback for drafts where published_at is unset). (#8666 follow-up)
 				type candidate struct {
-					tag       string
-					sortTime  time.Time
+					tag      string
+					sortTime time.Time
 				}
 				candidates := make([]candidate, 0, len(arr))
 				for _, r := range arr {
@@ -1146,8 +1148,6 @@ func ghpStreakKind(c *string) string {
 	}
 	return ""
 }
-
-
 
 // ---------------------------------------------------------------------------
 // Matrix
@@ -1394,7 +1394,8 @@ func (h *GitHubPipelinesHandler) handleLog(c *fiber.Ctx) error {
 	ctx := c.UserContext()
 	res, err := h.ghGet(ctx, fmt.Sprintf("/repos/%s/actions/jobs/%s/logs", repo, jobStr))
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[GitHubPipelines] failed to fetch job logs", "repo", repo, "job", jobStr, "error", err)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream service error"})
 	}
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusNotFound {
@@ -1457,13 +1458,15 @@ func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ghpGitHubAPIBase+path, nil)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[GitHubPipelines] failed to create mutation request", "repo", repo, "run", run, "op", op, "error", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "internal error"})
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Authorization", "Bearer "+h.mutationToken)
 	res, err := h.httpClient.Do(req)
 	if err != nil {
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[GitHubPipelines] failed to send mutation request", "repo", repo, "run", run, "op", op, "error", err)
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream service error"})
 	}
 	defer res.Body.Close()
 	if res.StatusCode >= 400 {
@@ -1471,7 +1474,8 @@ func (h *GitHubPipelinesHandler) handleMutate(c *fiber.Ctx) error {
 		if err != nil {
 			slog.Warn("failed to read response body", "error", err)
 		}
-		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": fmt.Sprintf("github %d: %s", res.StatusCode, string(body))})
+		slog.Error("[GitHubPipelines] upstream error", "repo", repo, "run", run, "op", op, "status", res.StatusCode, "body", string(body))
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{"error": "upstream service error"})
 	}
 	return c.JSON(fiber.Map{"ok": true, "op": op, "run": run, "repo": repo})
 }

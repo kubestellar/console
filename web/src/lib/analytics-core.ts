@@ -387,7 +387,9 @@ function sendViaProxy(
   if (navigator.sendBeacon) {
     navigator.sendBeacon(url)
   } else {
-    fetch(url, { method: 'POST', keepalive: true, signal: AbortSignal.timeout(5_000) }).catch(() => {})
+    fetch(url, { method: 'POST', keepalive: true, signal: AbortSignal.timeout(5_000) }).catch((err) => {
+      if (import.meta.env.DEV) console.error('[analytics] beacon delivery failed:', err)
+    })
   }
 }
 
@@ -700,12 +702,14 @@ const STACK_FILE_BASENAME_RE = /\/([A-Za-z0-9_-]+)\.(?:tsx?|jsx?|mjs)[:?]/
  *   1. Explicit `cardId` (set by DynamicCardErrorBoundary — most precise)
  *   2. First React frame from `componentStack` (set by error boundaries)
  *   3. First source-file basename from `error.stack`
- *   4. COMPONENT_NAME_UNKNOWN
+ *   4. Page section extracted from `pathname` (e.g., /clusters → clusters)
+ *   5. COMPONENT_NAME_UNKNOWN
  */
 function inferComponentName(
   cardId?: string,
   componentStack?: string,
   error?: unknown,
+  pathname?: string,
 ): string {
   if (cardId && cardId.length > 0) {
     return cardId.slice(0, COMPONENT_NAME_MAX_LEN)
@@ -721,6 +725,15 @@ function inferComponentName(
     const match = stack.match(STACK_FILE_BASENAME_RE)
     if (match) return match[1].slice(0, COMPONENT_NAME_MAX_LEN)
   }
+  // Fallback: extract page section from pathname
+  if (typeof pathname === 'string' && pathname.length > 0) {
+    // Extract first path segment after leading slash (e.g., "/clusters" → "clusters")
+    // or use "dashboard" for root path
+    const segment = pathname === '/' ? 'dashboard' : pathname.split('/').filter(Boolean)[0]
+    if (segment && segment.length > 0) {
+      return segment.slice(0, COMPONENT_NAME_MAX_LEN)
+    }
+  }
   return COMPONENT_NAME_UNKNOWN
 }
 
@@ -734,6 +747,8 @@ export interface EmitErrorExtra {
   error?: unknown
   /** React `ErrorInfo.componentStack` — supplies the failing component name. */
   componentStack?: string
+  /** Page pathname — used as fallback for component_name when React context is unavailable. */
+  pathname?: string
 }
 
 /**
@@ -1042,7 +1057,7 @@ export function emitError(
   if (isGlobalRateLimited('ksc_error')) return
 
   const errorType = inferErrorType(detail, extra?.error)
-  const componentName = inferComponentName(cardId, extra?.componentStack, extra?.error)
+  const componentName = inferComponentName(cardId, extra?.componentStack, extra?.error, extra?.pathname)
   send('ksc_error', {
     error_code: category,
     error_category: category,
@@ -1054,6 +1069,10 @@ export function emitError(
     error_type: errorType,
     component_name: componentName,
     ...(cardId && { card_id: cardId }),
+    // Issue #13040 — also send card_type to match the dimension used in all
+    // other card events (ksc_card_added, ksc_card_expanded, etc.), enabling
+    // BigQuery joins between error data and card usage analytics.
+    ...(cardId && { card_type: cardId }),
   })
 }
 
@@ -1357,7 +1376,10 @@ export function startGlobalErrorTracking() {
         return
       }
       pushCapturedError('error', event.message, 'runtime')
-      emitError('runtime', event.message, undefined, { error: event.error })
+      emitError('runtime', event.message, undefined, {
+        error: event.error,
+        pathname: window.location.pathname,
+      })
     } finally {
       isEmitting = false
     }

@@ -2,6 +2,14 @@
 /// <reference types="react" />
 /// <reference types="react-dom" />
 
+interface ImportMetaEnv {
+  readonly VITE_KC_AGENT_URL?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // Build-time constants injected by vite.config.ts
 declare const __APP_VERSION__: string;
 declare const __COMMIT_HASH__: string;

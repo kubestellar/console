@@ -39,6 +39,7 @@ const LABEL_FILTER_REPO = 'Filter by repo'
 const CELL_CLASS: Record<string, string> = {
   success: 'bg-green-500/70 hover:bg-green-500',
   failure: 'bg-red-500/80 hover:bg-red-500',
+  startup_failure: 'bg-red-500/80 hover:bg-red-500',
   timed_out: 'bg-orange-500/80 hover:bg-orange-500',
   cancelled: 'bg-muted/60 hover:bg-muted',
   skipped: 'bg-muted/40 hover:bg-muted/80',
@@ -70,10 +71,11 @@ export function WorkflowMatrix() {
 
   const data = hasUnified ? unifiedData.matrix : individual.data
   const isLoading = hasUnified ? unifiedData.isLoading : individual.isLoading
+  const isRefreshing = hasUnified ? unifiedData.isRefreshing : individual.isRefreshing
   const error = hasUnified ? unifiedData.error : individual.error
   const { isDemoMode } = useDemoMode()
   const hasData = (data?.workflows?.length ?? 0) > 0
-  useCardLoadingState({ isLoading: isLoading && !hasData, hasAnyData: hasData, isDemoData: isDemoMode })
+  useCardLoadingState({ isLoading: isLoading && !hasData, isRefreshing, hasAnyData: hasData, isDemoData: isDemoMode })
 
   const workflows = (data?.workflows ?? []).filter((wf) => {
     if (days <= RANGE_OPTIONS[0]) return true

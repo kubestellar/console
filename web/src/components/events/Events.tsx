@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Activity, AlertTriangle, Clock, Bell, ChevronRight, CheckCircle2, Calendar, Zap, RefreshCw } from 'lucide-react'
 import { useCachedEvents } from '../../hooks/useCachedData'
+import type { ClusterEvent } from '../../hooks/mcp/types'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
 import { useDrillDownActions } from '../../hooks/useDrillDown'
 import { ClusterBadge } from '../ui/ClusterBadge'
@@ -89,6 +90,15 @@ function getEventIcon(type: string, reason: string): React.ReactNode {
 // concatenation, so we narrow to the runtime contract we actually rely on.
 type TranslateFn = (key: string, opts?: Record<string, unknown>) => string
 
+function getEventSeverity(eventType: string): 'high' | 'info' {
+  return eventType === 'Warning' ? 'high' : 'info'
+}
+
+function matchesEventQuery(event: ClusterEvent, query: string): boolean {
+  const searchableFields = [event.reason, event.message, event.object, event.namespace, event.cluster || '']
+  return searchableFields.some(value => (value || '').toLowerCase().includes(query))
+}
+
 export function Events() {
   const { t: tTyped } = useTranslation()
   const t = tTyped as unknown as TranslateFn
@@ -107,7 +117,6 @@ export function Events() {
     isDemoFallback: eventsIsDemoFallback,
     error: eventsError,
   } = useCachedEvents(undefined, undefined, { limit: EVENT_LIMIT })
-  const warningEvents = (allEvents || []).filter(e => e.type === 'Warning')
   const lastUpdated = allUpdated ? new Date(allUpdated) : null
   // Show the explicit error banner once the cache layer has given up and
   // there's no usable cached data to display. We don't want to flash this
@@ -132,16 +141,21 @@ export function Events() {
     if (!isAllClustersSelected) {
       result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
     }
+    result = filterBySeverity(
+      result.map(event => ({
+        ...event,
+        severity: getEventSeverity(event.type),
+      }))
+    ).map(event => {
+      const { severity: _severity, ...rest } = event as ClusterEvent & { severity: string }
+      return rest
+    })
     if (globalCustomFilter.trim()) {
       const query = globalCustomFilter.toLowerCase()
-      result = result.filter(e =>
-        e.reason.toLowerCase().includes(query) || e.message.toLowerCase().includes(query) ||
-        e.object.toLowerCase().includes(query) || e.namespace.toLowerCase().includes(query) ||
-        (e.cluster && e.cluster.toLowerCase().includes(query))
-      )
+      result = result.filter(event => matchesEventQuery(event, query))
     }
     return result
-  }, [allEvents, isAllClustersSelected, globalSelectedClusters, globalCustomFilter])
+  }, [allEvents, isAllClustersSelected, globalSelectedClusters, filterBySeverity, globalCustomFilter])
 
   const globalFilteredWarningEvents = useMemo(
     () => globalFilteredAllEvents.filter(e => e.type === 'Warning'),
@@ -149,6 +163,10 @@ export function Events() {
   )
   const globalFilteredErrorEvents = useMemo(
     () => globalFilteredAllEvents.filter(e => e.type === 'Error'),
+    [globalFilteredAllEvents]
+  )
+  const globalFilteredNormalEvents = useMemo(
+    () => globalFilteredAllEvents.filter(e => e.type === 'Normal'),
     [globalFilteredAllEvents]
   )
 
@@ -174,39 +192,26 @@ export function Events() {
 
   // Filtered events for list/timeline views
   const filteredEvents = useMemo(() => {
-    let result = filter === 'warning' ? warningEvents : (allEvents || [])
-    if (!isAllClustersSelected) {
-      result = result.filter(e => e.cluster && globalSelectedClusters.includes(e.cluster))
-    }
-    result = filterBySeverity(result.map(e => ({ ...e, severity: e.type === 'Warning' ? 'high' : 'info' }))).map(e => {
-      const { severity: _severity, ...rest } = e as typeof e & { severity: string }
-      return rest
-    })
-    if (globalCustomFilter.trim()) {
-      const query = globalCustomFilter.toLowerCase()
-      result = result.filter(e =>
-        e.reason.toLowerCase().includes(query) || e.message.toLowerCase().includes(query) ||
-        e.object.toLowerCase().includes(query) || e.namespace.toLowerCase().includes(query) ||
-        (e.cluster && e.cluster.toLowerCase().includes(query))
-      )
-    }
+    let result = filter === 'warning'
+      ? globalFilteredWarningEvents
+      : filter === 'normal'
+        ? globalFilteredNormalEvents
+        : globalFilteredAllEvents
+
     if (selectedNamespace) result = result.filter(e => e.namespace === selectedNamespace)
     if (selectedReason) result = result.filter(e => e.reason === selectedReason)
-    if (searchQuery) {
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
-      result = result.filter(e =>
-        e.reason.toLowerCase().includes(query) || e.message.toLowerCase().includes(query) ||
-        e.object.toLowerCase().includes(query) || e.namespace.toLowerCase().includes(query)
-      )
+      result = result.filter(event => matchesEventQuery(event, query))
     }
     return result
-  }, [filter, allEvents, warningEvents, searchQuery, selectedNamespace, selectedReason, globalSelectedClusters, isAllClustersSelected, filterBySeverity, globalCustomFilter])
+  }, [filter, globalFilteredAllEvents, globalFilteredWarningEvents, globalFilteredNormalEvents, searchQuery, selectedNamespace, selectedReason])
 
   // Stats calculation
   const stats = useMemo(() => {
     const warnings = globalFilteredWarningEvents.length
     const errors = globalFilteredErrorEvents.length
-    const normal = globalFilteredAllEvents.filter(e => e.type === 'Normal').length
+    const normal = globalFilteredNormalEvents.length
     const reasonCounts = globalFilteredAllEvents.reduce((acc, e) => { acc[e.reason] = (acc[e.reason] || 0) + 1; return acc }, {} as Record<string, number>)
     const topReasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]).slice(0, MAX_TOP_REASONS).map(([name, value], i) => ({
       name, value, color: getChartColor((i % DONUT_COLOR_BUCKETS) + 1)
@@ -248,7 +253,7 @@ export function Events() {
       total: globalFilteredAllEvents.length, warnings, errors, normal, recentCount, topReasons, clusterData, hourlyData,
       typeChartData: [{ name: t('events.stats.warnings'), value: warnings, color: getChartColorByName('warning') }, { name: t('common.normal'), value: normal, color: getChartColorByName('success') }].filter(d => d.value > 0)
     }
-  }, [globalFilteredAllEvents, globalFilteredWarningEvents, globalFilteredErrorEvents, t])
+  }, [globalFilteredAllEvents, globalFilteredWarningEvents, globalFilteredErrorEvents, globalFilteredNormalEvents, t])
 
   // Update cache
   useEffect(() => {
@@ -296,7 +301,7 @@ export function Events() {
     const now = new Date()
     const oneHourAgo = new Date(now.getTime() - MILLISECONDS_PER_HOUR)
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-    filteredEvents.forEach(event => {
+    ;(filteredEvents || []).forEach(event => {
       const eventTime = parseEventTime(event.lastSeen)
       if (eventTime === null) {
         groups.unknownTime.push(event)
@@ -480,7 +485,7 @@ export function Events() {
         <div className="space-y-6">
           <div className="glass p-6 rounded-lg">
             <h3 className="text-lg font-medium text-foreground mb-6 flex items-center gap-2"><Calendar className="w-5 h-5" />{t('events.sections.eventTimeline')}</h3>
-            {filteredEvents.length === 0 ? (
+            {(filteredEvents || []).length === 0 ? (
               <div className="text-center py-12"><Clock className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" /><p className="text-muted-foreground">{t('events.empty.noEventsToDisplay')}</p></div>
             ) : (
               <div className="relative">
@@ -613,7 +618,7 @@ export function Events() {
                 {t('events.loadError.retry')}
               </button>
             </div>
-          ) : filteredEvents.length === 0 ? (
+          ) : (filteredEvents || []).length === 0 ? (
             <div className="text-center py-12">
               <Bell className="w-16 h-16 mx-auto mb-4 text-muted-foreground opacity-50" />
               <p className="text-muted-foreground">{t('events.empty.noEventsFound')}</p>

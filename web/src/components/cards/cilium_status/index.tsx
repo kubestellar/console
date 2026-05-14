@@ -6,6 +6,7 @@ import { useCachedCiliumStatus } from '../../../hooks/useCachedCiliumStatus'
 import { useCardLoadingState } from '../CardDataContext'
 import { cn } from '../../../lib/cn'
 import { StatusBadge } from '../../ui/StatusBadge'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { CardComponentProps } from '../cardRegistry'
 import { CardControls } from '../../ui/CardControls'
 import { useCardData, commonComparators, CardPaginationFooter } from '../../../lib/cards'
@@ -120,12 +121,20 @@ export const CiliumStatus: React.FC<CardComponentProps> = () => {
                             </div>
                         </div>
                     </div>
-                    <StatusBadge
-                        variant="outline"
-                        color={data.status === 'Healthy' ? 'green' : data.status === 'Degraded' ? 'yellow' : 'red'}
-                    >
-                        {t(`ciliumStatus.${data.status.toLowerCase()}` as `ciliumStatus.${'healthy' | 'degraded' | 'unhealthy'}`)}
-                    </StatusBadge>
+                    <div className="flex flex-col items-end gap-1.5">
+                        <StatusBadge
+                            variant="outline"
+                            color={data.status === 'Healthy' ? 'green' : data.status === 'Degraded' ? 'yellow' : 'red'}
+                        >
+                            {t(`ciliumStatus.${data.status.toLowerCase()}` as `ciliumStatus.${'healthy' | 'degraded' | 'unhealthy'}`)}
+                        </StatusBadge>
+                        <RefreshIndicator
+                            isRefreshing={isRefreshing}
+                            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+                            size="sm"
+                            showLabel={true}
+                        />
+                    </div>
                 </div>
 
                 {/* Metrics Grid */}

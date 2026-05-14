@@ -514,13 +514,22 @@ type screenshotUploadResult struct {
 	Failed   int `json:"screenshots_failed"`
 }
 
-// Returns (issue number, html url, validated screenshots queued for async
+const maxAgentConnectionLogLines = 10
+
+type createdGitHubIssue struct {
+	Number  int
+	HTMLURL string
+	ID      int64
+	Warning string
+}
+
+// Returns (issue number, non-fatal warning, validated screenshots queued for async
 // upload, synchronous result counts, error). #9898: screenshot uploads are
 // decoupled from this path — callers launch uploadScreenshotCommentsAsync
 // on the returned slice from a background goroutine.
-func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, consoleErrors []models.ConsoleError, failedApiCalls []models.FailedApiCall, diagnostics *models.DiagnosticInfo, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
+func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *models.FeatureRequest, user *models.User, repoOwner, repoName string, screenshots []string, consoleErrors []models.ConsoleError, failedApiCalls []models.FailedApiCall, diagnostics *models.DiagnosticInfo, parentIssueNumber *int, clientAuth string) (int, string, []string, screenshotUploadResult, error) {
 	// Determine labels based on request type and target repo
-	var labels []string
+	labels := make([]string, 0)
 	isDocs := request.TargetRepo == models.TargetRepoDocs
 
 	if isDocs {
@@ -554,7 +563,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 	// images to the repo, and replaces the comment with a rendered image.
 	// #7062: validate screenshots upfront but only count as uploaded after
 	// successful delivery via addIssueComment (moved below).
-	var validScreenshots []string
+	validScreenshots := make([]string, 0)
 	var ssResult screenshotUploadResult
 	for i, dataURI := range screenshots {
 		parts := strings.SplitN(dataURI, ",", 2)
@@ -623,8 +632,20 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		if diagnostics.InstallMethod != "" {
 			diag.WriteString(fmt.Sprintf("| Install Method | %s |\n", diagnostics.InstallMethod))
 		}
+		if diagnostics.ConsoleDeployMode != "" {
+			diag.WriteString(fmt.Sprintf("| Deployment Mode | %s |\n", diagnostics.ConsoleDeployMode))
+		}
+		if diagnostics.ActiveAgentBackend != "" {
+			diag.WriteString(fmt.Sprintf("| Active Agent Backend | %s |\n", diagnostics.ActiveAgentBackend))
+		}
+		if diagnostics.BackendWSStatus != "" {
+			diag.WriteString(fmt.Sprintf("| Backend WS Status | %s |\n", diagnostics.BackendWSStatus))
+		}
 		if diagnostics.Clusters > 0 {
 			diag.WriteString(fmt.Sprintf("| Clusters | %d |\n", diagnostics.Clusters))
+		}
+		if diagnostics.ClusterContext != "" {
+			diag.WriteString(fmt.Sprintf("| Cluster Context | %s |\n", diagnostics.ClusterContext))
 		}
 		if diagnostics.AgentConnectionStatus != "" {
 			diag.WriteString(fmt.Sprintf("| Agent Connection | %s |\n", diagnostics.AgentConnectionStatus))
@@ -653,6 +674,27 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		if diagnostics.PageURL != "" {
 			diag.WriteString(fmt.Sprintf("| Page URL | %s |\n", diagnostics.PageURL))
 		}
+		if diagnostics.ConsoleDeployMode != "" {
+			diag.WriteString(fmt.Sprintf("| Console Deploy Mode | %s |\n", diagnostics.ConsoleDeployMode))
+		}
+		if diagnostics.ActiveAgentBackend != "" {
+			diag.WriteString(fmt.Sprintf("| Active Agent Backend | %s |\n", diagnostics.ActiveAgentBackend))
+		}
+		if diagnostics.BackendWSStatus != "" {
+			diag.WriteString(fmt.Sprintf("| Backend WS Status | %s |\n", diagnostics.BackendWSStatus))
+		}
+		if len(diagnostics.AgentConnectionLog) > 0 {
+			shown := diagnostics.AgentConnectionLog
+			if len(shown) > maxAgentConnectionLogLines {
+				shown = shown[:maxAgentConnectionLogLines]
+			}
+			diag.WriteString("\n<details>\n<summary>Agent Connection Log</summary>\n\n")
+			for _, line := range shown {
+				safeLine := strings.NewReplacer("`", "'", "\n", " ", "\r", "").Replace(line)
+				diag.WriteString(fmt.Sprintf("- `%s`\n", safeLine))
+			}
+			diag.WriteString("\n</details>\n")
+		}
 		diag.WriteString("\n</details>\n")
 		diagnosticsBlock = diag.String()
 	}
@@ -668,7 +710,7 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		for _, call := range failedApiCalls[:shown] {
 			detail := ""
 			if call.Detail != "" {
-			// Escape backticks and strip newlines so the detail cannot break out of
+				// Escape backticks and strip newlines so the detail cannot break out of
 				// the inline code span or inject arbitrary markdown into the issue body.
 				safeDetail := strings.NewReplacer("`", "'", "\n", " ", "\r", "").Replace(call.Detail)
 				detail = fmt.Sprintf(": %s", safeDetail)
@@ -697,13 +739,13 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 `, request.RequestType, repoLabel, user.GitHubLogin, request.ID.String(), request.Description, shaLine, consoleErrorBlock, failedApiBlock, diagnosticsBlock)
 
 	// First attempt: create issue with labels
-	number, htmlURL, err := h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, labels, clientAuth)
+	createdIssue, err := h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, labels, parentIssueNumber, clientAuth)
 	if err != nil && isLabelPermissionError(err) {
 		// The token lacks permission to create/apply labels on this repo.
 		// Retry without labels — the issue body includes the request type
 		// so maintainers can triage and label it manually.
 		slog.Info("[Feedback] label permission denied, retrying without labels", "repo", repoOwner+"/"+repoName)
-		number, htmlURL, err = h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, nil, clientAuth)
+		createdIssue, err = h.postGitHubIssue(ctx, repoOwner, repoName, request.Title, issueBody, nil, parentIssueNumber, clientAuth)
 	}
 
 	// Screenshots are uploaded asynchronously by the caller via
@@ -715,16 +757,16 @@ func (h *FeedbackHandler) createGitHubIssueInRepo(ctx context.Context, request *
 		ssResult.Uploaded = len(validScreenshots)
 	}
 
-	return number, htmlURL, validScreenshots, ssResult, err
+	return createdIssue.Number, createdIssue.Warning, validScreenshots, ssResult, err
 }
 
-// uploadScreenshotCommentsAsync posts each screenshot to the given issue as
-// a separate comment. It is intended to be called from a goroutine with a
-// context rooted in context.Background() so slow uploads do not block the
-// request path (#9898). Failures are logged via slog — the FeatureRequest
-// and its GitHub issue have already been persisted, so a missed screenshot
-// does not lose the user's submission.
-func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, issueNumber int, repoName string, screenshots []string) {
+// uploadScreenshotCommentsAsync uploads each screenshot to GitHub and posts
+// them as inline markdown images in separate comments. It is intended to be
+// called from a goroutine with a context rooted in context.Background() so
+// slow uploads do not block the request path (#9898). Failures are logged via
+// slog — the FeatureRequest and its GitHub issue have already been persisted,
+// so a missed screenshot does not lose the user's submission.
+func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, issueNumber int, repoOwner, repoName, requestID string, screenshots []string) {
 	if len(screenshots) == 0 {
 		return
 	}
@@ -737,9 +779,18 @@ func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, iss
 				"issue", issueNumber, "remaining", len(screenshots)-i, "reason", ctx.Err())
 			break
 		}
-		commentBody := fmt.Sprintf(
-			"<!-- screenshot-base64:%d -->\n<details>\n<summary>Screenshot %d (processing...)</summary>\n\n```\n%s\n```\n\n</details>",
-			i+1, i+1, dataURI)
+
+		// Upload the screenshot to GitHub and get the permanent URL
+		downloadURL, uploadErr := h.uploadScreenshotToGitHub(repoOwner, repoName, requestID, i, dataURI)
+		if uploadErr != nil {
+			slog.Warn("[Feedback] async screenshot upload failed",
+				"index", i+1, "issue", issueNumber, "error", uploadErr)
+			failed++
+			continue
+		}
+
+		// Post as a proper markdown image instead of base64 code block
+		commentBody := fmt.Sprintf("![Screenshot %d](%s)", i+1, downloadURL)
 		if commentErr := h.addIssueComment(ctx, issueNumber, commentBody, repoName); commentErr != nil {
 			slog.Warn("[Feedback] async screenshot comment upload failed",
 				"index", i+1, "issue", issueNumber, "error", commentErr)
@@ -757,14 +808,14 @@ func (h *FeedbackHandler) uploadScreenshotCommentsAsync(ctx context.Context, iss
 // credential is present. If labels is nil or empty, the "labels" field
 // is omitted from the payload.
 // #9901: accepts a context so client disconnect cancels the outbound call.
-func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoName, title, body string, labels []string, clientAuth string) (int, string, error) {
+func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoName, title, body string, labels []string, parentIssueNumber *int, clientAuth string) (createdGitHubIssue, error) {
 	// Attribution proxy path: when configured and the caller provided
 	// a per-user client credential, route through the central App-holder
 	// so GitHub stamps `performed_via_github_app.slug` on the issue.
 	if h.attributionProxyURL != "" && clientAuth != "" {
-		num, url, err := h.postGitHubIssueViaProxy(ctx, repoOwner, repoName, title, body, labels, clientAuth)
+		createdIssue, err := h.postGitHubIssueViaProxy(ctx, repoOwner, repoName, title, body, labels, parentIssueNumber, clientAuth)
 		if err == nil {
-			return num, url, nil
+			return createdIssue, nil
 		}
 		// Fall through to the direct path so a proxy outage doesn't
 		// block feedback submission. The issue won't get App
@@ -783,7 +834,7 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return 0, "", fmt.Errorf("failed to marshal issue payload: %w", err)
+		return createdGitHubIssue{}, fmt.Errorf("failed to marshal issue payload: %w", err)
 	}
 	apiURL := fmt.Sprintf("%s/repos/%s/%s/issues", resolveGitHubAPIBase(), repoOwner, repoName)
 
@@ -793,24 +844,10 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 
 	req, err := http.NewRequestWithContext(reqCtx, "POST", apiURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return 0, "", err
+		return createdGitHubIssue{}, err
 	}
 
-	// Prefer GitHub App installation token when available so the created
-	// issue is attributable via performed_via_github_app (anti-gaming on
-	// the rewards leaderboard). Falls back to the PAT if App auth isn't
-	// configured — see github_app_auth.go.
-	authToken := ""
-	if h.appTokenProvider != nil {
-		if tok, tokErr := h.appTokenProvider.Token(req.Context()); tokErr == nil {
-			authToken = tok
-		} else {
-			slog.Warn("[Feedback] GitHub App token unavailable — falling back to PAT", "error", tokErr)
-		}
-	}
-	if authToken == "" {
-		authToken = h.getEffectiveToken()
-	}
+	authToken := h.resolveIssueAuthToken(req.Context())
 	req.Header.Set("Authorization", "Bearer "+authToken)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
@@ -818,7 +855,7 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 	// #7059: reuse shared HTTP client for connection pooling.
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
-		return 0, "", err
+		return createdGitHubIssue{}, err
 	}
 	defer resp.Body.Close()
 
@@ -828,23 +865,46 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 			respBody = []byte("(failed to read response body)")
 		}
 		if resp.StatusCode == http.StatusUnauthorized {
-			return 0, "", fmt.Errorf("%w: %s", errGitHubUnauthorized, string(respBody))
+			return createdGitHubIssue{}, fmt.Errorf("%w: %s", errGitHubUnauthorized, string(respBody))
 		}
 		if resp.StatusCode == http.StatusForbidden && isInsufficientIssuePermissionError(string(respBody)) {
-			return 0, "", fmt.Errorf("%w: %s", errGitHubInsufficientPermissions, string(respBody))
+			return createdGitHubIssue{}, fmt.Errorf("%w: %s", errGitHubInsufficientPermissions, string(respBody))
 		}
-		return 0, "", fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(respBody))
+		return createdGitHubIssue{}, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	var result struct {
+		ID      int64  `json:"id"`
 		Number  int    `json:"number"`
 		HTMLURL string `json:"html_url"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return 0, "", err
+		return createdGitHubIssue{}, err
 	}
 
-	return result.Number, result.HTMLURL, nil
+	createdIssue := createdGitHubIssue{
+		ID:      result.ID,
+		Number:  result.Number,
+		HTMLURL: result.HTMLURL,
+	}
+	if parentIssueNumber != nil && *parentIssueNumber > 0 {
+		canLinkParent, err := h.canLinkParentIssue(req.Context(), repoOwner, repoName, clientAuth)
+		if err != nil {
+			slog.Warn("[Feedback] parent issue capability check failed", "issue", result.Number, "parent", *parentIssueNumber, "error", err)
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but the reporter's repository permissions could not be verified for parent issue #%d.", result.Number, *parentIssueNumber)
+			return createdIssue, nil
+		}
+		if !canLinkParent {
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but parent issue linking requires push access to %s/%s.", result.Number, repoOwner, repoName)
+			return createdIssue, nil
+		}
+		if err := h.linkIssueAsSubIssue(req.Context(), repoOwner, repoName, *parentIssueNumber, result.ID, authToken); err != nil {
+			slog.Warn("[Feedback] sub-issue link failed", "issue", result.Number, "parent", *parentIssueNumber, "error", err)
+			createdIssue.Warning = fmt.Sprintf("Issue #%d was created, but it could not be linked to parent issue #%d.", result.Number, *parentIssueNumber)
+		}
+	}
+
+	return createdIssue, nil
 }
 
 // postGitHubIssueViaProxy forwards the issue payload to the central
@@ -853,7 +913,7 @@ func (h *FeedbackHandler) postGitHubIssue(ctx context.Context, repoOwner, repoNa
 // `kubestellar-console-bot` App so GitHub stamps
 // `performed_via_github_app.slug` on it.
 // #9901: accepts a context so client disconnect cancels the outbound call.
-func (h *FeedbackHandler) postGitHubIssueViaProxy(ctx context.Context, repoOwner, repoName, title, body string, labels []string, clientAuth string) (int, string, error) {
+func (h *FeedbackHandler) postGitHubIssueViaProxy(ctx context.Context, repoOwner, repoName, title, body string, labels []string, parentIssueNumber *int, clientAuth string) (createdGitHubIssue, error) {
 	payload := map[string]interface{}{
 		"repoOwner": repoOwner,
 		"repoName":  repoName,
@@ -863,10 +923,13 @@ func (h *FeedbackHandler) postGitHubIssueViaProxy(ctx context.Context, repoOwner
 	if len(labels) > 0 {
 		payload["labels"] = labels
 	}
+	if parentIssueNumber != nil && *parentIssueNumber > 0 {
+		payload["parentIssueNumber"] = *parentIssueNumber
+	}
 
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		return 0, "", fmt.Errorf("marshal proxy payload: %w", err)
+		return createdGitHubIssue{}, fmt.Errorf("marshal proxy payload: %w", err)
 	}
 
 	// #9901: layer a per-call timeout on top of the request-scoped context.
@@ -875,14 +938,14 @@ func (h *FeedbackHandler) postGitHubIssueViaProxy(ctx context.Context, repoOwner
 
 	req, err := http.NewRequestWithContext(reqCtx, "POST", h.attributionProxyURL, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return 0, "", err
+		return createdGitHubIssue{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-KC-Client-Auth", clientAuth)
 
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
-		return 0, "", err
+		return createdGitHubIssue{}, err
 	}
 	defer resp.Body.Close()
 
@@ -891,17 +954,145 @@ func (h *FeedbackHandler) postGitHubIssueViaProxy(ctx context.Context, repoOwner
 		if err != nil {
 			slog.Warn("failed to read response body", "error", err)
 		}
-		return 0, "", fmt.Errorf("proxy returned %d: %s", resp.StatusCode, string(respBody))
+		return createdGitHubIssue{}, fmt.Errorf("proxy returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	var result struct {
+		ID      int64  `json:"id"`
 		Number  int    `json:"number"`
 		HTMLURL string `json:"html_url"`
+		Warning string `json:"warning,omitempty"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return 0, "", err
+		return createdGitHubIssue{}, err
 	}
-	return result.Number, result.HTMLURL, nil
+	return createdGitHubIssue{
+		ID:      result.ID,
+		Number:  result.Number,
+		HTMLURL: result.HTMLURL,
+		Warning: result.Warning,
+	}, nil
+}
+
+func (h *FeedbackHandler) resolveIssueAuthToken(ctx context.Context) string {
+	if h.appTokenProvider != nil {
+		if tok, tokErr := h.appTokenProvider.Token(ctx); tokErr == nil {
+			return tok
+		} else {
+			slog.Warn("[Feedback] GitHub App token unavailable — falling back to PAT", "error", tokErr)
+		}
+	}
+	return h.getEffectiveToken()
+}
+
+func (h *FeedbackHandler) linkIssueAsSubIssue(ctx context.Context, repoOwner, repoName string, parentIssueNumber int, subIssueID int64, authToken string) error {
+	payload := map[string]interface{}{
+		"sub_issue_id": subIssueID,
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal sub-issue payload: %w", err)
+	}
+
+	apiURL := fmt.Sprintf("%s/repos/%s/%s/issues/%d/sub_issues", resolveGitHubAPIBase(), repoOwner, repoName, parentIssueNumber)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+authToken)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("X-GitHub-Api-Version", "2026-03-10")
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		if readErr != nil {
+			respBody = []byte("(failed to read response body)")
+		}
+		return fmt.Errorf("GitHub sub-issue API returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+func (h *FeedbackHandler) canLinkParentIssue(ctx context.Context, repoOwner, repoName, clientAuth string) (bool, error) {
+	if clientAuth == "" {
+		return false, nil
+	}
+	if h.attributionProxyURL != "" {
+		canLinkParent, err := h.fetchIssueLinkCapabilitiesViaProxy(ctx, repoOwner, repoName, clientAuth)
+		if err == nil {
+			return canLinkParent, nil
+		}
+		slog.Warn("[Feedback] issue link capability proxy failed, falling back to GitHub", "error", err)
+	}
+	return h.fetchIssueLinkCapabilitiesDirect(ctx, repoOwner, repoName, clientAuth)
+}
+
+func (h *FeedbackHandler) fetchIssueLinkCapabilitiesViaProxy(ctx context.Context, repoOwner, repoName, clientAuth string) (bool, error) {
+	proxyURL := fmt.Sprintf("%s?mode=capabilities&repoOwner=%s&repoName=%s", h.attributionProxyURL, repoOwner, repoName)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, proxyURL, nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("X-KC-Client-Auth", clientAuth)
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		return false, fmt.Errorf("proxy returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		CanLinkParent bool `json:"can_link_parent"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return false, err
+	}
+	return result.CanLinkParent, nil
+}
+
+func (h *FeedbackHandler) fetchIssueLinkCapabilitiesDirect(ctx context.Context, repoOwner, repoName, clientAuth string) (bool, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/%s", resolveGitHubAPIBase(), repoOwner, repoName)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("Authorization", "Bearer "+clientAuth)
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("X-GitHub-Api-Version", "2026-03-10")
+
+	resp, err := h.httpClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, maxGitHubResponseBytes))
+		return false, fmt.Errorf("GitHub repo permissions API returned %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		Permissions struct {
+			Push bool `json:"push"`
+		} `json:"permissions"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return false, err
+	}
+	return result.Permissions.Push, nil
 }
 
 // uploadScreenshotToGitHub uploads a base64 data-URI screenshot to the

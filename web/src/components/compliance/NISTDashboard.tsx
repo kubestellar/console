@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, memo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { nistDashboardConfig } from '../../config/dashboards/nist'
 import {
@@ -76,6 +76,7 @@ export const NISTDashboardContent = memo(function NISTDashboardContent() {
   const [activeTab, setActiveTab] = useState<'families' | 'mappings' | 'summary'>('families')
   const [familyFilter, setFamilyFilter] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -94,17 +95,24 @@ export const NISTDashboardContent = memo(function NISTDashboardContent() {
         sRes.json(),
       ])
 
+      if (cancelledRef.current) return
       setFamilies(Array.isArray(familiesData) ? familiesData : [])
       setMappings(Array.isArray(mappingsData) ? mappingsData : [])
       setSummary(summaryData ?? null)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   const filteredFamilies = useMemo(() => {
     if (familyFilter === 'all') return families

@@ -1,5 +1,4 @@
-import React, { memo } from 'react'
-import { useState, useEffect, useCallback } from 'react'
+import React, { memo, useRef, useState, useEffect, useCallback } from 'react'
 import {
   CheckCircle2, Loader2,
   ArrowRight, Clock, XCircle
@@ -75,6 +74,7 @@ const SIEMDashboard = memo(function SIEMDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'events' | 'alerts' | 'overview'>('overview')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -86,17 +86,24 @@ const SIEMDashboard = memo(function SIEMDashboard() {
         authFetch('/api/v1/compliance/siem/summary'),
       ])
       if (!eRes.ok || !aRes.ok || !sRes.ok) throw new Error('Failed to fetch SIEM data')
+      if (cancelledRef.current) return
       setEvents(await eRes.json())
       setAlerts(await aRes.json())
       setSummary(await sRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">

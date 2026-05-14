@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { Eye, Loader2 } from 'lucide-react'
+import { AlertTriangle, Eye, Loader2 } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import type { ProjectHoverInfo } from './svg/ProjectNode'
 import type { ClusterHoverInfo } from './svg/ClusterZone'
@@ -137,15 +137,19 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
   const connections = edges?.filter(e => e.from === info.name || e.to === info.name) ?? []
   const [mission, setMission] = useState<MissionExport | null>(null)
   const [loadingSteps, setLoadingSteps] = useState(false)
+  const [stepsError, setStepsError] = useState<string | null>(null)
+  const [stepsRetryNonce, setStepsRetryNonce] = useState(0)
   const fetchedRef = useRef<string>('')
 
   // Fetch mission steps — try multiple KB path variants for fuzzy matching
   const slug = info.name.toLowerCase().replace(/\s+/g, '-')
   useEffect(() => {
-    if (fetchedRef.current === slug) return
-    fetchedRef.current = slug
+    const fetchKey = `${slug}:${stepsRetryNonce}`
+    if (fetchedRef.current === fetchKey) return
+    fetchedRef.current = fetchKey
     setLoadingSteps(true)
     setMission(null)
+    setStepsError(null)
 
     const candidates: string[] = []
     if (info.kbPath) candidates.push(info.kbPath)
@@ -161,6 +165,11 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
       candidates.push(`fixes/cncf-install/install-${slug.replace(/-operator$/, '')}.json`)
     }
 
+    const failSteps = () => {
+      setStepsError('Install steps are unavailable right now. Retry to load them again.')
+      setLoadingSteps(false)
+    }
+
     const tryNext = (idx: number) => {
       if (idx >= candidates.length) {
         // #11881 — No KB entry found; generate install steps from kubara chart data
@@ -168,6 +177,10 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
           const chartName = info.kubaraChart.repoPath.split('/').pop() || slug
           fetchKubaraValues(chartName, info.kubaraChart.valuesUrl)
             .then((valuesYaml) => {
+              if (!valuesYaml) {
+                failSteps()
+                return
+              }
               const generatedSteps = generateKubaraInstallSteps(chartName, valuesYaml)
               const generatedMission: MissionExport = {
                 version: 'kc-mission-v1',
@@ -181,9 +194,9 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
               setMission(generatedMission)
               setLoadingSteps(false)
             })
-            .catch(() => { setLoadingSteps(false) })
+            .catch(() => failSteps())
         } else {
-          setLoadingSteps(false)
+          failSteps()
         }
         return
       }
@@ -198,13 +211,17 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
       }
       fetchMissionContent(indexMission)
         .then(({ mission: m }) => {
-          if (m.steps && m.steps.length > 0) { setMission(m); setLoadingSteps(false) }
-          else tryNext(idx + 1)
+          if (m.steps && m.steps.length > 0) {
+            setMission(m)
+            setLoadingSteps(false)
+          } else {
+            tryNext(idx + 1)
+          }
         })
         .catch(() => tryNext(idx + 1))
     }
     tryNext(0)
-  }, [slug, info.kbPath, info.displayName, info.reason, info.kubaraChart])
+  }, [slug, info.kbPath, info.displayName, info.reason, info.kubaraChart, stepsRetryNonce])
 
   return (
     <div className="space-y-5">
@@ -294,6 +311,22 @@ export function ProjectInfoPanel({ info, edges }: { info: ProjectHoverInfo; edge
           <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
             <Loader2 className="w-3 h-3 animate-spin" />
             Loading...
+          </div>
+        ) : stepsError ? (
+          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-[10px] text-red-300">
+            <div className="flex items-start gap-1.5">
+              <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+              <div className="space-y-2">
+                <p>{stepsError}</p>
+                <button
+                  type="button"
+                  onClick={() => setStepsRetryNonce((prev) => prev + 1)}
+                  className="font-medium text-red-200 underline underline-offset-2 hover:text-white"
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
           </div>
         ) : mission?.steps && mission.steps.length > 0 ? (
           <div className="space-y-1.5">

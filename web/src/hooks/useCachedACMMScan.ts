@@ -249,7 +249,7 @@ export function useCachedACMMScan(repo: string = DEFAULT_REPO): UseACMMScanResul
   // so the cards render with the standard Demo badge instead of "Refresh failed".
   const apiUnavailable =
     (cacheResult.error?.includes('not available') ?? false) ||
-    (cacheResult.isFailed && cacheResult.data.detectedIds.length === 0)
+    (cacheResult.isFailed && (cacheResult.data?.detectedIds?.length ?? 0) === 0)
   const effectiveData = apiUnavailable ? demoScan(repo) : cacheResult.data
 
   const detectedIds = new Set(effectiveData.detectedIds ?? [])

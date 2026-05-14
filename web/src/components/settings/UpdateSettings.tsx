@@ -597,6 +597,15 @@ export function UpdateSettings() {
           <p className="text-sm text-green-400">{t('settings.updates.upToDate')}</p>
         </div>
       )}
+      {lastCheckResult === 'error' && !isChecking && !isVisuallySpinning && error && (
+        <div data-testid="check-failed-banner" className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 animate-in fade-in">
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-red-400 font-medium">{t('settings.updates.errorChecking')}</p>
+            <p className="text-xs text-red-400/80 mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Update Progress Banner */}
       {isUpdating && (

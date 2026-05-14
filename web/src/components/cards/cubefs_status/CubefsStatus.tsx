@@ -18,6 +18,7 @@ import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useCardData } from '../../../lib/cards/cardHooks'
 import { useCubefsStatus } from './useCubefsStatus'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import type {
   CubefsVolume,
   CubefsVolumeStatus,
@@ -296,6 +297,7 @@ function TabButton({
 
 export function CubefsStatus() {
   const { t } = useTranslation('cards')
+  useDemoMode()
 
   const {
     data,

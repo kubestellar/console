@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SigningStatusDashboard from './SigningStatusDashboard'
 import { authFetch } from '../../lib/api'
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+}))
+
 vi.mock('../../lib/api', () => ({
   authFetch: vi.fn(),
 }))
@@ -145,6 +149,6 @@ describe('SigningStatusDashboard', () => {
     await waitFor(() => {
       expect(screen.getByText('Failed to load signing data')).toBeInTheDocument()
     })
-    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'common.retry' })).toBeInTheDocument()
   })
 })

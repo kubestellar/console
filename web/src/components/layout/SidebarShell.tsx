@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { iconRegistry } from '../../lib/icons'
 import { cn } from '../../lib/cn'
+import { ROUTES } from '../../config/routes'
 import { Tooltip } from '../ui/Tooltip'
 import { SnoozedCards } from './SnoozedCards'
 import {
@@ -35,7 +36,6 @@ import type { SnoozedRecommendation } from '../../hooks/useSnoozedRecommendation
 import type { SnoozedMission } from '../../hooks/useSnoozedMissions'
 import { useActiveUsers } from '../../hooks/useActiveUsers'
 import { useMissions } from '../../hooks/useMissions'
-import { ROUTES } from '../../config/routes'
 import { DASHBOARD_CONFIGS } from '../../config/dashboards/index'
 import { emitSidebarNavigated, emitDashboardRenamed } from '../../lib/analytics'
 import { prefetchDashboard } from '../../lib/prefetchDashboard'
@@ -139,21 +139,21 @@ const PRIMARY_SECTION_INDEX = 0
 
 /** Map sidebar item href to dashboard config ID for card count display. */
 const HREF_TO_DASHBOARD_ID: Record<string, string> = {
-  '/': 'main', '/compute': 'compute', '/security': 'security',
-  '/gitops': 'gitops', '/storage': 'storage', '/network': 'network',
-  '/events': 'events', '/alerts': 'alerts', '/workloads': 'workloads', '/operators': 'operators',
-  '/clusters': 'clusters', '/compliance': 'compliance', '/cost': 'cost',
-  '/gpu-reservations': 'gpu', '/nodes': 'nodes', '/deployments': 'deployments',
-  '/pods': 'pods', '/services': 'services', '/helm': 'helm',
-  '/ai-ml': 'ai-ml', '/ci-cd': 'ci-cd',
-  '/logs': 'logs', '/data-compliance': 'data-compliance', '/arcade': 'arcade',
-  '/deploy': 'deploy', '/ai-agents': 'ai-agents',
-  '/llm-d-benchmarks': 'llm-d-benchmarks', '/cluster-admin': 'cluster-admin',
-  '/insights': 'insights', '/drasi': 'drasi',
-  '/multi-tenancy': 'multi-tenancy', '/acmm': 'acmm',
+  [ROUTES.HOME]: 'main', [ROUTES.COMPUTE]: 'compute', [ROUTES.SECURITY]: 'security',
+  [ROUTES.GITOPS]: 'gitops', [ROUTES.STORAGE]: 'storage', [ROUTES.NETWORK]: 'network',
+  [ROUTES.EVENTS]: 'events', [ROUTES.ALERTS]: 'alerts', [ROUTES.WORKLOADS]: 'workloads', [ROUTES.OPERATORS]: 'operators',
+  [ROUTES.CLUSTERS]: 'clusters', [ROUTES.COMPLIANCE]: 'compliance', [ROUTES.COST]: 'cost',
+  [ROUTES.GPU_RESERVATIONS]: 'gpu', [ROUTES.NODES]: 'nodes', [ROUTES.DEPLOYMENTS]: 'deployments',
+  [ROUTES.PODS]: 'pods', [ROUTES.SERVICES]: 'services', [ROUTES.HELM]: 'helm',
+  [ROUTES.AI_ML]: 'ai-ml', [ROUTES.CI_CD]: 'ci-cd',
+  [ROUTES.LOGS]: 'logs', [ROUTES.DATA_COMPLIANCE]: 'data-compliance', [ROUTES.ARCADE]: 'arcade',
+  [ROUTES.DEPLOY]: 'deploy', [ROUTES.AI_AGENTS]: 'ai-agents',
+  [ROUTES.LLM_D_BENCHMARKS]: 'llm-d-benchmarks', [ROUTES.CLUSTER_ADMIN]: 'cluster-admin',
+  [ROUTES.INSIGHTS]: 'insights', [ROUTES.DRASI]: 'drasi',
+  [ROUTES.MULTI_TENANCY]: 'multi-tenancy', [ROUTES.ACMM]: 'acmm',
 }
 
-const CUSTOM_DASHBOARD_PREFIX = '/custom-dashboard/'
+const CUSTOM_DASHBOARD_PREFIX = ROUTES.CUSTOM_DASHBOARD.replace(':id', '')
 
 function isGroundControlItem(href: string): boolean {
   if (!href.startsWith(CUSTOM_DASHBOARD_PREFIX)) return false
@@ -830,17 +830,16 @@ export function SidebarShell({
         {features.activeUsers && !isCollapsed && (
           <div className="mt-auto pt-4 border-t border-border/30 flex flex-col items-center gap-1">
             <div className="flex items-center justify-center gap-2">
-              <div
-                className="flex items-center gap-1 px-2 text-muted-foreground/60"
-                aria-label={t('sidebar.activeViewers', { count: viewerCount })}
-              >
+              <div className="flex items-center gap-1 px-2 text-muted-foreground/60">
+                <span className="sr-only">{t('sidebar.activeViewers', { count: viewerCount })}</span>
                 <User className={cn('w-3 h-3', viewersError && 'text-red-400')} aria-hidden="true" />
                 <span className="text-2xs tabular-nums" aria-hidden="true">
                   {viewersError ? '!' : viewersLoading ? '…' : viewerCount}
                 </span>
               </div>
-              <span className="text-2xs text-muted-foreground/40 font-mono" aria-label={`Commit: ${__COMMIT_HASH__}`}>
-                #{__COMMIT_HASH__.substring(0, 7)}
+              <span className="text-2xs text-muted-foreground/40 font-mono" title={`Commit: ${__COMMIT_HASH__}`}>
+                <span className="sr-only">{`Commit: ${__COMMIT_HASH__}`}</span>
+                <span aria-hidden="true">#{__COMMIT_HASH__.substring(0, 7)}</span>
               </span>
             </div>
             {/* Developer mode: warn when running an older commit, or show upgrade progress */}

@@ -15,7 +15,7 @@ jobs:
       (github.event_name == 'issues' && github.event.label.name == 'hold')
     steps:
       - name: Check for hold-labeled referenced issues
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             // Matches: Fixes #123, Closes: #123, Resolves #123, fix #45, close: #9, etc.

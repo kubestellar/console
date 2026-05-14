@@ -54,6 +54,7 @@ interface GitOpsSseConfig<T> {
   defaultCategory: RefreshCategory
   getDemoData: () => T[]
   fetchOptions?: FetchFromAllClustersOptions
+  fallbackToDemoOnError?: boolean
 }
 
 function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
@@ -65,6 +66,7 @@ function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
     defaultCategory,
     getDemoData,
     fetchOptions,
+    fallbackToDemoOnError = false,
   } = config
 
   return function useCachedGitOpsResource(
@@ -73,6 +75,7 @@ function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
   ): CachedHookResult<T[]> & Record<string, T[]> {
     const { category = defaultCategory } = options || {}
     const key = `${cacheKeyPrefix}:${cluster || 'all'}`
+    const demoData = getDemoData()
 
     const restFetcher = async () => {
       const data = await fetchGitOpsAPI<Record<string, T[]>>(apiEndpoint, cluster ? { cluster } : undefined)
@@ -83,7 +86,7 @@ function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
       key,
       category,
       initialData: [] as T[],
-      demoData: getDemoData(),
+      demoData,
       fetcher: restFetcher,
       progressiveFetcher: cluster ? undefined : async (onProgress) => {
         try {
@@ -106,17 +109,23 @@ function createGitOpsSseHook<T extends object>(config: GitOpsSseConfig<T>) {
       },
     })
 
+    const shouldUseDemoFallback = fallbackToDemoOnError
+      && !!result.error
+      && (result.data || []).length === 0
+    const data = shouldUseDemoFallback ? demoData : result.data
+
     return {
-      [aliasKey]: result.data,
-      data: result.data,
-      isLoading: result.isLoading,
-      isRefreshing: result.isRefreshing,
-      isDemoFallback: result.isDemoFallback && !result.isLoading,
-      error: result.error,
-      isFailed: result.isFailed,
-      consecutiveFailures: result.consecutiveFailures,
+      [aliasKey]: data,
+      data,
+      isLoading: shouldUseDemoFallback ? false : result.isLoading,
+      isRefreshing: shouldUseDemoFallback ? false : result.isRefreshing,
+      isDemoFallback: shouldUseDemoFallback || (result.isDemoFallback && !result.isLoading),
+      error: shouldUseDemoFallback ? null : result.error,
+      isFailed: shouldUseDemoFallback ? false : result.isFailed,
+      consecutiveFailures: shouldUseDemoFallback ? 0 : result.consecutiveFailures,
       lastRefresh: result.lastRefresh,
-      refetch: result.refetch, retryFetch: result.retryFetch,
+      refetch: shouldUseDemoFallback ? result.retryFetch : result.refetch,
+      retryFetch: result.retryFetch,
     } as CachedHookResult<T[]> & Record<string, T[]>
   }
 }
@@ -198,6 +207,7 @@ export const useCachedOperators = createGitOpsSseHook<Operator>({
   defaultCategory: 'operators',
   getDemoData: getDemoOperators,
   fetchOptions: { throwIfPartialFailureEmpty: true },
+  fallbackToDemoOnError: true,
 })
 
 export const useCachedOperatorSubscriptions = createGitOpsSseHook<OperatorSubscription>({
@@ -208,6 +218,7 @@ export const useCachedOperatorSubscriptions = createGitOpsSseHook<OperatorSubscr
   defaultCategory: 'operators',
   getDemoData: getDemoOperatorSubscriptions,
   fetchOptions: { throwIfPartialFailureEmpty: true },
+  fallbackToDemoOnError: true,
 })
 
 // ============================================================================

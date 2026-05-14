@@ -369,6 +369,7 @@ func (s *SQLiteStore) migrate() error {
 	CREATE INDEX IF NOT EXISTS idx_events_user_time ON user_events(user_id, created_at);
 	CREATE INDEX IF NOT EXISTS idx_card_history_user ON card_history(user_id, swapped_out_at DESC);
 	CREATE INDEX IF NOT EXISTS idx_pending_swaps_due ON pending_swaps(status, swap_at);
+	CREATE INDEX IF NOT EXISTS idx_pending_swaps_user ON pending_swaps(user_id);
 
 	-- Feature requests from users (bugs/features submitted via console)
 	CREATE TABLE IF NOT EXISTS feature_requests (
@@ -443,7 +444,7 @@ func (s *SQLiteStore) migrate() error {
 		start_date TEXT NOT NULL,
 		duration_hours INTEGER DEFAULT 24,
 		notes TEXT DEFAULT '',
-		status TEXT DEFAULT 'pending',
+		status TEXT DEFAULT 'active',
 		quota_name TEXT DEFAULT '',
 		quota_enforced INTEGER DEFAULT 0,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -611,6 +612,16 @@ func (s *SQLiteStore) migrate() error {
 		slog.Debug("[SQLite] migration applied", "migration", migration, "version", i+1)
 	}
 	slog.Info("[SQLite] schema migrations complete", "total_migrations", len(migrations))
+
+	// Data migration: "pending" status is eliminated — reservations are now
+	// provisioned synchronously and go straight to "active". Flip any
+	// legacy pending rows so the UI no longer shows a dead state.
+	if res, err := s.db.ExecContext(ctx,
+		`UPDATE gpu_reservations SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE status = 'pending'`); err != nil {
+		return fmt.Errorf("migrate pending gpu reservations to active: %w", err)
+	} else if n, _ := res.RowsAffected(); n > 0 {
+		slog.Info("[SQLite] migrated pending reservations to active", "count", n)
+	}
 
 	return nil
 }

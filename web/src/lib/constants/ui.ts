@@ -94,8 +94,8 @@ export const DEFAULT_PAGE_SIZE = 5
 // ── Layout dimensions ──────────────────────────────────────────────────
 /** Height of the top navbar in pixels (h-16 = 64px) */
 export const NAVBAR_HEIGHT_PX = 64
-/** Height of each status banner (network, demo, offline) in pixels */
-export const BANNER_HEIGHT_PX = 36
+/** Height of each status banner (network, demo, offline) in pixels — matches min-h-11 (44px) dismiss buttons */
+export const BANNER_HEIGHT_PX = 44
 /** Collapse mobile banner stacks into a summary row once this many alerts are active. */
 export const MOBILE_BANNER_COLLAPSE_THRESHOLD = 2
 /** Root CSS variable used to push dashboard content below the open filter panel */

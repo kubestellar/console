@@ -90,6 +90,8 @@ export function ClusterChangelog() {
               className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
                 timeRange === r ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
               }`}
+              aria-label={`Filter by ${r}`}
+              aria-pressed={timeRange === r}
             >
               {r}
             </button>
@@ -116,6 +118,7 @@ export function ClusterChangelog() {
           <button
             onClick={() => refetch()}
             className="text-xs text-red-400 hover:text-red-300 underline underline-offset-2 shrink-0"
+            aria-label={t('clusterChangelog.retry')}
           >
             {t('clusterChangelog.retry')}
           </button>

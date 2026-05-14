@@ -20,6 +20,7 @@ import { useOrbitAutoRun } from './hooks/useOrbitAutoRun'
 import { UnifiedDemoProvider } from './lib/unified/demo'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { AppErrorBoundary } from './components/AppErrorBoundary'
+import { PageErrorBoundary } from './components/PageErrorBoundary'
 import { ROUTES } from './config/routes'
 import { usePersistedSettings } from './hooks/usePersistedSettings'
 import { SHORT_DELAY_MS } from './lib/constants/network'
@@ -153,7 +154,7 @@ if (typeof window !== 'undefined') {
   const PREFETCH_DASHBOARD_TIMEOUT_MS = 2_000
 
   /** Routes where chunk prefetching is skipped to avoid errors during OAuth flow (#9767) */
-  const SKIP_PREFETCH_PATHS = new Set(['/login', '/auth/callback'])
+  const SKIP_PREFETCH_PATHS: ReadonlySet<string> = new Set([ROUTES.LOGIN, ROUTES.AUTH_CALLBACK])
 
   const prefetchRoutes = async () => {
     // Skip prefetching on auth pages — during OAuth redirects, the browser
@@ -219,7 +220,11 @@ function OrbitAutoRunner() { useOrbitAutoRun(); return null }
 // change is immediate. Without this, React 18's concurrent transitions
 // keep the OLD route visible while the new lazy component loads.
 function SuspenseRoute({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+  return (
+    <PageErrorBoundary>
+      <Suspense fallback={<LoadingFallback />}>{children}</Suspense>
+    </PageErrorBoundary>
+  )
 }
 
 // Loading fallback component with delay to prevent flash on fast navigation
@@ -293,7 +298,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // Save the intended destination so AuthCallback can return here after login.
     // This preserves deep-link params like ?mission= through the OAuth round-trip.
     const destination = location.pathname + location.search
-    if (destination !== '/' && destination !== '/login') {
+    if (destination !== ROUTES.HOME && destination !== ROUTES.LOGIN) {
       safeSet(RETURN_TO_KEY, destination)
     }
     return <Navigate to={ROUTES.LOGIN} replace />
@@ -337,87 +342,92 @@ function FeatureRedirect() {
 
 // MissionDeepLink removed — replaced by MissionLandingPage standalone component
 
-// Route-to-title map for GA4 page view granularity and browser tab labeling
+// Route-to-title map for GA4 page view granularity and browser tab labeling.
+// Keys use ROUTES constants so renames stay in sync automatically.
 const ROUTE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
-  '/clusters': 'My Clusters',
-  '/cluster-admin': 'Cluster Admin',
-  '/nodes': 'Nodes',
-  '/namespaces': 'Namespaces',
-  '/deployments': 'Deployments',
-  '/pods': 'Pods',
-  '/services': 'Services',
-  '/workloads': 'Workloads',
-  '/operators': 'Operators',
-  '/helm': 'Helm',
-  '/logs': 'Logs',
-  '/events': 'Events',
-  '/compute': 'Compute',
-  '/compute/compare': 'Cluster Comparison',
-  '/storage': 'Storage',
-  '/network': 'Network',
-  '/alerts': 'Alerts',
-  '/security': 'Security',
-  '/security-posture': 'Security Posture',
-  '/compliance': 'Compliance',
-  '/compliance-frameworks': 'Compliance Frameworks',
-  '/change-control': 'Change Control',
-  '/segregation-of-duties': 'Segregation of Duties',
-  '/compliance-reports': 'Compliance Reports',
-  '/data-residency': 'Data Residency',
-  '/baa': 'BAA Tracker',
-  '/hipaa': 'HIPAA Compliance',
-  '/gxp': 'GxP Validation',
-  '/nist': 'NIST 800-53',
-  '/stig': 'DISA STIG',
-  '/air-gap': 'Air-Gap Readiness',
-  '/fedramp': 'FedRAMP Readiness',
-  '/enterprise': 'Enterprise Compliance',
-  '/enterprise/oidc': 'OIDC Federation',
-  '/enterprise/rbac-audit': 'RBAC Audit',
-  '/enterprise/sessions': 'Session Management',
-  '/enterprise/siem': 'SIEM Integration',
-  '/enterprise/incident-response': 'Incident Response',
-  '/enterprise/threat-intel': 'Threat Intelligence',
-  '/enterprise/sbom': 'SBOM Manager',
-  '/enterprise/sigstore': 'Sigstore Verification',
-  '/enterprise/slsa': 'SLSA Provenance',
-  '/enterprise/risk-matrix': 'Risk Matrix',
-  '/enterprise/risk-register': 'Risk Register',
-  '/enterprise/risk-appetite': 'Risk Appetite',
-  '/data-compliance': 'Data Compliance',
-  '/gitops': 'GitOps',
-  '/cost': 'Cost',
-  '/gpu-reservations': 'GPU Reservations',
-  '/deploy': 'Deploy',
-  '/ai-ml': 'AI/ML',
-  '/ai-agents': 'AI Agents',
-  '/ci-cd': 'CI/CD',
-  '/karmada-ops': 'Karmada Ops',
-  '/llm-d-benchmarks': 'llm-d Benchmarks',
-  '/multi-tenancy': 'Multi-Tenancy',
-  '/drasi': 'Drasi',
-  '/acmm': 'AI Codebase Maturity',
-  '/arcade': 'Arcade',
-  '/marketplace': 'Marketplace',
-  '/missions': 'Missions',
-  '/history': 'Card History',
-  '/settings': 'Settings',
-  '/users': 'User Management',
-  '/login': 'Login',
-  '/from-lens': 'Switching from Lens',
-  '/from-headlamp': 'Coming from Headlamp',
-  '/from-holmesgpt': 'Coming from HolmesGPT',
-  '/feature-inspektorgadget': 'Inspektor Gadget Integration',
-  '/feature-kagent': 'Kagent Integration',
-  '/white-label': 'White-Label Your Console',
-  '/embed': 'Embed Card',
+  [ROUTES.HOME]:                    'Dashboard',
+  [ROUTES.CLUSTERS]:                'My Clusters',
+  [ROUTES.CLUSTER_ADMIN]:           'Cluster Admin',
+  [ROUTES.NODES]:                   'Nodes',
+  [ROUTES.NAMESPACES]:              'Namespaces',
+  [ROUTES.DEPLOYMENTS]:             'Deployments',
+  [ROUTES.PODS]:                    'Pods',
+  [ROUTES.SERVICES]:                'Services',
+  [ROUTES.WORKLOADS]:               'Workloads',
+  [ROUTES.OPERATORS]:               'Operators',
+  [ROUTES.HELM]:                    'Helm',
+  [ROUTES.LOGS]:                    'Logs',
+  [ROUTES.EVENTS]:                  'Events',
+  [ROUTES.COMPUTE]:                 'Compute',
+  [ROUTES.COMPUTE_COMPARE]:         'Cluster Comparison',
+  [ROUTES.STORAGE]:                 'Storage',
+  [ROUTES.NETWORK]:                 'Network',
+  [ROUTES.ALERTS]:                  'Alerts',
+  [ROUTES.SECURITY]:                'Security',
+  [ROUTES.SECURITY_POSTURE]:        'Security Posture',
+  [ROUTES.COMPLIANCE]:              'Compliance',
+  [ROUTES.COMPLIANCE_FRAMEWORKS]:   'Compliance Frameworks',
+  [ROUTES.CHANGE_CONTROL]:          'Change Control',
+  [ROUTES.SEGREGATION_OF_DUTIES]:   'Segregation of Duties',
+  [ROUTES.COMPLIANCE_REPORTS]:      'Compliance Reports',
+  [ROUTES.DATA_RESIDENCY]:          'Data Residency',
+  [ROUTES.BAA]:                     'BAA Tracker',
+  [ROUTES.HIPAA]:                   'HIPAA Compliance',
+  [ROUTES.GXP]:                     'GxP Validation',
+  [ROUTES.NIST]:                    'NIST 800-53',
+  [ROUTES.STIG]:                    'DISA STIG',
+  [ROUTES.AIR_GAP]:                 'Air-Gap Readiness',
+  [ROUTES.FEDRAMP]:                 'FedRAMP Readiness',
+  [ROUTES.ENTERPRISE]:              'Enterprise Compliance',
+  [ROUTES.ENTERPRISE_OIDC]:               'OIDC Federation',
+  [ROUTES.ENTERPRISE_RBAC_AUDIT]:         'RBAC Audit',
+  [ROUTES.ENTERPRISE_SESSIONS]:           'Session Management',
+  [ROUTES.ENTERPRISE_SIEM]:               'SIEM Integration',
+  [ROUTES.ENTERPRISE_INCIDENT_RESPONSE]:  'Incident Response',
+  [ROUTES.ENTERPRISE_THREAT_INTEL]:       'Threat Intelligence',
+  [ROUTES.ENTERPRISE_SBOM]:               'SBOM Manager',
+  [ROUTES.ENTERPRISE_SIGSTORE]:           'Sigstore Verification',
+  [ROUTES.ENTERPRISE_SLSA]:               'SLSA Provenance',
+  [ROUTES.ENTERPRISE_RISK_MATRIX]:        'Risk Matrix',
+  [ROUTES.ENTERPRISE_RISK_REGISTER]:      'Risk Register',
+  [ROUTES.ENTERPRISE_RISK_APPETITE]:      'Risk Appetite',
+  [ROUTES.DATA_COMPLIANCE]:         'Data Compliance',
+  [ROUTES.GITOPS]:                  'GitOps',
+  [ROUTES.COST]:                    'Cost',
+  [ROUTES.GPU_RESERVATIONS]:        'GPU Reservations',
+  [ROUTES.DEPLOY]:                  'Deploy',
+  [ROUTES.AI_ML]:                   'AI/ML',
+  [ROUTES.AI_AGENTS]:               'AI Agents',
+  [ROUTES.CI_CD]:                   'CI/CD',
+  [ROUTES.KARMADA_OPS]:             'Karmada Ops',
+  [ROUTES.LLM_D_BENCHMARKS]:        'llm-d Benchmarks',
+  [ROUTES.MULTI_TENANCY]:           'Multi-Tenancy',
+  [ROUTES.DRASI]:                   'Drasi',
+  [ROUTES.ACMM]:                    'AI Codebase Maturity',
+  [ROUTES.ARCADE]:                  'Arcade',
+  [ROUTES.MARKETPLACE]:             'Marketplace',
+  [ROUTES.MISSIONS]:                'Missions',
+  [ROUTES.HISTORY]:                 'Card History',
+  [ROUTES.SETTINGS]:                'Settings',
+  [ROUTES.USERS]:                   'User Management',
+  [ROUTES.LOGIN]:                   'Login',
+  [ROUTES.FROM_LENS]:               'Switching from Lens',
+  [ROUTES.FROM_HEADLAMP]:           'Coming from Headlamp',
+  [ROUTES.FROM_HOLMESGPT]:          'Coming from HolmesGPT',
+  [ROUTES.FEATURE_INSPEKTORGADGET]: 'Inspektor Gadget Integration',
+  [ROUTES.FEATURE_KAGENT]:          'Kagent Integration',
+  [ROUTES.WHITE_LABEL]:             'White-Label Your Console',
+  [ROUTES.EMBED_BASE]:              'Embed Card',
+  [ROUTES.INSIGHTS]:                'Insights',
 }
 
+
 /** Map route paths to dashboard IDs for duration analytics */
-function pathToDashboardId(path: string): string | null {
-  if (path === '/') return 'main'
-  if (path.startsWith('/custom-dashboard/')) return path.replace('/custom-dashboard/', 'custom-')
+function pathToDashboardId(path?: string | null): string | null {
+  if (!path) return null
+  if (path === ROUTES.HOME) return 'main'
+  const customPrefix = ROUTES.CUSTOM_DASHBOARD.replace(':id', '')
+  if (path.startsWith(customPrefix)) return path.replace(customPrefix, 'custom-')
   const id = path.replace(/^\//, '')
   return id || null
 }
@@ -455,7 +465,12 @@ function PageViewTracker() {
     // Track new page entry
     pageEnteredRef.current = { path: location.pathname, timestamp: Date.now() }
 
-    const section = ROUTE_TITLES[location.pathname]
+    let lookupPath = location.pathname
+    if (lookupPath.startsWith(`${ROUTES.EMBED_BASE}/`)) {
+      lookupPath = ROUTES.EMBED_BASE
+    }
+
+    const section = ROUTE_TITLES[lookupPath]
     const title = section ? `${section} - ${appName}` : appName
     document.title = title
     emitPageView(location.pathname)
@@ -514,10 +529,12 @@ function LightweightShell({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
     <AppErrorBoundary>
     <ChunkErrorBoundary>
+    <PageErrorBoundary>
     <PageViewTracker />
     <Suspense fallback={<LoadingFallback />}>
       {children}
     </Suspense>
+    </PageErrorBoundary>
     </ChunkErrorBoundary>
     </AppErrorBoundary>
     </ThemeProvider>
@@ -587,7 +604,7 @@ function useLiveUrl(): string {
       }
     },
     getLiveUrl,
-    () => '/',
+    () => ROUTES.HOME,
   )
 }
 
@@ -687,13 +704,18 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
       <DashboardProvider>
       <DrillDownProvider>
       <AppErrorBoundary>
-      <Suspense fallback={null}><DrillDownModal /></Suspense>
-      <NPSSurvey />
+      <PageErrorBoundary>
+        <Suspense fallback={null}><DrillDownModal /></Suspense>
+      </PageErrorBoundary>
+      <PageErrorBoundary>
+        <NPSSurvey />
+      </PageErrorBoundary>
       <OrbitAutoRunner />
       <ChunkErrorBoundary>
+      <PageErrorBoundary>
       <Routes location={liveLocation}>
-        <Route path={ROUTES.LOGIN} element={<Login />} />
-        <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallback />} />
+        <Route path={ROUTES.LOGIN} element={<PageErrorBoundary><Login /></PageErrorBoundary>} />
+        <Route path={ROUTES.AUTH_CALLBACK} element={<PageErrorBoundary><AuthCallback /></PageErrorBoundary>} />
         {/* PWA Mini Dashboard - lightweight widget mode (no auth required for local monitoring) */}
         <Route path={ROUTES.WIDGET} element={<SuspenseRoute><MiniDashboard /></SuspenseRoute>} />
 
@@ -813,10 +835,12 @@ function FullDashboardApp({ liveLocation }: { liveLocation: Location }) {
           {/* /feature, /features open the feedback modal on the feature tab */}
           <Route path={ROUTES.FEATURE} element={<FeatureRedirect />} />
           <Route path={ROUTES.FEATURES} element={<FeatureRedirect />} />
+          <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />
         </Route>
 
         <Route path="*" element={<SuspenseRoute><NotFound /></SuspenseRoute>} />
       </Routes>
+      </PageErrorBoundary>
       </ChunkErrorBoundary>
       </AppErrorBoundary>
       </DrillDownProvider>

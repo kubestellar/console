@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *websocket.Conn, msg protocol.Message, forceAgent string, writeMu *sync.Mutex, closed *atomic.Bool) {
@@ -45,7 +46,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	// Parse payload
 	payloadBytes, err := json.Marshal(msg.Payload)
 	if err != nil {
-		safeWrite(context.Background(), s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request"))
+		safeWrite(connCtx, s.errorResponse(msg.ID, "invalid_payload", "Failed to parse chat request"))
 		return
 	}
 
@@ -54,7 +55,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		// Try legacy ClaudeRequest format for backward compatibility
 		var legacyReq protocol.ClaudeRequest
 		if err := json.Unmarshal(payloadBytes, &legacyReq); err != nil {
-			safeWrite(context.Background(), s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
+			safeWrite(connCtx, s.errorResponse(msg.ID, "invalid_payload", "Invalid chat request format"))
 			return
 		}
 		req.Prompt = legacyReq.Prompt
@@ -62,12 +63,12 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	}
 
 	if req.Prompt == "" {
-		safeWrite(context.Background(), s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty"))
+		safeWrite(connCtx, s.errorResponse(msg.ID, "empty_prompt", "Prompt cannot be empty"))
 		return
 	}
 
 	if len(req.Prompt) > maxPromptChars {
-		safeWrite(context.Background(), s.errorResponse(msg.ID, "prompt_too_large",
+		safeWrite(connCtx, s.errorResponse(msg.ID, "prompt_too_large",
 			fmt.Sprintf("Prompt exceeds maximum length of %d characters", maxPromptChars)))
 		return
 	}
@@ -75,7 +76,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	// SECURITY: Reject new prompts when the session token quota is exhausted
 	// to prevent unbounded AI API spend (#9438).
 	if s.isSessionQuotaExceeded() {
-		safeWrite(context.Background(), s.errorResponse(msg.ID, "token_quota_exceeded", s.sessionTokenQuotaMessage()))
+		safeWrite(connCtx, s.errorResponse(msg.ID, "token_quota_exceeded", s.sessionTokenQuotaMessage()))
 		return
 	}
 
@@ -178,7 +179,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 	}
 
 	if !provider.IsAvailable() {
-		safeWrite(ctx, s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available", agentName)))
+		safeWrite(ctx, s.errorResponse(msg.ID, "agent_unavailable", "AI agent is not available"))
 		return
 	}
 
@@ -276,7 +277,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 		// send, preventing "send on closed channel" panics (#7179).
 		heartbeatDone := make(chan struct{}, 1)
 		var heartbeatOnce sync.Once
-		go func() {
+		safego.GoWith("ai-chat-heartbeat", func() {
 			ticker := time.NewTicker(missionHeartbeatInterval)
 			defer ticker.Stop()
 			for {
@@ -295,7 +296,7 @@ func (s *Server) handleChatMessageStreaming(connCtx context.Context, conn *webso
 					})
 				}
 			}
-		}()
+		})
 		// Defer close so the heartbeat goroutine is always stopped,
 		// even if StreamChatWithProgress panics (#7001).
 		// sync.Once ensures close is called exactly once (#7179).
@@ -572,7 +573,7 @@ func (s *Server) handleCancelChatHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"cancelled": ok,
 		"sessionId": req.SessionID,
 	})
@@ -637,7 +638,7 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 	}
 
 	if !provider.IsAvailable() {
-		return s.errorResponse(msg.ID, "agent_unavailable", fmt.Sprintf("Agent %s is not available - API key may be missing", agentName))
+		return s.errorResponse(msg.ID, "agent_unavailable", "AI agent is not available - API key may be missing")
 	}
 
 	// Convert protocol history to provider history
@@ -688,9 +689,9 @@ func (s *Server) handleChatMessage(msg protocol.Message, forceAgent string, pare
 		slog.Error("[Chat] execution error", "agent", agentName, "error", err, "timeout", handleChatMessageTimeout)
 		if ctx.Err() == context.DeadlineExceeded {
 			return s.errorResponse(msg.ID, "timeout",
-				fmt.Sprintf("%s did not respond within %s", agentName, handleChatMessageTimeout))
+				fmt.Sprintf("AI agent did not respond within %s", handleChatMessageTimeout))
 		}
-		return s.errorResponse(msg.ID, "execution_error", fmt.Sprintf("Failed to execute %s", agentName))
+		return s.errorResponse(msg.ID, "execution_error", "Failed to execute AI agent")
 	}
 
 	if resp == nil {
@@ -822,7 +823,7 @@ func classifyProviderError(err error) (code, message string) {
 		strings.Contains(errText, "invalid x-api-key") ||
 		strings.Contains(errText, "invalid_api_key") ||
 		strings.Contains(errText, "unauthorized") {
-		return "authentication_error", "Failed to authenticate. API Error: " + err.Error()
+		return "authentication_error", "Failed to authenticate with AI provider - check your API key"
 	}
 
 	// Rate limit (HTTP 429)
@@ -831,10 +832,10 @@ func classifyProviderError(err error) (code, message string) {
 		strings.Contains(errText, "rate limit") ||
 		strings.Contains(errText, "too many requests") ||
 		strings.Contains(errText, "resource_exhausted") {
-		return "rate_limit", "Rate limit exceeded. " + err.Error()
+		return "rate_limit", "Rate limit exceeded - please wait and try again"
 	}
 
-	return "execution_error", "Failed to get response from AI provider. " + err.Error()
+	return "execution_error", "Failed to get response from AI provider"
 }
 
 // handleMixedModeChat orchestrates a dual-agent chat:

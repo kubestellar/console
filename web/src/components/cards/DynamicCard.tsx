@@ -16,6 +16,32 @@ import type { CardComponentProps, CardComponent } from './cardRegistry'
 import { useTranslation } from 'react-i18next'
 
 const MAX_AUTO_GRID_COLS = 3
+const DEFAULT_DYNAMIC_CARD_EXPANDABLE_COLUMN_WIDTH = 'minmax(0, 1fr)'
+const DEFAULT_DYNAMIC_CARD_BADGE_COLUMN_WIDTH = 'fit-content(8rem)'
+const DEFAULT_DYNAMIC_CARD_COMPACT_COLUMN_WIDTH = 'fit-content(10rem)'
+
+function getDynamicCardColumnWidth(column: NonNullable<DynamicCardDefinition_T1['columns']>[number]): string {
+  const explicitWidth = column.width?.trim()
+  if (explicitWidth) return explicitWidth
+
+  switch (column.format) {
+    case 'badge':
+      return DEFAULT_DYNAMIC_CARD_BADGE_COLUMN_WIDTH
+    case 'number':
+    case 'date':
+      return DEFAULT_DYNAMIC_CARD_COMPACT_COLUMN_WIDTH
+    default:
+      return DEFAULT_DYNAMIC_CARD_EXPANDABLE_COLUMN_WIDTH
+  }
+}
+
+function buildDynamicCardColumnTemplate(columns: DynamicCardDefinition_T1['columns'] | undefined): string | undefined {
+  if (!columns || columns.length === 0) return undefined
+
+  return columns
+    .map(getDynamicCardColumnWidth)
+    .join(' ')
+}
 
 /**
  * DynamicCard: Meta-component that renders dynamic card definitions.
@@ -57,6 +83,7 @@ export function DynamicCard({ config }: CardComponentProps) {
   const { shouldUseDemoData } = useCardDemoState({ requires: 'agent' })
   useReportCardDataState({
     isDemoData: shouldUseDemoData,
+    isRefreshing: false,
     isFailed: false,
     consecutiveFailures: 0,
     hasData: true,
@@ -131,6 +158,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
   const {
     data: apiData,
     isLoading: apiLoading,
+    isRefreshing: apiRefreshing,
     isFailed: apiFailed,
     isDemoFallback,
     error: apiError,
@@ -165,6 +193,7 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
     consecutiveFailures,
     errorMessage: apiError ?? undefined,
     isLoading: isApiSource ? apiLoading : false,
+    isRefreshing: isApiSource ? apiRefreshing : false,
     hasData: isApiSource ? apiData.length > 0 : true,
     isDemoData: isDemoFallback && !apiLoading,
   })
@@ -240,6 +269,8 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
 
   const showStats = cardDefinition.layout === 'stats' || cardDefinition.layout === 'stats-and-list'
   const showList = cardDefinition.layout === 'list' || cardDefinition.layout === 'stats-and-list'
+  const columnTemplate = buildDynamicCardColumnTemplate(cardDefinition.columns)
+  const columnLayoutStyle = columnTemplate ? { gridTemplateColumns: columnTemplate } : undefined
 
   return (
     <div className="h-full flex flex-col min-h-card">
@@ -295,51 +326,56 @@ export function Tier1CardRuntime({ cardDefinition }: Tier1Props) {
               </p>
             </div>
           ) : (
-            <div className="space-y-0.5">
+            <div
+              className="grid items-center gap-x-2 gap-y-0.5"
+              style={columnLayoutStyle}
+              data-testid="dynamic-card-list-grid"
+            >
               {/* Column headers */}
-              {cardDefinition.columns && cardDefinition.columns.length > 0 && (
-                <div className="flex items-center gap-2 py-1 px-1.5 border-b border-border/50">
-                  {cardDefinition.columns.map(col => (
-                    <span
-                      key={col.field}
-                      className="text-2xs font-medium text-muted-foreground uppercase"
-                      style={{ width: col.width, flex: col.width ? 'none' : '1' }}
-                    >
-                      {col.label}
-                    </span>
-                  ))}
-                </div>
-              )}
+              {(cardDefinition.columns || []).map(col => (
+                <span
+                  key={`header-${col.field}`}
+                  className="min-w-0 border-b border-border/50 px-1.5 py-1 text-2xs font-medium text-muted-foreground uppercase truncate"
+                >
+                  {col.label}
+                </span>
+              ))}
               {/* Rows */}
-              {items.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 py-1 px-1.5 rounded hover:bg-card/30 transition-colors">
-                  {(cardDefinition.columns || []).map(col => {
-                    const val = String((item as Record<string, unknown>)[col.field] ?? '-')
-                    if (col.format === 'badge') {
-                      // Semantic badge color — adapts to both light and dark themes.
-                      const badgeColor = col.badgeColors?.[val] || 'bg-muted text-muted-foreground'
-                      return (
+              {items.flatMap((item, idx) =>
+                (cardDefinition.columns || []).map(col => {
+                  const val = String((item as Record<string, unknown>)[col.field] ?? '-')
+                  const cellKey = `${idx}-${col.field}`
+                  if (col.format === 'badge') {
+                    // Semantic badge color — adapts to both light and dark themes.
+                    const badgeColor = col.badgeColors?.[val] || 'bg-muted text-muted-foreground'
+                    return (
+                      <div
+                        key={cellKey}
+                        className="min-w-0 px-1.5 py-1"
+                        data-testid={idx === 0 ? 'dynamic-card-data-row' : undefined}
+                      >
                         <span
-                          key={col.field}
-                          className={cn('text-2xs px-1 py-0.5 rounded shrink-0', badgeColor)}
-                          style={{ width: col.width, flex: col.width ? 'none' : undefined }}
+                          className={cn(
+                            'inline-flex max-w-full justify-self-start overflow-hidden text-ellipsis whitespace-nowrap rounded px-1 py-0.5 text-2xs',
+                            badgeColor,
+                          )}
                         >
                           {val}
                         </span>
-                      )
-                    }
-                    return (
-                      <span
-                        key={col.field}
-                        className="text-xs text-foreground truncate"
-                        style={{ width: col.width, flex: col.width ? 'none' : '1' }}
-                      >
-                        {val}
-                      </span>
+                      </div>
                     )
-                  })}
-                </div>
-              ))}
+                  }
+                  return (
+                    <span
+                      key={cellKey}
+                      className="min-w-0 px-1.5 py-1 truncate text-xs text-foreground"
+                      data-testid={idx === 0 ? 'dynamic-card-data-row' : undefined}
+                    >
+                      {val}
+                    </span>
+                  )
+                })
+              )}
             </div>
           )}
         </div>
@@ -385,6 +421,7 @@ export function Tier2CardRuntime({ definition, config }: Tier2Props) {
     consecutiveFailures: error ? 1 : 0,
     errorMessage: error ?? undefined,
     isLoading: compiling,
+    isRefreshing: false,
     hasData: !!CardComponent,
     isDemoData: false,
   })

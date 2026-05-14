@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os/exec"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // handleCloudCLIStatus detects installed cloud CLIs (aws, gcloud, az, oc)
@@ -38,7 +40,7 @@ func (s *Server) handleCloudCLIStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"clis": clis,
 	})
 }
@@ -87,7 +89,7 @@ func (s *Server) handleLocalClusterTools(w http.ResponseWriter, r *http.Request)
 		tools = s.localClusters.DetectNamedTools(requestedTools)
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"tools": tools,
 	})
 }
@@ -112,7 +114,7 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		// List all local clusters
 		clusters := s.localClusters.ListClusters()
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, map[string]interface{}{
 			"clusters": clusters,
 		})
 
@@ -134,19 +136,15 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 		// SECURITY: Validate cluster name against DNS-1123 to prevent command
 		// injection via crafted names that flow into exec.Command args (#7171).
 		if err := validateDNS1123Label("cluster name", req.Name); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			slog.Warn("[LocalClusters] invalid cluster name", "name", req.Name, "error", err)
+			http.Error(w, "invalid cluster name", http.StatusBadRequest)
 			return
 		}
 
 		// Create cluster in background and return immediately
 		s.clusterOpsWG.Add(1)
-		go func() {
+		safego.GoWith("local-cluster-create", func() {
 			defer s.clusterOpsWG.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[LocalClusters] recovered from panic creating cluster", "cluster", req.Name, "panic", r)
-				}
-			}()
 			if err := s.localClusters.CreateCluster(req.Tool, req.Name); err != nil {
 				slog.Error("[LocalClusters] failed to create cluster", "cluster", req.Name, "tool", req.Tool, "error", err)
 				errMsg := sanitizeClusterError(err)
@@ -179,9 +177,9 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 				})
 				// Kubeconfig watcher will automatically pick up the new cluster
 			}
-		}()
+		})
 
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, map[string]interface{}{
 			"status":  "creating",
 			"tool":    req.Tool,
 			"name":    req.Name,
@@ -199,19 +197,15 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 
 		// SECURITY: Validate cluster name against DNS-1123 (#7171).
 		if err := validateDNS1123Label("cluster name", name); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			slog.Warn("[LocalClusters] invalid cluster name", "name", name, "error", err)
+			http.Error(w, "invalid cluster name", http.StatusBadRequest)
 			return
 		}
 
 		// Delete cluster in background
 		s.clusterOpsWG.Add(1)
-		go func() {
+		safego.GoWith("local-cluster-delete", func() {
 			defer s.clusterOpsWG.Done()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[LocalClusters] recovered from panic deleting cluster", "cluster", name, "panic", r)
-				}
-			}()
 			if err := s.localClusters.DeleteCluster(tool, name); err != nil {
 				slog.Error("[LocalClusters] failed to delete cluster", "cluster", name, "error", err)
 				errMsg := sanitizeClusterError(err)
@@ -244,9 +238,9 @@ func (s *Server) handleLocalClusters(w http.ResponseWriter, r *http.Request) {
 				})
 				// Kubeconfig watcher will automatically pick up the change
 			}
-		}()
+		})
 
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, map[string]interface{}{
 			"status":  "deleting",
 			"tool":    tool,
 			"name":    name,
@@ -294,7 +288,8 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 	}
 	// SECURITY: Validate cluster name against DNS-1123 (#7171).
 	if err := validateDNS1123Label("cluster name", req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[LocalClusters] invalid cluster name", "name", req.Name, "error", err)
+		http.Error(w, "invalid cluster name", http.StatusBadRequest)
 		return
 	}
 	if req.Action != "start" && req.Action != "stop" && req.Action != "restart" {
@@ -303,13 +298,8 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 	}
 
 	s.clusterOpsWG.Add(1)
-	go func() {
+	safego.GoWith("local-cluster-lifecycle", func() {
 		defer s.clusterOpsWG.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[LocalClusters] recovered from panic during lifecycle action", "action", req.Action, "cluster", req.Name, "panic", r)
-			}
-		}()
 
 		var err error
 		switch req.Action {
@@ -344,9 +334,9 @@ func (s *Server) handleLocalClusterLifecycle(w http.ResponseWriter, r *http.Requ
 				"progress": 100,
 			})
 		}
-	}()
+	})
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":  req.Action + "ing",
 		"tool":    req.Tool,
 		"name":    req.Name,
@@ -372,11 +362,11 @@ func (s *Server) handleVClusterList(w http.ResponseWriter, r *http.Request) {
 	instances, err := s.localClusters.ListVClusters()
 	if err != nil {
 		slog.Error("[vCluster] failed to list vclusters", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, sanitizeAgentError("list vclusters", err), http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"vclusters": instances,
 	})
 }
@@ -417,23 +407,20 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
 	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[vCluster] invalid vcluster name", "name", req.Name, "error", err)
+		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
 	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[vCluster] invalid namespace", "namespace", req.Namespace, "error", err)
+		http.Error(w, "invalid namespace", http.StatusBadRequest)
 		return
 	}
 
 	// Create vCluster in background and return immediately
 	s.clusterOpsWG.Add(1)
-	go func() {
+	safego.GoWith("vcluster-create", func() {
 		defer s.clusterOpsWG.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[vCluster] recovered from panic creating vcluster", "name", req.Name, "panic", r)
-			}
-		}()
 		if err := s.localClusters.CreateVCluster(req.Name, req.Namespace); err != nil {
 			slog.Error("[vCluster] failed to create vcluster", "name", req.Name, "error", err)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
@@ -453,9 +440,9 @@ func (s *Server) handleVClusterCreate(w http.ResponseWriter, r *http.Request) {
 				"progress": progressDone,
 			})
 		}
-	}()
+	})
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":    "creating",
 		"name":      req.Name,
 		"namespace": req.Namespace,
@@ -498,11 +485,13 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
 	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[vCluster] invalid vcluster name", "name", req.Name, "error", err)
+		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
 	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[vCluster] invalid namespace", "namespace", req.Namespace, "error", err)
+		http.Error(w, "invalid namespace", http.StatusBadRequest)
 		return
 	}
 
@@ -515,7 +504,7 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 			"message":  sanitizeClusterError(err),
 			"progress": progressFailed,
 		})
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, sanitizeAgentError("connect to vcluster", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -527,7 +516,7 @@ func (s *Server) handleVClusterConnect(w http.ResponseWriter, r *http.Request) {
 		"message":  fmt.Sprintf("Connected to vCluster '%s'", req.Name),
 		"progress": progressDone,
 	})
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":    "connected",
 		"name":      req.Name,
 		"namespace": req.Namespace,
@@ -570,11 +559,13 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
 	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[vCluster] invalid vcluster name", "name", req.Name, "error", err)
+		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
 	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[vCluster] invalid namespace", "namespace", req.Namespace, "error", err)
+		http.Error(w, "invalid namespace", http.StatusBadRequest)
 		return
 	}
 
@@ -587,7 +578,7 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 			"message":  sanitizeClusterError(err),
 			"progress": progressFailed,
 		})
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, sanitizeAgentError("disconnect from vcluster", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -599,7 +590,7 @@ func (s *Server) handleVClusterDisconnect(w http.ResponseWriter, r *http.Request
 		"message":  fmt.Sprintf("Disconnected from vCluster '%s'", req.Name),
 		"progress": progressDone,
 	})
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":    "disconnected",
 		"name":      req.Name,
 		"namespace": req.Namespace,
@@ -642,23 +633,20 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	// SECURITY: Validate name and namespace against DNS-1123 (#7171).
 	if err := validateDNS1123Label("vcluster name", req.Name); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[vCluster] invalid vcluster name", "name", req.Name, "error", err)
+		http.Error(w, "invalid vcluster name", http.StatusBadRequest)
 		return
 	}
 	if err := validateDNS1123Label("namespace", req.Namespace); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		slog.Warn("[vCluster] invalid namespace", "namespace", req.Namespace, "error", err)
+		http.Error(w, "invalid namespace", http.StatusBadRequest)
 		return
 	}
 
 	// Delete vCluster in background and return immediately
 	s.clusterOpsWG.Add(1)
-	go func() {
+	safego.GoWith("vcluster-delete", func() {
 		defer s.clusterOpsWG.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[vCluster] recovered from panic deleting vcluster", "name", req.Name, "panic", r)
-			}
-		}()
 		if err := s.localClusters.DeleteVCluster(req.Name, req.Namespace); err != nil {
 			slog.Error("[vCluster] failed to delete vcluster", "name", req.Name, "error", err)
 			s.BroadcastToClients("local_cluster_progress", map[string]interface{}{
@@ -678,9 +666,9 @@ func (s *Server) handleVClusterDelete(w http.ResponseWriter, r *http.Request) {
 				"progress": progressDone,
 			})
 		}
-	}()
+	})
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":    "deleting",
 		"name":      req.Name,
 		"namespace": req.Namespace,

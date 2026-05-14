@@ -677,6 +677,7 @@ export function TenantTopology() {
 
   useCardLoadingState({
     isLoading: data.isLoading && !data.isDemoData,
+    isRefreshing: liveData.isRefreshing,
     hasAnyData: true,
     isDemoData: data.isDemoData })
 

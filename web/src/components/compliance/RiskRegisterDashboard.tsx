@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo, useCallback } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { riskRegisterDashboardConfig } from '../../config/dashboards/risk-register'
 import {
@@ -92,6 +92,7 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
   const [severityFilter, setSeverityFilter] = useState('All')
   const [selectedRisk, setSelectedRisk] = useState<Risk | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -104,6 +105,7 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
       ])
       if (!rRes.ok || !cRes.ok || !sRes.ok) throw new Error('Failed to fetch risk register data')
       const rData = await rRes.json()
+      if (cancelledRef.current) return
       setRisks(Array.isArray(rData) ? rData : [])
       const cData = await cRes.json()
       setCategories(Array.isArray(cData) ? cData : [])
@@ -111,13 +113,19 @@ export const RiskRegisterDashboardContent = memo(function RiskRegisterDashboardC
       // Guard against non-object responses (e.g. catch-all mock returning [])
       setSummary(sData && typeof sData === 'object' && !Array.isArray(sData) && 'total_risks' in sData ? sData : null)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   useEffect(() => {
     onStateChange?.({ loading, error })

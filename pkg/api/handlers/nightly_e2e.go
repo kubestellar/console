@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/sync/singleflight"
 )
@@ -22,7 +24,7 @@ const (
 	nightlyCacheIdleTTL   = 5 * time.Minute  // cache when no jobs running
 	nightlyCacheActiveTTL = 2 * time.Minute  // cache when jobs are in progress
 	imageCacheTTL         = 30 * time.Minute // image tags change less frequently
-	nightlyRunsPerPage = 7
+	nightlyRunsPerPage    = 7
 
 	failureReasonGPU  = "gpu_unavailable"
 	failureReasonTest = "test_failure"
@@ -30,10 +32,10 @@ const (
 	// maxErrorBodyBytes is the maximum number of bytes to read from GitHub error
 	// response bodies. Prevents unbounded memory consumption on large HTML error
 	// pages during outages (#7055).
-	maxErrorBodyBytes = 10_000 // 10 KB
-	maxLogBytes       = 200_000 // 200KB tail per job log
-	logCacheTTL     = 10 * time.Minute // immutable once run completes
-	maxLogFetchJobs = 5                // limit concurrent job log fetches
+	maxErrorBodyBytes = 10_000           // 10 KB
+	maxLogBytes       = 200_000          // 200KB tail per job log
+	logCacheTTL       = 10 * time.Minute // immutable once run completes
+	maxLogFetchJobs   = 5                // limit concurrent job log fetches
 
 	// imageRepo is the GitHub repo whose guide directories contain image references
 	imageRepo = "llm-d/llm-d"
@@ -132,7 +134,7 @@ type NightlyE2EHandler struct {
 	cache    *NightlyE2EResponse
 	cacheExp time.Time
 	// #7053 — singleflight group coalesces concurrent cold-cache GetRuns
-	// callers into a single fetchAll call.
+	// callers into a single fetchAllWithContext call.
 	fetchGroup singleflight.Group
 
 	logMu       sync.RWMutex
@@ -190,13 +192,13 @@ func NewNightlyE2EHandler(githubToken string) *NightlyE2EHandler {
 		logCacheExp: make(map[string]time.Time),
 		imgCache:    make(map[string]map[string]string),
 	}
-	go h.prewarm()
+	safego.GoWith("nightly-e2e/prewarm", func() { h.prewarm() })
 	return h
 }
 
 func (h *NightlyE2EHandler) prewarm() {
 	// #7052 — Use a cancellable context so that on timeout, all goroutines
-	// spawned by fetchAll are cancelled instead of abandoned.
+	// spawned by fetchAllWithContext are cancelled instead of abandoned.
 	ctx, cancel := context.WithTimeout(context.Background(), prewarmTimeout)
 	defer cancel()
 
@@ -204,10 +206,10 @@ func (h *NightlyE2EHandler) prewarm() {
 	var resp *NightlyE2EResponse
 	var fetchErr error
 
-	go func() {
+	safego.Go(func() {
 		resp, fetchErr = h.fetchAllWithContext(ctx)
 		close(done)
-	}()
+	})
 
 	select {
 	case <-done:
@@ -271,11 +273,8 @@ func (h *NightlyE2EHandler) GetRuns(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
-func (h *NightlyE2EHandler) fetchAll() (*NightlyE2EResponse, error) {
-	return h.fetchAllWithContext(context.Background())
-}
-
-// fetchAllWithContext is the context-aware version of fetchAll (#7052).
+// fetchAllWithContext is the context-aware fetch used by both the handler and
+// prewarm paths (#7052).
 // When ctx is cancelled, HTTP requests made by sub-goroutines will be
 // interrupted instead of running to completion.
 func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2EResponse, error) {
@@ -290,22 +289,16 @@ func (h *NightlyE2EHandler) fetchAllWithContext(ctx context.Context) (*NightlyE2
 	// cancellation so prewarm timeouts don't leave goroutines running.
 	ch := make(chan result, len(nightlyWorkflows))
 	for i, wf := range nightlyWorkflows {
-		go func(idx int, wf NightlyWorkflow) {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in nightly workflow fetch", "workflow", wf.WorkflowFile, "error", r)
-					ch <- result{idx: idx, err: fmt.Errorf("panic: %v", r)}
-				}
-			}()
+		safego.GoWith("nightly-e2e-fetch-workflow", func() {
 			select {
 			case <-ctx.Done():
-				ch <- result{idx: idx, err: ctx.Err()}
+				ch <- result{idx: i, err: ctx.Err()}
 				return
 			default:
 			}
 			runs, err := h.fetchWorkflowRuns(wf)
-			ch <- result{idx: idx, runs: runs, err: err}
-		}(i, wf)
+			ch <- result{idx: i, runs: runs, err: err}
+		})
 	}
 
 	// Fetch dynamic image tags (cached separately with longer TTL)
@@ -457,11 +450,12 @@ func (h *NightlyE2EHandler) classifyFailures(repo string, runs []NightlyRun) {
 		}
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(idx int) {
+		idx := i
+		safego.Go(func() {
 			defer wg.Done()
 			defer func() { <-sem }()
 			runs[idx].FailureReason = h.detectGPUFailure(repo, runs[idx].ID)
-		}(i)
+		})
 	}
 	wg.Wait()
 }
@@ -545,7 +539,7 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 
 	// Collect unique guide paths
 	seen := make(map[string]bool)
-	var guidePaths []string
+	guidePaths := make([]string, 0, len(nightlyWorkflows))
 	for _, wf := range nightlyWorkflows {
 		if wf.GuidePath != "" && !seen[wf.GuidePath] {
 			seen[wf.GuidePath] = true
@@ -564,18 +558,12 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 	ch := make(chan guideResult, len(guidePaths))
 
 	for _, gp := range guidePaths {
-		go func(guidePath string) {
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in fetchAllGuideImages goroutine", "guide", guidePath, "error", r)
-					ch <- guideResult{path: guidePath, images: make(map[string]string)}
-				}
-			}()
-			prefix := "guides/" + guidePath + "/"
+		safego.GoWith("nightly-e2e-fetch-guide-images", func() {
+			prefix := "guides/" + gp + "/"
 			images := make(map[string]string)
 
 			// Find YAML files under this guide's directory
-			var files []treeEntry
+			files := make([]treeEntry, 0, len(yamlFiles)/4)
 			for _, f := range yamlFiles {
 				if strings.HasPrefix(f.Path, prefix) {
 					files = append(files, f)
@@ -593,8 +581,8 @@ func (h *NightlyE2EHandler) fetchAllGuideImages() map[string]map[string]string {
 				}
 			}
 
-			ch <- guideResult{path: guidePath, images: images}
-		}(gp)
+			ch <- guideResult{path: gp, images: images}
+		})
 	}
 
 	for range guidePaths {
@@ -648,7 +636,7 @@ func (h *NightlyE2EHandler) fetchGuideYAMLFiles() []treeEntry {
 		return nil
 	}
 
-	var results []treeEntry
+	results := make([]treeEntry, 0, len(tree.Tree)/4)
 	for _, entry := range tree.Tree {
 		if entry.Type != "blob" {
 			continue
@@ -832,8 +820,9 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 		if readErr != nil {
 			body = []byte("(failed to read response body)")
 		}
-		return c.Status(resp.StatusCode).JSON(fiber.Map{
-			"error": fmt.Sprintf("GitHub API returned %d: %s", resp.StatusCode, string(body)),
+		slog.Error("[NightlyE2E] GitHub API error fetching run jobs", "status", resp.StatusCode, "body", string(body))
+		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
+			"error": "upstream API error",
 		})
 	}
 
@@ -868,17 +857,11 @@ func (h *NightlyE2EHandler) GetRunLogs(c *fiber.Ctx) error {
 			continue
 		}
 		sem <- struct{}{}
-		go func(idx int, jobID int64, name, conc string) {
+		safego.GoWith("nightly-e2e-fetch-job-logs", func() {
 			defer func() { <-sem }()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("panic in fetchJobLogs goroutine", "jobID", jobID, "error", r)
-					ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: ""}}
-				}
-			}()
-			logText := h.fetchJobLog(repo, jobID)
-			ch <- logResult{idx: idx, log: JobLog{Name: name, Conclusion: conc, Log: logText}}
-		}(i, job.ID, job.Name, conclusion)
+			logText := h.fetchJobLog(repo, job.ID)
+			ch <- logResult{idx: i, log: JobLog{Name: job.Name, Conclusion: conclusion, Log: logText}}
+		})
 	}
 
 	logs := make([]JobLog, len(jobData.Jobs))
@@ -1027,4 +1010,3 @@ func successRate(runs []NightlyRun) float64 {
 	}
 	return float64(passed) / float64(len(runs))
 }
-

@@ -334,8 +334,10 @@ export function SearchDropdown() {
         // with the `capture: true` on the addEventListener call below so
         // this listener wins regardless of registration order.
         event.stopPropagation()
-        inputRef.current?.focus()
         openSearch()
+        // Defer focus until after React commits the open state so inputRef is
+        // guaranteed to be attached and the input is focusable (#find-and-search).
+        requestAnimationFrame(() => inputRef.current?.focus())
         emitGlobalSearchOpened('keyboard')
       }
 

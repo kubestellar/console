@@ -7,6 +7,7 @@ import { LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { agentFetch } from './mcp/shared'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../lib/constants/network'
 import { isInClusterMode } from './useBackendHealth'
+import { fetchKagentiProviderStatus } from '../lib/kagentiProviderBackend'
 
 /** Health status of a single provider */
 export interface ProviderHealthInfo {
@@ -67,27 +68,30 @@ interface KeysStatusResponse {
   configPath: string
 }
 
-/** Demo data — shows a realistic set of providers all operational */
-const DEMO_PROVIDERS: ProviderHealthInfo[] = [
-  { id: 'anthropic', name: 'Anthropic (Claude)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.anthropic, detail: 'API key configured' },
-  { id: 'openai', name: 'OpenAI', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.openai, detail: 'API key configured' },
-  { id: 'google', name: 'Google (Gemini)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.google, detail: 'API key configured' },
-  { id: 'eks', name: 'AWS EKS', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.eks, detail: '3 clusters' },
-  { id: 'gke', name: 'Google GKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.gke, detail: '2 clusters' },
-  { id: 'aks', name: 'Azure AKS', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.aks, detail: '1 cluster' },
-  { id: 'openshift', name: 'OpenShift', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.openshift, detail: '1 cluster' },
-  { id: 'oci', name: 'Oracle OKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.oci, detail: '1 cluster' },
-]
+function createAIProviderHealth(
+  provider: string,
+  options: {
+    displayName?: string
+    status: ProviderHealthInfo['status']
+    detail?: string
+  },
+): ProviderHealthInfo {
+  const normalizedProvider = normalizeAIProvider(provider)
 
-/** Fetch AI + Cloud providers and their health status */
-async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): Promise<ProviderHealthInfo[]> {
+  return {
+    id: normalizedProvider,
+    name: AI_PROVIDER_NAMES[provider] || AI_PROVIDER_NAMES[normalizedProvider] || options.displayName || provider,
+    category: 'ai',
+    status: options.status,
+    configured: true,
+    statusUrl: STATUS_PAGES[normalizedProvider],
+    detail: options.detail,
+  }
+}
+
+async function fetchLocalAIProviders(): Promise<ProviderHealthInfo[]> {
   const result: ProviderHealthInfo[] = []
 
-  if (isInClusterMode()) {
-    return result
-  }
-
-  // --- AI Providers from /settings/keys ---
   try {
     const response = await agentFetch(`${LOCAL_AGENT_HTTP_URL}/settings/keys`, {
       signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
@@ -107,7 +111,6 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
         if (seen.has(normalized)) continue
         seen.add(normalized)
 
-        const name = AI_PROVIDER_NAMES[key.provider] || key.displayName || key.provider
         let status: ProviderHealthInfo['status'] = 'unknown'
         let detail: string | undefined
 
@@ -122,21 +125,69 @@ async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: st
           detail = 'API key configured'
         }
 
-        result.push({
-          id: normalized,
-          name,
-          category: 'ai',
+        result.push(createAIProviderHealth(key.provider, {
+          displayName: key.displayName,
           status,
-          configured: true,
-          statusUrl: STATUS_PAGES[normalized],
-          detail })
+          detail,
+        }))
       }
     }
   } catch {
     // Agent unreachable — no AI providers to show
   }
 
-  // --- Cloud Providers from cluster distributions ---
+  return result
+}
+
+async function fetchInClusterAIProviders(): Promise<ProviderHealthInfo[]> {
+  const result: ProviderHealthInfo[] = []
+
+  try {
+    const status = await fetchKagentiProviderStatus({ signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+    const configuredProviders = new Set<string>()
+
+    for (const provider of (status.configured_providers || [])) {
+      configuredProviders.add(normalizeAIProvider(provider))
+    }
+
+    if (status.llm_provider && status.api_key_configured) {
+      configuredProviders.add(normalizeAIProvider(status.llm_provider))
+    }
+
+    const providerStatus: ProviderHealthInfo['status'] = status.available ? 'operational' : 'down'
+    const detail = status.available ? 'API key configured' : status.reason || 'Provider backend unavailable'
+
+    for (const provider of configuredProviders) {
+      result.push(createAIProviderHealth(provider, {
+        status: providerStatus,
+        detail,
+      }))
+    }
+  } catch {
+    // Kagenti status unavailable — no AI providers to show
+  }
+
+  return result
+}
+
+/** Demo data — shows a realistic set of providers all operational */
+const DEMO_PROVIDERS: ProviderHealthInfo[] = [
+  { id: 'anthropic', name: 'Anthropic (Claude)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.anthropic, detail: 'API key configured' },
+  { id: 'openai', name: 'OpenAI', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.openai, detail: 'API key configured' },
+  { id: 'google', name: 'Google (Gemini)', category: 'ai', status: 'operational', configured: true, statusUrl: STATUS_PAGES.google, detail: 'API key configured' },
+  { id: 'eks', name: 'AWS EKS', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.eks, detail: '3 clusters' },
+  { id: 'gke', name: 'Google GKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.gke, detail: '2 clusters' },
+  { id: 'aks', name: 'Azure AKS', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.aks, detail: '1 cluster' },
+  { id: 'openshift', name: 'OpenShift', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.openshift, detail: '1 cluster' },
+  { id: 'oci', name: 'Oracle OKE', category: 'cloud', status: 'operational', configured: true, statusUrl: STATUS_PAGES.oci, detail: '1 cluster' },
+]
+
+/** Fetch AI + Cloud providers and their health status */
+async function fetchProviders(clusterSnapshot: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }>): Promise<ProviderHealthInfo[]> {
+  const result: ProviderHealthInfo[] = isInClusterMode()
+    ? await fetchInClusterAIProviders()
+    : await fetchLocalAIProviders()
+
   if (clusterSnapshot.length > 0) {
     const providerCounts = new Map<CloudProvider, number>()
     for (const cluster of (clusterSnapshot || [])) {
@@ -184,7 +235,7 @@ export function useProviderHealth() {
     category: 'default',
     initialData: [],
     demoData: DEMO_PROVIDERS,
-    demoWhenEmpty: true,
+    demoWhenEmpty: !isInClusterMode(),
     fetcher: () => fetchProviders(clustersRef.current),
     refreshInterval: 60_000 })
 

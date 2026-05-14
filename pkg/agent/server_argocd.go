@@ -31,6 +31,18 @@ const argocdCLITimeoutSeconds = "30"
 // kc-agent process when ARGOCD_TLS_INSECURE=true is set.
 var argocdInsecureWarning sync.Once
 
+// argocdHTTPClient is the default ArgoCD REST API client with TLS verification enabled.
+var argocdHTTPClient = &http.Client{Timeout: argocdSyncTimeout}
+
+// argocdInsecureHTTPClient is used when ARGOCD_TLS_INSECURE=true for self-signed
+// certificates in dev/test environments.
+var argocdInsecureHTTPClient = &http.Client{
+	Timeout: argocdSyncTimeout,
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // #nosec G402 -- intentionally env-var-gated (ARGOCD_TLS_INSECURE) for self-signed certs in dev/test
+	},
+}
+
 // agentArgoSyncRequest mirrors pkg/api/handlers/gitops.go TriggerArgoSync
 // inline request struct.
 type agentArgoSyncRequest struct {
@@ -82,13 +94,15 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := validateHelmK8sName(req.AppName, "appName"); err != nil {
+		slog.Error("invalid ArgoCD app name", "appName", req.AppName, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"error": err.Error(), "success": false})
+		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
 	}
 	if err := validateHelmK8sName(req.Cluster, "cluster"); err != nil {
+		slog.Error("invalid ArgoCD cluster", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"error": err.Error(), "success": false})
+		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
 	}
 
@@ -104,8 +118,9 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	if namespace == "" {
 		namespace = defaultArgoNamespace
 	} else if err := validateHelmK8sName(namespace, "namespace"); err != nil {
+		slog.Error("invalid ArgoCD namespace", "namespace", namespace, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"error": err.Error(), "success": false})
+		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("", err), "success": false})
 		return
 	}
 
@@ -153,8 +168,9 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	// Strategy 3: Annotate the Application to trigger a refresh + sync.
 	dynamicClient, err := s.k8sClient.GetDynamicClient(req.Cluster)
 	if err != nil {
+		slog.Error("failed to get ArgoCD dynamic client", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"error": fmt.Sprintf("Failed to get dynamic client: %v", err), "success": false})
+		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("get cluster client", err), "success": false})
 		return
 	}
 
@@ -163,9 +179,10 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 
 	app, err := dynamicClient.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Get(ctx, req.AppName, metav1.GetOptions{})
 	if err != nil {
+		slog.Error("failed to get ArgoCD application", "cluster", req.Cluster, "namespace", namespace, "appName", req.AppName, "error", err)
 		w.WriteHeader(http.StatusNotFound)
 		writeJSON(w, map[string]interface{}{
-			"error":   fmt.Sprintf("Application %s not found in %s/%s: %v", req.AppName, req.Cluster, namespace, err),
+			"error":   sanitizeAgentError("get application", err),
 			"success": false,
 		})
 		return
@@ -192,8 +209,9 @@ func (s *Server) handleArgoCDSync(w http.ResponseWriter, r *http.Request) {
 	app.SetUnstructuredContent(content)
 
 	if _, err := dynamicClient.Resource(v1alpha1.ArgoApplicationGVR).Namespace(namespace).Update(ctx, app, metav1.UpdateOptions{}); err != nil {
+		slog.Error("failed to trigger ArgoCD sync", "cluster", req.Cluster, "namespace", namespace, "appName", req.AppName, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"error": fmt.Sprintf("Failed to trigger sync: %v", err), "success": false})
+		writeJSON(w, map[string]interface{}{"error": sanitizeAgentError("trigger sync", err), "success": false})
 		return
 	}
 
@@ -221,17 +239,15 @@ func tryArgoRESTSync(ctx context.Context, argoServerURL, argoToken, appName stri
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	skipVerify := os.Getenv("ARGOCD_TLS_INSECURE") == "true"
+	var client *http.Client
 	if skipVerify {
 		argocdInsecureWarning.Do(func() {
 			slog.Warn("WARNING: ARGOCD_TLS_INSECURE=true — TLS certificate verification disabled for ArgoCD API calls. " +
 				"This should only be used in development/test environments with self-signed certificates.")
 		})
-	}
-	client := &http.Client{
-		Timeout: argocdSyncTimeout,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: skipVerify}, // #nosec G402 -- intentionally env-var-gated (ARGOCD_TLS_INSECURE) for self-signed certs in dev/test
-		},
+		client = argocdInsecureHTTPClient
+	} else {
+		client = argocdHTTPClient
 	}
 	resp, err := client.Do(httpReq)
 	if err != nil {

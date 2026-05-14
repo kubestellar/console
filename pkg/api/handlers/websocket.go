@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/contrib/websocket"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -63,7 +65,7 @@ type Message struct {
 // Client represents a WebSocket client
 type Client struct {
 	conn      *websocket.Conn
-	netConn   net.Conn      // #9736 — captured at creation to avoid racing with releaseConn
+	netConn   net.Conn // #9736 — captured at creation to avoid racing with releaseConn
 	userID    uuid.UUID
 	send      chan []byte
 	closeOnce sync.Once // #6584 — guard against double Close on the underlying conn
@@ -239,7 +241,8 @@ func (h *Hub) Run() {
 					// full to force a reconnect and state resync.
 					slog.Warn("[WebSocket] slow client buffer full, disconnecting",
 						"user", client.userID)
-					go func(c *Client) {
+					c := client
+					safego.Go(func() {
 						// #11877 — Use a timeout instead of default case so
 						// the unregister is never silently dropped. If the
 						// unregister channel is full for >1s, forcibly close
@@ -252,7 +255,7 @@ func (h *Hub) Run() {
 							c.closeConn()
 						case <-h.done:
 						}
-					}(client)
+					})
 				}
 			}
 
@@ -451,7 +454,8 @@ func (h *Hub) BroadcastAll(msg Message) {
 			// reconnect, which re-fetches current state.
 			slog.Warn("[WebSocket] slow client buffer full, disconnecting",
 				"user", client.userID, "type", msg.Type)
-			go func(c *Client) {
+			c := client
+			safego.Go(func() {
 				// #12112 — Use a timeout instead of default case so
 				// the unregister is never silently dropped. If the
 				// unregister channel is full for >1s, forcibly close
@@ -465,7 +469,7 @@ func (h *Hub) BroadcastAll(msg Message) {
 					c.closeConn()
 				case <-h.done:
 				}
-			}(client)
+			})
 		}
 	}
 }
@@ -618,7 +622,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 	// Start writer goroutine — also sends periodic WebSocket-level pings
 	// so the browser responds with pongs and the read deadline keeps resetting.
 	wg.Add(1)
-	go func() {
+	safego.Go(func() {
 		defer wg.Done()
 		pingTicker := time.NewTicker(30 * time.Second)
 		defer func() {
@@ -662,7 +666,7 @@ func (h *Hub) HandleConnection(conn *websocket.Conn) {
 				}
 			}
 		}
-	}()
+	})
 
 	// Reader loop
 	defer func() {

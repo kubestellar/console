@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic/fake"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -57,24 +58,35 @@ func setupTestEnv(t *testing.T) *testEnv {
 	// Ensure we start with a clean state for this test run relative to the file.
 	_ = manager.Load()
 
-	// Initialize K8s Client with a non-existent kubeconfig path to ensure
-	// predictable error handling and avoid interference from local ~/.kube/config.
-	k8sClient, _ := k8s.NewMultiClusterClient("/tmp/kubestellar-test-kubeconfig")
-	// Inject a fake client for a "test-cluster" context
-	fakeClient := k8sfake.NewSimpleClientset()
-	k8sClient.InjectClient("test-cluster", fakeClient)
-
-	// Set a minimal rawConfig so ListClusters / HealthyClusters can discover
-	// injected clusters (without this, LoadConfig fails → 500 in handlers).
-	k8sClient.SetRawConfig(&api.Config{
+	// Initialize K8s Client with an isolated kubeconfig file so tests can inject
+	// fake cluster clients without tripping ErrNoClusterConfigured.
+	rawConfig := &api.Config{
 		Clusters: map[string]*api.Cluster{
 			"test-cluster": {Server: "https://test-cluster:6443"},
 		},
 		Contexts: map[string]*api.Context{
 			"test-cluster": {Cluster: "test-cluster", AuthInfo: "test-user"},
 		},
+		AuthInfos: map[string]*api.AuthInfo{
+			"test-user": {},
+		},
 		CurrentContext: "test-cluster",
-	})
+	}
+	kubeconfigPath := filepath.Join(tempDir, "kubeconfig")
+	if err := clientcmd.WriteToFile(*rawConfig, kubeconfigPath); err != nil {
+		t.Fatalf("write test kubeconfig: %v", err)
+	}
+	k8sClient, err := k8s.NewMultiClusterClient(kubeconfigPath)
+	if err != nil {
+		t.Fatalf("create test k8s client: %v", err)
+	}
+	// Inject a fake client for a "test-cluster" context
+	fakeClient := k8sfake.NewSimpleClientset()
+	k8sClient.InjectClient("test-cluster", fakeClient)
+
+	// Set a minimal rawConfig so ListClusters / HealthyClusters can discover
+	// injected clusters (without this, LoadConfig fails → 500 in handlers).
+	k8sClient.SetRawConfig(rawConfig)
 
 	// Initialize Hub
 	hub := NewHub()

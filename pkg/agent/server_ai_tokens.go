@@ -235,7 +235,9 @@ func (s *Server) saveTokenUsage() {
 	// Read on-disk state (may contain writes from other instances).
 	var onDisk tokenUsageData
 	if diskData, err := os.ReadFile(path); err == nil {
-		_ = json.Unmarshal(diskData, &onDisk)
+		if err := json.Unmarshal(diskData, &onDisk); err != nil {
+			slog.Warn("could not parse token usage file during save", "path", path, "error", err)
+		}
 	}
 
 	// Merge: if the on-disk date matches, add our delta to the on-disk

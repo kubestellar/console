@@ -639,7 +639,6 @@ export default async (req: Request) => {
     return new Response(
       JSON.stringify({
         error: "Failed to fetch ACCM metrics",
-        detail: err instanceof Error ? err.message : "Unknown error",
       }),
       {
         status: 502,

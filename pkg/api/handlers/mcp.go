@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -37,10 +39,10 @@ const mcpExtendedTimeout = 30 * time.Second
 // time.
 func waitWithDeadline(wg *sync.WaitGroup, cancel context.CancelFunc, deadline time.Duration) bool {
 	done := make(chan struct{})
-	go func() {
+	safego.Go(func() {
 		wg.Wait()
 		close(done)
-	}()
+	})
 	timer := time.NewTimer(deadline)
 	defer timer.Stop()
 	select {
@@ -68,6 +70,11 @@ var sanitizedErrorMessages = map[string]string{
 // All other errors are returned as 500 Internal Server Error.
 // Raw error details are only logged server-side and never sent to the client (#4753).
 func handleK8sError(c *fiber.Ctx, err error) error {
+	if errors.Is(err, k8s.ErrNoClusterConfigured) {
+		slog.Info("[MCP] no cluster configured")
+		return errNoClusterAccess(c)
+	}
+
 	errType := k8s.ClassifyError(err.Error())
 	switch errType {
 	case "not_found":
@@ -192,4 +199,3 @@ func (h *MCPHandlers) GetDeployTools(c *fiber.Ctx) error {
 	tools := h.bridge.GetDeployTools()
 	return c.JSON(fiber.Map{"tools": tools})
 }
-

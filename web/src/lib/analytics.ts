@@ -65,6 +65,7 @@ export {
   emitMissionStarted,
   emitMissionCompleted,
   emitMissionError,
+  emitMissionToolMissing,
   emitMissionRated,
 
   // Mission Browser / Knowledge Base

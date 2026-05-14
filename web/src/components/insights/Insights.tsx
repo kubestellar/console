@@ -1,9 +1,11 @@
+import { AlertCircle, AlertTriangle, CheckCircle } from 'lucide-react'
 import { useClusters } from '../../hooks/useMCP'
 import { useMultiClusterInsights } from '../../hooks/useMultiClusterInsights'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
+import { StatusBadge } from '../ui/StatusBadge'
 
 const INSIGHTS_CARDS_KEY = 'kubestellar-insights-cards'
 
@@ -16,6 +18,30 @@ export function Insights() {
   const reachableClusters = clusters.filter(c => c.reachable !== false)
   const criticalCount = (insights || []).filter(i => i.severity === 'critical').length
   const warningCount = (insights || []).filter(i => i.severity === 'warning').length
+
+  const headerBadge = (() => {
+    if (criticalCount > 0) {
+      return (
+        <StatusBadge color="red" size="xs" variant="outline" icon={<AlertCircle className="w-3 h-3" />}>
+          {`${criticalCount} critical issue${criticalCount === 1 ? '' : 's'}`}
+        </StatusBadge>
+      )
+    }
+
+    if (warningCount > 0) {
+      return (
+        <StatusBadge color="yellow" size="xs" variant="outline" icon={<AlertTriangle className="w-3 h-3" />}>
+          {`${warningCount} warning${warningCount === 1 ? '' : 's'}`}
+        </StatusBadge>
+      )
+    }
+
+    return (
+      <StatusBadge color="green" size="xs" variant="outline" icon={<CheckCircle className="w-3 h-3" />}>
+        No critical issues
+      </StatusBadge>
+    )
+  })()
 
   const getDashboardStatValue = (blockId: string): StatBlockValue => {
     switch (blockId) {
@@ -39,6 +65,7 @@ export function Insights() {
       title="Insights"
       subtitle="Cross-cluster correlation and pattern detection"
       icon="Lightbulb"
+      afterTitle={headerBadge}
       rightExtra={<RotatingTip page="insights" />}
       storageKey={INSIGHTS_CARDS_KEY}
       defaultCards={DEFAULT_INSIGHTS_CARDS}

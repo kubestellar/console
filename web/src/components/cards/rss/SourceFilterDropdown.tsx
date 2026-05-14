@@ -30,6 +30,8 @@ export const SourceFilterDropdown = memo(function SourceFilterDropdown({
 }: SourceFilterDropdownProps) {
   const { t } = useTranslation(['cards', 'common'])
   const sourceFilterRef = useRef<HTMLDivElement>(null)
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const pendingFocusIndexRef = useRef<number | null>(null)
 
   // Close on click outside
   useEffect(() => {
@@ -44,10 +46,44 @@ export const SourceFilterDropdown = memo(function SourceFilterDropdown({
     }
   }, [showSourceFilter, onClose])
 
+  useEffect(() => {
+    if (!showSourceFilter) return
+    const selectedIndex = sourceFilter.length === 0
+      ? 0
+      : Math.max(1, availableSources.findIndex(source => sourceFilter.includes(source.url)) + 1)
+    const nextIndex = pendingFocusIndexRef.current ?? selectedIndex
+    const target = optionRefs.current[nextIndex] ?? optionRefs.current[0]
+    pendingFocusIndexRef.current = null
+    if (target) requestAnimationFrame(() => target.focus())
+  }, [availableSources, showSourceFilter, sourceFilter])
+
+  const focusOption = (index: number) => {
+    optionRefs.current[Math.max(0, Math.min(index, availableSources.length))]?.focus()
+  }
+
+  const openDropdown = (index: number) => {
+    pendingFocusIndexRef.current = Math.max(0, Math.min(index, availableSources.length))
+    if (!showSourceFilter) onToggle()
+  }
+
   return (
     <div ref={sourceFilterRef} className="relative">
       <button
         onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            openDropdown(0)
+          } else if (e.key === 'ArrowUp' || e.key === 'End') {
+            e.preventDefault()
+            openDropdown(availableSources.length)
+          } else if (e.key === 'Home') {
+            e.preventDefault()
+            openDropdown(0)
+          }
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={showSourceFilter}
         className={cn(
           'flex items-center gap-1 px-2 py-0.5 text-2xs rounded border transition-colors',
           sourceFilter.length > 0
@@ -62,10 +98,37 @@ export const SourceFilterDropdown = memo(function SourceFilterDropdown({
       </button>
 
       {showSourceFilter && (
-        <div className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-lg z-50">
+        <div
+          role="listbox"
+          aria-label={t('cards:rssFeed.sources')}
+          className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-lg z-50"
+          onKeyDown={(e) => {
+            const currentIndex = optionRefs.current.findIndex(option => option === document.activeElement)
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              onClose()
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault()
+              focusOption(currentIndex < 0 ? 0 : currentIndex + 1)
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault()
+              focusOption(currentIndex <= 0 ? 0 : currentIndex - 1)
+            } else if (e.key === 'Home') {
+              e.preventDefault()
+              focusOption(0)
+            } else if (e.key === 'End') {
+              e.preventDefault()
+              focusOption(availableSources.length)
+            }
+          }}
+        >
           <div className="p-1">
             <button
+              ref={node => { optionRefs.current[0] = node }}
               onClick={() => onSetFilter([])}
+              role="option"
+              aria-selected={sourceFilter.length === 0}
+              tabIndex={sourceFilter.length === 0 ? 0 : -1}
               className={cn(
                 'w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded transition-colors',
                 sourceFilter.length === 0 ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-secondary text-foreground'
@@ -74,9 +137,10 @@ export const SourceFilterDropdown = memo(function SourceFilterDropdown({
               {t('cards:rssFeed.allSources')} ({availableSources.length})
             </button>
             <div className="border-t border-border my-1" />
-            {availableSources.map(source => (
+            {availableSources.map((source, index) => (
               <button
                 key={source.url}
+                ref={node => { optionRefs.current[index + 1] = node }}
                 onClick={() => {
                   onSetFilter(
                     sourceFilter.includes(source.url)
@@ -84,6 +148,9 @@ export const SourceFilterDropdown = memo(function SourceFilterDropdown({
                       : [...sourceFilter, source.url]
                   )
                 }}
+                role="option"
+                aria-selected={sourceFilter.includes(source.url)}
+                tabIndex={sourceFilter.includes(source.url) ? 0 : -1}
                 className={cn(
                   'w-full flex items-center gap-2 px-2 py-1.5 text-xs text-left rounded transition-colors',
                   sourceFilter.includes(source.url) ? 'bg-blue-500/20 text-blue-400' : 'hover:bg-secondary text-foreground'

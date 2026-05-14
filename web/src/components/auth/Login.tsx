@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useState, useRef } from 'react'
 import { AlertTriangle, CheckCircle2, ExternalLink, Settings, Copy, Check, ChevronDown, ChevronRight, KeyRound, Monitor } from 'lucide-react'
 import { Github } from '@/lib/icons'
 import { Navigate, useSearchParams } from 'react-router-dom'
@@ -11,21 +11,12 @@ import { LogoWithStar } from '../ui/LogoWithStar'
 import { useBranding } from '../../hooks/useBranding'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
+import { safeLazy } from '@/lib/safeLazy'
 
 // Lazy load the heavy Three.js globe animation.
-// Swallow import failures so a missing/stale chunk doesn't crash the login
-// page — the globe is cosmetic and the Suspense fallback (spinner) is fine.
-// The empty fallback component renders nothing — the globe area stays blank
-// rather than crashing the login page with a chunk error.
-const GlobeFallback = () => null
-const GlobeAnimation = lazy(async () => {
-  try {
-    const m = await import('../animations/globe')
-    return { default: m.GlobeAnimation }
-  } catch {
-    return { default: GlobeFallback as unknown as typeof import('../animations/globe')['GlobeAnimation'] }
-  }
-})
+// safeLazy() handles chunk errors and retries automatically.
+// The Suspense fallback (spinner) shows while loading.
+const GlobeAnimation = safeLazy(() => import('../animations/globe'), 'GlobeAnimation')
 
 // Apache 2.0 license is the project's effective terms; link opens in a new tab (#8376).
 const TERMS_OF_SERVICE_URL = 'https://github.com/kubestellar/console/blob/main/LICENSE'

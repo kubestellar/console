@@ -909,7 +909,7 @@ export const CardWrapper = memo(function CardWrapper({
                           className="no-underline flex items-center gap-1 rounded-md border border-amber-500/10 bg-background/30 px-1.5 py-0.5 text-2xs text-amber-200/90 transition-colors hover:bg-background/50 hover:text-amber-100"
                           aria-label={t('cardWrapper.failureRetry')}
                         >
-                          <RefreshCw className="h-3 w-3" aria-hidden="true" />
+                          <RefreshCw className={cn('h-3 w-3', (isRefreshing || isVisuallySpinning) && 'animate-spin')} aria-hidden="true" />
                           {t('cardWrapper.failureRetry')}
                         </button>
                       )}
@@ -979,7 +979,7 @@ export const CardWrapper = memo(function CardWrapper({
                             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
                             aria-label={t('cardWrapper.loadingTimedOutRetry')}
                           >
-                            <RefreshCw className="w-3 h-3" aria-hidden="true" />
+                            <RefreshCw className={cn('w-3 h-3', (isRefreshing || isVisuallySpinning) && 'animate-spin')} aria-hidden="true" />
                             {t('cardWrapper.loadingTimedOutRetry')}
                           </button>
                         )}
@@ -1017,7 +1017,7 @@ export const CardWrapper = memo(function CardWrapper({
                             className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-md bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
                             aria-label={t('cardWrapper.loadingTimedOutRetry')}
                           >
-                            <RefreshCw className="w-3 h-3" aria-hidden="true" />
+                            <RefreshCw className={cn('w-3 h-3', (isRefreshing || isVisuallySpinning) && 'animate-spin')} aria-hidden="true" />
                             {t('cardWrapper.loadingTimedOutRetry')}
                           </button>
                         )}

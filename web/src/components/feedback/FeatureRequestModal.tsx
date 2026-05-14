@@ -91,7 +91,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
   const { user, isAuthenticated, token } = useAuth()
   const { showToast } = useToast()
   const currentGitHubLogin = user?.github_login || ''
-  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, isDemoMode: isInDemoMode } = useFeatureRequests(currentGitHubLogin)
+  const { createRequest, isSubmitting, requests, isLoading: requestsLoading, isRefreshing: requestsRefreshing, refresh: refreshRequests, requestUpdate, closeRequest, reopenRequest, isDemoMode: isInDemoMode } = useFeatureRequests(currentGitHubLogin)
   const { isRefreshing: notificationsRefreshing, refresh: refreshNotifications, getUnreadCountForRequest, markRequestNotificationsAsRead } = useNotifications()
   const { githubRewards, githubPoints, refreshGitHubRewards } = useRewards()
   const { drafts, draftCount, recentlyDeletedDrafts, recentlyDeletedCount, saveDraft, deleteDraft, permanentlyDeleteDraft, restoreDeletedDraft, clearAllDrafts, emptyRecentlyDeleted } = useFeedbackDrafts()
@@ -530,6 +530,7 @@ export function FeatureRequestModal({ isOpen, onClose, initialTab, initialReques
             isGitHubRefreshing={isGitHubRefreshing}
             onRequestUpdate={requestUpdate}
             onCloseRequest={closeRequest}
+            onReopenRequest={reopenRequest}
             getUnreadCountForRequest={getUnreadCountForRequest}
             markRequestNotificationsAsRead={markRequestNotificationsAsRead}
             onShowLoginPrompt={() => setShowLoginPrompt(true)}

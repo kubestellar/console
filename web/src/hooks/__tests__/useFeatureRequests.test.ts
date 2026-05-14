@@ -8,6 +8,7 @@ vi.mock('../../lib/api', async (importOriginal) => {
     api: {
       get: vi.fn(),
       post: vi.fn(),
+      patch: vi.fn(),
     },
   }
 })
@@ -24,7 +25,7 @@ vi.mock('../../lib/constants/network', async (importOriginal) => {
   MIN_PERCEIVED_DELAY_MS: 0,
 } })
 
-import { useFeatureRequests, useNotifications, isTriaged, getStatusDescription, STATUS_LABELS, STATUS_COLORS, STATUS_DESCRIPTIONS } from '../useFeatureRequests'
+import { useFeatureRequests, useNotifications, isTriaged, getStatusDescription, STATUS_LABELS, STATUS_COLORS, STATUS_DESCRIPTIONS, __resetDemoNotificationsForTests } from '../useFeatureRequests'
 import { api } from '../../lib/api'
 
 describe('useFeatureRequests', () => {
@@ -204,11 +205,11 @@ describe('useFeatureRequests', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
     const closed = { ...existing, status: 'closed', closed_by_user: true }
-    vi.mocked(api.post).mockResolvedValue({ data: closed })
+    vi.mocked(api.patch).mockResolvedValue({ data: closed })
     await act(async () => {
       await result.current.closeRequest('r2')
     })
-    expect(api.post).toHaveBeenCalledWith('/api/feedback/requests/r2/close')
+    expect(api.patch).toHaveBeenCalledWith('/api/feedback/r2/close', {}, {})
     expect(result.current.requests[0].status).toBe('closed')
     expect(result.current.requests[0].closed_by_user).toBe(true)
   })
@@ -269,6 +270,7 @@ describe('useFeatureRequests', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(api.get).not.toHaveBeenCalled()
     expect(api.post).not.toHaveBeenCalled()
+    expect(api.patch).not.toHaveBeenCalled()
   })
 
   it('createRequest sets isSubmitting during submission', async () => {
@@ -363,7 +365,7 @@ describe('useFeatureRequests', () => {
     expect(result.current.requests).toHaveLength(2)
 
     const closedReq2 = { ...req2, status: 'closed', closed_by_user: true }
-    vi.mocked(api.post).mockResolvedValue({ data: closedReq2 })
+    vi.mocked(api.patch).mockResolvedValue({ data: closedReq2 })
     await act(async () => {
       await result.current.closeRequest('r2')
     })
@@ -373,12 +375,35 @@ describe('useFeatureRequests', () => {
     // req2 should be closed
     expect(result.current.requests.find(r => r.id === 'r2')?.status).toBe('closed')
   })
+
+  it('reopenRequest posts follow-up details and updates the matching request', async () => {
+    localStorage.setItem('kc-auth-token', 'real-jwt-token')
+    const existing = { id: 'r3', title: 'Needs another pass', description: 'd', request_type: 'bug', user_id: 'u1', status: 'fix_complete', created_at: '2024-01-01' }
+    vi.mocked(api.get).mockResolvedValue({ data: [existing] })
+
+    const { result } = renderHook(() => useFeatureRequests())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    const reopened = { ...existing, status: 'triage_accepted', latest_comment: 'Still broken on my cluster.' }
+    vi.mocked(api.post).mockResolvedValue({ data: reopened })
+    await act(async () => {
+      await result.current.reopenRequest('r3', { comment: 'Still broken on my cluster.' })
+    })
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/feedback/r3/reopen',
+      { comment: 'Still broken on my cluster.' },
+      {}
+    )
+    expect(result.current.requests.find(r => r.id === 'r3')?.status).toBe('triage_accepted')
+  })
 })
 
 describe('useNotifications', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
+    __resetDemoNotificationsForTests()
   })
 
   it('loads demo notifications when no token', async () => {
@@ -397,6 +422,24 @@ describe('useNotifications', () => {
       const updated = result.current.notifications.find(n => n.id === unreadNotif.id)
       expect(updated?.read).toBe(true)
     }
+  })
+
+  it('persists demo markAsRead state across remounts', async () => {
+    const { result, unmount } = renderHook(() => useNotifications())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.markAsRead('demo-notif-1')
+    })
+    expect(result.current.unreadCount).toBe(0)
+
+    unmount()
+
+    const { result: remounted } = renderHook(() => useNotifications())
+    await waitFor(() => expect(remounted.current.isLoading).toBe(false))
+
+    expect(remounted.current.notifications.find(n => n.id === 'demo-notif-1')?.read).toBe(true)
+    expect(remounted.current.unreadCount).toBe(0)
   })
 
   it('markAllAsRead marks all notifications as read', async () => {
@@ -436,6 +479,23 @@ describe('useNotifications', () => {
     expect(result.current.unreadCount).toBeLessThanOrEqual(initialUnread)
   })
 
+  it('persists demo request-level read state across remounts', async () => {
+    const { result, unmount } = renderHook(() => useNotifications())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.markRequestNotificationsAsRead('demo-1')
+    })
+
+    unmount()
+
+    const { result: remounted } = renderHook(() => useNotifications())
+    await waitFor(() => expect(remounted.current.isLoading).toBe(false))
+
+    expect(remounted.current.notifications.filter(n => n.feature_request_id === 'demo-1').every(n => n.read)).toBe(true)
+    expect(remounted.current.unreadCount).toBe(0)
+  })
+
   it('markRequestNotificationsAsRead is a no-op for request with no unread notifications', async () => {
     const { result } = renderHook(() => useNotifications())
     await waitFor(() => expect(result.current.isLoading).toBe(false))
@@ -468,6 +528,26 @@ describe('useNotifications', () => {
     expect(result.current.notifications).toHaveLength(1)
     expect(result.current.notifications[0].id).toBe('n1')
     expect(result.current.unreadCount).toBe(1)
+  })
+
+  it('derives unreadCount from loaded notifications when authenticated', async () => {
+    localStorage.setItem('kc-auth-token', 'real-jwt-token')
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/api/notifications') {
+        return Promise.resolve({ data: [
+          { id: 'n1', user_id: 'u1', feature_request_id: 'r1', notification_type: 'fix_ready', title: 'PR Ready', message: 'PR is ready', read: false, created_at: '2024-01-01' },
+          { id: 'n2', user_id: 'u1', feature_request_id: 'r2', notification_type: 'fix_complete', title: 'Merged', message: 'Merged', read: true, created_at: '2024-01-02' },
+        ] })
+      }
+      if (url === '/api/notifications/unread-count') return Promise.resolve({ data: { count: 99 } })
+      return Promise.resolve({ data: [] })
+    })
+
+    const { result } = renderHook(() => useNotifications())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.unreadCount).toBe(1)
+    expect(api.get).not.toHaveBeenCalledWith('/api/notifications/unread-count')
   })
 
   it('markAsRead calls API when authenticated', async () => {
@@ -507,6 +587,51 @@ describe('useNotifications', () => {
     expect(api.post).toHaveBeenCalledWith('/api/notifications/read-all')
     expect(result.current.unreadCount).toBe(0)
     expect(result.current.notifications.every(n => n.read)).toBe(true)
+  })
+
+  it('reverts markAsRead optimistic state when API call fails', async () => {
+    localStorage.setItem('kc-auth-token', 'real-jwt-token')
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/api/notifications') {
+        return Promise.resolve({ data: [{ id: 'n1', user_id: 'u1', feature_request_id: 'r1', notification_type: 'fix_ready', title: 'T', message: 'M', read: false, created_at: '2024-01-01' }] })
+      }
+      return Promise.resolve({ data: [] })
+    })
+    vi.mocked(api.post).mockRejectedValue(new Error('read failed'))
+
+    const { result } = renderHook(() => useNotifications())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.markAsRead('n1')
+    })
+
+    expect(result.current.notifications[0].read).toBe(false)
+    expect(result.current.unreadCount).toBe(1)
+  })
+
+  it('reverts markAllAsRead optimistic state when API call fails', async () => {
+    localStorage.setItem('kc-auth-token', 'real-jwt-token')
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/api/notifications') {
+        return Promise.resolve({ data: [
+          { id: 'n1', user_id: 'u1', feature_request_id: 'r1', notification_type: 'fix_ready', title: 'T1', message: 'M1', read: false, created_at: '2024-01-01' },
+          { id: 'n2', user_id: 'u1', feature_request_id: 'r2', notification_type: 'fix_complete', title: 'T2', message: 'M2', read: false, created_at: '2024-01-02' },
+        ] })
+      }
+      return Promise.resolve({ data: [] })
+    })
+    vi.mocked(api.post).mockRejectedValue(new Error('read all failed'))
+
+    const { result } = renderHook(() => useNotifications())
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    await act(async () => {
+      await result.current.markAllAsRead()
+    })
+
+    expect(result.current.notifications.every(n => !n.read)).toBe(true)
+    expect(result.current.unreadCount).toBe(2)
   })
 
   it('unreadCount never goes below zero', async () => {

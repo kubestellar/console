@@ -5,7 +5,8 @@
  * flags deny-listed licenses (GPL, AGPL, SSPL, etc.) and warn-listed ones
  * (LGPL, MPL), and provides a fleet-wide license inventory.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   CheckCircle2, XCircle, AlertTriangle, Loader2,
   BookOpen,
@@ -60,6 +61,7 @@ const RISK_ICONS: Record<LicenseRisk, typeof CheckCircle2> = {
 }
 
 export default function LicenseComplianceDashboard() {
+  const { t } = useTranslation()
   const [packages, setPackages] = useState<LicensePackage[]>([])
   const [categories, setCategories] = useState<LicenseCategory[]>([])
   const [summary, setSummary] = useState<LicenseSummary | null>(null)
@@ -68,6 +70,7 @@ export default function LicenseComplianceDashboard() {
   const [activeTab, setActiveTab] = useState<'violations' | 'inventory' | 'categories'>('violations')
   const [filterRisk, setFilterRisk] = useState<LicenseRisk | null>('denied')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const mountedRef = useRef(true)
 
   const fetchData = async () => {
     setLoading(true)
@@ -79,20 +82,30 @@ export default function LicenseComplianceDashboard() {
         authFetch('/api/supply-chain/licenses/summary'),
       ])
       if (!pkgRes.ok || !catRes.ok || !sumRes.ok) throw new Error('Failed to load license data')
-      setPackages(await pkgRes.json())
-      setCategories(await catRes.json())
-      setSummary(await sumRes.json())
+      const packages = await pkgRes.json()
+      const categories = await catRes.json()
+      const summaryData = await sumRes.json()
+      if (!mountedRef.current) return
+      setPackages(packages)
+      setCategories(categories)
+      setSummary(summaryData)
     } catch (e: unknown) {
+      if (!mountedRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load license data')
     } finally {
+      if (!mountedRef.current) return
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    mountedRef.current = true
     fetchData()
     const id = setInterval(fetchData, LICENSE_REFRESH_MS)
-    return () => clearInterval(id)
+    return () => {
+      mountedRef.current = false
+      clearInterval(id)
+    }
   }, [])
 
   if (loading) return (
@@ -106,7 +119,7 @@ export default function LicenseComplianceDashboard() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">Retry</button>
+      <button onClick={fetchData} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 
@@ -170,7 +183,7 @@ export default function LicenseComplianceDashboard() {
               if (tab === 'violations') setFilterRisk('denied')
             }}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white hover:bg-white/5'
+              activeTab === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
             }`}
           >
             {tab === 'violations'

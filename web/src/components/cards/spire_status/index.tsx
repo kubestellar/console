@@ -156,7 +156,16 @@ export function SpireStatus() {
     )
   }
 
-  if (showEmptyState || (data.health === 'not-installed' && !isDemoData)) {
+  if (showEmptyState) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
+        <AlertTriangle className="w-6 h-6 text-red-400" />
+        <p className="text-sm text-red-400">{t('spireStatus.fetchFailed', 'Failed to fetch SPIRE status')}</p>
+      </div>
+    )
+  }
+
+  if (data.health === 'not-installed' && !isDemoData) {
     return (
       <div className="h-full flex flex-col items-center justify-center min-h-card text-muted-foreground gap-2">
         <ShieldOff className="w-6 h-6 text-muted-foreground/50" />

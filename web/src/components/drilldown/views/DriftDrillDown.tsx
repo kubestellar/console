@@ -125,10 +125,10 @@ export function DriftDrillDown({ data }: Props) {
 
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       let ws: WebSocket
       try {
-        ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
       } catch {
         resolve('')
         return

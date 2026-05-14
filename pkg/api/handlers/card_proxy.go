@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
@@ -54,7 +53,7 @@ var cardProxyClient = &http.Client{
 			}
 			for _, ip := range ips {
 				if isBlockedIP(ip.IP) {
-					return nil, fmt.Errorf("blocked: private IP %s for host %s", ip.IP, host)
+					return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)
 				}
 			}
 			// Connect to the first validated IP directly — no second DNS lookup
@@ -64,40 +63,10 @@ var cardProxyClient = &http.Client{
 	},
 }
 
-// blockedCIDRs contains CIDR ranges that must never be proxied.
-// This prevents SSRF attacks against internal infrastructure.
-var blockedCIDRs = func() []*net.IPNet {
-	cidrs := []string{
-		"127.0.0.0/8",    // loopback
-		"10.0.0.0/8",     // RFC 1918 private
-		"172.16.0.0/12",  // RFC 1918 private
-		"192.168.0.0/16", // RFC 1918 private
-		"169.254.0.0/16", // link-local
-		"::1/128",        // IPv6 loopback
-		"fc00::/7",       // IPv6 unique local
-		"fe80::/10",      // IPv6 link-local
-	}
-	nets := make([]*net.IPNet, 0, len(cidrs))
-	for _, cidr := range cidrs {
-		_, ipnet, err := net.ParseCIDR(cidr)
-		if err != nil {
-			// Hardcoded CIDRs must always parse — a failure here is a programming error.
-			slog.Error("[CardProxy] failed to parse blocked CIDR", "cidr", cidr, "error", err)
-			os.Exit(1)
-		}
-		nets = append(nets, ipnet)
-	}
-	return nets
-}()
-
-// isBlockedIP returns true if the IP is in a private/reserved range.
+// isBlockedIP returns true if the IP is in a non-public range.
 func isBlockedIP(ip net.IP) bool {
-	for _, cidr := range blockedCIDRs {
-		if cidr.Contains(ip) {
-			return true
-		}
-	}
-	return false
+	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
+		ip.IsLinkLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified()
 }
 
 // CardProxyHandler proxies external HTTP GET requests for custom card code.

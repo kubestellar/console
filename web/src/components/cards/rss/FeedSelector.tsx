@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import { ChevronDown, Plus, Filter } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { useTranslation } from 'react-i18next'
@@ -27,6 +27,25 @@ export const FeedSelector = memo(function FeedSelector({
 }: FeedSelectorProps) {
   const { t } = useTranslation(['cards', 'common'])
   const activeFeed = feeds[activeFeedIndex] || feeds[0]
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const pendingFocusIndexRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!showFeedSelector) return
+    const nextIndex = pendingFocusIndexRef.current ?? activeFeedIndex
+    const target = optionRefs.current[nextIndex] ?? optionRefs.current[0]
+    pendingFocusIndexRef.current = null
+    if (target) requestAnimationFrame(() => target.focus())
+  }, [showFeedSelector, activeFeedIndex])
+
+  const focusOption = (index: number) => {
+    optionRefs.current[Math.max(0, Math.min(index, feeds.length - 1))]?.focus()
+  }
+
+  const openSelector = (index: number) => {
+    pendingFocusIndexRef.current = Math.max(0, Math.min(index, feeds.length - 1))
+    if (!showFeedSelector) onToggleSelector()
+  }
 
   return (
     <div className="flex items-center gap-2 min-w-0">
@@ -34,6 +53,20 @@ export const FeedSelector = memo(function FeedSelector({
       <div className="relative">
         <button
           onClick={onToggleSelector}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              openSelector(activeFeedIndex)
+            } else if (e.key === 'ArrowUp' || e.key === 'End') {
+              e.preventDefault()
+              openSelector(feeds.length - 1)
+            } else if (e.key === 'Home') {
+              e.preventDefault()
+              openSelector(0)
+            }
+          }}
+          aria-haspopup="listbox"
+          aria-expanded={showFeedSelector}
           className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
         >
           <span>{activeFeed?.icon || '📰'}</span>
@@ -42,12 +75,39 @@ export const FeedSelector = memo(function FeedSelector({
         </button>
 
         {showFeedSelector && (
-          <div className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-lg z-50">
+          <div
+            role="listbox"
+            aria-label={t('cards:rssFeed.selectFeed', 'Select feed')}
+            className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto bg-card border border-border rounded-lg shadow-lg z-50"
+            onKeyDown={(e) => {
+              const currentIndex = optionRefs.current.findIndex(option => option === document.activeElement)
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                onToggleSelector()
+              } else if (e.key === 'ArrowDown') {
+                e.preventDefault()
+                focusOption(currentIndex < 0 ? 0 : currentIndex + 1)
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault()
+                focusOption(currentIndex <= 0 ? 0 : currentIndex - 1)
+              } else if (e.key === 'Home') {
+                e.preventDefault()
+                focusOption(0)
+              } else if (e.key === 'End') {
+                e.preventDefault()
+                focusOption(feeds.length - 1)
+              }
+            }}
+          >
             <div className="p-1">
               {feeds.map((feed, idx) => (
                 <button
                   key={feed.url}
+                  ref={node => { optionRefs.current[idx] = node }}
                   onClick={() => onSelectFeed(idx)}
+                  role="option"
+                  aria-selected={idx === activeFeedIndex}
+                  tabIndex={idx === activeFeedIndex ? 0 : -1}
                   className={cn(
                     'w-full flex items-center gap-2 px-3 py-2 text-sm rounded transition-colors',
                     idx === activeFeedIndex

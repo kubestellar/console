@@ -601,20 +601,22 @@ func (h *MissionsHandler) fetchWithCache(c *fiber.Ctx, cacheKey, url, logContext
 func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	path, err := sanitizePath(c.Query("path", ""))
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		slog.Warn("[missions] invalid path parameter", "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid path parameter"})
 	}
-
-	cacheKey := "browse:" + path
 	url := fmt.Sprintf("%s/repos/kubestellar/console-kb/contents/%s?ref=master", h.githubAPIURL, path)
+	cacheKey := "browse:" + path
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(browse)", "path", path)
 	if err != nil {
 		if res == nil {
-			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+			slog.Error("[missions] upstream fetch failed (browse)", "path", path, "error", err)
+			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": "upstream request failed"})
 		}
 		if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests {
+			slog.Warn("[missions] upstream rate limited (browse)", "path", path, "status", res.StatusCode, "error", err)
 			return c.Status(res.StatusCode).JSON(fiber.Map{
-				"error":  err.Error(),
+				"error":  "upstream rate limited",
 				"status": res.StatusCode,
 				"code":   "rate_limited",
 			})
@@ -623,7 +625,8 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		if res != nil && res.StatusCode > 0 {
 			status = res.StatusCode
 		}
-		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[missions] upstream request failed (browse)", "path", path, "status", status, "error", err)
+		return c.Status(status).JSON(fiber.Map{"error": "upstream request failed"})
 	}
 
 	if res.CacheStatus != cacheStatusMiss {
@@ -656,7 +659,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 	// response was an object, crashing frontend iterators. Now we attempt to
 	// unmarshal as an array first; if that fails, try a single object and wrap
 	// it in an array so the frontend always receives a consistent shape.
-	var ghEntries []map[string]interface{}
+	ghEntries := make([]map[string]interface{}, 0)
 	if err := json.Unmarshal(body, &ghEntries); err != nil {
 		var single map[string]interface{}
 		if singleErr := json.Unmarshal(body, &single); singleErr != nil {
@@ -677,7 +680,7 @@ func (h *MissionsHandler) BrowseConsoleKB(c *fiber.Ctx) error {
 		"search-state.json": true,
 	}
 
-	var entries []fiber.Map
+	entries := make([]fiber.Map, 0, len(ghEntries))
 	for _, e := range ghEntries {
 		entryType, _ := e["type"].(string)
 		if entryType == "dir" {
@@ -737,12 +740,14 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	}
 	path, err := sanitizePath(rawPath)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		slog.Warn("[missions] invalid path parameter", "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid path parameter"})
 	}
 	rawRef := c.Query("ref", "master")
 	ref, err := sanitizeRef(rawRef)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		slog.Warn("[missions] invalid ref parameter", "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid ref parameter"})
 	}
 
 	cacheKey := "file:" + ref + ":" + path
@@ -751,11 +756,13 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 	res, err := h.fetchWithCache(c, cacheKey, url, "(file)", "ref", ref, "path", path)
 	if err != nil {
 		if res == nil {
-			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": err.Error()})
+			slog.Error("[missions] upstream fetch failed (file)", "ref", ref, "path", path, "error", err)
+			return c.Status(http.StatusBadGateway).JSON(fiber.Map{"error": "upstream request failed"})
 		}
 		if res.StatusCode == http.StatusForbidden || res.StatusCode == http.StatusTooManyRequests {
+			slog.Warn("[missions] upstream rate limited (file)", "ref", ref, "path", path, "status", res.StatusCode, "error", err)
 			return c.Status(res.StatusCode).JSON(fiber.Map{
-				"error":  err.Error(),
+				"error":  "upstream rate limited",
 				"status": res.StatusCode,
 				"code":   "rate_limited",
 			})
@@ -764,7 +771,8 @@ func (h *MissionsHandler) GetMissionFile(c *fiber.Ctx) error {
 		if res != nil && res.StatusCode > 0 {
 			status = res.StatusCode
 		}
-		return c.Status(status).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[missions] upstream request failed (file)", "ref", ref, "path", path, "status", status, "error", err)
+		return c.Status(status).JSON(fiber.Map{"error": "upstream request failed"})
 	}
 
 	if res.CacheStatus != cacheStatusMiss {
@@ -843,7 +851,7 @@ func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"valid": false, "errors": []string{"invalid mission JSON format"}})
 	}
 
-	var errs []string
+	errs := make([]string, 0)
 	if mission.APIVersion != "kc-mission-v1" {
 		errs = append(errs, "apiVersion must be 'kc-mission-v1'")
 	}
@@ -860,7 +868,8 @@ func (h *MissionsHandler) ValidateMission(c *fiber.Ctx) error {
 
 	index, err := h.fetchMissionIndex(c)
 	if err != nil {
-		return c.Status(502).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[missions] failed to fetch mission index (validate)", "error", err)
+		return c.Status(502).JSON(fiber.Map{"error": "failed to fetch mission index"})
 	}
 
 	for _, entry := range index.Missions {
@@ -919,7 +928,7 @@ func (h *MissionsHandler) fetchMissionIndex(c *fiber.Ctx) (*indexJsonFormat, err
 
 	res, err := h.fetchWithCache(c, cacheKey, url, "(index json)")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch index: %v", err)
+		return nil, fmt.Errorf("failed to fetch index: %w", err)
 	}
 
 	var body = res.Body
@@ -961,11 +970,12 @@ func (h *MissionsHandler) GetKBScores(c *fiber.Ctx) error {
 	}
 	index, err := h.fetchMissionIndex(c)
 	if err != nil {
-		return c.Status(502).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[missions] failed to fetch mission index (scores)", "error", err)
+		return c.Status(502).JSON(fiber.Map{"error": "failed to fetch mission index"})
 	}
 
 	// Filter just the scoring related fields
-	results := make([]fiber.Map, 0)
+	results := make([]fiber.Map, 0, len(index.Missions))
 	for _, m := range index.Missions {
 		if m.QualityScore != nil {
 			project := "unknown"
@@ -1005,7 +1015,8 @@ func (h *MissionsHandler) GetMissionScore(c *fiber.Ctx) error {
 
 	index, err := h.fetchMissionIndex(c)
 	if err != nil {
-		return c.Status(502).JSON(fiber.Map{"error": err.Error()})
+		slog.Error("[missions] failed to fetch mission index (score)", "project", project, "id", id, "error", err)
+		return c.Status(502).JSON(fiber.Map{"error": "failed to fetch mission index"})
 	}
 
 	for _, m := range index.Missions {
@@ -1112,7 +1123,8 @@ func (h *MissionsHandler) ShareToSlack(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid request body"})
 	}
 	if err := validateSlackWebhookURL(req.WebhookURL); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		slog.Warn("[missions] invalid slack webhook URL", "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid webhook URL"})
 	}
 	if req.Text == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "text is required"})
@@ -1215,10 +1227,12 @@ func (h *MissionsHandler) ShareToGitHub(c *fiber.Ctx) error {
 
 	// SECURITY: Validate path and branch to prevent traversal/injection
 	if _, err := sanitizePath(req.FilePath); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid filePath: %v", err)})
+		slog.Error("[MissionsHandler] invalid filePath", "filePath", req.FilePath, "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid filePath"})
 	}
 	if _, err := sanitizeRef(req.Branch); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid branch: %v", err)})
+		slog.Error("[MissionsHandler] invalid branch", "branch", req.Branch, "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid branch"})
 	}
 
 	// Step 1: Fork the repo

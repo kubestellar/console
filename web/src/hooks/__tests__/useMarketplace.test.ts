@@ -693,7 +693,7 @@ describe('useMarketplace', () => {
       act(() => result.current.installItem(result.current.allItems[0]))
     ).rejects.toThrow('backend exploded')
 
-    expect(mockEmitInstallFailed).toHaveBeenCalledWith('card-preset', expect.any(String), 'backend exploded')
+    expect(mockEmitInstallFailed).toHaveBeenCalledWith('card-preset', expect.any(String), 'backend exploded', 'persist')
     expect(eventSpy).not.toHaveBeenCalled()
     expect(result.current.isInstalled('preset-fail')).toBe(false)
 
@@ -741,7 +741,7 @@ describe('useMarketplace', () => {
       act(() => result.current.installItem(result.current.allItems[0]))
     ).rejects.toThrow('timeout')
 
-    expect(mockEmitInstallFailed).toHaveBeenCalledWith('dashboard', expect.any(String), 'timeout')
+    expect(mockEmitInstallFailed).toHaveBeenCalledWith('dashboard', expect.any(String), 'timeout', 'download')
     expect(result.current.isInstalled('fail-1')).toBe(false)
   })
 
@@ -760,7 +760,7 @@ describe('useMarketplace', () => {
       act(() => result.current.installItem(result.current.allItems[0]))
     ).rejects.toThrow('Download failed: 404')
 
-    expect(mockEmitInstallFailed).toHaveBeenCalledWith('dashboard', expect.any(String), 'HTTP 404')
+    expect(mockEmitInstallFailed).toHaveBeenCalledWith('dashboard', expect.any(String), 'HTTP 404', 'http_error')
   })
 
   it('removes an installed dashboard via API delete', async () => {

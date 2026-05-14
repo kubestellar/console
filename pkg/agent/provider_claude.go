@@ -16,7 +16,6 @@ import (
 const maxLLMResponseBytes = 10 * 1024 * 1024 // 10 MiB
 
 var (
-	claudeAPIURL       = "https://api.anthropic.com/v1/messages"
 	claudeAPIVersion   = "2023-06-01"
 	defaultClaudeModel = "claude-opus-4-20250514"
 )
@@ -79,7 +78,7 @@ func (c *ClaudeProvider) Chat(ctx context.Context, req *ChatRequest) (*ChatRespo
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", claudeAPIURL, bytes.NewBuffer(jsonBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.getAPIURL(), bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -147,7 +146,7 @@ func (c *ClaudeProvider) StreamChat(ctx context.Context, req *ChatRequest, onChu
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", claudeAPIURL, bytes.NewBuffer(jsonBody))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.getAPIURL(), bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -244,6 +243,14 @@ func (c *ClaudeProvider) buildMessages(req *ChatRequest) []map[string]string {
 	})
 
 	return messages
+}
+
+func (c *ClaudeProvider) getAPIURL() string {
+	baseURL := GetConfigManager().GetBaseURL("claude")
+	if baseURL != "" {
+		return baseURL + "/messages"
+	}
+	return "https://api.anthropic.com/v1/messages"
 }
 
 func (c *ClaudeProvider) setHeaders(req *http.Request) {

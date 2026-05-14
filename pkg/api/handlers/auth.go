@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
@@ -212,7 +213,7 @@ func NewAuthHandler(s store.Store, cfg AuthConfig) *AuthHandler {
 	// that use DevMode handlers do not leak a background goroutine for
 	// the lifetime of the test process (#6125).
 	if cfg.GitHubClientID != "" {
-		go h.runOAuthStateCleanup()
+		safego.GoWith("auth/oauth-state-cleanup", func() { h.runOAuthStateCleanup() })
 	}
 
 	return h
@@ -506,7 +507,7 @@ func classifyExchangeError(err error) (code, detail string) {
 	case strings.Contains(lower, "bad_verification_code"):
 		return "exchange_failed", "Authorization code expired or was already used — please try logging in again"
 	default:
-		return "exchange_failed", msg
+		return "exchange_failed", "Token exchange failed — please try logging in again"
 	}
 }
 
@@ -583,8 +584,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 	ghUser, err := h.getGitHubUser(c.UserContext(), token.AccessToken)
 	if err != nil {
 		slog.Error("[Auth] failed to get GitHub user", "error", err)
-		detail := err.Error()
-		return h.oauthErrorRedirect(c, "user_fetch_failed", detail)
+		return h.oauthErrorRedirect(c, "user_fetch_failed", "Failed to retrieve GitHub user profile")
 	}
 
 	// Find or create user
@@ -901,7 +901,7 @@ func (h *AuthHandler) getGitHubPrimaryEmail(ctx context.Context, accessToken str
 		return "", fmt.Errorf("GitHub emails API returned %d", resp.StatusCode)
 	}
 
-	var emails []gitHubEmail
+	emails := make([]gitHubEmail, 0)
 	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
 		return "", err
 	}

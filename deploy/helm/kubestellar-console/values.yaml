@@ -307,6 +307,8 @@ kagenti:
   controllerUrl: ""
   namespace: "kagenti-system"
   serviceName: "kagenti-backend"
+  deploymentName: "kagenti-backend"
+  llmSecretName: "kagenti-llm-secrets"
   servicePort: "8000"
   serviceProtocol: "http"
 

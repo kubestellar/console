@@ -7,6 +7,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeyTracking } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+import { Button } from '../ui/Button'
 
 /** localStorage key for Kube Galaga high score persistence */
 const HIGH_SCORE_KEY = 'kubeGalagaHighScore'
@@ -528,6 +529,7 @@ export function KubeGalaga() {
               <span
                 role="button"
                 tabIndex={0}
+                aria-label="Start Kube Galaga game"
                 onClick={startGame}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startGame() } }}
                 className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
@@ -544,6 +546,7 @@ export function KubeGalaga() {
               <span
                 role="button"
                 tabIndex={0}
+                aria-label="Resume Kube Galaga game"
                 onClick={togglePause}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePause() } }}
                 className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
@@ -562,6 +565,7 @@ export function KubeGalaga() {
               <span
                 role="button"
                 tabIndex={0}
+                aria-label={`Start level ${level} of Kube Galaga`}
                 onClick={nextLevel}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); nextLevel() } }}
                 className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
@@ -583,6 +587,7 @@ export function KubeGalaga() {
               <span
                 role="button"
                 tabIndex={0}
+                aria-label="Play Kube Galaga again"
                 onClick={startGame}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startGame() } }}
                 className="flex items-center gap-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-700 rounded text-white cursor-pointer"
@@ -597,13 +602,14 @@ export function KubeGalaga() {
         {/* Controls */}
         {gameState === 'playing' && (
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Pause className="w-4 h-4" />}
               onClick={togglePause}
-              className="flex items-center gap-1 px-3 py-1 bg-secondary hover:bg-secondary/80 rounded text-sm"
             >
-              <Pause className="w-4 h-4" />
               Pause
-            </button>
+            </Button>
           </div>
         )}
       </div>

@@ -126,8 +126,8 @@ export function PolicyDrillDown({ data }: Props) {
 
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
-    return new Promise((resolve) => {
-      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+    return new Promise(async (resolve) => {
+      const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
       const requestId = `kubectl-${Date.now()}-${Math.random().toString(36).slice(2)}`
       let output = ''
 
@@ -318,7 +318,7 @@ Please:
       <div className="px-6 pt-6 pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-6 text-sm">
-            <button onClick={() => state.stack.length > 1 ? pop() : closeDrillDown()} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+            <button onClick={() => state.stack.length > 1 ? pop() : closeDrillDown()} className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors min-h-11 min-w-11 px-2 py-2">
               <ChevronLeft className="w-4 h-4" />
               {t('drilldown.goBack', 'Back')}
             </button>

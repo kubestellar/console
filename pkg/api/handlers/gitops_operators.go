@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
@@ -21,7 +22,8 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 	// SECURITY: Validate cluster name before passing to kubectl CLI
 	if cluster != "" {
 		if err := validateK8sName(cluster, "cluster"); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			slog.Warn("[gitops] invalid cluster parameter (operators)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
 		}
 	}
 
@@ -32,7 +34,8 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 		operators, fetchErr := h.getOperatorsForClusterWithError(ctx, cluster)
 		resp := fiber.Map{"operators": operators}
 		if fetchErr != nil {
-			resp["clusterErrors"] = []string{fmt.Sprintf("%s: %v", cluster, fetchErr)}
+			slog.Warn("[GitOps] operator fetch failed for cluster", "cluster", cluster, "error", fetchErr)
+			resp["clusterErrors"] = []string{fmt.Sprintf("%s: failed to fetch operators", cluster)}
 		}
 		return c.JSON(resp)
 	}
@@ -51,14 +54,15 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 		allOperators := make([]Operator, 0)
 		// #7544: Surface per-cluster errors so the frontend can indicate
 		// which clusters failed rather than showing a silent empty state.
-		var clusterErrors []string
+		clusterErrors := make([]string, 0)
 
 		overallCtx, overallCancel := context.WithTimeout(c.Context(), operatorRestOverallTimeout)
 		defer overallCancel()
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-operators/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -68,13 +72,14 @@ func (h *GitOpsHandlers) ListOperators(c *fiber.Ctx) error {
 				operators, fetchErr := h.getOperatorsForClusterWithError(ctx, clusterName)
 				mu.Lock()
 				if fetchErr != nil {
-					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: %v", clusterName, fetchErr))
+					slog.Warn("[GitOps] operator fetch failed for cluster", "cluster", clusterName, "error", fetchErr)
+					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: failed to fetch operators", clusterName))
 				}
 				if len(operators) > 0 {
 					allOperators = append(allOperators, operators...)
 				}
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -148,8 +153,9 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 		totalClusters := len(clusters)
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-operators-stream/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -162,9 +168,10 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 				// #7546: Emit cluster_error when a fetch fails so the frontend
 				// can distinguish "no operators" from "query failed".
 				if fetchErr != nil {
+					slog.Error("[GitOpsOperators] cluster fetch failed", "cluster", clusterName, "error", fetchErr)
 					writeSSEEvent(w, sseEventClusterError, fiber.Map{
 						"cluster": clusterName,
-						"error":   fetchErr.Error(),
+						"error":   "cluster query failed",
 					})
 				} else {
 					writeSSEEvent(w, "cluster_data", fiber.Map{
@@ -174,7 +181,7 @@ func (h *GitOpsHandlers) StreamOperators(c *fiber.Ctx) error {
 					})
 				}
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -450,7 +457,8 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 	// SECURITY: Validate cluster name before passing to kubectl CLI
 	if cluster != "" {
 		if err := validateK8sName(cluster, "cluster"); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			slog.Warn("[gitops] invalid cluster parameter (subscriptions)", "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster parameter"})
 		}
 	}
 
@@ -460,7 +468,8 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 		subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, cluster)
 		resp := fiber.Map{"subscriptions": subs}
 		if fetchErr != nil {
-			resp["clusterErrors"] = []string{fmt.Sprintf("%s: %v", cluster, fetchErr)}
+			slog.Warn("[GitOps] subscription fetch failed for cluster", "cluster", cluster, "error", fetchErr)
+			resp["clusterErrors"] = []string{fmt.Sprintf("%s: failed to fetch subscriptions", cluster)}
 		}
 		return c.JSON(resp)
 	}
@@ -477,11 +486,12 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 		allSubs := make([]OperatorSubscription, 0)
 		// #7545: Surface per-cluster errors so the frontend can indicate
 		// which clusters failed rather than showing a silent empty state.
-		var clusterErrors []string
+		clusterErrors := make([]string, 0)
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-subscriptions/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -491,13 +501,14 @@ func (h *GitOpsHandlers) ListOperatorSubscriptions(c *fiber.Ctx) error {
 				subs, fetchErr := h.getSubscriptionsForClusterWithError(ctx, clusterName)
 				mu.Lock()
 				if fetchErr != nil {
-					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: %v", clusterName, fetchErr))
+					slog.Warn("[GitOps] subscription fetch failed for cluster", "cluster", clusterName, "error", fetchErr)
+					clusterErrors = append(clusterErrors, fmt.Sprintf("%s: failed to fetch subscriptions", clusterName))
 				}
 				if len(subs) > 0 {
 					allSubs = append(allSubs, subs...)
 				}
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -567,8 +578,9 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 		totalClusters := len(clusters)
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-subscriptions-stream/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -581,9 +593,10 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 				// #7546: Emit cluster_error when a fetch fails so the frontend
 				// can distinguish "no subscriptions" from "query failed".
 				if fetchErr != nil {
+					slog.Error("[GitOpsOperators] cluster fetch failed", "cluster", clusterName, "error", fetchErr)
 					writeSSEEvent(w, sseEventClusterError, fiber.Map{
 						"cluster": clusterName,
-						"error":   fetchErr.Error(),
+						"error":   "cluster query failed",
 					})
 				} else {
 					writeSSEEvent(w, "cluster_data", fiber.Map{
@@ -593,7 +606,7 @@ func (h *GitOpsHandlers) StreamOperatorSubscriptions(c *fiber.Ctx) error {
 					})
 				}
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -741,7 +754,8 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 
 		for _, cl := range clusters {
 			wg.Add(1)
-			go func(clusterName string) {
+			clusterName := cl.Name
+			safego.GoWith("gitops-ops/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -757,7 +771,7 @@ func (h *GitOpsHandlers) StreamHelmReleases(c *fiber.Ctx) error {
 					"source":   "k8s",
 				})
 				mu.Unlock()
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()

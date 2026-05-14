@@ -49,7 +49,7 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
   const { drillToOperator } = useDrillDownActions()
 
   // Fetch subscriptions - pass undefined to get all clusters
-  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, refetch } = useCachedOperatorSubscriptions(undefined)
+  const { subscriptions: rawSubscriptions, isLoading: subscriptionsLoading, isRefreshing, consecutiveFailures, isFailed, isDemoFallback: isDemoData, retryFetch } = useCachedOperatorSubscriptions(undefined)
 
   // Report loading state to CardWrapper for skeleton/refresh behavior
   const hasData = rawSubscriptions.length > 0
@@ -132,8 +132,9 @@ export function OperatorSubscriptions({ config: _config }: OperatorSubscriptions
           <p className="text-sm">{t('operatorSubscriptions.errorLoading', 'Unable to load subscriptions')}</p>
           <p className="text-xs">{t('operatorSubscriptions.errorLoadingHint', 'Failed after {{count}} attempts', { count: consecutiveFailures })}</p>
           <button
-            onClick={() => refetch()}
-            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors"
+            onClick={() => retryFetch()}
+            disabled={isRefreshing}
+            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-purple-500/20 text-purple-400 hover:bg-purple-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={cn('w-3 h-3', isRefreshing && 'animate-spin')} />
             {t('common:common.retry', 'Retry')}

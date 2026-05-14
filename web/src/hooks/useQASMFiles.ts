@@ -31,10 +31,15 @@ function extractErrorMessage(err: unknown): string {
 export const __testables = { normalizeFileList, extractErrorMessage }
 
 export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
+export function useQASMFiles(enabled?: boolean, forceDemo?: boolean): UseQASMFilesResult {
   const { isAuthenticated } = useAuth()
   const [files, setFiles] = useState<QASMFile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Determine demo mode: prefer explicit forceDemo, otherwise use workload detection
+  const workloadIsDemoMode = isQuantumForcedToDemo()
+  const isDemoMode = forceDemo ?? workloadIsDemoMode
 
   const fetchFiles = async () => {
     try {
@@ -64,13 +69,21 @@ export function useQASMFiles(enabled?: boolean): UseQASMFilesResult {
   }
 
   useEffect(() => {
-    // Skip fetch if explicitly disabled, user is not authenticated, or quantum is forced to demo
-    if (enabled === false || !isAuthenticated || isQuantumForcedToDemo()) {
+    // Skip fetch if explicitly disabled or user is not authenticated
+    if (enabled === false || !isAuthenticated) {
       setIsLoading(false)
       return
     }
+
+    if (isDemoMode) {
+      // In demo mode, show only bell.qasm
+      setFiles([{ name: 'bell.qasm' }])
+      setIsLoading(false)
+      return
+    }
+
     fetchFiles()
-  }, [isAuthenticated, enabled])
+  }, [isAuthenticated, enabled, isDemoMode, forceDemo, workloadIsDemoMode])
 
   return { files, isLoading, error, refetch: fetchFiles }
 }

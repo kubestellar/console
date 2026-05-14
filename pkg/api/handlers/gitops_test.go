@@ -72,7 +72,7 @@ func TestGitOps_ListHelmHistory_Validation_InvalidClusterName(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
 	body, _ := io.ReadAll(resp.Body)
-	assert.Contains(t, string(body), "cluster contains invalid character")
+	assert.Contains(t, string(body), "invalid parameter")
 }
 
 func TestGitOps_ListHelmHistory_UsesClusterAndNamespaceFilters(t *testing.T) {

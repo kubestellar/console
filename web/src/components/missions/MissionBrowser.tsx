@@ -384,7 +384,9 @@ export function MissionBrowser({ isOpen, onClose, onImport, initialMission, onUs
         treeNodesRef.current = next
         return next
       })
-    }).catch(() => { /* keep defaults on error */ })
+    }).catch((error: unknown) => {
+      console.error('[MissionBrowser] failed to load kubara config:', error)
+    })
 
     if (isAuthenticated && user) {
       rootNodes.push({

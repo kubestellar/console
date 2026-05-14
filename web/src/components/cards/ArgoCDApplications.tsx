@@ -101,19 +101,19 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
 
   // Card-specific status filter
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'outOfSync' | 'unhealthy'>('all')
-  const handleFilterSelect = (filter: 'all' | 'outOfSync' | 'unhealthy') => () => setSelectedFilter(filter)
-  const handleFilterKeyDown = (filter: 'all' | 'outOfSync' | 'unhealthy') => (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      setSelectedFilter(filter)
-    }
-  }
 
-  // Step 2: Pre-filter by config and status filter (card-specific)
-  const preFiltered = (() => {
+  // Step 2a: Config-scoped base — cluster/namespace only, no status chip.
+  // Stats tiles read from here so their counts remain accurate when a filter is active.
+  const baseFiltered = (() => {
     let filtered = allApps
     if (config?.cluster) filtered = filtered.filter(a => a.cluster === config.cluster)
     if (config?.namespace) filtered = filtered.filter(a => a.namespace === config.namespace)
+    return filtered
+  })()
+
+  // Step 2b: Apply status chip on top for the list fed into useCardData.
+  const preFiltered = (() => {
+    let filtered = baseFiltered
     if (selectedFilter === 'outOfSync') filtered = filtered.filter(a => a.syncStatus === 'OutOfSync')
     else if (selectedFilter === 'unhealthy') filtered = filtered.filter(a => a.healthStatus !== 'Healthy')
     return filtered
@@ -156,12 +156,28 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
       comparators: ARGO_SORT_COMPARATORS },
     defaultLimit: 5 })
 
-  // Stats computed from preFiltered (reflects status counts before search/pagination)
+  // selectedFilter is a pre-useCardData filter so useCardData's internal page-reset effect
+  // never fires for it. Always jump to page 1 when the filter changes so users see the
+  // beginning of the filtered results (same pattern as DeploymentStatus, see #9257).
+  const handleFilterSelect = (filter: 'all' | 'outOfSync' | 'unhealthy') => () => {
+    setSelectedFilter(filter)
+    goToPage(1)
+  }
+  const handleFilterKeyDown = (filter: 'all' | 'outOfSync' | 'unhealthy') => (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      setSelectedFilter(filter)
+      goToPage(1)
+    }
+  }
+
+  // Stats always computed from baseFiltered (before selectedFilter) so tiles
+  // remain accurate navigation controls regardless of which filter is active.
   const stats = {
-    synced: preFiltered.filter(a => a.syncStatus === 'Synced').length,
-    outOfSync: preFiltered.filter(a => a.syncStatus === 'OutOfSync').length,
-    healthy: preFiltered.filter(a => a.healthStatus === 'Healthy').length,
-    unhealthy: preFiltered.filter(a => a.healthStatus !== 'Healthy').length }
+    synced: baseFiltered.filter(a => a.syncStatus === 'Synced').length,
+    outOfSync: baseFiltered.filter(a => a.syncStatus === 'OutOfSync').length,
+    healthy: baseFiltered.filter(a => a.healthStatus === 'Healthy').length,
+    unhealthy: baseFiltered.filter(a => a.healthStatus !== 'Healthy').length }
 
   if (showSkeleton) {
     return (
@@ -303,7 +319,7 @@ function ArgoCDApplicationsInternal({ config }: ArgoCDApplicationsProps) {
           <Button
             variant="accent"
             size="sm"
-            onClick={() => setSelectedFilter('all')}
+            onClick={handleFilterSelect('all')}
             className="px-2 py-0.5"
             aria-label={`Clear filter: ${selectedFilter === 'outOfSync' ? t('argoCDApplications.outOfSync') : t('argoCDApplications.unhealthy')}`}
           >

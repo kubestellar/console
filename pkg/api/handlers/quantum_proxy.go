@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	quantumProxyTimeout = 30 * time.Second
+	quantumProxyTimeout        = 30 * time.Second
+	maxQuantumResponseBytes    = 10 << 20 // 10 MB
 )
 
 // quantumClient uses a shared HTTP client with timeout to prevent hanging requests
@@ -48,9 +49,34 @@ func NewQuantumProxyHandler() *QuantumProxyHandler {
 	}
 }
 
+// allowedQuantumPaths lists valid API path prefixes for the quantum proxy.
+var allowedQuantumPaths = []string{
+	"result",
+	"circuit",
+	"job",
+	"status",
+	"health",
+}
+
+// isAllowedQuantumPath validates that the endpoint matches an allowed prefix.
+func isAllowedQuantumPath(endpoint string) bool {
+	for _, prefix := range allowedQuantumPaths {
+		if endpoint == prefix || strings.HasPrefix(endpoint, prefix+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // ProxyRequest handles GET requests to quantum endpoints
 func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	endpoint := c.Params("*")
+
+	// SECURITY: Reject path traversal and validate against allowed paths
+	if strings.Contains(endpoint, "..") || !isAllowedQuantumPath(endpoint) {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid quantum API path")
+	}
+
 	// Prepend /api/ to the endpoint path to match quantum backend API structure
 	targetURL := h.quantumServiceURL + "/api/" + endpoint
 
@@ -64,7 +90,8 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	// Create HTTP client request
 	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to create request: %v", err))
+		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
 	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
@@ -78,12 +105,13 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, fmt.Sprintf("Quantum service unavailable: %v", err))
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()
 
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
+	// Read response body (bounded to prevent memory exhaustion)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
 	}
@@ -97,16 +125,27 @@ func (h *QuantumProxyHandler) ProxyRequest(c *fiber.Ctx) error {
 	return c.Send(body)
 }
 
+// allowedHistogramSorts lists valid sort values for the histogram endpoint.
+var allowedHistogramSorts = map[string]bool{
+	"count":       true,
+	"name":        true,
+	"probability": true,
+}
+
 // ProxyResultHistogram handles GET requests to /api/result/histogram
 func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	sort := c.Query("sort", "count")
-	targetURL := h.quantumServiceURL + "/api/result/histogram?sort=" + sort
+	if !allowedHistogramSorts[sort] {
+		sort = "count"
+	}
+	targetURL := h.quantumServiceURL + "/api/result/histogram?sort=" + url.QueryEscape(sort)
 
 	slog.Debug("[QuantumProxy] Forwarding histogram request", "from", c.Path(), "to", targetURL)
 
 	req, err := http.NewRequest(http.MethodGet, targetURL, nil)
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to create request: %v", err))
+		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
 	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
@@ -120,11 +159,12 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, fmt.Sprintf("Quantum service unavailable: %v", err))
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
 	}
@@ -140,6 +180,12 @@ func (h *QuantumProxyHandler) ProxyResultHistogram(c *fiber.Ctx) error {
 // ProxyPostRequest handles POST requests to quantum endpoints
 func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	endpoint := c.Params("*")
+
+	// SECURITY: Reject path traversal and validate against allowed paths
+	if strings.Contains(endpoint, "..") || !isAllowedQuantumPath(endpoint) {
+		return fiber.NewError(fiber.StatusBadRequest, "Invalid quantum API path")
+	}
+
 	// Prepend /api/ to the endpoint path to match quantum backend API structure
 	targetURL := h.quantumServiceURL + "/api/" + endpoint
 
@@ -153,7 +199,8 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	// Create HTTP client request
 	req, err := http.NewRequest(http.MethodPost, targetURL, strings.NewReader(string(c.Body())))
 	if err != nil {
-		return fiber.NewError(fiber.StatusInternalServerError, fmt.Sprintf("Failed to create request: %v", err))
+		slog.Error("[QuantumProxy] Failed to create request", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Failed to create request")
 	}
 
 	// Forward only safe headers (exclude sensitive headers like Cookie, Authorization)
@@ -167,12 +214,13 @@ func (h *QuantumProxyHandler) ProxyPostRequest(c *fiber.Ctx) error {
 	// Execute request with shared client (has timeout)
 	resp, err := quantumClient.Do(req)
 	if err != nil {
-		return fiber.NewError(fiber.StatusServiceUnavailable, fmt.Sprintf("Quantum service unavailable: %v", err))
+		slog.Error("[QuantumProxy] Quantum service unavailable", "target", targetURL, "error", err)
+		return fiber.NewError(fiber.StatusServiceUnavailable, "Quantum service unavailable")
 	}
 	defer resp.Body.Close()
 
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
+	// Read response body (bounded to prevent memory exhaustion)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxQuantumResponseBytes))
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, "Failed to read response")
 	}

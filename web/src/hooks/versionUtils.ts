@@ -118,6 +118,16 @@ export function parseRelease(release: GitHubRelease): ParsedRelease {
 }
 
 /**
+ * Keep nightly prereleases even when GitHub marks them as drafts.
+ * Nightly automation currently publishes them that way, and unstable users still
+ * need them in the cached release list for "Latest Available" to work.
+ */
+export function shouldIncludeRelease(release: GitHubRelease): boolean {
+  if (!release.draft) return true
+  return parseReleaseTag(release.tag_name).type === 'nightly'
+}
+
+/**
  * Get the latest release for a given channel.
  *
  * - stable channel: stable (full semver) releases like v0.3.11

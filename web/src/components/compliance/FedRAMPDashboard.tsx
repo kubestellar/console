@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo, useCallback } from 'react'
+import { useState, useEffect, useMemo, memo, useCallback, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { fedrampDashboardConfig } from '../../config/dashboards/fedramp'
 import {
@@ -32,7 +32,7 @@ interface POAM {
 
 interface FedRAMPScore {
   overall_score: number
-  authorization_status: string
+  authorization_status?: string | null
   impact_level: string
   controls_satisfied: number
   controls_partially_satisfied: number
@@ -70,7 +70,7 @@ const controlStatusColor = (status: string) => {
   }
 }
 
-const authorizationStatusStyle = (status: string) => {
+const authorizationStatusStyle = (status?: string | null) => {
   switch (status) {
     case 'authorized': return 'text-green-700 dark:text-green-400'
     case 'in_progress':
@@ -79,6 +79,8 @@ const authorizationStatusStyle = (status: string) => {
     default: return 'text-foreground'
   }
 }
+
+const formatAuthorizationStatus = (status?: string | null) => status?.replace(/_/g, ' ') ?? 'Unknown'
 
 const milestoneStatusBadge = (status: string) => {
   switch (status) {
@@ -98,6 +100,7 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
   const [activeTab, setActiveTab] = useState<'controls' | 'poams' | 'readiness'>('controls')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -109,17 +112,24 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
         authFetch('/api/compliance/fedramp/score'),
       ])
       if (!cRes.ok || !pRes.ok || !sRes.ok) throw new Error('Failed to fetch FedRAMP data')
+      if (cancelledRef.current) return
       setControls(await cRes.json())
       setPOAMs(await pRes.json())
       setScore(await sRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Unknown error')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [fetchData])
 
   const filteredControls = useMemo(() => {
     if (statusFilter === 'all') return controls
@@ -161,7 +171,7 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
           </div>
           <div className="bg-card rounded-lg p-4 border border-border shadow-sm">
             <p className="text-sm text-muted-foreground">Authorization</p>
-            <p className={`text-2xl font-bold capitalize ${authorizationStatusStyle(score.authorization_status)}`}>{score.authorization_status.replace('_', ' ')}</p>
+            <p className={`text-2xl font-bold capitalize ${authorizationStatusStyle(score.authorization_status)}`}>{formatAuthorizationStatus(score.authorization_status)}</p>
           </div>
           <div className="bg-card rounded-lg p-4 border border-green-500/30 shadow-sm">
             <p className="text-sm text-muted-foreground">Satisfied</p>
@@ -293,7 +303,7 @@ export const FedRAMPDashboardContent = memo(function FedRAMPDashboardContent() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Authorization Status</p>
-                <p className={`text-xl font-bold capitalize ${authorizationStatusStyle(score.authorization_status)}`}>{score.authorization_status.replace('_', ' ')}</p>
+                <p className={`text-xl font-bold capitalize ${authorizationStatusStyle(score.authorization_status)}`}>{formatAuthorizationStatus(score.authorization_status)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Overall Score</p>

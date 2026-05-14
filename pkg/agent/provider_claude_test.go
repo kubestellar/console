@@ -29,10 +29,9 @@ func TestClaudeProvider_Chat(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Override URL
-	oldURL := claudeAPIURL
-	claudeAPIURL = server.URL
-	defer func() { claudeAPIURL = oldURL }()
+	// Override base URL via environment variable
+	os.Setenv("ANTHROPIC_BASE_URL", server.URL)
+	defer os.Unsetenv("ANTHROPIC_BASE_URL")
 
 	// 2. Setup provider
 	os.Setenv("ANTHROPIC_API_KEY", "test-key")
@@ -84,9 +83,9 @@ func TestClaudeProvider_StreamChat(t *testing.T) {
 	}))
 	defer server.Close()
 
-	oldURL := claudeAPIURL
-	claudeAPIURL = server.URL
-	defer func() { claudeAPIURL = oldURL }()
+	// Override base URL via environment variable
+	os.Setenv("ANTHROPIC_BASE_URL", server.URL)
+	defer os.Unsetenv("ANTHROPIC_BASE_URL")
 
 	os.Setenv("ANTHROPIC_API_KEY", "test-key")
 	defer os.Unsetenv("ANTHROPIC_API_KEY")

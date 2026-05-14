@@ -199,6 +199,7 @@ function MarketplaceCard({ item, onInstall, onRemove, isInstalled }: {
               src={item.screenshot}
               alt={item.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              loading="lazy"
             />
           </div>
         ) : (
@@ -413,6 +414,9 @@ function AuthorBadge({ author, github, compact }: { author: string; github?: str
                     src={`https://github.com/${github}.png?size=80`}
                     alt={github}
                     className="w-10 h-10 rounded-full border border-border"
+                    loading="lazy"
+                    width={40}
+                    height={40}
                   />
                   <div>
                     <div className="text-sm font-semibold text-white">@{github}</div>

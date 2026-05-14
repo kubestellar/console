@@ -209,7 +209,7 @@ export function useSlackNotification() {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*AI Analysis:*\n${alert.aiDiagnosis.summary}\n\n*Suggestions:*\n${alert.aiDiagnosis.suggestions.map(s => `• ${s}`).join('\n')}` } })
+            text: `*AI Analysis:*\n${alert.aiDiagnosis.summary}\n\n*Suggestions:*\n${(alert.aiDiagnosis.suggestions || []).map(s => `• ${s}`).join('\n')}` } })
       }
 
       try {

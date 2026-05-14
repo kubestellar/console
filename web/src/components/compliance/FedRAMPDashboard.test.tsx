@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { FedRAMPDashboardContent as FedRAMPDashboard } from './FedRAMPDashboard'
+import { authFetch } from '../../lib/api'
 
 const mockControls = [
   { id: 'AC-1', name: 'Access Control Policy', description: 'Define access policies.', family: 'AC', status: 'satisfied', responsible: 'Platform Team', implementation: 'RBAC and OPA' },
@@ -15,16 +16,25 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
 }))
 vi.mock('../../lib/api', () => ({
-  authFetch: vi.fn((url: string) => {
-    if (url.includes('/controls')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockControls) })
-    if (url.includes('/poams')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPOAMs) })
-    if (url.includes('/score')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockScore) })
-    return Promise.resolve({ ok: false })
-  }),
+  authFetch: vi.fn(),
 }))
 
+const mockAuthFetch = vi.mocked(authFetch)
+
+function mockFedRAMPFetches(score = mockScore) {
+  mockAuthFetch.mockImplementation((url: string) => {
+    if (url.includes('/controls')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockControls) })
+    if (url.includes('/poams')) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockPOAMs) })
+    if (url.includes('/score')) return Promise.resolve({ ok: true, json: () => Promise.resolve(score) })
+    return Promise.resolve({ ok: false })
+  })
+}
+
 describe('FedRAMPDashboard', () => {
-  beforeEach(() => { vi.clearAllMocks() })
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockFedRAMPFetches()
+  })
 
   it('renders the dashboard title', async () => {
     render(<FedRAMPDashboard />)
@@ -53,5 +63,13 @@ describe('FedRAMPDashboard', () => {
       const el = screen.getByText('in process')
       expect(el.className).toContain('text-orange')
     })
+  })
+
+  it('falls back to Unknown when authorization_status is missing', async () => {
+    mockFedRAMPFetches({ ...mockScore, authorization_status: undefined })
+
+    render(<FedRAMPDashboard />)
+
+    await waitFor(() => expect(screen.getByText('Unknown')).toBeInTheDocument())
   })
 })

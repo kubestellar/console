@@ -9,19 +9,26 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
-// RequiredMissionTools lists the CLI binaries that must be available in
-// PATH for AI missions to execute cluster operations. Each entry is a
-// binary name passed to exec.LookPath during the pre-launch readiness
-// check. Keep this list in sync with the tools referenced in
-// ClaudeCodeSystemPrompt and the --allowedTools flag below.
+// RequiredMissionTools lists CLI binaries that MUST be on PATH for any
+// mission to run. Missing any of these is a hard failure.
 var RequiredMissionTools = []string{
 	"kubectl", // Kubernetes CLI — cluster inspection & management
-	"helm",    // Helm — chart-based deployments
 	"git",     // Git — version control operations
-	"gh",      // GitHub CLI — PR creation, issue triage
+}
+
+// OptionalMissionTools lists CLI binaries that enhance missions but are
+// not strictly required. Missing tools are logged as warnings; missions
+// that need them will fail at execution time with a clear error from
+// the agent rather than a blanket preflight block.
+var OptionalMissionTools = []string{
+	"helm", // Helm — chart-based deployments
+	"gh",   // GitHub CLI — PR creation, issue triage
 }
 
 // ToolDependencyError is returned when one or more required CLI tools
@@ -35,9 +42,16 @@ func (e *ToolDependencyError) Error() string {
 	return fmt.Sprintf("missing required tools: %s — install them before running AI missions", strings.Join(e.MissingTools, ", "))
 }
 
+// warnedOptionalTools tracks which optional tools have already produced a
+// warning so each missing tool only logs once per process lifetime.
+var warnedOptionalTools sync.Map
+
 // CheckToolDependencies verifies that every binary in RequiredMissionTools
-// is available on PATH via exec.LookPath. Returns nil when all tools are
-// present, or a *ToolDependencyError listing the missing ones.
+// is available on PATH. Optional tools are checked but only produce a log
+// warning — they do not block mission execution. Each missing optional tool
+// warns at most once per process to avoid log spam on repeated invocations.
+// Optional tools are always checked, even when required tools are missing,
+// so the caller receives the full picture in one pass.
 func CheckToolDependencies() error {
 	var missing []string
 	for _, tool := range RequiredMissionTools {
@@ -45,6 +59,15 @@ func CheckToolDependencies() error {
 			missing = append(missing, tool)
 		}
 	}
+
+	for _, tool := range OptionalMissionTools {
+		if _, err := exec.LookPath(tool); err != nil {
+			if _, alreadyWarned := warnedOptionalTools.LoadOrStore(tool, true); !alreadyWarned {
+				slog.Warn("optional mission tool not found on PATH — missions requiring it will fail at execution time", "tool", tool)
+			}
+		}
+	}
+
 	if len(missing) > 0 {
 		return &ToolDependencyError{MissingTools: missing}
 	}
@@ -384,13 +407,13 @@ func (c *ClaudeCodeProvider) StreamChatWithProgress(ctx context.Context, req *Ch
 
 	// Read stderr in background for error reporting
 	var stderrContent strings.Builder
-	go func() {
+	safego.GoWith("claude-code-stream", func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
 			stderrContent.WriteString(scanner.Text())
 			stderrContent.WriteString("\n")
 		}
-	}()
+	})
 
 	// Parse streaming JSON output
 	var finalResult string

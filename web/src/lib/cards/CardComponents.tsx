@@ -1,6 +1,7 @@
 import { ReactNode, useRef, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { LucideIcon, CheckCircle, AlertTriangle, Info, Search, Filter, ChevronDown, ChevronRight, Server, Stethoscope, Wrench, XCircle } from 'lucide-react'
+import { cn } from '../../lib/cn'
 import { useMissions } from '../../hooks/useMissions'
 import { useApiKeyCheck, ApiKeyPromptModal } from '../../components/cards/console-missions/shared'
 import { Skeleton } from '../../components/ui/Skeleton'
@@ -241,7 +242,7 @@ export function CardSearchInput({
   useEffect(() => () => clearTimeout(timerRef.current), [])
 
   return (
-    <div className={`relative mb-4 flex-1 min-w-[10rem] max-w-full ${className}`}>
+    <div className={cn('relative mb-4 flex-1 min-w-[10rem] max-w-full', className)}>
       <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
       <input
         type="text"

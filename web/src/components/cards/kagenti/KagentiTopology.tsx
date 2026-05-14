@@ -32,12 +32,13 @@ interface TopoEdge {
 export function KagentiTopology({ config }: { config?: Record<string, unknown> }) {
   const { t } = useTranslation('cards')
   const cluster = config?.cluster as string | undefined
-  const { data: agents, isLoading: agentsLoading, isDemoFallback: agentsDemo } = useKagentiAgents({ cluster })
-  const { data: tools, isLoading: toolsLoading, isDemoFallback: toolsDemo } = useKagentiTools({ cluster })
+  const { data: agents, isLoading: agentsLoading, isRefreshing: agentsRefreshing, isDemoFallback: agentsDemo } = useKagentiAgents({ cluster })
+  const { data: tools, isLoading: toolsLoading, isRefreshing: toolsRefreshing, isDemoFallback: toolsDemo } = useKagentiTools({ cluster })
 
   const hasData = agents.length > 0 || tools.length > 0
   useCardLoadingState({
     isLoading: (agentsLoading || toolsLoading) && !hasData,
+    isRefreshing: agentsRefreshing || toolsRefreshing,
     hasAnyData: hasData,
     isDemoData: agentsDemo || toolsDemo,
   })

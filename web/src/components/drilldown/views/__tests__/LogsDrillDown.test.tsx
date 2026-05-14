@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import type { DependencyList, ReactNode } from 'react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
 
 vi.mock('../../../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -29,18 +30,52 @@ vi.mock('../../../../hooks/useTokenUsage', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', changeLanguage: vi.fn() } }),
-  Trans: ({ children }: { children: React.ReactNode }) => children,
+  Trans: ({ children }: { children: ReactNode }) => children,
 }))
 
 vi.mock('../../../../hooks/useDrillDown', () => ({
   useDrillDownActions: () => ({ drillToCluster: vi.fn(), drillToNamespace: vi.fn(), drillToPod: vi.fn() }),
 }))
 
-import { LogsDrillDown } from '../LogsDrillDown'
+async function loadLogsDrillDown() {
+  const module = await import('../LogsDrillDown')
+  return module.LogsDrillDown
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.doUnmock('react')
+  vi.resetModules()
+})
 
 describe('LogsDrillDown', () => {
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
+    const LogsDrillDown = await loadLogsDrillDown()
     const { container } = render(<LogsDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1' }} />)
     expect(container).toBeTruthy()
+  })
+
+  it('shows an empty state when no visible log lines remain', async () => {
+    vi.doMock('react', async () => {
+      const actual = await vi.importActual<typeof import('react')>('react')
+      let useMemoCallCount = 0
+
+      return {
+        ...actual,
+        useMemo: <T,>(factory: () => T, deps?: DependencyList) => {
+          useMemoCallCount += 1
+          if (useMemoCallCount <= 2) {
+            return [] as T
+          }
+          return actual.useMemo(factory, deps)
+        },
+      }
+    })
+
+    const LogsDrillDown = await loadLogsDrillDown()
+    render(<LogsDrillDown data={{ cluster: 'c1', namespace: 'ns1', pod: 'pod1' }} />)
+
+    expect(screen.getByText('drilldown.logs.noLogsMatchFilter')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'drilldown.logs.download' })).toBeDisabled()
   })
 })

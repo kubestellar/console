@@ -11,6 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // Client is a generic MCP client that communicates with an MCP server via stdio
@@ -31,11 +33,11 @@ type Client struct {
 	// float64 (from interface{} fields) while outgoing IDs are stored as
 	// int64 — a type mismatch that caused every call() to block until the
 	// context deadline fired (#6622).
-	pending  map[string]chan *Response
-	tools         []Tool
-	ready         atomic.Bool // protected via atomic to avoid data races (#6942)
-	done          chan struct{}
-	stopOnce      sync.Once
+	pending        map[string]chan *Response
+	tools          []Tool
+	ready          atomic.Bool // protected via atomic to avoid data races (#6942)
+	done           chan struct{}
+	stopOnce       sync.Once
 	stdinCloseOnce sync.Once
 }
 
@@ -216,14 +218,14 @@ func (c *Client) Start(ctx context.Context) error {
 	}
 
 	// Start reading responses
-	go c.readResponses()
+	safego.GoWith("mcp/read-responses", func() { c.readResponses() })
 
 	// #7960 — Drain the child's stderr on a dedicated goroutine. Linux
 	// pipe buffers default to 64 KiB; once a chatty MCP server fills it,
 	// every further stderr write blocks and the child stalls. Logging the
 	// drained lines via slog.Debug preserves diagnostics for operators
 	// without blocking the child.
-	go c.drainStderr()
+	safego.GoWith("mcp/drain-stderr", func() { c.drainStderr() })
 
 	// Initialize the connection
 	if err := c.initialize(ctx); err != nil {
@@ -460,11 +462,11 @@ func (c *Client) send(req Request) error {
 	ch := make(chan writeResult, 1)
 
 	c.writeMu.Lock()
-	go func() {
+	safego.Go(func() {
 		defer c.writeMu.Unlock()
 		_, werr := c.stdin.Write(data)
 		ch <- writeResult{err: werr}
-	}()
+	})
 
 	select {
 	case res := <-ch:

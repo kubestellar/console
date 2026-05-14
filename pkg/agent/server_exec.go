@@ -52,7 +52,6 @@ package agent
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -61,6 +60,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/kubestellar/console/pkg/safego"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/remotecommand"
@@ -325,12 +325,14 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// applies to the backend handler does NOT apply here.
 	clientset, err := s.k8sClient.GetClient(init.Cluster)
 	if err != nil {
-		agentExecWriteError(conn, fmt.Sprintf("Failed to get client for cluster %s: %v", init.Cluster, err))
+		slog.Error("[Exec] failed to get client", "cluster", init.Cluster, "error", err)
+		agentExecWriteError(conn, "Failed to get cluster client")
 		return
 	}
 	restConfig, err := s.k8sClient.GetRestConfig(init.Cluster)
 	if err != nil {
-		agentExecWriteError(conn, fmt.Sprintf("Failed to get REST config for cluster %s: %v", init.Cluster, err))
+		slog.Error("[Exec] failed to get REST config", "cluster", init.Cluster, "error", err)
+		agentExecWriteError(conn, "Failed to get cluster configuration")
 		return
 	}
 
@@ -352,7 +354,8 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 
 	executor, err := remotecommand.NewSPDYExecutor(restConfig, "POST", execReq.URL())
 	if err != nil {
-		agentExecWriteError(conn, fmt.Sprintf("Failed to create executor: %v", err))
+		slog.Error("[Exec] failed to create executor", "error", err)
+		agentExecWriteError(conn, "Failed to create command executor")
 		return
 	}
 
@@ -393,7 +396,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// Ping goroutine — matches the backend handler's #6891 pattern. A
 	// failed write means the peer is gone; cancel execCtx so the SPDY
 	// executor exits.
-	go func() {
+	safego.GoWith("agent-exec-ping", func() {
 		ticker := time.NewTicker(agentExecPingInterval)
 		defer ticker.Stop()
 		for {
@@ -411,7 +414,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	}()
+	})
 
 	// Read loop — stdin and resize messages. `done` is closed when the loop
 	// exits, so the main goroutine can wait for it before closing sizeQueue
@@ -422,7 +425,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 	// session counts so a sustained backpressure burst does not flood the
 	// journal. Matches the backend handler's per-session throttling.
 	var sessionStdinDrops uint64
-	go func() {
+	safego.GoWith("agent-exec-read-loop", func() {
 		defer close(done)
 		defer close(stdinCh)
 		defer execCancel()
@@ -466,7 +469,7 @@ func (s *Server) handleExec(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-	}()
+	})
 
 	// Block on the SPDY executor until the session ends.
 	streamOpts := remotecommand.StreamOptions{

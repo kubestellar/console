@@ -6,7 +6,7 @@ import { api } from '../../lib/api'
 import { useAuth } from '../../lib/auth'
 import { ROUTES } from '../../config/routes'
 import { STORAGE_KEY_TOKEN, DEMO_TOKEN_VALUE, STORAGE_KEY_ONBOARDING_RESPONSES, STORAGE_KEY_ONBOARDED } from '../../lib/constants'
-import { safeGetItem, safeSetItem, safeSetJSON } from '../../lib/utils/localStorage'
+import { safeGetItem, safeSetItem, safeSetJSON, safeRemoveItem } from '../../lib/utils/localStorage'
 import { Button } from '../ui/Button'
 
 interface Question {
@@ -132,6 +132,12 @@ export function Onboarding() {
   const [errorMessage, setErrorMessage] = useState('')
 
   const handleComplete = async () => {
+    const fallbackErrorMessage = t('onboarding.errorFallback', {
+      defaultValue: 'Failed to complete onboarding. Please try again.',
+    })
+    const token = safeGetItem(STORAGE_KEY_TOKEN)
+    const isDemoMode = token === DEMO_TOKEN_VALUE
+
     setIsSubmitting(true)
     setErrorMessage('')
     try {
@@ -141,14 +147,18 @@ export function Onboarding() {
         answer: Array.isArray(answer) ? answer.join(',') : answer,
       }))
 
-      // Check if demo mode (no backend available)
-      const token = safeGetItem(STORAGE_KEY_TOKEN)
-      const isDemoMode = token === DEMO_TOKEN_VALUE
-
       if (isDemoMode) {
-        // Demo mode: save onboarding responses to localStorage
-        safeSetJSON(STORAGE_KEY_ONBOARDING_RESPONSES, responses)
-        safeSetItem(STORAGE_KEY_ONBOARDED, 'true')
+        // Demo mode: persist onboarding locally, but surface storage failures.
+        const didStoreResponses = safeSetJSON(STORAGE_KEY_ONBOARDING_RESPONSES, responses)
+        if (!didStoreResponses) {
+          throw new Error(fallbackErrorMessage)
+        }
+
+        const didMarkOnboarded = safeSetItem(STORAGE_KEY_ONBOARDED, 'true')
+        if (!didMarkOnboarded) {
+          safeRemoveItem(STORAGE_KEY_ONBOARDING_RESPONSES)
+          throw new Error(fallbackErrorMessage)
+        }
       } else {
         // Real user: save to backend
         await api.post('/api/onboarding/responses', responses)
@@ -160,17 +170,13 @@ export function Onboarding() {
 
       navigate(ROUTES.HOME)
     } catch (err: unknown) {
-      // For demo mode, still allow navigation even if there's an error
-      const token = safeGetItem(STORAGE_KEY_TOKEN)
-      if (token === DEMO_TOKEN_VALUE) {
-        safeSetItem(STORAGE_KEY_ONBOARDED, 'true')
-        await refreshUser()
-        navigate(ROUTES.HOME)
-      } else {
-        // Real user: show error message so they are not stranded
-        const message = err instanceof Error ? err.message : t('onboarding.errorFallback')
-        setErrorMessage(message)
+      if (isDemoMode) {
+        safeRemoveItem(STORAGE_KEY_ONBOARDING_RESPONSES)
+        safeRemoveItem(STORAGE_KEY_ONBOARDED)
       }
+
+      const message = err instanceof Error && err.message ? err.message : fallbackErrorMessage
+      setErrorMessage(message)
     } finally {
       setIsSubmitting(false)
     }

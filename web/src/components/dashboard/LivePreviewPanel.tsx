@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Eye, EyeOff, Maximize2, Minimize2, AlertTriangle, Loader2, Database } from 'lucide-react'
 import { Tier1CardRuntime } from '../cards/DynamicCard'
@@ -171,45 +171,47 @@ function T2Preview({ source }: { source?: string }) {
   }, [source])
 
   // Compile when debounced source updates
-  const compiledKey = useMemo(() => debouncedSource, [debouncedSource])
-
   useEffect(() => {
-    if (!compiledKey) {
-      setCardComponent(null)
-      setError(null)
+    if (!debouncedSource) {
       return
     }
 
     let cancelled = false
-    setCompiling(true)
-    setError(null)
 
-    compileCardCode(compiledKey).then(result => {
+    Promise.resolve().then(async () => {
       if (cancelled) return
-      if (result.error) {
-        setError(result.error)
+      setCompiling(true)
+      setError(null)
+
+      try {
+        const result = await compileCardCode(debouncedSource)
+        if (cancelled) return
+        if (result.error) {
+          setError(result.error)
+          setCompiling(false)
+          setCardComponent(null)
+          return
+        }
+        const componentResult = createCardComponent(result.code!)
+        if (cancelled) return
+        if (componentResult.error) {
+          setError(componentResult.error)
+          setCompiling(false)
+          setCardComponent(null)
+          return
+        }
+        setCardComponent(() => componentResult.component)
         setCompiling(false)
+      } catch (err: unknown) {
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Compilation failed')
         setCardComponent(null)
-        return
-      }
-      const componentResult = createCardComponent(result.code!)
-      if (cancelled) return
-      if (componentResult.error) {
-        setError(componentResult.error)
         setCompiling(false)
-        setCardComponent(null)
-        return
       }
-      setCardComponent(() => componentResult.component)
-      setCompiling(false)
-    }).catch((err: unknown) => {
-      if (cancelled) return
-      setError(err instanceof Error ? err.message : 'Compilation failed')
-      setCompiling(false)
     })
 
     return () => { cancelled = true }
-  }, [compiledKey])
+  }, [debouncedSource])
 
   if (!source) {
     return (

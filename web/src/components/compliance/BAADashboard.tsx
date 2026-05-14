@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { baaDashboardConfig } from '../../config/dashboards/baa'
 import {
@@ -36,6 +37,7 @@ const PROVIDER_ICONS: Record<string, typeof Cloud> = {
 }
 
 export const BAADashboardContent = memo(function BAADashboardContent() {
+  const { t } = useTranslation()
   const [agreements, setAgreements] = useState<BAAgreement[]>([])
   const [alerts, setAlerts] = useState<BAAAlert[]>([])
   const [summary, setSummary] = useState<BAASummary | null>(null)
@@ -44,6 +46,7 @@ export const BAADashboardContent = memo(function BAADashboardContent() {
   const [activeTab, setActiveTab] = useState<'agreements' | 'alerts'>('agreements')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -55,17 +58,24 @@ export const BAADashboardContent = memo(function BAADashboardContent() {
         authFetch('/api/compliance/baa/summary'),
       ])
       if (!agRes.ok || !alRes.ok || !smRes.ok) throw new Error('Failed to load BAA data')
+      if (cancelledRef.current) return
       setAgreements(await agRes.json())
       setAlerts(await alRes.json())
       setSummary(await smRes.json())
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load BAA data')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [])
 
   const filtered = useMemo(() =>
     statusFilter === 'all' ? agreements : agreements.filter(a => a.status === statusFilter),
@@ -83,7 +93,7 @@ export const BAADashboardContent = memo(function BAADashboardContent() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">Retry</button>
+      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 

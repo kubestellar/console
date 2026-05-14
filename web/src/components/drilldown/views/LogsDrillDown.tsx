@@ -318,9 +318,15 @@ export function LogsDrillDown({ data }: Props) {
       {!isLoading && !error && (
         <div
           ref={logContainerRef}
-          className="rounded-lg bg-card border border-border p-4 font-mono text-sm overflow-auto max-h-[60vh]"
+          className="rounded-lg bg-card border border-border p-4 overflow-auto max-h-[60vh]"
         >
-          <pre className="text-foreground whitespace-pre-wrap">{visibleLog}</pre>
+          {visibleLogLines.length > 0 ? (
+            <pre className="font-mono text-sm text-foreground whitespace-pre-wrap">{visibleLog}</pre>
+          ) : (
+            <div className="py-8 text-sm text-muted-foreground text-center">
+              {t('drilldown.logs.noLogsMatchFilter')}
+            </div>
+          )}
         </div>
       )}
 

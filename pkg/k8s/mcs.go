@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/safego"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/kubestellar/console/pkg/api/v1alpha1"
 )
 
 // isCRDNotInstalled reports whether the given error indicates that the MCS
@@ -64,8 +64,9 @@ func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.
 	clusterErrors := make([]v1alpha1.MCSClusterError, 0)
 
 	for _, clusterName := range clusters {
+		cluster := clusterName
 		wg.Add(1)
-		go func(cluster string) {
+		safego.GoWith("mcs/"+cluster, func() {
 			defer wg.Done()
 
 			clusterExports, err := m.ListServiceExportsForCluster(ctx, cluster, "")
@@ -83,7 +84,7 @@ func (m *MultiClusterClient) ListServiceExports(ctx context.Context) (*v1alpha1.
 			mu.Lock()
 			exports = append(exports, clusterExports...)
 			mu.Unlock()
-		}(clusterName)
+		})
 	}
 
 	wg.Wait()
@@ -171,8 +172,9 @@ func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.
 	clusterErrors := make([]v1alpha1.MCSClusterError, 0)
 
 	for _, clusterName := range clusters {
+		cluster := clusterName
 		wg.Add(1)
-		go func(cluster string) {
+		safego.GoWith("mcs/"+cluster, func() {
 			defer wg.Done()
 
 			clusterImports, err := m.ListServiceImportsForCluster(ctx, cluster, "")
@@ -190,7 +192,7 @@ func (m *MultiClusterClient) ListServiceImports(ctx context.Context) (*v1alpha1.
 			mu.Lock()
 			imports = append(imports, clusterImports...)
 			mu.Unlock()
-		}(clusterName)
+		})
 	}
 
 	wg.Wait()

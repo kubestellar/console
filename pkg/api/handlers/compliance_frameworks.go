@@ -123,7 +123,7 @@ func (h *ComplianceFrameworksHandler) EvaluateFramework(c *fiber.Ctx) error {
 		slog.Error("[ComplianceFrameworks] evaluation failed",
 			"framework", id, "cluster", req.Cluster, "error", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "evaluation failed: " + err.Error(),
+			"error": "evaluation failed",
 		})
 	}
 	return c.JSON(result)

@@ -46,7 +46,9 @@ vi.mock('../../hooks/useMissions', () => ({
   useMissions: () => ({ startMission: vi.fn() }) }))
 
 vi.mock('../../hooks/useLocalAgent', () => ({
-  useLocalAgent: () => ({ status: 'connected' }) }))
+  useLocalAgent: () => ({ status: 'connected' }),
+  wasAgentEverConnected: () => false,
+}))
 
 vi.mock('../../hooks/useBackendHealth', () => ({
   isInClusterMode: () => false }))

@@ -8,6 +8,7 @@
  */
 import { test, expect} from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { ROUTES } from '../../src/config/routes'
 import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
@@ -49,21 +50,21 @@ interface A11yReport {
 // ---------------------------------------------------------------------------
 
 const ROUTES_TO_AUDIT = [
-  { name: 'Dashboard', path: '/' },
-  { name: 'Clusters', path: '/clusters' },
-  { name: 'Settings', path: '/settings' },
-  { name: 'Compute', path: '/compute' },
-  { name: 'Security', path: '/security' },
-  { name: 'Deployments', path: '/deployments' },
-  { name: 'Helm', path: '/helm' },
-  { name: 'GPU Reservations', path: '/gpu-reservations' },
-  { name: 'AI/ML', path: '/ai-ml' },
-  { name: 'Logs', path: '/logs' },
-  { name: 'Events', path: '/events' },
-  { name: 'Pods', path: '/pods' },
-  { name: 'Services', path: '/services' },
-  { name: 'Nodes', path: '/nodes' },
-  { name: 'Workloads', path: '/workloads' },
+  { name: 'Dashboard', path: ROUTES.HOME },
+  { name: 'Clusters', path: ROUTES.CLUSTERS },
+  { name: 'Settings', path: ROUTES.SETTINGS },
+  { name: 'Compute', path: ROUTES.COMPUTE },
+  { name: 'Security', path: ROUTES.SECURITY },
+  { name: 'Deployments', path: ROUTES.DEPLOYMENTS },
+  { name: 'Helm', path: ROUTES.HELM },
+  { name: 'GPU Reservations', path: ROUTES.GPU_RESERVATIONS },
+  { name: 'AI/ML', path: ROUTES.AI_ML },
+  { name: 'Logs', path: ROUTES.LOGS },
+  { name: 'Events', path: ROUTES.EVENTS },
+  { name: 'Pods', path: ROUTES.PODS },
+  { name: 'Services', path: ROUTES.SERVICES },
+  { name: 'Nodes', path: ROUTES.NODES },
+  { name: 'Workloads', path: ROUTES.WORKLOADS },
 ]
 
 const IS_CI = !!process.env.CI

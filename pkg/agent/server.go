@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -19,6 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -274,9 +274,10 @@ func NewServer(cfg Config) (*Server, error) {
 			return nil, fmt.Errorf("failed to generate random agent token: %w", err)
 		}
 		agentToken = generated
-		slog.Info("KC_AGENT_TOKEN is not set — auto-generated a random token for this session")
-		// Print to stdout so the operator can copy-paste it into clients.
-		fmt.Fprintf(os.Stderr, "Auto-generated KC_AGENT_TOKEN: %s\n", agentToken) //nolint:forbidigo // intentional stderr for operator UX
+		slog.Warn("KC_AGENT_TOKEN is not set — auto-generated a random token for this session; set KC_AGENT_TOKEN to pin a shared secret (docs: https://github.com/kubestellar/console#kc-agent-bridge-self-hosted-console-to-your-clusters)")
+		// Print to stderr so the operator can copy-paste it into clients.
+		fmt.Fprintf(os.Stderr, "Auto-generated KC_AGENT_TOKEN for this session: %s\n", agentToken)                                                                                                             //nolint:forbidigo // intentional stderr for operator UX
+		fmt.Fprintln(os.Stderr, "Set KC_AGENT_TOKEN in your shell or .env to use a persistent shared secret. See https://github.com/kubestellar/console#kc-agent-bridge-self-hosted-console-to-your-clusters") //nolint:forbidigo // intentional stderr for operator UX
 	}
 
 	// Resolve per-session token quota from env, falling back to the compiled
@@ -736,7 +737,7 @@ func (s *Server) Start() error {
 	slog.Info("WebSocket endpoint available", "url", "ws://"+addr+"/ws")
 
 	// Validate all configured API keys on startup (run in background to not delay startup)
-	go s.ValidateAllKeys()
+	safego.GoWith("validate-all-keys", func() { s.ValidateAllKeys() })
 
 	// Start kubeconfig file watcher (uses k8s client's built-in watcher)
 	if s.k8sClient != nil {
@@ -844,7 +845,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		AvailableProviders: providerSummaries,
 	}
 
-	json.NewEncoder(w).Encode(payload)
+	writeJSON(w, payload)
 }
 
 // handleStatus handles authenticated agent status probes.
@@ -864,7 +865,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	clusters, _ := s.kubectl.ListContexts()
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"status":   "ok",
 		"version":  Version,
 		"clusters": len(clusters),
@@ -890,7 +891,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	providerName := r.URL.Query().Get("name")
 	if providerName == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(protocol.ErrorPayload{
+		writeJSON(w, protocol.ErrorPayload{
 			Code:    "missing_name",
 			Message: "Query parameter 'name' is required",
 		})
@@ -900,7 +901,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	provider, err := s.registry.Get(providerName)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(protocol.ProviderCheckResponse{
+		writeJSON(w, protocol.ProviderCheckResponse{
 			Provider: providerName,
 			Ready:    false,
 			State:    "failed",
@@ -925,7 +926,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 			resp.State = "failed"
 			resp.Message = fmt.Sprintf("%s is not available", provider.DisplayName())
 		}
-		json.NewEncoder(w).Encode(resp)
+		writeJSON(w, resp)
 		return
 	}
 
@@ -936,7 +937,7 @@ func (s *Server) handleProviderCheck(w http.ResponseWriter, r *http.Request) {
 	result := hp.Handshake(ctx)
 	slog.Info("[ProviderCheck] result", "provider", providerName, "state", result.State, "ready", result.Ready, "message", result.Message)
 
-	json.NewEncoder(w).Encode(protocol.ProviderCheckResponse{
+	writeJSON(w, protocol.ProviderCheckResponse{
 		Provider:      providerName,
 		Ready:         result.Ready,
 		State:         result.State,
@@ -1012,10 +1013,10 @@ const clusterOpsShutdownTimeout = 30 * time.Second
 // avoid orphaning background cluster create/delete operations.
 func (s *Server) GracefulShutdown() {
 	done := make(chan struct{})
-	go func() {
+	safego.GoWith("server/graceful-shutdown", func() {
 		s.clusterOpsWG.Wait()
 		close(done)
-	}()
+	})
 	select {
 	case <-done:
 		slog.Info("[Server] all cluster operations completed")

@@ -15,6 +15,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -38,7 +40,14 @@ const (
 
 	// Max lines of build output to include in error messages sent to the frontend
 	buildOutputTailLines = 20
+
+	// githubAPITimeout bounds GitHub API HTTP requests (releases, main ref).
+	githubAPITimeout = 10 * time.Second
 )
+
+// githubHTTPClient is reused across all GitHub API calls to enable connection
+// pooling and reduce per-request allocation overhead.
+var githubHTTPClient = &http.Client{Timeout: githubAPITimeout}
 
 // githubRepo returns the GitHub owner/repo slug, preferring the GITHUB_REPO
 // environment variable so forks and GHE instances work out-of-the-box.
@@ -164,7 +173,7 @@ func (uc *UpdateChecker) Start() {
 	uc.cancel = cancel
 	uc.mu.Unlock()
 
-	go uc.run(ctx)
+	safego.GoWith("update-checker/run", func() { uc.run(ctx) })
 }
 
 // Stop cancels the update check loop.
@@ -211,7 +220,8 @@ func (uc *UpdateChecker) Status() AutoUpdateStatusResponse {
 		resp.LastUpdateTime = uc.lastUpdateTime.Format(time.RFC3339)
 	}
 	if uc.lastUpdateError != "" {
-		resp.LastUpdateResult = uc.lastUpdateError
+		// Sanitize error message for client - don't leak raw git/npm/build errors
+		resp.LastUpdateResult = "Update failed - check server logs for details"
 	}
 	repoPath := uc.repoPath
 	uc.mu.Unlock()
@@ -274,13 +284,8 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 	}
 
 	if channelOverride != "" {
-		go func() {
+		safego.GoWith("auto-update-override", func() {
 			defer cleanup()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[AutoUpdate] PANIC recovered in update goroutine", "panic", r)
-				}
-			}()
 
 			uc.mu.Lock()
 			origChannel := uc.channel
@@ -292,17 +297,12 @@ func (uc *UpdateChecker) TriggerNow(channelOverride string) bool {
 			uc.mu.Lock()
 			uc.channel = origChannel
 			uc.mu.Unlock()
-		}()
+		})
 	} else {
-		go func() {
+		safego.GoWith("auto-update", func() {
 			defer cleanup()
-			defer func() {
-				if r := recover(); r != nil {
-					slog.Error("[AutoUpdate] PANIC recovered in update goroutine", "panic", r)
-				}
-			}()
 			uc.checkAndUpdate()
-		}()
+		})
 	}
 	return true
 }
@@ -488,7 +488,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "git pull failed",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -517,7 +517,7 @@ func (uc *UpdateChecker) executeDeveloperUpdate(newSHA string) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "npm install failed after retries, rolling back...",
-			Error:   err.Error() + " (try: sudo chown -R $(id -u):$(id -g) ~/.npm)",
+			Error:   "check server logs for details (try: sudo chown -R $(id -u):$(id -g) ~/.npm)",
 		})
 		rollbackGit(repoPath, previousSHA)
 		if rbErr := rebuildFrontend(repoPath); rbErr != nil {
@@ -884,7 +884,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Download failed",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -902,7 +902,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Failed to prepare staging directory",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -913,7 +913,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Failed to prepare staging directory",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -944,7 +944,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Extract failed",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -976,7 +976,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Failed to back up current binary",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -997,7 +997,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Failed to set binary permissions, rolled back",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -1014,7 +1014,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Failed to install new binary, rolled back",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -1035,7 +1035,7 @@ func (uc *UpdateChecker) executeBinaryUpdate(release *githubReleaseInfo) {
 		uc.broadcast("update_progress", UpdateProgressPayload{
 			Status:  "failed",
 			Message: "Restart failed, rolled back",
-			Error:   err.Error(),
+			Error:   "check server logs for details",
 		})
 		return
 	}
@@ -1338,9 +1338,7 @@ func gitFetchLatestSHA(repoPath string) (string, error) {
 
 // fetchLatestMainSHAFromGitHub calls the GitHub API to get the latest main SHA.
 func fetchLatestMainSHAFromGitHub() (string, error) {
-	const githubAPITimeout = 10 * time.Second
-	client := &http.Client{Timeout: githubAPITimeout}
-	resp, err := client.Get(githubMainRefURL())
+	resp, err := githubHTTPClient.Get(githubMainRefURL())
 	if err != nil {
 		return "", err
 	}
@@ -1358,8 +1356,7 @@ func fetchLatestMainSHAFromGitHub() (string, error) {
 }
 
 func fetchGitHubReleases() ([]githubReleaseInfo, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(githubReleasesURL())
+	resp, err := githubHTTPClient.Get(githubReleasesURL())
 	if err != nil {
 		return nil, err
 	}
@@ -1600,12 +1597,11 @@ func rollbackGit(repoPath, sha string) {
 }
 
 func waitForBackendHealth() bool {
-	client := &http.Client{Timeout: healthCheckTimeout}
 	// URL is resolved once per poll so that a BACKEND_PORT env var change
 	// mid-run (e.g. an operator re-running startup-oauth.sh) is picked up.
 	healthURL := backendHealthURL()
 	for i := 0; i < healthCheckRetries; i++ {
-		resp, err := client.Get(healthURL)
+		resp, err := healthCheckHTTPClient.Get(healthURL)
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
@@ -1715,7 +1711,7 @@ func (uc *UpdateChecker) runBuildCmd(
 
 	// Heartbeat goroutine — sends periodic "still building..." messages
 	done := make(chan struct{})
-	go func() {
+	safego.GoWith("update-build-heartbeat", func() {
 		ticker := time.NewTicker(buildHeartbeatInterval)
 		defer ticker.Stop()
 		start := time.Now()
@@ -1734,7 +1730,7 @@ func (uc *UpdateChecker) runBuildCmd(
 				})
 			}
 		}
-	}()
+	})
 
 	err := cmd.Wait()
 	close(done)

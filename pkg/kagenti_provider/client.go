@@ -268,7 +268,7 @@ func (c *KagentiClient) ListAgentsWithContext(ctx context.Context) ([]AgentInfo,
 }
 
 func decodeAgentList(body io.Reader) ([]AgentInfo, error) {
-	raw, err := io.ReadAll(body)
+	raw, err := io.ReadAll(io.LimitReader(body, maxKAgentResponseBytes))
 	if err != nil {
 		return nil, err
 	}

@@ -145,6 +145,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingProvider, setEditingProvider] = useState<string | null>(null)
+  const [editError, setEditError] = useState<string | null>(null)
   const [deleteConfirmProvider, setDeleteConfirmProvider] = useState<string | null>(null)
   const [newKeyValue, setNewKeyValue] = useState('')
   const [showKey, setShowKey] = useState(false)
@@ -183,9 +184,9 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
         throw new Error(t('agent.failedToFetchKeyStatus'))
       }
       const data: KeysStatusResponse = await response.json()
-      setKeysStatus(data.keys)
+      setKeysStatus(data.keys || [])
       setRegisteredProviders(data.registeredProviders || [])
-      setConfigPath(data.configPath)
+      setConfigPath(data.configPath || '')
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('agent.failedToConnect'))
     } finally {
@@ -246,11 +247,25 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     }
   }, [])
 
+  const getApiKeyErrorMessage = useCallback((message: string) => {
+    if (message.includes('not_found_error')) {
+      return t('agent.validationFailedModel')
+    }
+    if (message.includes('invalid_api_key') || message.includes('authentication')) {
+      return t('agent.invalidApiKey')
+    }
+    if (message.includes('rate_limit')) {
+      return t('agent.rateLimitExceeded')
+    }
+    return t('agent.failedToValidate')
+  }, [t])
+
   const handleSaveKey = async (provider: string) => {
     if (!newKeyValue.trim()) return
 
     try {
       setSaving(true)
+      setEditError(null)
       const response = await fetch(`${KC_AGENT_URL}/settings/keys`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -271,13 +286,14 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
 
       // Success - refresh status and close edit mode
       setEditingProvider(null)
+      setEditError(null)
       setNewKeyValue('')
       setShowKey(false)
       await fetchKeysStatus()
       emitApiKeyConfigured(provider)
       emitConversionStep(5, 'api_key', { provider })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t('agent.failedToSaveKey'))
+      setEditError(err instanceof Error ? err.message : t('agent.failedToSaveKey'))
     } finally {
       setSaving(false)
     }
@@ -315,11 +331,13 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
     setEditingProvider(provider)
     setNewKeyValue('')
     setShowKey(false)
+    setEditError(null)
     setError(null)
   }
 
   const cancelEditing = () => {
     setEditingProvider(null)
+    setEditError(null)
     setNewKeyValue('')
     setShowKey(false)
   }
@@ -383,6 +401,35 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                 {t('agent.retryConnection')}
               </button>
             </div>
+          ) : filteredKeys.length === 0 ? (
+            <div className="text-center py-6">
+              <div className="p-3 rounded-full bg-secondary w-fit mx-auto mb-4">
+                <Key className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">
+                {t('agent.noProvidersTitle')}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {t('agent.noProvidersDescription')}
+              </p>
+              <div className="bg-secondary/50 rounded-lg p-4 mb-4 text-left">
+                <p className="text-xs font-medium text-foreground mb-2">{t('agent.envVarsTitle')}</p>
+                <div className="space-y-1">
+                  <code className="block text-xs text-muted-foreground font-mono">ANTHROPIC_API_KEY=sk-ant-...</code>
+                  <code className="block text-xs text-muted-foreground font-mono">OPENAI_API_KEY=sk-...</code>
+                  <code className="block text-xs text-muted-foreground font-mono">GEMINI_API_KEY=...</code>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {t('agent.envVarsHint')}
+                </p>
+              </div>
+              <button
+                onClick={fetchKeysStatus}
+                className="text-sm text-primary hover:underline"
+              >
+                {t('agent.retryConnection')}
+              </button>
+            </div>
           ) : (
             <div className="space-y-4">
               {error && (
@@ -390,13 +437,7 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                   className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive cursor-help"
                   title={error}
                 >
-                  {error.includes('not_found_error')
-                    ? t('agent.validationFailedModel')
-                    : error.includes('invalid_api_key') || error.includes('authentication')
-                    ? t('agent.invalidApiKey')
-                    : error.includes('rate_limit')
-                    ? t('agent.rateLimitExceeded')
-                    : t('agent.failedToValidate')}
+                  {getApiKeyErrorMessage(error)}
                 </div>
               )}
 
@@ -475,7 +516,10 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                         <input
                           type={showKey ? 'text' : 'password'}
                           value={newKeyValue}
-                          onChange={(e) => setNewKeyValue(e.target.value)}
+                          onChange={(e) => {
+                            setNewKeyValue(e.target.value)
+                            setEditError(null)
+                          }}
                           placeholder={PROVIDER_INFO[key.provider]?.placeholder || t('agent.enterApiKey')}
                           className="w-full px-3 py-2 pr-10 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-primary"
                           autoFocus
@@ -488,6 +532,14 @@ export function APIKeySettings({ isOpen, onClose }: APIKeySettingsProps) {
                           {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
+                      {editError && (
+                        <div
+                          className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive cursor-help"
+                          title={editError}
+                        >
+                          {getApiKeyErrorMessage(editError)}
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleSaveKey(key.provider)}

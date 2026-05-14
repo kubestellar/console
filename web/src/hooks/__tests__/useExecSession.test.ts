@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
-vi.mock('../../lib/constants', async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>
-  return { ...actual,
-  STORAGE_KEY_TOKEN: 'kc-auth-token',
-} })
+vi.mock('../../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: (url: string) => Promise.resolve(url),
+}))
 
 import { useExecSession } from '../useExecSession'
 import type { ExecSessionConfig } from '../useExecSession'
@@ -53,12 +51,26 @@ const DEFAULT_CONFIG: ExecSessionConfig = {
   container: 'main',
 }
 
+async function flushPendingConnection() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+}
+
+async function connectSession(result: { current: { connect: (config: ExecSessionConfig) => void } }, config: ExecSessionConfig = DEFAULT_CONFIG) {
+  act(() => {
+    result.current.connect(config)
+  })
+  await flushPendingConnection()
+}
+
 describe('useExecSession', () => {
   let mockWs: MockWebSocket
 
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem('kc-auth-token', 'test-jwt')
+    localStorage.setItem('kc-agent-token', 'test-jwt')
     vi.clearAllMocks()
     vi.useFakeTimers()
 
@@ -90,6 +102,7 @@ describe('useExecSession', () => {
     expect(result.current.error).toBeNull()
     expect(result.current.reconnectAttempt).toBe(0)
     expect(result.current.reconnectCountdown).toBe(0)
+    expect(result.current.isStale).toBe(false)
   })
 
   it('provides connect/disconnect/sendInput/resize functions', () => {
@@ -124,18 +137,18 @@ describe('useExecSession', () => {
   })
 
   // --- Connect flow ---
-  it('transitions to connecting when connect is called', () => {
+  it('transitions to connecting when connect is called', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     expect(result.current.status).toBe('connecting')
   })
 
-  it('sends exec_init as the first WebSocket message on open', () => {
+  it('sends exec_init as the first WebSocket message on open', async () => {
     // #7993 Phase 3d: kc-agent validates the token on the HTTP upgrade
     // (Authorization header or ?token= query param), so the first JSON
     // frame we send is exec_init directly — no auth preamble.
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
 
     expect(mockWs.sentMessages.length).toBe(1)
@@ -149,7 +162,7 @@ describe('useExecSession', () => {
     expect(init.rows).toBe(24)
   })
 
-  it('uses custom command and cols/rows when provided', () => {
+  it('uses custom command and cols/rows when provided', async () => {
     const config: ExecSessionConfig = {
       ...DEFAULT_CONFIG,
       command: ['/bin/bash'],
@@ -158,7 +171,7 @@ describe('useExecSession', () => {
       rows: 40,
     }
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(config) })
+    await connectSession(result, config)
     act(() => { mockWs.triggerOpen() })
 
     // #7993 Phase 3d: exec_init is the first (and only) pre-stream frame.
@@ -169,19 +182,19 @@ describe('useExecSession', () => {
     expect(init.rows).toBe(40)
   })
 
-  it('transitions to connected on exec_started message', () => {
+  it('transitions to connected on exec_started message', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     expect(result.current.status).toBe('connected')
   })
 
-  it('calls statusChange callback on status transitions', () => {
+  it('calls statusChange callback on status transitions', async () => {
     const statusCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onStatusChange(statusCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     expect(statusCb).toHaveBeenCalledWith('connecting', undefined)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
@@ -189,11 +202,11 @@ describe('useExecSession', () => {
   })
 
   // --- Data and exit messages ---
-  it('calls data callback on stdout/stderr messages', () => {
+  it('calls data callback on stdout/stderr messages', async () => {
     const dataCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onData(dataCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'stdout', data: 'hello\n' }) })
@@ -202,21 +215,21 @@ describe('useExecSession', () => {
     expect(dataCb).toHaveBeenCalledWith('error!\n')
   })
 
-  it('ignores stdout/stderr with no data', () => {
+  it('ignores stdout/stderr with no data', async () => {
     const dataCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onData(dataCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'stdout' }) }) // no data
     expect(dataCb).not.toHaveBeenCalled()
   })
 
-  it('calls exit callback and transitions to disconnected on exit', () => {
+  it('calls exit callback and transitions to disconnected on exit', async () => {
     const exitCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onExit(exitCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'exit', exitCode: 0 }) })
@@ -224,11 +237,11 @@ describe('useExecSession', () => {
     expect(result.current.status).toBe('disconnected')
   })
 
-  it('defaults exit code to 0 when not provided', () => {
+  it('defaults exit code to 0 when not provided', async () => {
     const exitCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onExit(exitCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'exit' }) })
@@ -236,18 +249,18 @@ describe('useExecSession', () => {
   })
 
   // --- Error messages from server ---
-  it('transitions to error on server error message', () => {
+  it('transitions to error on server error message', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'error', data: 'Pod not found' }) })
     expect(result.current.status).toBe('error')
     expect(result.current.error).toBe('Pod not found')
   })
 
-  it('uses default error message when data is empty', () => {
+  it('uses default error message when data is empty', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'error' }) })
     expect(result.current.error).toBe('Unknown server error')
@@ -261,18 +274,22 @@ describe('useExecSession', () => {
   // throwing" test below.
 
   // --- WebSocket creation failure ---
-  it('handles WebSocket constructor throwing', () => {
-    vi.stubGlobal('WebSocket', vi.fn(() => { throw new Error('WS blocked by CSP') }))
+  it('handles WebSocket constructor throwing', async () => {
+    function ThrowingWebSocket() {
+      throw new Error('WS blocked by CSP')
+    }
+
+    vi.stubGlobal('WebSocket', ThrowingWebSocket)
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     expect(result.current.status).toBe('error')
     expect(result.current.error).toContain('WS blocked by CSP')
   })
 
   // --- onerror before connection established ---
-  it('sets error on WebSocket onerror before connection', () => {
+  it('sets error on WebSocket onerror before connection', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     // Error fires before exec_started
     act(() => { mockWs.triggerError() })
     expect(result.current.status).toBe('error')
@@ -280,33 +297,33 @@ describe('useExecSession', () => {
   })
 
   // --- onclose before connection established ---
-  it('sets error on WebSocket close before connection established', () => {
+  it('sets error on WebSocket close before connection established', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerClose(1006) })
     expect(result.current.status).toBe('error')
     expect(result.current.error).toContain('code: 1006')
   })
 
-  it('does not include code in error for normal close', () => {
+  it('does not include code in error for normal close', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerClose(1000) })
     expect(result.current.status).toBe('error')
     expect(result.current.error).not.toContain('code:')
   })
 
   // --- Disconnect ---
-  it('disconnect sets status to disconnected', () => {
+  it('disconnect sets status to disconnected', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { result.current.disconnect() })
     expect(result.current.status).toBe('disconnected')
   })
 
-  it('disconnect prevents reconnection on subsequent close', () => {
+  it('disconnect prevents reconnection on subsequent close', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { result.current.disconnect() })
@@ -317,9 +334,9 @@ describe('useExecSession', () => {
   })
 
   // --- sendInput and resize ---
-  it('sendInput sends JSON stdin message when connected', () => {
+  it('sendInput sends JSON stdin message when connected', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { result.current.sendInput('ls -la\n') })
@@ -328,9 +345,9 @@ describe('useExecSession', () => {
     expect(JSON.parse(sent!).data).toBe('ls -la\n')
   })
 
-  it('resize sends JSON resize message when connected', () => {
+  it('resize sends JSON resize message when connected', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { result.current.resize(120, 40) })
@@ -349,11 +366,11 @@ describe('useExecSession', () => {
   })
 
   // --- Reconnection ---
-  it('schedules reconnect on unexpected close after connection', () => {
+  it('schedules reconnect on unexpected close after connection', async () => {
     const dataCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onData(dataCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
 
@@ -366,11 +383,25 @@ describe('useExecSession', () => {
     expect(dataCb).toHaveBeenCalledWith(expect.stringContaining('Connection lost'))
   })
 
-  it('reports error message after connection is lost and max reconnects exhausted', () => {
+  it('marks the session stale when reconnecting takes too long', async () => {
+    const { result } = renderHook(() => useExecSession())
+    await connectSession(result)
+    act(() => { mockWs.triggerOpen() })
+    act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
+    act(() => { mockWs.triggerClose(1006) })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(50_000)
+    })
+
+    expect(result.current.isStale).toBe(true)
+  })
+
+  it('reports error message after connection is lost and max reconnects exhausted', async () => {
     // This test verifies the error message format for the "max reconnects" case
     // The actual reconnection scheduling is already tested in "schedules reconnect" test
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
 
@@ -387,9 +418,9 @@ describe('useExecSession', () => {
   })
 
   // --- JSON parse errors in messages ---
-  it('ignores non-JSON messages', () => {
+  it('ignores non-JSON messages', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     // Send raw non-JSON message
     act(() => {
@@ -400,30 +431,30 @@ describe('useExecSession', () => {
   })
 
   // --- Unmount cleanup ---
-  it('cleans up on unmount', () => {
+  it('cleans up on unmount', async () => {
     const { result, unmount } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     unmount()
     // Should not throw
     expect(mockWs.readyState).toBe(MockWebSocket.CLOSED)
   })
 
   // --- Multiple connects ---
-  it('cleans up previous connection when connect is called again', () => {
+  it('cleans up previous connection when connect is called again', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     const closeSpy = vi.spyOn(mockWs, 'close')
 
     // Second connect reuses the same mock (FakeWebSocket returns same instance)
     // but the hook calls closeWebSocket on the previous ws ref
-    act(() => { result.current.connect({ ...DEFAULT_CONFIG, pod: 'other-pod' }) })
+    await connectSession(result, { ...DEFAULT_CONFIG, pod: 'other-pod' })
     expect(closeSpy).toHaveBeenCalled()
   })
 
   // --- Exit after connection marks intentional disconnect ---
-  it('does not reconnect after exit message', () => {
+  it('does not reconnect after exit message', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'exit', exitCode: 0 }) })
@@ -435,11 +466,11 @@ describe('useExecSession', () => {
   // --- Additional regression tests ---
 
   // --- Non-zero exit code ---
-  it('passes non-zero exit code to exit callback', () => {
+  it('passes non-zero exit code to exit callback', async () => {
     const exitCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onExit(exitCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'exit', exitCode: 137 }) })
@@ -455,24 +486,24 @@ describe('useExecSession', () => {
   })
 
   // --- Error clears on new connect ---
-  it('clears error state when a new connection is initiated', () => {
+  it('clears error state when a new connection is initiated', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'error', data: 'Something went wrong' }) })
     expect(result.current.status).toBe('error')
     expect(result.current.error).toBe('Something went wrong')
 
     // Reconnect clears the error
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     expect(result.current.error).toBeNull()
     expect(result.current.status).toBe('connecting')
   })
 
   // --- exec_started resets reconnect counter ---
-  it('resets reconnect attempt on successful exec_started', () => {
+  it('resets reconnect attempt on successful exec_started', async () => {
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     expect(result.current.reconnectAttempt).toBe(0)
@@ -487,22 +518,22 @@ describe('useExecSession', () => {
   })
 
   // --- Status callback receives error info ---
-  it('statusChange callback receives error string', () => {
+  it('statusChange callback receives error string', async () => {
     const statusCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onStatusChange(statusCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'error', data: 'Pod not found' }) })
     expect(statusCb).toHaveBeenCalledWith('error', 'Pod not found')
   })
 
   // --- Multiple data messages accumulated ---
-  it('receives multiple sequential data messages', () => {
+  it('receives multiple sequential data messages', async () => {
     const dataCb = vi.fn()
     const { result } = renderHook(() => useExecSession())
     act(() => { result.current.onData(dataCb) })
-    act(() => { result.current.connect(DEFAULT_CONFIG) })
+    await connectSession(result)
     act(() => { mockWs.triggerOpen() })
     act(() => { mockWs.triggerMessage({ type: 'exec_started' }) })
     act(() => { mockWs.triggerMessage({ type: 'stdout', data: 'line1\n' }) })
@@ -515,7 +546,7 @@ describe('useExecSession', () => {
   })
 
   // --- Connect includes all config fields in exec_init ---
-  it('sends namespace and container in exec_init message', () => {
+  it('sends namespace and container in exec_init message', async () => {
     const config: ExecSessionConfig = {
       cluster: 'staging',
       namespace: 'kube-system',
@@ -523,7 +554,7 @@ describe('useExecSession', () => {
       container: 'coredns',
     }
     const { result } = renderHook(() => useExecSession())
-    act(() => { result.current.connect(config) })
+    await connectSession(result, config)
     act(() => { mockWs.triggerOpen() })
 
     // #7993 Phase 3d: exec_init is the first frame.

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -119,8 +120,9 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 		g.Go(func() error {
 			client, err := h.k8sClient.GetDynamicClient(clusterName)
 			if err != nil {
+				slog.Error("[AdmissionWebhooks] failed to get dynamic client", "cluster", clusterName, "error", err)
 				mu.Lock()
-				clusterErrors[clusterName] = err.Error()
+				clusterErrors[clusterName] = "cluster client unavailable"
 				mu.Unlock()
 				return nil
 			}
@@ -155,11 +157,14 @@ func (h *WebhookHandlers) ListWebhooks(c *fiber.Ctx) error {
 			allWebhooks = append(allWebhooks, localWebhooks...)
 			switch {
 			case valErr != nil && mutErr != nil:
-				clusterErrors[clusterName] = "validating: " + valErr.Error() + "; mutating: " + mutErr.Error()
+				slog.Error("[AdmissionWebhooks] failed to list webhooks", "cluster", clusterName, "validatingErr", valErr, "mutatingErr", mutErr)
+				clusterErrors[clusterName] = "failed to list validating and mutating webhooks"
 			case valErr != nil:
-				clusterErrors[clusterName] = "validating: " + valErr.Error()
+				slog.Error("[AdmissionWebhooks] failed to list validating webhooks", "cluster", clusterName, "error", valErr)
+				clusterErrors[clusterName] = "failed to list validating webhooks"
 			case mutErr != nil:
-				clusterErrors[clusterName] = "mutating: " + mutErr.Error()
+				slog.Error("[AdmissionWebhooks] failed to list mutating webhooks", "cluster", clusterName, "error", mutErr)
+				clusterErrors[clusterName] = "failed to list mutating webhooks"
 			}
 			return nil
 		})

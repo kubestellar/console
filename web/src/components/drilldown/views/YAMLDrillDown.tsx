@@ -68,7 +68,7 @@ export function YAMLDrillDown({ data }: Props) {
       copiedTimerRef.current = setTimeout(() => setCopied(false), UI_FEEDBACK_TIMEOUT_MS)
       emitDataExported('yaml_copy', resourceType)
     } catch {
-      showToast('Failed to copy to clipboard', 'error')
+      showToast(t('drilldown.yaml.copyError', 'Failed to copy to clipboard'), 'error')
     }
   }
 
@@ -78,7 +78,7 @@ export function YAMLDrillDown({ data }: Props) {
     // of an unhandled exception that whites out the dialog.
     const result = downloadText(`${resourceName}.yaml`, yaml, 'text/yaml')
     if (!result.ok) {
-      showToast(`Failed to download YAML: ${result.error?.message || 'unknown error'}`, 'error')
+      showToast(t('drilldown.yaml.downloadError', { detail: result.error?.message || 'unknown error' }), 'error')
       return
     }
     emitDataExported('yaml_download', resourceType)

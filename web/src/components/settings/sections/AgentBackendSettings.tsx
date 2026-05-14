@@ -1,9 +1,15 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bot, Monitor, RefreshCw, Check, ExternalLink } from 'lucide-react'
+import { Bot, Monitor, RefreshCw, Check, ExternalLink, KeyRound } from 'lucide-react'
 import { AgentIcon } from '../../agent/AgentIcon'
 import type { AgentBackendType } from '../../../hooks/useKagentBackend'
 import type { KagentAgent, KagentStatus } from '../../../lib/kagentBackend'
-import type { KagentiProviderAgent, KagentiProviderStatus } from '../../../lib/kagentiProviderBackend'
+import {
+  updateKagentiProviderConfig,
+  type KagentiLLMProvider,
+  type KagentiProviderAgent,
+  type KagentiProviderStatus,
+} from '../../../lib/kagentiProviderBackend'
 
 interface AgentBackendSettingsProps {
   kagentAvailable: boolean
@@ -19,9 +25,13 @@ interface AgentBackendSettingsProps {
   onSelectBackend: (backend: AgentBackendType) => void
   onSelectKagentAgent: (agent: KagentAgent) => void
   onSelectKagentiAgent: (agent: KagentiProviderAgent) => void
-  onRefresh: () => void
+  onRefresh: () => void | Promise<void>
   isRefreshing?: boolean
 }
+
+const DEFAULT_KAGENTI_PROVIDER: KagentiLLMProvider = 'gemini'
+const KAGENTI_PROVIDER_OPTIONS: KagentiLLMProvider[] = ['gemini', 'anthropic', 'openai']
+const MASKED_API_KEY_PLACEHOLDER = '••••••••••••••••'
 
 export function AgentBackendSettings({
   kagentAvailable,
@@ -41,6 +51,52 @@ export function AgentBackendSettings({
   isRefreshing = false,
 }: AgentBackendSettingsProps) {
   const { t } = useTranslation()
+  const [selectedProvider, setSelectedProvider] = useState<KagentiLLMProvider>(DEFAULT_KAGENTI_PROVIDER)
+  const [apiKeyDraft, setApiKeyDraft] = useState('')
+  const [isSavingConfig, setIsSavingConfig] = useState(false)
+  const [configError, setConfigError] = useState<string | null>(null)
+  const [configSaved, setConfigSaved] = useState(false)
+
+  useEffect(() => {
+    if (kagentiStatus?.llm_provider) {
+      setSelectedProvider(kagentiStatus.llm_provider)
+      return
+    }
+    setSelectedProvider(DEFAULT_KAGENTI_PROVIDER)
+  }, [kagentiStatus?.llm_provider])
+
+  const configuredProviders = useMemo(
+    () => kagentiStatus?.configured_providers || [],
+    [kagentiStatus?.configured_providers],
+  )
+  const selectedProviderHasStoredKey = configuredProviders.includes(selectedProvider)
+
+  const handleSaveKagentiConfig = async () => {
+    if (!apiKeyDraft.trim() && !selectedProviderHasStoredKey) {
+      setConfigSaved(false)
+      setConfigError(t('settings.agentBackend.apiKeyRequired'))
+      return
+    }
+
+    try {
+      setIsSavingConfig(true)
+      setConfigError(null)
+      setConfigSaved(false)
+      await updateKagentiProviderConfig({
+        llm_provider: selectedProvider,
+        api_key: apiKeyDraft.trim() || undefined,
+      })
+      setApiKeyDraft('')
+      setConfigSaved(true)
+      await Promise.resolve(onRefresh())
+    } catch (error: unknown) {
+      setConfigSaved(false)
+      setConfigError(error instanceof Error ? error.message : t('settings.agentBackend.saveFailed'))
+    } finally {
+      setIsSavingConfig(false)
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -51,7 +107,7 @@ export function AgentBackendSettings({
           </p>
         </div>
         <button
-          onClick={onRefresh}
+          onClick={() => void onRefresh()}
           aria-label={t('settings.agentBackend.refreshStatus')}
           className="p-1.5 rounded-md hover:bg-accent transition-colors"
           title={t('settings.agentBackend.refreshStatus')}
@@ -60,9 +116,7 @@ export function AgentBackendSettings({
         </button>
       </div>
 
-      {/* Backend selector — 3 columns */}
       <div className="grid grid-cols-3 gap-3">
-        {/* kc-agent option */}
         <button
           onClick={() => onSelectBackend('kc-agent')}
           className={`relative p-3 rounded-lg border text-left transition-colors ${
@@ -81,7 +135,6 @@ export function AgentBackendSettings({
           </div>
         </button>
 
-        {/* kagent option */}
         <button
           onClick={() => onSelectBackend('kagent')}
           disabled={!kagentAvailable}
@@ -106,7 +159,7 @@ export function AgentBackendSettings({
               href="https://github.com/kagent-dev/kagent"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
+              onClick={event => event.stopPropagation()}
               className="inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 mt-1.5"
             >
               {t('settings.agentBackend.install')} <ExternalLink className="w-2.5 h-2.5" />
@@ -114,7 +167,6 @@ export function AgentBackendSettings({
           )}
         </button>
 
-        {/* kagenti option */}
         <button
           onClick={() => onSelectBackend('kagenti')}
           disabled={!kagentiAvailable}
@@ -139,7 +191,7 @@ export function AgentBackendSettings({
               href="https://github.com/kagenti/kagenti"
               target="_blank"
               rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
+              onClick={event => event.stopPropagation()}
               className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 mt-1.5"
             >
               {t('settings.agentBackend.install')} <ExternalLink className="w-2.5 h-2.5" />
@@ -148,7 +200,6 @@ export function AgentBackendSettings({
         </button>
       </div>
 
-      {/* Active backend indicator */}
       <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/50 text-xs">
         <div className={`w-1.5 h-1.5 rounded-full ${
           activeBackend === 'kagenti' ? 'bg-green-400' :
@@ -157,18 +208,17 @@ export function AgentBackendSettings({
         <span className="text-muted-foreground">
           {t('settings.agentBackend.activeLabel')} <span className="text-foreground font-medium">
             {activeBackend === 'kagenti' ? t('settings.agentBackend.kagentiInCluster') :
-             activeBackend === 'kagent' ? t('settings.agentBackend.kagentInCluster') :
-             t('settings.agentBackend.localAgentKcAgent')}
+              activeBackend === 'kagent' ? t('settings.agentBackend.kagentInCluster') :
+                t('settings.agentBackend.localAgentKcAgent')}
           </span>
         </span>
       </div>
 
-      {/* Kagent agent list */}
       {preferredBackend === 'kagent' && kagentAvailable && kagentAgents.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('settings.agentBackend.kagentAgents')}</h4>
           <div className="space-y-1">
-            {kagentAgents.map(agent => {
+            {(kagentAgents || []).map(agent => {
               const isSelected = selectedKagentAgent?.name === agent.name && selectedKagentAgent?.namespace === agent.namespace
               return (
                 <button
@@ -196,7 +246,6 @@ export function AgentBackendSettings({
         </div>
       )}
 
-      {/* Kagent empty state */}
       {preferredBackend === 'kagent' && kagentAvailable && kagentAgents.length === 0 && (
         <div className="flex items-center gap-2 px-3 py-3 rounded-md bg-muted/30 text-xs text-muted-foreground">
           <Bot className="w-3.5 h-3.5 shrink-0" />
@@ -204,12 +253,11 @@ export function AgentBackendSettings({
         </div>
       )}
 
-      {/* Kagenti agent list */}
       {preferredBackend === 'kagenti' && kagentiAvailable && kagentiAgents.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('settings.agentBackend.kagentiAgents')}</h4>
           <div className="space-y-1">
-            {kagentiAgents.map(agent => {
+            {(kagentiAgents || []).map(agent => {
               const isSelected = selectedKagentiAgent?.name === agent.name && selectedKagentiAgent?.namespace === agent.namespace
               return (
                 <button
@@ -237,7 +285,6 @@ export function AgentBackendSettings({
         </div>
       )}
 
-      {/* Kagenti empty state */}
       {preferredBackend === 'kagenti' && kagentiAvailable && kagentiAgents.length === 0 && (
         <div className="flex items-center gap-2 px-3 py-3 rounded-md bg-muted/30 text-xs text-muted-foreground">
           <Bot className="w-3.5 h-3.5 shrink-0" />
@@ -245,7 +292,99 @@ export function AgentBackendSettings({
         </div>
       )}
 
-      {/* Status details when not available */}
+      {preferredBackend === 'kagenti' && kagentiAvailable && (
+        <div className="space-y-3 rounded-lg border border-border bg-background/40 p-4">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-green-400" />
+            <h4 className="text-sm font-medium text-foreground">{t('settings.agentBackend.providerConfigTitle')}</h4>
+          </div>
+
+          {kagentiStatus?.config_supported === false ? (
+            <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              {kagentiStatus.config_reason || t('settings.agentBackend.configUnsupported')}
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">{t('settings.agentBackend.currentProvider')}</span>
+                  <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
+                    {kagentiStatus?.llm_provider
+                      ? t(`settings.agentBackend.providers.${kagentiStatus.llm_provider}`)
+                      : t('settings.agentBackend.providerUnknown')}
+                  </div>
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">{t('settings.agentBackend.providerSelector')}</span>
+                  <select
+                    value={selectedProvider}
+                    onChange={event => {
+                      setSelectedProvider(event.target.value as KagentiLLMProvider)
+                      setConfigSaved(false)
+                      setConfigError(null)
+                    }}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  >
+                    {KAGENTI_PROVIDER_OPTIONS.map(provider => (
+                      <option key={provider} value={provider}>
+                        {t(`settings.agentBackend.providers.${provider}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className="space-y-1">
+                <span className="text-xs font-medium text-muted-foreground">{t('settings.agentBackend.apiKeyLabel')}</span>
+                <input
+                  type="password"
+                  value={apiKeyDraft}
+                  onChange={event => {
+                    setApiKeyDraft(event.target.value)
+                    setConfigSaved(false)
+                    setConfigError(null)
+                  }}
+                  placeholder={selectedProviderHasStoredKey
+                    ? MASKED_API_KEY_PLACEHOLDER
+                    : t('settings.agentBackend.apiKeyPlaceholder')}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {selectedProviderHasStoredKey
+                    ? t('settings.agentBackend.apiKeyMaskedHint')
+                    : t('settings.agentBackend.apiKeyHint')}
+                </p>
+              </label>
+
+              {configError && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                  {configError}
+                </div>
+              )}
+              {configSaved && (
+                <div className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-xs text-green-400">
+                  {t('settings.agentBackend.saveSuccess')}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-muted-foreground">
+                  {t('settings.agentBackend.rolloutHint')}
+                </div>
+                <button
+                  onClick={() => void handleSaveKagentiConfig()}
+                  disabled={isSavingConfig}
+                  className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isSavingConfig ? t('settings.agentBackend.saving') : t('settings.agentBackend.save')}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {kagentStatus && !kagentAvailable && kagentStatus.reason && (
         <div className="text-xs text-muted-foreground px-3 py-2 rounded-md bg-muted/30">
           Kagent: {kagentStatus.reason}

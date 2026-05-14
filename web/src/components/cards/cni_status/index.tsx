@@ -24,6 +24,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useCachedCni } from '../../../hooks/useCachedCni'
 import { useReportCardDataState } from '../CardDataContext'
 import type { CniNodeState, CniNodeStatus } from '../../../lib/demo/cni'
@@ -92,9 +93,26 @@ function NodeRow({ node }: { node: CniNodeStatus }) {
 
 export function CniStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedCni()
+  const {
+    data,
+    isRefreshing,
+    isDemoData,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh,
+    error,
+    showSkeleton,
+    showEmptyState,
+  } = useCachedCni()
 
-  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isDemoData,
+    isRefreshing,
+    hasData: data.health !== 'unknown',
+    lastUpdated: lastRefresh ? new Date(lastRefresh) : null,
+  })
 
   const isHealthy = data.health === 'healthy'
   const nodes = data.nodes ?? []
@@ -157,6 +175,12 @@ export function CniStatus() {
             ? t('cniStatus.healthy', 'Healthy')
             : t('cniStatus.degraded', 'Degraded')}
         </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+        />
       </div>
 
       {/* Summary tiles */}

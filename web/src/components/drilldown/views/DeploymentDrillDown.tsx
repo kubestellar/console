@@ -175,10 +175,10 @@ export function DeploymentDrillDown({ data }: Props) {
 
   // Helper to run kubectl commands
   const runKubectl = (args: string[]): Promise<string> => {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
       let ws: WebSocket
       try {
-        ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
       } catch {
         resolve('')
         return
@@ -205,7 +205,7 @@ export function DeploymentDrillDown({ data }: Props) {
             output = msg.payload.output
           }
         } catch (err) {
-          console.warn('[DeploymentDrillDown] Non-JSON WebSocket message:', event.data)
+          console.error('[DeploymentDrillDown] Non-JSON WebSocket message:', event.data)
         }
         clearTimeout(timeout)
         ws.close()

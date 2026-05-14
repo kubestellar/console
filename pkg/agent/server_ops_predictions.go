@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // =============================================================================
@@ -36,14 +38,14 @@ func (s *Server) handlePredictionsAI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.predictionWorker == nil {
-		json.NewEncoder(w).Encode(AIPredictionsResponse{
+		writeJSON(w, AIPredictionsResponse{
 			Predictions: []AIPrediction{},
 			Stale:       true,
 		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(s.predictionWorker.GetPredictions())
+	writeJSON(w, s.predictionWorker.GetPredictions())
 }
 
 // handlePredictionsAnalyze triggers a manual AI analysis
@@ -78,13 +80,13 @@ func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request
 		if err := json.NewDecoder(io.LimitReader(r.Body, maxRequestBodyBytes)).Decode(&req); err != nil && err != io.EOF {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "invalid JSON body"})
+			writeJSON(w, map[string]string{"error": "invalid JSON body"})
 			return
 		}
 	}
 
 	if s.predictionWorker.IsAnalyzing() {
-		json.NewEncoder(w).Encode(map[string]string{
+		writeJSON(w, map[string]string{
 			"status": "already_running",
 		})
 		return
@@ -96,7 +98,7 @@ func (s *Server) handlePredictionsAnalyze(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{
+	writeJSON(w, map[string]string{
 		"status":        "started",
 		"estimatedTime": "30s",
 	})
@@ -143,7 +145,7 @@ func (s *Server) handlePredictionsFeedback(w http.ResponseWriter, r *http.Reques
 	// In the future, this could store to a database for model improvement
 	slog.Info("[Predictions] feedback received", "predictionID", req.PredictionID, "feedback", req.Feedback)
 
-	json.NewEncoder(w).Encode(map[string]string{
+	writeJSON(w, map[string]string{
 		"status": "recorded",
 	})
 }
@@ -170,7 +172,7 @@ func (s *Server) handlePredictionsStats(w http.ResponseWriter, r *http.Request) 
 
 	// Stats are calculated client-side from localStorage
 	// This endpoint is for future server-side aggregation
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	writeJSON(w, map[string]interface{}{
 		"totalPredictions":   0,
 		"accurateFeedback":   0,
 		"inaccurateFeedback": 0,
@@ -201,14 +203,14 @@ func (s *Server) handleMetricsHistory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.metricsHistory == nil {
-		json.NewEncoder(w).Encode(MetricsHistoryResponse{
+		writeJSON(w, MetricsHistoryResponse{
 			Snapshots: []MetricsSnapshot{},
 			Retention: "24h",
 		})
 		return
 	}
 
-	json.NewEncoder(w).Encode(s.metricsHistory.GetSnapshots())
+	writeJSON(w, s.metricsHistory.GetSnapshots())
 }
 
 // handleDeviceAlerts returns current hardware device alerts
@@ -232,7 +234,7 @@ func (s *Server) handleDeviceAlerts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.deviceTracker == nil {
-		json.NewEncoder(w).Encode(DeviceAlertsResponse{
+		writeJSON(w, DeviceAlertsResponse{
 			Alerts:    []DeviceAlert{},
 			NodeCount: 0,
 			Timestamp: time.Now().Format(time.RFC3339),
@@ -240,7 +242,7 @@ func (s *Server) handleDeviceAlerts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(s.deviceTracker.GetAlerts())
+	writeJSON(w, s.deviceTracker.GetAlerts())
 }
 
 // handleDeviceAlertsClear clears a specific device alert
@@ -284,7 +286,7 @@ func (s *Server) handleDeviceAlertsClear(w http.ResponseWriter, r *http.Request)
 	}
 
 	cleared := s.deviceTracker.ClearAlert(req.AlertID)
-	json.NewEncoder(w).Encode(map[string]bool{"cleared": cleared})
+	writeJSON(w, map[string]bool{"cleared": cleared})
 }
 
 func (s *Server) handleDeviceInventory(w http.ResponseWriter, r *http.Request) {
@@ -308,7 +310,7 @@ func (s *Server) handleDeviceInventory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.deviceTracker == nil {
-		json.NewEncoder(w).Encode(DeviceInventoryResponse{
+		writeJSON(w, DeviceInventoryResponse{
 			Nodes:     []NodeDeviceInventory{},
 			Timestamp: time.Now().Format(time.RFC3339),
 		})
@@ -316,7 +318,7 @@ func (s *Server) handleDeviceInventory(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := s.deviceTracker.GetInventory()
-	json.NewEncoder(w).Encode(response)
+	writeJSON(w, response)
 }
 
 // sendNativeNotification sends a native macOS notification for device alerts
@@ -354,13 +356,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 
 	// Prefer terminal-notifier (supports click-to-open via -open flag).
 	// Fall back to osascript display notification (no click handler support).
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[DeviceTracker] recovered from panic in notification", "panic", r)
-			}
-		}()
-
+	safego.GoWith("device-tracker-notification", func() {
 		if tnPath, err := exec.LookPath("terminal-notifier"); err == nil {
 			cmd := execCommand(tnPath,
 				"-title", "KubeStellar Console",
@@ -392,7 +388,7 @@ func (s *Server) sendNativeNotification(alerts []DeviceAlert) {
 		if err := cmd.Run(); err != nil {
 			slog.Error("[DeviceTracker] failed to send notification", "error", err)
 		}
-	}()
+	})
 }
 
 // cloudCLI describes a cloud provider CLI binary and its purpose.

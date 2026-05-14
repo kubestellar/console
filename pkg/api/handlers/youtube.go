@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os/exec"
 	"strings"
@@ -227,8 +228,9 @@ func fetchPlaylistViaYTDLP() ([]PlaylistVideo, error) {
 		return nil, fmt.Errorf("yt-dlp failed: %w", err)
 	}
 
-	var videos []PlaylistVideo
-	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	videos := make([]PlaylistVideo, 0, len(lines))
+	for _, line := range lines {
 		if line == "" {
 			continue
 		}
@@ -296,9 +298,9 @@ func getPlaylistVideos() ([]PlaylistVideo, error) {
 func YouTubePlaylistHandler(c *fiber.Ctx) error {
 	videos, err := getPlaylistVideos()
 	if err != nil {
+		slog.Error("[YouTube] failed to fetch playlist", "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error":  "failed to fetch playlist",
-			"detail": err.Error(),
+			"error": "failed to fetch playlist",
 		})
 	}
 

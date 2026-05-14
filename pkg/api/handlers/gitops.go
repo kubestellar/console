@@ -22,6 +22,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/mcp"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -277,7 +278,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 	// SECURITY: Validate cluster name before passing to helm CLI
 	if cluster != "" {
 		if err := validateK8sName(cluster, "cluster"); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster name"})
 		}
 	}
 
@@ -302,8 +303,9 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 		allReleases := make([]HelmRelease, 0)
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-helm-releases/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -316,7 +318,7 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 					allReleases = append(allReleases, releases...)
 					mu.Unlock()
 				}
-			}(cl.Name)
+			})
 		}
 
 		wg.Wait()
@@ -349,7 +351,7 @@ type helmReleaseBody struct {
 	Namespace string `json:"namespace"`
 	Version   int    `json:"version"`
 	Info      struct {
-		Status    string `json:"status"`
+		Status     string `json:"status"`
 		LastDeploy string `json:"last_deployed"`
 	} `json:"info"`
 	Chart struct {
@@ -553,7 +555,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 	// SECURITY: Validate cluster name before passing to kubectl CLI
 	if cluster != "" {
 		if err := validateK8sName(cluster, "cluster"); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			return c.Status(400).JSON(fiber.Map{"error": "invalid cluster name"})
 		}
 	}
 
@@ -583,8 +585,9 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 		defer clusterCancel()
 
 		for _, cl := range clusters {
+			clusterName := cl.Name
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gitops-kustomizations/"+clusterName, func() {
 				defer wg.Done()
 				subprocessSem <- struct{}{}        // acquire
 				defer func() { <-subprocessSem }() // release
@@ -597,7 +600,7 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 					allKustomizations = append(allKustomizations, kustomizations...)
 					mu.Unlock()
 				}
-			}(cl.Name)
+			})
 		}
 
 		waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
@@ -752,7 +755,7 @@ func init() {
 // results use a 5m TTL. Must be called exactly once from getOperatorsForCluster().
 func startOperatorCacheEvictor() {
 	operatorEvictOnce.Do(func() {
-		go func() {
+		safego.Go(func() {
 			ticker := time.NewTicker(operatorCacheEvictionInterval)
 			defer ticker.Stop()
 
@@ -775,7 +778,7 @@ func startOperatorCacheEvictor() {
 					operatorCacheMu.Unlock()
 				}
 			}
-		}()
+		})
 	})
 }
 

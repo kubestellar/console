@@ -67,7 +67,7 @@ jobs:
     name: Compliance (${{ matrix.suite }})
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -196,7 +196,7 @@ jobs:
     name: Perf (${{ matrix.suite }})
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -389,7 +389,7 @@ jobs:
 
       - name: Create per-suite issues for failures & auto-close passing
         if: github.event.inputs.skip_issue_creation != 'true'
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('fs');

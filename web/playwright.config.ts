@@ -52,6 +52,11 @@ export default defineConfig({
 
   // Retry failed tests once in CI (balances flake detection vs run time)
   retries: isCI ? 1 : 0,
+  // #12932 — Explicitly disable early termination so all browser projects
+  // execute even when one test fails. maxFailures: 1 would skip remaining
+  // Firefox/WebKit/mobile runs after the first Chromium failure, hiding
+  // browser-specific regressions.
+  maxFailures: 0,
 
   // Workers — CI gets 2 workers per shard for better stability, local uses half of available cores
   workers: isCI ? 2 : '50%',

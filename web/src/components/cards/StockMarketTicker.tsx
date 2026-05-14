@@ -707,7 +707,7 @@ export function StockMarketTicker({ config }: StockMarketTickerProps) {
   // Calculate portfolio summary
   const portfolioSummary = useMemo(() => {
     const totalChange = stockData.reduce((sum, stock) => sum + stock.changePercent, 0)
-    const avgChange = totalChange / stockData.length
+    const avgChange = stockData.length > 0 ? totalChange / stockData.length : 0
     const gainers = stockData.filter(s => s.change > 0).length
     const losers = stockData.filter(s => s.change < 0).length
 

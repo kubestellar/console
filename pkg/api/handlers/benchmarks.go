@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -642,7 +644,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 
 		// Start keepalive ticker — send comment heartbeats every 5s
 		keepaliveDone := make(chan struct{})
-		go func() {
+		safego.Go(func() {
 			ticker := time.NewTicker(5 * time.Second)
 			defer ticker.Stop()
 			for {
@@ -658,7 +660,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 					return
 				}
 			}
-		}()
+		})
 		defer close(keepaliveDone)
 
 		topLevel, err := h.listDriveFolder(ctx, h.folderID)
@@ -674,7 +676,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 		}
 
 		// Filter to folders only, skip folders older than cutoff
-		var experiments []driveFile
+		experiments := make([]driveFile, 0, len(topLevel))
 		for _, item := range topLevel {
 			if item.MimeType != driveFolderMIME {
 				continue
@@ -711,7 +713,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 				streamWg.Done()
 				continue
 			}
-			go func() {
+			safego.Go(func() {
 				defer streamWg.Done()
 				defer func() { <-streamSem }()
 
@@ -748,7 +750,7 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 						innerWg.Done()
 						continue
 					}
-					go func() {
+					safego.Go(func() {
 						defer innerWg.Done()
 						defer func() { <-innerSem }()
 
@@ -783,10 +785,10 @@ func (h *BenchmarkHandlers) StreamReports(c *fiber.Ctx) error {
 						if len(reports) > 0 {
 							slog.Info("[benchmarks] streamed reports", "count", len(reports), "experiment", item.Name, "run", runItem.Name, "totalSent", sentSnapshot)
 						}
-					}()
+					})
 				}
 				innerWg.Wait()
-			}()
+			})
 		}
 		streamWg.Wait()
 
@@ -834,7 +836,7 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 	}
 
 	// Filter experiments up-front so we know the work set.
-	var experiments []driveFile
+	experiments := make([]driveFile, 0, len(topLevel))
 	for _, item := range topLevel {
 		if item.MimeType != driveFolderMIME {
 			continue
@@ -846,19 +848,19 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 	}
 
 	var (
-		mu             sync.Mutex
-		allReports     []BenchmarkReport
-		totalFailures  int
-		wg             sync.WaitGroup
-		sem            = make(chan struct{}, driveFetchConcurrency)
-		innerSem       = make(chan struct{}, driveFetchConcurrency)
+		mu            sync.Mutex
+		allReports    []BenchmarkReport
+		totalFailures int
+		wg            sync.WaitGroup
+		sem           = make(chan struct{}, driveFetchConcurrency)
+		innerSem      = make(chan struct{}, driveFetchConcurrency)
 	)
 
 	for _, item := range experiments {
 		item := item // capture loop var
 		wg.Add(1)
 		sem <- struct{}{} // acquire semaphore slot
-		go func() {
+		safego.Go(func() {
 			defer wg.Done()
 			defer func() { <-sem }() // release slot
 
@@ -880,7 +882,7 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 				runItem := runItem // capture
 				innerWg.Add(1)
 				innerSem <- struct{}{} // separate semaphore for inner work
-				go func() {
+				safego.Go(func() {
 					defer innerWg.Done()
 					defer func() { <-innerSem }()
 
@@ -893,10 +895,10 @@ func (h *BenchmarkHandlers) fetchAllReports(ctx context.Context, cutoff time.Tim
 					allReports = append(allReports, reports...)
 					totalFailures += failures
 					mu.Unlock()
-				}()
+				})
 			}
 			innerWg.Wait()
-		}()
+		})
 	}
 	wg.Wait()
 
@@ -913,8 +915,8 @@ func (h *BenchmarkHandlers) fetchRunFolder(ctx context.Context, folderID, experi
 	}
 
 	// First: look for benchmark YAML files directly in this folder
-	reports := make([]BenchmarkReport, 0)
-	var subfolders []driveFile
+	reports := make([]BenchmarkReport, 0, len(items))
+	subfolders := make([]driveFile, 0, len(items)/2)
 	parseFailures := 0
 	for _, f := range items {
 		if f.MimeType == driveFolderMIME {
@@ -966,7 +968,7 @@ func (h *BenchmarkHandlers) collectBenchmarkFiles(ctx context.Context, folderID,
 	if err != nil {
 		return nil, 0, err
 	}
-	reports := make([]BenchmarkReport, 0)
+	reports := make([]BenchmarkReport, 0, len(files))
 	parseFailures := 0
 	for _, f := range files {
 		if f.MimeType == driveFolderMIME {
@@ -1002,7 +1004,7 @@ func (h *BenchmarkHandlers) downloadAndParseReport(ctx context.Context, f driveF
 // listDriveFolder lists all files in a Google Drive folder, handling pagination
 // so that folders with more than 1000 items are not silently truncated.
 func (h *BenchmarkHandlers) listDriveFolder(ctx context.Context, folderID string) ([]driveFile, error) {
-	var allFiles []driveFile
+	allFiles := make([]driveFile, 0)
 	pageToken := ""
 
 	for {
@@ -1150,7 +1152,7 @@ func adaptV1ToV2(raw rawV1Report, experimentName, runName, fileCreatedTime strin
 }
 
 func buildStackComponents(raw rawV1Report) []BenchmarkStackComponent {
-	components := make([]BenchmarkStackComponent, 0)
+	components := make([]BenchmarkStackComponent, 0, len(raw.Scenario.Host.Accelerator))
 
 	// Build one component per accelerator entry
 	for i, accel := range raw.Scenario.Host.Accelerator {

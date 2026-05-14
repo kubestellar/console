@@ -21,7 +21,6 @@ import {
   Layers,
   Link2,
   Radio,
-  RefreshCw,
   Server,
   Shield,
 } from 'lucide-react'
@@ -29,6 +28,7 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { Skeleton, SkeletonList, SkeletonStats } from '../../ui/Skeleton'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { useCachedDapr } from '../../../hooks/useCachedDapr'
 import { useReportCardDataState } from '../CardDataContext'
 import type {
@@ -36,7 +36,6 @@ import type {
   DaprComponentType,
   DaprControlPlanePod,
 } from './demoData'
-import { formatTimeAgo } from '../../../lib/formatters'
 
 // ---------------------------------------------------------------------------
 // Named constants (no magic numbers)
@@ -144,9 +143,26 @@ function ComponentRow({
 
 export function DaprStatus() {
   const { t } = useTranslation('cards')
-  const { data, isRefreshing, isDemoData, isFailed, consecutiveFailures, error, showSkeleton, showEmptyState } = useCachedDapr()
+  const {
+    data,
+    isRefreshing,
+    isDemoData,
+    isFailed,
+    consecutiveFailures,
+    lastRefresh,
+    error,
+    showSkeleton,
+    showEmptyState,
+  } = useCachedDapr()
 
-  useReportCardDataState({ isFailed, consecutiveFailures, isDemoData, isRefreshing, hasData: data.health !== 'unknown' })
+  useReportCardDataState({
+    isFailed,
+    consecutiveFailures,
+    isDemoData,
+    isRefreshing,
+    hasData: data.health !== 'unknown',
+    lastUpdated: lastRefresh ? new Date(lastRefresh) : null,
+  })
 
   const isHealthy = data.health === 'healthy'
 
@@ -208,10 +224,12 @@ export function DaprStatus() {
             : t('daprStatus.degraded', 'Degraded')}
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span>{formatTimeAgo(data.lastCheckTime)}</span>
-        </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+        />
       </div>
 
       {/* Summary tiles */}

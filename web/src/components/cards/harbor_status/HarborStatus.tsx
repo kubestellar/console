@@ -18,6 +18,7 @@ import { Button } from '../../ui/Button'
 import { CardSearchInput } from '../../../lib/cards/CardComponents'
 import { useHarborStatus } from './useHarborStatus'
 import { useDrillDownActions } from '../../../hooks/useDrillDown'
+import { useDemoMode } from '../../../hooks/useDemoMode'
 import type {
   HarborProject,
   HarborRepository,
@@ -234,12 +235,14 @@ function RepositoryRow({
 
 export function HarborStatus() {
   const { t } = useTranslation('cards')
+  useDemoMode()
   const {
     data,
     error,
     showSkeleton,
     showEmptyState,
     isRefreshing,
+    lastRefresh,
   } = useHarborStatus()
   const { drillToAllStorage } = useDrillDownActions()
 
@@ -319,8 +322,6 @@ export function HarborStatus() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden relative">
-      {isRefreshing && <RefreshIndicator isRefreshing={isRefreshing} />}
-
       <div className="flex flex-wrap items-center justify-between mb-4 shrink-0 px-1 gap-2">
         <div className="flex items-center gap-2">
           {currentData.health === 'healthy' ? (
@@ -340,6 +341,12 @@ export function HarborStatus() {
             </span>
           )}
         </div>
+        <RefreshIndicator
+          isRefreshing={isRefreshing}
+          lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+          size="sm"
+          showLabel={true}
+        />
       </div>
 
       <div className="grid grid-cols-2 @md:grid-cols-4 gap-3 mb-4 shrink-0 px-0.5">

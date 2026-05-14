@@ -7,7 +7,7 @@ import {
 import { Github, Linkedin } from '@/lib/icons'
 import { StatusBadge } from '../ui/StatusBadge'
 import { isTriaged } from '../../hooks/useFeatureRequests'
-import type { FeatureRequest } from '../../hooks/useFeatureRequests'
+import type { CloseRequestInput, FeatureRequest, ReopenRequestInput } from '../../hooks/useFeatureRequests'
 import { emitLinkedInShare } from '../../lib/analytics'
 import { BACKEND_DEFAULT_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { MS_PER_SECOND } from '../../lib/constants/time'
@@ -23,6 +23,12 @@ import {
 import type { PreviewResult } from './FeatureRequestTypes'
 import { useTranslation } from 'react-i18next'
 import { getStatusDescription } from '../../hooks/useFeatureRequests'
+import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
+
+const REOPEN_COMMENT_ROWS = 3
+const REOPEN_COMMENT_MAX_LENGTH = 1000
+
+type RequestCardState = 'awaiting_verification' | FeatureRequest['status']
 
 interface UpdatesTabProps {
   requests: FeatureRequest[]
@@ -51,7 +57,8 @@ interface UpdatesTabProps {
   onRefreshGitHub: () => void
   isGitHubRefreshing: boolean
   onRequestUpdate: (id: string) => Promise<unknown>
-  onCloseRequest: (id: string) => Promise<unknown>
+  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<unknown>
+  onReopenRequest: (id: string, input: ReopenRequestInput) => Promise<unknown>
   getUnreadCountForRequest: (id: string) => number
   markRequestNotificationsAsRead: (id: string) => void
   onShowLoginPrompt: () => void
@@ -75,6 +82,7 @@ export function UpdatesTab({
   isGitHubRefreshing,
   onRequestUpdate,
   onCloseRequest,
+  onReopenRequest,
   getUnreadCountForRequest,
   markRequestNotificationsAsRead,
   onShowLoginPrompt,
@@ -100,16 +108,34 @@ export function UpdatesTab({
     }
   }
 
-  const handleCloseRequest = async (requestId: string) => {
+  const handleCloseRequest = async (requestId: string, input?: CloseRequestInput) => {
     try {
       setActionLoading(requestId)
       setActionError(null)
-      await onCloseRequest(requestId)
+      await onCloseRequest(requestId, input)
       setConfirmClose(null)
     } catch {
-      const errorMsg = 'Failed to close request'
+      const errorMsg = input?.user_verified
+        ? t('feedback.verifyFixFailed')
+        : t('feedback.closeRequestFailed')
       setActionError(errorMsg)
       showToast(errorMsg, 'error')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleReopenRequest = async (requestId: string, input: ReopenRequestInput) => {
+    try {
+      setActionLoading(requestId)
+      setActionError(null)
+      await onReopenRequest(requestId, input)
+      showToast(t('feedback.reopenRequestSubmitted'), 'success')
+    } catch {
+      const errorMsg = t('feedback.reopenRequestFailed')
+      setActionError(errorMsg)
+      showToast(errorMsg, 'error')
+      throw new Error(errorMsg)
     } finally {
       setActionLoading(null)
     }
@@ -224,6 +250,7 @@ export function UpdatesTab({
               markRequestNotificationsAsRead={markRequestNotificationsAsRead}
               onRequestUpdate={handleRequestUpdate}
               onCloseRequest={handleCloseRequest}
+              onReopenRequest={handleReopenRequest}
               onSetConfirmClose={setConfirmClose}
               onCheckPreview={handleCheckPreview}
               onShowLoginPrompt={onShowLoginPrompt}
@@ -259,7 +286,8 @@ interface RequestItemProps {
   getUnreadCountForRequest: (id: string) => number
   markRequestNotificationsAsRead: (id: string) => void
   onRequestUpdate: (id: string) => Promise<void>
-  onCloseRequest: (id: string) => Promise<void>
+  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<void>
+  onReopenRequest: (id: string, input: ReopenRequestInput) => Promise<void>
   onSetConfirmClose: (id: string | null) => void
   onCheckPreview: (prNumber: number) => Promise<void>
   onShowLoginPrompt: () => void
@@ -277,19 +305,40 @@ function RequestItem({
   markRequestNotificationsAsRead,
   onRequestUpdate,
   onCloseRequest,
+  onReopenRequest,
   onSetConfirmClose,
   onCheckPreview,
   onShowLoginPrompt,
 }: RequestItemProps) {
   const { t } = useTranslation()
-  const statusInfo = getStatusInfo(request.status, request.closed_by_user)
+  const [isReopenFormVisible, setIsReopenFormVisible] = useState(false)
+  const [reopenComment, setReopenComment] = useState('')
   const isLoading = actionLoading === request.id
   const showConfirm = confirmClose === request.id
   const isOwnedByUser = request.github_login
     ? request.github_login === currentGitHubLogin
     : request.user_id === currentGitHubLogin
+  const displayState: RequestCardState = request.status === 'fix_complete' && isOwnedByUser && !request.closed_by_user
+    ? 'awaiting_verification'
+    : request.status
+  const statusInfo = getStatusInfo(request.status, request.closed_by_user)
   const shouldBlur = !isTriaged(request.status) && !isOwnedByUser
   const requestUnreadCount = getUnreadCountForRequest(request.id)
+  const isAwaitingVerification = displayState === 'awaiting_verification'
+
+  const handleReopenSubmit = async () => {
+    const trimmedComment = reopenComment.trim()
+    if (!trimmedComment) {
+      return
+    }
+    try {
+      await onReopenRequest(request.id, { comment: trimmedComment })
+      setIsReopenFormVisible(false)
+      setReopenComment('')
+    } catch {
+      // Parent handles the toast; keep the form open so the user can retry.
+    }
+  }
 
   return (
     <div
@@ -341,6 +390,7 @@ function RequestItem({
               request={request}
               shouldBlur={shouldBlur}
               statusInfo={statusInfo}
+              isAwaitingVerification={isAwaitingVerification}
             />
           )}
 
@@ -364,7 +414,21 @@ function RequestItem({
 
           {/* Merged celebration for fix_complete */}
           {request.status === 'fix_complete' && (
-            <FixCompleteBanner request={request} />
+            <FixCompleteBanner request={request} isAwaitingVerification={isAwaitingVerification} />
+          )}
+          {isAwaitingVerification && (
+            <FixVerificationPrompt
+              requestId={request.id}
+              canPerformActions={canPerformActions}
+              isLoading={isLoading}
+              isReopenFormVisible={isReopenFormVisible}
+              reopenComment={reopenComment}
+              onVerify={() => void onCloseRequest(request.id, { user_verified: true })}
+              onToggleReopenForm={() => setIsReopenFormVisible(prev => !prev)}
+              onReopenCommentChange={setReopenComment}
+              onReopenSubmit={() => void handleReopenSubmit()}
+              onShowLoginPrompt={onShowLoginPrompt}
+            />
           )}
 
           {/* Latest comment for unable_to_fix */}
@@ -486,11 +550,15 @@ function TriagedRequestContent({
   request,
   shouldBlur,
   statusInfo,
+  isAwaitingVerification,
 }: {
   request: FeatureRequest
   shouldBlur: boolean
   statusInfo: { label: string; color: string; bgColor: string }
+  isAwaitingVerification: boolean
 }) {
+  const { t } = useTranslation()
+
   return (
     <>
       <p className={`text-sm font-medium text-foreground mt-1 truncate ${shouldBlur ? 'blur-xs select-none' : ''}`}>
@@ -505,6 +573,11 @@ function TriagedRequestContent({
             Closed
           </span>
         )}
+        {isAwaitingVerification && (
+          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-blue-500/20 text-blue-300">
+            {t('feedback.awaitingVerificationBadge')}
+          </span>
+        )}
         {getStatusDescription(request.status, request.closed_by_user) && (
           <span className={`text-xs text-muted-foreground ${shouldBlur ? 'blur-xs select-none' : ''}`}>
             {getStatusDescription(request.status, request.closed_by_user)}
@@ -517,24 +590,48 @@ function TriagedRequestContent({
 
 // ── Fix Complete Banner ──
 
-function FixCompleteBanner({ request }: { request: FeatureRequest }) {
+function FixCompleteBanner({
+  request,
+  isAwaitingVerification,
+}: {
+  request: FeatureRequest
+  isAwaitingVerification: boolean
+}) {
+  const { t } = useTranslation()
+
   return (
     <div className="mt-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-      <div className="flex items-center gap-2 mb-1">
+      <div className="flex items-center gap-2 mb-1 flex-wrap">
         <div className="flex items-center gap-1.5">
           <Check className="w-4 h-4 text-green-400" />
-          <span className="text-xs font-semibold text-green-400">Merged</span>
+          <span className="text-xs font-semibold text-green-400">{t('feedback.fixMerged')}</span>
         </div>
+        {request.closed_by_user && (
+          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-green-500/20 text-green-300">
+            {t('feedback.verifiedByYou')}
+          </span>
+        )}
+        {isAwaitingVerification && (
+          <span className="px-1.5 py-0.5 text-2xs font-medium rounded bg-blue-500/20 text-blue-300">
+            {t('feedback.awaitingVerificationBadge')}
+          </span>
+        )}
       </div>
       <p className="text-xs text-green-300/80 mb-2">
-        Thank you for your feedback! Your {request.request_type === 'bug' ? 'bug fix' : 'feature'} has been merged and will be available in the next nightly build and weekly release.
+        {request.closed_by_user
+          ? t('feedback.verificationRecorded')
+          : t('feedback.fixMergedDescription', {
+            requestType: request.request_type === 'bug'
+              ? t('feedback.requestTypeBugFix')
+              : t('feedback.requestTypeFeature'),
+          })}
       </p>
       <div className="flex items-center gap-3 flex-wrap">
         <a href="https://github.com/kubestellar/console/releases" target="_blank" rel="noopener noreferrer"
           className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
           onClick={e => e.stopPropagation()}>
           <ExternalLink className="w-3 h-3" />
-          Releases
+          {t('feedback.releases')}
         </a>
         {request.pr_url && (
           <a href={request.pr_url} target="_blank" rel="noopener noreferrer"
@@ -557,6 +654,81 @@ function FixCompleteBanner({ request }: { request: FeatureRequest }) {
   )
 }
 
+function FixVerificationPrompt({
+  requestId,
+  canPerformActions,
+  isLoading,
+  isReopenFormVisible,
+  reopenComment,
+  onVerify,
+  onToggleReopenForm,
+  onReopenCommentChange,
+  onReopenSubmit,
+  onShowLoginPrompt,
+}: {
+  requestId: string
+  canPerformActions: boolean
+  isLoading: boolean
+  isReopenFormVisible: boolean
+  reopenComment: string
+  onVerify: () => void
+  onToggleReopenForm: () => void
+  onReopenCommentChange: (value: string) => void
+  onReopenSubmit: () => void
+  onShowLoginPrompt: () => void
+}) {
+  const { t } = useTranslation()
+  const isCommentEmpty = reopenComment.trim().length === 0
+
+  return (
+    <div className="mt-2 rounded-lg border border-blue-500/30 bg-blue-500/10 p-3" data-testid={`awaiting-verification-${requestId}`}>
+      <p className="text-sm font-medium text-blue-200">{t('feedback.awaitingVerificationQuestion')}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          onClick={canPerformActions ? onVerify : onShowLoginPrompt}
+          disabled={canPerformActions && isLoading}
+          className="px-2.5 py-1.5 text-xs rounded bg-green-500/20 hover:bg-green-500/30 text-green-300 transition-colors disabled:opacity-50"
+        >
+          {canPerformActions && isLoading ? t('feedback.verifyingFix') : t('feedback.verifyFix')}
+        </button>
+        <button
+          onClick={canPerformActions ? onToggleReopenForm : onShowLoginPrompt}
+          className="px-2.5 py-1.5 text-xs rounded bg-secondary hover:bg-secondary/80 text-foreground transition-colors"
+        >
+          {t('feedback.stillBroken')}
+        </button>
+      </div>
+      {isReopenFormVisible && (
+        <div className="mt-3 space-y-2">
+          <textarea
+            value={reopenComment}
+            onChange={event => onReopenCommentChange(event.target.value.slice(0, REOPEN_COMMENT_MAX_LENGTH))}
+            rows={REOPEN_COMMENT_ROWS}
+            maxLength={REOPEN_COMMENT_MAX_LENGTH}
+            className="w-full rounded-md border border-border bg-background/70 px-3 py-2 text-sm text-foreground outline-none focus:border-blue-400"
+            placeholder={t('feedback.stillBrokenPlaceholder')}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={onReopenSubmit}
+              disabled={isLoading || isCommentEmpty}
+              className="px-2.5 py-1.5 text-xs rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 transition-colors disabled:opacity-50"
+            >
+              {isLoading ? t('feedback.submittingReopen') : t('feedback.submitStillBroken')}
+            </button>
+            <button
+              onClick={onToggleReopenForm}
+              className="px-2.5 py-1.5 text-xs rounded bg-secondary hover:bg-secondary/80 text-muted-foreground transition-colors"
+            >
+              {t('actions.cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Preview Section ──
 
 function PreviewSection({
@@ -572,13 +744,14 @@ function PreviewSection({
 }) {
   const checkedPreview = request.pr_number ? previewResults[request.pr_number] : null
   const previewUrl = request.netlify_preview_url || (checkedPreview?.status === 'ready' ? checkedPreview.preview_url : null)
+  const safePreviewUrl = isValidPreviewUrl(previewUrl) ? previewUrl : null
   const isCheckingThis = previewChecking === request.pr_number
 
   const readyAt = checkedPreview?.ready_at ? new Date(checkedPreview.ready_at) : null
   const secondsSinceReady = readyAt ? (Date.now() - readyAt.getTime()) / MS_PER_SECOND : Infinity
   const isWarmingUp = secondsSinceReady < PREVIEW_WARMUP_SECONDS
 
-  if (previewUrl && request.status === 'fix_ready') {
+  if (safePreviewUrl && request.status === 'fix_ready') {
     if (isWarmingUp) {
       const secondsLeft = Math.ceil(PREVIEW_WARMUP_SECONDS - secondsSinceReady)
       return (
@@ -597,24 +770,34 @@ function PreviewSection({
             <Eye className="w-4 h-4 text-green-400" />
             <span className="text-xs text-green-400 font-medium">Preview Available</span>
           </div>
-          <a href={previewUrl} target="_blank" rel="noopener noreferrer"
-            className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1"
-            onClick={e => e.stopPropagation()}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              if (isValidPreviewUrl(safePreviewUrl)) {
+                window.open(safePreviewUrl, '_blank', 'noopener,noreferrer')
+              }
+            }}
+            className="px-2 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1">
             <ExternalLink className="w-3 h-3" />
             Try It
-          </a>
+          </button>
         </div>
       </div>
     )
   }
-  if (previewUrl) {
+  if (safePreviewUrl) {
     return (
-      <a href={previewUrl} target="_blank" rel="noopener noreferrer"
-        className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1"
-        onClick={e => e.stopPropagation()}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          if (isValidPreviewUrl(safePreviewUrl)) {
+            window.open(safePreviewUrl, '_blank', 'noopener,noreferrer')
+          }
+        }}
+        className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1 mt-1 bg-transparent border-0 p-0 cursor-pointer">
         <Eye className="w-3 h-3" />
         Preview
-      </a>
+      </button>
     )
   }
   if (request.pr_number && request.status === 'fix_ready') {
@@ -660,7 +843,7 @@ function RequestActions({
   isLoading: boolean
   showConfirm: boolean
   onRequestUpdate: (id: string) => Promise<void>
-  onCloseRequest: (id: string) => Promise<void>
+  onCloseRequest: (id: string, input?: CloseRequestInput) => Promise<void>
   onSetConfirmClose: (id: string | null) => void
   onShowLoginPrompt: () => void
 }) {

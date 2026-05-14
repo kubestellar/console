@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/kubestellar/console/pkg/api"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 func main() {
@@ -68,7 +69,7 @@ func main() {
 	}
 
 	// Handle graceful shutdown
-	go func() {
+	safego.GoWith("signal-handler", func() {
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 		<-sigCh
@@ -78,7 +79,7 @@ func main() {
 			slog.Error("shutdown error", "error", err)
 		}
 		os.Exit(0)
-	}()
+	})
 
 	// Block until shutdown (HTTP listener runs in background from NewServer)
 	if err := server.Start(); err != nil {

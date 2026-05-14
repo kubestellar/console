@@ -1,7 +1,7 @@
 import { WifiOff, HardDrive, Server, CheckCircle2, XCircle, Cpu, MemoryStick, Layers, Zap, Box, Settings, Sparkles } from 'lucide-react'
 import { formatStat, formatMemoryStat } from '../../../lib/formatStats'
 import { StatsConfigModal, useStatsConfig } from '../../ui/StatsConfig'
-import { useLocalAgent } from '../../../hooks/useLocalAgent'
+import { useLocalAgent, wasAgentEverConnected } from '../../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../../hooks/useBackendHealth'
 import { useDemoMode } from '../../../hooks/useDemoMode'
 import { Skeleton } from '../../ui/Skeleton'
@@ -225,7 +225,7 @@ export function StatsOverview({
 
   // When demo mode is OFF and agent is not connected, force skeleton display
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceLoadingForOffline = !isDemoMode && isAgentOffline && !isInClusterMode()
+  const forceLoadingForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
 
   // Map block IDs to their click handlers
   const getClickHandler = (blockId: string) => {

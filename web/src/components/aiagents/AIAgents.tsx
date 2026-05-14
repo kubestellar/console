@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useKagentiSummary } from '../../hooks/mcp/kagenti'
 import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards'
@@ -29,6 +29,7 @@ function AIAgentsContent() {
   const { summary, isLoading, isDemoData: hookIsDemoData, refetch, error } = useKagentiSummary()
   const tabs = aiAgentsDashboardConfig.tabs || []
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || 'kagenti')
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   const hasData = !!summary && summary.agentCount > 0
   const isDemoData = hookIsDemoData || (!hasData && !isLoading)
@@ -59,6 +60,10 @@ function AIAgentsContent() {
   // between enabled tabs, Home/End jump to the first/last enabled tab,
   // Enter/Space activate. Roving tabindex is applied below.
   const enabledTabs = tabs.filter(t => !t.disabled)
+  const focusTab = (tabId: string) => {
+    setActiveTab(tabId)
+    tabRefs.current[tabId]?.focus()
+  }
   const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (enabledTabs.length === 0) return
     const currentIdx = enabledTabs.findIndex(t => t.id === activeTab)
@@ -66,14 +71,14 @@ function AIAgentsContent() {
       e.preventDefault()
       const delta = e.key === 'ArrowRight' ? 1 : -1
       const next = enabledTabs[(currentIdx + delta + enabledTabs.length) % enabledTabs.length]
-      if (next) setActiveTab(next.id)
+      if (next) focusTab(next.id)
     } else if (e.key === 'Home') {
       e.preventDefault()
-      if (enabledTabs[0]) setActiveTab(enabledTabs[0].id)
+      if (enabledTabs[0]) focusTab(enabledTabs[0].id)
     } else if (e.key === 'End') {
       e.preventDefault()
       const last = enabledTabs[enabledTabs.length - 1]
-      if (last) setActiveTab(last.id)
+      if (last) focusTab(last.id)
     }
   }
 
@@ -82,9 +87,10 @@ function AIAgentsContent() {
       {tabs.map(tab => (
         <React.Fragment key={tab.id}>
         <Button
+          ref={node => { tabRefs.current[tab.id] = node }}
           variant="ghost"
           size="md"
-          onClick={() => !tab.disabled && setActiveTab(tab.id)}
+          onClick={() => !tab.disabled && focusTab(tab.id)}
           onKeyDown={handleTabKeyDown}
           disabled={tab.disabled}
           role="tab"

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -103,7 +104,7 @@ func NewDeviceTracker(k8sClient *k8s.MultiClusterClient, broadcast func(string, 
 
 // Start begins periodic device tracking
 func (t *DeviceTracker) Start() {
-	go t.runLoop()
+	safego.GoWith("device-tracker/run-loop", func() { t.runLoop() })
 }
 
 // Stop stops the device tracker. Safe to call multiple times (#6684).
@@ -156,8 +157,9 @@ func (t *DeviceTracker) scanDevices() {
 
 	var wg sync.WaitGroup
 	for _, cluster := range clusters {
+		cl := cluster
 		wg.Add(1)
-		go func(cl k8s.ClusterInfo) {
+		safego.GoWith("device-tracker/"+cl.Name, func() {
 			defer wg.Done()
 			clusterCtx, clusterCancel := context.WithTimeout(ctx, deviceTrackerPerClusterTimeout)
 			defer clusterCancel()
@@ -176,14 +178,14 @@ func (t *DeviceTracker) scanDevices() {
 					Timestamp: now,
 				}
 			}
-		}(cluster)
+		})
 	}
 
 	// Close channel once all scanners finish
-	go func() {
+	safego.GoWith("device-tracker/close-snapshots", func() {
 		wg.Wait()
 		close(snapshotCh)
-	}()
+	})
 
 	// Process snapshots as they stream in — broadcast after each cluster's batch.
 	// Track observed keys so we can evict deleted nodes afterward (#7274).

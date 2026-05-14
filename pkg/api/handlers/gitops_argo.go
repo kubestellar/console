@@ -28,11 +28,10 @@ func (h *GitOpsHandlers) ListHelmHistory(c *fiber.Ctx) error {
 	// SECURITY: Validate all user-supplied params before passing to helm CLI
 	for field, val := range map[string]string{"cluster": cluster, "release": release, "namespace": namespace} {
 		if err := validateK8sName(val, field); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			slog.Warn("[gitops] invalid parameter (helm history)", "field", field, "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid parameter: " + field})
 		}
 	}
-
-	// Note: helm history doesn't support -A (all namespaces) flag
 	// If namespace not provided, helm will search in the default namespace
 	// The frontend should pass the namespace from the release data
 	args := []string{"history", release, "--output", "json", "--max", "20"}
@@ -78,7 +77,8 @@ func (h *GitOpsHandlers) GetHelmValues(c *fiber.Ctx) error {
 	// SECURITY: Validate all user-supplied params before passing to helm CLI
 	for field, val := range map[string]string{"cluster": cluster, "release": release, "namespace": namespace} {
 		if err := validateK8sName(val, field); err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+			slog.Warn("[gitops] invalid parameter (helm values)", "field", field, "error", err)
+			return c.Status(400).JSON(fiber.Map{"error": "invalid parameter: " + field})
 		}
 	}
 

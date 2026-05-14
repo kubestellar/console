@@ -70,6 +70,8 @@ export interface DashboardPageProps {
   beforeCards?: ReactNode
   /** Extra content to render in header row (e.g., selectors, filters) */
   headerExtra?: ReactNode
+  /** Extra content rendered after the title (e.g., a page-specific health badge) */
+  afterTitle?: ReactNode
   /** Extra content rendered on the right side of the header (e.g., action buttons) */
   rightExtra?: ReactNode
   /** Empty state configuration for no cards. An optional `action` (primary CTA)
@@ -116,6 +118,7 @@ export function DashboardPage({
   children,
   beforeCards,
   headerExtra,
+  afterTitle,
   rightExtra,
   emptyState,
   isDemoData = false,
@@ -359,7 +362,7 @@ export function DashboardPage({
           lastUpdated={lastUpdated}
           showTimestamp={false}
           error={error}
-          afterTitle={<DashboardHealthIndicator />}
+          afterTitle={afterTitle ?? <DashboardHealthIndicator />}
           rightExtra={rightExtra}
         />
 

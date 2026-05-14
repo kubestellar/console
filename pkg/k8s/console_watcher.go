@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // errWatchGone is returned from doWatch when the apiserver sends a 410 Gone
@@ -94,7 +95,7 @@ func (w *ConsoleWatcher) Start(ctx context.Context) error {
 	}
 
 	for _, r := range gvrs {
-		go w.watchResource(ctx, stopCh, r.gvr, r.resourceType)
+		safego.GoWith("console-watcher/"+r.resourceType, func() { w.watchResource(ctx, stopCh, r.gvr, r.resourceType) })
 	}
 
 	return nil

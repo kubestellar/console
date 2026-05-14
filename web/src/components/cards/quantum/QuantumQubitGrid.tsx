@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import DOMPurify from 'dompurify'
 import { AlertCircle, RefreshCw } from 'lucide-react'
 import { useReportCardDataState } from '../CardDataContext'
-import { isGlobalQuantumPollingPaused } from '../../../lib/quantum/pollingContext'
 import { isQuantumForcedToDemo } from '../../../lib/demoMode'
 import { useAuth } from '../../../lib/auth'
-import { FETCH_DEFAULT_TIMEOUT_MS } from '../../../lib/constants/network'
+import {
+  useQuantumQubitGridData,
+  DEMO_QUANTUM_QUBITS,
+  QUANTUM_QUBIT_GRID_DEFAULT_POLL_MS,
+} from '../../../hooks/useCachedQuantum'
 
 // Polling interval for qubit grid updates (adjustable for responsiveness)
-const QUBIT_GRID_DEFAULT_POLL_MS = 10000
+const QUBIT_GRID_DEFAULT_POLL_MS = QUANTUM_QUBIT_GRID_DEFAULT_POLL_MS
 // SVG border color for qubit grid display
 const SVG_BORDER_COLOR = '#ccc'
 
@@ -16,10 +20,7 @@ interface QubitSimpleData {
   pattern: string
 }
 
-const DEMO_DATA: QubitSimpleData = {
-  num_qubits: 8,
-  pattern: '01010101',
-}
+const DEMO_DATA: QubitSimpleData = DEMO_QUANTUM_QUBITS
 
 // Qubit pixel coordinate mappings from QuantumKCDemo.v0_2.py
 const QUBIT_DISPLAY_PATTERNS = {
@@ -65,8 +66,8 @@ const QUBIT_DISPLAY_PATTERNS = {
   qk_logo: [
     [2], [3], [4], [5],
     [9], [10], [13], [14],
-    [16], [17], [18], [21], [22], [23],
-    [24], [25], [27], [28], [31],
+    [16], [18], [21], [23],
+    [24], [27], [28], [31],
     [32], [33], [38], [39],
     [40], [42], [43], [44], [45], [47],
     [49], [54],
@@ -166,123 +167,51 @@ function renderQubitSVG(pattern: string, displayPattern: readonly (readonly numb
 
 export const QuantumQubitGrid: React.FC = () => {
   const { isAuthenticated, login, isLoading: authIsLoading } = useAuth()
-  const [data, setData] = useState<QubitSimpleData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [consecutiveFailures, setConsecutiveFailures] = useState(0)
   const [refreshInterval, setRefreshInterval] = useState(QUBIT_GRID_DEFAULT_POLL_MS)
   const [selectedMask, setSelectedMask] = useState<MaskKey>('ibm_qx5')
-  const [versionInfo, setVersionInfo] = useState<{ version: string; commit: string; timestamp: string } | null>(null)
+  const forceDemo = isQuantumForcedToDemo()
+  const {
+    data,
+    isLoading,
+    isRefreshing,
+    isDemoData,
+    error,
+    isFailed,
+    consecutiveFailures,
+  } = useQuantumQubitGridData({
+    isAuthenticated,
+    forceDemo,
+    pollInterval: refreshInterval,
+  })
 
-  
-
-  const isDemoFallback = consecutiveFailures >= 3
-  // Show empty grid if no data AND (executing or loop_mode is active)
-  const shouldShowEmpty = data === null  // Always show empty grid when no data
+  const qubitData = data?.qubits ?? null
+  const versionInfo = data?.versionInfo ?? null
+  const shouldShowEmpty = qubitData === null
 
   useReportCardDataState({
-    isLoading: isLoading && !isDemoFallback,
+    isLoading: isAuthenticated ? isLoading && qubitData === null : false,
     isRefreshing,
-    isDemoData: isDemoFallback,
-    hasData: data !== null || shouldShowEmpty,  // Show grid even when empty
-    isFailed: error !== null,
+    isDemoData: isAuthenticated ? isDemoData : false,
+    hasData: isAuthenticated ? qubitData !== null || shouldShowEmpty : false,
+    isFailed,
     consecutiveFailures,
   })
 
-  const displayData = shouldShowEmpty ? { num_qubits: 8, pattern: '' } : (data || DEMO_DATA)
+  const displayData = shouldShowEmpty ? { num_qubits: 8, pattern: '' } : (qubitData || DEMO_DATA)
 
   // Auto-select smallest valid mask for current qubit count
   useEffect(() => {
-    if (data) {
-      const best = MASK_OPTIONS.find(m => m.maxQubits >= data.num_qubits)
+    if (qubitData) {
+      const best = MASK_OPTIONS.find(m => m.maxQubits >= qubitData.num_qubits)
       if (best) {
         setSelectedMask(best.key)
       }
     }
-  }, [data?.num_qubits])
+  }, [qubitData])
 
   const svgContent = useMemo(() => {
     return renderQubitSVG(displayData.pattern, QUBIT_DISPLAY_PATTERNS[selectedMask])
   }, [displayData.pattern, selectedMask])
-
-  // Fetch qubit data and execution status
-  useEffect(() => {
-    const fetchQubits = async () => {
-      try {
-        setIsRefreshing(true)
-        const res = await fetch('/api/quantum/qubits/simple', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-        })
-
-        if (!res.ok) {
-          const errorBody = await res.text()
-          console.error('[QuantumQubitGrid] Request failed:', {
-            status: res.status,
-            statusText: res.statusText,
-            body: errorBody,
-          })
-          throw new Error(`API error: ${res.status} - ${errorBody}`)
-        }
-
-        const result = await res.json()
-        if (result.error) {
-          setData(null)  // Set to null to trigger empty grid display
-          setError(null)
-        } else {
-          setData(result)
-          setError(null)
-        }
-
-        // Fetch execution status (to know if we should show empty grid)
-        try {
-          const statusRes = await fetch('/api/quantum/status', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS),
-          })
-
-          if (statusRes.ok) {
-            const statusData = await statusRes.json()
-            if (statusData.version_info) {
-              setVersionInfo(statusData.version_info)
-            }
-          }
-        } catch (err) {
-          // Status fetch is optional, don't fail if it doesn't work
-          console.debug('Could not fetch execution status:', err)
-        }
-
-        setConsecutiveFailures(0)
-      } catch (err) {
-        console.error('Error fetching qubits:', err)
-        console.debug('[QuantumQubitGrid] Auth Debug:', {
-          hasCredentials: true,
-          url: '/api/quantum/qubits/simple',
-          error: err instanceof Error ? err.message : String(err),
-          isOnline: navigator.onLine,
-        })
-        setError(err instanceof Error ? err.message : 'Unknown error')
-        setConsecutiveFailures(prev => prev + 1)
-      } finally {
-        setIsLoading(false)
-        setIsRefreshing(false)
-      }
-    }
-
-    fetchQubits()
-    const interval = setInterval(() => {
-      // Skip polling if paused (e.g., dashboard settings modal open) or demo forced
-      if (!isGlobalQuantumPollingPaused() && !isQuantumForcedToDemo()) {
-        fetchQubits()
-      }
-    }, refreshInterval)
-    return () => clearInterval(interval)
-  }, [refreshInterval, isQuantumForcedToDemo])
 
   // Get the label for the currently selected mask
   const patternLabel = useMemo(() => {
@@ -324,7 +253,7 @@ export const QuantumQubitGrid: React.FC = () => {
               </span>
             )}
           </h3>
-          {isDemoFallback && (
+          {isDemoData && (
             <span className="inline-block px-2 py-1 text-xs font-semibold bg-yellow-200 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-200 rounded">
               Demo Mode
             </span>
@@ -332,7 +261,7 @@ export const QuantumQubitGrid: React.FC = () => {
         </div>
 
         {/* Error message */}
-        {error && !isDemoFallback && (
+        {error && !isDemoData && (
           <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
             <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <span>{error}</span>
@@ -342,8 +271,8 @@ export const QuantumQubitGrid: React.FC = () => {
         {/* SVG Grid */}
         <div className="flex justify-center p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
           <div
-            dangerouslySetInnerHTML={{ __html: svgContent }}
-            style={{ filter: isDemoFallback ? 'brightness(0.9)' : 'none' }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(svgContent, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
+            style={{ filter: isDemoData ? 'brightness(0.9)' : 'none' }}
           />
         </div>
 

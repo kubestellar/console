@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -29,11 +30,11 @@ const (
 	DepService            DependencyKind = "Service"
 	DepIngress            DependencyKind = "Ingress"
 	DepNetworkPolicy      DependencyKind = "NetworkPolicy"
-	DepHPA                      DependencyKind = "HorizontalPodAutoscaler"
-	DepPDB                      DependencyKind = "PodDisruptionBudget"
-	DepCRD                      DependencyKind = "CustomResourceDefinition"
-	DepValidatingWebhook        DependencyKind = "ValidatingWebhookConfiguration"
-	DepMutatingWebhook          DependencyKind = "MutatingWebhookConfiguration"
+	DepHPA                DependencyKind = "HorizontalPodAutoscaler"
+	DepPDB                DependencyKind = "PodDisruptionBudget"
+	DepCRD                DependencyKind = "CustomResourceDefinition"
+	DepValidatingWebhook  DependencyKind = "ValidatingWebhookConfiguration"
+	DepMutatingWebhook    DependencyKind = "MutatingWebhookConfiguration"
 )
 
 // Apply order: lower = applied first
@@ -50,11 +51,11 @@ var depApplyOrder = map[DependencyKind]int{
 	DepService:            9,
 	DepIngress:            10,
 	DepNetworkPolicy:      11,
-	DepHPA:                      12,
-	DepPDB:                      13,
-	DepCRD:                      14,
-	DepValidatingWebhook:        15,
-	DepMutatingWebhook:          16,
+	DepHPA:                12,
+	DepPDB:                13,
+	DepCRD:                14,
+	DepValidatingWebhook:  15,
+	DepMutatingWebhook:    16,
 }
 
 // rbacCacheTTL is how long cached RBAC binding lists remain valid before re-fetch.
@@ -405,8 +406,10 @@ func (m *MultiClusterClient) ResolveDependencies(
 	sem := make(chan struct{}, maxParallelFetches) // concurrency limiter
 
 	for i, dep := range bundle.Dependencies {
+		idx := i
+		d := dep
 		wg.Add(1)
-		go func(idx int, d Dependency) {
+		safego.Go(func() {
 			defer wg.Done()
 			sem <- struct{}{}        // acquire slot
 			defer func() { <-sem }() // release slot
@@ -449,7 +452,7 @@ func (m *MultiClusterClient) ResolveDependencies(
 			// Clean the manifest for cross-cluster deploy
 			d.Object = cleanManifestForDeploy(obj, sourceCluster, opts)
 			results[idx] = fetchResult{index: idx, dep: d}
-		}(i, dep)
+		})
 	}
 	wg.Wait()
 

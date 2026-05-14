@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
@@ -262,7 +264,8 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 
 			for _, cl := range clusters {
 				wg.Add(1)
-				go func(clusterName string) {
+				clusterName := cl.Name
+				safego.GoWith("mcp-workloads/"+clusterName, func() {
 					defer wg.Done()
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
@@ -280,7 +283,7 @@ func (h *MCPHandlers) GetServices(c *fiber.Ctx) error {
 						allServices = append(allServices, services...)
 					}
 					mu.Unlock()
-				}(cl.Name)
+				})
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)

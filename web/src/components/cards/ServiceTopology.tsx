@@ -47,6 +47,7 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
     graph,
     stats,
     isLoading,
+    isRefreshing,
     isFailed,
     consecutiveFailures,
     isDemoData } = useTopology()
@@ -56,7 +57,8 @@ export function ServiceTopology({ config: _config }: ServiceTopologyProps) {
     isFailed,
     consecutiveFailures,
     isDemoData,
-    isLoading })
+    isLoading,
+    isRefreshing })
 
   const [zoom, setZoom] = useState(1)
   const [selectedNode, setSelectedNode] = useState<string | null>(null)

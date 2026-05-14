@@ -46,6 +46,11 @@ interface KubaraConfig {
 
 let cachedKubaraConfig: KubaraConfig | null = null
 
+/** Reset the cached Kubara config (used on navigation/page changes). */
+export function resetCachedKubaraConfig(): void {
+  cachedKubaraConfig = null
+}
+
 /** Fetch active Kubara catalog config from the backend (cached, falls back to defaults). */
 export async function getKubaraConfig(): Promise<KubaraConfig> {
   if (cachedKubaraConfig) return cachedKubaraConfig
@@ -335,4 +340,23 @@ export async function fetchNodeFileContent(node: TreeNode): Promise<string | nul
   }
 
   return null
+}
+
+// ============================================================================
+// Cache invalidation on navigation/visibility changes
+// ============================================================================
+
+if (typeof window !== 'undefined') {
+  // Reset cache when page becomes hidden (user navigates away or switches tabs)
+  // This ensures fresh fetches after navigation in Playwright tests and normal usage
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      resetCachedKubaraConfig()
+    }
+  })
+
+  // Reset cache on beforeunload to ensure fresh state after navigation
+  window.addEventListener('beforeunload', () => {
+    resetCachedKubaraConfig()
+  })
 }

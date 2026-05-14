@@ -181,3 +181,47 @@ func TestClusterMatchesFilters_OneFails(t *testing.T) {
 
 	assert.False(t, h.clusterMatchesFilters(cluster, health, nil, filters))
 }
+
+// TestSetTerminalStatus_SanitizedMessage verifies that the message stored in
+// wd.Status.History does not contain raw error text — only the generic string
+// passed by the caller. This prevents internal Kubernetes error details from
+// leaking via the WorkloadDeployment status API.
+func TestSetTerminalStatus_SanitizedMessage(t *testing.T) {
+	h := newTestHandler()
+	noop := func(*v1alpha1.WorkloadDeployment) {}
+
+	tests := []struct {
+		name    string
+		message string
+	}{
+		{
+			name:    "ManagedWorkload resolution failure uses generic message",
+			message: "Failed to resolve ManagedWorkload",
+		},
+		{
+			name:    "target cluster resolution failure uses generic message",
+			message: "Failed to resolve target clusters",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			wd := &v1alpha1.WorkloadDeployment{}
+			h.setTerminalStatus(wd, "Failed", tc.message, noop)
+
+			if len(wd.Status.History) == 0 {
+				t.Fatal("expected a history entry to be appended")
+			}
+			got := wd.Status.History[len(wd.Status.History)-1].Message
+
+			// Exact message must match — no raw error text appended.
+			assert.Equal(t, tc.message, got)
+
+			// Must not contain Go error formatting artefacts that would
+			// indicate a raw err was embedded via fmt.Sprintf("...: %v", err).
+			assert.NotContains(t, got, "%v")
+			assert.NotContains(t, got, "failed to get")
+			assert.NotContains(t, got, "connection refused")
+		})
+	}
+}

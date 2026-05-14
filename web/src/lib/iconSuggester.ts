@@ -94,13 +94,13 @@ function askAgentForIcon(name: string): Promise<string | null> {
     return Promise.resolve(null)
   }
 
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const timeout = setTimeout(() => {
       resolve(null)
     }, ICON_SUGGESTION_TIMEOUT_MS)
 
     try {
-      const ws = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+      const ws = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
       let response = ''
       const requestId = `icon-suggest-${Date.now()}`
 

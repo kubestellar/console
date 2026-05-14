@@ -14,6 +14,7 @@ import (
 	"github.com/kubestellar/console/pkg/agent/protocol"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -152,29 +153,24 @@ func (s *Server) handleGPUNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("gpu-nodes-fetch", func() {
 				defer wg.Done()
-				defer func() {
-					if r := recover(); r != nil {
-						slog.Error("[GPUNodes] recovered from panic", "cluster", clusterName, "panic", r)
-					}
-				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
 				defer clusterCancel()
-				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, clusterName)
+				nodes, err := s.k8sClient.GetGPUNodes(clusterCtx, cl.Name)
 				if err != nil {
-					retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
+					retryIn := s.recordClusterResourceFailure(resourceName, cl.Name)
 					// #7750: Log per-cluster errors so GPU metric gaps are diagnosable.
-					slog.Warn("[GPUNodes] failed to list GPU nodes for cluster", "cluster", clusterName, "error", err, "retryIn", retryIn)
+					slog.Warn("[GPUNodes] failed to list GPU nodes for cluster", "cluster", cl.Name, "error", err, "retryIn", retryIn)
 					return
 				}
-				s.recordClusterResourceSuccess(resourceName, clusterName)
+				s.recordClusterResourceSuccess(resourceName, cl.Name)
 				if len(nodes) > 0 {
 					mu.Lock()
 					allNodes = append(allNodes, nodes...)
 					mu.Unlock()
 				}
-			}(cl.Name)
+			})
 		}
 		wg.Wait()
 	}
@@ -241,28 +237,23 @@ func (s *Server) handleNodesHTTP(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			wg.Add(1)
-			go func(clusterName string) {
+			safego.GoWith("nodes-fetch", func() {
 				defer wg.Done()
-				defer func() {
-					if r := recover(); r != nil {
-						slog.Error("[Nodes] recovered from panic", "cluster", clusterName, "panic", r)
-					}
-				}()
 				clusterCtx, clusterCancel := context.WithTimeout(ctx, agentDefaultTimeout)
 				defer clusterCancel()
-				nodes, err := s.k8sClient.GetNodes(clusterCtx, clusterName)
+				nodes, err := s.k8sClient.GetNodes(clusterCtx, cl.Name)
 				if err != nil {
-					retryIn := s.recordClusterResourceFailure(resourceName, clusterName)
-					slog.Warn("[Nodes] failed to list nodes for cluster", "cluster", clusterName, "error", err, "retryIn", retryIn)
+					retryIn := s.recordClusterResourceFailure(resourceName, cl.Name)
+					slog.Warn("[Nodes] failed to list nodes for cluster", "cluster", cl.Name, "error", err, "retryIn", retryIn)
 					return
 				}
-				s.recordClusterResourceSuccess(resourceName, clusterName)
+				s.recordClusterResourceSuccess(resourceName, cl.Name)
 				if len(nodes) > 0 {
 					mu.Lock()
 					allNodes = append(allNodes, nodes...)
 					mu.Unlock()
 				}
-			}(cl.Name)
+			})
 		}
 		wg.Wait()
 	}
@@ -430,13 +421,15 @@ func (s *Server) createNamespaceHTTP(w http.ResponseWriter, r *http.Request) {
 	// render a specific error and so we don't lean on the apiserver for
 	// validation.
 	if err := validateKubeContext(req.Cluster); err != nil {
+		slog.Error("invalid cluster for create namespace request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := validateDNS1123Label("name", req.Name); err != nil {
+		slog.Error("invalid namespace name for create request", "name", req.Name, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 
@@ -909,7 +902,7 @@ func (s *Server) createServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		slog.Warn("error creating service account", "cluster", req.Cluster, "namespace", req.Namespace, "name", req.Name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("create service account", err), "source": "agent"})
 		return
 	}
 	writeJSON(w, sa)
@@ -934,7 +927,7 @@ func (s *Server) deleteServiceAccountHTTP(w http.ResponseWriter, r *http.Request
 	if err := s.k8sClient.DeleteServiceAccount(ctx, cluster, namespace, name); err != nil {
 		slog.Warn("error deleting service account", "cluster", cluster, "namespace", namespace, "name", name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("delete service account", err), "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{"success": true, "cluster": cluster, "namespace": namespace, "name": name, "source": "agent"})
@@ -1001,7 +994,7 @@ func (s *Server) createServiceExportHTTP(w http.ResponseWriter, r *http.Request)
 	if err := s.k8sClient.CreateServiceExport(ctx, req.Cluster, req.Namespace, req.ServiceName); err != nil {
 		slog.Warn("error creating service export", "cluster", req.Cluster, "namespace", req.Namespace, "serviceName", req.ServiceName, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("create service export", err), "source": "agent"})
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
@@ -1033,7 +1026,7 @@ func (s *Server) deleteServiceExportHTTP(w http.ResponseWriter, r *http.Request)
 	if err := s.k8sClient.DeleteServiceExport(ctx, cluster, namespace, name); err != nil {
 		slog.Warn("error deleting service export", "cluster", cluster, "namespace", namespace, "name", name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error(), "source": "agent"})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("delete service export", err), "source": "agent"})
 		return
 	}
 	writeJSON(w, map[string]interface{}{
@@ -1304,8 +1297,9 @@ func (s *Server) createRoleBindingHTTP(w http.ResponseWriter, r *http.Request) {
 	// so we return a specific 400 instead of passing empty/malformed values
 	// down to the apiserver and getting back an opaque 500.
 	if err := validateKubeContext(req.Cluster); err != nil {
+		slog.Error("invalid cluster for role binding request", "cluster", req.Cluster, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]interface{}{"success": false, "error": err.Error()})
+		writeJSON(w, map[string]interface{}{"success": false, "error": sanitizeAgentError("", err)})
 		return
 	}
 	if req.SubjectKind == "" || req.SubjectName == "" {
@@ -1511,7 +1505,7 @@ func (s *Server) handleResolveDepsHTTP(w http.ResponseWriter, r *http.Request) {
 			"namespace":    namespace,
 			"cluster":      cluster,
 			"dependencies": []interface{}{},
-			"warnings":     []string{err.Error()},
+			"warnings":     []string{sanitizeAgentError("resolve workload dependencies", err)},
 			"source":       "agent",
 		})
 		return

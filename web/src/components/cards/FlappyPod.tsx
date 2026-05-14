@@ -6,6 +6,7 @@ import { useReportCardDataState } from './CardDataContext'
 import { emitGameStarted, emitGameEnded } from '../../lib/analytics'
 import { useGameKeys } from '../../hooks/useGameKeys'
 import { safeGet, safeSet } from '../../lib/safeLocalStorage'
+import { Button } from '../ui/Button'
 
 /** localStorage key for Flappy Pod high score */
 const HIGH_SCORE_KEY = 'flappy-pod-high'
@@ -295,14 +296,14 @@ export function FlappyPod(_props: CardComponentProps) {
           </div>
         </div>
 
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<RotateCcw className="w-4 h-4" />}
           onClick={startGame}
-          className="p-1.5 rounded hover:bg-secondary"
           title="New Game"
           aria-label="New Game"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
+        />
       </div>
 
       {/* Game area - relative container for overlays */}
@@ -343,12 +344,13 @@ export function FlappyPod(_props: CardComponentProps) {
               {score === highScore && score > 0 && (
                 <div className="text-yellow-400 text-sm mb-4">New High Score!</div>
               )}
-              <button
+              <Button
+                variant="accent"
+                size="lg"
                 onClick={startGame}
-                className="px-6 py-3 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 font-semibold"
               >
                 Play Again
-              </button>
+              </Button>
             </div>
           </div>
         )}

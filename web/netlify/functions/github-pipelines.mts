@@ -228,7 +228,7 @@ async function gh(path: string, token: string, init: RequestInit = {}): Promise<
     ...(init.headers ?? {}),
   };
   for (let attempt = 0; attempt < GH_RETRY_MAX_ATTEMPTS; attempt++) {
-    const resp = await fetch(url, { ...init, headers });
+    const resp = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(10_000) });
     if (resp.status !== 429 && resp.status !== 403) return resp;
     if (attempt === GH_RETRY_MAX_ATTEMPTS - 1) {
       console.warn(`[github-pipelines] retries exhausted for ${path}, status=${resp.status}`);
@@ -799,7 +799,7 @@ async function buildLog(
     return jsonResponse({ error: "Log not available (may have been purged)" }, { status: 404 });
   }
   if (!res.ok) {
-    return jsonResponse({ error: `GitHub ${res.status}` }, { status: 502 });
+    return jsonResponse({ error: "upstream request failed" }, { status: 502 });
   }
   const text = await res.text();
   const lines = text.split("\n");
@@ -835,8 +835,7 @@ async function mutate(
 
   const res = await gh(path, token, { method: "POST" });
   if (!res.ok) {
-    const body = await res.text();
-    return jsonResponse({ error: `GitHub ${res.status}: ${body}` }, { status: 502 });
+    return jsonResponse({ error: "upstream request failed" }, { status: 502 });
   }
   return jsonResponse({ ok: true, op, run: runId, repo });
 }
@@ -882,6 +881,9 @@ export default async (req: Request): Promise<Response> => {
       const op = url.searchParams.get("op") ?? "";
       const repo = url.searchParams.get("repo") ?? "";
       const run = url.searchParams.get("run") ?? "";
+      if (!/^\d+$/.test(run)) {
+        return jsonResponse({ error: "Invalid run ID" }, { status: 400, headers: baseHeaders });
+      }
       const resp = await mutate(op, repo, run);
       // Inherit CORS headers
       for (const [k, v] of Object.entries(baseHeaders)) resp.headers.set(k, v);
@@ -946,9 +948,9 @@ export default async (req: Request): Promise<Response> => {
       case "log": {
         const repo = url.searchParams.get("repo") ?? "";
         const job = url.searchParams.get("job") ?? "";
-        if (!isValidRepo(repo) || !job) {
+        if (!isValidRepo(repo) || !job || !/^\d+$/.test(job)) {
           return jsonResponse(
-            { error: "repo and job params required" },
+            { error: "repo and valid numeric job params required" },
             { status: 400, headers: baseHeaders }
           );
         }
@@ -957,7 +959,7 @@ export default async (req: Request): Promise<Response> => {
         return r;
       }
       default:
-        return jsonResponse({ error: `Unknown view: ${view}` }, { status: 400, headers: baseHeaders });
+        return jsonResponse({ error: "unknown view" }, { status: 400, headers: baseHeaders });
     }
 
     // Wrap payload with the repo list so the client never hardcodes it.
@@ -974,7 +976,7 @@ export default async (req: Request): Promise<Response> => {
   } catch (err) {
     return jsonResponse(
       {
-        error: (err as Error).message ?? "Internal error",
+        error: "Internal error",
         repos: REPOS,
         nextCron: "0 5 * * *",
       },

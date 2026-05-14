@@ -4,6 +4,7 @@ import React from 'react'
 import { MissionProvider, useMissions } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { discoverKagentiProviderAgent, kagentiProviderChat } from '../lib/kagentiProviderBackend'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
@@ -75,6 +76,13 @@ vi.mock('../lib/missions/scanner/malicious', () => ({
 
 vi.mock('../lib/kubectlProxy', () => ({
   kubectlProxy: { exec: vi.fn() },
+}))
+
+vi.mock('../lib/kagentiProviderBackend', () => ({
+  discoverKagentiProviderAgent: vi.fn(),
+  fetchKagentiProviderAgents: vi.fn(),
+  fetchKagentiProviderStatus: vi.fn(),
+  kagentiProviderChat: vi.fn(),
 }))
 
 // ── Mock WebSocket ─────────────────────────────────────────────────────────────
@@ -473,6 +481,82 @@ describe('startMission', () => {
     // Use expect.anything() so this assertion stays valid as the 3rd arg
     // evolves (test exists to verify the type+code, not the message body).
     expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'test_err', expect.anything())
+  })
+
+  it('persists an auto-discovered kagenti agent before starting the mission', async () => {
+    vi.mocked(discoverKagentiProviderAgent).mockResolvedValueOnce({
+      ok: true,
+      agent: { name: 'agent-a', namespace: 'agents' },
+    })
+    vi.mocked(kagentiProviderChat).mockImplementationOnce(async (_agent, _namespace, _message, options) => {
+      options.onDone()
+    })
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => {
+      result.current.selectAgent('kagenti')
+    })
+
+    act(() => {
+      result.current.startMission(defaultParams)
+    })
+
+    await waitFor(() => expect(localStorage.getItem('kc_kagenti_selected_agent')).toBe('agents/agent-a'))
+    expect(kagentiProviderChat).toHaveBeenCalledWith(
+      'agent-a',
+      'agents',
+      defaultParams.initialPrompt,
+      expect.objectContaining({ contextId: expect.any(String) }),
+    )
+  })
+
+  it('shows a provider unavailable error when kagenti discovery cannot reach the provider', async () => {
+    vi.mocked(discoverKagentiProviderAgent).mockResolvedValueOnce({
+      ok: false,
+      reason: 'provider_unreachable',
+      detail: 'unreachable',
+    })
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => {
+      result.current.selectAgent('kagenti')
+    })
+
+    let missionId = ''
+    act(() => {
+      missionId = result.current.startMission(defaultParams)
+    })
+
+    await waitFor(() => {
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('failed')
+      expect((mission?.messages || []).some(message => message.content.includes('Kagenti provider unavailable'))).toBe(true)
+    })
+    expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'kagenti_provider_unavailable', 'provider_unreachable')
+  })
+
+  it('shows a zero-agents error when kagenti discovery succeeds but no agents are registered', async () => {
+    vi.mocked(discoverKagentiProviderAgent).mockResolvedValueOnce({
+      ok: false,
+      reason: 'no_agents_discovered',
+    })
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => {
+      result.current.selectAgent('kagenti')
+    })
+
+    let missionId = ''
+    act(() => {
+      missionId = result.current.startMission(defaultParams)
+    })
+
+    await waitFor(() => {
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('failed')
+      expect((mission?.messages || []).some(message => message.content.includes('No Kagenti agents discovered'))).toBe(true)
+    })
+    expect(emitMissionError).toHaveBeenCalledWith('troubleshoot', 'kagenti_no_agents_discovered', 'no_agents_discovered')
   })
 
   it('transitions mission to failed when connection cannot be established', async () => {

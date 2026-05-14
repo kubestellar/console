@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kubestellar/console/pkg/k8s"
@@ -29,6 +31,10 @@ const eventRetentionSweepInterval = 1 * time.Hour
 // defaultEventRetentionDays is the fallback when KSC_EVENT_RETENTION_DAYS is
 // unset or invalid.
 const defaultEventRetentionDays = 7
+
+// clusterListTimeout caps the HealthyClusters call in the background
+// collector so a hung API server cannot block the event poll loop.
+const clusterListTimeout = 15 * time.Second
 
 // eventCollectTimeout is the per-cluster fetch timeout.
 const eventCollectTimeout = 15 * time.Second
@@ -107,7 +113,7 @@ func (h *TimelineHandler) StartEventCollector(done <-chan struct{}) {
 		slog.Info("[Timeline] no k8s client — event collector disabled")
 		return
 	}
-	go h.runCollector(done)
+	safego.GoWith("timeline/event-collector", func() { h.runCollector(done) })
 }
 
 func (h *TimelineHandler) runCollector(done <-chan struct{}) {
@@ -138,7 +144,9 @@ func (h *TimelineHandler) runCollector(done <-chan struct{}) {
 }
 
 func (h *TimelineHandler) collectAll() {
-	healthy, _, err := h.k8sClient.HealthyClusters(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), clusterListTimeout)
+	defer cancel()
+	healthy, _, err := h.k8sClient.HealthyClusters(ctx)
 	if err != nil {
 		slog.Error("[Timeline] failed to list clusters", "error", err)
 		return
@@ -147,10 +155,11 @@ func (h *TimelineHandler) collectAll() {
 	var wg sync.WaitGroup
 	for _, ci := range healthy {
 		wg.Add(1)
-		go func(cluster k8s.ClusterInfo) {
+		cluster := ci
+		safego.GoWith("timeline/"+cluster.Name, func() {
 			defer wg.Done()
 			h.collectCluster(cluster)
-		}(ci)
+		})
 	}
 	wg.Wait()
 }

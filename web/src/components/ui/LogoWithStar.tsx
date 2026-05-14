@@ -27,6 +27,7 @@ export function LogoWithStar({ className, logoClassName, alt, showStar }: LogoWi
         src={logoUrl}
         alt={alt || appShortName}
         className={cn('w-full h-full', logoClassName)}
+        loading="lazy"
       />
       {/* Star treatment overlay — only shown for KubeStellar branding */}
       {renderStar && (

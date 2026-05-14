@@ -15,8 +15,13 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
+
+// healthCheckHTTPClient is reused across all backend health checks to enable
+// connection pooling and reduce per-request allocation overhead.
+var healthCheckHTTPClient = &http.Client{Timeout: healthCheckTimeout}
 
 // mapK8sErrorToHTTP translates a Kubernetes API error into the appropriate
 // HTTP status + sanitized user-facing message. Opaque 500s leak apiserver
@@ -28,31 +33,30 @@ import (
 func mapK8sErrorToHTTP(err error) (int, string) {
 	switch {
 	case k8serrors.IsAlreadyExists(err):
-		return http.StatusConflict, err.Error()
+		return http.StatusConflict, sanitizeAgentError("", err)
 	case k8serrors.IsForbidden(err):
-		return http.StatusForbidden, err.Error()
+		return http.StatusForbidden, sanitizeAgentError("", err)
 	case k8serrors.IsInvalid(err):
-		return http.StatusBadRequest, err.Error()
+		return http.StatusBadRequest, sanitizeAgentError("", err)
 	case k8serrors.IsNotFound(err):
-		return http.StatusNotFound, err.Error()
+		return http.StatusNotFound, sanitizeAgentError("", err)
 	case k8serrors.IsUnauthorized(err):
-		return http.StatusUnauthorized, err.Error()
+		return http.StatusUnauthorized, sanitizeAgentError("", err)
 	case k8serrors.IsConflict(err):
-		return http.StatusConflict, err.Error()
+		return http.StatusConflict, sanitizeAgentError("", err)
 	case k8serrors.IsTimeout(err), k8serrors.IsServerTimeout(err):
-		return http.StatusGatewayTimeout, err.Error()
+		return http.StatusGatewayTimeout, sanitizeAgentError("", err)
 	case k8serrors.IsServiceUnavailable(err):
-		return http.StatusServiceUnavailable, err.Error()
+		return http.StatusServiceUnavailable, sanitizeAgentError("", err)
 	default:
-		return http.StatusInternalServerError, "internal server error"
+		return http.StatusInternalServerError, sanitizeAgentError("", err)
 	}
 }
 
-// writeJSON encodes v as JSON to w and logs any encoding error.
-// After headers have been written, the only safe action is to log the failure.
-func writeJSON(w http.ResponseWriter, v interface{}) {
+// writeJSON encodes v as JSON to w; logs on failure.
+func writeJSON(w http.ResponseWriter, v any) {
 	if err := json.NewEncoder(w).Encode(v); err != nil {
-		slog.Error("[HTTP] failed to encode JSON response", "error", err)
+		slog.Error("failed to encode JSON response", "error", err)
 	}
 }
 
@@ -401,19 +405,14 @@ func (s *Server) startBackendProcess() error {
 	s.backendCmd = cmd
 
 	// Reap process in background to avoid zombies
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[Backend] recovered from panic in process reaper", "panic", r)
-			}
-		}()
+	safego.GoWith("backend-process-reaper", func() {
 		cmd.Wait()
 		s.backendMux.Lock()
 		if s.backendCmd == cmd {
 			s.backendCmd = nil
 		}
 		s.backendMux.Unlock()
-	}()
+	})
 
 	return nil
 }
@@ -423,8 +422,7 @@ func (s *Server) startBackendProcess() error {
 // which in watchdog deployments is the reverse proxy and NOT the real
 // backend, yielding false-positive health results after a restart (#7945).
 func (s *Server) checkBackendHealth() bool {
-	client := &http.Client{Timeout: healthCheckTimeout}
-	resp, err := client.Get(backendHealthURL())
+	resp, err := healthCheckHTTPClient.Get(backendHealthURL())
 	if err != nil {
 		return false
 	}

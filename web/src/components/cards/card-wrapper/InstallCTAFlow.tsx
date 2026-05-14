@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Sparkles, X } from 'lucide-react'
+import { Loader2, Sparkles, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { CARD_INSTALL_MAP } from '../../../lib/cards/cardInstallMap'
 import { loadMissionPrompt } from '../multi-tenancy/missionLoader'
@@ -39,18 +39,25 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
     prompt: string
     clusters: string[]
   } | null>(null)
+  const [isPreparingInstall, setIsPreparingInstall] = useState(false)
+  const [installError, setInstallError] = useState<string | null>(null)
 
   const handleClick = async () => {
+    if (isPreparingInstall) return
+    setInstallError(null)
     if (isAgentConnected && installInfo) {
       setShowClusterSelect(true)
     } else if (installInfo) {
+      setIsPreparingInstall(true)
       try {
         const resp = await fetch(`/console-kb/${installInfo.kbPaths[0]}`, { signal: AbortSignal.timeout(KB_FETCH_TIMEOUT_MS) })
-        if (resp.ok) {
-          const data = await resp.json()
-          setShowInstallGuide({ mission: data })
-        }
-      } catch { /* ignore fetch error */ }
+        if (!resp.ok) throw new Error('Failed to load install guide')
+        setShowInstallGuide({ mission: await resp.json() })
+      } catch {
+        setInstallError(t('cards:installGuideLoadFailed', 'Could not load the install guide. Try again.'))
+      } finally {
+        setIsPreparingInstall(false)
+      }
     } else {
       startMission({
         title: `Set up ${title} for live data`,
@@ -67,12 +74,14 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
       {/* Install CTA button */}
       <div className="mt-auto pt-2 border-t border-yellow-500/10">
         <button
-          onClick={(e) => { e.stopPropagation(); handleClick() }}
-          className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-yellow-400/80 hover:text-yellow-300 hover:bg-yellow-500/10 rounded transition-colors"
+          onClick={(e) => { e.stopPropagation(); void handleClick() }}
+          disabled={isPreparingInstall}
+          className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-yellow-400/80 hover:text-yellow-300 hover:bg-yellow-500/10 rounded transition-colors disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Sparkles className="w-3 h-3" />
-          <span>Install {installInfo?.project ?? 'components'} for live data</span>
+          {isPreparingInstall ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          <span>{isPreparingInstall ? 'Loading install flow…' : `Install ${installInfo?.project ?? 'components'} for live data`}</span>
         </button>
+        {installError && <p className="mt-2 text-[11px] text-red-300">{installError} <button type="button" className="underline underline-offset-2" onClick={() => void handleClick()}>{t('common:actions.retry')}</button></p>}
       </div>
 
       {/* Cluster selection dialog (agent available) */}
@@ -82,15 +91,23 @@ export function InstallCTAFlow({ cardType, title }: InstallCTAFlowProps) {
           onCancel={() => setShowClusterSelect(false)}
           onSelect={async (clusters) => {
             setShowClusterSelect(false)
-            const prompt = await loadMissionPrompt(
-              installInfo.missionKey,
-              `Install and configure ${installInfo.project} for live data on the "${title}" dashboard card.`,
-              installInfo.kbPaths,
-            )
-            const clusterContext = clusters.length > 0
-              ? `\n\n**Target cluster(s):** ${clusters.join(', ')}\n\nPlease install on ${clusters.length === 1 ? `cluster "${clusters[0]}"` : `the following clusters: ${clusters.join(', ')}`}.`
-              : ''
-            setPendingMission({ prompt: prompt + clusterContext, clusters })
+            setInstallError(null)
+            setIsPreparingInstall(true)
+            try {
+              const prompt = await loadMissionPrompt(
+                installInfo.missionKey,
+                `Install and configure ${installInfo.project} for live data on the "${title}" dashboard card.`,
+                installInfo.kbPaths,
+              )
+              const clusterContext = clusters.length > 0
+                ? `\n\n**Target cluster(s):** ${clusters.join(', ')}\n\nPlease install on ${clusters.length === 1 ? `cluster "${clusters[0]}"` : `the following clusters: ${clusters.join(', ')}`}.`
+                : ''
+              setPendingMission({ prompt: prompt + clusterContext, clusters })
+            } catch {
+              setInstallError(t('cards:installGuidePrepareFailed', 'Could not prepare the install flow. Try again.'))
+            } finally {
+              setIsPreparingInstall(false)
+            }
           }}
           missionTitle={`Install ${installInfo.project}`}
         />

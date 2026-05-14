@@ -349,6 +349,14 @@ describe('EventStream', () => {
 
   // -------------------------------------------------------------------------
   describe('controls & footer', () => {
+    it('renders event list without legacy min-height spacing class', () => {
+      setupDefaults({ events: [makeEvent()] })
+      const { container } = render(<EventStream />)
+      const eventList = container.querySelector('.overflow-y-auto')
+      expect(eventList).toBeTruthy()
+      expect(eventList?.className).not.toContain('min-h-card-content')
+    })
+
     it('renders search input', () => {
       setupDefaults({ events: [] })
       render(<EventStream />)

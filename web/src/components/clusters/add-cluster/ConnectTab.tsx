@@ -247,6 +247,9 @@ export function ConnectTab({
                       <button
                         key={p}
                         onClick={() => setSelectedCloudProvider(p)}
+                        aria-label={t('actions.selectCloudProviderAria', {
+                          provider: t(`cluster.cloudIAMProvider${p.toUpperCase() === 'EKS' ? 'AWS' : p.toUpperCase() === 'GKE' ? 'GKE' : p.toUpperCase() === 'AKS' ? 'AKS' : 'OpenShift'}`),
+                        })}
                         className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border text-xs transition-colors ${
                           selectedCloudProvider === p
                             ? 'border-purple-500 bg-purple-500/10 text-foreground'

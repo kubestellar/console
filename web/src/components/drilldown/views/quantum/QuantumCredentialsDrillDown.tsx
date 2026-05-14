@@ -19,6 +19,7 @@ export function QuantumCredentialsDrillDown({ data }: Props) {
   const [credentialSaving, setCredentialSaving] = useState(false)
   const ibmAuthenticated = (data.ibmAuthenticated as boolean) || false
   const onSave = data.onSave as ((form: CredentialForm) => Promise<void>) | undefined
+  const onClose = data.onClose as (() => void) | undefined
 
   const handleSaveCredentials = async () => {
     if (!onSave) return
@@ -28,6 +29,10 @@ export function QuantumCredentialsDrillDown({ data }: Props) {
       setCredentialSaving(true)
       await onSave(credentialForm)
       setCredentialForm({ apiKey: '', crn: '' })
+      // Close the modal after successful save
+      if (onClose) {
+        onClose()
+      }
     } catch (err) {
       setCredentialError(err instanceof Error ? err.message : 'Failed to save credentials')
     } finally {

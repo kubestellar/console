@@ -27,6 +27,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -167,7 +169,9 @@ func runWatcher(cfg WatcherConfig) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go pollBackendHealth(ctx, backendURL.String(), &backendHealthy, &backendStatus)
+	safego.GoWith("watcher-health-poll", func() {
+		pollBackendHealth(ctx, backendURL.String(), &backendHealthy, &backendStatus)
+	})
 
 	mux := http.NewServeMux()
 
@@ -184,7 +188,7 @@ func runWatcher(cfg WatcherConfig) error {
 			stage = "ready"
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, map[string]interface{}{
 			"status":           "watchdog",
 			"backend":          beStatus,
 			"stage":            stage,
@@ -196,10 +200,10 @@ func runWatcher(cfg WatcherConfig) error {
 		w.Header().Set("Content-Type", "application/json")
 		if atomic.LoadInt32(&backendHealthy) == 1 {
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+			writeJSON(w, map[string]string{"status": "ready"})
 		} else {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			json.NewEncoder(w).Encode(map[string]string{"status": "not_ready"})
+			writeJSON(w, map[string]string{"status": "not_ready"})
 		}
 	})
 
@@ -245,15 +249,17 @@ func runWatcher(cfg WatcherConfig) error {
 
 		slog.Info("[Watcher] listening (HTTPS/H2 + HTTP redirect)", "addr", addr, "backend", backendURL.String())
 
-		go func() {
+		safego.GoWith("watcher-stream", func() {
 			for {
 				conn, acceptErr := ln.Accept()
 				if acceptErr != nil {
 					return
 				}
-				go handleConn(conn, tlsCfg, srv, cfg.ListenPort)
+				safego.GoWith("watcher-conn-handler", func() {
+					handleConn(conn, tlsCfg, srv, cfg.ListenPort)
+				})
 			}
-		}()
+		})
 
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -264,7 +270,7 @@ func runWatcher(cfg WatcherConfig) error {
 		ln.Close()
 		srv.Shutdown(shutdownCtx)
 	} else {
-		go func() {
+		safego.GoWith("signal-handler", func() {
 			sigCh := make(chan os.Signal, 1)
 			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 			<-sigCh
@@ -272,7 +278,7 @@ func runWatcher(cfg WatcherConfig) error {
 			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), watcherShutdownTimeout)
 			defer shutdownCancel()
 			srv.Shutdown(shutdownCtx)
-		}()
+		})
 
 		slog.Info("[Watcher] listening (HTTP/1.1)", "addr", addr, "backend", backendURL.String())
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -295,7 +301,7 @@ func handleConn(conn net.Conn, tlsCfg *tls.Config, srv *http.Server, listenPort 
 	if first[0] == 0x16 {
 		tlsConn := tls.Server(newPeekedConn(conn, br), tlsCfg)
 		srv.ConnState = nil
-		go srv.Serve(&singleConnListener{conn: tlsConn})
+		safego.GoWith("watcher/http-serve", func() { srv.Serve(&singleConnListener{conn: tlsConn}) })
 		return
 	}
 
@@ -391,7 +397,10 @@ func ensureTLSCert() (certFile, keyFile string, err error) {
 	if fileErr != nil {
 		return "", "", fileErr
 	}
-	pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}); err != nil {
+		certOut.Close()
+		return "", "", fmt.Errorf("write TLS cert: %w", err)
+	}
 	certOut.Close()
 
 	keyDER, marshalErr := x509.MarshalECPrivateKey(key)
@@ -402,7 +411,10 @@ func ensureTLSCert() (certFile, keyFile string, err error) {
 	if fileErr2 != nil {
 		return "", "", fileErr2
 	}
-	pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+	if err := pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}); err != nil {
+		keyOut.Close()
+		return "", "", fmt.Errorf("write TLS key: %w", err)
+	}
 	keyOut.Close()
 
 	slog.Info("[Watcher] TLS cert generated", "cert", certFile, "key", keyFile)
@@ -487,10 +499,17 @@ func serveFallback(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusServiceUnavailable)
-	json.NewEncoder(w).Encode(map[string]string{
+	writeJSON(w, map[string]string{
 		"error":  "backend_unavailable",
 		"status": "watchdog",
 	})
+}
+
+// writeJSON encodes v as JSON into w, logging on failure.
+func writeJSON(w http.ResponseWriter, v any) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		slog.Error("failed to encode JSON response", "error", err)
+	}
 }
 
 func readStartupStage() string {

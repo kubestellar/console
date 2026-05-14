@@ -41,6 +41,10 @@ vi.mock('../lib/constants', async (importOriginal) => {
   LOCAL_AGENT_WS_URL: 'ws://127.0.0.1:8585/ws',
 } })
 
+vi.mock('../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: async (url: string) => url,
+}))
+
 // ── WebSocket mock ──────────────────────────────────────────────────────────────
 // A lightweight stand-in that captures instances and exposes simulation helpers.
 
@@ -113,6 +117,42 @@ function makeEnrichment(overrides: Partial<AIInsightEnrichment> = {}): AIInsight
   }
 }
 
+type UseInsightEnrichmentHook = (insights: MultiClusterInsight[]) => {
+  enrichedInsights: MultiClusterInsight[]
+  hasEnrichments: boolean
+  enrichmentCount: number
+}
+
+async function flushMicrotasks() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+}
+
+async function renderInsightEnrichmentHook(
+  useInsightEnrichment: UseInsightEnrichmentHook,
+  insights: MultiClusterInsight[],
+) {
+  const hook = renderHook(() => useInsightEnrichment(insights))
+  await flushMicrotasks()
+  return hook
+}
+
+async function advanceTime(ms: number) {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms)
+  })
+  await flushMicrotasks()
+}
+
+async function runAllTimers() {
+  await act(async () => {
+    await vi.runAllTimersAsync()
+  })
+  await flushMicrotasks()
+}
+
 // ── mergeEnrichments — empty enrichments map ───────────────────────────────────
 
 
@@ -146,9 +186,9 @@ describe('useInsightEnrichment — HTTP error handling', () => {
       json: async () => ({ error: 'Internal Server Error' }),
     })
 
-    const { result, unmount } = renderHook(() => useInsightEnrichment([insight]))
+    const { result, unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
     await act(async () => {})
 
     // Should not crash — insights remain unchanged
@@ -168,8 +208,8 @@ describe('useInsightEnrichment — HTTP error handling', () => {
       }),
     })
 
-    renderHook(() => useInsightEnrichment([insightB]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insightB])
+    await advanceTime(2_000)
     await act(async () => {})
 
     // Second call went through because endpoint was NOT disabled
@@ -182,9 +222,9 @@ describe('useInsightEnrichment — HTTP error handling', () => {
 
     mockFetch.mockRejectedValue(new TypeError('Failed to fetch'))
 
-    const { result } = renderHook(() => useInsightEnrichment([insight]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
     await act(async () => {})
 
     // Should not crash — insights remain unchanged
@@ -205,9 +245,9 @@ describe('useInsightEnrichment — HTTP error handling', () => {
       }),
     })
 
-    const { result } = renderHook(() => useInsightEnrichment([insight]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
     await act(async () => {})
 
     expect(result.current.hasEnrichments).toBe(false)
@@ -262,18 +302,18 @@ describe('useInsightEnrichment — debounce behavior on rapid updates', () => {
     )
 
     // Advance 1s (less than 2s debounce) and change insights (length 1 -> 2)
-    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+    await advanceTime(1_000)
     rerender({ insights: [insightA, insightB] })
 
     // Advance another 1s and change again (length 2 -> 3)
-    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+    await advanceTime(1_000)
     rerender({ insights: [insightA, insightB, insightC] })
 
     // No fetch yet — debounce keeps resetting because length keeps changing
     expect(mockFetch).not.toHaveBeenCalled()
 
     // Now wait the full 2s debounce from the last change
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await advanceTime(2_000)
     await act(async () => {})
 
     // Only one fetch call with the latest insights
@@ -328,8 +368,8 @@ describe('useInsightEnrichment — payload includes optional fields', () => {
       metrics: { 'cpu-usage': 85.5, 'memory-usage': 72.1 },
     })
 
-    renderHook(() => useInsightEnrichment([insight]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
+    await advanceTime(2_000)
     await act(async () => {})
 
     const body = JSON.parse(mockFetch.mock.calls[0][1].body as string)
@@ -360,7 +400,7 @@ describe('useInsightEnrichment — WebSocket edge cases', () => {
 
   it('ignores WS message with type insights_enriched but missing data field', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -372,7 +412,7 @@ describe('useInsightEnrichment — WebSocket edge cases', () => {
 
   it('ignores WS message with type insights_enriched but null enrichments in data', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -395,7 +435,7 @@ describe('useInsightEnrichment — WebSocket edge cases', () => {
     })
 
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     // Should not crash — graceful degradation
     expect(result.current.enrichedInsights).toHaveLength(1)
@@ -434,14 +474,14 @@ describe('useInsightEnrichment — cleanup on unmount', () => {
       json: async () => ({ enrichments: [], timestamp: new Date().toISOString() }),
     })
 
-    const { unmount } = renderHook(() => useInsightEnrichment([makeInsight({ id: 'unmount-test' })]))
+    const { unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight({ id: 'unmount-test' })])
 
     // Advance 1s (less than 2s debounce) then unmount
-    await act(async () => { await vi.advanceTimersByTimeAsync(1_000) })
+    await advanceTime(1_000)
     unmount()
 
     // Advance past the debounce window
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    await advanceTime(5_000)
 
     // Fetch should never have been called — timer was cleared on unmount
     expect(mockFetch).not.toHaveBeenCalled()
@@ -451,7 +491,7 @@ describe('useInsightEnrichment — cleanup on unmount', () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
     const insight = makeInsight({ id: 'unsub-test' })
 
-    const { result, unmount } = renderHook(() => useInsightEnrichment([insight]))
+    const { result, unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -495,8 +535,8 @@ describe('useInsightEnrichment — multiple concurrent hook instances', () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
     const insight = makeInsight({ id: 'shared-test' })
 
-    const { result: result1 } = renderHook(() => useInsightEnrichment([insight]))
-    const { result: result2 } = renderHook(() => useInsightEnrichment([insight]))
+    const { result: result1 } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
+    const { result: result2 } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     // WS was already connected by first hook — second hook reuses singleton
     await act(async () => {
@@ -543,8 +583,8 @@ describe('useInsightEnrichment — requestEnrichment guards', () => {
     mockIsAgentUnavailable.mockReturnValue(true)
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight({ id: 'unavail-guard' })]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight({ id: 'unavail-guard' })])
+    await advanceTime(2_000)
 
     expect(mockFetch).not.toHaveBeenCalled()
   })
@@ -555,8 +595,8 @@ describe('useInsightEnrichment — requestEnrichment guards', () => {
     // First call gets a 404 — disables endpoint
     mockFetch.mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
 
-    const { unmount } = renderHook(() => useInsightEnrichment([makeInsight({ id: 'disable-1' })]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    const { unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight({ id: 'disable-1' })])
+    await advanceTime(2_000)
     await act(async () => {})
     expect(mockFetch).toHaveBeenCalledOnce()
 
@@ -564,8 +604,8 @@ describe('useInsightEnrichment — requestEnrichment guards', () => {
 
     // Change to a different insight (different hash) to bypass dedup
     const insightNew = makeInsight({ id: 'disable-2', severity: 'critical' })
-    renderHook(() => useInsightEnrichment([insightNew]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insightNew])
+    await advanceTime(2_000)
     await act(async () => {})
 
     // Should still be only 1 call — endpoint was disabled by 404
@@ -578,8 +618,8 @@ describe('useInsightEnrichment — requestEnrichment guards', () => {
     const abortError = new DOMException('The operation was aborted', 'AbortError')
     mockFetch.mockRejectedValue(abortError)
 
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight({ id: 'abort-test' })]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight({ id: 'abort-test' })])
+    await advanceTime(2_000)
     await act(async () => {})
 
     // Should not crash — insights remain heuristic
@@ -607,7 +647,7 @@ describe('useInsightEnrichment — applyEnrichments edge cases', () => {
 
   it('handles enrichments with undefined enrichments array via || [] guard', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -624,7 +664,7 @@ describe('useInsightEnrichment — applyEnrichments edge cases', () => {
 
   it('does not notify subscribers when empty enrichments array is applied', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -642,7 +682,7 @@ describe('useInsightEnrichment — applyEnrichments edge cases', () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
     const insight = makeInsight({ id: 'overwrite-ws' })
 
-    const { result } = renderHook(() => useInsightEnrichment([insight]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     // First enrichment
     await act(async () => {
@@ -690,8 +730,8 @@ describe('useInsightEnrichment — WS reconnect agent state changes', () => {
   it('does not reconnect if agent disconnects between close event and reconnect timeout', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
-    await act(async () => { await vi.runAllTimersAsync() })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
+    await runAllTimers()
     expect(capturedWsInstances.length).toBe(1)
 
     // Close the WS
@@ -700,7 +740,7 @@ describe('useInsightEnrichment — WS reconnect agent state changes', () => {
     // Agent disconnects before the 5s reconnect timer fires
     mockIsAgentConnected.mockReturnValue(false)
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    await advanceTime(5_000)
 
     // connectWebSocket bails because isAgentConnected() returns false
     expect(capturedWsInstances.length).toBe(1)
@@ -709,32 +749,32 @@ describe('useInsightEnrichment — WS reconnect agent state changes', () => {
   it('caps reconnect delay at 2 minutes (WS_MAX_RECONNECT_DELAY_MS)', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
-    await act(async () => { await vi.runAllTimersAsync() })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
+    await runAllTimers()
 
     // Close 1: delay = 5s
     act(() => { capturedWsInstances[0].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    await advanceTime(5_000)
     expect(capturedWsInstances.length).toBe(2)
 
     // Close 2: delay = 10s
     act(() => { capturedWsInstances[1].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    await advanceTime(10_000)
     expect(capturedWsInstances.length).toBe(3)
 
     // Close 3: delay = 20s
     act(() => { capturedWsInstances[2].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(20_000) })
+    await advanceTime(20_000)
     expect(capturedWsInstances.length).toBe(4)
 
     // Close 4: delay = 40s
     act(() => { capturedWsInstances[3].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(40_000) })
+    await advanceTime(40_000)
     expect(capturedWsInstances.length).toBe(5)
 
     // Close 5: wsReconnectAttempts = 5 = MAX — no more reconnects
     act(() => { capturedWsInstances[4].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(300_000) })
+    await advanceTime(300_000)
     expect(capturedWsInstances.length).toBe(5)
   })
 })
@@ -771,7 +811,7 @@ describe('mergeEnrichments — enrichment severity undefined edge case', () => {
     const enrichment = makeEnrichment({ insightId: 'sev-undef-crit' })
     delete (enrichment as Record<string, unknown>).severity
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -792,7 +832,7 @@ describe('mergeEnrichments — enrichment severity undefined edge case', () => {
     const enrichment = makeEnrichment({ insightId: 'rem-undef' })
     delete (enrichment as Record<string, unknown>).remediation
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -812,7 +852,7 @@ describe('mergeEnrichments — enrichment severity undefined edge case', () => {
     // No remediation on insight (undefined)
     const enrichment = makeEnrichment({ insightId: 'rem-no-heuristic', remediation: 'AI fix' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -865,16 +905,16 @@ describe('useInsightEnrichment — hashInsights determinism', () => {
     const insightB = makeInsight({ id: 'order-b', severity: 'warning', affectedClusters: ['c1', 'c2'] })
 
     // First render: [A, B]
-    const { unmount } = renderHook(() => useInsightEnrichment([insightA, insightB]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    const { unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [insightA, insightB])
+    await advanceTime(2_000)
     await act(async () => {})
     expect(mockFetch).toHaveBeenCalledOnce()
 
     unmount()
 
     // Second render: [B, A] — same insights, different order → hash sorts → same hash
-    renderHook(() => useInsightEnrichment([insightB, insightA]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insightB, insightA])
+    await advanceTime(2_000)
     await act(async () => {})
 
     // Should NOT have made a second request (hash is the same, cache is valid)
@@ -895,8 +935,8 @@ describe('useInsightEnrichment — hashInsights determinism', () => {
 
     const insightV1 = makeInsight({ id: 'cluster-count', severity: 'warning', affectedClusters: ['c1'] })
 
-    const { unmount } = renderHook(() => useInsightEnrichment([insightV1]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    const { unmount } = await renderInsightEnrichmentHook(useInsightEnrichment, [insightV1])
+    await advanceTime(2_000)
     await act(async () => {})
     expect(mockFetch).toHaveBeenCalledOnce()
 
@@ -904,8 +944,8 @@ describe('useInsightEnrichment — hashInsights determinism', () => {
 
     // Same id and severity but different cluster count → different hash
     const insightV2 = makeInsight({ id: 'cluster-count', severity: 'warning', affectedClusters: ['c1', 'c2', 'c3'] })
-    renderHook(() => useInsightEnrichment([insightV2]))
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000) })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insightV2])
+    await advanceTime(2_000)
     await act(async () => {})
 
     expect(mockFetch).toHaveBeenCalledTimes(2)

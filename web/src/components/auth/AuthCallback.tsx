@@ -6,7 +6,7 @@ import { ROUTES, getLoginWithError } from '../../config/routes'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/Toast'
 import { safeGetItem, safeRemoveItem, safeSetItem } from '../../lib/utils/localStorage'
-import { emitGitHubConnected } from '../../lib/analytics'
+import { emitError, emitGitHubConnected } from '../../lib/analytics'
 import { STORAGE_KEY_HAS_SESSION } from '../../lib/constants/storage'
 import { captureClientCtxFromFragment } from '../../lib/clientCtx'
 
@@ -117,7 +117,22 @@ export function AuthCallback() {
           .then((agentData: { token?: string } | null) => {
             if (agentData?.token) safeSetItem('kc-agent-token', agentData.token)
           })
-          .catch(() => {
+          .catch((err: unknown) => {
+            const error = err instanceof Error ? err : undefined
+            const message = err instanceof Error
+              ? err.message
+              : typeof err === 'string'
+                ? err
+                : typeof err === 'object' && err !== null && 'message' in err && typeof err.message === 'string'
+                  ? err.message
+                  : 'unknown error'
+            console.warn('Failed to fetch kc-agent token during auth callback', err)
+            emitError(
+              'agent_token_failure',
+              JSON.stringify({ message, context: 'auth_callback' }),
+              undefined,
+              { error },
+            )
             // Non-fatal — agent auth will fail but OAuth session is intact
           })
           .then(() => {

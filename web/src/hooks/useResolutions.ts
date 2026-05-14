@@ -5,7 +5,7 @@
  * them in future missions, showing users that their past knowledge is being leveraged.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../lib/auth'
 import { getOrCreateAnonymousId } from '../lib/analytics-session'
 
@@ -64,6 +64,12 @@ export interface Resolution {
 
 const RESOLUTIONS_STORAGE_KEY = 'kc_resolutions'
 const SHARED_RESOLUTIONS_KEY = 'kc_shared_resolutions'
+const RESOLUTIONS_UPDATED_EVENT = 'kc:resolutions-updated'
+
+interface ResolutionStoreSnapshot {
+  resolutions: Resolution[]
+  sharedResolutions: Resolution[]
+}
 
 // Common Kubernetes issue patterns for auto-detection
 const ISSUE_PATTERNS: { pattern: RegExp; type: string; resourceKind?: string }[] = [
@@ -242,6 +248,24 @@ function saveSharedResolutions(resolutions: Resolution[]): void {
   }
 }
 
+function loadResolutionSnapshot(): ResolutionStoreSnapshot {
+  return {
+    resolutions: loadResolutions(),
+    sharedResolutions: loadSharedResolutions(),
+  }
+}
+
+function persistResolutionSnapshot(snapshot: ResolutionStoreSnapshot): void {
+  saveResolutions(snapshot.resolutions)
+  saveSharedResolutions(snapshot.sharedResolutions)
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent<ResolutionStoreSnapshot>(RESOLUTIONS_UPDATED_EVENT, {
+      detail: snapshot,
+    }))
+  }
+}
+
 export interface SimilarResolution {
   resolution: Resolution
   similarity: number
@@ -318,17 +342,49 @@ export function generateResolutionPromptContext(similarResolutions: SimilarResol
  */
 export function useResolutions() {
   const { user } = useAuth()
-  const [resolutions, setResolutions] = useState<Resolution[]>(() => loadResolutions())
-  const [sharedResolutions, setSharedResolutions] = useState<Resolution[]>(() => loadSharedResolutions())
+  const [{ resolutions, sharedResolutions }, setSnapshot] = useState<ResolutionStoreSnapshot>(() => loadResolutionSnapshot())
+  const resolutionsRef = useRef(resolutions)
+  const sharedResolutionsRef = useRef(sharedResolutions)
 
-  // Persist changes
-  useEffect(() => {
-    saveResolutions(resolutions)
-  }, [resolutions])
+  const syncSnapshot = useCallback((nextSnapshot: ResolutionStoreSnapshot) => {
+    resolutionsRef.current = nextSnapshot.resolutions
+    sharedResolutionsRef.current = nextSnapshot.sharedResolutions
+    setSnapshot(nextSnapshot)
+  }, [])
 
   useEffect(() => {
-    saveSharedResolutions(sharedResolutions)
-  }, [sharedResolutions])
+    resolutionsRef.current = resolutions
+    sharedResolutionsRef.current = sharedResolutions
+  }, [resolutions, sharedResolutions])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleResolutionsUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<ResolutionStoreSnapshot>).detail
+      syncSnapshot(detail ?? loadResolutionSnapshot())
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key && event.key !== RESOLUTIONS_STORAGE_KEY && event.key !== SHARED_RESOLUTIONS_KEY) {
+        return
+      }
+      syncSnapshot(loadResolutionSnapshot())
+    }
+
+    window.addEventListener(RESOLUTIONS_UPDATED_EVENT, handleResolutionsUpdated as EventListener)
+    window.addEventListener('storage', handleStorage)
+
+    return () => {
+      window.removeEventListener(RESOLUTIONS_UPDATED_EVENT, handleResolutionsUpdated as EventListener)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [syncSnapshot])
+
+  const commitSnapshot = (nextSnapshot: ResolutionStoreSnapshot): void => {
+    syncSnapshot(nextSnapshot)
+    persistResolutionSnapshot(nextSnapshot)
+  }
 
   /**
    * Find similar resolutions based on issue signature
@@ -403,18 +459,26 @@ export function useResolutions() {
       context: params.context ?? {},
       effectiveness: {
         timesUsed: 0,
-        timesSuccessful: 0 },
+        timesSuccessful: 0,
+      },
       createdAt: now,
-      updatedAt: now }
-
-    if (params.visibility === 'shared') {
-      newResolution.sharedBy = 'You' // MVP: hardcoded
-      setSharedResolutions(prev => [newResolution, ...prev])
-    } else {
-      setResolutions(prev => [newResolution, ...prev])
+      updatedAt: now,
     }
 
-    return newResolution
+    const nextSnapshot = params.visibility === 'shared'
+      ? {
+          resolutions: resolutionsRef.current,
+          sharedResolutions: [{ ...newResolution, sharedBy: 'You' }, ...sharedResolutionsRef.current],
+        }
+      : {
+          resolutions: [newResolution, ...resolutionsRef.current],
+          sharedResolutions: sharedResolutionsRef.current,
+        }
+
+    commitSnapshot(nextSnapshot)
+    return nextSnapshot.sharedResolutions[0]?.id === newResolution.id
+      ? nextSnapshot.sharedResolutions[0]
+      : nextSnapshot.resolutions[0]
   }
 
   /**
@@ -424,56 +488,65 @@ export function useResolutions() {
     id: string,
     updates: Partial<Omit<Resolution, 'id' | 'createdAt'>>
   ): void => {
-    const updateFn = (prev: Resolution[]) =>
-      prev.map(r => r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r)
+    const updateFn = (items: Resolution[]) =>
+      items.map(r => r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r)
 
-    // Try both lists
-    setResolutions(updateFn)
-    setSharedResolutions(updateFn)
+    commitSnapshot({
+      resolutions: updateFn(resolutionsRef.current),
+      sharedResolutions: updateFn(sharedResolutionsRef.current),
+    })
   }
 
   /**
    * Delete a resolution
    */
   const deleteResolution = (id: string): void => {
-    setResolutions(prev => prev.filter(r => r.id !== id))
-    setSharedResolutions(prev => prev.filter(r => r.id !== id))
+    commitSnapshot({
+      resolutions: resolutionsRef.current.filter(r => r.id !== id),
+      sharedResolutions: sharedResolutionsRef.current.filter(r => r.id !== id),
+    })
   }
 
   /**
    * Record usage of a resolution (after user applies it)
    */
   const recordUsage = (id: string, successful: boolean): void => {
-    const updateFn = (prev: Resolution[]) =>
-      prev.map(r => {
+    const updateFn = (items: Resolution[]) =>
+      items.map(r => {
         if (r.id !== id) return r
         return {
           ...r,
           effectiveness: {
             timesUsed: r.effectiveness.timesUsed + 1,
             timesSuccessful: r.effectiveness.timesSuccessful + (successful ? 1 : 0),
-            lastUsed: new Date().toISOString() },
-          updatedAt: new Date().toISOString() }
+            lastUsed: new Date().toISOString(),
+          },
+          updatedAt: new Date().toISOString(),
+        }
       })
 
-    setResolutions(updateFn)
-    setSharedResolutions(updateFn)
+    commitSnapshot({
+      resolutions: updateFn(resolutionsRef.current),
+      sharedResolutions: updateFn(sharedResolutionsRef.current),
+    })
   }
 
   /**
    * Share a personal resolution to org
    */
   const shareResolution = (id: string): void => {
-    const resolution = resolutions.find(r => r.id === id)
+    const resolution = resolutionsRef.current.find(r => r.id === id)
     if (!resolution) return
 
-    // Remove from personal, add to shared
-    setResolutions(prev => prev.filter(r => r.id !== id))
-    setSharedResolutions(prev => [{
-      ...resolution,
-      visibility: 'shared',
-      sharedBy: 'You',
-      updatedAt: new Date().toISOString() }, ...prev])
+    commitSnapshot({
+      resolutions: resolutionsRef.current.filter(r => r.id !== id),
+      sharedResolutions: [{
+        ...resolution,
+        visibility: 'shared',
+        sharedBy: 'You',
+        updatedAt: new Date().toISOString(),
+      }, ...sharedResolutionsRef.current],
+    })
   }
 
   /**

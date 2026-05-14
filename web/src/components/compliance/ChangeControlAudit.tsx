@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { changeControlDashboardConfig } from '../../config/dashboards/change-control'
 import {
@@ -72,6 +72,7 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
   const [filterApproval, setFilterApproval] = useState('all')
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [activeTab, setActiveTab] = useState<'changes' | 'violations' | 'policies'>('changes')
+  const cancelledRef = useRef(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -88,18 +89,25 @@ export const ChangeControlAuditContent = memo(function ChangeControlAuditContent
       const cData = await cRes.json()
       const vData = await vRes.json()
       const pData = await pRes.json()
+      if (cancelledRef.current) return
       setSummary(sData ?? null)
       setChanges(Array.isArray(cData) ? cData : [])
       setViolations(Array.isArray(vData) ? vData : [])
       setPolicies(Array.isArray(pData) ? pData : [])
     } catch (err: unknown) {
+      if (cancelledRef.current) return
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [])
 
   const filteredChanges = useMemo(() =>
     filterApproval === 'all' ? (changes || []) : (changes || []).filter(c => c.approval_status === filterApproval),

@@ -13,124 +13,52 @@ import { appendWsAuthToken } from '../lib/utils/wsAuth'
 import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory'
-import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
+import { SECONDS_PER_DAY } from '../lib/constants/time'
+import {
+  MISSION_RECONNECT_DELAY_MS,
+  MISSION_RECONNECT_MAX_AGE_MS,
+  MAX_RESENT_MESSAGES,
+  WS_RECONNECT_INITIAL_DELAY_MS,
+  WS_RECONNECT_MAX_DELAY_MS,
+  WS_RECONNECT_MAX_RETRIES,
+  WS_CONNECTION_TIMEOUT_MS,
+  STATUS_WAITING_DELAY_MS,
+  STATUS_PROCESSING_DELAY_MS,
+  MISSION_TIMEOUT_MS,
+  MISSION_TIMEOUT_CHECK_INTERVAL_MS,
+  MISSION_INACTIVITY_TIMEOUT_MS,
+  CANCEL_ACK_TIMEOUT_MS,
+  CANCEL_ACK_MESSAGE_TYPE,
+  CANCEL_CONFIRMED_MESSAGE_TYPE,
+  WAITING_INPUT_TIMEOUT_MS,
+  WS_SEND_MAX_RETRIES,
+  WS_SEND_RETRY_DELAY_MS,
+  STREAM_GAP_THRESHOLD_MS,
+} from './useMissions.constants'
 import { runPreflightCheck, type PreflightResult } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
+import {
+  kagentiProviderChat,
+  discoverKagentiProviderAgent,
+} from '../lib/kagentiProviderBackend'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
 import {
   MISSIONS_STORAGE_KEY, CROSS_TAB_ECHO_IGNORE_MS,
   SELECTED_AGENT_KEY,
   loadMissions, saveMissions, loadUnreadMissionIds, saveUnreadMissionIds,
-  mergeMissions, getSelectedKagentiAgentFromStorage,
+  mergeMissions, getSelectedKagentiAgentFromStorage, persistSelectedKagentiAgentToStorage,
 } from './useMissionStorage'
 import {
   generateMessageId, buildEnhancedPrompt, buildSystemMessages,
   stripInteractiveArtifacts, buildSavedMissionPrompt,
 } from './useMissionPromptBuilder'
-
-function getMissionMessages(messages?: MissionMessage[]): MissionMessage[] {
-  return messages || []
-}
-
-const MISSION_RECONNECT_DELAY_MS = 500
-/**
- * Maximum age (ms) a disconnected mission may have before auto-resume is
- * considered unsafe (#6371). Agents purge sessions after a short idle
- * window, so resuming a mission whose last update was hours ago is very
- * likely to hit a GONE/not_found session on the backend — or worse, land
- * the user's prompt in a disjointed new thread. Past this threshold the
- * mission is transitioned to `failed` with an actionable message so the
- * user can explicitly retry instead of the agent silently replaying a
- * half-finished prompt. 30 minutes is conservative: it covers lunch/
- * meeting gaps while still protecting against overnight reconnects.
- */
-const MISSION_RECONNECT_MAX_AGE_MS = 30 * MS_PER_MINUTE
-/**
- * issue 6429 — Cap how many prior messages we re-append to the prompt on
- * reconnect. Long-running missions can accumulate hundreds of turns; some
- * agents (notably ones with 8k–32k token budgets) reject the payload
- * outright with HTTP 413. We always keep the most recent
- * MAX_RESENT_MESSAGES items (which always include the last user message
- * that is re-sent separately) and drop anything older.
- */
-const MAX_RESENT_MESSAGES = 20
-/** Initial delay (ms) before auto-reconnecting WebSocket after close */
-const WS_RECONNECT_INITIAL_DELAY_MS = 1_000
-/** Maximum delay (ms) between reconnection attempts (backoff cap) */
-const WS_RECONNECT_MAX_DELAY_MS = 30_000
-/** Maximum number of consecutive reconnection attempts before giving up */
-const WS_RECONNECT_MAX_RETRIES = 10
-/** Maximum time (ms) to wait for a WebSocket connection to open */
-const WS_CONNECTION_TIMEOUT_MS = 5_000
-/** Delay before showing "Waiting for response..." status */
-const STATUS_WAITING_DELAY_MS = 500
-/** Delay before showing "Processing with AI..." status */
-const STATUS_PROCESSING_DELAY_MS = 3_000
-
-/**
- * Maximum time (ms) a mission is allowed to stay in "running" state before the
- * frontend considers it timed out and transitions it to "failed".  This acts as
- * a client-side safety net in case the backend timeout fires but the error
- * message is lost (e.g., WebSocket reconnect race), or the backend itself is
- * unreachable.  Matches the backend missionExecutionTimeout (5 min) plus a
- * small grace period for network latency.
- */
-const MISSION_TIMEOUT_MS = 300_000 // 5 minutes
-/** How often (ms) the frontend checks for timed-out missions */
-const MISSION_TIMEOUT_CHECK_INTERVAL_MS = 15_000 // 15 seconds
-/**
- * If streaming has started (at least one chunk received) but no new chunk
- * arrives within this window, the agent is assumed to be stuck waiting on a
- * tool call (e.g., an APISIX gateway that never responds) and the mission is
- * failed early with an actionable message (#3079).
- */
-const MISSION_INACTIVITY_TIMEOUT_MS = 90_000 // 90 seconds of stream silence
-/**
- * Maximum time (ms) the frontend waits for backend acknowledgment after sending
- * a cancel request. If the backend doesn't respond within this window, the
- * frontend transitions the mission from 'cancelling' to 'failed' as a safety net.
- */
-const CANCEL_ACK_TIMEOUT_MS = 10_000 // 10 seconds
-
-/**
- * WebSocket message types the frontend accepts as a dedicated cancel
- * acknowledgement (#8106). Kept as named constants to avoid magic strings
- * and to make the protocol contract easy to audit. The backend currently
- * emits `result` messages with `{cancelled, sessionId}` shape instead, which
- * is handled as a compatibility path in the message router.
- */
-const CANCEL_ACK_MESSAGE_TYPE = 'cancel_ack'
-const CANCEL_CONFIRMED_MESSAGE_TYPE = 'cancel_confirmed'
-
-/**
- * Maximum time (ms) a mission may sit in 'waiting_input' with no new
- * assistant/result message before the frontend treats it as stuck and
- * transitions it to 'failed' (#5936). This state is entered when a streaming
- * turn ends without a final 'result' message; if the backend never sends
- * one (lost event, disconnected agent, etc.) the mission would otherwise
- * hang indefinitely.
- */
-const WAITING_INPUT_TIMEOUT_MS = 600_000 // 10 minutes
-
-/**
- * Patterns that identify system messages generated when the local agent is
- * unreachable. Used by both the reconnect useEffect (#10525) and the retry
- * path in sendMessage to strip stale errors from chat history.
- */
-const AGENT_DISCONNECT_ERROR_PATTERNS = [
-  'Local Agent Not Connected',
-  'agent not available',
-  'agent not responding',
-] as const
-
-/** Returns true when a MissionMessage is a stale agent-disconnect error. */
-function isStaleAgentErrorMessage(msg: MissionMessage): boolean {
-  return (
-    msg.role === 'system' &&
-    AGENT_DISCONNECT_ERROR_PATTERNS.some(pattern => msg.content.includes(pattern))
-  )
-}
+import {
+  getMissionMessages,
+  isStaleAgentErrorMessage,
+  KAGENTI_PROVIDER_UNAVAILABLE_EVENT,
+  KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
+  buildKagentiDiscoveryErrorMessage,
+} from './useMissions.helpers'
 
 export function MissionProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<Mission[]>(() => loadMissions())
@@ -290,12 +218,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
    * of the onopen handler from dispatching duplicate chat_request payloads.
    */
   const wsOpenEpoch = useRef(0)
-  const STREAM_GAP_THRESHOLD_MS = 8000 // If >8s gap between stream chunks, create new message bubble (tool-use gap)
-
-  // Maximum number of WebSocket send retries before giving up
-  const WS_SEND_MAX_RETRIES = 3
-  // Delay between WebSocket send retries in milliseconds
-  const WS_SEND_RETRY_DELAY_MS = 1000
 
   // #6629 — Track in-flight wsSend retry timers so they can be cleared on
   // unmount. Without this, a provider unmount while a retry was still
@@ -656,7 +578,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       return Promise.resolve()
     }
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>(async (resolve, reject) => {
       // Show loading state while connecting
       setAgentsLoading(true)
 
@@ -681,7 +603,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         // The backoff is reset later, after the first application-layer
         // message actually arrives, not here.
         connectionEstablished.current = false
-        wsRef.current = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        wsRef.current = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)
@@ -2084,38 +2006,43 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       void (async () => {
         let target = getSelectedKagentiAgentFromStorage()
         if (!target) {
-          const discovered = await fetchKagentiProviderAgents()
-          if (discovered?.[0]) {
+          const discovery = await discoverKagentiProviderAgent()
+          if (discovery.ok) {
             target = {
-              namespace: discovered[0].namespace,
-              name: discovered[0].name,
+              namespace: discovery.agent.namespace,
+              name: discovery.agent.name,
             }
+            persistSelectedKagentiAgentToStorage(target)
+          } else {
+            executingMissions.current.delete(missionId)
+            const errorContent = buildKagentiDiscoveryErrorMessage(discovery)
+            setMissions(prev => prev.map(m =>
+              m.id === missionId
+                ? {
+                    ...m,
+                    status: 'failed',
+                    currentStep: undefined,
+                    messages: [
+                      ...getMissionMessages(m.messages),
+                      {
+                        id: generateMessageId('kagenti-missing-agent'),
+                        role: 'system',
+                        content: errorContent,
+                        timestamp: new Date(),
+                      },
+                    ],
+                  }
+                : m
+            ))
+            emitMissionError(
+              missionType,
+              discovery.reason === 'provider_unreachable'
+                ? KAGENTI_PROVIDER_UNAVAILABLE_EVENT
+                : KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
+              discovery.reason,
+            )
+            return
           }
-        }
-
-        if (!target) {
-          executingMissions.current.delete(missionId)
-          const errorContent = `**Kagenti Agent Not Selected**\n\nSelect a Kagenti agent in Settings → Agent Backend, then retry this mission.`
-          setMissions(prev => prev.map(m =>
-            m.id === missionId
-              ? {
-                  ...m,
-                  status: 'failed',
-                  currentStep: undefined,
-                  messages: [
-                    ...getMissionMessages(m.messages),
-                    {
-                      id: generateMessageId('kagenti-missing-agent'),
-                      role: 'system',
-                      content: errorContent,
-                      timestamp: new Date(),
-                    },
-                  ],
-                }
-              : m
-          ))
-          emitMissionError(missionType, 'kagenti_agent_missing', 'no_selected_kagenti_agent')
-          return
         }
 
         await kagentiProviderChat(target.name, target.namespace, enhancedPrompt, {

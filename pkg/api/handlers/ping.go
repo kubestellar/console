@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,9 +22,27 @@ var pingClient = &http.Client{
 	Transport: &http.Transport{
 		TLSClientConfig:   &tls.Config{MinVersion: tls.VersionTLS12},
 		DisableKeepAlives: true,
-		DialContext: (&net.Dialer{
-			Timeout: 5 * time.Second,
-		}).DialContext,
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			ips, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+			if err != nil {
+				return nil, err
+			}
+			if len(ips) == 0 {
+				return nil, fmt.Errorf("no IPs resolved for host %s", host)
+			}
+			for _, ip := range ips {
+				if isBlockedIP(ip.IP) {
+					return nil, fmt.Errorf("blocked: non-public IP %s for host %s", ip.IP, host)
+				}
+			}
+			// Connect to the first validated IP directly — no second DNS lookup.
+			dialer := &net.Dialer{Timeout: 5 * time.Second}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ips[0].IP.String(), port))
+		},
 	},
 	// Do not follow redirects — we only care about reachability
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -92,7 +112,8 @@ func PingHandler(c *fiber.Ctx) error {
 	start := time.Now()
 	req, err := http.NewRequestWithContext(c.UserContext(), "HEAD", rawURL, nil)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("invalid request: %v", err)})
+		slog.Error("[PingHandler] invalid request", "url", rawURL, "error", err)
+		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
 	}
 	req.Header.Set("User-Agent", "KubeStellar-Console-Ping/1.0")
 
@@ -130,7 +151,7 @@ func PingHandler(c *fiber.Ctx) error {
 	})
 }
 
-// isPrivateHost checks whether a hostname resolves to a private/loopback IP.
+// isPrivateHost checks whether a hostname resolves to a blocked IP.
 func isPrivateHost(host string) bool {
 	// Block well-known internal hostnames
 	lower := strings.ToLower(host)
@@ -149,7 +170,7 @@ func isPrivateHost(host string) bool {
 		if ip == nil {
 			continue
 		}
-		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		if isBlockedIP(ip) {
 			return true
 		}
 	}

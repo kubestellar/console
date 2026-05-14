@@ -143,6 +143,7 @@ export function useLimaStatus(): UseLimaStatusResult {
     lastRefresh,
   } = useCachedLima()
 
+  const effectiveIsDemoData = isDemoFallback && !isLoading
   const hasAnyData = data.totalNodes > 0
 
   const { showSkeleton, showEmptyState } = useCardLoadingState({
@@ -151,7 +152,7 @@ export function useLimaStatus(): UseLimaStatusResult {
     hasAnyData,
     isFailed,
     consecutiveFailures,
-    isDemoData: isDemoFallback,
+    isDemoData: effectiveIsDemoData,
     lastRefresh,
   })
 
@@ -163,6 +164,6 @@ export function useLimaStatus(): UseLimaStatusResult {
     consecutiveFailures,
     showSkeleton,
     showEmptyState,
-    isDemoData: isDemoFallback,
+    isDemoData: effectiveIsDemoData,
   }
 }

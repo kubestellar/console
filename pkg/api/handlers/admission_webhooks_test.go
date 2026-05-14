@@ -114,7 +114,7 @@ func TestListWebhooks(t *testing.T) {
 		json.NewDecoder(resp.Body).Decode(&result)
 
 		assert.NotEmpty(t, result.Errors)
-		assert.Contains(t, result.Errors["failing-cluster"], "failing-cluster")
+		assert.Equal(t, "cluster client unavailable", result.Errors["failing-cluster"])
 	})
 
 	t.Run("Demo Data Fallback", func(t *testing.T) {

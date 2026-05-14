@@ -43,6 +43,7 @@ export function AlertRulesCard() {
   // Report state to CardWrapper (local storage rules are always available)
   useCardLoadingState({
     isLoading: false,
+    isRefreshing: false,
     hasAnyData: true,
     isDemoData: isDemoMode,
   })
@@ -201,7 +202,7 @@ export function AlertRulesCard() {
         value={localSearch}
         onChange={setLocalSearch}
         placeholder={t('alertRules.searchRules')}
-        className="mb-3"
+        className="mb-2"
       />
 
       {/* Rules List */}

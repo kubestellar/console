@@ -3,7 +3,18 @@ import { renderHook } from '@testing-library/react'
 
 let mockClusters: Array<{ name: string; server?: string; namespaces?: string[]; user?: string }> = []
 let mockIsInClusterMode = false
+let mockKagentiStatus: {
+  available: boolean
+  reason?: string
+  llm_provider?: string
+  api_key_configured?: boolean
+  configured_providers?: string[]
+} = {
+  available: false,
+  configured_providers: [],
+}
 let capturedFetcher: (() => Promise<unknown>) | null = null
+let capturedDemoWhenEmpty: boolean | undefined
 
 const mockCacheResult = {
   data: [] as Array<Record<string, unknown>>,
@@ -43,8 +54,9 @@ vi.mock('../mcp/clusters', () => ({
 }))
 
 vi.mock('../../lib/cache', () => ({
-  useCache: (opts: { fetcher: () => Promise<unknown> }) => {
+  useCache: (opts: { fetcher: () => Promise<unknown>; demoWhenEmpty?: boolean }) => {
     capturedFetcher = opts.fetcher
+    capturedDemoWhenEmpty = opts.demoWhenEmpty
     return {
       ...mockCacheResult,
       data: mockCacheResult.data,
@@ -78,6 +90,11 @@ vi.mock('../useBackendHealth', () => ({
   isInClusterMode: () => mockIsInClusterMode,
 }))
 
+vi.mock('../../lib/kagentiProviderBackend', () => ({
+  fetchKagentiProviderStatus: vi.fn(async () => mockKagentiStatus),
+}))
+
+import { fetchKagentiProviderStatus } from '../../lib/kagentiProviderBackend'
 import { useProviderHealth } from '../useProviderHealth'
 
 const originalFetch = globalThis.fetch
@@ -85,7 +102,12 @@ const originalFetch = globalThis.fetch
 beforeEach(() => {
   mockClusters = []
   mockIsInClusterMode = false
+  mockKagentiStatus = {
+    available: false,
+    configured_providers: [],
+  }
   capturedFetcher = null
+  capturedDemoWhenEmpty = undefined
   mockCacheResult.data = []
   mockCacheResult.isLoading = false
   mockCacheResult.isRefreshing = false
@@ -258,14 +280,37 @@ describe('fetchProviders — cloud providers', () => {
     expect(providers.filter(provider => provider.category === 'cloud')).toHaveLength(2)
   })
 
-  it('returns an empty list in cluster mode', async () => {
+  it('uses Kagenti status for AI providers and still derives cloud providers in cluster mode', async () => {
     mockIsInClusterMode = true
     mockClusters = [{ name: 'eks-prod', server: 'https://eks.amazonaws.com' }]
+    mockKagentiStatus = {
+      available: true,
+      llm_provider: 'anthropic',
+      api_key_configured: true,
+      configured_providers: ['anthropic', 'openai'],
+    }
     globalThis.fetch = vi.fn()
 
     const providers = await invokeProviderFetcher()
-    expect(providers).toEqual([])
+
+    expect(vi.mocked(fetchKagentiProviderStatus)).toHaveBeenCalledTimes(1)
     expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(providers).toContainEqual(expect.objectContaining({
+      id: 'anthropic',
+      category: 'ai',
+      status: 'operational',
+      detail: 'API key configured',
+    }))
+    expect(providers).toContainEqual(expect.objectContaining({
+      id: 'openai',
+      category: 'ai',
+      status: 'operational',
+    }))
+    expect(providers).toContainEqual(expect.objectContaining({
+      id: 'eks',
+      category: 'cloud',
+      detail: '1 cluster detected',
+    }))
   })
 })
 
@@ -314,6 +359,14 @@ describe('useProviderHealth hook integration', () => {
     expect(capturedFetcher).toBeInstanceOf(Function)
   })
 
+  it('disables demoWhenEmpty in cluster mode', () => {
+    mockIsInClusterMode = true
+
+    renderHook(() => useProviderHealth())
+
+    expect(capturedDemoWhenEmpty).toBe(false)
+  })
+
   it('suppresses demo fallback while loading', () => {
     mockCacheResult.isLoading = true
     mockCacheResult.isDemoFallback = true
@@ -327,6 +380,12 @@ describe('useProviderHealth hook integration', () => {
 
     const { result } = renderHook(() => useProviderHealth())
     expect(result.current.isDemoFallback).toBe(true)
+  })
+
+  it('keeps demoWhenEmpty enabled outside cluster mode', () => {
+    renderHook(() => useProviderHealth())
+
+    expect(capturedDemoWhenEmpty).toBe(true)
   })
 
   it('splits cached providers into aiProviders and cloudProviders', () => {

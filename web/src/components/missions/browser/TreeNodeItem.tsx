@@ -196,6 +196,9 @@ export const TreeNodeItem = memo(function TreeNodeItem({
                     src={`https://github.com/${projectOrg}.png?size=32`}
                     alt={projectOrg}
                     className="w-4 h-4 rounded-sm shrink-0"
+                    loading="lazy"
+                    width={16}
+                    height={16}
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
                 </>

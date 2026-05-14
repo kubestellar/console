@@ -275,7 +275,7 @@ Please proceed step by step.`,
               {(() => {
                 const errorMsg = Object.values(statuses).find(s => s.error)?.error
                 if (typeof errorMsg === 'string' && errorMsg.includes('.')) {
-                  return t(errorMsg as any) // eslint-disable-line @typescript-eslint/no-explicit-any -- dynamic translation key, runtime guard ensures safety
+                  return t(errorMsg, { defaultValue: errorMsg })
                 }
                 return t('intoto_supply_chain.fetchErrorHint')
               })()}{' '}

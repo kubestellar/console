@@ -57,7 +57,7 @@ func (s *SQLiteStore) CreateGPUReservation(ctx context.Context, reservation *mod
 	}
 	reservation.CreatedAt = time.Now()
 	if reservation.Status == "" {
-		reservation.Status = models.ReservationStatusPending
+		reservation.Status = models.ReservationStatusActive
 	}
 	reservation.NormalizeGPUTypes()
 	gpuTypesEncoded := encodeGPUTypes(reservation.GPUTypes)
@@ -72,10 +72,9 @@ func (s *SQLiteStore) CreateGPUReservation(ctx context.Context, reservation *mod
 }
 
 // ErrGPUQuotaExceeded is returned by CreateGPUReservationWithCapacity when
-// the atomic capacity check fails — either the combined
-// active+pending reservation count is already at or above capacity, or the
-// caller's requested gpu_count would push it over. Handlers should map this
-// error to HTTP 409 Conflict.
+// the atomic capacity check fails — either the active reservation count is
+// already at or above capacity, or the caller's requested gpu_count would
+// push it over. Handlers should map this error to HTTP 409 Conflict.
 var ErrGPUQuotaExceeded = errors.New("gpu cluster capacity exceeded")
 
 // ErrGPUReservationNotFound is returned when an update targets a
@@ -105,7 +104,7 @@ func (s *SQLiteStore) CreateGPUReservationWithCapacity(ctx context.Context, rese
 	}
 	reservation.CreatedAt = time.Now()
 	if reservation.Status == "" {
-		reservation.Status = models.ReservationStatusPending
+		reservation.Status = models.ReservationStatusActive
 	}
 	if capacity <= 0 {
 		// No capacity cap — fall through to the unchecked insert. Matches
@@ -118,7 +117,7 @@ func (s *SQLiteStore) CreateGPUReservationWithCapacity(ctx context.Context, rese
 	result, err := s.db.ExecContext(ctx,
 		`INSERT INTO gpu_reservations (id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at)
 		 SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-		 WHERE (COALESCE((SELECT SUM(gpu_count) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending')), 0) + ?) <= ?`,
+		 WHERE (COALESCE((SELECT SUM(gpu_count) FROM gpu_reservations WHERE cluster = ? AND status = 'active'), 0) + ?) <= ?`,
 		reservation.ID.String(), reservation.UserID.String(), reservation.UserName,
 		reservation.Title, reservation.Description, reservation.Cluster, reservation.Namespace,
 		reservation.GPUCount, reservation.GPUType, gpuTypesEncoded, reservation.StartDate, reservation.DurationHours,
@@ -161,7 +160,7 @@ func (s *SQLiteStore) ListGPUReservations(ctx context.Context) ([]models.GPURese
 	}
 	defer rows.Close()
 
-	var reservations []models.GPUReservation
+	reservations := make([]models.GPUReservation, 0)
 	for rows.Next() {
 		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {
@@ -180,7 +179,7 @@ func (s *SQLiteStore) ListUserGPUReservations(ctx context.Context, userID uuid.U
 	}
 	defer rows.Close()
 
-	var reservations []models.GPUReservation
+	reservations := make([]models.GPUReservation, 0)
 	for rows.Next() {
 		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {
@@ -228,7 +227,7 @@ func (s *SQLiteStore) UpdateGPUReservationWithCapacity(ctx context.Context, rese
 		     notes = ?, status = ?, quota_name = ?, quota_enforced = ?, updated_at = ?
 		 WHERE id = ?
 		   AND (COALESCE((SELECT SUM(gpu_count) FROM gpu_reservations
-		                   WHERE cluster = ? AND status IN ('active', 'pending') AND id != ?), 0) + ?) <= ?`,
+		                   WHERE cluster = ? AND status = 'active' AND id != ?), 0) + ?) <= ?`,
 		reservation.UserName, reservation.Title, reservation.Description,
 		reservation.Cluster, reservation.Namespace, reservation.GPUCount, reservation.GPUType, gpuTypesEncoded,
 		reservation.StartDate, reservation.DurationHours, reservation.Notes,
@@ -308,19 +307,19 @@ func (s *SQLiteStore) GetGPUReservationsByIDs(ctx context.Context, ids []uuid.UU
 	return result, nil
 }
 
-// GetClusterReservedGPUCount returns the total GPU count for active/pending reservations on a cluster.
+// GetClusterReservedGPUCount returns the total GPU count for active reservations on a cluster.
 // If excludeID is provided, that reservation is excluded (useful for updates).
 func (s *SQLiteStore) GetClusterReservedGPUCount(ctx context.Context, cluster string, excludeID *uuid.UUID) (int, error) {
 	var total int
 	var err error
 	if excludeID != nil {
 		err = s.db.QueryRowContext(ctx,
-			`SELECT COALESCE(SUM(gpu_count), 0) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending') AND id != ?`,
+			`SELECT COALESCE(SUM(gpu_count), 0) FROM gpu_reservations WHERE cluster = ? AND status = 'active' AND id != ?`,
 			cluster, excludeID.String(),
 		).Scan(&total)
 	} else {
 		err = s.db.QueryRowContext(ctx,
-			`SELECT COALESCE(SUM(gpu_count), 0) FROM gpu_reservations WHERE cluster = ? AND status IN ('active', 'pending')`,
+			`SELECT COALESCE(SUM(gpu_count), 0) FROM gpu_reservations WHERE cluster = ? AND status = 'active'`,
 			cluster,
 		).Scan(&total)
 	}
@@ -426,7 +425,7 @@ func (s *SQLiteStore) GetUtilizationSnapshots(ctx context.Context, reservationID
 	}
 	defer rows.Close()
 
-	var snapshots []models.GPUUtilizationSnapshot
+	snapshots := make([]models.GPUUtilizationSnapshot, 0)
 	for rows.Next() {
 		var snap models.GPUUtilizationSnapshot
 		if err := rows.Scan(&snap.ID, &snap.ReservationID, &snap.Timestamp,
@@ -533,7 +532,7 @@ func (s *SQLiteStore) DeleteOldUtilizationSnapshots(ctx context.Context, before 
 func (s *SQLiteStore) ListActiveGPUReservations(ctx context.Context) ([]models.GPUReservation, error) {
 	// #6604: same defense-in-depth LIMIT as ListGPUReservations.
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE status IN ('active', 'pending') ORDER BY start_date DESC LIMIT ?`,
+		`SELECT id, user_id, user_name, title, description, cluster, namespace, gpu_count, gpu_type, gpu_types, start_date, duration_hours, notes, status, quota_name, quota_enforced, created_at, updated_at FROM gpu_reservations WHERE status = 'active' ORDER BY start_date DESC LIMIT ?`,
 		gpuReservationsMaxRows,
 	)
 	if err != nil {
@@ -541,7 +540,7 @@ func (s *SQLiteStore) ListActiveGPUReservations(ctx context.Context) ([]models.G
 	}
 	defer rows.Close()
 
-	var reservations []models.GPUReservation
+	reservations := make([]models.GPUReservation, 0)
 	for rows.Next() {
 		r, err := s.scanGPUReservationRow(ctx, rows)
 		if err != nil {

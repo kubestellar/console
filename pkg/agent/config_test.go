@@ -61,7 +61,7 @@ expected string
 {"ollama", "OLLAMA_URL"},
 {"groq", "GROQ_BASE_URL"},
 {"openrouter", "OPENROUTER_BASE_URL"},
-{"openai", ""},
+{"openai", "OPENAI_BASE_URL"},
 }
 
 for _, tt := range tests {

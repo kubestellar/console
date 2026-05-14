@@ -175,8 +175,9 @@ func (s *Server) handleHelmRollback(w http.ResponseWriter, r *http.Request) {
 	}
 	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
+			slog.Error("invalid Helm rollback input", "field", field, "value", val, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
-			writeJSON(w, map[string]string{"error": err.Error()})
+			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
 		}
 	}
@@ -199,8 +200,7 @@ func (s *Server) handleHelmRollback(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("[agent] helm rollback failed", "release", req.Release, "error", err, "stderr", stderr.String())
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
-			"error":  "rollback failed",
-			"detail": stderr.String(),
+			"error":  sanitizeAgentError("rollback release", err),
 			"source": "agent",
 		})
 		return
@@ -248,8 +248,9 @@ func (s *Server) handleHelmUninstall(w http.ResponseWriter, r *http.Request) {
 	}
 	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
+			slog.Error("invalid Helm uninstall input", "field", field, "value", val, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
-			writeJSON(w, map[string]string{"error": err.Error()})
+			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
 		}
 	}
@@ -272,8 +273,7 @@ func (s *Server) handleHelmUninstall(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("[agent] helm uninstall failed", "release", req.Release, "error", err, "stderr", stderr.String())
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
-			"error":  "uninstall failed",
-			"detail": stderr.String(),
+			"error":  sanitizeAgentError("uninstall release", err),
 			"source": "agent",
 		})
 		return
@@ -321,19 +321,22 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 	}
 	for field, val := range map[string]string{"cluster": req.Cluster, "release": req.Release, "namespace": req.Namespace} {
 		if err := validateHelmK8sName(val, field); err != nil {
+			slog.Error("invalid Helm upgrade input", "field", field, "value", val, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
-			writeJSON(w, map[string]string{"error": err.Error()})
+			writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 			return
 		}
 	}
 	if err := validateHelmChartArg(req.Chart); err != nil {
+		slog.Error("invalid Helm chart", "chart", req.Chart, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return
 	}
 	if err := validateHelmChartVersion(req.Version); err != nil {
+		slog.Error("invalid Helm chart version", "version", req.Version, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, map[string]string{"error": sanitizeAgentError("", err)})
 		return
 	}
 
@@ -389,8 +392,7 @@ func (s *Server) handleHelmUpgrade(w http.ResponseWriter, r *http.Request) {
 		slog.Warn("[agent] helm upgrade failed", "release", req.Release, "error", err, "stderr", stderr.String())
 		w.WriteHeader(http.StatusInternalServerError)
 		writeJSON(w, map[string]interface{}{
-			"error":  "upgrade failed",
-			"detail": stderr.String(),
+			"error":  sanitizeAgentError("upgrade release", err),
 			"source": "agent",
 		})
 		return

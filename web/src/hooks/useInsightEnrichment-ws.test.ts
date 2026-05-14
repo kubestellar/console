@@ -41,6 +41,10 @@ vi.mock('../lib/constants', async (importOriginal) => {
   LOCAL_AGENT_WS_URL: 'ws://127.0.0.1:8585/ws',
 } })
 
+vi.mock('../lib/utils/wsAuth', () => ({
+  appendWsAuthToken: async (url: string) => url,
+}))
+
 // ── WebSocket mock ──────────────────────────────────────────────────────────────
 // A lightweight stand-in that captures instances and exposes simulation helpers.
 
@@ -111,6 +115,42 @@ function makeEnrichment(overrides: Partial<AIInsightEnrichment> = {}): AIInsight
     provider: 'claude',
     ...overrides,
   }
+}
+
+type UseInsightEnrichmentHook = (insights: MultiClusterInsight[]) => {
+  enrichedInsights: MultiClusterInsight[]
+  hasEnrichments: boolean
+  enrichmentCount: number
+}
+
+async function flushMicrotasks() {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  })
+}
+
+async function renderInsightEnrichmentHook(
+  useInsightEnrichment: UseInsightEnrichmentHook,
+  insights: MultiClusterInsight[],
+) {
+  const hook = renderHook(() => useInsightEnrichment(insights))
+  await flushMicrotasks()
+  return hook
+}
+
+async function advanceTime(ms: number) {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms)
+  })
+  await flushMicrotasks()
+}
+
+async function runAllTimers() {
+  await act(async () => {
+    await vi.runAllTimersAsync()
+  })
+  await flushMicrotasks()
 }
 
 // ── mergeEnrichments — empty enrichments map ───────────────────────────────────
@@ -184,7 +224,7 @@ describe('mergeEnrichments — with enrichments', () => {
       provider: 'gpt-4',
     })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -206,7 +246,7 @@ describe('mergeEnrichments — with enrichments', () => {
     const insight = makeInsight({ id: 'sev-up', severity: 'warning' })
     const enrichment = makeEnrichment({ insightId: 'sev-up', severity: 'critical' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -223,7 +263,7 @@ describe('mergeEnrichments — with enrichments', () => {
     const insight = makeInsight({ id: 'sev-down', severity: 'warning' })
     const enrichment = makeEnrichment({ insightId: 'sev-down', severity: 'info' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -240,7 +280,7 @@ describe('mergeEnrichments — with enrichments', () => {
     const insight = makeInsight({ id: 'sev-same', severity: 'critical' })
     const enrichment = makeEnrichment({ insightId: 'sev-same', severity: 'critical' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -257,7 +297,7 @@ describe('mergeEnrichments — with enrichments', () => {
     const insight = makeInsight({ id: 'no-match' })
     const enrichment = makeEnrichment({ insightId: 'different-id' })
 
-    renderHook(() => useInsightEnrichment([insight]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -294,7 +334,7 @@ describe('useInsightEnrichment — agent not connected', () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
     const insights = [makeInsight()]
 
-    const { result } = renderHook(() => useInsightEnrichment(insights))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, insights)
 
     expect(result.current.enrichedInsights).toEqual(insights)
     expect(result.current.hasEnrichments).toBe(false)
@@ -304,7 +344,7 @@ describe('useInsightEnrichment — agent not connected', () => {
   it('does not create a WebSocket connection when agent is not connected', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {})
 
@@ -333,7 +373,7 @@ describe('useInsightEnrichment — agent unavailable', () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
     const insights = [makeInsight()]
 
-    const { result } = renderHook(() => useInsightEnrichment(insights))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, insights)
 
     expect(result.current.enrichedInsights).toEqual(insights)
     expect(result.current.hasEnrichments).toBe(false)
@@ -342,7 +382,7 @@ describe('useInsightEnrichment — agent unavailable', () => {
   it('does not create a WebSocket connection when agent is unavailable', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {})
 
@@ -370,7 +410,7 @@ describe('useInsightEnrichment — WebSocket connection', () => {
   it('creates a WebSocket connection on mount when agent is connected', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {})
 
@@ -381,7 +421,7 @@ describe('useInsightEnrichment — WebSocket connection', () => {
   it('does not create a second WebSocket when one is already open', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    const { rerender } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { rerender } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -397,7 +437,7 @@ describe('useInsightEnrichment — WebSocket connection', () => {
     const insight = makeInsight({ id: 'ws-msg-test' })
     const enrichment = makeEnrichment({ insightId: 'ws-msg-test', description: 'WS AI desc' })
 
-    const { result } = renderHook(() => useInsightEnrichment([insight]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [insight])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -415,7 +455,7 @@ describe('useInsightEnrichment — WebSocket connection', () => {
 
   it('ignores WebSocket messages with an unknown type', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -427,7 +467,7 @@ describe('useInsightEnrichment — WebSocket connection', () => {
 
   it('ignores malformed JSON in WebSocket messages without throwing', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
-    const { result } = renderHook(() => useInsightEnrichment([makeInsight()]))
+    const { result } = await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -442,7 +482,7 @@ describe('useInsightEnrichment — WebSocket connection', () => {
   it('marks WebSocket as closed after an error event', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
 
     await act(async () => {
       capturedWsInstances[0]?.simulateOpen()
@@ -475,15 +515,15 @@ describe('useInsightEnrichment — exponential backoff', () => {
   it('schedules reconnect with 5s delay after first disconnect', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
-    await act(async () => { await vi.runAllTimersAsync() })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
+    await runAllTimers()
 
     expect(capturedWsInstances.length).toBe(1)
 
     act(() => { capturedWsInstances[0].simulateClose() })
 
     // Advance exactly 5s — reconnect should fire
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    await advanceTime(5_000)
 
     expect(capturedWsInstances.length).toBe(2)
   })
@@ -491,56 +531,56 @@ describe('useInsightEnrichment — exponential backoff', () => {
   it('schedules reconnect with 10s delay after second disconnect', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
-    await act(async () => { await vi.runAllTimersAsync() })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
+    await runAllTimers()
 
     // 1st close → 5s reconnect
     act(() => { capturedWsInstances[0].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    await advanceTime(5_000)
     expect(capturedWsInstances.length).toBe(2)
 
     // 2nd close → 10s reconnect
     act(() => { capturedWsInstances[1].simulateClose() })
 
     // 9 999ms is not enough
-    await act(async () => { await vi.advanceTimersByTimeAsync(9_999) })
+    await advanceTime(9_999)
     expect(capturedWsInstances.length).toBe(2)
 
     // +1ms completes the 10s window
-    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    await advanceTime(1)
     expect(capturedWsInstances.length).toBe(3)
   })
 
   it('schedules reconnect with 20s delay after third disconnect', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
-    await act(async () => { await vi.runAllTimersAsync() })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
+    await runAllTimers()
 
     // 1st close → 5s
     act(() => { capturedWsInstances[0].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    await advanceTime(5_000)
 
     // 2nd close → 10s
     act(() => { capturedWsInstances[1].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    await advanceTime(10_000)
 
     // 3rd close → 20s reconnect
     act(() => { capturedWsInstances[2].simulateClose() })
 
     // 19 999ms is not enough
-    await act(async () => { await vi.advanceTimersByTimeAsync(19_999) })
+    await advanceTime(19_999)
     expect(capturedWsInstances.length).toBe(3)
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    await advanceTime(1)
     expect(capturedWsInstances.length).toBe(4)
   })
 
   it('stops reconnecting after max reconnect attempts (5)', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
-    await act(async () => { await vi.runAllTimersAsync() })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
+    await runAllTimers()
 
     expect(capturedWsInstances.length).toBe(1)
 
@@ -550,7 +590,7 @@ describe('useInsightEnrichment — exponential backoff', () => {
       act(() => {
         capturedWsInstances[capturedWsInstances.length - 1].simulateClose()
       })
-      await act(async () => { await vi.advanceTimersByTimeAsync(delay) })
+      await advanceTime(delay)
     }
 
     // After 4 reconnects we have 5 WS instances total
@@ -562,7 +602,7 @@ describe('useInsightEnrichment — exponential backoff', () => {
       capturedWsInstances[capturedWsInstances.length - 1].simulateClose()
     })
 
-    await act(async () => { await vi.advanceTimersByTimeAsync(200_000) })
+    await advanceTime(200_000)
 
     expect(capturedWsInstances.length).toBe(countBefore)
   })
@@ -570,12 +610,12 @@ describe('useInsightEnrichment — exponential backoff', () => {
   it('resets reconnect attempt counter on successful open, allowing fresh reconnects', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
-    await act(async () => { await vi.runAllTimersAsync() })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
+    await runAllTimers()
 
     // Close once → reconnect after 5s
     act(() => { capturedWsInstances[0].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    await advanceTime(5_000)
     expect(capturedWsInstances.length).toBe(2)
 
     // Open second WS — resets wsReconnectAttempts to 0
@@ -583,7 +623,7 @@ describe('useInsightEnrichment — exponential backoff', () => {
 
     // Close again — should still reconnect after 5 s (attempts reset)
     act(() => { capturedWsInstances[1].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(5_000) })
+    await advanceTime(5_000)
 
     expect(capturedWsInstances.length).toBe(3)
   })
@@ -591,14 +631,14 @@ describe('useInsightEnrichment — exponential backoff', () => {
   it('does not reconnect if agent becomes unavailable during backoff', async () => {
     const { useInsightEnrichment } = await import('./useInsightEnrichment')
 
-    renderHook(() => useInsightEnrichment([makeInsight()]))
-    await act(async () => { await vi.runAllTimersAsync() })
+    await renderInsightEnrichmentHook(useInsightEnrichment, [makeInsight()])
+    await runAllTimers()
 
     // Agent becomes unavailable
     mockIsAgentUnavailable.mockReturnValue(true)
 
     act(() => { capturedWsInstances[0].simulateClose() })
-    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    await advanceTime(10_000)
 
     // No new WS — the close handler bailed early due to unavailable agent
     expect(capturedWsInstances.length).toBe(1)

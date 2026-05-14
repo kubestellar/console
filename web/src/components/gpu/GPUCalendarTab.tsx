@@ -145,7 +145,6 @@ export function GPUCalendarTab({
                   {/* Spanning bars */}
                   {week.bars.map((bar, barIdx) => {
                     const isActive = bar.reservation.status === 'active'
-                    const isPending = bar.reservation.status === 'pending'
                     const isInactive = bar.reservation.status === 'completed' || bar.reservation.status === 'cancelled'
 
                     return (
@@ -157,9 +156,7 @@ export function GPUCalendarTab({
                           'h-[20px]',
                           isInactive
                             ? 'bg-secondary/80 text-muted-foreground'
-                            : isActive
-                              ? 'bg-purple-500/30 text-purple-300'
-                              : 'bg-yellow-500/20 text-yellow-300',
+                            : 'bg-purple-500/30 text-purple-300',
                           bar.isStart ? 'rounded-l-md' : '',
                           bar.isEnd ? 'rounded-r-md' : '',
                         )}
@@ -171,11 +168,8 @@ export function GPUCalendarTab({
                         title={`${bar.reservation.title} (${bar.reservation.gpu_count} GPUs, ${bar.reservation.status})`}
                         aria-label={`${bar.reservation.title}: ${bar.reservation.gpu_count} GPUs, ${bar.reservation.status}`}
                       >
-                        {bar.isStart && (
-                          <>
-                            {isActive && <span className="inline-block w-2 h-2 rounded-full bg-green-400 shrink-0" />}
-                            {isPending && <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 shrink-0" />}
-                          </>
+                        {bar.isStart && isActive && (
+                          <span className="inline-block w-2 h-2 rounded-full bg-green-400 shrink-0" />
                         )}
                         {bar.isStart ? bar.reservation.title : ''}
                       </button>

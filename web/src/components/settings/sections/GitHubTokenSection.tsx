@@ -8,6 +8,7 @@ import { UI_FEEDBACK_TIMEOUT_MS, SCROLL_COMPLETE_MS } from '../../../lib/constan
 import { GITHUB_TOKEN_CREATE_URL, GITHUB_TOKEN_CLASSIC_URL } from '../../../lib/constants/github-token'
 import { ConfirmDialog } from '../../../lib/modals'
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../../../lib/utils/localStorage'
+import { useToast } from '../../ui/Toast'
 
 interface GitHubTokenSectionProps {
   forceVersionCheck: () => void
@@ -26,6 +27,10 @@ const HIGHLIGHT_DELAY_MS = 400
 /** Delay before trying to render deep-link scroll */
 const DEEP_LINK_RENDER_DELAY_MS = 300
 
+const GITHUB_TOKEN_FOCUS_TARGET = 'github-token'
+const GITHUB_TOKEN_INPUT_ID = 'github-token'
+const GITHUB_TOKEN_SECTION_ID = 'github-token-settings'
+
 /** Build JWT auth headers for backend proxy requests */
 function authHeaders(): Record<string, string> {
   const token = safeGetItem(STORAGE_KEY_TOKEN)
@@ -36,6 +41,7 @@ function authHeaders(): Record<string, string> {
 
 export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProps) {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [tokenInput, setTokenInput] = useState('')
   const [hasToken, setHasToken] = useState(false)
   const [tokenSource, setTokenSource] = useState<string | null>(null)
@@ -84,21 +90,16 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   useEffect(() => {
     const hash = window.location.hash
     const params = new URLSearchParams(window.location.search)
-    const shouldFocus = hash === '#github-token' || params.get('focus') === 'github-token'
+    const shouldFocus = hash === `#${GITHUB_TOKEN_FOCUS_TARGET}` || params.get('focus') === GITHUB_TOKEN_FOCUS_TARGET
 
     if (shouldFocus) {
       // Wait for component to render and page to settle
       const timer = setTimeout(() => {
-        const section = document.getElementById('github-token-settings')
-        const nextSection = document.getElementById('system-updates-settings')
-        const input = document.getElementById('github-token') as HTMLInputElement | null
+        const section = document.getElementById(GITHUB_TOKEN_SECTION_ID)
+        const input = document.getElementById(GITHUB_TOKEN_INPUT_ID) as HTMLInputElement | null
 
-        // Scroll to the NEXT section with block: 'center' so GitHub token is centered
-        if (nextSection) {
-          nextSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        } else if (section) {
-          // Fallback: scroll to section itself
-          section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        if (section) {
+          section.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }
 
         // Flash highlight effect on GitHub section
@@ -196,6 +197,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         setTokenInput('') // Clear from input field
         setTokenSaved(true)
         setTimeout(() => setTokenSaved(false), UI_FEEDBACK_TIMEOUT_MS)
+        showToast(t('settings.github.saveSuccessToast'), 'success')
 
         emitGitHubTokenConfigured()
         emitConversionStep(6, 'github_token')
@@ -211,6 +213,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   }
 
   const handleClearToken = async () => {
+    if (tokenTesting) return
+
     try {
       // Remove token from backend
       await fetch('/api/github/token', {
@@ -237,7 +241,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
   const isEnvToken = tokenSource === TOKEN_SOURCE_ENV
 
   return (
-    <div id="github-token-settings" className="glass rounded-xl p-6">
+    <div id={GITHUB_TOKEN_SECTION_ID} className="glass rounded-xl p-6">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-2 rounded-lg bg-secondary">
           <Github className="w-5 h-5 text-muted-foreground" />
@@ -312,7 +316,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
               </label>
               <div className="flex gap-2">
                 <input
-                  id="github-token"
+                  id={GITHUB_TOKEN_INPUT_ID}
                   type="password"
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
@@ -334,7 +338,8 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
                 {hasToken && (
                   <button
                     onClick={() => setShowClearConfirm(true)}
-                    className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10"
+                    disabled={tokenTesting}
+                    className="px-4 py-2 rounded-lg text-red-400 hover:bg-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {t('settings.github.clear')}
                   </button>
@@ -414,6 +419,7 @@ export function GitHubTokenSection({ forceVersionCheck }: GitHubTokenSectionProp
         message={t('settings.github.clearConfirm')}
         confirmLabel={t('actions.delete')}
         variant="danger"
+        isLoading={tokenTesting}
       />
     </div>
   )

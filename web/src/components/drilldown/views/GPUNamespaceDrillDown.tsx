@@ -79,7 +79,7 @@ export function GPUNamespaceDrillDown({ data }: Props) {
 
   return (
     <div className="space-y-6">
-      <button onClick={() => state.stack.length > 1 ? pop() : close()} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      <button onClick={() => state.stack.length > 1 ? pop() : close()} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors min-h-11 min-w-11 px-2 py-2">
         <ChevronLeft className="w-4 h-4" />
         Back
       </button>

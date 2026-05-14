@@ -77,6 +77,10 @@ const COLORS = {
   gateway: '#3b82f6',
   epp: '#f59e0b' }
 
+// Metric colors
+const METRIC_LOAD_COLOR = '#f59e0b'
+const METRIC_QUEUE_COLOR = '#06b6d4'
+
 // Premium gauge node with glowing arc
 interface PremiumNodeProps {
   id: string
@@ -574,14 +578,20 @@ export function LLMdFlow() {
   const { shouldUseDemoData: isDemoMode, showDemoBadge } = useCardDemoState({ requires: 'stack' })
 
   // Prometheus metrics for the selected stack (null when unavailable or no stack)
-  const { metrics: prometheusMetrics } = usePrometheusMetrics(
+  const { metrics: prometheusMetrics, isRefreshing: metricsRefreshing } = usePrometheusMetrics(
     selectedStack?.cluster,
     selectedStack?.namespace,
   )
 
   // Report demo state to CardWrapper so it can show demo badge and yellow outline
   // Use showDemoBadge (true when global demo mode) rather than isDemoMode (false when stack selected)
-  useReportCardDataState({ isDemoData: showDemoBadge, isFailed: false, consecutiveFailures: 0, hasData: true })
+  useReportCardDataState({
+    isDemoData: showDemoBadge,
+    isRefreshing: (stackContext?.isRefreshing ?? false) || metricsRefreshing,
+    isFailed: false,
+    consecutiveFailures: 0,
+    hasData: true,
+  })
 
   // Build dynamic node positions based on actual stack topology
   const { nodePositions: rawPositions, connections, nodeLabels } = useMemo(() => {
@@ -935,8 +945,8 @@ export function LLMdFlow() {
   }
 
   const metricConfig: Record<MetricType, { label: string; color: string; unit: string }> = {
-    load: { label: 'Load', color: '#f59e0b', unit: '%' },
-    queue: { label: 'Queue', color: '#06b6d4', unit: '' },
+    load: { label: 'Load', color: METRIC_LOAD_COLOR, unit: '%' },
+    queue: { label: 'Queue', color: METRIC_QUEUE_COLOR, unit: '' },
     rps: { label: 'RPS', color: getNodeColor(selectedNode), unit: '' } }
 
   // Show empty state when no stack selected in live mode

@@ -1,0 +1,174 @@
+{
+  "timestamp": "2026-05-12T07:59:29Z",
+  "fastMode": false,
+  "summary": {
+    "total": 32,
+    "passed": 30,
+    "failed": 2,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "suite": "consistency-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "helm-lint-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "license-compliance-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "mission-security-test",
+      "status": "pass",
+      "duration": 7
+    },
+    {
+      "suite": "card-registry-integrity-test",
+      "status": "pass",
+      "duration": 1
+    },
+    {
+      "suite": "unit-test",
+      "status": "pass",
+      "duration": 1023
+    },
+    {
+      "suite": "auth-lifecycle-test",
+      "status": "pass",
+      "duration": 26
+    },
+    {
+      "suite": "settings-migration-test",
+      "status": "pass",
+      "duration": 2
+    },
+    {
+      "suite": "update-lifecycle-test",
+      "status": "pass",
+      "duration": 62
+    },
+    {
+      "suite": "websocket-resilience-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "gosec-test",
+      "status": "pass",
+      "duration": 48
+    },
+    {
+      "suite": "dependency-audit-test",
+      "status": "pass",
+      "duration": 13
+    },
+    {
+      "suite": "secret-scan-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "ts-sast-test",
+      "status": "pass",
+      "duration": 3
+    },
+    {
+      "suite": "container-scan-test",
+      "status": "pass",
+      "duration": 14
+    },
+    {
+      "suite": "security-headers-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-contract-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "api-fuzz-test",
+      "status": "pass",
+      "duration": 155
+    },
+    {
+      "suite": "error-boundary-test",
+      "status": "pass",
+      "duration": 0
+    },
+    {
+      "suite": "console-error-scan",
+      "status": "pass",
+      "duration": 110
+    },
+    {
+      "suite": "nav-test",
+      "status": "pass",
+      "duration": 539
+    },
+    {
+      "suite": "perf-test",
+      "status": "pass",
+      "duration": 908
+    },
+    {
+      "suite": "ui-compliance-test",
+      "status": "pass",
+      "duration": 104
+    },
+    {
+      "suite": "deploy-test",
+      "status": "pass",
+      "duration": 71
+    },
+    {
+      "suite": "cache-test",
+      "status": "fail",
+      "duration": 353,
+      "failure_reason": "    Usage:\n        npx playwright show-trace e2e/test-results/compliance/card-cache-compliance-card-a1949-nce-—-storage-and-retrieval-chromium-retry1/trace.zip\n    ────────────────────────────────────────────────────────────────────────────────────────────────\n  1 failed\n    [chromium] › e2e/compliance/"
+    },
+    {
+      "suite": "benchmark-test",
+      "status": "fail",
+      "duration": 4,
+      "failure_reason": "    ────────────────────────────────────────────────────────────────────────────────────────────────\n  1 failed\n    [chromium] › e2e/benchmarks/benchmark-dashboard.spec.ts:563:3 › Nightly E2E Status — console.kubestellar.io › each guide has recent runs with valid structure \n  9 skipped\n  2 passed (2"
+    },
+    {
+      "suite": "ai-ml-test",
+      "status": "pass",
+      "duration": 4
+    },
+    {
+      "suite": "a11y-test",
+      "status": "pass",
+      "duration": 82
+    },
+    {
+      "suite": "error-resilience-test",
+      "status": "pass",
+      "duration": 31
+    },
+    {
+      "suite": "i18n-test",
+      "status": "pass",
+      "duration": 62
+    },
+    {
+      "suite": "interaction-test",
+      "status": "pass",
+      "duration": 37
+    },
+    {
+      "suite": "security-e2e-test",
+      "status": "pass",
+      "duration": 37
+    }
+  ]
+}

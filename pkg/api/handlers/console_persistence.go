@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/api/v1alpha1"
@@ -138,6 +140,10 @@ func (h *ConsolePersistenceHandlers) StartWatcher(ctx context.Context) error {
 		return nil
 	}
 
+	if h.k8sClient == nil {
+		return fmt.Errorf("%s", noClusterAccessMsg)
+	}
+
 	activeCluster, err := h.persistenceStore.GetActiveCluster(ctx)
 	if err != nil {
 		slog.Warn("[ConsolePersistence] cannot start watcher", "error", err)
@@ -199,10 +205,10 @@ func (h *ConsolePersistenceHandlers) handleResourceEvent(event k8s.ConsoleResour
 	// detached timeout.
 	const reconcileTimeout = 5 * time.Minute
 	reconcileCtx, reconcileCancel := context.WithTimeout(context.Background(), reconcileTimeout)
-	go func() {
+	safego.Go(func() {
 		defer reconcileCancel()
 		h.reconcileDeployment(reconcileCtx, wd)
-	}()
+	})
 }
 
 // =============================================================================
@@ -413,7 +419,8 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(ctx context.Context, g
 				for _, cluster := range clusters {
 					wg.Add(1)
 					sem <- struct{}{} // acquire semaphore slot
-					go func(clusterName string) {
+					clusterName := cluster.Name
+					safego.GoWith("persistence/"+clusterName, func() {
 						defer wg.Done()
 						defer func() { <-sem }() // release semaphore slot
 						nodes, nodeErr := h.k8sClient.GetNodes(ctx, clusterName)
@@ -422,7 +429,7 @@ func (h *ConsolePersistenceHandlers) evaluateClusterGroup(ctx context.Context, g
 							nodesByCluster[clusterName] = nodes
 							mu.Unlock()
 						}
-					}(cluster.Name)
+					})
 				}
 				wg.Wait()
 			}
@@ -637,8 +644,7 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 	if err != nil {
 		slog.Error("[reconcile] failed to resolve ManagedWorkload",
 			"name", wd.Name, "error", err)
-		h.setTerminalStatus(wd, "Failed",
-			fmt.Sprintf("Failed to resolve ManagedWorkload: %v", err), updateStatus)
+		h.setTerminalStatus(wd, "Failed", "Failed to resolve ManagedWorkload", updateStatus)
 		return
 	}
 
@@ -647,8 +653,7 @@ func (h *ConsolePersistenceHandlers) reconcileDeployment(ctx context.Context, wd
 	if err != nil {
 		slog.Error("[reconcile] failed to resolve target clusters",
 			"name", wd.Name, "error", err)
-		h.setTerminalStatus(wd, "Failed",
-			fmt.Sprintf("Failed to resolve target clusters: %v", err), updateStatus)
+		h.setTerminalStatus(wd, "Failed", "Failed to resolve target clusters", updateStatus)
 		return
 	}
 	if len(targets) == 0 {

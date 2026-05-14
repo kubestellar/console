@@ -5,7 +5,7 @@ import { Lightbulb, Clock, X, ChevronDown, ChevronUp, Zap, AlertTriangle, Shield
 import { useMissionSuggestions, MissionSuggestion, MissionType } from '../../hooks/useMissionSuggestions'
 import { useSnoozedMissions, formatTimeRemaining } from '../../hooks/useSnoozedMissions'
 import { useMissions } from '../../hooks/useMissions'
-import { useLocalAgent } from '../../hooks/useLocalAgent'
+import { useLocalAgent, wasAgentEverConnected } from '../../hooks/useLocalAgent'
 import { isInClusterMode } from '../../hooks/useBackendHealth'
 import { useDemoMode } from '../../hooks/useDemoMode'
 import { Skeleton } from '../ui/Skeleton'
@@ -65,7 +65,7 @@ export function MissionSuggestions() {
   const { status: agentStatus } = useLocalAgent()
   const { isDemoMode } = useDemoMode()
   const isAgentOffline = agentStatus === 'disconnected'
-  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode()
+  const forceSkeletonForOffline = !isDemoMode && isAgentOffline && !isInClusterMode() && !wasAgentEverConnected()
 
   // Force dependency on snoozedMissions for reactivity
   void snoozedMissions

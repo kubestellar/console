@@ -3,6 +3,13 @@
  * 
  * Centralized route definitions for type-safety and maintainability.
  * Use these constants instead of hardcoding route paths throughout the app.
+ * 
+ * Navigation Best Practices:
+ * - Always use ROUTES constants instead of hardcoding paths
+ * - Use helper functions (getCustomDashboardRoute, getMissionRoute) for dynamic routes
+ * - External links should use the ExternalLink component from components/ui/ExternalLink
+ * - Deep navigation is handled by DrillDownProvider with automatic breadcrumbs
+ * - Browser history integration is automatic for drill-down views
  */
 
 export const ROUTES = {
@@ -82,6 +89,18 @@ export const ROUTES = {
 
   // Enterprise Compliance Portal
   ENTERPRISE: '/enterprise',
+  ENTERPRISE_OIDC: '/enterprise/oidc',
+  ENTERPRISE_RBAC_AUDIT: '/enterprise/rbac-audit',
+  ENTERPRISE_SESSIONS: '/enterprise/sessions',
+  ENTERPRISE_SIEM: '/enterprise/siem',
+  ENTERPRISE_INCIDENT_RESPONSE: '/enterprise/incident-response',
+  ENTERPRISE_THREAT_INTEL: '/enterprise/threat-intel',
+  ENTERPRISE_SBOM: '/enterprise/sbom',
+  ENTERPRISE_SIGSTORE: '/enterprise/sigstore',
+  ENTERPRISE_SLSA: '/enterprise/slsa',
+  ENTERPRISE_RISK_MATRIX: '/enterprise/risk-matrix',
+  ENTERPRISE_RISK_REGISTER: '/enterprise/risk-register',
+  ENTERPRISE_RISK_APPETITE: '/enterprise/risk-appetite',
 
   // Marketplace
   MARKETPLACE: '/marketplace',
@@ -94,6 +113,7 @@ export const ROUTES = {
   WIDGET: '/widget',
 
   // Embed (standalone card for iframe embedding)
+  EMBED_BASE: '/embed',
   EMBED_CARD: '/embed/:cardType',
 
   // Feedback / issue shortcuts

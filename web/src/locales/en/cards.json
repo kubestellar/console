@@ -206,6 +206,15 @@
     "yAxisLabel": "Counts",
     "lastExecution": "Last execution: {{time}}"
   },
+  "quantumControlPanel": {
+    "backendOptions": {
+      "aerSimulator": "Aer Simulator"
+    },
+    "qasmFiles": {
+      "loadingFiles": "Loading files...",
+      "customQasm": "Custom QASM..."
+    }
+  },
   "titles": {
     "cluster_health": "Cluster Health",
     "cluster_focus": "Cluster Focus",
@@ -2749,6 +2758,8 @@
     "version": "Version",
     "noOperators": "No operators",
     "noOperatorsHint": "Operators will appear when installed",
+    "errorLoading": "Unable to load operators",
+    "errorLoadingHint": "Failed after {{count}} attempts",
     "nOperators": "{{count}} operators",
     "nOperators_one": "{{count}} operator",
     "nOperators_other": "{{count}} operators",
@@ -2771,6 +2782,8 @@
     "channel": "Channel",
     "noSubscriptions": "No subscriptions",
     "noSubscriptionsHint": "Operator subscriptions will appear here",
+    "errorLoading": "Unable to load subscriptions",
+    "errorLoadingHint": "Failed after {{count}} attempts",
     "nPending": "{{count}} pending",
     "nPending_one": "{{count}} pending",
     "nPending_other": "{{count}} pending",

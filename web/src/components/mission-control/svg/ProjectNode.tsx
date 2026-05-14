@@ -261,6 +261,7 @@ export function ProjectNode({
                 objectFit: 'cover',
               }}
               onError={() => setImgFailed(true)}
+              loading="lazy"
             />
           ) : (
             <span style={{

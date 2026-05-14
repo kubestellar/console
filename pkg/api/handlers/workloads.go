@@ -19,6 +19,7 @@ import (
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
 	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +38,8 @@ const (
 	workloadWriteTimeout = 30 * time.Second
 	// workloadDeployLogsTimeout is the timeout for fetching deploy logs (events + pod queries).
 	workloadDeployLogsTimeout = 15 * time.Second
+	// defaultDemoReplicas is the replica count returned for deployments in demo mode.
+	defaultDemoReplicas = 3
 )
 
 const (
@@ -259,8 +262,8 @@ func (h *WorkloadHandlers) GetDeployStatus(c *fiber.Ctx) error {
 			"namespace":     c.Params("namespace"),
 			"name":          c.Params("name"),
 			"status":        "Running",
-			"replicas":      3,
-			"readyReplicas": 3,
+			"replicas":      defaultDemoReplicas,
+			"readyReplicas": defaultDemoReplicas,
 		})
 	}
 	if h.k8sClient == nil {
@@ -381,7 +384,7 @@ func (h *WorkloadHandlers) StartCacheRefresh() {
 	if h.store == nil {
 		return
 	}
-	go func() {
+	safego.GoWith("workload-cache-refresh", func() {
 		ticker := time.NewTicker(clusterGroupRefreshInterval)
 		defer ticker.Stop()
 		for {
@@ -392,7 +395,7 @@ func (h *WorkloadHandlers) StartCacheRefresh() {
 				h.LoadPersistedClusterGroups()
 			}
 		}
-	}()
+	})
 	slog.Info("[Workloads] started periodic cluster group cache refresh",
 		"interval", clusterGroupRefreshInterval)
 }
@@ -506,13 +509,13 @@ func (h *WorkloadHandlers) CreateClusterGroup(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
 		defer cancel()
 
-		var labelErrors []string
+		labelErrors := make([]string, 0)
 		for _, cluster := range group.Clusters {
 			if err := h.k8sClient.LabelClusterNodes(ctx, cluster, map[string]string{
 				"kubestellar.io/group": group.Name,
 			}); err != nil {
 				slog.Error("[Workloads] failed to label cluster", "cluster", cluster, "error", err)
-				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: operation failed", cluster))
 			}
 		}
 		if len(labelErrors) > 0 {
@@ -569,12 +572,12 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 		for _, c := range group.Clusters {
 			newSet[c] = true
 		}
-		var labelErrors []string
+		labelErrors := make([]string, 0)
 		for _, cluster := range oldGroup.Clusters {
 			if !newSet[cluster] {
 				if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
 					slog.Error("[Workloads] failed to remove label from cluster", "cluster", cluster, "error", err)
-					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: operation failed", cluster))
 				}
 			}
 		}
@@ -584,7 +587,7 @@ func (h *WorkloadHandlers) UpdateClusterGroup(c *fiber.Ctx) error {
 					"kubestellar.io/group": group.Name,
 				}); err != nil {
 					slog.Error("[Workloads] failed to label cluster", "cluster", cluster, "error", err)
-					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+					labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: operation failed", cluster))
 				}
 			}
 		}
@@ -629,11 +632,11 @@ func (h *WorkloadHandlers) DeleteClusterGroup(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.Context(), workloadWriteTimeout)
 		defer cancel()
 
-		var labelErrors []string
+		labelErrors := make([]string, 0)
 		for _, cluster := range group.Clusters {
 			if err := h.k8sClient.RemoveClusterNodeLabels(ctx, cluster, []string{"kubestellar.io/group"}); err != nil {
 				slog.Error("[Workloads] failed to remove label from cluster", "cluster", cluster, "error", err)
-				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: %v", cluster, err))
+				labelErrors = append(labelErrors, fmt.Sprintf("cluster %s: operation failed", cluster))
 			}
 		}
 		if len(labelErrors) > 0 {
@@ -666,7 +669,7 @@ func (h *WorkloadHandlers) SyncClusterGroups(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Request body too large")
 	}
 
-	var groups []ClusterGroup
+	groups := make([]ClusterGroup, 0)
 	if err := json.Unmarshal(c.Body(), &groups); err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid request body"})
 	}
@@ -730,7 +733,6 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 			return c.Status(400).JSON(fiber.Map{
 				"error":         "invalid label selector",
 				"labelSelector": query.LabelSelector,
-				"detail":        selErr.Error(),
 			})
 		}
 	}
@@ -788,7 +790,7 @@ func (h *WorkloadHandlers) EvaluateClusterQuery(c *fiber.Ctx) error {
 		_ = g.Wait() // errors are non-fatal (logged above)
 	}
 
-	matching := make([]string, 0)
+	matching := make([]string, 0, len(healthData))
 	for _, health := range healthData {
 		if clusterMatchesQuery(health, nodesByCluster[health.Cluster], &query) {
 			matching = append(matching, health.Cluster)
@@ -1167,7 +1169,8 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 
 	client, err := h.k8sClient.GetClient(cluster)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": fmt.Sprintf("cluster %s: %v", cluster, err)})
+		slog.Error("[workloads] failed to get cluster client", "cluster", cluster, "error", err)
+		return c.Status(500).JSON(fiber.Map{"error": "cluster access failed"})
 	}
 
 	ctx, cancel := context.WithTimeout(c.Context(), workloadDeployLogsTimeout)
@@ -1188,7 +1191,8 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 		// Fallback: list all pods and filter by name prefix
 		allPods, listErr := client.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 		if listErr != nil {
-			return c.Status(500).JSON(fiber.Map{"error": listErr.Error()})
+			slog.Error("[workloads] failed to list pods", "namespace", namespace, "error", listErr)
+			return c.Status(500).JSON(fiber.Map{"error": "failed to list pods"})
 		}
 		filtered := allPods.DeepCopy()
 		filtered.Items = nil
@@ -1203,7 +1207,7 @@ func (h *WorkloadHandlers) GetDeployLogs(c *fiber.Ctx) error {
 	// Collect k8s events for the deployment and its pods
 	// Use a limit to bound memory usage (#3721)
 	const maxEventsPerQuery = 50
-	var allEvents []corev1.Event
+	allEvents := make([]corev1.Event, 0, maxEventsPerQuery*(1+len(pods.Items)))
 
 	// Events for the deployment itself
 	deployEvents, _ := client.CoreV1().Events(namespace).List(ctx, metav1.ListOptions{

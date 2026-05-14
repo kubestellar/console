@@ -1,6 +1,19 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+
+const { mockUseServices, mockT } = vi.hoisted(() => ({
+  mockUseServices: vi.fn(),
+  mockT: vi.fn((key: string) => {
+    const translations: Record<string, string> = {
+      'network.errors.loadFailedTitle': 'Unable to load network data',
+      'network.errors.refreshFailedTitle': 'Unable to refresh network data — showing cached data',
+      'network.errors.loadingDescription': 'Please check your connection and try again.',
+      'network.errors.permissionsDescription': 'Please check your connection or permissions, then try again.',
+    }
+    return translations[key] ?? key
+  }),
+}))
 
 vi.mock('../../lib/demoMode', () => ({
   isDemoMode: () => true, getDemoMode: () => true, isNetlifyDeployment: false,
@@ -30,10 +43,7 @@ vi.mock('../../lib/dashboards/DashboardPage', () => ({
 }))
 
 vi.mock('../../hooks/useMCP', () => ({
-  useServices: () => ({
-    services: [], isLoading: false, isRefreshing: false,
-    lastUpdated: null, refetch: vi.fn(), error: null,
-  }),
+  useServices: () => mockUseServices(),
 }))
 
 vi.mock('../../hooks/useGlobalFilters', () => ({
@@ -59,7 +69,7 @@ vi.mock('../../hooks/useUniversalStats', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+  useTranslation: () => ({ t: mockT, i18n: { language: 'en' } }),
 }))
 
 import { Network } from './Network'
@@ -71,6 +81,18 @@ describe('Network Component', () => {
         <Network />
       </MemoryRouter>
     )
+
+  beforeEach(() => {
+    mockUseServices.mockReturnValue({
+      services: [],
+      isLoading: false,
+      isRefreshing: false,
+      lastUpdated: null,
+      refetch: vi.fn(),
+      error: null,
+      isFailed: false,
+    })
+  })
 
   it('renders without crashing', () => {
     expect(() => renderNetwork()).not.toThrow()
@@ -86,5 +108,41 @@ describe('Network Component', () => {
     renderNetwork()
     const page = screen.getByTestId('dashboard-page')
     expect(page.getAttribute('data-subtitle')).toBeTruthy()
+  })
+
+  it('shows a permissions-friendly message for unauthorized errors', () => {
+    mockUseServices.mockReturnValue({
+      services: [],
+      isLoading: false,
+      isRefreshing: false,
+      lastUpdated: null,
+      refetch: vi.fn(),
+      error: 'API error: 401',
+      isFailed: true,
+    })
+
+    renderNetwork()
+
+    expect(screen.getByText('Unable to load network data')).toBeTruthy()
+    expect(screen.getByText('Please check your connection or permissions, then try again.')).toBeTruthy()
+    expect(screen.queryByText('API error: 401')).toBeNull()
+  })
+
+  it('shows a generic message for non-auth network errors', () => {
+    mockUseServices.mockReturnValue({
+      services: [],
+      isLoading: false,
+      isRefreshing: false,
+      lastUpdated: null,
+      refetch: vi.fn(),
+      error: 'API error: 500',
+      isFailed: true,
+    })
+
+    renderNetwork()
+
+    expect(screen.getByText('Unable to load network data')).toBeTruthy()
+    expect(screen.getByText('Please check your connection and try again.')).toBeTruthy()
+    expect(screen.queryByText('API error: 500')).toBeNull()
   })
 })

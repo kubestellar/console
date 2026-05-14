@@ -11,6 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/models"
+	"github.com/kubestellar/console/pkg/safego"
+	"golang.org/x/sync/errgroup"
 	authv1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -18,10 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
-
-	"golang.org/x/sync/errgroup"
-
-	"github.com/kubestellar/console/pkg/models"
 )
 
 // maxConcurrentClusterRBACQueries bounds how many clusters GetAllClusterPermissions
@@ -131,7 +130,6 @@ func (m *MultiClusterClient) buildServiceAccountRolesMap(ctx context.Context, cl
 
 	return result
 }
-
 
 // ListRoles returns all Roles in a namespace
 func (m *MultiClusterClient) ListRoles(ctx context.Context, contextName, namespace string) ([]models.K8sRole, error) {
@@ -630,7 +628,8 @@ func (m *MultiClusterClient) CountServiceAccountsAllClusters(ctx context.Context
 
 	wg.Add(len(clusters))
 	for _, cluster := range clusters {
-		go func(name string) {
+		name := cluster.Name
+		safego.Go(func() {
 			defer wg.Done()
 			count, err := m.countServiceAccountsInCluster(ctx, name)
 			if err != nil {
@@ -641,7 +640,7 @@ func (m *MultiClusterClient) CountServiceAccountsAllClusters(ctx context.Context
 			total += count
 			clusterNames = append(clusterNames, name)
 			mu.Unlock()
-		}(cluster.Name)
+		})
 	}
 	wg.Wait()
 

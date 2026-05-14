@@ -47,5 +47,6 @@ export const DEMO_TENANT_TOPOLOGY: TenantTopologyData = {
   k3sEth1Rx: DEMO_K3S_ETH1_RX,
   k3sEth1Tx: DEMO_K3S_ETH1_TX,
   isLoading: false,
+  isRefreshing: false,
   isDemoData: true,
 }

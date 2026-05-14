@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"net/http"
 	"net/url"
@@ -189,9 +190,9 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 		select {
 		case <-waiter.done:
 			if waiter.err != nil {
+				slog.Error("[ACMMScan] in-flight scan failed", "repo", repo, "error", waiter.err)
 				return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-					"error": waiter.err.Error(),
-					"repo":  repo,
+					"error": "ACMM scan failed",
 				})
 			}
 			return c.JSON(waiter.result)
@@ -218,17 +219,17 @@ func ACMMScanHandler(c *fiber.Ctx) error {
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			waiter.err = fmt.Errorf("repo not found")
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Repo not found", "detail": repo})
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "Repo not found"})
 		}
 		waiter.err = fmt.Errorf("GitHub API error: %s", err.Error())
+		slog.Error("[ACMMScan] GitHub API error", "repo", repo, "error", err)
 		return c.Status(fiber.StatusBadGateway).JSON(fiber.Map{
-			"error": waiter.err.Error(),
-			"repo":  repo,
+			"error": "GitHub API request failed",
 		})
 	}
 
 	// Detect criteria
-	var detected []string
+	detected := make([]string, 0)
 	for _, crit := range acmmCriteria {
 		if matchesPatterns(treePaths, crit.Patterns) {
 			detected = append(detected, crit.ID)
@@ -417,7 +418,7 @@ type acmmSearchItem struct {
 }
 
 func searchAllACMMPages(ctx context.Context, baseURL, token string) []acmmSearchItem {
-	var items []acmmSearchItem
+	items := make([]acmmSearchItem, 0)
 	for page := 1; page <= searchMaxPages; page++ {
 		url := fmt.Sprintf("%s&per_page=%d&page=%d", baseURL, searchPageSize, page)
 		body, err := githubGet(ctx, url, token)

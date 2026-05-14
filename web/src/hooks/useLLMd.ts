@@ -129,8 +129,8 @@ function detectServerType(name: string, labels?: Record<string, string>): LLMdSe
   const nameLower = name.toLowerCase()
   if (labels?.['app.kubernetes.io/name'] === 'tgi' || nameLower.includes('tgi')) return 'tgi'
   if (labels?.['app.kubernetes.io/name'] === 'triton' || nameLower.includes('triton')) return 'triton'
-  if (labels?.['llmd.org/inferenceServing'] === 'true' || nameLower.includes('llm-d')) return 'llm-d'
   if (nameLower.includes('vllm')) return 'vllm'
+  if (labels?.['llmd.org/inferenceServing'] === 'true' || nameLower.includes('llm-d')) return 'llm-d'
   return 'unknown'
 }
 
@@ -194,6 +194,14 @@ function extractGPUInfo(deployment: DeploymentResource): { gpu?: string; gpuCoun
   }
 
   return {}
+}
+
+export const __testables = {
+  detectServerType,
+  detectComponentType,
+  detectGatewayType,
+  getServerStatus,
+  extractGPUInfo,
 }
 
 /**

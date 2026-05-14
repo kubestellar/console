@@ -186,7 +186,6 @@ func TestFeedbackType_Constants(t *testing.T) {
 }
 
 func TestReservationStatus_Constants(t *testing.T) {
-	require.Equal(t, ReservationStatus("pending"), ReservationStatusPending)
 	require.Equal(t, ReservationStatus("active"), ReservationStatusActive)
 	require.Equal(t, ReservationStatus("completed"), ReservationStatusCompleted)
 	require.Equal(t, ReservationStatus("cancelled"), ReservationStatusCancelled)
@@ -293,7 +292,7 @@ func TestGPUReservation_JSONRoundTrip_MultiType(t *testing.T) {
 		GPUType:       "NVIDIA A100",
 		GPUTypes:      []string{"NVIDIA A100", "NVIDIA H100"},
 		DurationHours: 24,
-		Status:        ReservationStatusPending,
+		Status:        ReservationStatusActive,
 	}
 	original.NormalizeGPUTypes()
 

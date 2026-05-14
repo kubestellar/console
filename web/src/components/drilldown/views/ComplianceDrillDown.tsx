@@ -425,7 +425,7 @@ export function ComplianceDrillDown({ data }: Props) {
             <button
               onClick={() => setPage(0)}
               disabled={page === 0}
-              className="p-1.5 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
               title="First page"
               aria-label="First page"
             >
@@ -434,7 +434,7 @@ export function ComplianceDrillDown({ data }: Props) {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="p-1.5 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
               title="Previous page"
               aria-label="Previous page"
             >
@@ -446,7 +446,7 @@ export function ComplianceDrillDown({ data }: Props) {
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1}
-              className="p-1.5 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
               title="Next page"
               aria-label="Next page"
             >
@@ -455,7 +455,7 @@ export function ComplianceDrillDown({ data }: Props) {
             <button
               onClick={() => setPage(totalPages - 1)}
               disabled={page >= totalPages - 1}
-              className="p-1.5 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded hover:bg-card/50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors min-h-11 min-w-11"
               title="Last page"
               aria-label="Last page"
             >

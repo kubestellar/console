@@ -1,4 +1,6 @@
 {
+  "share": "Share",
+  "yaml": "YAML",
   "help": {
     "sidebarNavItem": "Click to navigate. Hover a collapsed icon to see its name and what it opens.",
     "themeToggle": "Switch between dark, light, and system themes. Your choice is saved across sessions.",
@@ -22,6 +24,7 @@
     "edit": "Edit",
     "save": "Save",
     "cancel": "Cancel",
+    "done": "Done",
     "close": "Close",
     "clear": "Clear",
     "clearAll": "Clear All",
@@ -34,6 +37,7 @@
     "replace": "Replace",
     "delete": "Delete",
     "copy": "Copy",
+    "import": "Import",
     "apply": "Apply",
     "search": "Search",
     "filter": "Filter",
@@ -50,7 +54,10 @@
     "dismiss": "Dismiss",
     "viewNamespaceCostAria": "View cost details for namespace {{namespace}}",
     "viewOperatorAria": "View operator {{name}}",
-    "toggleGPUNodeAria": "Toggle details for GPU node {{node}}"
+    "toggleGPUNodeAria": "Toggle details for GPU node {{node}}",
+    "selectCloudProviderAria": "Select {{provider}} cloud provider",
+    "openSettingsSectionAria": "Open {{section}} settings section",
+    "retry": "Retry"
   },
   "buttons": {
     "addCard": "Add Card",
@@ -233,7 +240,27 @@
       "kagentAgents": "Kagent Agents",
       "kagentiAgents": "Kagenti Agents",
       "noKagentAgents": "No kagent agents found. Agents may not be deployed yet.",
-      "noKagentiAgents": "No kagenti agents found. Agents may not be deployed yet."
+      "noKagentiAgents": "No kagenti agents found. Agents may not be deployed yet.",
+      "providerConfigTitle": "Kagenti LLM configuration",
+      "currentProvider": "Current provider",
+      "providerSelector": "Provider",
+      "providerUnknown": "Unknown",
+      "apiKeyLabel": "API key",
+      "apiKeyPlaceholder": "Enter a new API key",
+      "apiKeyHint": "Paste a new key to save it for the selected provider.",
+      "apiKeyMaskedHint": "A key is already stored for this provider. Leave this blank to keep the current key.",
+      "apiKeyRequired": "Enter an API key or keep an existing key for the selected provider.",
+      "save": "Save",
+      "saving": "Saving...",
+      "saveSuccess": "Saved. Kagenti will roll out with the updated provider configuration.",
+      "saveFailed": "Failed to save Kagenti provider settings.",
+      "rolloutHint": "Saving updates the Kagenti secret and triggers a deployment rollout.",
+      "configUnsupported": "Provider configuration is only available when the console runs in-cluster with Kagenti RBAC.",
+      "providers": {
+        "gemini": "Gemini",
+        "anthropic": "Anthropic",
+        "openai": "OpenAI"
+      }
     },
     "localAgent": "Local Agent",
     "groups": {
@@ -355,6 +382,7 @@
       "personalAccessToken": "Personal Access Token",
       "testing": "Testing...",
       "saved": "Saved!",
+      "saveSuccessToast": "GitHub token saved and validated.",
       "saveAndTest": "Save & Test",
       "clear": "Clear",
       "howToCreate": "How to create a token:",
@@ -557,6 +585,7 @@
       "createNew": "Create New Cluster",
       "selectTool": "Select tool...",
       "clusterName": "Cluster name",
+      "connectionStale": "Connection lost — cluster operation status may be outdated",
       "creating": "Creating...",
       "create": "Create",
       "localClustersCount": "Local Clusters ({{count}})",
@@ -794,12 +823,36 @@
       "removeThemeMessage": "This will uninstall the theme and remove it from your list. This action cannot be undone."
     }
   },
+  "terminal": {
+    "connect": "Connect",
+    "connected": "Connected",
+    "connecting": "Connecting...",
+    "connectingToPod": "Connecting to {{pod}}...",
+    "connectionError": "Connection Error",
+    "connectionStale": "Terminal connection may be stale — reconnect if output stops responding.",
+    "connectionStaleShort": "Connection uncertain",
+    "disconnect": "Disconnect",
+    "disconnected": "Disconnected",
+    "error": "Error",
+    "reconnect": "Reconnect",
+    "reconnectNow": "Reconnect Now",
+    "reconnecting": "Reconnecting...",
+    "reconnectingCountdown": "Reconnecting ({{count}}s)",
+    "tryAgain": "Try Again"
+  },
   "filters": {
     "allClusters": "All Clusters",
     "clusterFilter": "Cluster Filter",
     "clusterFilterHint": "Filter all cards by cluster",
     "selectAll": "Select All",
     "noClusters": "No clusters available"
+  },
+  "clusterGroups": {
+    "syncWarning": {
+      "create": "Group saved locally only. Backend sync failed, so this change may not persist across devices.",
+      "update": "Group changes saved locally only. Backend sync failed, so this change may not persist across devices.",
+      "delete": "Group deletion was saved locally only. Backend sync failed, so this change may not persist across devices."
+    }
   },
   "profile": {
     "email": "Email:",
@@ -1275,6 +1328,30 @@
       "writeCodeToPreview": "Write code to see preview",
       "compiling": "Compiling...",
       "noComponentProduced": "No component produced"
+    },
+    "toast": {
+      "cardMoved": "Card moved to \"{{name}}\"",
+      "moveCardFailed": "Failed to move card",
+      "newDashboard": "New Dashboard",
+      "createDashboardFailed": "Failed to create dashboard",
+      "deploying": "Deploying {{workload}} to {{count}} cluster(s) in \"{{group}}\"",
+      "deployFailed": "Deploy failed: {{detail}}",
+      "unknownError": "Unknown error",
+      "cardRestored": "Restored \"{{name}}\" card",
+      "loadFailed": "Failed to load dashboard",
+      "persistFailed": "Failed to persist card to backend",
+      "updateWidthFailed": "Failed to update card width",
+      "updateHeightFailed": "Failed to update card height",
+      "updateConfigFailed": "Failed to update card configuration",
+      "templateApplied": "Applied \"{{name}}\" template with {{count}} cards",
+      "exported": "Dashboard exported",
+      "exportFailed": "Failed to export dashboard",
+      "imported": "Dashboard imported",
+      "importFailed": "Failed to import dashboard",
+      "cardsAdded": "Added {{count}} card(s)",
+      "persistTemplateFailed": "Failed to persist template card",
+      "resetToEmpty": "Dashboard reset to empty",
+      "deleted": "Deleted \"{{name}}\""
     }
   },
   "cardConfig": {
@@ -1873,6 +1950,8 @@
   "agent": {
     "connectingToAgent": "Connecting to agent...",
     "noAgentsAvailable": "No AI agents available",
+    "noProvidersDescription": "API keys for cloud AI providers are configured via environment variables. Set the variables below and restart the console to enable AI features.",
+    "noProvidersTitle": "No API Providers Available",
     "demoMode": "Demo Mode",
     "demoModeTitle": "Demo Mode - showing sample data",
     "degraded": "Degraded",
@@ -1935,11 +2014,24 @@
     "failedToFetchKeyStatus": "Failed to fetch key status",
     "failedToConnect": "Failed to connect to agent",
     "failedToSaveKey": "Failed to save key",
+    "approval": {
+      "title": "Authorize CLI Agents",
+      "description": "Review and approve the agents that will run on your machine",
+      "executeWarning": "These agents can execute commands on your system",
+      "enabledDescription": "When enabled, AI agents run CLI tools (<kubectl>kubectl</kubectl>, <helm>helm</helm>, etc.) to diagnose and repair your Kubernetes clusters. Only approve if you trust this machine's kubeconfig access.",
+      "detectedAgents": "Detected CLI agents ({{count}})",
+      "noAgentsDetected": "No CLI agents detected on this machine.",
+      "disableHint": "You can disable AI agents at any time from the <strong>AI Agent</strong> toggle in the top navbar.",
+      "cancel": "Cancel",
+      "approveEnable": "Approve & Enable"
+    },
     "failedToDeleteKey": "Failed to delete key",
     "localAgentRequired": "Local Agent Required",
     "installAgentPrompt": "Install and start the local agent to configure API keys.",
     "runInstallCommand": "Run this command to install:",
     "retryConnection": "Retry Connection",
+    "envVarsTitle": "Environment Variables",
+    "envVarsHint": "Set these in your .env file or shell environment, then restart the console.",
     "validationFailedModel": "API key validation failed - the model may not be available for your account",
     "invalidApiKey": "Invalid API key - please check and try again",
     "rateLimitExceeded": "Rate limit exceeded - please try again later",
@@ -2005,6 +2097,7 @@
     "needsAttention_other": "{{count}} needs attention",
     "mission": "mission",
     "missions": "missions",
+    "missionCount": "{{count}} missions",
     "missionCount_one": "{{count}} mission",
     "missionCount_other": "{{count}} missions",
     "resizeHandleTooltip": "Drag to resize",
@@ -2016,7 +2109,13 @@
     "viewHistory_one": "View {{count}} previous mission",
     "viewHistory_other": "View {{count}} previous missions",
     "missionHistory": "Mission History",
-    "headerActions": "Mission sidebar actions"
+    "headerActions": "Mission sidebar actions",
+    "importingMission": "Importing mission...",
+    "searchMissions": "Search missions...",
+    "loadMore": "Load more ({{visible}}/{{total}})",
+    "loadMore_one": "Load more ({{visible}}/{{total}})",
+    "loadMore_other": "Load more ({{visible}}/{{total}})",
+    "noSearchResults": "No missions match your search."
   },
   "feedback": {
     "share": "Share",
@@ -2078,6 +2177,25 @@
     "saveDraftAndSwitch": "Save Draft & Switch",
     "switchWithoutSaving": "Switch Without Saving",
     "requestSubmitted": "Request Submitted!",
+    "fixMerged": "Merged",
+    "fixMergedDescription": "Thank you for your feedback! Your {{requestType}} has been merged and will be available in the next nightly build and weekly release.",
+    "requestTypeBugFix": "bug fix",
+    "requestTypeFeature": "feature",
+    "awaitingVerificationBadge": "Awaiting verification",
+    "awaitingVerificationQuestion": "This fix has been merged. Has it resolved your issue?",
+    "verifyFix": "Yes, verified",
+    "verifyingFix": "Verifying...",
+    "verifiedByYou": "Verified by you",
+    "verificationRecorded": "Thanks for confirming the fix. We've marked this report as resolved.",
+    "stillBroken": "Still broken",
+    "stillBrokenPlaceholder": "Tell us what is still failing so we can reopen the issue with your notes.",
+    "submitStillBroken": "Send follow-up",
+    "submittingReopen": "Sending...",
+    "reopenRequestSubmitted": "Thanks — we reopened the issue with your follow-up details.",
+    "reopenRequestFailed": "Failed to reopen request",
+    "verifyFixFailed": "Failed to record verification",
+    "closeRequestFailed": "Failed to close request",
+    "releases": "Releases",
     "status": {
       "open": "Open",
       "inProgress": "In Progress",
@@ -2230,6 +2348,15 @@
       "manifest": "Manifest",
       "issues": "Issues"
     },
+    "buildpack": {
+      "fetchImageError": "Failed to fetch image info",
+      "fetchBuildsError": "Failed to fetch builds",
+      "fetchLogsError": "Failed to fetch logs"
+    },
+    "yaml": {
+      "copyError": "Failed to copy to clipboard",
+      "downloadError": "Failed to download YAML: {{detail}}"
+    },
     "ai": {
       "title": "AI Analysis",
       "notConnected": "AI agent not connected",
@@ -2375,7 +2502,8 @@
       "revisionHistory": "Revision History Limit:",
       "minReadySeconds": "Min Ready Seconds:",
       "progressDeadline": "Progress Deadline:",
-      "pod": "Pod:"
+      "pod": "Pod:",
+      "deployment": "Deployment:"
     },
     "status": {
       "fetchingEvents": "Fetching events...",
@@ -2533,6 +2661,7 @@
       "allLevels": "All Levels",
       "showing": "Showing {{lines}} of last {{tail}} lines",
       "generatedAt": "Generated at {{time}}",
+      "noLogsMatchFilter": "No logs match this filter.",
       "mockNotice": "Live log streaming is not yet available — showing placeholder content. Connect the local agent to stream real logs when available."
     },
     "deployment": {
@@ -2614,6 +2743,17 @@
     },
     "alertDetail": {
       "alertRule": "Alert Rule",
+      "alertRuleSource": "Alert Rule Source",
+      "relatedResources": "Related Resources",
+      "allLabels": "All Labels ({{count}})",
+      "copyLabel": "Copy label",
+      "started": "Started",
+      "labelsCount": "{{count}} labels",
+      "labelsCount_one": "{{count}} label",
+      "labelsCount_other": "{{count}} labels",
+      "diagnoseAlert": "Diagnose Alert",
+      "diagnoseMissionTitle": "Diagnose Alert: {{alertName}}",
+      "diagnoseMissionDescription": "Analyze {{severity}} alert and provide remediation guidance",
       "ruleNotAvailable": "Alert rule source not available",
       "clickDiagnose": "Click \"Diagnose Alert\" to get AI-powered analysis",
       "connectAgentRule": "Connect the agent to fetch PrometheusRule definitions",
@@ -2663,6 +2803,12 @@
   "statsOverview": {
     "title": "Stats Overview",
     "configureStats": "Configure stats",
+    "dragToReorderDesc": "Drag to reorder. Click the eye icon to show/hide stats.",
+    "searchPlaceholder": "Search all available stats...",
+    "noSearchResults": "No stats match your search",
+    "allStatsAdded": "All stats are already added",
+    "addStatFromDashboards": "Add stat from other dashboards",
+    "resetToDefault": "Reset to Default",
     "demo": "Demo",
     "notAvailable": "Not available",
     "updated": "Updated {{time}}",
@@ -2812,7 +2958,9 @@
     "apply": "Apply",
     "save": "Save",
     "cancel": "Cancel",
+    "done": "Done",
     "close": "Close",
+    "dismiss": "Dismiss",
     "delete": "Delete",
     "edit": "Edit",
     "copy": "Copy",
@@ -2824,6 +2972,7 @@
     "view": "View",
     "reset": "Reset",
     "submit": "Submit",
+    "summary": "Summary",
     "confirm": "Confirm",
     "configure": "Configure",
     "download": "Download",
@@ -3441,7 +3590,10 @@
     "diagnoseMissionTitle": "Diagnose {{cluster}}",
     "diagnoseMissionDescription": "Analyzing cluster health and identifying issues",
     "repairMissionTitle": "Repair {{cluster}}",
-    "repairMissionDescription": "Automatically fixing cluster issues"
+    "repairMissionDescription": "Automatically fixing cluster issues",
+    "andMoreClusters": "+{{count}} more",
+    "andMoreClusters_one": "+{{count}} more",
+    "andMoreClusters_other": "+{{count}} more"
   },
   "remediation": {
     "title": "AI Remediation Console",
@@ -3504,6 +3656,14 @@
     "pvcsPending": "PVCs pending",
     "persistentVolumesBound": "persistent volumes (bound)",
     "classesInUse": "classes in use"
+  },
+  "network": {
+    "errors": {
+      "loadFailedTitle": "Unable to load network data",
+      "refreshFailedTitle": "Unable to refresh network data — showing cached data",
+      "loadingDescription": "Please check your connection and try again.",
+      "permissionsDescription": "Please check your connection or permissions, then try again."
+    }
   },
   "cicd": {
     "title": "CI/CD",
@@ -3620,6 +3780,7 @@
     "openConsole": "Open {{provider}} console",
     "akaLabel": "aka:",
     "alsoKnownAs": "Also known as: {{aliases}}",
+    "serverAddress": "Server Address",
     "healthy": "Healthy",
     "unhealthy": "Unhealthy",
     "offlineStatus": "Offline - check network connection",
@@ -3898,6 +4059,9 @@
     "startingUp": "Starting up…",
     "newVersionAvailable": "A new version is available",
     "reload": "Reload",
+    "autonomousBannerMessage": "This project is fully autonomous — maintained by AI agents.",
+    "watchLive": "Watch them live",
+    "watchLiveMobile": "Watch live →",
     "sidebar": {
       "expandSidebar": "Expand sidebar",
       "collapseSidebar": "Collapse sidebar",
@@ -4011,7 +4175,19 @@
     "browser": {
       "showFilters": "Show Filters",
       "hideFilters": "Hide Filters",
+      "copyShareableLink": "Copy shareable link",
+      "linkCopied": "Link copied",
+      "copied": "Copied",
+      "stepsCount": "{{count}} steps",
+      "stepsCount_one": "{{count}} step",
+      "stepsCount_other": "{{count}} steps",
       "importSuccess": "Imported \"{{title}}\" successfully."
+    },
+    "kagenti": {
+      "providerUnavailableTitle": "Kagenti provider unavailable",
+      "providerUnavailableDescription": "Mission Control could not reach the Kagenti provider{{reasonSuffix}}. Verify your in-cluster Kagenti deployment or direct-agent configuration, then retry.",
+      "noAgentsTitle": "No Kagenti agents discovered",
+      "noAgentsDescription": "Kagenti is reachable, but it did not report any registered agents. Register at least one agent with the controller or configure direct-agent mode, then retry."
     },
     "preflight": {
       "toolCheck": {
@@ -4019,6 +4195,14 @@
         "agentUnreachable": "Agent is not reachable. Is kc-agent running on port 8585?",
         "requestFailedHttp": "Tool check request failed (HTTP {{status}}).",
         "requestFailedGeneric": "Failed to check required tools: {{message}}"
+      },
+      "toolWarning": {
+        "heading": "Tool availability warning",
+        "summary": "Missing local tools: {{tools}}.",
+        "suffix": "The AI-assisted flow can still continue, but local execution steps may still need these tools later."
+      },
+      "optionalToolUnavailable": {
+        "message": "This mission needs {{tools}} installed locally before it can run. Install {{tools}} and retry the mission."
       }
     },
     "detail": {
@@ -4043,6 +4227,19 @@
     "emptyPromptError": "Prompt cannot be empty.",
     "cancel": "Cancel",
     "confirm": "Run mission"
+  },
+  "missionToolCheck": {
+    "checking": "Checking for required local tools…",
+    "readyTitle": "Local tools ready",
+    "readyDescription": "Required local tools detected: {{tools}}.",
+    "blockedTitle": "Install local tools before running",
+    "blockedDescription": "This mission requires {{tools}} to be installed locally before it can run.",
+    "blockedHint": "Run Mission is disabled until the required tools are installed.",
+    "warningTitle": "Local tools recommended",
+    "warningDescription": "This AI-assisted flow can continue, but local execution steps may still require {{tools}}.",
+    "errorTitle": "Unable to verify local tools",
+    "errorDescription": "The console could not verify required local tools right now.",
+    "installTool": "Install {{tool}}"
   },
   "embed": {
     "getEmbedCode": "Get embed code",

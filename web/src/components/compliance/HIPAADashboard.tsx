@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { UnifiedDashboard } from '../../lib/unified/dashboard/UnifiedDashboard'
 import { hipaaDashboardConfig } from '../../config/dashboards/hipaa'
 import {
@@ -47,6 +48,7 @@ const SAFEGUARD_ICONS: Record<string, typeof Shield> = {
 }
 
 export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
+  const { t } = useTranslation()
   const [safeguards, setSafeguards] = useState<HIPAASafeguard[]>([])
   const [phiNamespaces, setPHINamespaces] = useState<PHINamespace[]>([])
   const [dataFlows, setDataFlows] = useState<DataFlow[]>([])
@@ -56,6 +58,7 @@ export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
   const [expandedSafeguard, setExpandedSafeguard] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'safeguards' | 'phi' | 'flows'>('safeguards')
   const [autoRefresh, setAutoRefresh] = useState(false)
+  const cancelledRef = useRef(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -68,18 +71,29 @@ export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
         authFetch('/api/compliance/hipaa/summary'),
       ])
       if (!sgRes.ok || !nsRes.ok || !flRes.ok || !smRes.ok) throw new Error('Failed to load HIPAA data')
-      setSafeguards(await sgRes.json())
-      setPHINamespaces(await nsRes.json())
-      setDataFlows(await flRes.json())
-      setSummary(await smRes.json())
+      const sgData = await sgRes.json()
+      const nsData = await nsRes.json()
+      const flData = await flRes.json()
+      const smData = await smRes.json()
+      if (cancelledRef.current) return
+      setSafeguards(sgData)
+      setPHINamespaces(nsData)
+      setDataFlows(flData)
+      setSummary(smData)
     } catch (e: unknown) {
+      if (cancelledRef.current) return
       setError(e instanceof Error ? e.message : 'Failed to load HIPAA data')
     } finally {
+      if (cancelledRef.current) return
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => {
+    cancelledRef.current = false
+    fetchData()
+    return () => { cancelledRef.current = true }
+  }, [])
 
   const scoreColor = useMemo(() => {
     if (!summary) return 'text-muted-foreground'
@@ -99,7 +113,7 @@ export const HIPAADashboardContent = memo(function HIPAADashboardContent() {
     <div className="p-6 text-center">
       <XCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
       <p className="text-red-300 mb-4">{error}</p>
-      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">Retry</button>
+      <button onClick={fetchData} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">{t('common.retry', 'Retry')}</button>
     </div>
   )
 

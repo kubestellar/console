@@ -66,7 +66,8 @@ describe('useBackendHealth', () => {
 
     await waitFor(() => expect(result.current.status).toBe('disconnected'))
     expect(result.current.inCluster).toBe(true)
-    expect(result.current.isInClusterMode).toBe(false)
+    expect(result.current.isInClusterMode).toBe(true)
+    expect(isInClusterMode()).toBe(true)
 
     reportBackendAvailable('http', 200)
     await waitFor(() => expect(result.current.status).toBe('connected'))

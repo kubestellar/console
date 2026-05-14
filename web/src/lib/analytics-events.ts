@@ -137,6 +137,20 @@ export function emitMissionError(
       : '' })
 }
 
+export function emitMissionToolMissing(
+  missionType: string,
+  missingTool: string,
+  errorDetail?: string
+) {
+  const trimmedDetail = errorDetail?.trim()
+  send('ksc_mission_tool_missing', {
+    mission_type: missionType,
+    missing_tool: missingTool,
+    error_detail: trimmedDetail
+      ? trimmedDetail.slice(0, MISSION_ERROR_DETAIL_MAX_LEN)
+      : '' })
+}
+
 export function emitMissionRated(missionType: string, rating: string) {
   send('ksc_mission_rated', { mission_type: missionType, rating }, { bypassOptOut: true })
 }
@@ -287,8 +301,18 @@ export function emitMarketplaceRemove(itemType: string) {
 }
 
 /** Fired when a marketplace install attempt fails */
-export function emitMarketplaceInstallFailed(itemType: string, itemName: string, error: string) {
-  send('ksc_marketplace_install_failed', { item_type: itemType, item_name: itemName, error_detail: error.slice(0, 100) })
+export function emitMarketplaceInstallFailed(
+  itemType: string,
+  itemName: string,
+  error: string,
+  failureStage: 'download' | 'http_error' | 'parse' | 'persist'
+) {
+  send('ksc_marketplace_install_failed', {
+    item_type: itemType,
+    item_name: itemName,
+    error_detail: error.slice(0, 100),
+    failure_stage: failureStage,
+  })
 }
 
 // ── Theme ─────────────────────────────────────────────────────────

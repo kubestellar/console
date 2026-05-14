@@ -5,11 +5,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,6 +32,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
 	"github.com/kubestellar/console/pkg/agent"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/api/audit"
 	"github.com/kubestellar/console/pkg/api/handlers"
 	"github.com/kubestellar/console/pkg/api/middleware"
@@ -51,11 +54,8 @@ const (
 	portReleasePollInterval = 50 * time.Millisecond
 	defaultDevFrontendURL   = "http://localhost:5174"
 	defaultProdFrontendURL  = "http://localhost:8080"
-
-	// kcAgentBaseURL is the loopback URL of the co-located kc-agent HTTP server.
-	// The backend proxies auto-update requests to this address so the browser
-	// never makes a cross-origin call to kc-agent (avoids CORS/PNA issues).
-	kcAgentBaseURL = "http://127.0.0.1:8585"
+	defaultKCAgentBaseURL   = "http://127.0.0.1:8585"
+	kcAgentURLEnvVar        = "KC_AGENT_URL"
 
 	// kcAgentProxyTimeout is the timeout for proxied requests to kc-agent.
 	kcAgentProxyTimeout = 30 * time.Second
@@ -84,6 +84,11 @@ const (
 // Used in /health response for stale-frontend detection.
 var Version = "dev"
 
+// kcAgentBaseURL is the loopback URL of the co-located kc-agent HTTP server.
+// The backend proxies auto-update requests to this address so the browser
+// never makes a cross-origin call to kc-agent (avoids CORS/PNA issues).
+var kcAgentBaseURL = defaultKCAgentBaseURL
+
 // BuildInfo holds VCS metadata extracted from the Go binary at startup.
 type BuildInfo struct {
 	GoVersion   string
@@ -98,6 +103,8 @@ var buildInfo BuildInfo
 func GetBuildInfo() BuildInfo { return buildInfo }
 
 func init() {
+	kcAgentBaseURL = normalizeKCAgentBaseURL(os.Getenv(kcAgentURLEnvVar))
+
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
 		return
@@ -113,6 +120,30 @@ func init() {
 			buildInfo.VCSModified = s.Value
 		}
 	}
+}
+
+func normalizeKCAgentBaseURL(raw string) string {
+	trimmed := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if trimmed == "" {
+		return defaultKCAgentBaseURL
+	}
+	return trimmed
+}
+
+func kcAgentWebSocketBaseURL(httpURL string) string {
+	parsedURL, err := url.Parse(httpURL)
+	if err != nil {
+		return ""
+	}
+
+	switch parsedURL.Scheme {
+	case "http":
+		parsedURL.Scheme = "ws"
+	case "https":
+		parsedURL.Scheme = "wss"
+	}
+
+	return strings.TrimRight(parsedURL.String(), "/")
 }
 
 // Config holds server configuration
@@ -311,27 +342,33 @@ func NewServer(cfg Config) (*Server, error) {
 	hub := handlers.NewHub()
 	hub.SetJWTSecret(cfg.JWTSecret)
 	hub.SetDevMode(cfg.DevMode)
-	go hub.Run()
+	safego.GoWith("api/hub-run", func() { hub.Run() })
 
 	// Initialize Kubernetes multi-cluster client
 	k8sClient, err := k8s.NewMultiClusterClient(cfg.Kubeconfig)
 	if err != nil {
 		slog.Warn("Kubernetes client initialization failed — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 	} else {
-		if err := k8sClient.LoadConfig(); err != nil {
+		k8sClient.SetOnReload(func() {
+			hub.BroadcastAll(handlers.Message{
+				Type: "kubeconfig_changed",
+				Data: map[string]string{"message": "Kubeconfig updated"},
+			})
+			slog.Info("Broadcasted kubeconfig change to all clients")
+		})
+
+		if !k8sClient.HasClusterConfig() {
+			slog.Warn("No kubeconfig found; starting in no-cluster mode", "path", k8sClient.KubeconfigPath())
+			if err := k8sClient.StartWatching(); err != nil && !errors.Is(err, k8s.ErrNoClusterConfigured) {
+				slog.Warn("Kubeconfig file watcher failed to start", "error", err)
+			}
+		} else if err := k8sClient.LoadConfig(); err != nil {
 			slog.Warn("Failed to load kubeconfig — connect clusters via Settings or place a kubeconfig at ~/.kube/config", "error", err)
 		} else {
 			slog.Info("Kubernetes client initialized successfully")
 			// Warmup: probe all clusters to populate health cache before serving.
 			// Without this, first load hits ALL clusters (including offline) = 30s+ load.
 			k8sClient.WarmupHealthCache()
-			k8sClient.SetOnReload(func() {
-				hub.BroadcastAll(handlers.Message{
-					Type: "kubeconfig_changed",
-					Data: map[string]string{"message": "Kubeconfig updated"},
-				})
-				slog.Info("Broadcasted kubeconfig change to all clients")
-			})
 			if err := k8sClient.StartWatching(); err != nil {
 				slog.Warn("Kubeconfig file watcher failed to start", "error", err)
 			}
@@ -351,7 +388,7 @@ func NewServer(cfg Config) (*Server, error) {
 			KubestellarDeployPath: cfg.KubestellarDeployPath,
 			Kubeconfig:            cfg.Kubeconfig,
 		})
-		go func() {
+		safego.GoWith("mcp-bridge-start", func() {
 			ctx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
 			defer cancel()
 			if err := bridge.Start(ctx); err != nil {
@@ -360,7 +397,7 @@ func NewServer(cfg Config) (*Server, error) {
 			} else {
 				slog.Info("MCP bridge started successfully")
 			}
-		}()
+		})
 	}
 
 	// Initialize notification service
@@ -442,12 +479,12 @@ func startLoadingServer(addr string) *http.Server {
 	})
 
 	srv := &http.Server{Addr: addr, Handler: mux}
-	go func() {
+	safego.GoWith("loading-page-server", func() {
 		slog.Info("[Server] loading page available", "addr", addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("[Server] loading server error", "error", err)
 		}
-	}()
+	})
 	// Give the listener time to bind
 	time.Sleep(serverStartupDelay)
 	return srv
@@ -512,6 +549,14 @@ func (s *Server) setupMiddleware() {
 		const kcAgentLocalhost = "http://localhost:8585" // kc-agent HTTP on localhost
 		const kcAgentLocalhostWS = "ws://localhost:8585" // kc-agent WebSocket on localhost
 
+		customKCAgentConnectSrc := ""
+		if kcAgentBaseURL != kcAgentLoopback && kcAgentBaseURL != kcAgentLocalhost {
+			customKCAgentConnectSrc = " " + kcAgentBaseURL
+			if kcAgentBaseURLWS := kcAgentWebSocketBaseURL(kcAgentBaseURL); kcAgentBaseURLWS != "" {
+				customKCAgentConnectSrc += " " + kcAgentBaseURLWS
+			}
+		}
+
 		// script-src includes 'wasm-unsafe-eval' because the SQLite cache
 		// worker compiles a WebAssembly module at runtime; without it the
 		// worker aborts, logs a noisy CompileError, and forces an IndexedDB
@@ -535,7 +580,7 @@ func (s *Server) setupMiddleware() {
 				"worker-src 'self' blob:; "+
 				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"img-src 'self' data: https:; "+
-				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+" https://console.kubestellar.io https://api.github.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
+				"connect-src 'self' "+kcAgentLoopback+" "+kcAgentLoopbackWS+" "+kcAgentLocalhost+" "+kcAgentLocalhostWS+customKCAgentConnectSrc+" https://console.kubestellar.io https://api.github.com https://raw.githubusercontent.com https://www.google-analytics.com https://www.googletagmanager.com https://cdn.jsdelivr.net wss:; "+
 				"font-src 'self' data: https://fonts.gstatic.com; "+
 				"object-src 'none'; "+
 				"base-uri 'self'")
@@ -1146,11 +1191,14 @@ func (s *Server) setupRoutes() {
 	// POST route is registered outside the /api group to exempt it from apiLimiter (#9969)
 	// GET routes still use the group limiters for general API protection
 	api.Get("/feedback/requests", feedback.ListFeatureRequests)
+	api.Get("/feedback/issue-link-capabilities", feedback.GetIssueLinkCapabilities)
 	api.Get("/feedback/queue", feedback.ListAllFeatureRequests)
 	api.Get("/feedback/requests/:id", feedback.GetFeatureRequest)
 	api.Post("/feedback/requests/:id/feedback", feedback.SubmitFeedback)
 	api.Post("/feedback/requests/:id/close", feedback.CloseRequest)
+	api.Patch("/feedback/:id/close", feedback.CloseRequest)
 	api.Post("/feedback/requests/:id/request-update", feedback.RequestUpdate)
+	api.Post("/feedback/:id/reopen", feedback.ReopenRequest)
 	api.Get("/feedback/preview/:pr_number", feedback.CheckPreviewStatus)
 	api.Get("/notifications", feedback.GetNotifications)
 	api.Get("/notifications/unread-count", feedback.GetUnreadCount)
@@ -1222,7 +1270,7 @@ func (s *Server) setupRoutes() {
 		}
 		return total
 	})
-	gpuHandler := handlers.NewGPUHandler(s.store, gpuCapacity)
+	gpuHandler := handlers.NewGPUHandler(s.store, gpuCapacity, s.k8sClient)
 	api.Post("/gpu/reservations", gpuHandler.CreateReservation)
 	api.Get("/gpu/reservations", gpuHandler.ListReservations)
 	api.Get("/gpu/reservations/:id", gpuHandler.GetReservation)
@@ -1254,11 +1302,20 @@ func (s *Server) setupRoutes() {
 
 	// Kagenti A2A proxy routes
 	kagentiProviderClient := kagenti_provider.NewKagentiClientFromEnv()
-	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient)
+	var kagentiConfigManager kagenti_provider.ConfigManager
+	if manager, err := kagenti_provider.NewKubernetesConfigManagerFromEnv(); err != nil {
+		slog.Debug("kagenti config manager unavailable", "error", err)
+	} else {
+		kagentiConfigManager = manager
+	}
+	kagentiProviderHandler := handlers.NewKagentiProviderProxyHandler(kagentiProviderClient, kagentiConfigManager, s.k8sClient)
 	api.Get("/kagenti-provider/status", kagentiProviderHandler.GetStatus)
 	api.Get("/kagenti-provider/agents", kagentiProviderHandler.ListAgents)
+	api.Get("/kagenti-provider/tools", kagentiProviderHandler.GetTools)
+	api.Patch("/kagenti-provider/config", kagentiProviderHandler.UpdateConfig)
 	api.Post("/kagenti-provider/chat", kagentiProviderHandler.Chat)
 	api.Post("/kagenti-provider/tools/call", kagentiProviderHandler.CallTool)
+	api.Post("/kagenti-provider/tools/call-direct", kagentiProviderHandler.CallToolDirect)
 
 	// Console persistence routes (CRD-based state management)
 	persistenceHandler := handlers.NewConsolePersistenceHandlers(s.persistenceStore, s.k8sClient, s.hub, s.store)

@@ -40,6 +40,12 @@ describe('network constants', () => {
     expect(network.CARD_LOADING_TIMEOUT_MS).toBeGreaterThan(0)
   })
 
+  it('exports latency classification thresholds in ascending order', () => {
+    expect(network.LATENCY_GOOD_MS).toBe(100)
+    expect(network.LATENCY_GOOD_MS).toBeLessThan(network.LATENCY_ACCEPTABLE_MS)
+    expect(network.LATENCY_ACCEPTABLE_MS).toBe(300)
+  })
+
   it('exports AI chat limits', () => {
     expect(network.MAX_MESSAGE_SIZE_CHARS).toBeGreaterThan(0)
   })

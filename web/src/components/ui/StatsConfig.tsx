@@ -301,7 +301,9 @@ export function StatsConfigModal({
   blocks,
   onSave,
   defaultBlocks,
-  title = 'Configure Stats' }: StatsConfigModalProps) {
+  title, }: StatsConfigModalProps) {
+  const { t } = useTranslation()
+  const resolvedTitle = title || t('statsOverview.configureStats', 'Configure stats')
   const [localBlocks, setLocalBlocks] = useState<StatBlockConfig[]>(blocks)
   const [panelState, setPanelState] = useState<PanelState>({ showAddPanel: false, searchQuery: '', expandedCategories: new Set<string>() })
   const { showAddPanel, searchQuery, expandedCategories } = panelState
@@ -406,8 +408,8 @@ export function StatsConfigModal({
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} size="lg" closeOnBackdrop={false}>
       <BaseModal.Header
-        title={title}
-        description="Drag to reorder. Click the eye icon to show/hide stats."
+        title={resolvedTitle}
+        description={t('statsOverview.dragToReorderDesc', 'Drag to reorder. Click the eye icon to show/hide stats.')}
         icon={Settings}
         onClose={onClose}
         showBack={false}
@@ -445,7 +447,7 @@ export function StatsConfigModal({
                   type="text"
                   value={searchQuery}
                   onChange={e => setPanelState(prev => ({ ...prev, searchQuery: e.target.value }))}
-                  placeholder="Search all available stats..."
+                  placeholder={t('statsOverview.searchPlaceholder', 'Search all available stats...')}
                   className="w-full pl-9 pr-3 py-2 bg-secondary/30 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-purple-500/50"
                   autoFocus
                 />
@@ -455,7 +457,7 @@ export function StatsConfigModal({
                 size="sm"
                 onClick={() => setPanelState(prev => ({ ...prev, showAddPanel: false }))}
               >
-                Done
+                {t('common.done', 'Done')}
               </Button>
             </div>
             <div className="space-y-0 min-h-48 max-h-80 overflow-y-auto border border-border/50 rounded-lg">
@@ -476,7 +478,7 @@ export function StatsConfigModal({
                 })
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  {searchQuery ? 'No stats match your search' : 'All stats are already added'}
+                  {searchQuery ? t('statsOverview.noSearchResults', 'No stats match your search') : t('statsOverview.allStatsAdded', 'All stats are already added')}
                 </p>
               )}
             </div>
@@ -490,7 +492,7 @@ export function StatsConfigModal({
             icon={<Plus className="w-4 h-4" />}
             fullWidth
           >
-            Add stat from other dashboards
+            {t('statsOverview.addStatFromDashboards', 'Add stat from other dashboards')}
           </Button>
         )}
       </BaseModal.Content>
@@ -501,7 +503,7 @@ export function StatsConfigModal({
           size="sm"
           onClick={handleReset}
         >
-          Reset to Default
+          {t('statsOverview.resetToDefault', 'Reset to Default')}
         </Button>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
@@ -510,7 +512,7 @@ export function StatsConfigModal({
             size="md"
             onClick={onClose}
           >
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </Button>
           <Button
             variant="accent"
@@ -518,7 +520,7 @@ export function StatsConfigModal({
             onClick={handleSave}
             icon={<Check className="w-4 h-4" />}
           >
-            Save
+            {t('common.save', 'Save')}
           </Button>
         </div>
       </BaseModal.Footer>

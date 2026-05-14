@@ -23,6 +23,7 @@ export interface PrometheusMetricsResult {
   /** Per-pod metrics keyed by pod name */
   metrics: Record<string, PodMetrics> | null
   loading: boolean
+  isRefreshing: boolean
   error: string | null
 }
 
@@ -80,8 +81,10 @@ export function usePrometheusMetrics(
 ): PrometheusMetricsResult {
   const [metrics, setMetrics] = useState<Record<string, PodMetrics> | null>(null)
   const [loading, setLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const hasFetchedRef = useRef(false)
 
   const fetchMetrics = useCallback(async () => {
     if (!cluster || !namespace) return
@@ -91,7 +94,11 @@ export function usePrometheusMetrics(
     const controller = new AbortController()
     abortRef.current = controller
 
-    setLoading(prev => !prev ? true : prev) // only set true on first load
+    if (hasFetchedRef.current) {
+      setIsRefreshing(true)
+    } else {
+      setLoading(true)
+    }
 
     try {
       // Fire all 6 queries in parallel
@@ -158,6 +165,8 @@ export function usePrometheusMetrics(
       // If cleanup aborted us (unmount), still clear loading to avoid stuck state (#7787).
       if (abortRef.current === controller || controller.signal.aborted) {
         setLoading(false)
+        setIsRefreshing(false)
+        hasFetchedRef.current = true
       }
     }
   }, [cluster, namespace])
@@ -167,6 +176,8 @@ export function usePrometheusMetrics(
       setMetrics(null)
       setError(null)
       setLoading(false)
+      setIsRefreshing(false)
+      hasFetchedRef.current = false
       return
     }
 
@@ -180,5 +191,5 @@ export function usePrometheusMetrics(
     }
   }, [fetchMetrics, pollIntervalMs, cluster, namespace])
 
-  return { metrics, loading, error }
+  return { metrics, loading, isRefreshing, error }
 }

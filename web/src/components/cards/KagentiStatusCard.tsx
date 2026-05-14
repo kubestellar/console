@@ -105,9 +105,12 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
   }, [agents, builds, tools])
 
   // Recent builds for list view
-  const recentBuilds = [...builds]
+  const recentBuilds = useMemo(() =>
+    [...builds]
       .sort((a, b) => (b.startTime || '').localeCompare(a.startTime || ''))
-      .slice(0, 5)
+      .slice(0, 5),
+    [builds]
+  )
 
   if (showSkeleton) {
     return (
@@ -133,7 +136,10 @@ export function KagentiStatusCard({ config }: KagentiStatusCardProps) {
     )
   }
 
-  const maxFramework = Object.entries(stats.frameworks).sort((a, b) => b[1] - a[1])
+  const maxFramework = useMemo(
+    () => Object.entries(stats.frameworks).sort((a, b) => b[1] - a[1]),
+    [stats.frameworks]
+  )
 
   return (
     <div className="space-y-3 p-1">

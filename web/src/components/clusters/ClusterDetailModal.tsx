@@ -23,6 +23,7 @@ type CloudProvider = 'eks' | 'gke' | 'aks' | 'openshift' | 'oci' | 'alibaba' | '
 // Maximum time to wait for initial data before forcing modal to show content (10 seconds)
 // Prevents indefinite loading when cluster is slow or unreachable
 const MAX_INITIAL_LOADING_MS = 10_000
+const MAX_HEADER_ALIASES = 2
 
 // Get console URL for a specific provider
 function getConsoleUrlForProvider(provider: string, clusterName: string, apiServerUrl?: string): string | null {
@@ -266,6 +267,11 @@ After I approve, help me execute the repairs step by step.`,
   // Effective loading state: override to false after timeout
   // This ensures the modal shows partial data rather than hanging indefinitely
   const effectiveLoading = forceShowContent ? false : isLoading
+  const aliasList = clusterInfo?.aliases || []
+  const serverAddress = clusterInfo?.server || health?.apiServer
+  const headerAliasSummary = aliasList.length <= MAX_HEADER_ALIASES
+    ? aliasList.map(alias => alias.split('/').pop() || alias).join(', ')
+    : `${aliasList.slice(0, MAX_HEADER_ALIASES).map(alias => alias.split('/').pop() || alias).join(', ')} ${t('cluster.andMoreClusters', { count: aliasList.length - MAX_HEADER_ALIASES })}`
 
   // Group GPUs by type for summary
   const gpuByType = (() => {
@@ -313,12 +319,19 @@ After I approve, help me execute the repairs step by step.`,
             )}
             <div className="flex flex-col">
               <h2 className="text-xl font-semibold text-foreground">{clusterName.split('/').pop()}</h2>
-              {clusterInfo?.aliases && clusterInfo.aliases.length > 0 && (
-                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: (clusterInfo.aliases || []).join(', ') })}>
-                  {t('clusterDetail.akaLabel')} {clusterInfo.aliases.length <= 2
-                    ? clusterInfo.aliases.map(a => a.split('/').pop()).join(', ')
-                    : `${clusterInfo.aliases.slice(0, 2).map(a => a.split('/').pop()).join(', ')} +${clusterInfo.aliases.length - 2} more`
-                  }
+              {aliasList.length > 0 && (
+                <div className="text-xs text-muted-foreground mt-0.5" title={t('clusterDetail.alsoKnownAs', { aliases: (aliasList || []).join(', ') })}>
+                  {t('clusterDetail.akaLabel')} {headerAliasSummary}
+                </div>
+              )}
+              {serverAddress && (
+                <div
+                  className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1"
+                  data-testid="cluster-detail-server-address"
+                  title={`${t('clusterDetail.serverAddress')}: ${serverAddress}`}
+                >
+                  <Server className="w-3 h-3 shrink-0" />
+                  <span className="truncate max-w-xs">{serverAddress}</span>
                 </div>
               )}
             </div>

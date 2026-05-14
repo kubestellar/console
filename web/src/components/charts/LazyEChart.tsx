@@ -1,10 +1,11 @@
-import { lazy, Suspense, type Ref } from 'react'
+import { Suspense, type Ref } from 'react'
 import type { EChartsReactProps } from 'echarts-for-react/lib/types'
 import type EChartsReact from 'echarts-for-react'
+import { safeLazy } from '@/lib/safeLazy'
 
 const SKELETON_MIN_HEIGHT_PX = 120
 
-const ReactEChartsLazy = lazy(() => import('echarts-for-react'))
+const ReactEChartsLazy = safeLazy(() => import('echarts-for-react'), 'default')
 
 interface LazyEChartProps extends EChartsReactProps {
   ref?: Ref<EChartsReact>

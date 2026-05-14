@@ -7,10 +7,32 @@ import { LOCAL_AGENT_WS_URL, LOCAL_AGENT_HTTP_URL } from '../lib/constants'
 import { useLocalAgent } from './useLocalAgent'
 import { agentFetch } from './mcp/agentFetch'
 import { appendWsAuthToken } from '../lib/utils/wsAuth'
-import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
+import { emitError, emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionToolMissing, emitMissionRated } from '../lib/analytics'
 import { scanForMaliciousContent } from '../lib/missions/scanner/malicious'
 import { getTokenCategoryForMissionType } from '../lib/tokenUsageMissionCategory'
-import { MS_PER_MINUTE, SECONDS_PER_DAY } from '../lib/constants/time'
+import { SECONDS_PER_DAY } from '../lib/constants/time'
+import {
+  MISSION_RECONNECT_DELAY_MS,
+  MISSION_RECONNECT_MAX_AGE_MS,
+  MAX_RESENT_MESSAGES,
+  WS_RECONNECT_INITIAL_DELAY_MS,
+  WS_RECONNECT_MAX_DELAY_MS,
+  WS_RECONNECT_MAX_RETRIES,
+  WS_CONNECTION_TIMEOUT_MS,
+  STATUS_WAITING_DELAY_MS,
+  STATUS_PROCESSING_DELAY_MS,
+  MISSION_TIMEOUT_MS,
+  MISSION_TIMEOUT_CHECK_INTERVAL_MS,
+  MISSION_INACTIVITY_TIMEOUT_MS,
+  CANCEL_ACK_TIMEOUT_MS,
+  CANCEL_ACK_MESSAGE_TYPE,
+  CANCEL_CONFIRMED_MESSAGE_TYPE,
+  WAITING_INPUT_TIMEOUT_MS,
+  AGENT_DISCONNECT_ERROR_PATTERNS,
+  WS_SEND_MAX_RETRIES,
+  WS_SEND_RETRY_DELAY_MS,
+  STREAM_GAP_THRESHOLD_MS,
+} from './useMissions.constants'
 import {
   runPreflightCheck,
   runToolPreflightCheck,
@@ -19,7 +41,10 @@ import {
   type PreflightResult,
 } from '../lib/missions/preflightCheck'
 import { kubectlProxy } from '../lib/kubectlProxy'
-import { kagentiProviderChat, fetchKagentiProviderAgents } from '../lib/kagentiProviderBackend'
+import {
+  kagentiProviderChat,
+  discoverKagentiProviderAgent,
+} from '../lib/kagentiProviderBackend'
 import { ConfirmMissionPromptDialog } from '../components/missions/ConfirmMissionPromptDialog'
 // Sub-modules extracted from this file (#8624)
 export type {
@@ -35,16 +60,20 @@ import {
   MISSIONS_STORAGE_KEY, CROSS_TAB_ECHO_IGNORE_MS,
   SELECTED_AGENT_KEY,
   loadMissions, saveMissions, loadUnreadMissionIds, saveUnreadMissionIds,
-  mergeMissions, getSelectedKagentiAgentFromStorage,
+  mergeMissions, getSelectedKagentiAgentFromStorage, persistSelectedKagentiAgentToStorage,
 } from './useMissionStorage'
 import {
   generateMessageId, buildEnhancedPrompt, buildSystemMessages,
   stripInteractiveArtifacts, buildSavedMissionPrompt,
 } from './useMissionPromptBuilder'
-
-function getMissionMessages(messages?: MissionMessage[]): MissionMessage[] {
-  return messages || []
-}
+import {
+  getMissionMessages,
+  isStaleAgentErrorMessage,
+  KAGENTI_PROVIDER_UNAVAILABLE_EVENT,
+  KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
+  buildKagentiDiscoveryErrorMessage,
+} from './useMissions.helpers'
+import i18n from '../lib/i18n'
 
 interface MissionContextValue {
   missions: Mission[]
@@ -125,43 +154,13 @@ function generateRequestId(prefix = 'claude'): string {
   return `${prefix}-${Date.now()}-${requestIdCounter}-${crypto.randomUUID().replace(/-/g, '').slice(0, 6)}`
 }
 
-/** Delay before auto-reconnecting interrupted missions after WS opens */
-const MISSION_RECONNECT_DELAY_MS = 500
-/**
- * Maximum age (ms) a disconnected mission may have before auto-resume is
- * considered unsafe (#6371). Agents purge sessions after a short idle
- * window, so resuming a mission whose last update was hours ago is very
- * likely to hit a GONE/not_found session on the backend — or worse, land
- * the user's prompt in a disjointed new thread. Past this threshold the
- * mission is transitioned to `failed` with an actionable message so the
- * user can explicitly retry instead of the agent silently replaying a
- * half-finished prompt. 30 minutes is conservative: it covers lunch/
- * meeting gaps while still protecting against overnight reconnects.
- */
-const MISSION_RECONNECT_MAX_AGE_MS = 30 * MS_PER_MINUTE
-/**
- * issue 6429 — Cap how many prior messages we re-append to the prompt on
- * reconnect. Long-running missions can accumulate hundreds of turns; some
- * agents (notably ones with 8k–32k token budgets) reject the payload
- * outright with HTTP 413. We always keep the most recent
- * MAX_RESENT_MESSAGES items (which always include the last user message
- * that is re-sent separately) and drop anything older.
- */
-const MAX_RESENT_MESSAGES = 20
-/** Initial delay (ms) before auto-reconnecting WebSocket after close */
-const WS_RECONNECT_INITIAL_DELAY_MS = 1_000
-/** Maximum delay (ms) between reconnection attempts (backoff cap) */
-const WS_RECONNECT_MAX_DELAY_MS = 30_000
-/** Maximum number of consecutive reconnection attempts before giving up */
-const WS_RECONNECT_MAX_RETRIES = 10
-/** Maximum time (ms) to wait for a WebSocket connection to open */
-const WS_CONNECTION_TIMEOUT_MS = 5_000
-/** Delay before showing "Waiting for response..." status */
-const STATUS_WAITING_DELAY_MS = 500
-/** Delay before showing "Processing with AI..." status */
-const STATUS_PROCESSING_DELAY_MS = 3_000
-const MISSING_TOOL_WARNING_HEADING = '**Tool availability warning**'
-const MISSING_TOOL_WARNING_SUFFIX = 'The AI-assisted flow can still continue, but local execution steps may still need these tools later.'
+const OPTIONAL_MISSION_TOOL_PATTERNS = {
+  gh: /\bgh\b|\bgithub\s+cli\b/i,
+  helm: /\bhelm\b/i,
+} as const
+const MISSION_CONTEXT_TOOL_KEYS = ['requiredLocalTools', 'requiredTools', 'requiredMissionTools'] as const
+const MISSING_TOOL_WARNING_HEADING = `**${i18n.t('missions.preflight.toolWarning.heading')}**`
+const MISSING_TOOL_WARNING_SUFFIX = i18n.t('missions.preflight.toolWarning.suffix')
 
 function shouldAllowMissingToolWarning(context?: Record<string, unknown>): boolean {
   return context?.allowMissingLocalTools === true
@@ -171,79 +170,66 @@ function shouldSkipClusterPreflight(context?: Record<string, unknown>): boolean 
   return context?.skipClusterPreflight === true
 }
 
+function getMissingTools(error: PreflightError, fallbackTools: string[]): string[] {
+  const missingTools = error.details?.missingTools
+  return Array.isArray(missingTools) && missingTools.every(tool => typeof tool === 'string')
+    ? missingTools
+    : fallbackTools
+}
+
+function getMissionContextTools(context?: Record<string, unknown>): string[] {
+  return MISSION_CONTEXT_TOOL_KEYS.flatMap((key) => {
+    const value = context?.[key]
+    return Array.isArray(value)
+      ? value.filter((tool): tool is string => typeof tool === 'string')
+      : []
+  })
+}
+
+function resolveMissionToolRequirements({
+  title,
+  description,
+  prompt,
+  type,
+  context,
+}: {
+  title?: string
+  description?: string
+  prompt: string
+  type?: string
+  context?: Record<string, unknown>
+}): { requiredTools: string[]; missionSpecificOptionalTools: string[] } {
+  const searchableText = `${title || ''}\n${description || ''}\n${prompt}`
+  const missionSpecificOptionalTools = Object.entries(OPTIONAL_MISSION_TOOL_PATTERNS)
+    .filter(([, pattern]) => pattern.test(searchableText))
+    .map(([tool]) => tool)
+  const requiredTools = [...new Set([
+    ...resolveRequiredTools(type),
+    ...getMissionContextTools(context),
+    ...missionSpecificOptionalTools,
+  ])]
+
+  return { requiredTools, missionSpecificOptionalTools }
+}
+
 function buildMissingToolWarning(error: PreflightError): string {
-  const missingTools = Array.isArray(error.details?.missingTools)
-    ? (error.details.missingTools as string[])
-    : []
+  const missingTools = getMissingTools(error, [])
   const toolSummary = missingTools.length > 0
-    ? `Missing local tools: ${missingTools.join(', ')}.`
+    ? i18n.t('missions.preflight.toolWarning.summary', { tools: missingTools.join(', ') })
     : error.message
 
   return `${MISSING_TOOL_WARNING_HEADING}\n\n${toolSummary}\n\n${MISSING_TOOL_WARNING_SUFFIX}`
 }
 
-/**
- * Maximum time (ms) a mission is allowed to stay in "running" state before the
- * frontend considers it timed out and transitions it to "failed".  This acts as
- * a client-side safety net in case the backend timeout fires but the error
- * message is lost (e.g., WebSocket reconnect race), or the backend itself is
- * unreachable.  Matches the backend missionExecutionTimeout (5 min) plus a
- * small grace period for network latency.
- */
-const MISSION_TIMEOUT_MS = 300_000 // 5 minutes
-/** How often (ms) the frontend checks for timed-out missions */
-const MISSION_TIMEOUT_CHECK_INTERVAL_MS = 15_000 // 15 seconds
-/**
- * If streaming has started (at least one chunk received) but no new chunk
- * arrives within this window, the agent is assumed to be stuck waiting on a
- * tool call (e.g., an APISIX gateway that never responds) and the mission is
- * failed early with an actionable message (#3079).
- */
-const MISSION_INACTIVITY_TIMEOUT_MS = 90_000 // 90 seconds of stream silence
-/**
- * Maximum time (ms) the frontend waits for backend acknowledgment after sending
- * a cancel request. If the backend doesn't respond within this window, the
- * frontend transitions the mission from 'cancelling' to 'failed' as a safety net.
- */
-const CANCEL_ACK_TIMEOUT_MS = 10_000 // 10 seconds
-
-/**
- * WebSocket message types the frontend accepts as a dedicated cancel
- * acknowledgement (#8106). Kept as named constants to avoid magic strings
- * and to make the protocol contract easy to audit. The backend currently
- * emits `result` messages with `{cancelled, sessionId}` shape instead, which
- * is handled as a compatibility path in the message router.
- */
-const CANCEL_ACK_MESSAGE_TYPE = 'cancel_ack'
-const CANCEL_CONFIRMED_MESSAGE_TYPE = 'cancel_confirmed'
-
-/**
- * Maximum time (ms) a mission may sit in 'waiting_input' with no new
- * assistant/result message before the frontend treats it as stuck and
- * transitions it to 'failed' (#5936). This state is entered when a streaming
- * turn ends without a final 'result' message; if the backend never sends
- * one (lost event, disconnected agent, etc.) the mission would otherwise
- * hang indefinitely.
- */
-const WAITING_INPUT_TIMEOUT_MS = 600_000 // 10 minutes
-
-/**
- * Patterns that identify system messages generated when the local agent is
- * unreachable. Used by both the reconnect useEffect (#10525) and the retry
- * path in sendMessage to strip stale errors from chat history.
- */
-const AGENT_DISCONNECT_ERROR_PATTERNS = [
-  'Local Agent Not Connected',
-  'agent not available',
-  'agent not responding',
-] as const
-
-/** Returns true when a MissionMessage is a stale agent-disconnect error. */
-function isStaleAgentErrorMessage(msg: MissionMessage): boolean {
-  return (
-    msg.role === 'system' &&
-    AGENT_DISCONNECT_ERROR_PATTERNS.some(pattern => msg.content.includes(pattern))
-  )
+function buildMissionToolUnavailableError(error: PreflightError, missingTools: string[]): PreflightError {
+  return {
+    ...error,
+    message: i18n.t('missions.preflight.optionalToolUnavailable.message', { tools: missingTools.join(', ') }),
+    details: {
+      ...(error.details || {}),
+      missingTools,
+    },
+  }
 }
 
 export function MissionProvider({ children }: { children: ReactNode }) {
@@ -404,12 +390,6 @@ export function MissionProvider({ children }: { children: ReactNode }) {
    * of the onopen handler from dispatching duplicate chat_request payloads.
    */
   const wsOpenEpoch = useRef(0)
-  const STREAM_GAP_THRESHOLD_MS = 8000 // If >8s gap between stream chunks, create new message bubble (tool-use gap)
-
-  // Maximum number of WebSocket send retries before giving up
-  const WS_SEND_MAX_RETRIES = 3
-  // Delay between WebSocket send retries in milliseconds
-  const WS_SEND_RETRY_DELAY_MS = 1000
 
   // #6629 — Track in-flight wsSend retry timers so they can be cleared on
   // unmount. Without this, a provider unmount while a retry was still
@@ -766,7 +746,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
       return Promise.resolve()
     }
 
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>(async (resolve, reject) => {
       // Show loading state while connecting
       setAgentsLoading(true)
 
@@ -791,7 +771,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
         // The backoff is reset later, after the first application-layer
         // message actually arrives, not here.
         connectionEstablished.current = false
-        wsRef.current = new WebSocket(appendWsAuthToken(LOCAL_AGENT_WS_URL))
+        wsRef.current = new WebSocket(await appendWsAuthToken(LOCAL_AGENT_WS_URL))
 
         wsRef.current.onopen = () => {
           clearTimeout(timeout)
@@ -815,11 +795,30 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           const missionsToReconnect: Mission[] = []
           // Missions that have already had one reconnect attempt — don't
           // replay the prompt again; fail them instead (#5930).
-          const missionsToFailDuplicate: string[] = []
+          const missionsToFailDuplicate = new Set<string>()
           // Missions whose last update was so long ago that the backend
           // session is almost certainly gone. Don't auto-resume these —
           // mark them as needing a manual restart (#6371).
-          const missionsToMarkStale: string[] = []
+          const missionsToMarkStale = new Set<string>()
+
+          // #7074 — Build reconnect candidates SYNCHRONOUSLY from refs before
+          // entering the state updater. React may defer updater execution, so
+          // any arrays populated inside `setMissions` are not safe to use for
+          // same-tick side effects like the delayed wsSend below.
+          const reconnectCandidates = (missionsRef.current || []).filter(m =>
+            (m.status === 'running' || m.status === 'waiting_input') && m.context?.needsReconnect
+          )
+          const now = Date.now()
+          for (const mission of reconnectCandidates) {
+            const ageMs = now - new Date(mission.updatedAt).getTime()
+            if (ageMs > MISSION_RECONNECT_MAX_AGE_MS) {
+              missionsToMarkStale.add(mission.id)
+            } else if (mission.context?.reconnectAttempted) {
+              missionsToFailDuplicate.add(mission.id)
+            } else {
+              missionsToReconnect.push(mission)
+            }
+          }
 
           // #7074 — Build the waiting_input set SYNCHRONOUSLY from the ref
           // before entering the state updater. If React batches or delays the
@@ -832,32 +831,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
           )
 
           setMissions(prev => {
-            const candidates = prev.filter(m =>
-              (m.status === 'running' || m.status === 'waiting_input') && m.context?.needsReconnect
-            )
-
-            if (candidates.length > 0) {
-              // Split candidates into first-attempt (safe to replay) vs
-              // already-attempted (unsafe — would duplicate execution on
-              // non-idempotent agents, see #5930) vs stale (backend session
-              // has very likely expired, see #6371).
-              const now = Date.now()
-              for (const m of (candidates || [])) {
-                const ageMs = now - new Date(m.updatedAt).getTime()
-                if (ageMs > MISSION_RECONNECT_MAX_AGE_MS) {
-                  missionsToMarkStale.push(m.id)
-                } else if (m.context?.reconnectAttempted) {
-                  missionsToFailDuplicate.push(m.id)
-                } else {
-                  missionsToReconnect.push(m)
-                }
-              }
-
+            if (reconnectCandidates.length > 0) {
               // Clear the needsReconnect flag and mark reconnectAttempted
               // so a subsequent reconnect won't replay the prompt again.
               return prev.map(m => {
                 if (!m.context?.needsReconnect) return m
-                if (missionsToMarkStale.includes(m.id)) {
+                if (missionsToMarkStale.has(m.id)) {
                   // Issue 9157: if the agent's LAST message was a substantive
                   // assistant response, the mission almost certainly completed
                   // before the session went stale — the only thing missing is
@@ -915,7 +894,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
                     ]
                   }
                 }
-                if (missionsToFailDuplicate.includes(m.id)) {
+                if (missionsToFailDuplicate.has(m.id)) {
                   return {
                     ...m,
                     status: 'failed' as MissionStatus,
@@ -1912,11 +1891,52 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
         streamSplitCounter.current.delete(missionId)
         toolsInFlight.current.delete(missionId)
         lastStreamTimestamp.current.delete(missionId)
-        emitMissionError(m.type, payload.code || 'unknown', payload.message)
+
+        // Pattern-match common error types for classification
+        const combinedErrorText = `${payload.code || ''} ${payload.message || ''}`.toLowerCase()
+
+        // Detect tool-missing errors (helm or gh not installed)
+        // Patterns: "helm: not found", "gh: command not found", "executable file not found", etc.
+        const isToolMissingError =
+          (combinedErrorText.includes('helm') && 
+            (combinedErrorText.includes('not found') || 
+             combinedErrorText.includes('command not found') ||
+             combinedErrorText.includes('executable file not found') ||
+             combinedErrorText.includes('no such file'))) ||
+          (combinedErrorText.includes('gh') && 
+            (combinedErrorText.includes('not found') || 
+             combinedErrorText.includes('command not found') ||
+             combinedErrorText.includes('executable file not found') ||
+             combinedErrorText.includes('no such file')))
+
+        // Extract which tool is missing
+        let missingTool = 'unknown'
+        if (isToolMissingError) {
+          if (combinedErrorText.includes('helm')) {
+            missingTool = 'helm'
+          } else if (combinedErrorText.includes('gh')) {
+            missingTool = 'gh'
+          }
+        }
+
+        // Emit specific event for tool-missing errors, generic event otherwise
+        if (isToolMissingError) {
+          emitMissionToolMissing(m.type, missingTool, payload.message)
+        } else {
+          emitMissionError(m.type, payload.code || 'unknown', payload.message)
+        }
 
         // Create helpful error message based on error code
         let errorContent = payload.message || 'Unknown error'
-        if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
+        if (isToolMissingError) {
+          const toolName = missingTool === 'helm' ? 'Helm' : missingTool === 'gh' ? 'GitHub CLI (gh)' : missingTool
+          const installInstructions = missingTool === 'helm' 
+            ? 'Visit https://helm.sh/docs/intro/install/ for installation instructions.'
+            : missingTool === 'gh'
+            ? 'Visit https://cli.github.com/ for installation instructions.'
+            : 'Check the tool documentation for installation instructions.'
+          errorContent = `**Mission requires ${toolName} which is not installed**\n\nThis mission attempted to use \`${missingTool}\` but it was not found on your system.\n\n**To fix:**\n1. Install ${toolName} on your machine\n2. ${installInstructions}\n3. Verify installation with \`${missingTool} version\`\n4. Retry the mission\n\n**Note:** ${toolName} is an optional tool for missions. Most missions work without it.`
+        } else if (payload.code === 'no_agent' || payload.code === 'agent_unavailable') {
           errorContent = `**Mission interrupted — agent not available**\n\nThe AI agent was disconnected or is not reachable. This often happens after a page refresh.\n\n**To fix:**\n1. Make sure your agent (e.g., Claude Code, bob) is running\n2. Select the agent from the top navbar\n3. Click **Retry Mission** below to rerun your request`
         } else if (payload.code === 'authentication_error') {
           errorContent = '**Authentication Error — Agent CLI Needs Attention**\n\nThis is not a console issue. The AI agent\'s API token has expired or is invalid.\n\n**To fix:** Restart kc-agent to refresh authentication, or run `gh auth status` in your terminal to verify your credentials. You can also update your API key in [Settings →](/settings).\n\nOnce re-authenticated, retry your message.'
@@ -1924,8 +1944,6 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
           errorContent = `**Mission Timed Out**\n\n${payload.message}\n\nYou can:\n- **Retry** the mission with the same or a different prompt\n- **Try a simpler request** that requires less processing\n- **Check your AI provider** configuration in [Settings](/settings)`
         }
 
-        // Pattern-match common API provider errors for user-friendly messages
-        const combinedErrorText = `${payload.code || ''} ${payload.message || ''}`.toLowerCase()
 
         // Detect authentication / token expiry errors (HTTP 401/403)
         const isAuthError =
@@ -1991,40 +2009,47 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
   const preflightAndExecute = (
     missionId: string,
     enhancedPrompt: string,
-    params: { cluster?: string; context?: Record<string, unknown>; type?: string },
+    params: { title?: string; description?: string; initialPrompt?: string; cluster?: string; context?: Record<string, unknown>; type?: string },
   ) => {
     // --- Phase 1: Tool availability check (#11077) ---
-    const requiredTools = resolveRequiredTools(params.type)
+    const { requiredTools, missionSpecificOptionalTools } = resolveMissionToolRequirements({
+      title: params.title,
+      description: params.description,
+      prompt: params.initialPrompt || enhancedPrompt,
+      type: params.type,
+      context: params.context,
+    })
     const toolCheckPromise = runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
 
     toolCheckPromise.then(toolResult => {
+      const missingTools = toolResult.error
+        ? getMissingTools(toolResult.error, requiredTools)
+        : []
+      const missingMissionSpecificOptionalTools = missingTools.filter(tool => missionSpecificOptionalTools.includes(tool))
+      const preflightToolError = missingMissionSpecificOptionalTools.length > 0 && toolResult.error
+        ? buildMissionToolUnavailableError(toolResult.error, missingMissionSpecificOptionalTools)
+        : toolResult.error
       const allowMissingToolWarning =
         !toolResult.ok &&
-        toolResult.error?.code === 'MISSING_TOOLS' &&
-        shouldAllowMissingToolWarning(params.context)
+        preflightToolError?.code === 'MISSING_TOOLS' &&
+        shouldAllowMissingToolWarning(params.context) &&
+        missingMissionSpecificOptionalTools.length === 0
 
-      if (!toolResult.ok && toolResult.error && !allowMissingToolWarning) {
+      if (!toolResult.ok && preflightToolError && !allowMissingToolWarning) {
+        // Block the mission — the PreflightFailure component renders the
+        // structured error card; no duplicate system message needed (#13464).
         setMissions(prev => prev.map(m =>
           m.id === missionId ? {
             ...m,
             status: 'blocked' as MissionStatus,
             currentStep: 'Missing required tools',
-            preflightError: toolResult.error,
-            messages: [
-              ...getMissionMessages(m.messages),
-              {
-                id: generateMessageId('tool-preflight'),
-                role: 'system' as const,
-                content: `**Pre-flight Tool Check Failed**\n\n${toolResult.error?.message || 'Required tools are missing.'}\n\nInstall the missing tools and retry the mission.`,
-                timestamp: new Date(),
-              },
-            ],
+            preflightError: preflightToolError,
           } : m
         ))
         return
       }
 
-      if (allowMissingToolWarning && toolResult.error) {
+      if (allowMissingToolWarning && preflightToolError) {
         setMissions(prev => prev.map(m =>
           m.id === missionId ? {
             ...m,
@@ -2034,7 +2059,7 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
               {
                 id: generateMessageId('tool-preflight-warning'),
                 role: 'system' as const,
-                content: buildMissingToolWarning(toolResult.error!),
+                content: buildMissingToolWarning(preflightToolError),
                 timestamp: new Date(),
               },
             ],
@@ -2062,21 +2087,15 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
 
     preflightPromise.then(preflight => {
       if (!preflight.ok && 'error' in preflight && preflight.error) {
-        // Preflight failed — block the mission with a structured error
+        // Preflight failed — block the mission with a structured error.
+        // The PreflightFailure component renders the error card; no duplicate
+        // system message needed (#13464).
         setMissions(prev => prev.map(m =>
           m.id === missionId ? {
             ...m,
             status: 'blocked' as MissionStatus,
             currentStep: 'Preflight check failed',
             preflightError: preflight.error,
-            messages: [
-              ...getMissionMessages(m.messages),
-              {
-                id: generateMessageId('preflight'),
-                role: 'system' as const,
-                content: `**Preflight Check Failed**\n\nThe mission cannot proceed because cluster access verification failed. See the details below for how to fix this.\n\nError: ${preflight.error?.message || 'Unknown error'}`,
-                timestamp: new Date() }
-            ]
           } : m
         ))
         emitMissionError(
@@ -2103,7 +2122,9 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       executeMission(missionId, enhancedPrompt, params)
     }).catch((err) => {
       // Preflight itself threw unexpectedly — block the mission instead of
-      // fail-open to prevent executing without validation (#5846)
+      // fail-open to prevent executing without validation (#5846).
+      // The PreflightFailure component renders the error; no duplicate
+      // system message needed (#13464).
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
           ...m,
@@ -2114,20 +2135,13 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             message: err instanceof Error ? err.message : 'Unknown error',
             details: { hint: 'The preflight check threw an unexpected error. Retry or check cluster connectivity.' },
           },
-          messages: [
-            ...getMissionMessages(m.messages),
-            {
-              id: generateMessageId('preflight-error'),
-              role: 'system' as const,
-              content: `**Preflight Check Error**\n\nThe preflight check encountered an unexpected error. The mission has been blocked to prevent unvalidated execution.\n\nError: ${err instanceof Error ? err.message : 'Unknown error'}`,
-              timestamp: new Date() }
-          ]
         } : m
       ))
     })
     }) // end toolCheckPromise.then
     .catch((err) => {
-      // Tool check itself threw — block with a generic error
+      // Tool check itself threw — block with a generic error.
+      // PreflightFailure component handles display (#13464).
       setMissions(prev => prev.map(m =>
         m.id === missionId ? {
           ...m,
@@ -2138,15 +2152,6 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
             message: err instanceof Error ? err.message : 'Unknown error',
             details: { hint: 'The tool pre-flight check threw an unexpected error. Verify the local agent is running.' },
           },
-          messages: [
-            ...getMissionMessages(m.messages),
-            {
-              id: generateMessageId('tool-check-error'),
-              role: 'system' as const,
-              content: `**Tool Check Error**\n\nFailed to verify required tools: ${err instanceof Error ? err.message : 'Unknown error'}`,
-              timestamp: new Date(),
-            },
-          ],
         } : m
       ))
     })
@@ -2268,38 +2273,43 @@ The WebSocket connection to the agent at \`${LOCAL_AGENT_WS_URL}\` was lost and 
       void (async () => {
         let target = getSelectedKagentiAgentFromStorage()
         if (!target) {
-          const discovered = await fetchKagentiProviderAgents()
-          if ((discovered || []).length > 0) {
+          const discovery = await discoverKagentiProviderAgent()
+          if (discovery.ok) {
             target = {
-              namespace: discovered[0].namespace,
-              name: discovered[0].name,
+              namespace: discovery.agent.namespace,
+              name: discovery.agent.name,
             }
+            persistSelectedKagentiAgentToStorage(target)
+          } else {
+            executingMissions.current.delete(missionId)
+            const errorContent = buildKagentiDiscoveryErrorMessage(discovery)
+            setMissions(prev => prev.map(m =>
+              m.id === missionId
+                ? {
+                    ...m,
+                    status: 'failed',
+                    currentStep: undefined,
+                    messages: [
+                      ...getMissionMessages(m.messages),
+                      {
+                        id: generateMessageId('kagenti-missing-agent'),
+                        role: 'system',
+                        content: errorContent,
+                        timestamp: new Date(),
+                      },
+                    ],
+                  }
+                : m
+            ))
+            emitMissionError(
+              missionType,
+              discovery.reason === 'provider_unreachable'
+                ? KAGENTI_PROVIDER_UNAVAILABLE_EVENT
+                : KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
+              discovery.reason,
+            )
+            return
           }
-        }
-
-        if (!target) {
-          executingMissions.current.delete(missionId)
-          const errorContent = `**Kagenti Agent Not Selected**\n\nSelect a Kagenti agent in Settings → Agent Backend, then retry this mission.`
-          setMissions(prev => prev.map(m =>
-            m.id === missionId
-              ? {
-                  ...m,
-                  status: 'failed',
-                  currentStep: undefined,
-                  messages: [
-                    ...getMissionMessages(m.messages),
-                    {
-                      id: generateMessageId('kagenti-missing-agent'),
-                      role: 'system',
-                      content: errorContent,
-                      timestamp: new Date(),
-                    },
-                  ],
-                }
-              : m
-          ))
-          emitMissionError(missionType, 'kagenti_agent_missing', 'no_selected_kagenti_agent')
-          return
         }
 
         await kagentiProviderChat(target.name, target.namespace, enhancedPrompt, {
@@ -2509,35 +2519,42 @@ Install the console locally with the KubeStellar Console agent to use AI mission
     void (async () => {
       try {
         // --- Phase 1: Tool availability check (matches preflightAndExecute) ---
-        const requiredTools = resolveRequiredTools(mission.type)
+        const lastUserMsg = getMissionMessages(mission.messages).find(m => m.role === 'user')
+        const { requiredTools, missionSpecificOptionalTools } = resolveMissionToolRequirements({
+          title: mission.title,
+          description: mission.description,
+          prompt: lastUserMsg?.content || mission.description,
+          type: mission.type,
+          context: mission.context,
+        })
         const toolResult = await runToolPreflightCheck(LOCAL_AGENT_HTTP_URL, requiredTools, agentFetch)
+        const missingTools = toolResult.error
+          ? getMissingTools(toolResult.error, requiredTools)
+          : []
+        const missingMissionSpecificOptionalTools = missingTools.filter(tool => missionSpecificOptionalTools.includes(tool))
+        const preflightToolError = missingMissionSpecificOptionalTools.length > 0 && toolResult.error
+          ? buildMissionToolUnavailableError(toolResult.error, missingMissionSpecificOptionalTools)
+          : toolResult.error
         const allowMissingToolWarning =
           !toolResult.ok &&
-          toolResult.error?.code === 'MISSING_TOOLS' &&
-          shouldAllowMissingToolWarning(mission.context)
+          preflightToolError?.code === 'MISSING_TOOLS' &&
+          shouldAllowMissingToolWarning(mission.context) &&
+          missingMissionSpecificOptionalTools.length === 0
 
-        if (!toolResult.ok && toolResult.error && !allowMissingToolWarning) {
+        if (!toolResult.ok && preflightToolError && !allowMissingToolWarning) {
+          // Re-block — PreflightFailure component handles display (#13464)
           setMissions(prev => prev.map(m =>
             m.id === missionId ? {
               ...m,
               status: 'blocked' as MissionStatus,
               currentStep: 'Missing required tools',
-              preflightError: toolResult.error,
-              messages: [
-                ...getMissionMessages(m.messages),
-                {
-                  id: generateMessageId('tool-preflight-retry'),
-                  role: 'system' as const,
-                  content: `**Pre-flight Tool Check Still Failing**\n\n${toolResult.error?.message || 'Required tools are missing.'}\n\nInstall the missing tools and retry the mission.`,
-                  timestamp: new Date(),
-                },
-              ],
+              preflightError: preflightToolError,
             } : m
           ))
           return
         }
 
-        if (allowMissingToolWarning && toolResult.error) {
+        if (allowMissingToolWarning && preflightToolError) {
           setMissions(prev => prev.map(m =>
             m.id === missionId ? {
               ...m,
@@ -2547,7 +2564,7 @@ Install the console locally with the KubeStellar Console agent to use AI mission
                 {
                   id: generateMessageId('tool-preflight-warning-retry'),
                   role: 'system' as const,
-                  content: buildMissingToolWarning(toolResult.error!),
+                  content: buildMissingToolWarning(preflightToolError),
                   timestamp: new Date(),
                 },
               ],
@@ -2584,21 +2601,13 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         const failing = results.find(r => !r.result.ok && 'error' in r.result && r.result.error)
         const preflight = failing ? failing.result : (results[0]?.result || { ok: true })
         if (!preflight.ok && 'error' in preflight && preflight.error) {
-          // Still failing — re-block
+          // Still failing — re-block. PreflightFailure component handles display (#13464)
           setMissions(prev => prev.map(m =>
             m.id === missionId ? {
               ...m,
               status: 'blocked' as MissionStatus,
               currentStep: 'Preflight check failed',
               preflightError: preflight.error,
-              messages: [
-                ...getMissionMessages(m.messages),
-                {
-                  id: generateMessageId('preflight-retry'),
-                  role: 'system' as const,
-                  content: `**Preflight Check Still Failing**\n\nError: ${preflight.error?.message || 'Unknown error'}`,
-                  timestamp: new Date() }
-              ]
             } : m
           ))
           if (preflight.error?.message) {
@@ -2613,7 +2622,6 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         // only prepended cluster context, losing dry-run instructions,
         // resolution context, and non-interactive handling from the original
         // enriched prompt.
-        const lastUserMsg = getMissionMessages(mission.messages).find(m => m.role === 'user')
         const retryParams: StartMissionParams = {
           title: mission.title,
           description: mission.description,
@@ -2948,6 +2956,155 @@ Install the console locally with the KubeStellar Console agent to use AI mission
         ]
       }
     }))
+
+    // Route kagenti follow-up messages through SSE proxy, matching initial
+    // message path. Without this check, follow-ups fall through to local-agent
+    // WebSocket and fail in in-cluster deployments (#12992).
+    if (selectedAgentRef.current === 'kagenti') {
+      const startedAt = Date.now()
+      const assistantMessageId = generateMessageId('kagenti-stream')
+      const mission = missionsRef.current.find(m => m.id === missionId)
+      const missionType = mission?.type || 'unknown'
+
+      void (async () => {
+        let target = getSelectedKagentiAgentFromStorage()
+        if (!target) {
+          const discovery = await discoverKagentiProviderAgent()
+          if (discovery.ok) {
+            target = {
+              namespace: discovery.agent.namespace,
+              name: discovery.agent.name,
+            }
+            persistSelectedKagentiAgentToStorage(target)
+          } else {
+            executingMissions.current.delete(missionId)
+            const errorContent = buildKagentiDiscoveryErrorMessage(discovery)
+            setMissions(prev => prev.map(m =>
+              m.id === missionId
+                ? {
+                    ...m,
+                    status: 'failed',
+                    currentStep: undefined,
+                    messages: [
+                      ...getMissionMessages(m.messages),
+                      {
+                        id: generateMessageId('kagenti-missing-agent'),
+                        role: 'system',
+                        content: errorContent,
+                        timestamp: new Date(),
+                      },
+                    ],
+                  }
+                : m
+            ))
+            emitMissionError(
+              missionType,
+              discovery.reason === 'provider_unreachable'
+                ? KAGENTI_PROVIDER_UNAVAILABLE_EVENT
+                : KAGENTI_NO_AGENTS_DISCOVERED_EVENT,
+              discovery.reason,
+            )
+            return
+          }
+        }
+
+        await kagentiProviderChat(target.name, target.namespace, content, {
+          contextId: missionId,
+          onChunk: (text: string) => {
+            setMissions(prev => prev.map(m => {
+              if (m.id !== missionId) return m
+
+              const missionMessages = getMissionMessages(m.messages)
+              const idx = missionMessages.findIndex(msg => msg.id === assistantMessageId)
+              if (idx === -1) {
+                return {
+                  ...m,
+                  currentStep: `Processing with ${selectedAgentRef.current || 'kagenti'}...`,
+                  messages: [
+                    ...missionMessages,
+                    {
+                      id: assistantMessageId,
+                      role: 'assistant',
+                      content: text,
+                      timestamp: new Date(),
+                      agent: selectedAgentRef.current || 'kagenti',
+                    },
+                  ],
+                }
+              }
+
+              const nextMessages = [...missionMessages]
+              nextMessages[idx] = {
+                ...nextMessages[idx],
+                content: `${nextMessages[idx].content}${text}`,
+                timestamp: new Date(),
+              }
+              return {
+                ...m,
+                currentStep: `Processing with ${selectedAgentRef.current || 'kagenti'}...`,
+                messages: nextMessages,
+              }
+            }))
+          },
+          onDone: () => {
+            executingMissions.current.delete(missionId)
+            const durationMs = Math.max(0, Date.now() - startedAt)
+            emitMissionCompleted(missionType, durationMs)
+
+            setMissions(prev => prev.map(m => {
+              if (m.id !== missionId) return m
+
+              const missionMessages = getMissionMessages(m.messages)
+              const hasAssistant = missionMessages.some(msg => msg.id === assistantMessageId && msg.content.trim().length > 0)
+              return {
+                ...m,
+                status: 'completed',
+                currentStep: undefined,
+                updatedAt: new Date(),
+                messages: hasAssistant
+                  ? missionMessages
+                  : [
+                      ...missionMessages,
+                      {
+                        id: assistantMessageId,
+                        role: 'assistant',
+                        content: 'Task completed.',
+                        timestamp: new Date(),
+                        agent: selectedAgentRef.current || 'kagenti',
+                      },
+                    ],
+              }
+            }))
+          },
+          onError: (error: string) => {
+            executingMissions.current.delete(missionId)
+            emitMissionError(missionType, 'kagenti_chat_error', error)
+
+            setMissions(prev => prev.map(m =>
+              m.id === missionId
+                ? {
+                    ...m,
+                    status: 'failed',
+                    currentStep: undefined,
+                    updatedAt: new Date(),
+                    messages: [
+                      ...getMissionMessages(m.messages),
+                      {
+                        id: generateMessageId('kagenti-error'),
+                        role: 'system',
+                        content: `**Kagenti Request Failed**\n\n${error}`,
+                        timestamp: new Date(),
+                      },
+                    ],
+                  }
+                : m
+            ))
+          },
+        })
+      })()
+
+      return
+    }
 
     ensureConnection().then(() => {
       const requestId = generateRequestId()

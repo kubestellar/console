@@ -13,6 +13,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/agent"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/models"
 	"github.com/kubestellar/console/pkg/notifications"
 	"github.com/kubestellar/console/pkg/store"
@@ -129,7 +130,7 @@ func NewGPUUtilizationWorker(s store.Store, k8sClient *k8s.MultiClusterClient, n
 
 // Start begins the background polling loop
 func (w *GPUUtilizationWorker) Start() {
-	go func() {
+	safego.GoWith("gpu-utilization-worker", func() {
 		// Cleanup old snapshots on startup
 		w.cleanupOldSnapshots()
 
@@ -147,7 +148,7 @@ func (w *GPUUtilizationWorker) Start() {
 				return
 			}
 		}
-	}()
+	})
 	slog.Info("GPU utilization worker started", "interval", w.interval)
 }
 
@@ -191,13 +192,14 @@ func (w *GPUUtilizationWorker) collectUtilization() {
 	for i := range reservations {
 		wg.Add(1)
 		sem <- struct{}{} // acquire
-		go func(r *models.GPUReservation) {
+		safego.Go(func() {
 			defer wg.Done()
 			defer func() { <-sem }() // release
+			r := &reservations[i]
 			ctx, cancel := context.WithTimeout(w.baseCtx, perReservationTimeout)
 			defer cancel()
 			w.collectForReservation(ctx, r, dcgmByCluster[r.Cluster])
-		}(&reservations[i])
+		})
 	}
 	wg.Wait()
 }

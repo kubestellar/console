@@ -307,7 +307,7 @@ func extractPRNumber(ref string) int {
 // extractLinkedIssueNumbers extracts issue numbers from PR body
 // Looks for patterns like "Fixes #123", "Closes org/repo#456", "Resolves #789"
 func extractLinkedIssueNumbers(body string) []int {
-	var issueNumbers []int
+	issueNumbers := make([]int, 0)
 
 	// Regex to match: Fixes/Closes/Resolves [org/repo]#123
 	// Handles both "#123" and "org/repo#123" formats

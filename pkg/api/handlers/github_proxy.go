@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/kubestellar/console/pkg/safego"
 	"golang.org/x/time/rate"
 
 	"github.com/kubestellar/console/pkg/api/audit"
@@ -94,7 +95,7 @@ func getGitHubProxyLimiter(userID string) *rate.Limiter {
 	// Lazy-start the evictor on first limiter creation
 	if !githubProxyLimiters.evictStarted {
 		githubProxyLimiters.evictStarted = true
-		go startGitHubProxyLimiterEvictor(githubProxyEvictCtx)
+		safego.GoWith("github-proxy/limiter-evictor", func() { startGitHubProxyLimiterEvictor(githubProxyEvictCtx) })
 	}
 
 	if entry, ok := githubProxyLimiters.m[userID]; ok {

@@ -347,6 +347,7 @@ export const T2_TEMPLATES: T2Template[] = [
               className="max-w-full max-h-full object-contain"
               onLoad={() => setLoading(false)}
               onError={() => { setError(true); setLoading(false) }}
+              loading="lazy"
             />
           </>
         )}

@@ -104,7 +104,7 @@ func (s *SQLiteStore) ListUsers(ctx context.Context, limit, offset int) ([]model
 	}
 	defer rows.Close()
 
-	var users []models.User
+	users := make([]models.User, 0)
 	for rows.Next() {
 		var u models.User
 		var idStr string
@@ -233,7 +233,7 @@ func (s *SQLiteStore) GetOnboardingResponses(ctx context.Context, userID uuid.UU
 	}
 	defer rows.Close()
 
-	var responses []models.OnboardingResponse
+	responses := make([]models.OnboardingResponse, 0)
 	for rows.Next() {
 		var r models.OnboardingResponse
 		var idStr, userIDStr string

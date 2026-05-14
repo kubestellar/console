@@ -1,4 +1,5 @@
 import { AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useServices } from '../../hooks/useMCP'
 import { useIngresses } from '../../hooks/mcp/networking'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -8,6 +9,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
+import { classifyApiError } from '../../lib/errorHandling'
 
 const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 
@@ -15,6 +17,7 @@ const NETWORK_CARDS_KEY = 'kubestellar-network-cards'
 const DEFAULT_NETWORK_CARDS = getDefaultCards('network')
 
 export function Network() {
+  const { t } = useTranslation('common')
   const { services, isLoading: servicesLoading, isRefreshing: servicesRefreshing, lastUpdated, refetch, error, isFailed } = useServices()
   const { ingresses } = useIngresses()
 
@@ -95,6 +98,13 @@ export function Network() {
 
   // Show skeleton during mode switching for smooth transitions
   const showSkeletons = (services.length === 0 && servicesLoading) || isModeSwitching
+  const classifiedError = error ? classifyApiError(error) : null
+  const errorDescription = classifiedError?.category === 'auth'
+    ? t('network.errors.permissionsDescription')
+    : t('network.errors.loadingDescription')
+  const errorTitle = services.length > 0
+    ? t('network.errors.refreshFailedTitle')
+    : t('network.errors.loadFailedTitle')
 
   return (
     <DashboardPage
@@ -120,10 +130,8 @@ export function Network() {
         <div className="mb-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-red-400">
-              {services.length > 0 ? 'Refresh failed — showing cached data' : 'Error loading network data'}
-            </p>
-            {error && <p className="text-xs text-muted-foreground mt-1">{error}</p>}
+            <p className="text-sm font-medium text-red-400">{errorTitle}</p>
+            <p className="text-xs text-muted-foreground mt-1">{errorDescription}</p>
           </div>
         </div>
       )}

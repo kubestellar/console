@@ -56,7 +56,7 @@ func (h *ComplianceReportsHandler) GenerateReport(c *fiber.Ctx) error {
 	}
 	if format != reports.FormatPDF && format != reports.FormatJSON {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf("unsupported format %q, use \"pdf\" or \"json\"", format),
+			"error": "unsupported format, use \"pdf\" or \"json\"",
 		})
 	}
 
@@ -66,7 +66,7 @@ func (h *ComplianceReportsHandler) GenerateReport(c *fiber.Ctx) error {
 		userName = login
 	}
 
-	var data []byte
+	data := make([]byte, 0)
 	var contentType string
 	var err error
 
@@ -81,7 +81,7 @@ func (h *ComplianceReportsHandler) GenerateReport(c *fiber.Ctx) error {
 			slog.Error("[ComplianceReports] evaluation failed",
 				"framework", id, "cluster", req.Cluster, "error", evalErr)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "evaluation failed: " + evalErr.Error(),
+				"error": "evaluation failed",
 			})
 		}
 

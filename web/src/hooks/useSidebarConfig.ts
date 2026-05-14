@@ -4,6 +4,7 @@ import { setActiveProject } from '../lib/project/context'
 import { setQuantumWorkloadAvailable } from '../lib/demoMode'
 import { NAVIGATION_ICONS } from '../lib/navigationIcons'
 import { safeGetItem, safeRemoveItem, safeSetItem } from '../lib/utils/localStorage'
+import { ROUTES } from '../config/routes'
 
 /** Width of the collapsed sidebar in pixels (w-20 = 5rem = 80px) */
 export const SIDEBAR_COLLAPSED_WIDTH_PX = 80
@@ -54,20 +55,20 @@ function subscribe(listener: () => void): () => void {
 
 // Core dashboards shown in sidebar by default (reduced from 28 to 9 to cut clutter)
 export const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
-  { id: 'dashboard', name: 'Dashboard', icon: NAVIGATION_ICONS['dashboard'], href: '/', type: 'link', order: 0 },
-  { id: 'clusters', name: 'My Clusters', icon: NAVIGATION_ICONS['clusters'], href: '/clusters', type: 'link', order: 1 },
-  { id: 'cluster-admin', name: 'Cluster Admin', icon: NAVIGATION_ICONS['cluster-admin'], href: '/cluster-admin', type: 'link', order: 2 },
-  { id: 'compliance', name: 'Sec. Compliance', icon: NAVIGATION_ICONS['compliance'], href: '/compliance', type: 'link', order: 2.5 },
-  { id: 'enterprise', name: 'Enterprise', icon: NAVIGATION_ICONS['enterprise'], href: '/enterprise', type: 'link', order: 2.7 },
-  { id: 'deploy', name: 'Deploy', icon: NAVIGATION_ICONS['deploy'], href: '/deploy', type: 'link', order: 3 },
-  { id: 'insights', name: 'Insights', icon: NAVIGATION_ICONS['insights'], href: '/insights', type: 'link', order: 3.5 },
-  { id: 'ai-ml', name: 'AI/ML', icon: NAVIGATION_ICONS['ai-ml'], href: '/ai-ml', type: 'link', order: 4 },
-  { id: 'ai-agents', name: 'AI Agents', icon: NAVIGATION_ICONS['ai-agents'], href: '/ai-agents', type: 'link', order: 5 },
-  { id: 'ci-cd', name: 'CI/CD', icon: NAVIGATION_ICONS['ci-cd'], href: '/ci-cd', type: 'link', order: 5.5 },
-  { id: 'acmm', name: 'ACMM', icon: NAVIGATION_ICONS['acmm'], href: '/acmm', type: 'link', order: 6 },
-  { id: 'multi-tenancy', name: 'Multi-Tenancy', icon: NAVIGATION_ICONS['multi-tenancy'], href: '/multi-tenancy', type: 'link', order: 6.5 },
-  { id: 'alerts', name: 'Alerts', icon: NAVIGATION_ICONS['alerts'], href: '/alerts', type: 'link', order: 7 },
-  { id: 'arcade', name: 'Arcade', icon: NAVIGATION_ICONS['arcade'], href: '/arcade', type: 'link', order: 8 },
+  { id: 'dashboard', name: 'Dashboard', icon: NAVIGATION_ICONS['dashboard'], href: ROUTES.HOME, type: 'link', order: 0 },
+  { id: 'clusters', name: 'My Clusters', icon: NAVIGATION_ICONS['clusters'], href: ROUTES.CLUSTERS, type: 'link', order: 1 },
+  { id: 'cluster-admin', name: 'Cluster Admin', icon: NAVIGATION_ICONS['cluster-admin'], href: ROUTES.CLUSTER_ADMIN, type: 'link', order: 2 },
+  { id: 'compliance', name: 'Sec. Compliance', icon: NAVIGATION_ICONS['compliance'], href: ROUTES.COMPLIANCE, type: 'link', order: 2.5 },
+  { id: 'enterprise', name: 'Enterprise', icon: NAVIGATION_ICONS['enterprise'], href: ROUTES.ENTERPRISE, type: 'link', order: 2.7 },
+  { id: 'deploy', name: 'Deploy', icon: NAVIGATION_ICONS['deploy'], href: ROUTES.DEPLOY, type: 'link', order: 3 },
+  { id: 'insights', name: 'Insights', icon: NAVIGATION_ICONS['insights'], href: ROUTES.INSIGHTS, type: 'link', order: 3.5 },
+  { id: 'ai-ml', name: 'AI/ML', icon: NAVIGATION_ICONS['ai-ml'], href: ROUTES.AI_ML, type: 'link', order: 4 },
+  { id: 'ai-agents', name: 'AI Agents', icon: NAVIGATION_ICONS['ai-agents'], href: ROUTES.AI_AGENTS, type: 'link', order: 5 },
+  { id: 'ci-cd', name: 'CI/CD', icon: NAVIGATION_ICONS['ci-cd'], href: ROUTES.CI_CD, type: 'link', order: 5.5 },
+  { id: 'acmm', name: 'ACMM', icon: NAVIGATION_ICONS['acmm'], href: ROUTES.ACMM, type: 'link', order: 6 },
+  { id: 'multi-tenancy', name: 'Multi-Tenancy', icon: NAVIGATION_ICONS['multi-tenancy'], href: ROUTES.MULTI_TENANCY, type: 'link', order: 6.5 },
+  { id: 'alerts', name: 'Alerts', icon: NAVIGATION_ICONS['alerts'], href: ROUTES.ALERTS, type: 'link', order: 7 },
+  { id: 'arcade', name: 'Arcade', icon: NAVIGATION_ICONS['arcade'], href: ROUTES.ARCADE, type: 'link', order: 8 },
 ]
 
 /**
@@ -76,35 +77,35 @@ export const DEFAULT_PRIMARY_NAV: SidebarItem[] = [
  * Users can add any of these to their sidebar via the customizer.
  */
 export const DISCOVERABLE_DASHBOARDS: SidebarItem[] = [
-  { id: 'quantum', name: 'Quantum Demo', icon: NAVIGATION_ICONS['quantum'], href: '/quantum', type: 'link', order: 0 },
-  { id: 'compute', name: 'Compute', icon: NAVIGATION_ICONS['compute'], href: '/compute', type: 'link', order: 1 },
-  { id: 'cost', name: 'Cost', icon: NAVIGATION_ICONS['cost'], href: '/cost', type: 'link', order: 2 },
-  { id: 'data-compliance', name: 'Data Compliance', icon: NAVIGATION_ICONS['data-compliance'], href: '/data-compliance', type: 'link', order: 3 },
-  { id: 'deployments', name: 'Deployments', icon: NAVIGATION_ICONS['deployments'], href: '/deployments', type: 'link', order: 4 },
-  { id: 'events', name: 'Events', icon: NAVIGATION_ICONS['events'], href: '/events', type: 'link', order: 5 },
-  { id: 'gitops', name: 'GitOps', icon: NAVIGATION_ICONS['gitops'], href: '/gitops', type: 'link', order: 6 },
-  { id: 'gpu-reservations', name: 'GPU Reservations', icon: NAVIGATION_ICONS['gpu-reservations'], href: '/gpu-reservations', type: 'link', order: 7 },
-  { id: 'karmada-ops', name: 'Karmada Ops', icon: NAVIGATION_ICONS['karmada-ops'], href: '/karmada-ops', type: 'link', order: 8 },
-  { id: 'helm', name: 'Helm', icon: NAVIGATION_ICONS['helm'], href: '/helm', type: 'link', order: 8 },
-  { id: 'llm-d-benchmarks', name: 'llm-d Benchmarks', icon: NAVIGATION_ICONS['llm-d-benchmarks'], href: '/llm-d-benchmarks', type: 'link', order: 9 },
-  { id: 'logs', name: 'Logs', icon: NAVIGATION_ICONS['logs'], href: '/logs', type: 'link', order: 10 },
-  { id: 'network', name: 'Network', icon: NAVIGATION_ICONS['network'], href: '/network', type: 'link', order: 11 },
-  { id: 'nodes', name: 'Nodes', icon: NAVIGATION_ICONS['nodes'], href: '/nodes', type: 'link', order: 12 },
-  { id: 'operators', name: 'Operators', icon: NAVIGATION_ICONS['operators'], href: '/operators', type: 'link', order: 13 },
-  { id: 'pods', name: 'Pods', icon: NAVIGATION_ICONS['pods'], href: '/pods', type: 'link', order: 14 },
-  { id: 'security', name: 'Security', icon: NAVIGATION_ICONS['security'], href: '/security', type: 'link', order: 15 },
-  { id: 'security-posture', name: 'Security Posture', icon: NAVIGATION_ICONS['security-posture'], href: '/security-posture', type: 'link', order: 16 },
-  { id: 'services', name: 'Services', icon: NAVIGATION_ICONS['services'], href: '/services', type: 'link', order: 17 },
-  { id: 'storage', name: 'Storage', icon: NAVIGATION_ICONS['storage'], href: '/storage', type: 'link', order: 18 },
-  { id: 'workloads', name: 'Workloads', icon: NAVIGATION_ICONS['workloads'], href: '/workloads', type: 'link', order: 19 },
+  { id: 'quantum', name: 'Quantum Demo', icon: NAVIGATION_ICONS['quantum'], href: ROUTES.QUANTUM, type: 'link', order: 0 },
+  { id: 'compute', name: 'Compute', icon: NAVIGATION_ICONS['compute'], href: ROUTES.COMPUTE, type: 'link', order: 1 },
+  { id: 'cost', name: 'Cost', icon: NAVIGATION_ICONS['cost'], href: ROUTES.COST, type: 'link', order: 2 },
+  { id: 'data-compliance', name: 'Data Compliance', icon: NAVIGATION_ICONS['data-compliance'], href: ROUTES.DATA_COMPLIANCE, type: 'link', order: 3 },
+  { id: 'deployments', name: 'Deployments', icon: NAVIGATION_ICONS['deployments'], href: ROUTES.DEPLOYMENTS, type: 'link', order: 4 },
+  { id: 'events', name: 'Events', icon: NAVIGATION_ICONS['events'], href: ROUTES.EVENTS, type: 'link', order: 5 },
+  { id: 'gitops', name: 'GitOps', icon: NAVIGATION_ICONS['gitops'], href: ROUTES.GITOPS, type: 'link', order: 6 },
+  { id: 'gpu-reservations', name: 'GPU Reservations', icon: NAVIGATION_ICONS['gpu-reservations'], href: ROUTES.GPU_RESERVATIONS, type: 'link', order: 7 },
+  { id: 'karmada-ops', name: 'Karmada Ops', icon: NAVIGATION_ICONS['karmada-ops'], href: ROUTES.KARMADA_OPS, type: 'link', order: 8 },
+  { id: 'helm', name: 'Helm', icon: NAVIGATION_ICONS['helm'], href: ROUTES.HELM, type: 'link', order: 8 },
+  { id: 'llm-d-benchmarks', name: 'llm-d Benchmarks', icon: NAVIGATION_ICONS['llm-d-benchmarks'], href: ROUTES.LLM_D_BENCHMARKS, type: 'link', order: 9 },
+  { id: 'logs', name: 'Logs', icon: NAVIGATION_ICONS['logs'], href: ROUTES.LOGS, type: 'link', order: 10 },
+  { id: 'network', name: 'Network', icon: NAVIGATION_ICONS['network'], href: ROUTES.NETWORK, type: 'link', order: 11 },
+  { id: 'nodes', name: 'Nodes', icon: NAVIGATION_ICONS['nodes'], href: ROUTES.NODES, type: 'link', order: 12 },
+  { id: 'operators', name: 'Operators', icon: NAVIGATION_ICONS['operators'], href: ROUTES.OPERATORS, type: 'link', order: 13 },
+  { id: 'pods', name: 'Pods', icon: NAVIGATION_ICONS['pods'], href: ROUTES.PODS, type: 'link', order: 14 },
+  { id: 'security', name: 'Security', icon: NAVIGATION_ICONS['security'], href: ROUTES.SECURITY, type: 'link', order: 15 },
+  { id: 'security-posture', name: 'Security Posture', icon: NAVIGATION_ICONS['security-posture'], href: ROUTES.SECURITY_POSTURE, type: 'link', order: 16 },
+  { id: 'services', name: 'Services', icon: NAVIGATION_ICONS['services'], href: ROUTES.SERVICES, type: 'link', order: 17 },
+  { id: 'storage', name: 'Storage', icon: NAVIGATION_ICONS['storage'], href: ROUTES.STORAGE, type: 'link', order: 18 },
+  { id: 'workloads', name: 'Workloads', icon: NAVIGATION_ICONS['workloads'], href: ROUTES.WORKLOADS, type: 'link', order: 19 },
 ]
 
 const DEFAULT_SECONDARY_NAV: SidebarItem[] = [
-  { id: 'marketplace', name: 'Marketplace', icon: NAVIGATION_ICONS['marketplace'], href: '/marketplace', type: 'link', order: 0 },
-  { id: 'history', name: 'Card History', icon: NAVIGATION_ICONS['history'], href: '/history', type: 'link', order: 1 },
-  { id: 'namespaces', name: 'Namespaces', icon: NAVIGATION_ICONS['namespaces'], href: '/namespaces', type: 'link', order: 2 },
-  { id: 'users', name: 'User Management', icon: NAVIGATION_ICONS['users'], href: '/users', type: 'link', order: 3 },
-  { id: 'settings', name: 'Settings', icon: NAVIGATION_ICONS['settings'], href: '/settings', type: 'link', order: 4 },
+  { id: 'marketplace', name: 'Marketplace', icon: NAVIGATION_ICONS['marketplace'], href: ROUTES.MARKETPLACE, type: 'link', order: 0 },
+  { id: 'history', name: 'Card History', icon: NAVIGATION_ICONS['history'], href: ROUTES.HISTORY, type: 'link', order: 1 },
+  { id: 'namespaces', name: 'Namespaces', icon: NAVIGATION_ICONS['namespaces'], href: ROUTES.NAMESPACES, type: 'link', order: 2 },
+  { id: 'users', name: 'User Management', icon: NAVIGATION_ICONS['users'], href: ROUTES.USERS, type: 'link', order: 3 },
+  { id: 'settings', name: 'Settings', icon: NAVIGATION_ICONS['settings'], href: ROUTES.SETTINGS, type: 'link', order: 4 },
 ]
 
 const DEFAULT_NAV_ITEMS = [...DEFAULT_PRIMARY_NAV, ...DEFAULT_SECONDARY_NAV]

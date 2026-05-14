@@ -15,6 +15,7 @@ import {
   RefreshCw,
   Plug,
   AlertTriangle,
+  ExternalLink,
 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { useToast } from '../ui/Toast'
@@ -45,7 +46,7 @@ import { useDeepLink } from '../../hooks/useDeepLink'
 import { cn } from '../../lib/cn'
 import { LOCAL_AGENT_HTTP_URL, FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
 import { agentFetch } from '../../hooks/mcp/shared'
-import { safeGetItem, safeRemoveItem } from '../../lib/utils/localStorage'
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../../lib/utils/localStorage'
 import { MS_PER_DAY } from '../../lib/constants/time'
 import {
   NAVBAR_HEIGHT_PX,
@@ -55,6 +56,7 @@ import {
   SIDEBAR_CONTROLS_OFFSET_PX,
 } from '../../lib/constants/ui'
 import { CLOSE_ANIMATION_MS, UI_FEEDBACK_TIMEOUT_MS, TOAST_DISMISS_MS } from '../../lib/constants/network'
+import { STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED } from '../../lib/constants/storage'
 import { TourOverlay, TourPrompt } from '../onboarding/Tour'
 import { TourProvider } from '../../hooks/useTour'
 import { SetupInstructionsDialog } from '../setup/SetupInstructionsDialog'
@@ -208,6 +210,9 @@ export function Layout({ children: _children }: LayoutProps) {
   const { kagentAvailable, kagentiAvailable } = useKagentBackend()
   const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [demoBannerDismissed, setDemoBannerDismissed] = useState(false)
+  const [autonomousBannerDismissed, setAutonomousBannerDismissed] = useState(
+    () => safeGetItem(STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED) === 'true'
+  )
   const [showSetupDialog, setShowSetupDialog] = useState(false)
   const [showInClusterAgentDialog, setShowInClusterAgentDialog] =
     useState(false)
@@ -570,7 +575,7 @@ export function Layout({ children: _children }: LayoutProps) {
             </Link>
             <button
               onClick={toggleDemoMode}
-              className="text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap"
+              className="text-xs px-2 py-2 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded transition-colors whitespace-nowrap min-h-11 min-w-11"
             >
               <span className="hidden sm:inline">
                 {t('layout.switchTo')}{' '}
@@ -585,6 +590,50 @@ export function Layout({ children: _children }: LayoutProps) {
               <X className="w-3.5 h-3.5 text-orange-400" />
             </button>
           </div>
+        </div>
+      ),
+    })
+  }
+
+  if (!autonomousBannerDismissed) {
+    const HIVE_DASHBOARD_URL = 'https://kubestellar.io/live/hive'
+    activeBanners.push({
+      id: 'autonomous',
+      className: 'right-0 z-10 bg-purple-500/10 border-b border-purple-500/20',
+      content: (
+        <div className="flex items-center justify-center gap-2 md:gap-3 py-1.5 px-3 md:px-4">
+          <span className="text-sm" aria-hidden="true">🐝</span>
+          <span className="text-sm text-purple-300 font-medium">
+            {t('layout.autonomousBannerMessage')}
+          </span>
+          <a
+            href={HIVE_DASHBOARD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:inline-flex items-center gap-1 text-xs px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded transition-colors whitespace-nowrap"
+          >
+            {t('layout.watchLive')}
+            <ExternalLink className="w-3 h-3" aria-hidden="true" />
+          </a>
+          <a
+            href={HIVE_DASHBOARD_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sm:hidden text-xs text-purple-300 underline underline-offset-2 whitespace-nowrap"
+          >
+            {t('layout.watchLiveMobile')}
+          </a>
+          <button
+            onClick={() => {
+              setAutonomousBannerDismissed(true)
+              safeSetItem(STORAGE_KEY_AUTONOMOUS_BANNER_DISMISSED, 'true')
+            }}
+            className="ml-1 md:ml-2 p-2 min-h-11 min-w-11 flex items-center justify-center hover:bg-purple-500/20 rounded-full transition-colors"
+            aria-label={t('buttons.dismissBanner')}
+            title={t('buttons.dismissBanner')}
+          >
+            <X className="w-3.5 h-3.5 text-purple-400" aria-hidden="true" />
+          </button>
         </div>
       ),
     })
@@ -633,7 +682,10 @@ export function Layout({ children: _children }: LayoutProps) {
     updateProgress != null &&
     !['idle', 'done', 'failed', 'cancelled'].includes(updateProgress.status)
   const showBackendBanner =
-    (backendDown || wasBackendDown) && !isUpdateInProgress && !isDemoModeForced
+    (backendDown || wasBackendDown)
+    && !isUpdateInProgress
+    && !isDemoModeForced
+    && !isInClusterMode
   const backendRecovering = backendDown && (
     Boolean(watchdogStage) ||
     restartState === 'restarting' ||
@@ -731,6 +783,7 @@ export function Layout({ children: _children }: LayoutProps) {
               key={banner.id}
               style={{
                 top: NAVBAR_HEIGHT_PX + (index * BANNER_HEIGHT_PX),
+                minHeight: BANNER_HEIGHT_PX,
                 left: sidebarWidthPx,
                 ...banner.style,
               }}
@@ -860,7 +913,7 @@ export function Layout({ children: _children }: LayoutProps) {
                     ) : (
                       <button
                         onClick={handleRestartBackend}
-                        className="ml-1 flex items-center gap-1.5 px-2.5 py-1 bg-muted hover:bg-muted/80 text-foreground rounded text-xs transition-colors"
+                        className="ml-1 flex items-center gap-1.5 px-2.5 py-2 bg-muted hover:bg-muted/80 text-foreground rounded text-xs transition-colors min-h-11 min-w-11"
                         title={t('layout.restartBackendServer')}
                       >
                         <RotateCcw className="w-3 h-3" />
@@ -922,7 +975,7 @@ export function Layout({ children: _children }: LayoutProps) {
                 </span>
                 <button
                   onClick={() => setUpdateToastDismissed(true)}
-                  className="p-1 hover:bg-secondary/50 rounded shrink-0"
+                  className="p-2 hover:bg-secondary/50 rounded shrink-0 min-h-11 min-w-11"
                 >
                   <X className="w-3 h-3" />
                 </button>

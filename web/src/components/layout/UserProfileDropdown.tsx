@@ -3,7 +3,7 @@ import { safeLazy } from '../../lib/safeLazy'
 import { Tooltip } from '../ui/Tooltip'
 import { useModalState } from '../../lib/modals'
 import { useTranslation } from 'react-i18next'
-import { User, Mail, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
+import { User, MessageSquare, Shield, Settings, LogOut, ChevronDown, Coins, Lightbulb, Globe, Check, Download, Code2, ExternalLink, Rocket, KeyRound, CheckCircle2, XCircle, GitBranch } from 'lucide-react'
 import { Linkedin } from '@/lib/icons'
 import { useRewards, REWARD_ACTIONS } from '../../hooks/useRewards'
 import { getContributorLevel } from '../../types/rewards'
@@ -48,6 +48,7 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
   const { t, i18n } = useTranslation()
 
   const currentLanguage = languages.find(l => l.code === i18n.language) || languages[0]
+  const contributorLevel = getContributorLevel(totalCoins).current
 
   const handleLanguageChange = (langCode: string) => {
     i18n.changeLanguage(langCode)
@@ -149,6 +150,9 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             src={user.avatar_url}
             alt={user.github_login}
             className="w-6 h-6 rounded-full"
+            loading="lazy"
+            width={24}
+            height={24}
           />
         ) : (
           <div className="w-6 h-6 rounded-full bg-purple-900 flex items-center justify-center">
@@ -172,6 +176,9 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   src={user.avatar_url}
                   alt={user.github_login}
                   className="w-12 h-12 rounded-full"
+                  loading="lazy"
+                  width={48}
+                  height={48}
                 />
               ) : (
                 <div className="w-12 h-12 rounded-full bg-purple-900 flex items-center justify-center">
@@ -190,11 +197,6 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
           {/* User details section */}
           <div className="p-3 space-y-2 border-b border-border">
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
-              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
-              <span className="text-muted-foreground shrink-0">{t('profile.email')}</span>
-              <span className="text-foreground truncate">{user.email || t('profile.notSet')}</span>
-            </div>
-            <div className="flex items-center gap-3 px-2 py-1.5 text-sm min-w-0">
               <MessageSquare className="w-4 h-4 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground shrink-0">{t('profile.slack')}</span>
               <span className="text-foreground truncate">{user.slack_id || t('profile.notConnected')}</span>
@@ -202,10 +204,8 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
             <div className="flex items-center gap-3 px-2 py-1.5 text-sm">
               <Shield className="w-4 h-4 text-muted-foreground" />
               <span className="text-muted-foreground">{t('profile.role')}</span>
-              <span className={`text-xs px-2 py-0.5 rounded ${
-                user.role === 'admin' ? 'bg-purple-900 text-purple-400' : 'bg-secondary text-foreground'
-              }`}>
-                {user.role || t('profile.defaultRole')}
+              <span className={`text-xs px-2 py-0.5 rounded-full ${contributorLevel.bgClass} ${contributorLevel.textClass}`}>
+                {contributorLevel.name}
               </span>
             </div>
             <button
@@ -227,8 +227,8 @@ export function UserProfileDropdown({ user, onLogout, onPreferences }: UserProfi
                   'Note: Docs leaderboard shows GitHub points only',
                 ].filter(Boolean).join('\n')}
               >{totalCoins.toLocaleString()}</span>
-              <span className={`text-2xs px-1.5 py-0.5 rounded-full ${getContributorLevel(totalCoins).current.bgClass} ${getContributorLevel(totalCoins).current.textClass}`}>
-                {getContributorLevel(totalCoins).current.name}
+              <span className={`text-2xs px-1.5 py-0.5 rounded-full ${contributorLevel.bgClass} ${contributorLevel.textClass}`}>
+                {contributorLevel.name}
               </span>
               <ChevronDown className="w-3 h-3 ml-auto text-muted-foreground -rotate-90" />
             </button>

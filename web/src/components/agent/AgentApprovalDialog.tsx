@@ -1,4 +1,5 @@
 import { Shield, AlertTriangle } from 'lucide-react'
+import { Trans, useTranslation } from 'react-i18next'
 import { BaseModal } from '../../lib/modals'
 import type { AgentInfo } from '../../types/agent'
 import { AgentIcon } from './AgentIcon'
@@ -44,13 +45,14 @@ interface AgentApprovalDialogProps {
 }
 
 export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: AgentApprovalDialogProps) {
-  const available = agents.filter(a => a.available)
+  const { t } = useTranslation()
+  const available = (agents || []).filter(agent => agent.available)
 
   return (
     <BaseModal isOpen={isOpen} onClose={onCancel} size="md">
       <BaseModal.Header
-        title="Authorize CLI Agents"
-        description="Review and approve the agents that will run on your machine"
+        title={t('agent.approval.title')}
+        description={t('agent.approval.description')}
         icon={Shield}
         onClose={onCancel}
       />
@@ -61,20 +63,22 @@ export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: Age
           <div className="flex gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
             <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
             <div className="text-sm text-amber-200/90">
-              <p className="font-medium mb-1">These agents can execute commands on your system</p>
+              <p className="font-medium mb-1">{t('agent.approval.executeWarning')}</p>
               <p className="text-amber-200/70">
-                When enabled, AI agents run CLI tools (<code className="px-1 py-0.5 rounded bg-amber-500/20 text-xs">kubectl</code>,{' '}
-                <code className="px-1 py-0.5 rounded bg-amber-500/20 text-xs">helm</code>, etc.) to diagnose and repair your Kubernetes
-                clusters. Only approve if you trust this machine&apos;s kubeconfig access.
+                <Trans
+                  i18nKey="agent.approval.enabledDescription"
+                  components={{
+                    kubectl: <code className="px-1 py-0.5 rounded bg-amber-500/20 text-xs" />,
+                    helm: <code className="px-1 py-0.5 rounded bg-amber-500/20 text-xs" />,
+                  }}
+                />
               </p>
             </div>
           </div>
 
           {/* Detected agents list */}
           <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              Detected CLI agents ({available.length})
-            </h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">{t('agent.approval.detectedAgents', { count: available.length })}</h3>
             <div className="space-y-2">
               {available.map(agent => (
                 <div
@@ -89,13 +93,16 @@ export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: Age
                 </div>
               ))}
               {available.length === 0 && (
-                <p className="text-sm text-muted-foreground italic">No CLI agents detected on this machine.</p>
+                <p className="text-sm text-muted-foreground italic">{t('agent.approval.noAgentsDetected')}</p>
               )}
             </div>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            You can disable AI agents at any time from the <strong>AI Agent</strong> toggle in the top navbar.
+            <Trans
+              i18nKey="agent.approval.disableHint"
+              components={{ strong: <strong /> }}
+            />
           </p>
         </div>
       </BaseModal.Content>
@@ -106,7 +113,7 @@ export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: Age
             onClick={onCancel}
             className="px-4 py-2 text-sm rounded-lg border border-border text-muted-foreground hover:bg-secondary transition-colors"
           >
-            Cancel
+            {t('agent.approval.cancel')}
           </button>
           <button
             onClick={() => {
@@ -115,7 +122,7 @@ export function AgentApprovalDialog({ isOpen, agents, onApprove, onCancel }: Age
             }}
             className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-medium"
           >
-            Approve &amp; Enable
+            {t('agent.approval.approveEnable')}
           </button>
         </div>
       </BaseModal.Footer>

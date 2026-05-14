@@ -37,6 +37,7 @@ export interface TenantIsolationSetupData {
   isolationScore: number
   totalIsolationLevels: number
   isLoading: boolean
+  isRefreshing: boolean
   isDemoData: boolean
 }
 
@@ -54,6 +55,7 @@ export function useTenantIsolationSetup(): TenantIsolationSetupData {
   const kubevirt = kubevirtResult.data
 
   const isLoading = ovnResult.loading || kubeflexResult.loading || k3sResult.loading || kubevirtResult.loading
+  const isRefreshing = ovnResult.isRefreshing || kubeflexResult.isRefreshing || k3sResult.isRefreshing || kubevirtResult.isRefreshing
   // Demo when ALL hooks are returning demo fallback data (useCache in demo mode)
   const isDemoData = ovnResult.isDemoData && kubeflexResult.isDemoData && k3sResult.isDemoData && kubevirtResult.isDemoData
 
@@ -98,5 +100,6 @@ export function useTenantIsolationSetup(): TenantIsolationSetupData {
     isolationScore,
     totalIsolationLevels: TOTAL_ISOLATION_LEVELS,
     isLoading,
+    isRefreshing,
     isDemoData }
 }

@@ -301,6 +301,15 @@ describe('DashboardPage', () => {
     expect(screen.getByTestId('header-extra')).toBeInTheDocument()
   })
 
+  it('passes a custom afterTitle node to the header when provided', () => {
+    const badge = <div data-testid="custom-badge">Synced badge</div>
+
+    renderPage({ afterTitle: badge })
+
+    const headerProps = mockDashboardHeader.mock.calls.at(-1)?.[0]
+    expect(headerProps).toEqual(expect.objectContaining({ afterTitle: badge }))
+  })
+
   // Issue 9344 — pages that embed DashboardPage (Clusters, Events, ...) need
   // a stable route-specific testid on the page wrapper so cross-browser
   // Playwright specs can synchronize on "page mounted". This is a contract

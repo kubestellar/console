@@ -318,8 +318,22 @@ describe('Route config completeness', () => {
 
   // Routes that are intentionally not directly wired (used programmatically)
   const INTENTIONALLY_UNWIRED = new Set([
-    'HOME',           // Uses <Route index> instead of path={ROUTES.HOME}
-    'AUTH_CALLBACK',  // Used in AuthProvider
+    'HOME',                        // Uses <Route index> instead of path={ROUTES.HOME}
+    'AUTH_CALLBACK',               // Used in AuthProvider
+    'EMBED_BASE',                  // Prefix constant for ROUTE_TITLES lookup, not a navigable route
+    // Enterprise sub-routes use relative paths nested under <Route path="/enterprise">
+    'ENTERPRISE_OIDC',
+    'ENTERPRISE_RBAC_AUDIT',
+    'ENTERPRISE_SESSIONS',
+    'ENTERPRISE_SIEM',
+    'ENTERPRISE_INCIDENT_RESPONSE',
+    'ENTERPRISE_THREAT_INTEL',
+    'ENTERPRISE_SBOM',
+    'ENTERPRISE_SIGSTORE',
+    'ENTERPRISE_SLSA',
+    'ENTERPRISE_RISK_MATRIX',
+    'ENTERPRISE_RISK_REGISTER',
+    'ENTERPRISE_RISK_APPETITE',
   ])
 
   it('every route in config is either wired in App.tsx or intentionally unwired', () => {

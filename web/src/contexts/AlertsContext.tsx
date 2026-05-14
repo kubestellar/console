@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense, type ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, Suspense, type ReactNode } from 'react'
+import { safeLazy } from '@/lib/safeLazy'
 import { settledWithConcurrency } from '../lib/utils/concurrency'
 import { useMissions } from '../hooks/useMissions'
 import { useDemoMode } from '../hooks/useDemoMode'
@@ -43,12 +44,38 @@ import { alertDedupKey, deduplicateAlerts } from './alerts/deduplication'
 // Lazy-load the MCP data fetcher — keeps the 300 KB MCP hook tree out of
 // the main chunk.  The provider renders immediately with empty data; once
 // the fetcher chunk loads, it starts pushing live data via onData callback.
-const AlertsDataFetcher = lazy(() => import('./AlertsDataFetcher'))
+const AlertsDataFetcher = safeLazy(() => import('./AlertsDataFetcher'), 'default')
 const MCP_UPDATE_BATCH_FRAME_FALLBACK_MS = 16
 
 // Generate unique ID
 function generateId(): string {
   return `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+}
+
+// Local development distributions that may have transient node readiness issues
+const LOCAL_DEV_DISTRIBUTIONS = ['k3d', 'k3s', 'kind', 'minikube']
+
+/**
+ * Detect if a cluster is a local development environment that may have
+ * expected transient node readiness issues (e.g., k3d, k3s, kind, minikube).
+ * These environments often show temporary "Node Not Ready" states during
+ * startup or due to resource constraints, but the console remains operational.
+ */
+function isLocalDevCluster(cluster: { distribution?: string; server?: string }): boolean {
+  // Check distribution field
+  if (cluster.distribution && LOCAL_DEV_DISTRIBUTIONS.includes(cluster.distribution)) {
+    return true
+  }
+  
+  // Check server URL for localhost/127.0.0.1 (common for local k3d/kind)
+  if (cluster.server) {
+    const serverLower = cluster.server.toLowerCase()
+    if (serverLower.includes('localhost') || serverLower.includes('127.0.0.1')) {
+      return true
+    }
+  }
+  
+  return false
 }
 
 // ── Batched Mutation Types ───────────────────────────────────────────────────
@@ -1042,6 +1069,11 @@ Please provide:
   // by a user running 20+ offline clusters. Any already-firing node_ready
   // alert for an unreachable cluster is auto-resolved so the list clears
   // down to just the single authoritative Cluster Unreachable entry.
+  //
+  // Fix for #13038: Local k3d/k3s/kind/minikube environments can show transient
+  // "Node Not Ready" states due to resource constraints or startup sequences,
+  // but the console remains operational. We suppress alerts for these environments
+  // unless the cluster is genuinely unreachable (already covered by cluster_unreachable).
   const evaluateNodeReady = (rule: AlertRule) => {
       const currentClusters = clustersRef.current || []
       const relevantClusters = rule.condition.clusters?.length
@@ -1053,6 +1085,16 @@ Please provide:
           queueAutoResolve(rule.id, cluster.name)
           continue
         }
+        
+        // Skip node readiness alerts for local dev environments (#13038)
+        // These clusters often show transient unhealthy states but remain operational
+        if (cluster.healthy === false && isLocalDevCluster(cluster)) {
+          // Don't fire alert for local dev clusters with node readiness issues
+          // The cluster_unreachable condition will catch truly offline clusters
+          queueAutoResolve(rule.id, cluster.name)
+          continue
+        }
+        
         if (cluster.healthy === false) {
           createAlert(
             rule,

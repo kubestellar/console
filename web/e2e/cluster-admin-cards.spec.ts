@@ -694,7 +694,7 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
       await page.goto('/cluster-admin')
       await page.waitForLoadState('domcontentloaded')
 
-      // All 21 default card types from cluster-admin.ts config
+      // All 24 default card types from cluster-admin.ts config
       const EXPECTED_CARD_TYPES = [
         'kubectl',
         'node_debug',
@@ -717,9 +717,12 @@ test.describe('Cluster Admin Cards — EtcdStatus, DNSHealth, AdmissionWebhooks'
         'alert_rules',
         'security_issues',
         'console_ai_health_check',
+        'etcd_status',
+        'dns_health',
+        'admission_webhooks',
       ]
 
-      const EXPECTED_CARD_COUNT = 21
+      const EXPECTED_CARD_COUNT = 24
 
       // Wait for the dashboard grid to be visible
       const grid = page.locator('[data-testid="dashboard-cards-grid"], .grid')

@@ -71,6 +71,7 @@ vi.mock('../../../hooks/useGlobalFilters', () => ({
 let mockAgentStatus = 'connected'
 vi.mock('../../../hooks/useLocalAgent', () => ({
   useLocalAgent: () => ({ status: mockAgentStatus }),
+  wasAgentEverConnected: () => false,
 }))
 
 vi.mock('../../../hooks/useBackendHealth', () => ({

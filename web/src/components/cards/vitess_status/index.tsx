@@ -16,13 +16,13 @@ import {
   Clock,
   Database,
   Layers,
-  RefreshCw,
   Server,
 } from 'lucide-react'
 import { useCachedVitess } from '../../../hooks/useCachedVitess'
 import { useCardLoadingState } from '../CardDataContext'
 import { SkeletonCardWithRefresh } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
+import { RefreshIndicator } from '../../ui/RefreshIndicator'
 import { MetricTile } from '../../../lib/cards/CardComponents'
 import { cn } from '../../../lib/cn'
 import type { VitessKeyspace, VitessTablet, VitessTabletType } from '../../../lib/demo/vitess'
@@ -172,12 +172,17 @@ export function VitessStatus() {
             : t('vitessStatus.degraded', 'Degraded')}
         </div>
 
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <RefreshCw className={cn('w-3 h-3', isRefreshing ? 'animate-spin' : '')} />
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span>
             {t('vitessStatus.version', 'version')}:{' '}
             <span className="text-foreground font-mono">{data.vitessVersion}</span>
           </span>
+          <RefreshIndicator
+            isRefreshing={isRefreshing}
+            lastUpdated={lastRefresh ? new Date(lastRefresh) : null}
+            size="sm"
+            showLabel={true}
+          />
         </div>
       </div>
 

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -70,10 +71,17 @@ type MetricsHistory struct {
 	mu                 sync.RWMutex
 	diskMu             sync.Mutex // serializes saveToDisk calls (#7017)
 	stopCh             chan struct{}
-	stopOnce           sync.Once  // prevents double-close panic on stopCh (#7244)
+	stopOnce           sync.Once // prevents double-close panic on stopCh (#7244)
 	dataDir            string
 	loggedClusterError atomic.Bool // suppress repeated "no kubeconfig" errors (#7015)
 	lastPersistError   error       // last saveToDisk error, nil on success (#5553)
+}
+
+// setLastPersistError safely stores the last saveToDisk result under mu.
+func (mh *MetricsHistory) setLastPersistError(err error) {
+	mh.mu.Lock()
+	defer mh.mu.Unlock()
+	mh.lastPersistError = err
 }
 
 // NewMetricsHistory creates a new metrics history manager
@@ -106,7 +114,7 @@ func (mh *MetricsHistory) SetDataDir(dir string) {
 
 // Start begins the metrics collection loop
 func (mh *MetricsHistory) Start(interval time.Duration) {
-	go mh.runLoop(interval)
+	safego.GoWith("metrics-history/run-loop", func() { mh.runLoop(interval) })
 }
 
 // Stop gracefully shuts down the history manager. It is safe to call
@@ -221,8 +229,9 @@ func (mh *MetricsHistory) captureSnapshot() error {
 		var snapMu sync.Mutex
 		var wg sync.WaitGroup
 		for _, cluster := range clusters {
+			cl := cluster
 			wg.Add(1)
-			go func(cl k8s.ClusterInfo) {
+			safego.GoWith("metrics-history/pods/"+cl.Name, func() {
 				defer wg.Done()
 				pods, podErr := mh.k8sClient.FindPodIssues(ctx, cl.Context, "")
 				if podErr != nil {
@@ -243,11 +252,12 @@ func (mh *MetricsHistory) captureSnapshot() error {
 				snapMu.Lock()
 				snapshot.PodIssues = append(snapshot.PodIssues, entries...)
 				snapMu.Unlock()
-			}(cluster)
+			})
 		}
 		for _, cluster := range clusters {
+			cl := cluster
 			wg.Add(1)
-			go func(cl k8s.ClusterInfo) {
+			safego.GoWith("metrics-history/gpu/"+cl.Name, func() {
 				defer wg.Done()
 				gpuNodes, err := mh.k8sClient.GetGPUNodes(ctx, cl.Context)
 				if err != nil {
@@ -269,7 +279,7 @@ func (mh *MetricsHistory) captureSnapshot() error {
 				snapMu.Lock()
 				snapshot.GPUNodes = append(snapshot.GPUNodes, entries...)
 				snapMu.Unlock()
-			}(cluster)
+			})
 		}
 		wg.Wait()
 	}
@@ -327,18 +337,14 @@ func (mh *MetricsHistory) saveToDisk() {
 
 	if err != nil {
 		slog.Error("[MetricsHistory] error marshaling history", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 
 	// Ensure directory exists
 	if err := os.MkdirAll(mh.dataDir, metricsDirMode); err != nil {
 		slog.Error("[MetricsHistory] error creating data dir", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 
@@ -348,9 +354,7 @@ func (mh *MetricsHistory) saveToDisk() {
 	tmpFile, err := os.CreateTemp(mh.dataDir, "metrics_history_*.tmp")
 	if err != nil {
 		slog.Error("[MetricsHistory] error creating temp file", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 	tmpPath := tmpFile.Name()
@@ -359,32 +363,24 @@ func (mh *MetricsHistory) saveToDisk() {
 		tmpFile.Close()
 		os.Remove(tmpPath)
 		slog.Error("[MetricsHistory] error writing temp file", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 	if err := tmpFile.Close(); err != nil {
 		os.Remove(tmpPath)
 		slog.Error("[MetricsHistory] error closing temp file", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 
 	if err := os.Rename(tmpPath, filePath); err != nil {
 		os.Remove(tmpPath)
 		slog.Error("[MetricsHistory] error renaming temp file to history file", "error", err)
-		mh.mu.Lock()
-		mh.lastPersistError = err
-		mh.mu.Unlock()
+		mh.setLastPersistError(err)
 		return
 	}
 
-	mh.mu.Lock()
-	mh.lastPersistError = nil
-	mh.mu.Unlock()
+	mh.setLastPersistError(nil)
 }
 
 // LastPersistError returns the last saveToDisk error, or nil if persistence is healthy.

@@ -127,7 +127,7 @@ export default async (request: Request): Promise<Response> => {
           },
         });
       }
-      return jsonResponse(corsHeaders, { error: "GitHub raw content error", status: resp.status }, resp.status);
+      return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
     }
 
     const body = await resp.text();
@@ -153,7 +153,7 @@ export default async (request: Request): Promise<Response> => {
   } catch (err) {
     const message = err instanceof Error ? err.message : "unknown error";
     console.error("[missions-file] Error:", message);
-    return jsonResponse(corsHeaders, { error: "upstream request failed", detail: message }, 502);
+    return jsonResponse(corsHeaders, { error: "upstream request failed" }, 502);
   }
 };
 

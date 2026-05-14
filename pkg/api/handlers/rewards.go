@@ -15,6 +15,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/rewards"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/settings"
 )
 
@@ -88,7 +89,7 @@ type RewardsHandler struct {
 // Org-level tokens are not expanded (no API call); only explicit repo
 // tokens are used.
 func parseRepos(orgs string) []string {
-	var repos []string
+	repos := make([]string, 0)
 	for _, token := range strings.Fields(orgs) {
 		if strings.HasPrefix(token, "repo:") {
 			repos = append(repos, strings.TrimPrefix(token, "repo:"))
@@ -302,7 +303,7 @@ func (h *RewardsHandler) listRepoItems(repo, login, sinceISO, token string) ([]s
 			return allItems, fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, string(body[:min(len(body), 200)]))
 		}
 
-		var pageItems []searchItem
+		pageItems := make([]searchItem, 0)
 		if err := json.Unmarshal(body, &pageItems); err != nil {
 			return allItems, fmt.Errorf("unmarshal: %w", err)
 		}
@@ -480,7 +481,7 @@ func (h *RewardsHandler) startEviction() {
 	}
 
 	h.evictCtx, h.evictFn = context.WithCancel(context.Background())
-	go func() {
+	safego.GoWith("rewards-cache-evictor", func() {
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
 
@@ -489,7 +490,7 @@ func (h *RewardsHandler) startEviction() {
 			case <-ticker.C:
 				h.mu.RLock()
 				now := time.Now()
-				var staleKeys []string
+				staleKeys := make([]string, 0)
 				for login, entry := range h.cache {
 					if now.Sub(entry.fetchedAt) > rewardsCacheTTL {
 						staleKeys = append(staleKeys, login)
@@ -509,7 +510,7 @@ func (h *RewardsHandler) startEviction() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // StopEviction stops the background eviction goroutine. Call during graceful shutdown.

@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 const (
@@ -125,7 +126,7 @@ func NewPredictionWorker(k8sClient *k8s.MultiClusterClient, registry *Registry, 
 
 // Start begins the background analysis loop
 func (w *PredictionWorker) Start() {
-	go w.runLoop()
+	safego.GoWith("prediction/run-loop", func() { w.runLoop() })
 }
 
 // Stop gracefully shuts down the worker and cancels all in-flight analyses.
@@ -203,16 +204,10 @@ func (w *PredictionWorker) TriggerAnalysis(providers []string) error {
 		return fmt.Errorf("analysis already in progress")
 	}
 
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				slog.Error("[PredictionWorker] panic in runAnalysis; recovered",
-					"panic", r)
-			}
-			w.running.Store(false)
-		}()
+	safego.GoWith("prediction-analysis", func() {
+		defer w.running.Store(false)
 		w.runAnalysis(providers)
-	}()
+	})
 
 	return nil
 }
@@ -528,8 +523,9 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 				slog.Info("[PredictionWorker] skipping offline cluster", "cluster", cluster.Name)
 				continue
 			}
+			cl := cluster
 			wg.Add(1)
-			go func(cl k8s.ClusterInfo) {
+			safego.GoWith("prediction-worker/"+cl.Name, func() {
 				defer wg.Done()
 
 				// Check parent context before starting work
@@ -606,7 +602,7 @@ func (w *PredictionWorker) gatherClusterData(ctx context.Context) (*ClusterAnaly
 						mu.Unlock()
 					}
 				}
-			}(cluster)
+			})
 		}
 		wg.Wait()
 

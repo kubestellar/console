@@ -7,11 +7,8 @@ import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMission
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
-vi.mock('./mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  clusterCacheRef: { clusters: [] },
-  REFRESH_INTERVAL_MS: 120_000,
-  CLUSTER_POLL_INTERVAL_MS: 60_000,
+vi.mock('./mcp/agentFetch', () => ({
+  agentFetch: vi.fn((...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?]))),
 }))
 
 vi.mock('./useDemoMode', () => ({
@@ -343,7 +340,9 @@ describe('agent selection logic', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
     await act(async () => {
       result.current.connectToAgent()
+      await Promise.resolve()
       MockWebSocket.lastInstance?.simulateOpen()
+      await Promise.resolve()
     })
 
     act(() => {
@@ -361,11 +360,13 @@ describe('agent selection logic', () => {
       })
     })
 
-    const selectCalls = MockWebSocket.lastInstance?.send.mock.calls.filter(
-      (call: string[]) => JSON.parse(call[0]).type === 'select_agent',
-    )
-    expect(selectCalls?.length).toBeGreaterThan(0)
-    expect(JSON.parse(selectCalls![0][0]).payload.agent).toBe('gemini-cli')
+    await waitFor(() => {
+      const selectCalls = MockWebSocket.lastInstance?.send.mock.calls.filter(
+        (call: string[]) => JSON.parse(call[0]).type === 'select_agent',
+      )
+      expect(selectCalls?.length).toBeGreaterThan(0)
+      expect(JSON.parse(selectCalls![0][0]).payload.agent).toBe('gemini-cli')
+    })
   })
 
   it('selectAgent with "none" does not send WebSocket message', () => {
@@ -446,11 +447,15 @@ describe('sendMessage edge cases', () => {
 
     // Simulate connection error
     await act(async () => {
+      await Promise.resolve()
       MockWebSocket.lastInstance?.simulateError()
+      await Promise.resolve()
     })
 
-    const mission = result.current.missions.find(m => m.id === missionId)
-    expect(mission?.status).toBe('failed')
+    await waitFor(() => {
+      const mission = result.current.missions.find(m => m.id === missionId)
+      expect(mission?.status).toBe('failed')
+    })
   })
 })
 
@@ -527,7 +532,7 @@ describe('preflight check', () => {
     const mission = result.current.missions[0]
     expect(mission.status).toBe('blocked')
     expect(mission.preflightError?.code).toBe('MISSING_CREDENTIALS')
-    expect(mission.messages.some(m => m.content.includes('Preflight Check Failed'))).toBe(true)
+    // PreflightFailure component renders the error; no duplicate system message (#13464)
     expect(emitMissionError).toHaveBeenCalledWith('deploy', 'MISSING_CREDENTIALS', expect.anything())
   })
 
@@ -581,6 +586,46 @@ describe('preflight check', () => {
     expect(mission.messages.some(m => m.content.includes('Tool availability warning'))).toBe(true)
     expect(runPreflightCheck).not.toHaveBeenCalled()
     expect(MockWebSocket.lastInstance).not.toBeNull()
+  })
+
+  it('blocks AI-assisted missions when the prompt requires missing optional tools', async () => {
+    const { runPreflightCheck, runToolPreflightCheck } = await import('../lib/missions/preflightCheck')
+    vi.mocked(runPreflightCheck).mockClear()
+    vi.mocked(runToolPreflightCheck).mockResolvedValueOnce({
+      ok: false,
+      error: {
+        code: 'MISSING_TOOLS',
+        message: 'Required tools not found: gh, helm',
+        details: { missingTools: ['gh', 'helm'] },
+      },
+      tools: [],
+    })
+
+    const { result } = renderHook(() => useMissions(), { wrapper })
+    act(() => {
+      result.current.startMission({
+        ...defaultParams,
+        type: 'deploy',
+        initialPrompt: 'Use gh to open the pull request and helm to install the release.',
+        context: {
+          allowMissingLocalTools: true,
+          skipClusterPreflight: true,
+        },
+      })
+    })
+    await act(async () => { await Promise.resolve() })
+    await act(async () => { await Promise.resolve() })
+
+    const mission = result.current.missions[0]
+    expect(runToolPreflightCheck).toHaveBeenCalledWith(
+      'http://localhost:8585',
+      expect.arrayContaining(['gh', 'helm']),
+      expect.any(Function),
+    )
+    expect(mission.status).toBe('blocked')
+    expect(mission.preflightError?.message).toContain('installed locally before it can run')
+    expect(runPreflightCheck).not.toHaveBeenCalled()
+    expect(MockWebSocket.lastInstance).toBeNull()
   })
 
   it('retryPreflight transitions blocked mission back to pending', async () => {
@@ -644,9 +689,8 @@ describe('preflight check', () => {
     await act(async () => { await Promise.resolve() })
 
     expect(result.current.missions.find(m => m.id === missionId)?.status).toBe('blocked')
-    expect(result.current.missions.find(m => m.id === missionId)?.messages.some(
-      m => m.content.includes('Still Failing'),
-    )).toBe(true)
+    // PreflightFailure component renders the error; no duplicate system message (#13464)
+    expect(result.current.missions.find(m => m.id === missionId)?.preflightError?.code).toBe('RBAC_DENIED')
   })
 
   it('retryPreflight is a no-op for non-blocked missions', () => {

@@ -62,11 +62,14 @@ function deepFreeze<T>(obj: T, seen = new WeakSet<object>()): T {
   return obj
 }
 
+/** Maximum time to wait for dynamic card compilation before failing fast. */
+export const CARD_COMPILE_TIMEOUT_MS = 5000
+
 /**
  * Compile TSX source code to JavaScript using Sucrase.
  * Sucrase is loaded dynamically to avoid bloating the main bundle.
  */
-export async function compileCardCode(tsx: string): Promise<CompileResult> {
+async function runCompileCardCode(tsx: string): Promise<CompileResult> {
   try {
     // Dynamic import to keep Sucrase out of the main bundle
     const { transform } = await import('sucrase')
@@ -81,6 +84,24 @@ export async function compileCardCode(tsx: string): Promise<CompileResult> {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     return { code: null, error: `Compilation error: ${message}` }
+  }
+}
+
+export async function compileCardCode(tsx: string, timeoutMs = CARD_COMPILE_TIMEOUT_MS): Promise<CompileResult> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  const timeoutResult = new Promise<CompileResult>((resolve) => {
+    timeoutId = setTimeout(() => {
+      resolve({
+        code: null,
+        error: `Compilation error: timed out after ${timeoutMs}ms. Please try again.`,
+      })
+    }, timeoutMs)
+  })
+
+  try {
+    return await Promise.race([runCompileCardCode(tsx), timeoutResult])
+  } finally {
+    clearTimeout(timeoutId)
   }
 }
 

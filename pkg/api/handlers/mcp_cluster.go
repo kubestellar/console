@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // listClustersHealthWarmup coordinates background health-refresh goroutines
@@ -98,12 +99,12 @@ func (h *MCPHandlers) ListClusters(c *fiber.Ctx) error {
 		// health sweeps, each expensive and all racing on the same cache
 		// (#6484).
 		if tryStartClusterHealthWarmup() {
-			go func() {
+			safego.GoWith("cluster-health-warmup", func() {
 				defer finishClusterHealthWarmup()
 				ctx, cancel := context.WithTimeout(context.Background(), mcpHealthTimeout)
 				defer cancel()
 				h.k8sClient.GetAllClusterHealth(ctx)
-			}()
+			})
 		}
 
 		if clusters == nil {
@@ -204,8 +205,9 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 
 			for _, cl := range clusters {
 				wg.Add(1)
-				go func(clusterName string) {
+				safego.Go(func() {
 					defer wg.Done()
+					clusterName := cl.Name
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
@@ -217,7 +219,7 @@ func (h *MCPHandlers) GetNodes(c *fiber.Ctx) error {
 						allNodes = append(allNodes, nodes...)
 						mu.Unlock()
 					}
-				}(cl.Name)
+				})
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
@@ -302,8 +304,9 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 
 			for _, cl := range clusters {
 				wg.Add(1)
-				go func(clusterName string) {
+				safego.Go(func() {
 					defer wg.Done()
+					clusterName := cl.Name
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
@@ -315,7 +318,7 @@ func (h *MCPHandlers) GetEvents(c *fiber.Ctx) error {
 						allEvents = append(allEvents, events...)
 						mu.Unlock()
 					}
-				}(cl.Name)
+				})
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
@@ -405,8 +408,9 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 
 			for _, cl := range clusters {
 				wg.Add(1)
-				go func(clusterName string) {
+				safego.Go(func() {
 					defer wg.Done()
+					clusterName := cl.Name
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
@@ -418,7 +422,7 @@ func (h *MCPHandlers) GetWarningEvents(c *fiber.Ctx) error {
 						allEvents = append(allEvents, events...)
 						mu.Unlock()
 					}
-				}(cl.Name)
+				})
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)
@@ -483,8 +487,9 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 
 			for _, cl := range clusters {
 				wg.Add(1)
-				go func(clusterName string) {
+				safego.Go(func() {
 					defer wg.Done()
+					clusterName := cl.Name
 					ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 					defer cancel()
 
@@ -496,7 +501,7 @@ func (h *MCPHandlers) CheckSecurityIssues(c *fiber.Ctx) error {
 						allIssues = append(allIssues, issues...)
 						mu.Unlock()
 					}
-				}(cl.Name)
+				})
 			}
 
 			waitWithDeadline(&wg, clusterCancel, maxResponseDeadline)

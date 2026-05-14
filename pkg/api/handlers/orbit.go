@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // orbitSuffixBytes is the number of random bytes used to generate a unique
@@ -58,6 +60,10 @@ const orbitMaxHistoryEntries = 50
 
 const orbitRunMissionNoExecutorSummary = "No executor configured — mission steps were not run"
 const orbitSchedulerNoExecutorSummary = "No executor configured"
+
+// orbitMissionExecTimeout caps a single scheduled mission execution so a
+// hung executor cannot block the entire orbit scheduler goroutine.
+const orbitMissionExecTimeout = 5 * time.Minute
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -272,7 +278,7 @@ func (h *OrbitHandler) GetSchedule(c *fiber.Ctx) error {
 // is closed.
 func (h *OrbitHandler) StartScheduler(done <-chan struct{}) {
 	ticker := time.NewTicker(time.Duration(orbitScheduleCheckIntervalSec) * time.Second)
-	go func() {
+	safego.GoWith("orbit-scheduler", func() {
 		defer ticker.Stop()
 		for {
 			select {
@@ -282,7 +288,7 @@ func (h *OrbitHandler) StartScheduler(done <-chan struct{}) {
 				h.checkDueMissions()
 			}
 		}
-	}()
+	})
 }
 
 // checkDueMissions iterates all missions and auto-runs those that are
@@ -322,7 +328,9 @@ func (h *OrbitHandler) checkDueMissions() {
 	h.mu.RUnlock()
 
 	for idx, mission := range dueMissions {
-		result, summary := h.executeMission(context.Background(), mission, orbitSchedulerNoExecutorSummary)
+		execCtx, execCancel := context.WithTimeout(context.Background(), orbitMissionExecTimeout)
+		result, summary := h.executeMission(execCtx, mission, orbitSchedulerNoExecutorSummary)
+		execCancel()
 		runAt := time.Now().UTC().Format(time.RFC3339)
 		h.recordMissionRun(dueMissionIDs[idx], runAt, result, summary)
 		slog.Info("orbit auto-run triggered", "mission", mission.ID, "type", mission.OrbitType, "result", result, "summary", summary)
@@ -336,7 +344,8 @@ func (h *OrbitHandler) executeMission(ctx context.Context, mission *OrbitMission
 
 	result, summary, err := h.executor.Execute(ctx, mission)
 	if err != nil {
-		return "failed", err.Error()
+		slog.Error("[Orbit] mission execution failed", "error", err)
+		return "failed", "mission execution failed"
 	}
 
 	return result, summary
@@ -387,7 +396,7 @@ func (h *OrbitHandler) loadFromDisk() {
 		return
 	}
 
-	var missions []*OrbitMission
+	missions := make([]*OrbitMission, 0)
 	if err := json.Unmarshal(data, &missions); err != nil {
 		slog.Warn("orbit: failed to parse data file", "path", h.dataFile, "error", err)
 		return
@@ -450,17 +459,23 @@ func (h *OrbitHandler) saveToDiskLocked() {
 	// Best-effort cleanup if we bail out before the rename.
 	defer func() {
 		if _, err := os.Stat(tmpPath); err == nil {
-			_ = os.Remove(tmpPath)
+			if err := os.Remove(tmpPath); err != nil {
+				slog.Warn("orbit: failed to clean up temp file", "path", tmpPath, "error", err)
+			}
 		}
 	}()
 	if _, err := tmp.Write(data); err != nil {
 		slog.Error("orbit: failed to write temp data file", "path", tmpPath, "error", err)
-		_ = tmp.Close()
+		if err := tmp.Close(); err != nil {
+			slog.Warn("orbit: failed to close temp file after write error", "path", tmpPath, "error", err)
+		}
 		return
 	}
 	if err := tmp.Sync(); err != nil {
 		slog.Error("orbit: failed to fsync temp data file", "path", tmpPath, "error", err)
-		_ = tmp.Close()
+		if err := tmp.Close(); err != nil {
+			slog.Warn("orbit: failed to close temp file after sync error", "path", tmpPath, "error", err)
+		}
 		return
 	}
 	if err := tmp.Close(); err != nil {

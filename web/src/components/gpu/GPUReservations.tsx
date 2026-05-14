@@ -547,6 +547,7 @@ export function GPUReservations() {
           utilizations={utilizations}
           effectiveDemoMode={effectiveDemoMode}
           showOnlyMine={showOnlyMine}
+          onSelectReservation={(id) => { setExpandedReservationId(id); setActiveTab('quotas') }}
         />
       )}
 

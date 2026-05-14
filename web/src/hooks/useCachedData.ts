@@ -126,6 +126,30 @@ export * from './useCachedProw'
 export * from './useCachedLLMd'
 
 // ============================================================================
+// Quantum hooks — useCachedQuantum.ts
+// ============================================================================
+// Named re-export (avoids `__testables` export-name collision with TiKV).
+
+export {
+  DEMO_QUANTUM_STATUS,
+  QUANTUM_CIRCUIT_DEFAULT_POLL_MS,
+  QUANTUM_QUBIT_GRID_DEFAULT_POLL_MS,
+  QUANTUM_STATUS_DEFAULT_POLL_MS,
+  useQuantumAuthStatus,
+  useQuantumCircuitAscii,
+  useQuantumQubitGridData,
+  useQuantumSystemStatus,
+  type QuantumAuthStatus,
+  type QuantumCircuitAsciiData,
+  type QuantumCircuitInfo,
+  type QuantumControlSystem,
+  type QuantumQubitGridData,
+  type QuantumQubitSimpleData,
+  type QuantumSystemStatus,
+  type QuantumVersionInfo,
+} from './useCachedQuantum'
+
+// ============================================================================
 // ISO 27001 Security Audit — re-exported from useCachedISO27001.ts
 // ============================================================================
 

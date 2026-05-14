@@ -1,17 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
-import { MissionProvider, useMissions } from './useMissions'
+import { MissionProvider, useMissions, __missionsTestables } from './useMissions'
 import { getDemoMode } from './useDemoMode'
 import { emitMissionStarted, emitMissionCompleted, emitMissionError, emitMissionRated } from '../lib/analytics'
 
 // ── External module mocks ─────────────────────────────────────────────────────
 
-vi.mock('./mcp/shared', () => ({
-  agentFetch: (...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?])),
-  clusterCacheRef: { clusters: [] },
-  REFRESH_INTERVAL_MS: 120_000,
-  CLUSTER_POLL_INTERVAL_MS: 60_000,
+vi.mock('./mcp/agentFetch', () => ({
+  agentFetch: vi.fn((...args: unknown[]) => globalThis.fetch(...(args as [RequestInfo, RequestInit?]))),
 }))
 
 vi.mock('./useDemoMode', () => ({
@@ -261,7 +258,10 @@ describe('WebSocket auto-reconnect backoff', () => {
 
       // Connect first
       act(() => { result.current.connectToAgent() })
-      await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
+      await act(async () => {
+        MockWebSocket.lastInstance?.simulateOpen()
+        await Promise.resolve()
+      })
 
       const firstWs = MockWebSocket.lastInstance
 
@@ -269,7 +269,10 @@ describe('WebSocket auto-reconnect backoff', () => {
       act(() => { firstWs?.simulateClose() })
 
       // Advance past initial reconnect delay (1s)
-      act(() => { vi.advanceTimersByTime(1_100) })
+      await act(async () => {
+        vi.advanceTimersByTime(1_100)
+        await Promise.resolve()
+      })
 
       // A new WebSocket should have been created
       expect(MockWebSocket.lastInstance).not.toBe(firstWs)
@@ -453,7 +456,11 @@ describe('sendMessage connection failure path', () => {
     act(() => { result.current.sendMessage(missionId, 'follow up') })
 
     // Simulate connection error
-    await act(async () => { MockWebSocket.lastInstance?.simulateError() })
+    await act(async () => {
+      await Promise.resolve()
+      MockWebSocket.lastInstance?.simulateError()
+      await Promise.resolve()
+    })
 
     const mission = result.current.missions.find(m => m.id === missionId)
     expect(mission?.status).toBe('failed')
@@ -598,7 +605,11 @@ describe('selectAgent WebSocket interaction', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     act(() => { result.current.selectAgent('claude-code') })
-    await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
+    await act(async () => {
+      await Promise.resolve()
+      MockWebSocket.lastInstance?.simulateOpen()
+      await Promise.resolve()
+    })
 
     const selectCalls = MockWebSocket.lastInstance?.send.mock.calls.filter(
       (call: string[]) => {
@@ -649,15 +660,20 @@ describe('mission reconnection on WebSocket open', () => {
 
     // Connect to agent — the onopen handler should clear needsReconnect
     act(() => { result.current.connectToAgent() })
-    await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
+    await act(async () => {
+      await Promise.resolve()
+      MockWebSocket.lastInstance?.simulateOpen()
+      await Promise.resolve()
+    })
 
-    // needsReconnect should be cleared and step updated
     const mission = result.current.missions[0]
     expect(mission.context?.needsReconnect).toBe(false)
     expect(mission.currentStep).toBe('Resuming...')
   })
 
   it('sends reconnection chat message after delay', async () => {
+    vi.useRealTimers()
+
     localStorage.setItem('kc_missions', JSON.stringify([{
       id: 'reconnect-m-2',
       title: 'Running Mission 2',
@@ -675,40 +691,42 @@ describe('mission reconnection on WebSocket open', () => {
     const { result } = renderHook(() => useMissions(), { wrapper })
 
     act(() => { result.current.connectToAgent() })
-    await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
-
-    // Wait for the MISSION_RECONNECT_DELAY_MS (500ms) timer to fire.
-    // Fake timers are active (set in beforeEach), so we must advance the
-    // clock rather than relying on a real setTimeout that would never fire.
-    act(() => { vi.advanceTimersByTime(600) })
-    await act(async () => { await Promise.resolve() })
-
-    // Check all WS send calls to see what types were sent
-    const allCalls = MockWebSocket.lastInstance?.send.mock.calls ?? []
-    const allTypes = allCalls.map((call: string[]) => {
-      try { return JSON.parse(call[0]).type } catch { return 'unparseable' }
+    await act(async () => {
+      await Promise.resolve()
+      MockWebSocket.lastInstance?.simulateOpen()
+      await Promise.resolve()
     })
 
-    // At minimum, list_agents should have been sent on connect
-    expect(allTypes).toContain('list_agents')
-
-    // The chat reconnection should have been scheduled and fired
-    const chatCalls = allCalls.filter(
-      (call: string[]) => {
-        try { return JSON.parse(call[0]).type === 'chat' } catch { return false }
-      },
-    )
-
-    // If chat was sent, verify the payload
-    if (chatCalls.length > 0) {
-      const payload = JSON.parse(chatCalls[chatCalls.length - 1][0]).payload
-      expect(payload.prompt).toBe('Help me')
-      expect(payload.history).toBeDefined()
-    } else {
-      // The reconnection scheduled a setTimeout but wsSend may be using
-      // retry logic. At least verify the needsReconnect was cleared.
+    await waitFor(() => {
       expect(result.current.missions[0].context?.needsReconnect).toBe(false)
-    }
+      expect(result.current.missions[0].currentStep).toBe('Resuming...')
+    })
+
+    // This specific reconnect flow is more reliable on real timers because
+    // waitFor and the delayed resume send share the same timer queue.
+    await waitFor(() => {
+      const allCalls = MockWebSocket.lastInstance?.send.mock.calls ?? []
+      const allTypes = allCalls.map((call: string[]) => {
+        try { return JSON.parse(call[0]).type } catch { return 'unparseable' }
+      })
+      expect(allTypes).toContain('list_agents')
+
+      const chatCalls = allCalls.filter(
+        (call: string[]) => {
+          try { return JSON.parse(call[0]).type === 'chat' } catch { return false }
+        },
+      )
+      expect(chatCalls.length).toBeGreaterThan(0)
+      const payload = JSON.parse(chatCalls[chatCalls.length - 1][0]).payload
+      expect(payload).toMatchObject({
+        prompt: 'Help me',
+        sessionId: 'reconnect-m-2',
+        agent: 'claude-code',
+        history: [],
+        resumeKey: 'resume-reconnect-m-2',
+        isResume: true,
+      })
+    }, { timeout: __missionsTestables.MISSION_RECONNECT_DELAY_MS * 3 })
   })
 })
 
@@ -1291,22 +1309,34 @@ describe('WebSocket auto-reconnect backoff arithmetic', () => {
 
       // First connection
       act(() => { result.current.connectToAgent() })
-      await act(async () => { MockWebSocket.lastInstance?.simulateOpen() })
+      await act(async () => {
+        MockWebSocket.lastInstance?.simulateOpen()
+        await Promise.resolve()
+      })
       const ws1 = MockWebSocket.lastInstance
 
       // Close #1 -> delay = 1000ms
       act(() => { ws1?.simulateClose() })
-      act(() => { vi.advanceTimersByTime(1_100) })
+      await act(async () => {
+        vi.advanceTimersByTime(1_100)
+        await Promise.resolve()
+      })
       const ws2 = MockWebSocket.lastInstance
       expect(ws2).not.toBe(ws1)
 
       // Close #2 without opening -> delay = 2000ms
       act(() => { ws2?.simulateClose() })
       // At 1100ms nothing should have reconnected yet
-      act(() => { vi.advanceTimersByTime(1_100) })
+      await act(async () => {
+        vi.advanceTimersByTime(1_100)
+        await Promise.resolve()
+      })
       expect(MockWebSocket.lastInstance).toBe(ws2)
       // At 2100ms total (surpassing 2000ms) it should reconnect
-      act(() => { vi.advanceTimersByTime(1_000) })
+      await act(async () => {
+        vi.advanceTimersByTime(1_000)
+        await Promise.resolve()
+      })
       const ws3 = MockWebSocket.lastInstance
       expect(ws3).not.toBe(ws2)
     } finally {

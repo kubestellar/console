@@ -188,9 +188,9 @@ export default async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[github-rewards] Leaderboard unavailable:", err instanceof Error ? err.message : err);
     return new Response(
-      JSON.stringify({ error: "Leaderboard unavailable", detail: message }),
+      JSON.stringify({ error: "Leaderboard unavailable" }),
       {
         status: 503,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

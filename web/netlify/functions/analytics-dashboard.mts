@@ -187,6 +187,7 @@ async function getAccessToken(
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion: jwt,
     }),
+    signal: AbortSignal.timeout(10_000),
   });
 
   if (!resp.ok) {
@@ -226,6 +227,7 @@ async function runReport(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
     }
   );
 

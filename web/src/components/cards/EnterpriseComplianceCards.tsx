@@ -6,8 +6,10 @@
  */
 import { useState, useEffect } from 'react'
 import { Shield, FileText, Activity, Lock, WifiOff, Award, CheckCircle2, XCircle, KeyRound, Clock, Package, Scale } from 'lucide-react'
-import { authFetch, safeJson } from '../../lib/api'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { authFetch, safeJson } from '../../lib/api'
+import { useCache } from '../../lib/cache'
 
 // ── Shared helpers ──────────────────────────────────────────────────────
 
@@ -18,29 +20,27 @@ const RING_BG = 'hsl(var(--muted) / 0.4)'
 const CARD_LOAD_ERROR = 'Failed to load'
 const ERROR_TEXT_CLASS = 'text-red-400 text-sm'
 const LOADING_TEXT_CLASS = 'text-gray-500 text-sm'
+const ENTERPRISE_SUMMARY_CACHE_PREFIX = 'enterprise-summary:'
 
 function useSummaryData<T extends Record<string, unknown>>(endpoint: string) {
-  const [data, setData] = useState<T | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { t } = useTranslation('errors')
+  const { data, error } = useCache<T | null>({
+    key: `${ENTERPRISE_SUMMARY_CACHE_PREFIX}${endpoint}`,
+    category: 'rbac',
+    initialData: null,
+    fetcher: async () => {
+      const response = await authFetch(endpoint)
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`)
+      }
+      return safeJson<T>(response)
+    },
+  })
 
-  useEffect(() => {
-    setError(null)
-    authFetch(endpoint)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`)
-        }
-
-        return safeJson<T>(response)
-      })
-      .then(setData)
-      .catch((err: unknown) => {
-        console.error(`[EnterpriseComplianceCards] ${endpoint} fetch failed:`, err)
-        setError(CARD_LOAD_ERROR)
-      })
-  }, [endpoint])
-
-  return { data, error }
+  return {
+    data,
+    error: error ? t('messages.loadFailed', { defaultValue: CARD_LOAD_ERROR }) : null,
+  }
 }
 
 function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {

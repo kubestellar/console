@@ -110,7 +110,7 @@ func (s *Server) handleKubeconfigPreviewHTTP(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		slog.Error("kubeconfig preview error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, protocol.ErrorPayload{Code: "preview_failed", Message: err.Error()})
+		writeJSON(w, protocol.ErrorPayload{Code: "preview_failed", Message: sanitizeAgentError("preview kubeconfig", err)})
 		return
 	}
 
@@ -210,7 +210,7 @@ func (s *Server) handleKubeconfigRemoveHTTP(w http.ResponseWriter, r *http.Reque
 	if err := s.k8sClient.RemoveContext(req.Context); err != nil {
 		slog.Error("[kubeconfig] failed to remove context", "context", req.Context, "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, map[string]string{"error": sanitizeAgentError("remove cluster context", err)})
 		return
 	}
 
@@ -248,7 +248,7 @@ func (s *Server) handleKubeconfigAddHTTP(w http.ResponseWriter, r *http.Request)
 	if err := s.kubectl.AddCluster(req); err != nil {
 		slog.Error("add cluster error", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
-		writeJSON(w, kubeconfigAddResponse{Success: false, Error: err.Error()})
+		writeJSON(w, kubeconfigAddResponse{Success: false, Error: sanitizeAgentError("add cluster", err)})
 		return
 	}
 

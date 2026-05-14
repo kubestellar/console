@@ -67,10 +67,13 @@ const ATTENTION_MISSION_STATUSES: ReadonlySet<Mission['status']> = new Set(['wai
 const MISSION_BROWSER_QUERY_KEY = 'browse'
 const MISSION_BROWSER_QUERY_VALUE = 'missions'
 const MISSION_DEEP_LINK_QUERY_KEY = 'mission'
+const MISSION_VIEW_QUERY_KEY = 'view'
+const MISSION_CHAT_VIEW = 'chat'
 const MISSION_IMPORT_QUERY_KEY = 'import'
 const MISSION_CONTROL_QUERY_KEY = 'mission-control'
 const MISSION_PLAN_QUERY_KEY = 'plan'
 const MISSION_BROWSER_HISTORY_STATE_KEY = 'kscMissionBrowserOpen'
+const FULLSCREEN_KNOWLEDGE_PANEL_WIDTH_CLASS = 'w-80 xl:w-96'
 
 function getMissionAttentionCount(missions: Mission[]): number {
   return missions.filter(mission => ATTENTION_MISSION_STATUSES.has(mission.status)).length
@@ -280,11 +283,16 @@ export function MissionSidebar() {
   const navigate = useNavigate()
   const browserHistoryEntryRef = useRef(false)
   const deepLinkMission = searchParams.get(MISSION_DEEP_LINK_QUERY_KEY)
+  const missionViewParam = searchParams.get(MISSION_VIEW_QUERY_KEY)
   const directImportSlug = searchParams.get(MISSION_IMPORT_QUERY_KEY)
   const browseParam = searchParams.get(MISSION_BROWSER_QUERY_KEY)
   const missionControlParam = searchParams.get(MISSION_CONTROL_QUERY_KEY)
   const isMissionBrowserRoute = location.pathname === ROUTES.MISSIONS
-  const isMissionBrowserDeepLink = Boolean(deepLinkMission) || browseParam === MISSION_BROWSER_QUERY_VALUE || isMissionBrowserRoute
+  const isMissionChatView = missionViewParam === MISSION_CHAT_VIEW
+  const fullScreenMissionFromUrl = isMissionChatView && deepLinkMission
+    ? missions.find(mission => mission.id === deepLinkMission) || null
+    : null
+  const isMissionBrowserDeepLink = !isMissionChatView && (Boolean(deepLinkMission) || browseParam === MISSION_BROWSER_QUERY_VALUE || isMissionBrowserRoute)
   /** Mission pre-fetched by MissionLandingPage and passed via navigation state */
   const prefetchedMission = (location.state as { prefetchedMission?: MissionExport } | null)?.prefetchedMission
 
@@ -332,6 +340,58 @@ export function MissionSidebar() {
       setShowBrowser(true)
     }
   }, [isMissionBrowserDeepLink])
+
+  useEffect(() => {
+    if (!isMissionChatView) return
+
+    if (!fullScreenMissionFromUrl) {
+      if (deepLinkMission) {
+        const nextParams = new URLSearchParams(searchParams)
+        nextParams.delete(MISSION_DEEP_LINK_QUERY_KEY)
+        nextParams.delete(MISSION_VIEW_QUERY_KEY)
+        setSearchParams(nextParams, { replace: true })
+      }
+      return
+    }
+
+    // Hydrate sidebar state from URL once when view=chat is present.
+    // Deps are limited to URL-derived values only — including isSidebarOpen,
+    // isSidebarMinimized, isFullScreen, or activeMission?.id would make this
+    // effect re-run after user-initiated close/minimize/back actions and undo
+    // them while the URL still shows view=chat (#13149).
+    setActiveMission(fullScreenMissionFromUrl.id)
+    openSidebar() // also clears isSidebarMinimized
+    setFullScreen(true)
+  }, [
+    deepLinkMission,
+    fullScreenMissionFromUrl,
+    isMissionChatView,
+    openSidebar,
+    searchParams,
+    setActiveMission,
+    setFullScreen,
+    setSearchParams,
+  ])
+
+  useEffect(() => {
+    const nextParams = new URLSearchParams(searchParams)
+
+    if (isFullScreen && activeMission) {
+      nextParams.set(MISSION_DEEP_LINK_QUERY_KEY, activeMission.id)
+      nextParams.set(MISSION_VIEW_QUERY_KEY, MISSION_CHAT_VIEW)
+    } else if (searchParams.get(MISSION_VIEW_QUERY_KEY) === MISSION_CHAT_VIEW) {
+      nextParams.delete(MISSION_VIEW_QUERY_KEY)
+      if (!activeMission || searchParams.get(MISSION_DEEP_LINK_QUERY_KEY) === activeMission.id) {
+        nextParams.delete(MISSION_DEEP_LINK_QUERY_KEY)
+      }
+    } else {
+      return
+    }
+
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true })
+    }
+  }, [activeMission, isFullScreen, searchParams, setSearchParams])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -544,6 +604,7 @@ export function MissionSidebar() {
       steps: mission.steps?.map(s => ({ title: s.title, description: s.description })),
       tags: mission.tags,
       initialPrompt: mission.resolution?.summary || mission.description })
+    closeMissionBrowser()
     // Auto-open the sidebar and highlight the imported mission so the user
     // immediately sees where it went and can act on it
     openSidebar()
@@ -866,7 +927,15 @@ export function MissionSidebar() {
                 {/* History toggle on mobile — desktop uses a standalone icon button (#10522) */}
                 {isMobile && listTotalMissions > 0 && (
                   <button
-                    onClick={() => { setShowAddMenu(false); toggleHistoryPanel() }}
+                    onClick={() => {
+                      setShowAddMenu(false)
+                      if (activeMission) {
+                        setActiveMission(null)
+                        setShowHistoryPanel(true)
+                      } else {
+                        toggleHistoryPanel()
+                      }
+                    }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted/30 text-foreground"
                   >
                     <History className="w-4 h-4 text-muted-foreground" />
@@ -885,10 +954,19 @@ export function MissionSidebar() {
               On mobile, the toggle is inside the + menu to avoid crowding the header. */}
           {!isMobile && (
             <button
-              onClick={toggleHistoryPanel}
+              onClick={() => {
+                if (activeMission) {
+                  // In chat mode the history panel is hidden behind the chat view;
+                  // navigate back to the list and open history so the click is visible.
+                  setActiveMission(null)
+                  setShowHistoryPanel(true)
+                } else {
+                  toggleHistoryPanel()
+                }
+              }}
               className={cn(
                 "relative p-1.5 rounded transition-colors ring-1 mr-1 shrink-0",
-                showHistoryPanel
+                showHistoryPanel && !activeMission
                   ? "bg-primary text-primary-foreground ring-primary"
                   : "bg-secondary/50 text-muted-foreground ring-border hover:bg-secondary hover:text-foreground"
               )}
@@ -1076,32 +1154,32 @@ export function MissionSidebar() {
           <p className="text-xs text-muted-foreground/70 mt-1">
             {t('missionSidebar.startMissionPrompt')}
           </p>
-          <div className="grid grid-cols-3 gap-2 mt-4 w-full max-w-sm">
+          <div className="flex flex-col gap-2.5 mt-5 w-full max-w-xs">
             {!showNewMission && (
               <button
                 onClick={() => {
                   setShowNewMission(true)
                   setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
                 }}
-                className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors h-[72px]"
+                className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
               >
-                <Sparkles className="w-6 h-6 shrink-0" />
-                <span className="text-center leading-tight text-xs truncate max-w-full">{t('missionSidebar.startCustomMission')}</span>
+                <Sparkles className="w-5 h-5 shrink-0" />
+                <span className="text-left leading-snug">{t('missionSidebar.startCustomMission')}</span>
               </button>
             )}
             <button
               onClick={() => openMissionBrowser()}
-              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
+              className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors"
             >
-              <Globe className="w-6 h-6 shrink-0" />
-              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.browseCommunityMissions')}</span>
+              <Globe className="w-5 h-5 shrink-0" />
+              <span className="text-left leading-snug">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
-              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-colors shadow-lg shadow-purple-500/25 h-[72px]"
+              className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-colors shadow-lg shadow-purple-500/25"
             >
-              <Rocket className="w-6 h-6 shrink-0" />
-              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.missionControl')}</span>
+              <Rocket className="w-5 h-5 shrink-0" />
+              <span className="text-left leading-snug">{t('layout.missionSidebar.missionControl')}</span>
             </button>
           </div>
         </div>
@@ -1112,7 +1190,10 @@ export function MissionSidebar() {
         )}>
           {/* Fullscreen: left sidebar with saved missions + related knowledge */}
           {isFullScreen && (
-            <div className="w-64 border-r border-border bg-secondary/20 flex flex-col overflow-hidden shrink-0">
+            <div className={cn(
+              FULLSCREEN_KNOWLEDGE_PANEL_WIDTH_CLASS,
+              "border-r border-border bg-secondary/20 flex flex-col overflow-hidden shrink-0"
+            )}>
               <div className="flex-1 overflow-y-auto scroll-enhanced">
                 {/* Saved Missions section */}
                 {savedMissions.length > 0 && (
@@ -1223,7 +1304,7 @@ export function MissionSidebar() {
                     </button>
                   </div>
                   {/* Panel content */}
-                  <div className="p-1.5">
+                  <div className="min-w-0 p-1.5">
                     {resolutionPanelView === 'related' ? (
                       <ResolutionKnowledgePanel
                         relatedResolutions={relatedResolutions}
@@ -1287,7 +1368,7 @@ export function MissionSidebar() {
           <p className="text-xs text-muted-foreground/70 mt-1">
             {t('missionSidebar.startMissionPrompt')}
           </p>
-          <div className="grid grid-cols-3 gap-2 mt-4 w-full max-w-sm">
+          <div className="mt-4 grid w-full max-w-sm grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-2">
             {!showNewMission && (
               <button
                 onClick={() => {
@@ -1295,25 +1376,25 @@ export function MissionSidebar() {
                   setShowNewMission(true)
                   setTimeout(() => newMissionInputRef.current?.focus(), FOCUS_DELAY_MS)
                 }}
-                className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors h-[72px]"
+                className="flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                <Sparkles className="w-6 h-6 shrink-0" />
-                <span className="text-center leading-tight text-xs truncate max-w-full">{t('missionSidebar.startCustomMission')}</span>
+                <Sparkles className="h-6 w-6 shrink-0" />
+                <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('missionSidebar.startCustomMission')}</span>
               </button>
             )}
             <button
               onClick={() => openMissionBrowser()}
-              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-secondary text-foreground rounded-lg hover:bg-secondary/80 transition-colors h-[72px]"
+              className="flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary/80"
             >
-              <Globe className="w-6 h-6 shrink-0" />
-              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.browseCommunityMissions')}</span>
+              <Globe className="h-6 w-6 shrink-0" />
+              <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('layout.missionSidebar.browseCommunityMissions')}</span>
             </button>
             <button
               onClick={() => setShowMissionControl(true)}
-              className="flex flex-col items-center justify-center gap-1.5 px-3 py-3 text-sm font-medium bg-linear-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-500 hover:to-indigo-500 transition-colors shadow-lg shadow-purple-500/25 h-[72px]"
+              className="flex min-h-[88px] flex-col items-center justify-center gap-1.5 rounded-lg bg-linear-to-r from-purple-600 to-indigo-600 px-3 py-3 text-sm font-medium text-white shadow-lg shadow-purple-500/25 transition-colors hover:from-purple-500 hover:to-indigo-500"
             >
-              <Rocket className="w-6 h-6 shrink-0" />
-              <span className="text-center leading-tight text-xs truncate max-w-full">{t('layout.missionSidebar.missionControl')}</span>
+              <Rocket className="h-6 w-6 shrink-0" />
+              <span className="max-w-full text-center text-xs leading-tight whitespace-normal break-words">{t('layout.missionSidebar.missionControl')}</span>
             </button>
           </div>
           {/* Hint to open history when missions exist */}
@@ -1607,6 +1688,7 @@ export function MissionSidebar() {
           mission={activeMission}
           isOpen={showSaveResolutionDialog}
           onClose={() => setShowSaveResolutionDialog(false)}
+          onSaved={() => setResolutionPanelView('history')}
         />
       )}
     </>

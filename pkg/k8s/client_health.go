@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubestellar/console/pkg/safego"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -145,18 +146,18 @@ func (m *MultiClusterClient) GetClusterHealth(ctx context.Context, contextName s
 	)
 
 	wg.Add(3)
-	go func() {
+	safego.Go(func() {
 		defer wg.Done()
 		nodes, nodesErr = client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
-	}()
-	go func() {
+	})
+	safego.Go(func() {
 		defer wg.Done()
 		pods, podsErr = client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
-	}()
-	go func() {
+	})
+	safego.Go(func() {
 		defer wg.Done()
 		pvcs, pvcsErr = client.CoreV1().PersistentVolumeClaims("").List(ctx, metav1.ListOptions{})
-	}()
+	})
 	wg.Wait()
 
 	// Process nodes - determines reachability
@@ -470,8 +471,10 @@ func (m *MultiClusterClient) GetAllClusterHealth(ctx context.Context) ([]Cluster
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	for i, cluster := range clusters {
+		idx := i
+		c := cluster
 		wg.Add(1)
-		go func(idx int, c ClusterInfo) {
+		safego.GoWith("health-check/"+c.Name, func() {
 			defer wg.Done()
 			// #7751: Check for context cancellation before starting an
 			// expensive health probe. Without this, goroutines that haven't
@@ -489,15 +492,15 @@ func (m *MultiClusterClient) GetAllClusterHealth(ctx context.Context) ([]Cluster
 			slots[idx].health = health
 			slots[idx].done = true
 			mu.Unlock()
-		}(i, cluster)
+		})
 	}
 
 	// Wait for either all goroutines to finish or the global deadline to fire.
 	waitCh := make(chan struct{})
-	go func() {
+	safego.Go(func() {
 		wg.Wait()
 		close(waitCh)
-	}()
+	})
 	select {
 	case <-waitCh:
 	case <-deadlineCtx.Done():

@@ -63,8 +63,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
   const { findSimilarResolutions, recordUsage } = useResolutions()
   const missionMessages = mission.messages || []
   const [input, setInput] = useState('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const messagesContentRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
   const lastMessageCountRef = useRef(missionMessages.length)
@@ -208,22 +209,36 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     setShouldAutoScroll(isAtBottom())
   }
 
-  /** Smoothly scroll the chat to the most recent message */
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  /** Scroll the chat container to the latest rendered content. */
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'auto') => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ block: 'end', behavior })
+    } else {
+      container.scrollTo({
+        top: Math.max(container.scrollHeight - container.clientHeight, 0),
+        behavior,
+      })
+    }
     setShouldAutoScroll(true)
   }, [])
 
-  // Auto-scroll to bottom only when new messages are added (not on every render)
+  // Keep the latest streaming content visible while the user is pinned to the bottom.
   useEffect(() => {
     const messageCount = missionMessages.length
     const hasNewMessages = messageCount > lastMessageCountRef.current
     lastMessageCountRef.current = messageCount
 
-    if (shouldAutoScroll && hasNewMessages) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [missionMessages.length, shouldAutoScroll])
+    if (!shouldAutoScroll) return
+
+    const frame = requestAnimationFrame(() => {
+      scrollToBottom(hasNewMessages ? 'smooth' : 'auto')
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [mission.updatedAt, missionMessages.length, shouldAutoScroll, scrollToBottom])
 
   // Focus input when mission becomes active
   useEffect(() => {
@@ -247,16 +262,33 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
     }
   }, [missionMessages])
 
+  // Keep the latest content visible when message layout changes after render
+  // (streaming tokens, markdown reflow, fullscreen resize, images/code blocks).
+  useEffect(() => {
+    if (!shouldAutoScroll || typeof ResizeObserver === 'undefined') return
+
+    const content = messagesContentRef.current
+    if (!content) return
+
+    const observer = new ResizeObserver(() => {
+      requestAnimationFrame(() => scrollToBottom('auto'))
+    })
+
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [shouldAutoScroll, scrollToBottom])
+
   // Scroll to bottom when entering full screen mode
   useEffect(() => {
-    if (isFullScreen) {
-      // Small delay to allow layout to settle
-      const id = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-      }, 100)
-      return () => clearTimeout(id)
-    }
-  }, [isFullScreen])
+    if (!isFullScreen) return
+
+    // Small delay to allow layout to settle
+    const id = setTimeout(() => {
+      scrollToBottom('smooth')
+    }, 100)
+
+    return () => clearTimeout(id)
+  }, [isFullScreen, scrollToBottom])
 
   // Get the original ask (first user message)
   const originalAsk = (() => {
@@ -568,8 +600,9 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
         aria-atomic="false"
         aria-relevant="additions text"
         aria-label="Mission chat messages"
-        className="absolute inset-0 overflow-y-auto scroll-enhanced p-4 space-y-4"
+        className="absolute inset-0 overflow-y-auto scroll-enhanced p-4"
       >
+        <div ref={messagesContentRef} className="flex min-h-full flex-col gap-4 pb-6">
         {/* Inline Run button + editable mission description/steps for saved missions (#3917, #4273) */}
         {isSavedPreRun && (
           <div
@@ -858,12 +891,13 @@ export function MissionChat({ mission, isFullScreen = false, fontSize = 'base' a
           </div>
         )}
 
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef} aria-hidden="true" className="h-px shrink-0" />
+        </div>
       </div>
 
       {/* Floating scroll-to-bottom button — appears when user scrolls up (#10452) */}
       <button
-        onClick={scrollToBottom}
+        onClick={() => scrollToBottom('smooth')}
         className={cn(
           'absolute bottom-4 right-4 z-10 p-2 rounded-full',
           'bg-primary/90 text-primary-foreground shadow-lg',

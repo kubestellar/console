@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Calculate MTTR and update badge
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           BADGE_GIST_ID: 4ae525a9797e8f83231ac344fcb47226
           GIST_TOKEN: ${{ secrets.GIST_TOKEN }}

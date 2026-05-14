@@ -21,6 +21,7 @@ export default async (req: Request) => {
       headers: {
         "User-Agent": req.headers.get("user-agent") || "",
       },
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (!resp.ok) {

@@ -13,6 +13,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/kubestellar/console/pkg/safego"
 )
 
 // Progress percentage constants for cluster creation/deletion phases
@@ -964,9 +966,9 @@ func runWithTimeout(cmd *exec.Cmd, timeout time.Duration) error {
 	}
 
 	done := make(chan error, 1)
-	go func() {
+	safego.GoWith("run-with-timeout", func() {
 		done <- cmd.Wait()
-	}()
+	})
 
 	select {
 	case err := <-done:

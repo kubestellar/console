@@ -33,34 +33,38 @@ export function RequestApprovalModal({
   const [submitting, setSubmitting] = useState(false)
   const [issueUrl, setIssueUrl] = useState<string | null>(null)
   const [hasGitHubToken, setHasGitHubToken] = useState(false)
+  const [checkingGitHubToken, setCheckingGitHubToken] = useState(false)
+  const [tokenCheckError, setTokenCheckError] = useState(false)
   const tokenCheckedRef = useRef(false)
   const submittingRef = useRef(false)
 
   const isValidRepo = REPO_PATTERN.test(repo.trim())
 
+  const checkGitHubTokenStatus = useCallback(async () => {
+    setCheckingGitHubToken(true)
+    setTokenCheckError(false)
+    try {
+      const res = await fetch('/api/github/token/status', { headers: token ? { Authorization: `Bearer ${token}` } : {}, signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS) })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setHasGitHubToken(Boolean((await res.json() as { hasToken?: boolean }).hasToken))
+    } catch {
+      setHasGitHubToken(false)
+      setTokenCheckError(true)
+    } finally {
+      setCheckingGitHubToken(false)
+    }
+  }, [token])
+
   // Check whether GitHub token is configured via /api/github/token/status
   useEffect(() => {
     if (!isOpen || tokenCheckedRef.current) return
     tokenCheckedRef.current = true
-
-    fetch('/api/github/token/status', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      signal: AbortSignal.timeout(FETCH_DEFAULT_TIMEOUT_MS)
-    })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data && data.hasToken) {
-          setHasGitHubToken(true)
-        }
-      })
-      .catch(() => {
-        // Silently ignore — backend may not be reachable
-      })
-  }, [isOpen, token])
+    void checkGitHubTokenStatus()
+  }, [isOpen, checkGitHubTokenStatus])
 
   const handleSubmit = useCallback(async () => {
     const trimmedRepo = repo.trim()
-    if (submittingRef.current || !isValidRepo || !token) return
+    if (submittingRef.current || !isValidRepo || !token || checkingGitHubToken || !hasGitHubToken) return
 
     submittingRef.current = true
     setSubmitting(true)
@@ -124,14 +128,18 @@ export function RequestApprovalModal({
       submittingRef.current = false
       setSubmitting(false)
     }
-  }, [repo, isValidRepo, token, state, installedProjects, showToast])
+  }, [repo, isValidRepo, token, checkingGitHubToken, hasGitHubToken, state, installedProjects, notes, showToast])
 
   const handleClose = useCallback(() => {
     submittingRef.current = false
+    tokenCheckedRef.current = false
     setRepo('')
     setNotes('')
     setIssueUrl(null)
     setSubmitting(false)
+    setHasGitHubToken(false)
+    setCheckingGitHubToken(false)
+    setTokenCheckError(false)
     onClose()
   }, [onClose])
 
@@ -167,7 +175,7 @@ export function RequestApprovalModal({
                   className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-foreground text-sm placeholder:text-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-primary/50"
                   autoFocus
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && isValidRepo && !submitting) handleSubmit()
+                    if (e.key === 'Enter' && isValidRepo && !submitting && !checkingGitHubToken && hasGitHubToken) handleSubmit()
                   }}
                 />
                 {repo && !isValidRepo && (
@@ -202,7 +210,16 @@ export function RequestApprovalModal({
                 </ul>
               </div>
 
-              {!hasGitHubToken && (
+              {checkingGitHubToken ? (
+                <p className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 p-3 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Checking GitHub access…</span>
+                </p>
+              ) : tokenCheckError ? (
+                <p className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                  Could not verify GitHub access. <button type="button" className="underline underline-offset-2" onClick={() => void checkGitHubTokenStatus()}>Retry</button>
+                </p>
+              ) : !hasGitHubToken && (
                 <p className="text-xs text-amber-400">
                   You must be logged in with GitHub to create issues.
                 </p>
@@ -238,7 +255,7 @@ export function RequestApprovalModal({
                 variant="primary"
                 size="sm"
                 onClick={handleSubmit}
-                disabled={!isValidRepo || submitting || !hasGitHubToken}
+                disabled={!isValidRepo || submitting || checkingGitHubToken || !hasGitHubToken}
                 icon={submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GitPullRequestArrow className="w-3.5 h-3.5" />}
               >
                 {submitting ? 'Creating…' : 'Create Issue'}

@@ -1,4 +1,4 @@
-import { CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react'
+import { CheckCircle, AlertTriangle, AlertCircle, Circle } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useDashboardHealth, type DashboardHealthStatus } from '../../hooks/useDashboardHealth'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -18,6 +18,12 @@ const STATUS_CONFIGS: Record<DashboardHealthStatus, StatusConfig> = {
     bgColor: 'bg-green-500/10',
     borderColor: 'border-green-500/30',
     icon: CheckCircle,
+  },
+  empty: {
+    color: 'text-muted-foreground',
+    bgColor: 'bg-secondary/10',
+    borderColor: 'border-border',
+    icon: Circle,
   },
   warning: {
     color: 'text-yellow-400',
@@ -76,7 +82,7 @@ export function DashboardHealthIndicator({
   }
 
   /** Whether clicking the badge has an action (navigate or filter) */
-  const isClickable = health.status !== 'healthy'
+  const isClickable = health.status !== 'healthy' && health.status !== 'empty'
 
   const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'
   const textSize = size === 'sm' ? 'text-2xs' : 'text-xs'

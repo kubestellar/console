@@ -165,18 +165,24 @@ export async function setupTestStorage(page: Page, config: StorageConfig = {}): 
       }
 
       // ---------------------------------------------------------------------------
-      // Step 3: Clear stale backend status cache (synchronous)
+      // Step 3: Clear stale backend/session caches (synchronous)
       // ---------------------------------------------------------------------------
-      // Remove kc-backend-status before setting new value to avoid cached "unavailable"
-      // results from previous tests (#10784)
+      // Remove cached session/update state before any app code runs so Playwright
+      // tests do not inherit real-user polling from a prior local browser session.
       localStorage.removeItem('kc-backend-status')
+      localStorage.removeItem('kc-has-session')
+      localStorage.removeItem('kc-update-channel')
+      localStorage.removeItem('kc-releases-cache')
+      localStorage.removeItem('kc-auth-token')
 
       // ---------------------------------------------------------------------------
       // Step 4: Set localStorage state atomically
       // ---------------------------------------------------------------------------
       localStorage.setItem('token', token)
       localStorage.setItem('kc-demo-mode', String(demoMode))
-      localStorage.setItem('kc-has-session', String(hasSession))
+      if (hasSession) {
+        localStorage.setItem('kc-has-session', 'true')
+      }
       localStorage.setItem('demo-user-onboarded', String(onboarded))
       localStorage.setItem('kc-agent-setup-dismissed', String(agentSetupDismissed))
 
@@ -247,7 +253,7 @@ export async function setupDemoMode(page: Page): Promise<void> {
   await setupTestStorage(page, {
     token: 'demo-token',
     demoMode: true,
-    hasSession: true,
+    hasSession: false,
     onboarded: true,
     agentSetupDismissed: true,
     backendStatus: { available: true, timestamp: Date.now() },
