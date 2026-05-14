@@ -211,7 +211,8 @@
       "quickSelect": "Quick Select",
       "marketplaceThemes": "Marketplace Themes",
       "removeThemeTitle": "Remove Theme",
-      "removeThemeMessage": "This will uninstall the theme and remove it from your list. This action cannot be undone."
+      "removeThemeMessage": "This will uninstall the theme and remove it from your list. This action cannot be undone.",
+      "removeFailed": "Failed to remove theme. Your browser storage may be unavailable."
     },
     "accessibility": {
       "title": "Accessibility",
