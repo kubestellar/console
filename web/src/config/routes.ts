@@ -3,6 +3,13 @@
  * 
  * Centralized route definitions for type-safety and maintainability.
  * Use these constants instead of hardcoding route paths throughout the app.
+ * 
+ * Navigation Best Practices:
+ * - Always use ROUTES constants instead of hardcoding paths
+ * - Use helper functions (getCustomDashboardRoute, getMissionRoute) for dynamic routes
+ * - External links should use the ExternalLink component from components/ui/ExternalLink
+ * - Deep navigation is handled by DrillDownProvider with automatic breadcrumbs
+ * - Browser history integration is automatic for drill-down views
  */
 
 export const ROUTES = {
