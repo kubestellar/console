@@ -15,12 +15,12 @@ jobs:
 
       - name: Extract and syntax-check inline JavaScript
         run: |
-          for html_file in $(find dashboard -name '*.html'); do
+          find dashboard -name '*.html' -print0 | while IFS= read -r -d '' html_file; do
             echo "Checking $html_file..."
-            # Extract all <script> blocks (handles multiple blocks per file)
+            # Extract all <script> blocks — pass filename via argv, not string interpolation
             node -e "
               const fs = require('fs');
-              const html = fs.readFileSync('$html_file', 'utf8');
+              const html = fs.readFileSync(process.argv[1], 'utf8');
               const re = /<script[^>]*>([\s\S]*?)<\/script>/gi;
               let match, idx = 0;
               while ((match = re.exec(html)) !== null) {
@@ -31,11 +31,11 @@ jobs:
                 idx++;
               }
               console.log('Extracted ' + idx + ' script block(s)');
-            "
+            " "$html_file"
             # Syntax-check each extracted block
             for block in /tmp/block_*.js; do
               [ -f "$block" ] || continue
-              echo "  Parsing $(basename $block)..."
+              echo "  Parsing $(basename "$block")..."
               node --check "$block"
             done
             rm -f /tmp/block_*.js
