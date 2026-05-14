@@ -2,25 +2,35 @@ import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 
-const demoModeTestState = vi.hoisted(() => ({
-  toggleDemoMode: vi.fn(),
-  hasApprovedAgents: vi.fn(),
-  agentFetch: vi.fn(),
-  useLocalAgent: vi.fn(),
-  useBackendHealth: vi.fn(),
-  useMissions: vi.fn(),
-  isDemoMode: true,
-  isDemoModeForced: false,
+const {
+  demoModeState,
+  mockToggleDemoMode,
+  mockHasApprovedAgents,
+  mockAgentFetch,
+  mockUseLocalAgent,
+  mockUseBackendHealth,
+  mockUseMissions,
+} = vi.hoisted(() => ({
+  demoModeState: {
+    isDemoMode: true,
+    isDemoModeForced: false,
+  },
+  mockToggleDemoMode: vi.fn(),
+  mockHasApprovedAgents: vi.fn(),
+  mockAgentFetch: vi.fn(),
+  mockUseLocalAgent: vi.fn(),
+  mockUseBackendHealth: vi.fn(),
+  mockUseMissions: vi.fn(),
 }))
 
 vi.mock('../../../../hooks/useDemoMode', () => ({
   useDemoMode: () => ({
-    isDemoMode: demoModeTestState.isDemoMode,
-    toggleDemoMode: demoModeTestState.toggleDemoMode,
+    isDemoMode: demoModeState.isDemoMode,
+    toggleDemoMode: mockToggleDemoMode,
     setDemoMode: vi.fn(),
   }),
-  getDemoMode: () => demoModeTestState.isDemoMode,
-  isDemoModeForced: demoModeTestState.isDemoModeForced,
+  getDemoMode: () => demoModeState.isDemoMode,
+  isDemoModeForced: demoModeState.isDemoModeForced,
 }))
 
 vi.mock('../../../../hooks/useLocalAgent', () => ({
@@ -61,8 +71,8 @@ import { AgentStatusIndicator } from '../AgentStatusIndicator'
 
 describe('AgentStatusIndicator demo mode transition', () => {
   beforeEach(() => {
-    demoModeTestState.isDemoMode = true
-    demoModeTestState.isDemoModeForced = false
+    demoModeState.isDemoMode = true
+    demoModeState.isDemoModeForced = false
     vi.clearAllMocks()
 
     demoModeTestState.hasApprovedAgents.mockReturnValue(false)
@@ -97,8 +107,8 @@ describe('AgentStatusIndicator demo mode transition', () => {
   })
 
   it('offers CLI agent authorization from the auth warning state instead', async () => {
-    demoModeTestState.isDemoMode = false
-    demoModeTestState.useLocalAgent.mockReturnValue({
+    demoModeState.isDemoMode = false
+    mockUseLocalAgent.mockReturnValue({
       status: 'auth_error',
       health: { version: '1.2.3' },
       connectionEvents: [],
