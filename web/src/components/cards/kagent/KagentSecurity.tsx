@@ -103,11 +103,11 @@ function KagentSecurityInternal({ config }: { config?: Record<string, unknown> }
           <span className="text-lg font-bold text-foreground">{stats.declarativePct}%</span>
         </div>
         <div className="grid grid-cols-2 gap-2 text-center">
-          <div className="rounded bg-green-400/10 py-1.5">
+          <div className="rounded bg-green-500/10 py-1.5">
             <div className="text-sm font-bold text-green-400">{stats.declarative}</div>
             <div className="text-xs text-muted-foreground">{t('kagentSecurity.declarative')}</div>
           </div>
-          <div className="rounded bg-yellow-400/10 py-1.5">
+          <div className="rounded bg-yellow-500/10 py-1.5">
             <div className="text-sm font-bold text-yellow-400">{stats.byo}</div>
             <div className="text-xs text-muted-foreground">{t('kagentSecurity.byo')}</div>
           </div>
@@ -158,7 +158,7 @@ function KagentSecurityInternal({ config }: { config?: Record<string, unknown> }
           </div>
           <div className="space-y-1">
             {byoAgents.map(agent => (
-              <div key={`${agent.cluster}-${agent.name}`} className="flex flex-wrap items-center justify-between gap-y-2 text-xs py-1 px-2 rounded bg-yellow-400/5 border border-yellow-400/10">
+              <div key={`${agent.cluster}-${agent.name}`} className="flex flex-wrap items-center justify-between gap-y-2 text-xs py-1 px-2 rounded bg-yellow-500/10 border border-yellow-500/20">
                 <div className="flex items-center gap-1.5">
                   <ShieldAlert className="w-3 h-3 text-yellow-400" />
                   <span className="text-foreground">{agent.name}</span>
@@ -172,7 +172,7 @@ function KagentSecurityInternal({ config }: { config?: Record<string, unknown> }
 
       {/* All Declarative */}
       {byoAgents.length === 0 && stats.totalAgents > 0 && (
-        <div className="flex items-center gap-2 text-xs text-green-400 bg-green-400/5 rounded-lg p-3 border border-green-400/10">
+        <div className="flex items-center gap-2 text-xs text-green-400 bg-green-500/10 rounded-lg p-3 border border-green-500/20">
           <ShieldCheck className="w-4 h-4" />
           <span>{t('kagentSecurity.allDeclarative', { count: stats.totalAgents })}</span>
         </div>

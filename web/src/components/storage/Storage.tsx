@@ -43,9 +43,9 @@ function PVCListModal({ isOpen, onClose, pvcs, title, statusFilter = 'all' }: PV
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Bound': return 'text-green-400 bg-green-400/20'
-      case 'Pending': return 'text-yellow-400 bg-yellow-400/20'
-      case 'Lost': return 'text-red-400 bg-red-400/20'
+      case 'Bound': return 'text-green-400 bg-green-500/10'
+      case 'Pending': return 'text-yellow-400 bg-yellow-500/10'
+      case 'Lost': return 'text-red-400 bg-red-500/10'
       default: return 'text-muted-foreground bg-secondary'
     }
   }
