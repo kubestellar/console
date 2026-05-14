@@ -65,20 +65,22 @@ async function clickSidebarRoute(page: Page, href: string) {
   // Dismiss any auto-opened modals that could overlay the sidebar (#11829).
   await dismissAnyOpenModals(page)
 
-  const link = sidebar.locator(`a[href="${href}"]`).first()
-  // The link may be inside a collapsed section — scroll it into view which
-  // also triggers any lazy section expansion.
-  const isVisible = await link.isVisible({ timeout: 3000 }).catch(() => false)
-  if (!isVisible) {
-    // Section may need expanding; try clicking the section header to reveal it.
-    // If the link still doesn't appear, the test will fail with a clear message.
-    await expect(link).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS })
-  }
+  const linkSelector = `[data-testid="sidebar"] a[href="${href}"]`
+  const link = page.locator(linkSelector).first()
+
+  await link.waitFor({ state: 'attached', timeout: ROUTE_LOAD_TIMEOUT_MS })
   await link.scrollIntoViewIfNeeded()
-  // Use force:true to bypass Playwright's stability check — sidebar CSS
-  // transitions can cause the element to appear "in motion" even when visually
-  // settled (see #11521).
-  await link.click({ force: true })
+  await link.waitFor({ state: 'visible', timeout: ROUTE_LOAD_TIMEOUT_MS })
+
+  // Re-locate immediately before the click so React sidebar re-renders do not
+  // leave us clicking a stale node. Prefer a normal click first; forcing the
+  // click too early can miss real navigation when overlays are still settling.
+  try {
+    await page.locator(linkSelector).first().click({ timeout: ROUTE_LOAD_TIMEOUT_MS })
+  } catch {
+    await page.locator(linkSelector).first().click({ force: true, timeout: ROUTE_LOAD_TIMEOUT_MS })
+  }
+
   await assertRouteLoaded(page, href)
 }
 
