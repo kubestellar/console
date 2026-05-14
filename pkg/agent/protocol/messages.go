@@ -28,6 +28,9 @@ const (
 	// Mixed-mode chat types
 	TypeMixedModeThinking  MessageType = "mixed_mode_thinking"  // Thinking agent phase indicator
 	TypeMixedModeExecuting MessageType = "mixed_mode_executing" // Execution agent phase indicator
+
+	// Integrity & Sync types
+	TypeStateDigest MessageType = "state_digest" // Server-side state integrity digest (#12000)
 )
 
 // Message is the base message structure for WebSocket communication
@@ -242,4 +245,12 @@ type ProviderCheckResponse struct {
 	Version       string   `json:"version,omitempty"`
 	CliPath       string   `json:"cliPath,omitempty"`
 	HasHandshake  bool     `json:"hasHandshake"`            // Whether the provider supports explicit readiness checks
+}
+
+// StateDigestPayload represents a snapshot of resource versions for integrity checking.
+// Clients compare these versions with their local cache to detect missed updates (sync drift).
+type StateDigestPayload struct {
+	Sequence  int64             `json:"seq"`      // Monotonic counter
+	Timestamp int64             `json:"ts"`       // Server Unix time
+	Versions  map[string]string `json:"versions"` // ResourceType -> MaxResourceVersion
 }

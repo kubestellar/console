@@ -6,6 +6,7 @@ interface CreateWsStaleDetectionOptions {
   onStale: (elapsedMs: number) => void
   isConnected?: () => boolean
   shouldCheck?: () => boolean
+  onDrift?: (versions: Record<string, string>) => void
 }
 
 export interface WsStaleDetectionController {
@@ -13,6 +14,7 @@ export interface WsStaleDetectionController {
   start: () => void
   stop: () => void
   getLastMessageAgeMs: () => number
+  handleDigest: (versions: Record<string, string>) => void
 }
 
 /**
@@ -27,6 +29,7 @@ export function createWsStaleDetection({
   onStale,
   isConnected,
   shouldCheck,
+  onDrift,
 }: CreateWsStaleDetectionOptions): WsStaleDetectionController {
   let lastMessageTime = 0
   let staleTimer: ReturnType<typeof setInterval> | null = null
@@ -75,5 +78,11 @@ export function createWsStaleDetection({
     start,
     stop,
     getLastMessageAgeMs: () => (lastMessageTime > 0 ? Date.now() - lastMessageTime : 0),
+    handleDigest: (versions: Record<string, string>) => {
+      markMessageReceived()
+      if (onDrift) {
+        onDrift(versions)
+      }
+    },
   }
 }

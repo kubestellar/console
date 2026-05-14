@@ -4745,5 +4745,20 @@
     "searchPlaceholder": "Search detection runs...",
     "viewRun": "View Run",
     "viewAllIssue": "View all detection runs on GitHub"
+  },
+  "quality": {
+    "bug_sweep": "AI Bug Sweep",
+    "issues_detected": "Potential issues detected",
+    "state_integrity": "State Integrity",
+    "stale": "Stale",
+    "synced": "Synced",
+    "drift_detected": "Drift detected",
+    "digest_active": "Real-time digest active",
+    "remediation_progress": "Remediation Progress",
+    "fixed": "Fixed",
+    "fix_guards_applied": "Added (data || []) guards to AdmissionWebhooks.tsx",
+    "paths_flagged": "unsafe paths flagged for triage",
+    "sweep_scheduled": "Weekly bug sweep scheduled (scripts/ai-bug-sweep.js)",
+    "version_poc": "Quality Dashboard v1.0 • LFX Mentorship POC"
   }
 }

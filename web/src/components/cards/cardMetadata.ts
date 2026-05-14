@@ -197,6 +197,7 @@ export const CARD_TITLES: Record<string, string> = {
   github_activity: 'GitHub Activity',
   issue_activity_chart: 'Daily Issues & PRs',
   kubectl: 'Kubectl Terminal',
+  quality_dashboard: 'Quality Dashboard',
   // weather — registered via unified descriptor system
   rss_feed: 'RSS Feed',
   iframe_embed: 'Iframe Embed',
@@ -547,6 +548,7 @@ export const CARD_DESCRIPTIONS: Record<string, string> = {
   github_activity: 'Recent GitHub activity: commits, PRs, and issues.',
   issue_activity_chart: 'Daily chart of issues opened vs closed and PRs merged, with configurable lookback period.',
   kubectl: 'Interactive kubectl terminal for running commands.',
+  quality_dashboard: 'Real-time metrics on state integrity, AI bug sweeps, and auto-remediations.',
   // weather — registered via unified descriptor system
   rss_feed: 'RSS feed reader for Kubernetes news and blogs.',
   iframe_embed: 'Embed an external web page inside a card.',

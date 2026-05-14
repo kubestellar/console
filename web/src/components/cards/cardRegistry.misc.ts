@@ -29,6 +29,7 @@ const IframeEmbed = safeLazy(() => import('./IframeEmbed'), 'IframeEmbed')
 const NetworkUtils = safeLazy(() => import('./NetworkUtils'), 'NetworkUtils')
 const MobileBrowser = safeLazy(() => import('./MobileBrowser'), 'MobileBrowser')
 const KubeChess = safeLazy(() => _arcadeBundle, 'KubeChess')
+const QualityDashboard = safeLazy(() => import('./QualityDashboard'), 'default')
 
 export const miscCardRegistry: CardRegistryCategory = {
   components: {
@@ -39,6 +40,7 @@ export const miscCardRegistry: CardRegistryCategory = {
     pod_brothers: PodBrothers, kube_kart: KubeKart, kube_pong: KubePong, kube_snake: KubeSnake,
     kube_galaga: KubeGalaga, kube_bert: KubeBert, kube_doom: KubeDoom, iframe_embed: IframeEmbed,
     network_utils: NetworkUtils, mobile_browser: MobileBrowser, kube_chess: KubeChess,
+    quality_dashboard: QualityDashboard,
   },
   preloaders: {
     kubectl: () => import('./Kubectl'), sudoku_game: () => import('./arcade-bundle'), match_game: () => import('./arcade-bundle'),
@@ -50,11 +52,13 @@ export const miscCardRegistry: CardRegistryCategory = {
     kube_pong: () => import('./arcade-bundle'), kube_snake: () => import('./arcade-bundle'), kube_galaga: () => import('./arcade-bundle'),
     kube_bert: () => import('./arcade-bundle'), kube_doom: () => import('./arcade-bundle'), iframe_embed: () => import('./IframeEmbed'),
     network_utils: () => import('./NetworkUtils'), mobile_browser: () => import('./MobileBrowser'), kube_chess: () => import('./arcade-bundle'),
+    quality_dashboard: () => import('./QualityDashboard'),
   },
   defaultWidths: {
     kubectl: 8, sudoku_game: 6, match_game: 6, solitaire: 6, checkers: 6, game_2048: 5, kubedle: 6, pod_sweeper: 6,
     container_tetris: 6, flappy_pod: 6, kube_man: 6, kube_kong: 6, pod_pitfall: 6, node_invaders: 6,
     missile_command: 6, pod_crosser: 6, pod_brothers: 6, kube_kart: 5, kube_pong: 5, kube_snake: 5,
     kube_galaga: 5, kube_bert: 5, kube_doom: 6, iframe_embed: 6, network_utils: 5, mobile_browser: 5, kube_chess: 5,
+    quality_dashboard: 4,
   },
 }

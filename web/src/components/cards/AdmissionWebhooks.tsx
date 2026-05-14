@@ -34,9 +34,9 @@ export function AdmissionWebhooks() {
     )
   }
 
-  const filtered = tab === 'all' ? webhooks : webhooks.filter(w => w.type === tab)
-  const mutatingCount = webhooks.filter(w => w.type === 'mutating').length
-  const validatingCount = webhooks.filter(w => w.type === 'validating').length
+  const filtered = tab === 'all' ? (webhooks || []) : (webhooks || []).filter(w => w.type === tab)
+  const mutatingCount = (webhooks || []).filter(w => w.type === 'mutating').length
+  const validatingCount = (webhooks || []).filter(w => w.type === 'validating').length
 
   return (
     <div className="space-y-2 p-1">
@@ -49,7 +49,7 @@ export function AdmissionWebhooks() {
               tab === tabKey ? 'bg-primary text-primary-foreground' : 'bg-muted/30 text-muted-foreground hover:bg-muted/50'
             }`}
           >
-            {tabKey === 'all' ? t('admissionWebhooks.allTab', { count: webhooks.length }) : tabKey === 'mutating' ? t('admissionWebhooks.mutatingTab', { count: mutatingCount }) : t('admissionWebhooks.validatingTab', { count: validatingCount })}
+            {tabKey === 'all' ? t('admissionWebhooks.allTab', { count: (webhooks || []).length }) : tabKey === 'mutating' ? t('admissionWebhooks.mutatingTab', { count: mutatingCount }) : t('admissionWebhooks.validatingTab', { count: validatingCount })}
           </button>
         ))}
       </div>
@@ -65,7 +65,7 @@ export function AdmissionWebhooks() {
       )}
 
       <div className="space-y-1 max-h-[300px] overflow-y-auto">
-        {filtered.map((wh, i) => (
+        {(filtered || []).map((wh, i) => (
           <div key={`${wh.cluster}-${wh.name}-${i}`} className="flex flex-wrap items-center justify-between gap-y-2 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">

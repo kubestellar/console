@@ -92,6 +92,16 @@ function getPredictionStaleDetection(): WsStaleDetectionController {
         wsConnectionIsStale = true
         notifySubscribers()
       },
+      onDrift: (versions) => {
+        // Drift detected by comparing server-side resource versions with client state.
+        // If 'clusters' count drifted, we MUST trigger a full refresh to avoid
+        // showing stale data from a deleted/added context (#12000).
+        const currentClusters = clusterCache.clusters?.length || 0
+        if (versions.clusters && parseInt(versions.clusters) !== currentClusters) {
+          console.warn('[AIPredictions] Cluster count drift detected, refreshing...');
+          fullFetchClusters();
+        }
+      },
     })
   }
 
@@ -366,6 +376,9 @@ async function connectWebSocket(): Promise<void> {
           clusterCache.consecutiveFailures = 0
           clusterCache.isFailed = false
           fullFetchClusters()
+        } else if (message.type === 'state_digest') {
+          const payload = (message.payload ?? {}) as { versions?: Record<string, string> }
+          getPredictionStaleDetection().handleDigest(payload.versions || {})
         }
       } catch {
         // Invalid JSON, ignore
