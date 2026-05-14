@@ -272,7 +272,10 @@ export function MissionSidebar() {
     if (NON_APPLIABLE_STATUSES.has(activeMission.status)) {
       return
     }
-    const applyMessage = `Please apply this saved resolution:\n\n**${resolution.title}**\n\n${resolution.resolution.summary}\n\nSteps:\n${resolution.resolution.steps.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}${resolution.resolution.yaml ? `\n\nYAML:\n\`\`\`yaml\n${resolution.resolution.yaml}\n\`\`\`` : ''}`
+    const stepsText = (resolution.resolution.steps || []).length > 0
+      ? `\n\nSteps:\n${(resolution.resolution.steps || []).map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}`
+      : ''
+    const applyMessage = `Please apply this saved resolution:\n\n**${resolution.title}**\n\n${resolution.resolution.summary}${stepsText}${resolution.resolution.yaml ? `\n\nYAML:\n\`\`\`yaml\n${resolution.resolution.yaml}\n\`\`\`` : ''}`
     sendMessage(activeMission.id, applyMessage)
   }
 
