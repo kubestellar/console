@@ -95,6 +95,13 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
       setIsDiscoveringAgents(false)
     }
   }
+
+  const openAgentApprovalDialog = () => {
+    void fetchAgentsFromHealth()
+    setShowApprovalDialog(true)
+    setShowAgentStatus(false)
+  }
+
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // ── Stabilize pill status ──────────────────────────────────────────────
@@ -358,21 +365,19 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
                 </span>
               </div>
               <button
+                data-testid="demo-mode-toggle"
                 disabled={isDiscoveringAgents}
                 onClick={() => {
                   if (isDemoModeForced && isDemoMode) {
                     setShowSetupDialog(true)
                     setShowAgentStatus(false)
-                  } else if (isDemoMode && !hasApprovedAgents()) {
-                    // Switching from demo → agent: require opt-in first
-                    // Fetch agents from kc-agent before showing dialog
-                    // (WebSocket is not connected in demo mode)
-                    fetchAgentsFromHealth()
-                    setShowApprovalDialog(true)
-                    setShowAgentStatus(false)
-                  } else {
-                    toggleDemoMode()
+                    return
                   }
+
+                  // Leaving demo mode should be immediate. CLI agent approval is
+                  // only required before enabling command-executing agents, not
+                  // for viewing live cluster/auth states (#13611).
+                  toggleDemoMode()
                 }}
                 className={cn(
                   'relative w-11 h-6 rounded-full transition-colors',
@@ -486,6 +491,15 @@ export function AgentStatusIndicator({ showLabel = false }: AgentStatusIndicator
                         ? t('agent.connectedToLocalAgent')
                         : t('agent.unableToConnect')}
             </p>
+            {!isDemoMode && isAuthError && !hasApprovedAgents() && (
+              <button
+                data-testid="agent-approval-cta"
+                onClick={openAgentApprovalDialog}
+                className="mt-2 rounded border border-yellow-500/30 bg-yellow-500/10 px-3 py-1.5 text-xs font-medium text-yellow-300 hover:bg-yellow-500/20"
+              >
+                {t('agent.approval.title')}
+              </button>
+            )}
             {/* When running on the hosted demo, surface a self-host link so
                 users who want real cluster data know where to go next. */}
             {isDemoMode && isDemoModeForced && (
