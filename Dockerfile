@@ -23,18 +23,30 @@ FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6
 
 ARG TARGETARCH
 ARG KUBESTELLAR_MCP_RELEASE_TAG=v0.8.18-nightly.20260509
+# SHA256 checksums for linux/amd64 tarballs (update when bumping KUBESTELLAR_MCP_RELEASE_TAG)
+ARG OPS_SHA256_AMD64="ee199aed870a074d056045e18ea0efb89af0dd817b502e8b1e2157608bd0efd2"
+ARG DEPLOY_SHA256_AMD64="f49e94bce3157bd7ed450fabcc6bff8a72bc41f19735740f6b89717a3f0dc225"
+# SHA256 checksums for linux/arm64 tarballs
+ARG OPS_SHA256_ARM64="264678618b30a178eed02488b3c74afd49b4a85f68b474d9ae9aae2b19ba0b23"
+ARG DEPLOY_SHA256_ARM64="65d4ca235e494a1a29345d28b65c8e46c66bd65c5101f1ca0a4c1bf8b83880a8"
 
 RUN set -eux; \
     apk add --no-cache ca-certificates curl tar; \
     case "${TARGETARCH}" in \
-      amd64|arm64) mcp_arch="${TARGETARCH}" ;; \
+      amd64) mcp_arch="amd64"; ops_sha="${OPS_SHA256_AMD64}"; deploy_sha="${DEPLOY_SHA256_AMD64}" ;; \
+      arm64) mcp_arch="arm64"; ops_sha="${OPS_SHA256_ARM64}"; deploy_sha="${DEPLOY_SHA256_ARM64}" ;; \
       *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
     release_version="${KUBESTELLAR_MCP_RELEASE_TAG#v}"; \
     base_url="https://github.com/kubestellar/kubestellar-mcp/releases/download/${KUBESTELLAR_MCP_RELEASE_TAG}"; \
     mkdir -p /out; \
-    curl -fsSL "${base_url}/kubestellar-ops_${release_version}_linux_${mcp_arch}.tar.gz" | tar -xz -C /out kubestellar-ops; \
-    curl -fsSL "${base_url}/kubestellar-deploy_${release_version}_linux_${mcp_arch}.tar.gz" | tar -xz -C /out kubestellar-deploy; \
+    curl -fsSL "${base_url}/kubestellar-ops_${release_version}_linux_${mcp_arch}.tar.gz" -o /out/kubestellar-ops.tar.gz; \
+    echo "${ops_sha}  /out/kubestellar-ops.tar.gz" | sha256sum -c -; \
+    tar -xzf /out/kubestellar-ops.tar.gz -C /out kubestellar-ops; \
+    curl -fsSL "${base_url}/kubestellar-deploy_${release_version}_linux_${mcp_arch}.tar.gz" -o /out/kubestellar-deploy.tar.gz; \
+    echo "${deploy_sha}  /out/kubestellar-deploy.tar.gz" | sha256sum -c -; \
+    tar -xzf /out/kubestellar-deploy.tar.gz -C /out kubestellar-deploy; \
+    rm /out/kubestellar-ops.tar.gz /out/kubestellar-deploy.tar.gz; \
     chmod +x /out/kubestellar-ops /out/kubestellar-deploy
 
 # Build stage - Frontend
