@@ -31,14 +31,19 @@ export function RangeSlider({
   }, [value, min, max])
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full h-2">
+      {/* Unfilled track background */}
+      <div
+        className="absolute top-0 left-0 w-full h-2 rounded-full bg-secondary pointer-events-none"
+        aria-hidden="true"
+      />
       {/* Fill track */}
       <div
-        className={cn('absolute top-1/2 left-0 h-2 rounded-full -translate-y-1/2 pointer-events-none', fillColor)}
+        className={cn('absolute top-0 left-0 h-2 rounded-full pointer-events-none', fillColor)}
         style={{ width: `${percentage}%` }}
         aria-hidden="true"
       />
-      {/* Native range input */}
+      {/* Native range input — transparent track so fill shows through */}
       <input
         id={id}
         type="range"
@@ -46,16 +51,20 @@ export function RangeSlider({
         max={max}
         value={value}
         className={cn(
-          'relative w-full h-2 bg-secondary rounded-full appearance-none cursor-pointer',
+          'absolute top-0 left-0 w-full h-2 bg-transparent rounded-full appearance-none cursor-pointer',
+          '[&::-webkit-slider-runnable-track]:bg-transparent',
+          '[&::-webkit-slider-runnable-track]:h-2',
+          '[&::-webkit-slider-runnable-track]:rounded-full',
           '[&::-webkit-slider-thumb]:appearance-none',
           '[&::-webkit-slider-thumb]:w-4',
           '[&::-webkit-slider-thumb]:h-4',
           '[&::-webkit-slider-thumb]:rounded-full',
           '[&::-webkit-slider-thumb]:bg-current',
           '[&::-webkit-slider-thumb]:cursor-pointer',
-          '[&::-webkit-slider-thumb]:relative',
-          '[&::-webkit-slider-thumb]:z-10',
           '[&::-webkit-slider-thumb]:shadow-md',
+          '[&::-webkit-slider-thumb]:-mt-1',
+          '[&::-moz-range-track]:bg-transparent',
+          '[&::-moz-range-track]:h-2',
           '[&::-moz-range-thumb]:w-4',
           '[&::-moz-range-thumb]:h-4',
           '[&::-moz-range-thumb]:rounded-full',
@@ -63,8 +72,6 @@ export function RangeSlider({
           '[&::-moz-range-thumb]:cursor-pointer',
           '[&::-moz-range-thumb]:border-0',
           '[&::-moz-range-thumb]:shadow-md',
-          '[&::-moz-range-progress]:bg-current',
-          '[&::-moz-range-progress]:rounded-full',
           className,
         )}
         {...props}
