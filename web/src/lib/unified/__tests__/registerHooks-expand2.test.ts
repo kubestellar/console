@@ -131,10 +131,14 @@ vi.mock('../card/hooks/useDataSource', () => ({
   }),
 }))
 
-vi.mock('../../constants/network', () => ({
-  SHORT_DELAY_MS: 10,
-  FLASH_ANIMATION_MS: 100,
-}))
+vi.mock('../../constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    SHORT_DELAY_MS: 10,
+    FLASH_ANIMATION_MS: 100,
+  }
+})
 
 // Import triggers registration
 import { registerUnifiedHooks } from '../registerHooks'

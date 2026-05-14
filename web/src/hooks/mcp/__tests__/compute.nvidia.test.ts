@@ -263,16 +263,18 @@ describe('useNVIDIAOperators', () => {
     expect(result.current.operators).toEqual(fakeOps)
   })
 
-  it('skips agent requests when the local agent URL is suppressed', async () => {
+  it('skips SSE when the local agent URL is suppressed and falls back to REST', async () => {
     localStorage.setItem('token', 'demo-token')
     mockLocalAgentHttpUrl.value = ''
-    globalThis.fetch = vi.fn()
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ operators: [] }), { status: 200 }))
+    )
 
     const { result } = renderHook(() => useNVIDIAOperators())
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(mockFetchSSE).not.toHaveBeenCalled()
-    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(globalThis.fetch).toHaveBeenCalledWith('http://127.0.0.1:8585/nvidia-operators?', undefined)
     expect(result.current.operators).toEqual([])
     expect(result.current.error).toBeNull()
   })

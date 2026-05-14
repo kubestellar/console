@@ -36,12 +36,16 @@ vi.mock('../shared', () => ({
 vi.mock('../pollingManager', () => ({
   subscribePolling: vi.fn(),
 }))
-vi.mock('../../../lib/constants/network', () => ({
-  MCP_HOOK_TIMEOUT_MS: 15_000,
-  DEPLOY_ABORT_TIMEOUT_MS: 30_000,
-  SERVICES_CACHE_TTL_MS: 300_000,
-  LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
-}))
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    MCP_HOOK_TIMEOUT_MS: 15_000,
+    DEPLOY_ABORT_TIMEOUT_MS: 30_000,
+    SERVICES_CACHE_TTL_MS: 300_000,
+    LOCAL_AGENT_HTTP_URL: 'http://127.0.0.1:8585',
+  }
+})
 vi.mock('../../useCachedData/demoData', () => ({
   getDemoIngresses: vi.fn().mockReturnValue([]),
 }))

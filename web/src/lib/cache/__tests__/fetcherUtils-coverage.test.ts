@@ -276,10 +276,12 @@ describe('fetcherUtils extended coverage', () => {
     })
 
     it('delegates to backend variant when in cluster mode', async () => {
+      localStorage.setItem('token', 'test-token')
       localStorage.setItem('kc_agent_backend_preference', 'kagenti')
       ;(clusterCacheRef as { clusters: Array<{ name: string; reachable?: boolean }> }).clusters = [
         { name: 'c1', reachable: true },
       ]
+      mockValidateArrayResponse.mockImplementation((_schema: unknown, raw: unknown) => raw)
       mockSettledWithConcurrency.mockImplementation(async (tasks: Array<() => Promise<unknown>>, _concurrency?: number, onSettled?: (r: PromiseSettledResult<unknown>) => void) => {
         for (const task of tasks) {
           const value = await task()
@@ -287,14 +289,13 @@ describe('fetcherUtils extended coverage', () => {
         }
         return []
       })
-      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(JSON.stringify({ items: [] }), { status: 200 })
-      )
+      const fetchSpy = vi.spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response(JSON.stringify({ clusters: [{ name: 'c1', reachable: true }] }), { status: 200 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }))
 
       await fetchFromAllClusters('items', 'items')
-      // In cluster mode it should use /api/mcp/ prefix
-      const calledUrl = fetchSpy.mock.calls[0]?.[0] as string
-      expect(calledUrl).toContain('/api/mcp/')
+      expect(fetchSpy.mock.calls[0]?.[0]).toContain('/api/mcp/clusters?')
+      expect(fetchSpy.mock.calls[1]?.[0]).toContain('/api/mcp/items?cluster=c1')
     })
   })
 

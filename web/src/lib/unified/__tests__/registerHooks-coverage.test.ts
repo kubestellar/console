@@ -128,9 +128,13 @@ vi.mock('../../../hooks/useMCS', () => ({
 
 /** Speed up demo data timer for tests */
 const FAST_DELAY_MS = 10
-vi.mock('../../constants/network', () => ({
-  SHORT_DELAY_MS: 10,
-}))
+vi.mock('../../constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    SHORT_DELAY_MS: FAST_DELAY_MS,
+  }
+})
 
 // Import triggers auto-registration
 import '../registerHooks'

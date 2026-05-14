@@ -141,9 +141,13 @@ vi.mock('../../../hooks/useMCS', () => ({
   useServiceImports: (...a: unknown[]) => mockUseServiceImports(...a),
 }))
 
-vi.mock('../../constants/network', () => ({
-  SHORT_DELAY_MS: 15,
-}))
+vi.mock('../../constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    SHORT_DELAY_MS: 15,
+  }
+})
 
 // Import triggers auto-registration, populating hookRegistry
 import '../registerHooks'

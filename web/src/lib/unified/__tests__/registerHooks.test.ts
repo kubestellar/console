@@ -71,9 +71,13 @@ vi.mock('../../../hooks/useMCS', () => ({
   useServiceImports: vi.fn().mockReturnValue({ imports: [], isLoading: false, error: null, refetch: vi.fn() }),
 }))
 
-vi.mock('../../constants/network', () => ({
-  SHORT_DELAY_MS: 0,
-}))
+vi.mock('../../constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    SHORT_DELAY_MS: 0,
+  }
+})
 
 // ── Import triggers auto-registration ────────────────────────────────
 // The module-level `registerUnifiedHooks()` call runs when imported.

@@ -15,9 +15,13 @@ import { CardDataReportContext, useCardLoadingState, type CardDataState } from '
 const TEST_TIMEOUT_MS = 100
 
 // Override the module-level constant used by useCardLoadingState
-vi.mock('../../../lib/constants/network', () => ({
-  CARD_LOADING_TIMEOUT_MS: 100, // 100ms for fast tests
-}))
+vi.mock('../../../lib/constants/network', async (importOriginal) => {
+  const actual = await importOriginal() as Record<string, unknown>
+  return {
+    ...actual,
+    CARD_LOADING_TIMEOUT_MS: 100, // 100ms for fast tests
+  }
+})
 
 beforeEach(() => {
   vi.useFakeTimers()
