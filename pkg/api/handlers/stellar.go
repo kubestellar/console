@@ -1293,6 +1293,9 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "AI provider error: " + err.Error()})
 	}
+	if generated == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "AI provider returned empty response"})
+	}
 
 	// Parse WATCH: line from LLM response before persisting
 	cleanContent, watch := parseWatchLine(generated.Content)
@@ -2754,6 +2757,9 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 		eval = evaluator.FallbackEvaluate(rawEvent)
 	} else {
 		eval, _ = evaluator.Evaluate(ctx, rawEvent, resolved)
+		if eval == nil {
+			eval = evaluator.FallbackEvaluate(rawEvent)
+		}
 	}
 	if !eval.ShouldShow {
 		slog.Debug("stellar: filtered event",
