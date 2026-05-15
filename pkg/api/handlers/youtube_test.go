@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/kubestellar/console/pkg/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,24 +25,27 @@ func TestYouTubePlaylistHandler(t *testing.T) {
 	app := fiber.New()
 	app.Get("/youtube/playlist", YouTubePlaylistHandler)
 
-	// Mock shared external client transport
-	oldTransport := client.External.Transport
-	defer func() { client.External.Transport = oldTransport }()
+	// Mock the shared client used by the handler.
+	origClient := youtubeHTTPClient
+	defer func() { youtubeHTTPClient = origClient }()
 
-	client.External.Transport = &mockYouTubeTransport{
-		roundTrip: func(req *http.Request) (*http.Response, error) {
-			if strings.Contains(req.URL.String(), "invidious") {
+	youtubeHTTPClient = &http.Client{
+		Timeout: origClient.Timeout,
+		Transport: &mockYouTubeTransport{
+			roundTrip: func(req *http.Request) (*http.Response, error) {
+				if strings.Contains(req.URL.String(), "invidious") {
+					return &http.Response{
+						StatusCode: 200,
+						Body:       io.NopCloser(strings.NewReader(`{"videos":[{"videoId":"abc","title":"Test Video"}]}`)),
+						Header:     make(http.Header),
+					}, nil
+				}
 				return &http.Response{
-					StatusCode: 200,
-					Body:       io.NopCloser(strings.NewReader(`{"videos":[{"videoId":"abc","title":"Test Video"}]}`)),
+					StatusCode: 404,
+					Body:       io.NopCloser(strings.NewReader("not found")),
 					Header:     make(http.Header),
 				}, nil
-			}
-			return &http.Response{
-				StatusCode: 404,
-				Body:       io.NopCloser(strings.NewReader("not found")),
-				Header:     make(http.Header),
-			}, nil
+			},
 		},
 	}
 
@@ -71,25 +73,28 @@ func TestYouTubeThumbnailProxy(t *testing.T) {
 	app := fiber.New()
 	app.Get("/youtube/thumbnail/:id", YouTubeThumbnailProxy)
 
-	// Mock shared external client transport
-	oldTransport := client.External.Transport
-	defer func() { client.External.Transport = oldTransport }()
+	// Mock the shared client used by the handler.
+	origClient := youtubeHTTPClient
+	defer func() { youtubeHTTPClient = origClient }()
 
-	client.External.Transport = &mockYouTubeTransport{
-		roundTrip: func(req *http.Request) (*http.Response, error) {
-			if strings.Contains(req.URL.String(), "mqdefault.jpg") {
-				// Real thumbnail size
+	youtubeHTTPClient = &http.Client{
+		Timeout: origClient.Timeout,
+		Transport: &mockYouTubeTransport{
+			roundTrip: func(req *http.Request) (*http.Response, error) {
+				if strings.Contains(req.URL.String(), "mqdefault.jpg") {
+					// Real thumbnail size
+					return &http.Response{
+						StatusCode: 200,
+						Body:       io.NopCloser(strings.NewReader(strings.Repeat("a", 2000))),
+						Header:     make(http.Header),
+					}, nil
+				}
 				return &http.Response{
-					StatusCode: 200,
-					Body:       io.NopCloser(strings.NewReader(strings.Repeat("a", 2000))),
+					StatusCode: 404,
+					Body:       io.NopCloser(strings.NewReader("not found")),
 					Header:     make(http.Header),
 				}, nil
-			}
-			return &http.Response{
-				StatusCode: 404,
-				Body:       io.NopCloser(strings.NewReader("not found")),
-				Header:     make(http.Header),
-			}, nil
+			},
 		},
 	}
 
