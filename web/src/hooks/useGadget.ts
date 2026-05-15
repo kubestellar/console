@@ -144,30 +144,27 @@ interface GadgetTraceHookResult<T> {
   consecutiveFailures: number
 }
 
-interface CreateGadgetTraceHookConfig<T> {
-  traceType: string
+/**
+ * Factory for gadget trace hooks. Eliminates duplication across trace types.
+ */
+function createGadgetTraceHook<T>(config: {
   keyPrefix: string
+  traceTool: string
   getDemoData: () => T[]
-}
-
-function createGadgetTraceHook<T>({
-  traceType,
-  keyPrefix,
-  getDemoData,
-}: CreateGadgetTraceHookConfig<T>) {
-  return function useCachedGadgetTrace(cluster?: string, namespace?: string): GadgetTraceHookResult<T> {
-    const key = `gadget:${keyPrefix}:${cluster || 'all'}:${namespace || 'all'}`
+}) {
+  return function useGadgetTraceHook(cluster?: string, namespace?: string): GadgetTraceHookResult<T> {
+    const key = `gadget:${config.keyPrefix}:${cluster || 'all'}:${namespace || 'all'}`
 
     const result = useCache({
       key,
       category: 'realtime' as RefreshCategory,
       initialData: [] as T[],
-      demoData: getDemoData(),
+      demoData: config.getDemoData(),
       fetcher: async () => {
         const args: Record<string, unknown> = {}
         if (cluster) args.cluster = cluster
         if (namespace) args.namespace = namespace
-        return fetchGadgetTrace<T[]>(traceType, args)
+        return fetchGadgetTrace<T[]>(config.traceTool, args)
       },
     })
 
@@ -204,20 +201,20 @@ export function useGadgetStatus(): { status: GadgetStatus; isLoading: boolean } 
 }
 
 export const useCachedNetworkTraces = createGadgetTraceHook<NetworkTraceEntry>({
-  traceType: 'trace_tcp',
   keyPrefix: 'network',
+  traceTool: 'trace_tcp',
   getDemoData: getDemoNetworkTraces,
 })
 
 export const useCachedDNSTraces = createGadgetTraceHook<DNSTraceEntry>({
-  traceType: 'trace_dns',
   keyPrefix: 'dns',
+  traceTool: 'trace_dns',
   getDemoData: getDemoDNSTraces,
 })
 
 export const useCachedProcessTraces = createGadgetTraceHook<ProcessTraceEntry>({
-  traceType: 'trace_exec',
   keyPrefix: 'process',
+  traceTool: 'trace_exec',
   getDemoData: getDemoProcessTraces,
 })
 
