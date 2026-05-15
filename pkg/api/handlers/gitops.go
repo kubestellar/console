@@ -307,8 +307,12 @@ func (h *GitOpsHandlers) ListHelmReleases(c *fiber.Ctx) error {
 			wg.Add(1)
 			safego.GoWith("gitops-helm-releases/"+clusterName, func() {
 				defer wg.Done()
-				subprocessSem <- struct{}{}        // acquire
-				defer func() { <-subprocessSem }() // release
+				select {
+				case subprocessSem <- struct{}{}:
+					defer func() { <-subprocessSem }()
+				case <-c.Context().Done():
+					return
+				}
 				ctx, cancel := context.WithTimeout(c.Context(), helmStreamPerClusterTimeout)
 				defer cancel()
 
@@ -589,8 +593,12 @@ func (h *GitOpsHandlers) ListKustomizations(c *fiber.Ctx) error {
 			wg.Add(1)
 			safego.GoWith("gitops-kustomizations/"+clusterName, func() {
 				defer wg.Done()
-				subprocessSem <- struct{}{}        // acquire
-				defer func() { <-subprocessSem }() // release
+				select {
+				case subprocessSem <- struct{}{}:
+					defer func() { <-subprocessSem }()
+				case <-clusterCtx.Done():
+					return
+				}
 				ctx, cancel := context.WithTimeout(clusterCtx, clusterTimeout)
 				defer cancel()
 
