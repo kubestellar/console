@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/kubestellar/console/pkg/safego"
 	"os"
 	"strings"
 	"time"
@@ -135,7 +137,7 @@ func (s *Server) handleEventsStreamSSE(w http.ResponseWriter, r *http.Request) {
 
 			// Forward Warning events to Stellar backend (non-blocking)
 			if obj.Type == "Warning" {
-				go s.forwardEventToStellar(obj)
+				safego.GoWith("forward-event-to-stellar", func() { s.forwardEventToStellar(obj) })
 			}
 		}
 	}
@@ -205,7 +207,7 @@ func (s *Server) forwardEventToStellar(event sseEventSummary) {
 	if backendURL == "" {
 		backendURL = "http://localhost:8080"
 	}
-	
+
 	payload := map[string]interface{}{
 		"cluster":   event.Cluster,
 		"namespace": event.Namespace,
@@ -216,20 +218,20 @@ func (s *Server) forwardEventToStellar(event sseEventSummary) {
 		"type":      event.Type,
 		"count":     1,
 	}
-	
+
 	body, err := json.Marshal(payload)
 	if err != nil {
 		slog.Warn("stellar: failed to marshal event", "error", err)
 		return
 	}
-	
+
 	req, err := http.NewRequest("POST", backendURL+"/api/stellar/events/ingest", bytes.NewReader(body))
 	if err != nil {
 		slog.Warn("stellar: failed to create request", "error", err)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -237,7 +239,7 @@ func (s *Server) forwardEventToStellar(event sseEventSummary) {
 		return
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusAccepted {
 		slog.Warn("stellar: backend rejected event", "status", resp.StatusCode)
 	}

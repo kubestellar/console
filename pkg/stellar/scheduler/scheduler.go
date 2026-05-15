@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar/providers"
 	"github.com/kubestellar/console/pkg/store"
 )
@@ -76,12 +77,13 @@ func (s *Scheduler) Start(ctx context.Context) {
 				slog.Warn("stellar/scheduler: fetch due actions failed", "error", err)
 				continue
 			}
-			for _, a := range actions {
+			for _, action := range actions {
+				action := action
 				sem <- struct{}{}
-				go func(action store.StellarAction) {
+				safego.GoWith("stellar-scheduler-execute", func() {
 					defer func() { <-sem }()
 					s.executeAction(ctx, action)
-				}(a)
+				})
 			}
 		}
 	}

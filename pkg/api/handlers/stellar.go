@@ -20,6 +20,7 @@ import (
 
 	"github.com/kubestellar/console/pkg/api/middleware"
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/stellar"
 	"github.com/kubestellar/console/pkg/stellar/prompts"
 	"github.com/kubestellar/console/pkg/stellar/providers"
@@ -236,7 +237,7 @@ func (h *StellarHandler) SetBroadcaster(b SSEBroadcaster) {
 // scheduled mission firer) belong here too. Safe to call multiple times — each
 // call spawns a new ticker, but the dedup-key gate prevents duplicate notifs.
 func (h *StellarHandler) StartBackgroundWorkers(ctx context.Context) {
-	go h.dueTaskReminderLoop(ctx)
+	safego.GoWith("stellar-due-task-reminder", func() { h.dueTaskReminderLoop(ctx) })
 }
 
 // dueTaskReminderLoop scans for tasks whose due_at has passed and fires a
@@ -1583,7 +1584,9 @@ func (h *StellarHandler) Stream(c *fiber.Ctx) error {
 
 		// If returning after a gap, push catch-up summary after stream establishes
 		if isReturning && lastSeen != nil {
-			go h.pushCatchUpSummary(context.Background(), w, userID, *lastSeen)
+			safego.GoWith("stellar-catch-up-summary", func() {
+				h.pushCatchUpSummary(context.Background(), w, userID, *lastSeen)
+			})
 		}
 
 		ticker := time.NewTicker(stellarStreamInterval)
@@ -1669,7 +1672,7 @@ func (h *StellarHandler) IngestEvent(c *fiber.Ctx) error {
 	}
 
 	// Process event asynchronously (non-blocking)
-	go h.ProcessEvent(context.Background(), event)
+	safego.GoWith("stellar-process-event", func() { h.ProcessEvent(context.Background(), event) })
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{"status": "accepted"})
 }
@@ -3045,7 +3048,7 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 		"autoAction", recommendedTypeOrEmpty(eval.RecommendedAction))
 
 	// Async LLM narration — replaces the fast narration when ready
-	go func() {
+	safego.GoWith("stellar-resolve-provider", func() {
 		resolved, resolveErr := h.resolveProviderAndModel(ctx, "system", "", "")
 		if resolveErr != nil || resolved.Provider == nil {
 			return
@@ -3074,7 +3077,7 @@ func (h *StellarHandler) ProcessEvent(ctx context.Context, event IncomingEvent) 
 				}})
 			}
 		}
-	}()
+	})
 
 	// Auto-create watch for critical or recurring events so the user gets follow-up
 	if isRecurring || severity == "critical" {

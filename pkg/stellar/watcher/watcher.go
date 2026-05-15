@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kubestellar/console/pkg/k8s"
+	"github.com/kubestellar/console/pkg/safego"
 	"github.com/kubestellar/console/pkg/store"
 )
 
@@ -107,16 +108,17 @@ func (w *Watcher) poll(ctx context.Context) {
 	sem := make(chan struct{}, 5)
 	var wg sync.WaitGroup
 	for _, c := range clusters {
+		name := c.Name
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(name string) {
+		safego.GoWith("stellar-watcher-poll-"+name, func() {
 			defer wg.Done()
 			defer func() { <-sem }()
 			added := w.pollCluster(pollCtx, name)
 			countMu.Lock()
 			newNotifs += added
 			countMu.Unlock()
-		}(c.Name)
+		})
 	}
 	wg.Wait()
 	slog.Info("stellar/watcher: poll complete", "clusters", len(clusters), "new_notifs", newNotifs, "duration_ms", int(time.Since(start).Milliseconds()))
