@@ -44,7 +44,7 @@ const STATUS_DOT: Record<string, string> = {
   unknown: 'bg-gray-400' }
 
 export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorProps) {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters: allClusters, isLoading: clustersLoading, isRefreshing: clustersRefreshing, refetch: refetchClusters } = useClusters()
   const { issues: allPodIssues, isLoading: podsLoading, isRefreshing: podsRefreshing, isDemoFallback: podsDemoFallback, isFailed: podsFailed, consecutiveFailures: podsFailures, refetch: refetchPods } = useCachedPodIssues()
   const { issues: allDeployIssues, isLoading: deploysLoading, isRefreshing: deploysRefreshing, isDemoFallback: deploysDemoFallback, isFailed: deploysFailed, consecutiveFailures: deploysFailures, refetch: refetchDeploys } = useCachedDeploymentIssues()
@@ -230,7 +230,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
           onClick={handleRefresh}
           disabled={isRefreshing}
           className="p-1 rounded hover:bg-secondary transition-colors"
-          title={t('common.refresh')}
+          title={t('common:common.refresh')}
         >
           {isRefreshing
             ? <Loader2 className="w-3.5 h-3.5 text-green-400 animate-spin" />
@@ -242,7 +242,7 @@ export function ClusterHealthMonitor({ config: _config }: ClusterHealthMonitorPr
       <div className="grid grid-cols-2 @md:grid-cols-3 gap-2 mb-3">
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-foreground">{stats.totalNodes}</p>
-          <p className="text-2xs text-muted-foreground">{t('common.nodes')}</p>
+          <p className="text-2xs text-muted-foreground">{t('common:common.nodes')}</p>
         </div>
         <div className="rounded-md bg-card/50 border border-border p-2 text-center">
           <p className="text-lg font-semibold text-red-400">{stats.totalPodIssues}</p>

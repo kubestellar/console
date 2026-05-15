@@ -33,7 +33,7 @@ const getIssueIcon = (status: string | undefined): { icon: typeof MemoryStick; t
 }
 
 export function PodIssues() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['cards', 'common'])
   const { deduplicatedClusters } = useClusters()
   const {
     issues: rawIssues,
@@ -165,7 +165,7 @@ export function PodIssues() {
         <CardSearchInput
           value={localSearch}
           onChange={setLocalSearch}
-          placeholder={t('common.searchIssues')}
+          placeholder={t('common:common.searchIssues')}
           className="mb-0 w-full min-w-0 sm:flex-1"
         />
         <CardControlsRow
