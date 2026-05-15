@@ -228,6 +228,9 @@ type Server struct {
 
 	// Event processor callback for Stellar integration
 	eventProcessor EventProcessor
+
+	// HTTP client for Stellar event forwarding (reused to avoid per-call allocation)
+	stellarClient *http.Client
 }
 
 // NewServer creates a new agent server
@@ -345,6 +348,12 @@ func NewServer(cfg Config) (*Server, error) {
 		dryRunSessions:     make(map[string]bool),
 		resourceRetryState: make(map[string]clusterResourceRetryState),
 		sessionTokenQuota:  sessionQuota,
+		stellarClient: &http.Client{
+			Timeout: 5 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConnsPerHost: 2,
+			},
+		},
 	}
 
 	server.upgrader = websocket.Upgrader{

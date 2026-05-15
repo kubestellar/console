@@ -232,8 +232,7 @@ func (s *Server) forwardEventToStellar(event sseEventSummary) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := s.stellarClient.Do(req)
 	if err != nil {
 		slog.Debug("stellar: failed to forward event to backend", "error", err)
 		return
