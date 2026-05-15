@@ -843,7 +843,7 @@ func (h *StellarHandler) executeDirectAction(c *fiber.Ctx, userID string, body e
 	status := "completed"
 	if dispatchErr != nil {
 		status = "failed"
-		outcome = dispatchErr.Error()
+		outcome = "action execution failed"
 		slog.Error("stellar: action execution failed", "action_id", action.ID, "error", dispatchErr)
 	}
 
@@ -851,11 +851,12 @@ func (h *StellarHandler) executeDirectAction(c *fiber.Ctx, userID string, body e
 
 	// Record execution
 	completedAt := time.Now().UTC()
+	triggerData, _ := json.Marshal(map[string]string{"actionType": body.ActionType, "cluster": body.Cluster})
 	_ = h.store.CreateStellarExecution(c.UserContext(), &store.StellarExecution{
 		UserID:      userID,
 		MissionID:   "action-execute",
 		TriggerType: "stellar-action",
-		TriggerData: fmt.Sprintf(`{"actionType":"%s","cluster":"%s"}`, body.ActionType, body.Cluster),
+		TriggerData: string(triggerData),
 		Status:      status,
 		RawInput:    body.Description,
 		Output:      outcome,
@@ -969,11 +970,12 @@ func (h *StellarHandler) executeLLMAction(c *fiber.Ctx, userID string, body exec
 	}
 
 	completedAt := time.Now().UTC()
+	triggerData2, _ := json.Marshal(map[string]string{"actionType": body.ActionType, "cluster": body.Cluster})
 	_ = h.store.CreateStellarExecution(c.UserContext(), &store.StellarExecution{
 		UserID:       userID,
 		MissionID:    "action-execute",
 		TriggerType:  "stellar-action",
-		TriggerData:  fmt.Sprintf(`{"actionType":"%s","cluster":"%s"}`, body.ActionType, body.Cluster),
+		TriggerData:  string(triggerData2),
 		Status:       "completed",
 		RawInput:     prompt,
 		Output:       generated.Content,
@@ -3175,17 +3177,18 @@ func (h *StellarHandler) autoExecuteAction(ctx context.Context, e IncomingEvent,
 	status := "completed"
 	if dispatchErr != nil {
 		status = "failed"
-		outcome = dispatchErr.Error()
+		outcome = "auto-execute dispatch failed"
 		slog.Error("stellar: auto-exec dispatch failed", "action_id", action.ID, "error", dispatchErr)
 	}
 	_ = h.store.UpdateStellarActionStatus(ctx, action.ID, status, outcome, "")
 
 	completedAt := time.Now().UTC()
+	autoTriggerData, _ := json.Marshal(map[string]string{"actionType": rec.Type, "cluster": e.Cluster, "reason": e.Reason})
 	_ = h.store.CreateStellarExecution(ctx, &store.StellarExecution{
 		UserID:      "system",
 		MissionID:   "auto-tend",
 		TriggerType: "auto-execute",
-		TriggerData: fmt.Sprintf(`{"actionType":"%s","cluster":"%s","reason":"%s"}`, rec.Type, e.Cluster, e.Reason),
+		TriggerData: string(autoTriggerData),
 		Status:      status,
 		RawInput:    rec.Reasoning,
 		Output:      outcome,
