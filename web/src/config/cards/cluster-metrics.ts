@@ -4,7 +4,7 @@
  * Shows cluster performance metrics over time using line/area charts.
  */
 
-import { CYAN_500 } from '../../lib/theme/chartColors'
+import { CYAN_500, PURPLE_400 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const clusterMetricsConfig: UnifiedCardConfig = {
@@ -67,7 +67,7 @@ export const clusterMetricsConfig: UnifiedCardConfig = {
       {
         field: 'memory',
         label: 'Memory Usage',
-        color: '#a855f7', // purple
+        color: PURPLE_400,
       },
     ],
   },

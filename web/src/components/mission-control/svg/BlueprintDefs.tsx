@@ -5,6 +5,7 @@
 
 import { AMBER_500, GREEN_500_BRIGHT, RED_500 } from '../../../lib/theme/chartColors'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
+import { AMBER_500, GREEN_500_BRIGHT, PURPLE_500, RED_500 } from '../../../lib/theme/chartColors'
 
 interface BlueprintDefsProps {
   id: string // unique prefix to avoid filter ID collisions
@@ -53,7 +54,7 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
       {/* ── Intra-cluster dependency gradient ─────────────────── */}
       <linearGradient id={`${id}-intra-dep`} x1="0%" y1="0%" x2="100%" y2="0%">
         <stop offset="0%" stopColor="#6366f1" stopOpacity="0.6" />
-        <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.6" />
+        <stop offset="100%" stopColor={PURPLE_500} stopOpacity="0.6" />
       </linearGradient>
 
       {/* ── Background grid pattern ──────────────────────────── */}

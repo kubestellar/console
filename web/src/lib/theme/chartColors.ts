@@ -22,6 +22,8 @@ export const AMBER_500 = '#f59e0b'
 export const RED_500 = '#ef4444'
 /** Tailwind purple-500 */
 export const PURPLE_500 = '#8b5cf6'
+/** Tailwind purple-400 */
+export const PURPLE_400 = '#a855f7'
 /** Tailwind cyan-500 */
 export const CYAN_500 = '#06b6d4'
 /** Tailwind lime-500 */
@@ -136,6 +138,37 @@ const HEX_GREEN_START = 3
 const HEX_BLUE_START = 5
 /** Radix for parsing hex strings */
 const HEX_RADIX = 16
+
+// ── Index/name accessors (replaces lib/chartColors.ts) ───────────────────────
+
+/** Palette size for modular indexing */
+const CHART_PALETTE_SIZE = CLUSTER_CHART_PALETTE.length
+
+/**
+ * Get a chart color by 1-based index (wraps around palette).
+ * Drop-in replacement for the deprecated lib/chartColors.ts getChartColor.
+ */
+export function getChartColor(index: number): string {
+  const i = ((index - 1) % CHART_PALETTE_SIZE + CHART_PALETTE_SIZE) % CHART_PALETTE_SIZE
+  return CLUSTER_CHART_PALETTE[i]
+}
+
+/** Semantic color name mapping */
+const SEMANTIC_CHART_MAP: Record<string, string> = {
+  primary: PURPLE_600,
+  info: BLUE_500,
+  success: GREEN_500,
+  warning: AMBER_500,
+  error: RED_500,
+}
+
+/**
+ * Get a chart color by semantic name.
+ * Drop-in replacement for the deprecated lib/chartColors.ts getChartColorByName.
+ */
+export function getChartColorByName(name: 'warning' | 'success' | 'error' | 'info' | 'primary'): string {
+  return SEMANTIC_CHART_MAP[name] || PURPLE_600
+}
 
 /**
  * Convert a hex color to an rgba() string with the given alpha.

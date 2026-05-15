@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { AMBER_500, GREEN_500, GREEN_500_BRIGHT, RED_500 } from '../../../lib/theme/chartColors'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
+import { AMBER_500, GREEN_500, GREEN_500_BRIGHT, RED_500 } from '../../../lib/theme/chartColors'
 
 /**
  * Static project icons served from /icons/cncf/ — avoids all CORS/CSP/proxy

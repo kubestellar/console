@@ -1,167 +1,90 @@
-import { describe, it, expect, vi } from 'vitest'
-import { getChartColor, getChartColorByName } from '../chartColors'
+import { describe, expect, it } from 'vitest'
+import {
+  AMBER_500,
+  BLUE_500,
+  CLUSTER_CHART_PALETTE,
+  CYAN_500,
+  getChartColor,
+  getChartColorByName,
+  GREEN_500,
+  PURPLE_500,
+  PURPLE_600,
+  RED_500,
+} from '../theme/chartColors'
+
+const TOTAL_CHART_COLORS = CLUSTER_CHART_PALETTE.length
 
 describe('getChartColor', () => {
-  it('returns fallback color for index 1', () => {
-    const color = getChartColor(1)
-    expect(typeof color).toBe('string')
-    expect(color.length).toBeGreaterThan(0)
+  it('returns palette color for index 1', () => {
+    expect(getChartColor(1)).toBe(PURPLE_600)
   })
 
-  it('wraps around for indices > 8', () => {
-    const color9 = getChartColor(9)
-    const color1 = getChartColor(1)
-    expect(color9).toBe(color1) // 9 wraps to 1
+  it('wraps around for indices past the palette size', () => {
+    expect(getChartColor(TOTAL_CHART_COLORS + 1)).toBe(getChartColor(1))
   })
 
   it('wraps around for index 0', () => {
-    const color = getChartColor(0)
-    expect(typeof color).toBe('string')
+    expect(getChartColor(0)).toBe(CLUSTER_CHART_PALETTE[TOTAL_CHART_COLORS - 1])
   })
 
-  it('returns different colors for different indices', () => {
-    const color1 = getChartColor(1)
-    const color2 = getChartColor(2)
-    expect(color1).not.toBe(color2)
-  })
-
-  // --- New edge case tests ---
-
-  it('returns the correct fallback hex values for all 8 indices', () => {
-    const expectedFallbacks: Record<number, string> = {
-      1: '#9333ea',
-      2: '#3b82f6',
-      3: '#10b981',
-      4: '#f59e0b',
-      5: '#ef4444',
-      6: '#06b6d4',
-      7: '#8b5cf6',
-      8: '#14b8a6',
+  it('returns the correct palette values for the first seven slots', () => {
+    const expectedColors: Record<number, string> = {
+      1: PURPLE_600,
+      2: BLUE_500,
+      3: GREEN_500,
+      4: AMBER_500,
+      5: RED_500,
+      6: PURPLE_500,
+      7: CYAN_500,
     }
 
-    for (let i = 1; i <= 8; i++) {
-      expect(getChartColor(i)).toBe(expectedFallbacks[i])
+    for (const [index, color] of Object.entries(expectedColors)) {
+      expect(getChartColor(Number(index))).toBe(color)
     }
-  })
-
-  it('wraps index 16 to index 8', () => {
-    expect(getChartColor(16)).toBe(getChartColor(8))
-  })
-
-  it('wraps index 17 to index 1', () => {
-    expect(getChartColor(17)).toBe(getChartColor(1))
   })
 
   it('handles large index values via modular wrapping', () => {
     const LARGE_INDEX = 100
-    // ((100 - 1) % 8) + 1 = (99 % 8) + 1 = 3 + 1 = 4
-    expect(getChartColor(LARGE_INDEX)).toBe(getChartColor(4))
+    const wrappedIndex = ((LARGE_INDEX - 1) % TOTAL_CHART_COLORS) + 1
+    expect(getChartColor(LARGE_INDEX)).toBe(getChartColor(wrappedIndex))
   })
 
   it('handles negative indices via modular arithmetic', () => {
-    // JavaScript % with negative: ((-1 - 1) % 8) + 1 = (-2 % 8) + 1 = -2 + 1 = -1
-    // This tests the boundary — the function may return fallback[1] via || fallback[1]
-    const color = getChartColor(-1)
-    expect(typeof color).toBe('string')
-    expect(color.length).toBeGreaterThan(0)
+    expect(getChartColor(-1)).toBe(CLUSTER_CHART_PALETTE[TOTAL_CHART_COLORS - 2])
   })
 
-  it('all 8 fallback colors are unique', () => {
-    const colors = new Set<string>()
-    for (let i = 1; i <= 8; i++) {
-      colors.add(getChartColor(i))
-    }
-    const TOTAL_CHART_COLORS = 8
+  it('all palette colors are unique', () => {
+    const colors = new Set(CLUSTER_CHART_PALETTE)
     expect(colors.size).toBe(TOTAL_CHART_COLORS)
   })
 
-  it('all fallback colors are valid hex codes', () => {
+  it('all palette colors are valid hex codes', () => {
     const hexPattern = /^#[0-9a-f]{6}$/i
-    for (let i = 1; i <= 8; i++) {
-      expect(getChartColor(i)).toMatch(hexPattern)
+    for (const color of CLUSTER_CHART_PALETTE) {
+      expect(color).toMatch(hexPattern)
     }
-  })
-
-  it('reads from CSS custom property when available', () => {
-    const mockGetComputedStyle = vi.fn().mockReturnValue({
-      getPropertyValue: vi.fn().mockReturnValue('#ff00ff'),
-    })
-    vi.stubGlobal('getComputedStyle', mockGetComputedStyle)
-
-    const color = getChartColor(1)
-    expect(color).toBe('#ff00ff')
-
-    vi.unstubAllGlobals()
-  })
-
-  it('falls back when CSS custom property returns empty string', () => {
-    const mockGetComputedStyle = vi.fn().mockReturnValue({
-      getPropertyValue: vi.fn().mockReturnValue(''),
-    })
-    vi.stubGlobal('getComputedStyle', mockGetComputedStyle)
-
-    const color = getChartColor(1)
-    expect(color).toBe('#9333ea') // fallback for index 1
-
-    vi.unstubAllGlobals()
-  })
-
-  it('falls back when CSS custom property returns whitespace only', () => {
-    const mockGetComputedStyle = vi.fn().mockReturnValue({
-      getPropertyValue: vi.fn().mockReturnValue('   '),
-    })
-    vi.stubGlobal('getComputedStyle', mockGetComputedStyle)
-
-    const color = getChartColor(1)
-    // After .trim(), whitespace becomes '', which is falsy
-    expect(color).toBe('#9333ea')
-
-    vi.unstubAllGlobals()
   })
 })
 
 describe('getChartColorByName', () => {
   it('returns colors for semantic names', () => {
-    expect(typeof getChartColorByName('primary')).toBe('string')
-    expect(typeof getChartColorByName('info')).toBe('string')
-    expect(typeof getChartColorByName('success')).toBe('string')
-    expect(typeof getChartColorByName('warning')).toBe('string')
-    expect(typeof getChartColorByName('error')).toBe('string')
+    expect(getChartColorByName('primary')).toBe(PURPLE_600)
+    expect(getChartColorByName('info')).toBe(BLUE_500)
+    expect(getChartColorByName('success')).toBe(GREEN_500)
+    expect(getChartColorByName('warning')).toBe(AMBER_500)
+    expect(getChartColorByName('error')).toBe(RED_500)
   })
 
   it('returns different colors for different names', () => {
     expect(getChartColorByName('success')).not.toBe(getChartColorByName('error'))
   })
 
-  // --- New edge case tests ---
-
-  it('maps primary to chart color index 1 (purple)', () => {
+  it('maps semantic colors to the same palette entries', () => {
     expect(getChartColorByName('primary')).toBe(getChartColor(1))
-  })
-
-  it('maps info to chart color index 2 (blue)', () => {
     expect(getChartColorByName('info')).toBe(getChartColor(2))
-  })
-
-  it('maps success to chart color index 3 (green)', () => {
     expect(getChartColorByName('success')).toBe(getChartColor(3))
-  })
-
-  it('maps warning to chart color index 4 (amber)', () => {
     expect(getChartColorByName('warning')).toBe(getChartColor(4))
-  })
-
-  it('maps error to chart color index 5 (red)', () => {
     expect(getChartColorByName('error')).toBe(getChartColor(5))
-  })
-
-  it('all five semantic names return distinct colors', () => {
-    const names: Array<'primary' | 'info' | 'success' | 'warning' | 'error'> = [
-      'primary', 'info', 'success', 'warning', 'error',
-    ]
-    const colors = names.map((n) => getChartColorByName(n))
-    const unique = new Set(colors)
-    expect(unique.size).toBe(names.length)
   })
 
   it('all semantic colors are valid hex codes', () => {

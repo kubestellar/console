@@ -11,7 +11,7 @@ import { BarChart } from '../charts/BarChart'
 import { ClusterBadge } from '../ui/ClusterBadge'
 import { cn } from '../../lib/cn'
 import { TechnicalAcronym } from '../shared/TechnicalAcronym'
-import { getChartColorByName } from '../../lib/theme/chartColors'
+import { getChartColorByName, PURPLE_600 } from '../../lib/theme/chartColors'
 import { Sparkline } from '../charts/Sparkline'
 import type { GPUReservation } from '../../hooks/useGPUReservations'
 import type { GPUUtilizationSnapshot } from '../../hooks/useGPUUtilizations'
@@ -163,7 +163,7 @@ export function GPUOverviewTab({
             const snapshots = (utilizations || {})[r.id] || []
             const avgUtil = computeAvgUtilization(snapshots)
             const activeDays = countActiveDays(snapshots)
-            const sparkColor = snapshots.length > 0 ? getUtilizationColor(avgUtil) : '#9333ea'
+            const sparkColor = snapshots.length > 0 ? getUtilizationColor(avgUtil) : PURPLE_600
             return (
             <div
               key={r.id}
