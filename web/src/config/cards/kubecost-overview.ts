@@ -1,6 +1,7 @@
 /**
  * Kubecost Overview Card Configuration
  */
+import { AMBER_500, BLUE_500, GREEN_500, RED_500 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const kubecostOverviewConfig: UnifiedCardConfig = {
@@ -19,7 +20,7 @@ export const kubecostOverviewConfig: UnifiedCardConfig = {
     dataKey: 'breakdown',
     valueKey: 'cost',
     labelKey: 'category',
-    colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+    colors: [BLUE_500, GREEN_500, AMBER_500, RED_500],
   },
   emptyState: { icon: 'Wallet', title: 'No Cost Data', message: 'Kubecost not configured', variant: 'info' },
   loadingState: { type: 'chart' },

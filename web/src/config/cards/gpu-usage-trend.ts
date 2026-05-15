@@ -1,6 +1,7 @@
 /**
  * GPU Usage Trend Card Configuration
  */
+import { BLUE_500, GREEN_500 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const gpuUsageTrendConfig: UnifiedCardConfig = {
@@ -19,7 +20,7 @@ export const gpuUsageTrendConfig: UnifiedCardConfig = {
     dataKey: 'timeseries',
     xAxis: 'timestamp',
     yAxis: ['memory', 'compute'],
-    colors: ['#10b981', '#3b82f6'],
+    colors: [GREEN_500, BLUE_500],
   },
   emptyState: { icon: 'BarChart2', title: 'No Data', message: 'No GPU trend data', variant: 'info' },
   loadingState: { type: 'chart' },

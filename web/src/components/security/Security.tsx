@@ -24,6 +24,7 @@ import {
   type ComplianceCheck } from '../../mocks/securityData'
 import { getDefaultCards } from '../../config/dashboards'
 import { useTranslation } from 'react-i18next'
+import { AMBER_500, BLUE_500, GREEN_500, PURPLE_500, RED_500 } from '../../lib/theme/chartColors'
 import { ensureCardInDashboard } from '../../lib/dashboards/migrateStorageKey'
 
 const SECURITY_CARDS_KEY = 'kubestellar-security-cards'
@@ -227,23 +228,23 @@ export function Security() {
       complianceScore,
       // Chart data
       severityChartData: [
-        { name: 'High', value: high, color: '#ef4444' },
-        { name: 'Medium', value: medium, color: '#f59e0b' },
-        { name: 'Low', value: low, color: '#3b82f6' },
+        { name: 'High', value: high, color: RED_500 },
+        { name: 'Medium', value: medium, color: AMBER_500 },
+        { name: 'Low', value: low, color: BLUE_500 },
       ].filter(d => d.value > 0),
       typeChartData: Object.entries(typeCounts).map(([name, value], i) => ({
         name: name.replace(/([A-Z])/g, ' $1').trim(),
         value,
-        color: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6'][i % 5] })),
+        color: [RED_500, AMBER_500, BLUE_500, GREEN_500, PURPLE_500][i % 5] })),
       rbacChartData: [
-        { name: 'High Risk', value: rbacHighRisk, color: '#ef4444' },
-        { name: 'Medium Risk', value: rbacMedRisk, color: '#f59e0b' },
-        { name: 'Low Risk', value: rbacLowRisk, color: '#10b981' },
+        { name: 'High Risk', value: rbacHighRisk, color: RED_500 },
+        { name: 'Medium Risk', value: rbacMedRisk, color: AMBER_500 },
+        { name: 'Low Risk', value: rbacLowRisk, color: GREEN_500 },
       ].filter(d => d.value > 0),
       complianceChartData: [
-        { name: 'Pass', value: compliancePass, color: '#10b981' },
-        { name: 'Warn', value: complianceWarn, color: '#f59e0b' },
-        { name: 'Fail', value: complianceFail, color: '#ef4444' },
+        { name: 'Pass', value: compliancePass, color: GREEN_500 },
+        { name: 'Warn', value: complianceWarn, color: AMBER_500 },
+        { name: 'Fail', value: complianceFail, color: RED_500 },
       ].filter(d => d.value > 0) }
   }, [globalFilteredIssues, filteredRBAC, filteredCompliance])
 
@@ -850,7 +851,7 @@ export function Security() {
             <ProgressBar
               value={stats.complianceScore}
               max={100}
-              color={stats.complianceScore >= 80 ? '#10b981' : stats.complianceScore >= 60 ? '#f59e0b' : '#ef4444'}
+              color={stats.complianceScore >= 80 ? GREEN_500 : stats.complianceScore >= 60 ? AMBER_500 : RED_500}
               size="lg"
               showValue={false}
             />

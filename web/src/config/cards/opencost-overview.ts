@@ -1,6 +1,7 @@
 /**
  * OpenCost Overview Card Configuration
  */
+import { AMBER_500, BLUE_500, GREEN_500 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const opencostOverviewConfig: UnifiedCardConfig = {
@@ -19,7 +20,7 @@ export const opencostOverviewConfig: UnifiedCardConfig = {
     dataKey: 'namespaces',
     xAxis: 'namespace',
     yAxis: ['cpu', 'memory', 'storage'],
-    colors: ['#3b82f6', '#10b981', '#f59e0b'],
+    colors: [BLUE_500, GREEN_500, AMBER_500],
   },
   emptyState: { icon: 'DollarSign', title: 'No Cost Data', message: 'OpenCost not configured', variant: 'info' },
   loadingState: { type: 'chart' },

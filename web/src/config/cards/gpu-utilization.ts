@@ -1,6 +1,7 @@
 /**
  * GPU Utilization Card Configuration
  */
+import { GREEN_500 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const gpuUtilizationConfig: UnifiedCardConfig = {
@@ -19,7 +20,7 @@ export const gpuUtilizationConfig: UnifiedCardConfig = {
     dataKey: 'timeseries',
     xAxis: 'timestamp',
     yAxis: ['utilization'],
-    colors: ['#10b981'],
+    colors: [GREEN_500],
   },
   emptyState: { icon: 'TrendingUp', title: 'No Data', message: 'No GPU utilization data', variant: 'info' },
   loadingState: { type: 'chart' },

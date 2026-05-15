@@ -1,6 +1,7 @@
 /**
  * Resource Trend Card Configuration
  */
+import { AMBER_500, BLUE_500 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const resourceTrendConfig: UnifiedCardConfig = {
@@ -19,7 +20,7 @@ export const resourceTrendConfig: UnifiedCardConfig = {
     dataKey: 'timeseries',
     xAxis: 'timestamp',
     yAxis: ['cpu', 'memory'],
-    colors: ['#f59e0b', '#3b82f6'],
+    colors: [AMBER_500, BLUE_500],
   },
   emptyState: { icon: 'TrendingUp', title: 'No Data', message: 'No resource trend data', variant: 'info' },
   loadingState: { type: 'chart' },

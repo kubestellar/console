@@ -1,6 +1,7 @@
 /**
  * GPU Inventory History Card Configuration
  */
+import { GREEN_500_BRIGHT, PURPLE_600 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const gpuInventoryHistoryConfig: UnifiedCardConfig = {
@@ -19,7 +20,7 @@ export const gpuInventoryHistoryConfig: UnifiedCardConfig = {
     dataKey: 'gpuNodes',
     xAxis: 'timestamp',
     yAxis: ['allocated', 'free'],
-    colors: ['#9333ea', '#22c55e'],
+    colors: [PURPLE_600, GREEN_500_BRIGHT],
   },
   emptyState: { icon: 'Cpu', title: 'No GPU History', message: 'No historical GPU data available yet', variant: 'info' },
   loadingState: { type: 'chart' },

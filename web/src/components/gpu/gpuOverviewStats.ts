@@ -1,4 +1,4 @@
-import { getChartColor } from '../../lib/chartColors'
+import { getChartColor } from '../../lib/theme/chartColors'
 import type { GPUReservation } from '../../hooks/useGPUReservations'
 import type { GPUNode, ResourceQuota } from '../../hooks/mcp/types'
 import { GPU_KEYS, MAX_NAME_DISPLAY_LENGTH } from './gpu-constants'

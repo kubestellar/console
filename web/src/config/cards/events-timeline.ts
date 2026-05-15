@@ -4,6 +4,7 @@
  * Shows event counts over time using a bar chart.
  */
 
+import { AMBER_500, GREEN_500_BRIGHT, RED_500 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const eventsTimelineConfig: UnifiedCardConfig = {
@@ -69,17 +70,17 @@ export const eventsTimelineConfig: UnifiedCardConfig = {
       {
         field: 'normal',
         label: 'Normal',
-        color: '#22c55e', // green
+        color: GREEN_500_BRIGHT,
       },
       {
         field: 'warnings',
         label: 'Warning',
-        color: '#f59e0b', // amber
+        color: AMBER_500,
       },
       {
         field: 'errors',
         label: 'Error',
-        color: '#ef4444', // red
+        color: RED_500,
       },
     ],
   },

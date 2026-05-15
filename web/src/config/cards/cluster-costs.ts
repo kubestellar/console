@@ -1,6 +1,7 @@
 /**
  * Cluster Costs Card Configuration
  */
+import { AMBER_500, BLUE_500, GREEN_500 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const clusterCostsConfig: UnifiedCardConfig = {
@@ -19,7 +20,7 @@ export const clusterCostsConfig: UnifiedCardConfig = {
     dataKey: 'clusters',
     xAxis: 'cluster',
     yAxis: ['compute', 'storage', 'network'],
-    colors: ['#3b82f6', '#10b981', '#f59e0b'],
+    colors: [BLUE_500, GREEN_500, AMBER_500],
   },
   emptyState: { icon: 'DollarSign', title: 'No Cost Data', message: 'Cost data not available', variant: 'info' },
   loadingState: { type: 'chart' },

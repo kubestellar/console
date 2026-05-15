@@ -3,6 +3,7 @@
  * Glow filters, gradient fills, particle gradients, drop shadows.
  */
 
+import { AMBER_500, GREEN_500_BRIGHT, RED_500 } from '../../../lib/theme/chartColors'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 
 interface BlueprintDefsProps {
@@ -45,8 +46,8 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
 
       {/* ── Cross-cluster dependency gradient ─────────────────── */}
       <linearGradient id={`${id}-cross-dep`} x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.8" />
-        <stop offset="100%" stopColor="#ef4444" stopOpacity="0.8" />
+        <stop offset="0%" stopColor={AMBER_500} stopOpacity="0.8" />
+        <stop offset="100%" stopColor={RED_500} stopOpacity="0.8" />
       </linearGradient>
 
       {/* ── Intra-cluster dependency gradient ─────────────────── */}
@@ -63,7 +64,7 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
       {/* ── Status glow colors ───────────────────────────────── */}
       <filter id={`${id}-glow-green`} x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation="1" result="blur" />
-        <feFlood floodColor="#22c55e" floodOpacity="0.5" result="color" />
+        <feFlood floodColor={GREEN_500_BRIGHT} floodOpacity="0.5" result="color" />
         <feComposite in="color" in2="blur" operator="in" result="glow" />
         <feMerge>
           <feMergeNode in="glow" />
@@ -73,7 +74,7 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
 
       <filter id={`${id}-glow-red`} x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation="1" result="blur" />
-        <feFlood floodColor="#ef4444" floodOpacity="0.5" result="color" />
+        <feFlood floodColor={RED_500} floodOpacity="0.5" result="color" />
         <feComposite in="color" in2="blur" operator="in" result="glow" />
         <feMerge>
           <feMergeNode in="glow" />
@@ -83,7 +84,7 @@ export function BlueprintDefs({ id }: BlueprintDefsProps) {
 
       <filter id={`${id}-glow-amber`} x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur stdDeviation="1" result="blur" />
-        <feFlood floodColor="#f59e0b" floodOpacity="0.5" result="color" />
+        <feFlood floodColor={AMBER_500} floodOpacity="0.5" result="color" />
         <feComposite in="color" in2="blur" operator="in" result="glow" />
         <feMerge>
           <feMergeNode in="glow" />

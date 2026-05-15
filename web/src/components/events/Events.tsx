@@ -14,7 +14,7 @@ import { StatBlockValue } from '../ui/StatsOverview'
 import { DashboardPage } from '../../lib/dashboards/DashboardPage'
 import { getDefaultCards } from '../../config/dashboards'
 import { RotatingTip } from '../ui/RotatingTip'
-import { getChartColor, getChartColorByName } from '../../lib/chartColors'
+import { getChartColor, getChartColorByName } from '../../lib/theme/chartColors'
 import { StatusBadge } from '../ui/StatusBadge'
 
 // Event-related constants

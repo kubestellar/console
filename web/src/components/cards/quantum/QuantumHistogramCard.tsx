@@ -8,7 +8,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { Slider } from '../../ui/Slider'
 import { useResultHistogram, type HistogramSort } from '../../../hooks/useResultHistogram'
 import { useAuth } from '../../../lib/auth'
-import { getChartColor } from '../../../lib/chartColors'
+import { getChartColor } from '../../../lib/theme/chartColors'
 import {
   CHART_AXIS_FONT_SIZE,
   CHART_GRID_STROKE,

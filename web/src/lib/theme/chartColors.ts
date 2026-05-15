@@ -148,3 +148,28 @@ export function hexToRgba(hex: string, alpha: number): string {
   if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return hex
   return `rgba(${r},${g},${b},${alpha})`
 }
+
+// ── Palette lookup helpers ───────────────────────────────────────────────────
+// Drop-in replacements for the CSS-variable-based functions in lib/chartColors.ts.
+// These use CLUSTER_CHART_PALETTE directly — no runtime DOM lookup needed.
+
+/**
+ * Get a chart color by 1-based index.
+ * Wraps around the 10-color CLUSTER_CHART_PALETTE.
+ */
+export function getChartColor(index: number): string {
+  const i = ((index - 1) % CLUSTER_CHART_PALETTE.length + CLUSTER_CHART_PALETTE.length) % CLUSTER_CHART_PALETTE.length
+  return CLUSTER_CHART_PALETTE[i]
+}
+
+/** Semantic color name → chart color. */
+export function getChartColorByName(name: 'warning' | 'success' | 'error' | 'info' | 'primary'): string {
+  const map: Record<string, string> = {
+    primary: PURPLE_600,
+    info: BLUE_500,
+    success: GREEN_500,
+    warning: AMBER_500,
+    error: RED_500,
+  }
+  return map[name] ?? PURPLE_600
+}

@@ -5,6 +5,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { AMBER_500, GREEN_500, GREEN_500_BRIGHT, RED_500 } from '../../../lib/theme/chartColors'
 import { CNCF_CATEGORY_GRADIENTS } from '../../../lib/cncf-constants'
 
 /**
@@ -32,9 +33,9 @@ type NodeStatus = 'pending' | 'running' | 'completed' | 'failed'
 
 const STATUS_COLORS: Record<NodeStatus, string> = {
   pending: '#64748b',
-  running: '#f59e0b',
-  completed: '#22c55e',
-  failed: '#ef4444',
+  running: AMBER_500,
+  completed: GREEN_500_BRIGHT,
+  failed: RED_500,
 }
 
 export interface ProjectNodeProps {
@@ -205,7 +206,7 @@ export function ProjectNode({
         cy={cy}
         r={radius + 3}
         fill="none"
-        stroke={glow ? (installed ? '#4ade80' : '#e2e8f0') : installed ? '#22c55e' : '#64748b'}
+        stroke={glow ? (installed ? '#4ade80' : '#e2e8f0') : installed ? GREEN_500_BRIGHT : '#64748b'}
         strokeWidth={glow ? (installed ? 2 : 1.2) : installed ? 1.5 : 0.6}
         strokeOpacity={glow ? 1 : installed ? 0.6 : 0.3}
         strokeDasharray={installed ? 'none' : '3 2'}
@@ -305,7 +306,7 @@ export function ProjectNode({
             cy={cy + radius - 1}
             r={4}
             fill="#065f46"
-            stroke="#10b981"
+            stroke={GREEN_500}
             strokeWidth={0.5}
           />
           <text
@@ -341,7 +342,7 @@ export function ProjectNode({
               rx={2.5}
               fill="#0f172a"
               fillOpacity={0.9}
-              stroke={installed ? '#22c55e' : '#ffffff'}
+              stroke={installed ? GREEN_500_BRIGHT : '#ffffff'}
               strokeWidth={0.3}
               strokeOpacity={0.5}
             />

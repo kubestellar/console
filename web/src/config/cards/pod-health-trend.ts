@@ -1,6 +1,7 @@
 /**
  * Pod Health Trend Card Configuration
  */
+import { GREEN_500, RED_500 } from '../../lib/theme/chartColors'
 import type { UnifiedCardConfig } from '../../lib/unified/types'
 
 export const podHealthTrendConfig: UnifiedCardConfig = {
@@ -19,7 +20,7 @@ export const podHealthTrendConfig: UnifiedCardConfig = {
     dataKey: 'timeseries',
     xAxis: 'timestamp',
     yAxis: ['healthy', 'unhealthy'],
-    colors: ['#10b981', '#ef4444'],
+    colors: [GREEN_500, RED_500],
   },
   emptyState: { icon: 'HeartPulse', title: 'No Data', message: 'No pod health data', variant: 'info' },
   loadingState: { type: 'chart' },
