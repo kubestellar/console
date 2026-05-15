@@ -1,4 +1,9 @@
 import type { Context } from "@netlify/functions";
+import { enforceSimpleRateLimit } from "./_shared/rate-limit";
+
+const RATE_LIMIT_STORE_NAME = "quantum-proxy-rate-limit";
+const QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS = 500;
+const QUANTUM_PROXY_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
 // Demo data responses
 const DEMO_STATUS = {
@@ -99,6 +104,29 @@ export default async (req: Request, context: Context): Promise<Response> => {
         headers: { "Content-Type": "application/json" },
       }
     );
+  }
+
+  const clientIp =
+    req.headers.get("x-nf-client-connection-ip") ||
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown";
+  if (req.method === "POST") {
+    const rate = await enforceSimpleRateLimit({
+      storeName: RATE_LIMIT_STORE_NAME,
+      prefix: "quantum-proxy:",
+      subject: clientIp,
+      maxRequests: QUANTUM_PROXY_RATE_LIMIT_MAX_REQUESTS,
+      windowMs: QUANTUM_PROXY_RATE_LIMIT_WINDOW_MS,
+    });
+    if (rate.limited) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded", retryAfter: rate.retryAfterSeconds }),
+        {
+          status: 429,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
   }
 
   // Determine if we have a real quantum service
