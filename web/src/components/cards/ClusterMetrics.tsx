@@ -351,16 +351,6 @@ export const ClusterMetrics = memo(function ClusterMetrics() {
   const rangeMs = TIME_RANGE_MS[timeRange]
   const filteredHistory = effectiveHistory.filter(point => Date.now() - point.timestamp <= rangeMs)
 
-  const effectiveHistory = useMemo(() => {
-    if (isDemoMode && hasRealData) {
-      return buildDemoMetricHistory(clusters)
-    }
-    return history
-  }, [clusters, hasRealData, history, isDemoMode])
-
-  const rangeMs = TIME_RANGE_MS[timeRange]
-  const filteredHistory = effectiveHistory.filter(point => Date.now() - point.timestamp <= rangeMs)
-
   // Transform history to chart data for selected metric
   const data = filteredHistory.map(point => ({
     time: point.time,
