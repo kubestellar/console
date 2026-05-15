@@ -91,6 +91,7 @@ vi.mock('../../ui/CloudProviderIcon', () => ({
   CloudProviderIcon: () => <div data-testid="cloud-provider-icon" />,
   detectCloudProvider: () => 'kubernetes',
   getProviderLabel: () => 'Kubernetes',
+  getConsoleUrl: () => null,
 }))
 
 vi.mock('../../ui/StatusBadge', () => ({

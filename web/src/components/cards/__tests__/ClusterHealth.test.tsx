@@ -99,6 +99,7 @@ vi.mock('../../ui/CloudProviderIcon', () => ({
   CloudProviderIcon: ({ provider }: { provider: string }) => <span data-testid={`cloud-${provider}`} />,
   detectCloudProvider: () => 'other',
   getProviderLabel: () => 'Other',
+  getConsoleUrl: () => null,
 }))
 
 vi.mock('react-router-dom', () => ({
