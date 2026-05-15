@@ -455,6 +455,7 @@ phase6() {
     'src/App.tsx'  # Date.now() for page view analytics duration, not cache TTL
     'src/hooks/useSelfUpgrade.ts'  # Date.now() for restart polling elapsed, not cache TTL
     'src/components/cards/workload-monitor/gitHubCIUtils.ts'  # Date.now() for formatTimeAgo display, not cache TTL
+    'src/components/feedback/UpdatesTab.tsx'  # Date.now() for preview warmup elapsed, not cache TTL; localStorage for persistent verified-fix flags (no expiry by design)
   )
 
   # Find files that implement caching with TTL: have localStorage AND Date.now() - (subtraction

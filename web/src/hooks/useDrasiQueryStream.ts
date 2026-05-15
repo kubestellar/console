@@ -117,6 +117,7 @@ export function useDrasiQueryStream(args: Args): UseDrasiQueryStreamResult {
     const MAX_RETRY_MS = 30000
     const BACKOFF_FACTOR = 2
     const JITTER_MS = 300
+    const PREFLIGHT_ABORT_TIMEOUT_MS = 10000
     const UNRECOVERABLE_STATUSES = new Set([401, 403, 404])
 
     const retryCountRef = { current: 0 }
@@ -138,7 +139,7 @@ export function useDrasiQueryStream(args: Args): UseDrasiQueryStreamResult {
     async function preflightCheck(): Promise<{ ok: boolean; status: number }>
     {
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 10000)
+      const timeout = setTimeout(() => controller.abort(), PREFLIGHT_ABORT_TIMEOUT_MS)
       try {
         const resp = await fetch(proxyUrl, {
           method: 'GET',
