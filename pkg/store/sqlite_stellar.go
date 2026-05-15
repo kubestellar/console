@@ -459,6 +459,9 @@ func (s *SQLiteStore) GetDueApprovedStellarActions(ctx context.Context, now time
 		if scanErr != nil {
 			return nil, scanErr
 		}
+		if action == nil {
+			continue
+		}
 		results = append(results, *action)
 	}
 	return results, rows.Err()

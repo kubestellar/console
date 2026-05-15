@@ -1273,7 +1273,7 @@ func (h *StellarHandler) Ask(c *fiber.Ctx) error {
 	if err != nil {
 		fallbackName := os.Getenv("STELLAR_FALLBACK_PROVIDER")
 		if fallbackName != "" && fallbackName != resolved.Provider.Name() {
-			if fp, ok := h.providerRegistry.GetGlobal(fallbackName); ok {
+			if fp, ok := h.providerRegistry.GetGlobal(fallbackName); ok && fp != nil {
 				fallbackUsed = true
 				fallbackReason = fmt.Sprintf("%s failed after %dms: %s. Falling back to %s.", resolved.Provider.Name(), durationMs, err.Error(), fallbackName)
 				startTime = time.Now()
