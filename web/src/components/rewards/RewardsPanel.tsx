@@ -11,6 +11,7 @@ import { GitHubInviteModal, GitHubInviteButton } from './GitHubInvite'
 import { LinkedInShareCard } from './LinkedInShare'
 import { GITHUB_REWARD_LABELS } from '../../types/rewards'
 import type { GitHubContribution } from '../../types/rewards'
+import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 
 export function RewardsPanel() {
   const [showGitHubInvite, setShowGitHubInvite] = useState(false)
@@ -216,7 +217,7 @@ export function RewardsPanel() {
               {githubRewards.contributions.slice(0, 20).map((contrib: GitHubContribution, idx: number) => (
                 <a
                   key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
-                  href={contrib.url}
+                  href={sanitizeUrl(contrib.url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between p-2.5 rounded-lg bg-secondary/20 hover:bg-secondary/40 transition-colors group"

@@ -21,6 +21,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { formatTimeAgo } from '../../lib/formatters'
 import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 interface RequestCardProps {
   request: FeatureRequest
@@ -79,7 +80,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
         </span>
         {request.github_issue_url && (
           <a
-            href={request.github_issue_url}
+            href={sanitizeUrl(request.github_issue_url)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 hover:text-purple-400 transition-colors"
@@ -90,7 +91,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
         )}
         {request.pr_url && (
           <a
-            href={request.pr_url}
+            href={sanitizeUrl(request.pr_url)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 hover:text-purple-400 transition-colors"
@@ -110,7 +111,7 @@ function RequestCard({ request, onFeedback }: RequestCardProps) {
               <span className="text-sm text-green-400">Preview Available</span>
             </div>
             <a
-              href={request.netlify_preview_url}
+              href={sanitizeUrl(request.netlify_preview_url)}
               target="_blank"
               rel="noopener noreferrer"
               className="px-3 py-1 text-xs rounded bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1"

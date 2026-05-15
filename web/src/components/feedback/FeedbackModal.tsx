@@ -21,6 +21,7 @@ import { useToast } from '../ui/Toast'
 import { emitFeedbackSubmitted, emitLinkedInShare, emitScreenshotAttached, emitScreenshotUploadFailed, emitScreenshotUploadSuccess, getRecentBrowserErrors, getRecentFailedApiCalls } from '../../lib/analytics'
 import { copyBlobToClipboard } from '../../lib/clipboard'
 import { useBranding } from '../../hooks/useBranding'
+import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 import { FETCH_DEFAULT_TIMEOUT_MS, COPY_FEEDBACK_TIMEOUT_MS } from '../../lib/constants'
 import { FEEDBACK_UPLOAD_TIMEOUT_MS } from '../../lib/constants/network'
 import { compressScreenshot } from '../../lib/imageCompression'
@@ -430,7 +431,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'feature' }: Feed
               {/* Link to the created GitHub issue */}
               {success.issueUrl && (
                 <a
-                  href={success.issueUrl}
+                  href={sanitizeUrl(success.issueUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground text-sm font-medium transition-colors mb-4"

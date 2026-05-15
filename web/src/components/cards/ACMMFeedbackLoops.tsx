@@ -17,6 +17,7 @@ import { ALL_CRITERIA, SOURCES_BY_ID } from '../../lib/acmm/sources'
 import type { Criterion, SourceId } from '../../lib/acmm/sources/types'
 import { detectionLabel, singleCriterionPrompt, levelCompletionPrompt, cumulativeLevelUpPrompt } from '../../lib/acmm/missionPrompts'
 import { emitACMMMissionLaunched, emitACMMLevelMissionLaunched } from '../../lib/analytics'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 type StatusFilter = 'all' | 'detected' | 'missing'
 
@@ -562,7 +563,7 @@ export function ACMMFeedbackLoops() {
                     <div>
                       <span className="text-muted-foreground">Cited from:</span>{' '}
                       <a
-                        href={SOURCES_BY_ID[c.source].url}
+                        href={sanitizeUrl(SOURCES_BY_ID[c.source].url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline"

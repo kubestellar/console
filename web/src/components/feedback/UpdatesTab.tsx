@@ -24,6 +24,7 @@ import type { PreviewResult } from './FeatureRequestTypes'
 import { useTranslation } from 'react-i18next'
 import { getStatusDescription } from '../../hooks/useFeatureRequests'
 import { isValidPreviewUrl } from '../../lib/utils/isValidPreviewUrl'
+import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 
 const REOPEN_COMMENT_ROWS = 3
 const REOPEN_COMMENT_MAX_LENGTH = 1000
@@ -454,7 +455,7 @@ function RequestItem({
 
           {/* PR links */}
           {request.status === 'feasibility_study' && request.pr_url && (
-            <a href={request.pr_url} target="_blank" rel="noopener noreferrer"
+            <a href={sanitizeUrl(request.pr_url)} target="_blank" rel="noopener noreferrer"
               className="text-xs flex items-center gap-1 mt-1.5 text-purple-400 hover:text-purple-300"
               onClick={e => e.stopPropagation()}>
               <GitPullRequest className="w-3 h-3" />
@@ -462,7 +463,7 @@ function RequestItem({
             </a>
           )}
           {request.status === 'fix_ready' && request.pr_url && (
-            <a href={request.pr_url} target="_blank" rel="noopener noreferrer"
+            <a href={sanitizeUrl(request.pr_url)} target="_blank" rel="noopener noreferrer"
               className="text-xs flex items-center gap-1 mt-1.5 text-green-400 hover:text-green-300"
               onClick={e => e.stopPropagation()}>
               <GitPullRequest className="w-3 h-3" />
@@ -520,7 +521,7 @@ function RequestItem({
               {formatRelativeTime(request.created_at)}
             </span>
             {request.github_issue_url && (
-              <a href={request.github_issue_url} target="_blank" rel="noopener noreferrer"
+              <a href={sanitizeUrl(request.github_issue_url)} target="_blank" rel="noopener noreferrer"
                 className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                 onClick={e => e.stopPropagation()}>
                 <ExternalLink className="w-3 h-3" />
@@ -569,7 +570,7 @@ function UntriagedRequestContent({
           {statusInfo.label}
         </span>
         {request.github_issue_url && (
-          <a href={request.github_issue_url} target="_blank" rel="noopener noreferrer"
+          <a href={sanitizeUrl(request.github_issue_url)} target="_blank" rel="noopener noreferrer"
             className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
             onClick={e => e.stopPropagation()}>
             <ExternalLink className="w-3 h-3" />
@@ -595,7 +596,7 @@ function UntriagedRequestContent({
         </span>
       )}
       {request.github_issue_url && (
-        <a href={request.github_issue_url} target="_blank" rel="noopener noreferrer"
+        <a href={sanitizeUrl(request.github_issue_url)} target="_blank" rel="noopener noreferrer"
           className="text-xs text-purple-400 hover:text-purple-300 flex items-center gap-1"
           onClick={e => e.stopPropagation()}>
           <ExternalLink className="w-3 h-3" />
@@ -698,7 +699,7 @@ function FixCompleteBanner({
           {t('feedback.releases')}
         </a>
         {request.pr_url && (
-          <a href={request.pr_url} target="_blank" rel="noopener noreferrer"
+          <a href={sanitizeUrl(request.pr_url)} target="_blank" rel="noopener noreferrer"
             className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
             onClick={e => e.stopPropagation()}>
             <GitPullRequest className="w-3 h-3" />
@@ -706,7 +707,7 @@ function FixCompleteBanner({
           </a>
         )}
         {request.github_issue_url && (
-          <a href={request.github_issue_url} target="_blank" rel="noopener noreferrer"
+          <a href={sanitizeUrl(request.github_issue_url)} target="_blank" rel="noopener noreferrer"
             className="text-xs flex items-center gap-1 text-green-400 hover:text-green-300"
             onClick={e => e.stopPropagation()}>
             <ExternalLink className="w-3 h-3" />
@@ -1106,7 +1107,7 @@ function GitHubContributionsSection({
             return (
               <a
                 key={`${contrib.repo}-${contrib.number}-${contrib.type}-${idx}`}
-                href={contrib.url}
+                href={sanitizeUrl(contrib.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between p-2.5 border-b border-border/50 hover:bg-secondary/30 transition-colors group"

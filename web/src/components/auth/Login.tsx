@@ -12,6 +12,7 @@ import { useBranding } from '../../hooks/useBranding'
 import { UI_FEEDBACK_TIMEOUT_MS } from '../../lib/constants/network'
 import { copyToClipboard } from '../../lib/clipboard'
 import { safeLazy } from '@/lib/safeLazy'
+import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 
 // Lazy load the heavy Three.js globe animation.
 // safeLazy() handles chunk errors and retries automatically.
@@ -459,7 +460,7 @@ export function Login() {
                           <span className="text-muted-foreground">
                             {idx + 1}. {step.label}{' '}
                             <a
-                              href={step.link}
+                              href={sanitizeUrl(step.link)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-400 hover:text-blue-300 underline"

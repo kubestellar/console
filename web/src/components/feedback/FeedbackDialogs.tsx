@@ -8,6 +8,7 @@ import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import remarkGfm from 'remark-gfm'
 import remarkBreaks from 'remark-breaks'
 import { useRef, useEffect } from 'react'
+import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 
 // ── Discard / Save Draft confirmation dialog ──
 
@@ -205,7 +206,7 @@ export function LoginPromptDialog({
                   Cancel
                 </Button>
                 <a
-                  href={githubIssueUrl}
+                  href={sanitizeUrl(githubIssueUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 px-4 py-2 text-sm rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors flex items-center justify-center gap-2"

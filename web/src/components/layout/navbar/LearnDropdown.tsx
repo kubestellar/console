@@ -14,6 +14,7 @@ import { useMediumBlog } from '../../../hooks/useMediumBlog'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../../lib/cn'
 import { emitBlogPostClicked } from '../../../lib/analytics'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 
 /** Width of the dropdown panel in pixels */
 const DROPDOWN_WIDTH_PX = 384 // sm:w-96 = 24rem = 384px
@@ -263,7 +264,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
                   {blogPosts.map(post => (
                     <a
                       key={post.link}
-                      href={post.link}
+                      href={sanitizeUrl(post.link)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => emitBlogPostClicked(post.title)}
@@ -296,7 +297,7 @@ export function LearnDropdown({ showLabel = false }: LearnDropdownProps) {
             {RESOURCES.map(resource => (
               <a
                 key={resource.label}
-                href={resource.href}
+                href={sanitizeUrl(resource.href)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-between px-2 py-2 rounded-md hover:bg-secondary/50 transition-colors group"

@@ -15,6 +15,7 @@ import { CloudProviderIcon, detectCloudProvider as detectCloudProviderShared, ge
 import { useTranslation } from 'react-i18next'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 import { ClusterStatusDetails } from './ClusterStatusDetails'
 
 // Cloud provider types
@@ -302,7 +303,7 @@ After I approve, help me execute the repairs step by step.`,
                 <>
                   {consoleUrl ? (
                     <a
-                      href={consoleUrl}
+                      href={sanitizeUrl(consoleUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm font-medium ${providerInfo.bgColor} ${providerInfo.color} hover:opacity-80 transition-opacity`}

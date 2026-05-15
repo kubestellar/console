@@ -42,6 +42,7 @@ import {
   emitUpdateRefreshed,
 } from '../../lib/analytics'
 import { MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from '../../lib/constants/time'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 /** Minimum spin duration to guarantee one full rotation (matches cards) */
 const MIN_SPIN_DURATION = 1000
@@ -1208,7 +1209,7 @@ function CommitList({ commits }: { commits: Array<{ sha: string; message: string
             return (
               <a
                 key={commit.sha}
-                href={url}
+                href={sanitizeUrl(url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-3 px-4 py-2 border-b border-border/50 last:border-b-0 hover:bg-secondary/30 cursor-pointer no-underline"

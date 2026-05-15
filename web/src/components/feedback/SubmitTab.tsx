@@ -19,6 +19,7 @@ import { useToast } from '../ui/Toast'
 import { useTranslation } from 'react-i18next'
 import { useBackendHealth } from '../../hooks/useBackendHealth'
 import { useKagentBackend } from '../../hooks/useKagentBackend'
+import { sanitizeUrl } from '@/lib/utils/sanitizeUrl'
 
 import { LazyMarkdown as ReactMarkdown } from '../ui/LazyMarkdown'
 import { useGlobalFilters } from '../../hooks/useGlobalFilters'
@@ -67,7 +68,7 @@ export function SuccessView({ success, screenshots, onViewUpdates }: SuccessView
       <div className="flex items-center justify-center gap-3">
         {success.issueUrl && (
           <a
-            href={success.issueUrl}
+            href={sanitizeUrl(success.issueUrl)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-sm text-purple-400 hover:text-purple-300"
@@ -596,7 +597,7 @@ export function SubmitForm({
                     : t('feedback.setupOAuth')}
                 </Button>
                 <a
-                  href={directIssueUrl}
+                  href={sanitizeUrl(directIssueUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors"
@@ -1004,7 +1005,7 @@ export function SubmitForm({
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <a
-                  href={directIssueUrl}
+                  href={sanitizeUrl(directIssueUrl)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-1.5 text-xs rounded-lg border border-border text-foreground hover:bg-secondary/50 transition-colors flex items-center gap-1.5"

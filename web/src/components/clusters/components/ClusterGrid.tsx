@@ -26,6 +26,7 @@ import { StatusBadge } from '../../ui/StatusBadge'
 import { Tooltip } from '../../ui/Tooltip'
 import { copyToClipboard } from '../../../lib/clipboard'
 import { useLocalClusterTools } from '../../../hooks/useLocalClusterTools'
+import { sanitizeUrl } from '../../../lib/utils/sanitizeUrl'
 import type { CSSProperties, ReactNode } from 'react'
 
 // Inline style constants
@@ -577,7 +578,7 @@ const FullClusterCard = memo(function FullClusterCard({
           {consoleUrl && (
             <div className="flex justify-center mb-3">
               <a
-                href={consoleUrl}
+                href={sanitizeUrl(consoleUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}

@@ -8,6 +8,7 @@ import type { MissionControlState } from './types'
 import { buildApprovalIssueBody } from './buildApprovalIssueBody'
 import { encodePlan } from './missionPlanCodec'
 import { FETCH_DEFAULT_TIMEOUT_MS } from '../../lib/constants'
+import { sanitizeUrl } from '../../lib/utils/sanitizeUrl'
 
 const GITHUB_API = 'https://api.github.com'
 const REPO_PATTERN = /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/
@@ -232,7 +233,7 @@ export function RequestApprovalModal({
               </div>
               <p className="text-sm text-foreground font-medium mb-2">Approval request created</p>
               <a
-                href={issueUrl}
+                href={sanitizeUrl(issueUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-primary hover:underline text-sm"
